@@ -1,0 +1,47 @@
+from fastapi import FastAPI
+
+from core.scheduler import setup_scheduler
+from contextlib import asynccontextmanager
+from api.router import router as api_router
+from fastapi.middleware.cors import CORSMiddleware
+
+
+from db.database import engine
+from db.models import Base
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup DB schemas
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    setup_scheduler()
+    yield
+    # Shutdown
+
+
+app = FastAPI(
+    title="ETF Analysis Platform API",
+    description="API for collecting, analyzing, and orchestrating ETF data.",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# CORS 설정
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "*"
+    ],  # 실제 서비스에서는 ["http://localhost:3000"] 등 프론트 주소로 제한
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+app.include_router(api_router, prefix="/api/v1")
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "message": "ETF Analysis Platform API is running"}

@@ -1,0 +1,40 @@
+0 verbose cli /Users/chanhojung/.nvm/versions/node/v24.13.0/bin/node /Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/bin/npm-cli.js
+1 info using npm@11.6.2
+2 info using node@v24.13.0
+3 silly config load:file:/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/chanhojung/.npmrc
+5 silly config load:file:/Users/chanhojung/.nvm/versions/node/v24.13.0/etc/npmrc
+6 verbose title npm exec create-next-app@latest ./frontend --ts --tailwind --eslint --app --src-dir --import-alias @/* --use-npm
+7 verbose argv "exec" "--yes" "--" "create-next-app@latest" "./frontend" "--ts" "--tailwind" "--eslint" "--app" "--src-dir" "--import-alias" "@/*" "--use-npm"
+8 verbose logfile logs-max:10 dir:/Users/chanhojung/ETF_One/.npm-cache/_logs/2026-02-22T10_00_28_285Z-
+9 verbose logfile /Users/chanhojung/ETF_One/.npm-cache/_logs/2026-02-22T10_00_28_285Z-debug-0.log
+10 silly logfile done cleaning log files
+11 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+12 http fetch GET 200 https://registry.npmjs.org/npm 106ms
+13 http fetch GET 200 https://registry.npmjs.org/create-next-app 123ms (cache miss)
+14 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+15 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+16 silly idealTree buildDeps
+17 silly fetch manifest create-next-app@16.1.6
+18 silly packumentCache full:https://registry.npmjs.org/create-next-app cache-miss
+19 http fetch GET 200 https://registry.npmjs.org/create-next-app 122ms (cache miss)
+20 silly packumentCache full:https://registry.npmjs.org/create-next-app set size:undefined disposed:false
+21 silly placeDep ROOT create-next-app@16.1.6 OK for:  want: 16.1.6
+22 silly reify moves {}
+23 silly audit bulk request { 'create-next-app': [ '16.1.6' ] }
+24 http cache create-next-app@https://registry.npmjs.org/create-next-app/-/create-next-app-16.1.6.tgz 0ms (cache hit)
+25 silly tarball no local data for create-next-app@https://registry.npmjs.org/create-next-app/-/create-next-app-16.1.6.tgz. Extracting by manifest.
+26 http fetch GET 200 https://registry.npmjs.org/create-next-app/-/create-next-app-16.1.6.tgz 87ms (cache miss)
+27 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 152ms
+28 silly audit report {}
+29 verbose cwd /Users/chanhojung/ETF_One
+30 verbose os Darwin 25.3.0
+31 verbose node v24.13.0
+32 verbose npm  v11.6.2
+33 notice
+33 notice New [33mminor[39m version of npm available! [33m11.6.2[39m -> [34m11.10.1[39m
+33 notice Changelog: [34mhttps://github.com/npm/cli/releases/tag/v11.10.1[39m
+33 notice To update run: [4mnpm install -g npm@11.10.1[24m
+33 notice  { force: true, Symbol(proc-log.meta): true }
+34 verbose exit 0
+35 info ok

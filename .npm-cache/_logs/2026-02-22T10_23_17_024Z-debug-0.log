@@ -1,0 +1,21 @@
+0 verbose cli /Users/chanhojung/.nvm/versions/node/v24.13.0/bin/node /Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/bin/npm-cli.js
+1 info using npm@11.6.2
+2 info using node@v24.13.0
+3 silly config load:file:/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/chanhojung/.npmrc
+5 silly config load:file:/Users/chanhojung/.nvm/versions/node/v24.13.0/etc/npmrc
+6 verbose title npm exec create-next-app@latest ./dashboard --ts --tailwind --eslint --app --src-dir --import-alias @/* --use-npm
+7 verbose argv "exec" "--yes" "--" "create-next-app@latest" "./dashboard" "--ts" "--tailwind" "--eslint" "--app" "--src-dir" "--import-alias" "@/*" "--use-npm"
+8 verbose logfile logs-max:10 dir:/Users/chanhojung/ETF_One/.npm-cache/_logs/2026-02-22T10_23_17_024Z-
+9 verbose logfile /Users/chanhojung/ETF_One/.npm-cache/_logs/2026-02-22T10_23_17_024Z-debug-0.log
+10 silly logfile done cleaning log files
+11 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+12 http fetch GET 200 https://registry.npmjs.org/create-next-app 95ms (cache revalidated)
+13 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+14 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+15 verbose cwd /Users/chanhojung/ETF_One
+16 verbose os Darwin 25.3.0
+17 verbose node v24.13.0
+18 verbose npm  v11.6.2
+19 verbose exit 0
+20 info ok
