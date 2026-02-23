@@ -1,0 +1,15 @@
+name: Keep Render Alive
+
+on:
+  schedule:
+    # 매 14분마다 실행 (Render는 15분 미사용시 슬립 모드에 들어감)
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit the health endpoint
+        run: |
+          curl -sS https://etf-lens.onrender.com/health || exit 1
