@@ -13,6 +13,11 @@ export default function Home() {
     { search: "", code: "" },
     { search: "", code: "" },
     { search: "", code: "" },
+    { search: "", code: "" },
+    { search: "", code: "" },
+    { search: "", code: "" },
+    { search: "", code: "" },
+    { search: "", code: "" },
   ]);
   const [globalSearch, setGlobalSearch] = useState("");
   const [globalActive, setGlobalActive] = useState(false);
@@ -47,6 +52,11 @@ export default function Home() {
       { search: "", code: "" },
       { search: "", code: "" },
       { search: "", code: "" },
+      { search: "", code: "" },
+      { search: "", code: "" },
+      { search: "", code: "" },
+      { search: "", code: "" },
+      { search: "", code: "" },
     ]);
     if (typeof window !== "undefined") {
       localStorage.removeItem('etf_current_slots');
@@ -69,7 +79,7 @@ export default function Home() {
       if (savedSlots) {
         try {
           const parsed = JSON.parse(savedSlots);
-          if (Array.isArray(parsed) && parsed.length === 5) {
+          if (Array.isArray(parsed) && parsed.length === 10) {
             setSlots(parsed);
           }
         } catch (e) { }
@@ -277,7 +287,7 @@ export default function Home() {
     setSelectedFavItems([]); // Reset selection on successful insertion
 
     if (fullCount > 0) {
-      alert("종목 입력칸이 5개를 초과했습니다. 더 추가하시려면 기존 입력칸의 종목을 삭제(X)해 주세요.");
+      alert("종목 입력칸이 10개를 초과했습니다. 더 추가하시려면 기존 입력칸의 종목을 삭제(X)해 주세요.");
     }
   };
 
@@ -685,7 +695,7 @@ export default function Home() {
         <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10 min-h-[50vh] animate-in fade-in zoom-in-95 duration-500">
           <div className="text-center mb-8">
             <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-white drop-shadow-md">ETF 투자는 데이터 기반으로 하세요</h2>
-            <p className="text-gray-400 text-sm md:text-base">최대 5개의 ETF를 선택하여 다각도로 성과와 포트폴리오를 비교 분석합니다.</p>
+            <p className="text-gray-400 text-sm md:text-base">최대 10개의 ETF를 선택하여 다각도로 성과와 포트폴리오를 비교 분석합니다.</p>
           </div>
           <section className="w-full max-w-[95vw] xl:max-w-[1200px] bg-white/[0.03] backdrop-blur-3xl rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] px-5 py-6 md:px-8 md:py-8 border border-white/10 transition-all hover:border-white/20 duration-500">
             <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 mb-2.5 relative z-50 border-b border-white/10 pb-2.5">
@@ -1770,8 +1780,8 @@ export default function Home() {
                       </table>
                     </div>
                     <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col relative pt-7">
-                      <span className="absolute left-[40px] top-3 text-[11px] text-gray-500 font-bold">[원]</span>
-                      <span className="absolute right-[5px] top-3 text-[11px] text-gray-500 font-bold">[%]</span>
+                      <span className="absolute left-[65px] top-3 text-[11px] text-gray-500 font-bold">[원]</span>
+                      <span className="absolute right-[20px] top-3 text-[11px] text-gray-500 font-bold">[%]</span>
                       <div className="flex-1 min-h-[250px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart data={detailMockData.nav} margin={{ top: 5, right: 0, left: 15, bottom: 5 }}>
