@@ -727,7 +727,7 @@ export default function Home() {
       <section className="w-full max-w-[95vw] xl:max-w-[1400px] relative z-10 bg-white/[0.03] backdrop-blur-2xl rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.5)] px-3 py-2.5 md:px-4 md:py-3 mb-4 border border-white/10 transition-all hover:border-white/20 duration-500">
         <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 mb-2.5 relative z-50 border-b border-white/10 pb-2.5">
           <div className="flex items-center gap-4 whitespace-nowrap">
-            <h2 className="text-lg md:text-xl font-bold flex items-center gap-2 text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">
+            <h2 className="text-base md:text-lg font-bold flex items-center gap-2 text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">
               <Search className="w-5 h-5 text-indigo-400" /> 종목 선택
             </h2>
             <button
@@ -1087,7 +1087,7 @@ export default function Home() {
                 {/* Radar Chart */}
                 <section className="bg-white/[0.02] backdrop-blur-3xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-5 border border-white/5 flex flex-col justify-center min-h-[300px] relative group lg:col-span-1">
                   <div className="absolute inset-0 bg-gradient-to-bl from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <h3 className="text-lg md:text-xl font-bold mb-2 flex items-center gap-3 relative z-10">
+                  <h3 className="text-base md:text-lg font-bold mb-2 flex items-center gap-3 relative z-10">
                     <span className="w-1.5 h-6 bg-gradient-to-b from-purple-400 to-pink-500 rounded-full"></span>
                     팩터 밸런스
                   </h3>
@@ -1115,7 +1115,7 @@ export default function Home() {
 
                 {/* Detailed Basic Info Inverted Table */}
                 <section className="bg-white/[0.02] backdrop-blur-3xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-5 border border-white/5 lg:col-span-4 mt-2 overflow-x-auto">
-                  <h3 className="text-lg md:text-xl font-bold mb-4 flex items-center gap-3">
+                  <h3 className="text-base md:text-lg font-bold mb-4 flex items-center gap-3">
                     <span className="w-1.5 h-6 bg-gradient-to-b from-teal-400 to-emerald-500 rounded-full"></span>
                     기본 정보
                   </h3>
@@ -1442,7 +1442,7 @@ export default function Home() {
                     <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
                       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                       <div className="flex justify-between items-center mb-4 relative z-10">
-                        <h3 className="text-lg md:text-xl font-bold flex items-center gap-3">
+                        <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
                           <span className="w-1.5 h-6 bg-gradient-to-b from-blue-400 to-indigo-500 rounded-full"></span>
                           가격 추이
                           <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(원)</span>
@@ -1477,7 +1477,7 @@ export default function Home() {
                     <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
                       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                       <div className="flex justify-between items-center mb-4 relative z-10">
-                        <h3 className="text-lg md:text-xl font-bold flex items-center gap-3">
+                        <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
                           <span className="w-1.5 h-6 bg-gradient-to-b from-indigo-400 to-pink-500 rounded-full"></span>
                           {period === '1W' ? '수익률 일간 변동' : '다중 ETF 수익률 매치업'}
                           <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">
@@ -1514,7 +1514,7 @@ export default function Home() {
                     <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
                       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                       <div className="flex justify-between items-center mb-4 relative z-10">
-                        <h3 className="text-lg md:text-xl font-bold flex items-center gap-3">
+                        <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
                           <span className="w-1.5 h-6 bg-emerald-400 rounded-full"></span>
                           순자금유입 추이 <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(누적, 억 원)</span>
                         </h3>
@@ -1553,7 +1553,7 @@ export default function Home() {
                     <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
                       <div className="absolute inset-0 bg-gradient-to-bl from-rose-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                       <div className="flex justify-between items-center mb-4 relative z-10">
-                        <h3 className="text-lg md:text-xl font-bold flex items-center gap-3">
+                        <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
                           <span className="w-1.5 h-6 bg-rose-400 rounded-full"></span>
                           연간배당률 트렌드 <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(TTM, %)</span>
                         </h3>
@@ -1750,7 +1750,7 @@ export default function Home() {
                 {/* 1. 시세 및 주주현황 */}
                 <div>
                   <div className="flex justify-between items-end mb-3 border-b-2 border-slate-700 pb-2">
-                    <h3 className="text-lg font-bold text-blue-400 tracking-wide">시세 <span className="text-white font-medium">및 주주현황</span></h3>
+                    <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">시세 <span className="text-white font-medium">및 주주현황</span></h3>
                     <span className="text-xs text-gray-500">[기준: 오늘]</span>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1807,7 +1807,7 @@ export default function Home() {
                 {/* 3. 상품설명 */}
                 <div>
                   <div className="flex justify-between items-end mb-3 border-b-2 border-slate-700 pb-2">
-                    <h3 className="text-lg font-bold text-blue-400 tracking-wide">상품설명</h3>
+                    <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">상품설명</h3>
                   </div>
                   <div className="bg-slate-900/30 p-5 rounded-xl border border-slate-800 text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
                     {selectedDetailEtf.basic_info?.['상품설명'] || `1좌당 순자산가치의 변동률을 기초지수의 변동률과 유사하도록 투자신탁재산을 운용하는 것을 목표로 합니다.\n${selectedDetailEtf.etf_name}는 해당 기초지수 구성종목을 바탕으로 포트폴리오를 구축하여 시장 대비 안정적인 수익을 추구합니다.`}
@@ -1817,7 +1817,7 @@ export default function Home() {
                 {/* 4. 순자산가치(NAV)추이 */}
                 <div>
                   <div className="flex justify-between items-end mb-3 border-b-2 border-slate-700 pb-2">
-                    <h3 className="text-lg font-bold text-blue-400 tracking-wide">순자산가치(NAV) <span className="text-white font-medium">추이</span></h3>
+                    <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">순자산가치(NAV) <span className="text-white font-medium">추이</span></h3>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="border border-slate-700 rounded-xl overflow-hidden">
@@ -1868,7 +1868,7 @@ export default function Home() {
                 {/* 5. 구성항목 */}
                 <div>
                   <div className="flex justify-between items-end mb-3 border-b-2 border-slate-700 pb-2">
-                    <h3 className="text-lg font-bold text-blue-400 tracking-wide">CU당 구성종목 <span className="text-white font-medium text-sm ml-2">[Top 10]</span></h3>
+                    <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">CU당 구성종목 <span className="text-white font-medium text-sm ml-2">[Top 10]</span></h3>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="border border-slate-700 rounded-xl overflow-hidden">
@@ -1940,7 +1940,7 @@ export default function Home() {
                 {/* 6. 거래량/거래대금 */}
                 <div>
                   <div className="flex justify-between items-end mb-3 border-b-2 border-slate-700 pb-2">
-                    <h3 className="text-lg font-bold text-blue-400 tracking-wide">거래량, 거래대금 <span className="text-white font-medium text-sm ml-2">(1개월, 평균)</span></h3>
+                    <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">거래량, 거래대금 <span className="text-white font-medium text-sm ml-2">(1개월, 평균)</span></h3>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="border border-slate-700 rounded-xl overflow-hidden">
