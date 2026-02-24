@@ -1901,7 +1901,7 @@ export default function Home() {
       {/* Detail Information Modal (Naver UI style) */}
       {
         selectedDetailEtf && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-2 md:p-6 lg:p-8">
+          <div className="fixed top-24 md:top-[88px] inset-x-0 bottom-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-2 md:p-6 lg:p-8">
             <div className="bg-[#0B0F19] border border-white/10 rounded-2xl w-full max-w-[1400px] h-full max-h-[95vh] overflow-hidden flex flex-col shadow-2xl">
 
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 lg:px-8 border-b border-white/10 relative gap-3 bg-gradient-to-r from-blue-900/20 to-transparent">
