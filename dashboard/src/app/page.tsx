@@ -2183,8 +2183,8 @@ export default function Home() {
 
       {/* ETF Check Modal */}
       {isEtfCheckModalOpen && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300 sm:p-2 lg:p-4">
-          <div className="relative w-full h-full max-w-none sm:w-[98vw] sm:h-[98vh] bg-neutral-900 border border-neutral-700/50 sm:rounded-2xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/10">
+        <div className="fixed top-24 md:top-[88px] inset-x-0 bottom-0 z-[400] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300 sm:p-2 lg:p-4 pb-0">
+          <div className="relative w-full h-full max-w-none sm:w-[98vw] bg-neutral-900 border border-neutral-700/50 sm:rounded-t-2xl md:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/10">
             {/* Header */}
             <div className="flex items-center justify-between px-3 md:px-5 py-2 border-b border-white/5 bg-gradient-to-r from-neutral-900 to-neutral-800 shrink-0 relative z-10">
               <h2 className="text-sm md:text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-400 flex items-center gap-2">
