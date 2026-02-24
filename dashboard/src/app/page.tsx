@@ -719,10 +719,31 @@ export default function Home() {
               </div>
 
               <div className="flex-1 w-full max-w-3xl flex flex-col md:flex-row items-center gap-4">
+                {/* 🚀 HOT Theme Quick Filters */}
+                <div className="flex flex-wrap items-center gap-1.5 md:gap-2 mr-auto md:mr-0 pl-1">
+                  <span className="text-[10px] md:text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-1 flex items-center"><span className="mr-0.5">🔥</span> HOT:</span>
+                  {['월배당', '반도체', 'S&P500', 'AI전력', '인도', '금'].map(theme => (
+                    <button
+                      key={theme}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setGlobalSearch(theme);
+                        setGlobalActive(true);
+                        setFocusedGlobalIndex(-1);
+                        document.getElementById('global-search-input')?.focus();
+                      }}
+                      className="text-[10px] md:text-xs font-medium px-2 py-0.5 bg-white/5 border border-white/10 rounded-full hover:bg-rose-500/10 hover:text-rose-300 hover:border-rose-400/30 transition-all text-gray-300"
+                    >
+                      {theme}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Global Search Interface */}
                 <div className="relative w-full">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
+                    id="global-search-input"
                     value={globalSearch}
                     onChange={(e) => { setGlobalSearch(e.target.value); setDropdownLimit(50); setFocusedGlobalIndex(-1); }}
                     onFocus={() => { setGlobalActive(true); setDropdownLimit(50); }}
@@ -1058,17 +1079,21 @@ export default function Home() {
                           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                           {data.raw_data && data.raw_data.map((etf: any, idx: number) => {
                             const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
+                            const isDanger = etf.etf_name.includes('인버스') || etf.etf_name.includes('레버리지') || etf.etf_name.includes('선물') || etf.etf_name.includes('블룸버그');
                             return (
                               <th key={etf.etf_code} className="py-2 px-1 xl:px-2 text-[10px] xl:text-xs font-bold text-center group cursor-pointer hover:bg-white/[0.05] transition-colors leading-tight whitespace-normal break-keep" onClick={() => setSelectedDetailEtf(etf)} style={{ color: glowColors[idx % glowColors.length] }}>
-                                <span className="group-hover:underline underline-offset-4">{etf.etf_name}</span>
+                                <div className="flex flex-col items-center justify-end gap-1.5 h-full">
+                                  {isDanger ? <span className="text-[8px] md:text-[9px] bg-rose-500/10 text-rose-400 px-1 py-0.5 rounded border border-rose-500/30 whitespace-nowrap">퇴직연금 불가</span> : <span className="text-[8px] md:text-[9px] bg-emerald-500/10 text-emerald-400 px-1 py-0.5 rounded border border-emerald-500/30 whitespace-nowrap">연금 가능</span>}
+                                  <span className="group-hover:underline underline-offset-4">{etf.etf_name}</span>
+                                </div>
                               </th>
                             );
                           })}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/[0.05]">
-                        {['운용사', '최초데이터(상장추정)', '순자산총액', '상장주식수', '52주 최고/최저', '거래량/거래대금', '20일평균 거래량/대금', '펀드보수', '최근 분배율(TTM)', '1M 수익률', '3M 수익률', '6M 수익률', '1Y 수익률'].map((key) => {
-                          const isNumericRow = !['운용사', '최초데이터(상장추정)'].includes(key);
+                        {['운용사', '최초데이터(상장추정)', '현재가 및 NAV (괴리율)', '순자산총액', '상장주식수', '52주 최고/최저', '거래량/거래대금', '20일평균 거래량/대금', '펀드보수', '최근 분배율(TTM)', '1M 수익률', '3M 수익률', '6M 수익률', '1Y 수익률'].map((key) => {
+                          const isNumericRow = !['운용사', '최초데이터(상장추정)', '현재가 및 NAV (괴리율)'].includes(key);
                           const isSplitRow = ['52주 최고/최저', '거래량/거래대금', '20일평균 거래량/대금'].includes(key);
                           let maxVal1 = 1;
                           let maxVal2 = 1;
@@ -1115,10 +1140,23 @@ export default function Home() {
                               <td className="py-3 px-4 text-xs font-semibold text-gray-400 bg-white/5 align-middle">{key}</td>
                               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                               {data.raw_data && data.raw_data.map((etf: any, idx: number) => {
-                                const val = etf.basic_info?.[key] || '-';
+                                let val: any = etf.basic_info?.[key] || '-';
+                                if (key === '현재가 및 NAV (괴리율)') {
+                                  const p = etf.market_data?.price || 0;
+                                  const n = etf.market_data?.nav || 0;
+                                  if (p > 0 && n > 0) {
+                                    const d = ((p - n) / n) * 100;
+                                    val = `${p.toLocaleString()}원 / ${n.toLocaleString()}원 (${d > 0 ? '+' : ''}${d.toFixed(2)}%)`;
+                                  } else {
+                                    val = 'N/A';
+                                  }
+                                }
+
                                 const isYield = key.includes('수익률');
-                                const isPositive = isYield && typeof val === 'string' && val.includes('%') && !val.includes('-');
-                                const isNegative = isYield && typeof val === 'string' && val.includes('%') && val.includes('-');
+                                const isDisparity = key === '현재가 및 NAV (괴리율)';
+
+                                const isPositive = (isYield && typeof val === 'string' && val.includes('%') && !val.includes('-')) || (isDisparity && typeof val === 'string' && val.includes('+'));
+                                const isNegative = (isYield && typeof val === 'string' && val.includes('%') && val.includes('-')) || (isDisparity && typeof val === 'string' && val.includes('-') && val.includes('%'));
                                 const textColor = isPositive ? 'text-rose-400' : isNegative ? 'text-blue-400' : 'text-gray-100';
 
                                 let num1 = 0;
@@ -2013,7 +2051,7 @@ export default function Home() {
       {/* Copyright */}
       <div className="mt-auto pt-8 w-full text-center text-sm text-gray-500/80 font-medium flex items-center justify-center gap-3">
         <span>Copyright &copy; Hoya 2026</span>
-        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2337</span>
+        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2344</span>
       </div>
     </main >
   );

@@ -1,0 +1,310 @@
+0 verbose cli /Users/chanhojung/.nvm/versions/node/v24.13.0/bin/node /Users/chanhojung/.nvm/versions/node/v24.13.0/bin/npm
+1 info using npm@11.6.2
+2 info using node@v24.13.0
+3 silly config load:file:/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/chanhojung/ETF_One/dashboard/.npmrc
+5 silly config load:file:/Users/chanhojung/.npmrc
+6 silly config load:file:/Users/chanhojung/.nvm/versions/node/v24.13.0/etc/npmrc
+7 verbose title npm install recharts lucide-react clsx tailwind-merge
+8 verbose argv "install" "recharts" "lucide-react" "clsx" "tailwind-merge"
+9 verbose logfile logs-max:10 dir:/Users/chanhojung/ETF_One/dashboard/.npm-cache/_logs/2026-02-22T10_24_11_019Z-
+10 verbose logfile /Users/chanhojung/ETF_One/dashboard/.npm-cache/_logs/2026-02-22T10_24_11_019Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+13 verbose shrinkwrap failed to load node_modules/.package-lock.json EPERM: operation not permitted, stat '/Users/chanhojung/ETF_One/dashboard/node_modules'
+14 silly idealTree buildDeps
+15 silly fetch manifest recharts@*
+16 silly packumentCache full:https://registry.npmjs.org/recharts cache-miss
+17 http fetch GET 200 https://registry.npmjs.org/recharts 73ms (cache miss)
+18 silly packumentCache full:https://registry.npmjs.org/recharts set size:undefined disposed:false
+19 silly fetch manifest react@19.2.3
+20 silly packumentCache full:https://registry.npmjs.org/react cache-miss
+21 http fetch GET 200 https://registry.npmjs.org/npm 167ms
+22 http fetch GET 200 https://registry.npmjs.org/react 114ms (cache miss)
+23 silly packumentCache full:https://registry.npmjs.org/react set size:undefined disposed:false
+24 silly fetch manifest react-dom@19.2.3
+25 silly packumentCache full:https://registry.npmjs.org/react-dom cache-miss
+26 http fetch GET 200 https://registry.npmjs.org/react-dom 113ms (cache miss)
+27 silly packumentCache full:https://registry.npmjs.org/react-dom set size:undefined disposed:false
+28 silly fetch manifest react-is@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+29 silly packumentCache full:https://registry.npmjs.org/react-is cache-miss
+30 http fetch GET 200 https://registry.npmjs.org/react-is 86ms (cache miss)
+31 silly packumentCache full:https://registry.npmjs.org/react-is set size:undefined disposed:false
+32 silly fetch manifest lucide-react@*
+33 silly packumentCache full:https://registry.npmjs.org/lucide-react cache-miss
+34 http fetch GET 200 https://registry.npmjs.org/lucide-react 74ms (cache miss)
+35 silly packumentCache full:https://registry.npmjs.org/lucide-react set size:undefined disposed:false
+36 silly fetch manifest clsx@*
+37 silly packumentCache full:https://registry.npmjs.org/clsx cache-miss
+38 http fetch GET 200 https://registry.npmjs.org/clsx 34ms (cache miss)
+39 silly packumentCache full:https://registry.npmjs.org/clsx set size:undefined disposed:false
+40 silly fetch manifest tailwind-merge@*
+41 silly packumentCache full:https://registry.npmjs.org/tailwind-merge cache-miss
+42 http fetch GET 200 https://registry.npmjs.org/tailwind-merge 43ms (cache miss)
+43 silly packumentCache full:https://registry.npmjs.org/tailwind-merge set size:undefined disposed:false
+44 silly placeDep ROOT clsx@2.1.1 OK for: dashboard@0.1.0 want: *
+45 silly placeDep ROOT lucide-react@0.575.0 OK for: dashboard@0.1.0 want: *
+46 silly placeDep ROOT recharts@3.7.0 OK for: dashboard@0.1.0 want: *
+47 silly placeDep ROOT tailwind-merge@3.5.0 OK for: dashboard@0.1.0 want: *
+48 silly fetch manifest @reduxjs/toolkit@1.x.x || 2.x.x
+49 silly packumentCache full:https://registry.npmjs.org/@reduxjs%2ftoolkit cache-miss
+50 silly fetch manifest decimal.js-light@^2.5.1
+51 silly packumentCache full:https://registry.npmjs.org/decimal.js-light cache-miss
+52 silly fetch manifest es-toolkit@^1.39.3
+53 silly packumentCache full:https://registry.npmjs.org/es-toolkit cache-miss
+54 silly fetch manifest eventemitter3@^5.0.1
+55 silly packumentCache full:https://registry.npmjs.org/eventemitter3 cache-miss
+56 silly fetch manifest immer@^10.1.1
+57 silly packumentCache full:https://registry.npmjs.org/immer cache-miss
+58 silly fetch manifest react-redux@8.x.x || 9.x.x
+59 silly packumentCache full:https://registry.npmjs.org/react-redux cache-miss
+60 silly fetch manifest reselect@5.1.1
+61 silly packumentCache full:https://registry.npmjs.org/reselect cache-miss
+62 http fetch GET 200 https://registry.npmjs.org/decimal.js-light 33ms (cache miss)
+63 silly packumentCache full:https://registry.npmjs.org/decimal.js-light set size:undefined disposed:false
+64 silly fetch manifest tiny-invariant@^1.3.3
+65 silly packumentCache full:https://registry.npmjs.org/tiny-invariant cache-miss
+66 http fetch GET 200 https://registry.npmjs.org/tiny-invariant 36ms (cache miss)
+67 silly packumentCache full:https://registry.npmjs.org/tiny-invariant set size:undefined disposed:false
+68 silly fetch manifest use-sync-external-store@^1.2.2
+69 silly packumentCache full:https://registry.npmjs.org/use-sync-external-store cache-miss
+70 http fetch GET 200 https://registry.npmjs.org/eventemitter3 74ms (cache miss)
+71 silly packumentCache full:https://registry.npmjs.org/eventemitter3 set size:undefined disposed:false
+72 silly fetch manifest victory-vendor@^37.0.2
+73 silly packumentCache full:https://registry.npmjs.org/victory-vendor cache-miss
+74 http fetch GET 200 https://registry.npmjs.org/react-redux 78ms (cache miss)
+75 silly packumentCache full:https://registry.npmjs.org/react-redux set size:undefined disposed:false
+76 http fetch GET 200 https://registry.npmjs.org/immer 85ms (cache miss)
+77 silly packumentCache full:https://registry.npmjs.org/immer set size:undefined disposed:false
+78 http fetch GET 200 https://registry.npmjs.org/reselect 90ms (cache miss)
+79 silly packumentCache full:https://registry.npmjs.org/reselect set size:undefined disposed:false
+80 http fetch GET 200 https://registry.npmjs.org/victory-vendor 34ms (cache miss)
+81 silly packumentCache full:https://registry.npmjs.org/victory-vendor set size:undefined disposed:false
+82 http fetch GET 200 https://registry.npmjs.org/es-toolkit 110ms (cache miss)
+83 silly packumentCache full:https://registry.npmjs.org/es-toolkit set size:undefined disposed:false
+84 http fetch GET 200 https://registry.npmjs.org/use-sync-external-store 103ms (cache miss)
+85 silly packumentCache full:https://registry.npmjs.org/use-sync-external-store set size:undefined disposed:false
+86 http fetch GET 200 https://registry.npmjs.org/@reduxjs%2ftoolkit 202ms (cache miss)
+87 silly packumentCache full:https://registry.npmjs.org/@reduxjs%2ftoolkit set size:undefined disposed:false
+88 silly fetch manifest react@^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+89 silly packumentCache full:https://registry.npmjs.org/react cache-miss
+90 http cache https://registry.npmjs.org/react 9ms (cache hit)
+91 silly packumentCache full:https://registry.npmjs.org/react set size:6508025 disposed:false
+92 silly fetch manifest @types/react@^18.2.25 || ^19
+93 silly packumentCache full:https://registry.npmjs.org/@types%2freact cache-miss
+94 http fetch GET 200 https://registry.npmjs.org/@types%2freact 60ms (cache miss)
+95 silly packumentCache full:https://registry.npmjs.org/@types%2freact set size:undefined disposed:false
+96 silly fetch manifest redux@^5.0.0
+97 silly packumentCache full:https://registry.npmjs.org/redux cache-miss
+98 http fetch GET 200 https://registry.npmjs.org/redux 40ms (cache miss)
+99 silly packumentCache full:https://registry.npmjs.org/redux set size:undefined disposed:false
+100 silly placeDep ROOT @reduxjs/toolkit@2.11.2 OK for: recharts@3.7.0 want: 1.x.x || 2.x.x
+101 silly placeDep ROOT decimal.js-light@2.5.1 OK for: recharts@3.7.0 want: ^2.5.1
+102 silly placeDep ROOT es-toolkit@1.44.0 OK for: recharts@3.7.0 want: ^1.39.3
+103 silly placeDep ROOT eventemitter3@5.0.4 OK for: recharts@3.7.0 want: ^5.0.1
+104 silly placeDep ROOT immer@10.2.0 OK for: recharts@3.7.0 want: ^10.1.1
+105 silly placeDep ROOT react-redux@9.2.0 OK for: recharts@3.7.0 want: 8.x.x || 9.x.x
+106 silly placeDep ROOT reselect@5.1.1 OK for: recharts@3.7.0 want: 5.1.1
+107 silly placeDep ROOT tiny-invariant@1.3.3 OK for: recharts@3.7.0 want: ^1.3.3
+108 silly placeDep ROOT use-sync-external-store@1.6.0 OK for: recharts@3.7.0 want: ^1.2.2
+109 silly placeDep ROOT victory-vendor@37.3.6 OK for: recharts@3.7.0 want: ^37.0.2
+110 silly fetch manifest @standard-schema/spec@^1.0.0
+111 silly packumentCache full:https://registry.npmjs.org/@standard-schema%2fspec cache-miss
+112 silly fetch manifest @standard-schema/utils@^0.3.0
+113 silly packumentCache full:https://registry.npmjs.org/@standard-schema%2futils cache-miss
+114 silly fetch manifest immer@^11.0.0
+115 silly packumentCache full:https://registry.npmjs.org/immer cache-miss
+116 silly fetch manifest redux@^5.0.1
+117 silly packumentCache full:https://registry.npmjs.org/redux cache-miss
+118 silly fetch manifest redux-thunk@^3.1.0
+119 silly packumentCache full:https://registry.npmjs.org/redux-thunk cache-miss
+120 silly fetch manifest reselect@^5.1.0
+121 silly packumentCache full:https://registry.npmjs.org/reselect cache-miss
+122 silly fetch manifest @types/use-sync-external-store@^0.0.6
+123 silly packumentCache full:https://registry.npmjs.org/@types%2fuse-sync-external-store cache-miss
+124 http cache https://registry.npmjs.org/redux 8ms (cache hit)
+125 silly packumentCache full:https://registry.npmjs.org/redux set size:553833 disposed:false
+126 silly fetch manifest use-sync-external-store@^1.4.0
+127 silly packumentCache full:https://registry.npmjs.org/use-sync-external-store cache-miss
+128 http cache https://registry.npmjs.org/immer 11ms (cache hit)
+129 silly packumentCache full:https://registry.npmjs.org/immer set size:747136 disposed:false
+130 silly fetch manifest d3-ease@^3.0.1
+131 silly packumentCache full:https://registry.npmjs.org/d3-ease cache-miss
+132 http cache https://registry.npmjs.org/reselect 13ms (cache hit)
+133 silly packumentCache full:https://registry.npmjs.org/reselect set size:910470 disposed:false
+134 silly fetch manifest d3-time@^3.0.0
+135 silly packumentCache full:https://registry.npmjs.org/d3-time cache-miss
+136 http cache https://registry.npmjs.org/use-sync-external-store 12ms (cache hit)
+137 silly packumentCache full:https://registry.npmjs.org/use-sync-external-store set size:4526568 disposed:false
+138 silly fetch manifest d3-array@^3.1.6
+139 silly packumentCache full:https://registry.npmjs.org/d3-array cache-miss
+140 http fetch GET 200 https://registry.npmjs.org/@standard-schema%2futils 44ms (cache miss)
+141 silly packumentCache full:https://registry.npmjs.org/@standard-schema%2futils set size:undefined disposed:false
+142 silly fetch manifest d3-scale@^4.0.2
+143 silly packumentCache full:https://registry.npmjs.org/d3-scale cache-miss
+144 http fetch GET 200 https://registry.npmjs.org/d3-ease 32ms (cache miss)
+145 silly packumentCache full:https://registry.npmjs.org/d3-ease set size:undefined disposed:false
+146 silly fetch manifest d3-shape@^3.1.0
+147 silly packumentCache full:https://registry.npmjs.org/d3-shape cache-miss
+148 http fetch GET 200 https://registry.npmjs.org/redux-thunk 45ms (cache miss)
+149 silly packumentCache full:https://registry.npmjs.org/redux-thunk set size:undefined disposed:false
+150 silly fetch manifest d3-timer@^3.0.1
+151 silly packumentCache full:https://registry.npmjs.org/d3-timer cache-miss
+152 http fetch GET 200 https://registry.npmjs.org/@standard-schema%2fspec 49ms (cache miss)
+153 silly packumentCache full:https://registry.npmjs.org/@standard-schema%2fspec set size:undefined disposed:false
+154 silly fetch manifest @types/d3-ease@^3.0.0
+155 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-ease cache-miss
+156 http fetch GET 200 https://registry.npmjs.org/d3-time 33ms (cache miss)
+157 silly packumentCache full:https://registry.npmjs.org/d3-time set size:undefined disposed:false
+158 silly fetch manifest @types/d3-time@^3.0.0
+159 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-time cache-miss
+160 http fetch GET 200 https://registry.npmjs.org/@types%2fuse-sync-external-store 51ms (cache miss)
+161 silly packumentCache full:https://registry.npmjs.org/@types%2fuse-sync-external-store set size:undefined disposed:false
+162 silly fetch manifest d3-interpolate@^3.0.1
+163 silly packumentCache full:https://registry.npmjs.org/d3-interpolate cache-miss
+164 http fetch GET 200 https://registry.npmjs.org/d3-array 38ms (cache miss)
+165 silly packumentCache full:https://registry.npmjs.org/d3-array set size:undefined disposed:false
+166 silly fetch manifest @types/d3-array@^3.0.3
+167 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-array cache-miss
+168 http fetch GET 200 https://registry.npmjs.org/d3-scale 32ms (cache miss)
+169 silly packumentCache full:https://registry.npmjs.org/d3-scale set size:undefined disposed:false
+170 silly fetch manifest @types/d3-scale@^4.0.2
+171 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-scale cache-miss
+172 http fetch GET 200 https://registry.npmjs.org/d3-timer 32ms (cache miss)
+173 silly packumentCache full:https://registry.npmjs.org/d3-timer set size:undefined disposed:false
+174 silly fetch manifest @types/d3-shape@^3.1.0
+175 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-shape cache-miss
+176 http fetch GET 200 https://registry.npmjs.org/d3-shape 35ms (cache miss)
+177 silly packumentCache full:https://registry.npmjs.org/d3-shape set size:undefined disposed:false
+178 silly fetch manifest @types/d3-timer@^3.0.0
+179 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-timer cache-miss
+180 http fetch GET 200 https://registry.npmjs.org/d3-interpolate 30ms (cache miss)
+181 silly packumentCache full:https://registry.npmjs.org/d3-interpolate set size:undefined disposed:false
+182 silly fetch manifest @types/d3-interpolate@^3.0.1
+183 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-interpolate cache-miss
+184 http fetch GET 200 https://registry.npmjs.org/@types%2fd3-ease 36ms (cache miss)
+185 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-ease set size:undefined disposed:false
+186 http fetch GET 200 https://registry.npmjs.org/@types%2fd3-time 35ms (cache miss)
+187 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-time set size:undefined disposed:false
+188 http fetch GET 200 https://registry.npmjs.org/@types%2fd3-scale 29ms (cache miss)
+189 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-scale set size:undefined disposed:false
+190 http fetch GET 200 https://registry.npmjs.org/@types%2fd3-timer 31ms (cache miss)
+191 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-timer set size:undefined disposed:false
+192 http fetch GET 200 https://registry.npmjs.org/@types%2fd3-shape 34ms (cache miss)
+193 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-shape set size:undefined disposed:false
+194 http fetch GET 200 https://registry.npmjs.org/@types%2fd3-array 43ms (cache miss)
+195 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-array set size:undefined disposed:false
+196 http fetch GET 200 https://registry.npmjs.org/@types%2fd3-interpolate 41ms (cache miss)
+197 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-interpolate set size:undefined disposed:false
+198 silly placeDep ROOT @standard-schema/spec@1.1.0 OK for: @reduxjs/toolkit@2.11.2 want: ^1.0.0
+199 silly placeDep ROOT @standard-schema/utils@0.3.0 OK for: @reduxjs/toolkit@2.11.2 want: ^0.3.0
+200 silly placeDep node_modules/@reduxjs/toolkit immer@11.1.4 OK for: @reduxjs/toolkit@2.11.2 want: ^11.0.0
+201 silly placeDep ROOT redux@5.0.1 OK for: @reduxjs/toolkit@2.11.2 want: ^5.0.1
+202 silly placeDep ROOT redux-thunk@3.1.0 OK for: @reduxjs/toolkit@2.11.2 want: ^3.1.0
+203 silly placeDep ROOT @types/use-sync-external-store@0.0.6 OK for: react-redux@9.2.0 want: ^0.0.6
+204 silly placeDep ROOT @types/d3-array@3.2.2 OK for: victory-vendor@37.3.6 want: ^3.0.3
+205 silly placeDep ROOT @types/d3-ease@3.0.2 OK for: victory-vendor@37.3.6 want: ^3.0.0
+206 silly placeDep ROOT @types/d3-interpolate@3.0.4 OK for: victory-vendor@37.3.6 want: ^3.0.1
+207 silly placeDep ROOT @types/d3-scale@4.0.9 OK for: victory-vendor@37.3.6 want: ^4.0.2
+208 silly placeDep ROOT @types/d3-shape@3.1.8 OK for: victory-vendor@37.3.6 want: ^3.1.0
+209 silly placeDep ROOT @types/d3-time@3.0.4 OK for: victory-vendor@37.3.6 want: ^3.0.0
+210 silly placeDep ROOT @types/d3-timer@3.0.2 OK for: victory-vendor@37.3.6 want: ^3.0.0
+211 silly placeDep ROOT d3-array@3.2.4 OK for: victory-vendor@37.3.6 want: ^3.1.6
+212 silly placeDep ROOT d3-ease@3.0.1 OK for: victory-vendor@37.3.6 want: ^3.0.1
+213 silly placeDep ROOT d3-interpolate@3.0.1 OK for: victory-vendor@37.3.6 want: ^3.0.1
+214 silly placeDep ROOT d3-scale@4.0.2 OK for: victory-vendor@37.3.6 want: ^4.0.2
+215 silly placeDep ROOT d3-shape@3.2.0 OK for: victory-vendor@37.3.6 want: ^3.1.0
+216 silly placeDep ROOT d3-time@3.1.0 OK for: victory-vendor@37.3.6 want: ^3.0.0
+217 silly placeDep ROOT d3-timer@3.0.1 OK for: victory-vendor@37.3.6 want: ^3.0.1
+218 silly fetch manifest @types/d3-color@*
+219 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-color cache-miss
+220 silly fetch manifest @types/d3-time@*
+221 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-time cache-miss
+222 silly fetch manifest @types/d3-path@*
+223 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-path cache-miss
+224 silly fetch manifest internmap@1 - 2
+225 silly packumentCache full:https://registry.npmjs.org/internmap cache-miss
+226 silly fetch manifest d3-color@1 - 3
+227 silly packumentCache full:https://registry.npmjs.org/d3-color cache-miss
+228 silly fetch manifest d3-format@1 - 3
+229 silly packumentCache full:https://registry.npmjs.org/d3-format cache-miss
+230 silly fetch manifest d3-time@2.1.1 - 3
+231 silly packumentCache full:https://registry.npmjs.org/d3-time cache-miss
+232 http cache https://registry.npmjs.org/d3-time 3ms (cache hit)
+233 silly packumentCache full:https://registry.npmjs.org/d3-time set size:150406 disposed:false
+234 silly fetch manifest d3-time-format@2 - 4
+235 silly packumentCache full:https://registry.npmjs.org/d3-time-format cache-miss
+236 http cache https://registry.npmjs.org/@types%2fd3-time 4ms (cache hit)
+237 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-time set size:52652 disposed:false
+238 silly fetch manifest d3-path@^3.1.0
+239 silly packumentCache full:https://registry.npmjs.org/d3-path cache-miss
+240 http fetch GET 200 https://registry.npmjs.org/internmap 24ms (cache miss)
+241 silly packumentCache full:https://registry.npmjs.org/internmap set size:undefined disposed:false
+242 http fetch GET 200 https://registry.npmjs.org/d3-format 34ms (cache miss)
+243 silly packumentCache full:https://registry.npmjs.org/d3-format set size:undefined disposed:false
+244 http fetch GET 200 https://registry.npmjs.org/d3-color 35ms (cache miss)
+245 silly packumentCache full:https://registry.npmjs.org/d3-color set size:undefined disposed:false
+246 http fetch GET 200 https://registry.npmjs.org/d3-time-format 36ms (cache miss)
+247 silly packumentCache full:https://registry.npmjs.org/d3-time-format set size:undefined disposed:false
+248 http fetch GET 200 https://registry.npmjs.org/@types%2fd3-color 41ms (cache miss)
+249 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-color set size:undefined disposed:false
+250 http fetch GET 200 https://registry.npmjs.org/d3-path 38ms (cache miss)
+251 silly packumentCache full:https://registry.npmjs.org/d3-path set size:undefined disposed:false
+252 http fetch GET 200 https://registry.npmjs.org/@types%2fd3-path 42ms (cache miss)
+253 silly packumentCache full:https://registry.npmjs.org/@types%2fd3-path set size:undefined disposed:false
+254 silly placeDep ROOT @types/d3-color@3.1.3 OK for: @types/d3-interpolate@3.0.4 want: *
+255 silly placeDep ROOT @types/d3-path@3.1.1 OK for: @types/d3-shape@3.1.8 want: *
+256 silly placeDep ROOT internmap@2.0.3 OK for: d3-array@3.2.4 want: 1 - 2
+257 silly placeDep ROOT d3-color@3.1.0 OK for: d3-interpolate@3.0.1 want: 1 - 3
+258 silly placeDep ROOT d3-format@3.1.2 OK for: d3-scale@4.0.2 want: 1 - 3
+259 silly placeDep ROOT d3-time-format@4.1.0 OK for: d3-scale@4.0.2 want: 2 - 4
+260 silly placeDep ROOT d3-path@3.1.0 OK for: d3-shape@3.2.0 want: ^3.1.0
+261 silly reify moves {}
+262 verbose stack Error: EPERM: operation not permitted, mkdir '/Users/chanhojung/ETF_One/dashboard/node_modules/@reduxjs/toolkit/node_modules'
+262 verbose stack     at async mkdir (node:internal/fs/promises:856:10)
+262 verbose stack     at async /Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:576:20
+262 verbose stack     at async Promise.allSettled (index 349)
+262 verbose stack     at async [reifyPackages] (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:313:11)
+262 verbose stack     at async Arborist.reify (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:125:5)
+262 verbose stack     at async Install.exec (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/lib/commands/install.js:150:5)
+262 verbose stack     at async Npm.exec (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/lib/npm.js:208:9)
+262 verbose stack     at async module.exports (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/lib/cli/entry.js:67:5)
+263 error code EPERM
+264 error syscall mkdir
+265 error path /Users/chanhojung/ETF_One/dashboard/node_modules/@reduxjs/toolkit/node_modules
+266 error errno -1
+267 error Error: EPERM: operation not permitted, mkdir '/Users/chanhojung/ETF_One/dashboard/node_modules/@reduxjs/toolkit/node_modules'
+267 error     at async mkdir (node:internal/fs/promises:856:10)
+267 error     at async /Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:576:20
+267 error     at async Promise.allSettled (index 349)
+267 error     at async [reifyPackages] (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:313:11)
+267 error     at async Arborist.reify (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:125:5)
+267 error     at async Install.exec (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/lib/commands/install.js:150:5)
+267 error     at async Npm.exec (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/lib/npm.js:208:9)
+267 error     at async module.exports (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/lib/cli/entry.js:67:5) {
+267 error   errno: -1,
+267 error   code: 'EPERM',
+267 error   syscall: 'mkdir',
+267 error   path: '/Users/chanhojung/ETF_One/dashboard/node_modules/@reduxjs/toolkit/node_modules'
+267 error }
+268 error
+268 error The operation was rejected by your operating system.
+268 error It is likely you do not have the permissions to access this file as the current user
+268 error
+268 error If you believe this might be a permissions issue, please double-check the
+268 error permissions of the file and its containing directories, or try running
+268 error the command again as root/Administrator.
+269 silly unfinished npm timer reify 1771755851178
+270 silly unfinished npm timer reify:createSparse 1771755852409
+271 verbose cwd /Users/chanhojung/ETF_One/dashboard
+272 verbose os Darwin 25.3.0
+273 verbose node v24.13.0
+274 verbose npm  v11.6.2
+275 notice
+275 notice New [33mminor[39m version of npm available! [33m11.6.2[39m -> [34m11.10.1[39m
+275 notice Changelog: [34mhttps://github.com/npm/cli/releases/tag/v11.10.1[39m
+275 notice To update run: [4mnpm install -g npm@11.10.1[24m
+275 notice  { force: true, Symbol(proc-log.meta): true }
+276 verbose exit -1
+277 verbose code -1
+278 error A complete log of this run can be found in: /Users/chanhojung/ETF_One/dashboard/.npm-cache/_logs/2026-02-22T10_24_11_019Z-debug-0.log

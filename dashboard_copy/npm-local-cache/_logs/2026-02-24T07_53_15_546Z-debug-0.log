@@ -1,0 +1,76 @@
+0 verbose cli /Users/chanhojung/.nvm/versions/node/v24.13.0/bin/node /Users/chanhojung/.nvm/versions/node/v24.13.0/bin/npm
+1 info using npm@11.6.2
+2 info using node@v24.13.0
+3 silly config load:file:/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/chanhojung/ETF_One/dashboard/.npmrc
+5 silly config load:file:/Users/chanhojung/.npmrc
+6 silly config load:file:/Users/chanhojung/.nvm/versions/node/v24.13.0/etc/npmrc
+7 verbose title npm install
+8 verbose argv "install" "--cache" "./npm-local-cache"
+9 verbose logfile logs-max:10 dir:/Users/chanhojung/ETF_One/dashboard/npm-local-cache/_logs/2026-02-24T07_53_15_546Z-
+10 verbose logfile /Users/chanhojung/ETF_One/dashboard/npm-local-cache/_logs/2026-02-24T07_53_15_546Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+13 silly idealTree buildDeps
+14 silly fetch manifest eslint@^7.23.0
+15 silly packumentCache full:https://registry.npmjs.org/eslint cache-miss
+16 verbose shrinkwrap failed to load node_modules/.package-lock.json EPERM: operation not permitted, stat '/Users/chanhojung/ETF_One/dashboard/node_modules'
+17 http fetch GET 200 https://registry.npmjs.org/npm 135ms
+18 http fetch GET 200 https://registry.npmjs.org/eslint 78ms (cache miss)
+19 silly packumentCache full:https://registry.npmjs.org/eslint set size:undefined disposed:false
+20 verbose stack Error: could not resolve
+20 verbose stack     at PlaceDep.failPeerConflict (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/place-dep.js:503:25)
+20 verbose stack     at new PlaceDep (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/place-dep.js:157:21)
+20 verbose stack     at #buildDepStep (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:945:18)
+20 verbose stack     at async Arborist.buildIdealTree (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:182:7)
+20 verbose stack     at async Promise.all (index 1)
+20 verbose stack     at async Arborist.reify (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:114:5)
+20 verbose stack     at async Install.exec (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/lib/commands/install.js:150:5)
+20 verbose stack     at async Npm.exec (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/lib/npm.js:208:9)
+20 verbose stack     at async module.exports (/Users/chanhojung/.nvm/versions/node/v24.13.0/lib/node_modules/npm/lib/cli/entry.js:67:5)
+21 error code ERESOLVE
+22 error ERESOLVE could not resolve
+23 error
+24 error While resolving: eslint-config-next@12.0.4
+24 error Found: eslint@10.0.2[2m[22m
+24 error [2mnode_modules/eslint[22m
+24 error   [34mdev[39m eslint@"^10.0.2" from the root project
+24 error   [95mpeer[39m eslint@"^6.0.0 || ^7.0.0 || >=8.0.0" from @eslint-community/eslint-utils@4.9.1[2m[22m
+24 error   [2mnode_modules/@eslint-community/eslint-utils[22m
+24 error     @eslint-community/eslint-utils@"^4.8.0" from eslint@10.0.2
+24 error   1 more (eslint-import-resolver-typescript)
+24 error
+24 error Could not resolve dependency:
+24 error [95mpeer[39m eslint@"^7.23.0" from eslint-config-next@12.0.4[2m[22m
+24 error [2mnode_modules/eslint-config-next[22m
+24 error   [34mdev[39m eslint-config-next@"^12.0.4" from the root project
+24 error
+24 error Conflicting peer dependency: eslint@7.32.0[2m[22m
+24 error [2mnode_modules/eslint[22m
+24 error   [95mpeer[39m eslint@"^7.23.0" from eslint-config-next@12.0.4[2m[22m
+24 error   [2mnode_modules/eslint-config-next[22m
+24 error     [34mdev[39m eslint-config-next@"^12.0.4" from the root project
+24 error
+24 error Fix the upstream dependency conflict, or retry
+24 error this command with --force or --legacy-peer-deps
+24 error to accept an incorrect (and potentially broken) dependency resolution.
+25 error
+25 error
+25 error For a full report see:
+25 error /Users/chanhojung/ETF_One/dashboard/npm-local-cache/_logs/2026-02-24T07_53_15_546Z-eresolve-report.txt
+26 silly unfinished npm timer reify 1771919595686
+27 silly unfinished npm timer reify:loadTrees 1771919595687
+28 silly unfinished npm timer idealTree:buildDeps 1771919595739
+29 silly unfinished npm timer idealTree:node_modules/eslint-config-next 1771919595740
+30 verbose cwd /Users/chanhojung/ETF_One/dashboard
+31 verbose os Darwin 25.3.0
+32 verbose node v24.13.0
+33 verbose npm  v11.6.2
+34 notice
+34 notice New [33mminor[39m version of npm available! [33m11.6.2[39m -> [34m11.10.1[39m
+34 notice Changelog: [34mhttps://github.com/npm/cli/releases/tag/v11.10.1[39m
+34 notice To update run: [4mnpm install -g npm@11.10.1[24m
+34 notice  { force: true, Symbol(proc-log.meta): true }
+35 verbose exit 1
+36 verbose code 1
+37 error A complete log of this run can be found in: /Users/chanhojung/ETF_One/dashboard/npm-local-cache/_logs/2026-02-24T07_53_15_546Z-debug-0.log

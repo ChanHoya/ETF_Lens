@@ -233,6 +233,7 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
                 "종목명",
                 "현재가",
                 "NAV",
+                "괴리율",
                 "1M 수익률",
                 "3M 수익률",
                 "6M 수익률",
@@ -252,6 +253,10 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
                     else "N/A",
                     f"{data['market_data']['nav']:,.0f}원"
                     if data["market_data"]["nav"]
+                    else "N/A",
+                    f"{(float(data['market_data']['price']) - float(data['market_data']['nav'])) / float(data['market_data']['nav']) * 100:+.2f}%"
+                    if data.get("market_data", {}).get("price")
+                    and data.get("market_data", {}).get("nav")
                     else "N/A",
                     data.get("basic_info", {}).get("1M 수익률", "N/A"),
                     data.get("basic_info", {}).get("3M 수익률", "N/A"),
