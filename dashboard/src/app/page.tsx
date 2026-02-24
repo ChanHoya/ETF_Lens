@@ -1980,19 +1980,19 @@ export default function Home() {
 
       {/* ETF Check Modal */}
       {isEtfCheckModalOpen && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-2 md:p-6 lg:p-10">
-          <div className="relative w-full h-full max-w-7xl max-h-[90vh] bg-neutral-900 border border-neutral-700/50 rounded-2xl md:rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] flex flex-col overflow-hidden ring-1 ring-white/10">
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300 sm:p-2 lg:p-4">
+          <div className="relative w-full h-full max-w-none sm:w-[98vw] sm:h-[98vh] bg-neutral-900 border border-neutral-700/50 sm:rounded-2xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/10">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-white/5 bg-gradient-to-r from-neutral-900 to-neutral-800 shrink-0 relative z-10">
-              <h2 className="text-base md:text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-400 flex items-center gap-3">
+            <div className="flex items-center justify-between px-3 md:px-5 py-2 border-b border-white/5 bg-gradient-to-r from-neutral-900 to-neutral-800 shrink-0 relative z-10">
+              <h2 className="text-sm md:text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-400 flex items-center gap-2">
                 <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
                 ETF Check Mobile
               </h2>
               <button
                 onClick={() => setIsEtfCheckModalOpen(false)}
-                className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/5 text-gray-400 hover:text-white hover:bg-rose-500/20 hover:scale-105 active:scale-95 transition-all outline-none group border border-transparent hover:border-rose-500/50"
+                className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-full bg-white/5 text-gray-400 hover:text-white hover:bg-rose-500/20 hover:scale-105 active:scale-95 transition-all outline-none group border border-transparent hover:border-rose-500/50"
               >
-                <X className="w-4 h-4 md:w-5 md:h-5 group-hover:rotate-90 transition-transform duration-300" />
+                <X className="w-3 h-3 md:w-4 md:h-4 group-hover:rotate-90 transition-transform duration-300" />
               </button>
             </div>
 
@@ -2013,7 +2013,7 @@ export default function Home() {
       {/* Copyright */}
       <div className="mt-auto pt-8 w-full text-center text-sm text-gray-500/80 font-medium flex items-center justify-center gap-3">
         <span>Copyright &copy; Hoya 2026</span>
-        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2327</span>
+        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2334</span>
       </div>
     </main >
   );
