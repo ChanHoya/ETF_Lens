@@ -669,11 +669,16 @@ export default function Home() {
               { id: 'select', label: '종목선택' },
               { id: 'info', label: '기본정보' },
               { id: 'chart', label: '차트' },
-              { id: 'holdings', label: '구성종목' }
+              { id: 'holdings', label: '구성종목' },
+              { id: 'etfcheck', label: 'ETF Check' }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => {
+                  if (tab.id === 'etfcheck') {
+                    window.open('https://www.etfcheck.co.kr/mobile/main', '_blank', `width=${window.screen.width},height=${window.screen.height},left=0,top=0`);
+                    return;
+                  }
                   if (tab.id !== 'select' && !data) {
                     alert('먼저 종목을 선택하고 비교를 실행해주세요.');
                     return;
@@ -1975,7 +1980,7 @@ export default function Home() {
       {/* Copyright */}
       <div className="mt-auto pt-8 w-full text-center text-sm text-gray-500/80 font-medium flex items-center justify-center gap-3">
         <span>Copyright &copy; Hoya 2026</span>
-        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2306</span>
+        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2323</span>
       </div>
     </main >
   );
