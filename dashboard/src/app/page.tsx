@@ -1718,7 +1718,7 @@ export default function Home() {
       {/* 즐겨찾기 Modal */}
       {
         isFavModalOpen && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-2 md:p-6">
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-transparent animate-in fade-in duration-200 p-2 md:p-6">
             <div className="bg-[#0f111a] border border-white/10 rounded-2xl w-full max-w-[1400px] h-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border-b border-white/10 relative gap-3 bg-black/20">
                 <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2 text-white">
@@ -1905,7 +1905,7 @@ export default function Home() {
       {/* Detail Information Modal (Naver UI style) */}
       {
         selectedDetailEtf && (
-          <div className="fixed top-[81px] md:top-[73px] inset-x-0 bottom-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-2 md:p-6 lg:p-8">
+          <div className="fixed top-[81px] md:top-[73px] inset-x-0 bottom-0 z-[300] flex items-center justify-center bg-transparent animate-in fade-in duration-200 p-2 md:p-6 lg:p-8">
             <div className="bg-[#0B0F19] border border-white/10 rounded-2xl w-full max-w-[1400px] h-full max-h-[95vh] overflow-hidden flex flex-col shadow-2xl">
 
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 lg:px-8 border-b border-white/10 relative gap-3 bg-gradient-to-r from-blue-900/20 to-transparent">
@@ -2187,7 +2187,7 @@ export default function Home() {
 
       {/* ETF Check Modal */}
       {hasOpenedEtfCheck && (
-        <div className={`fixed top-[81px] md:top-[73px] inset-x-0 bottom-0 z-[400] items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300 sm:p-2 lg:p-4 pb-0 ${isEtfCheckModalOpen ? 'flex' : 'hidden'}`}>
+        <div className={`fixed top-[81px] md:top-[73px] inset-x-0 bottom-0 z-[400] items-center justify-center bg-transparent animate-in fade-in duration-300 sm:p-2 lg:p-4 pb-0 ${isEtfCheckModalOpen ? 'flex' : 'hidden'}`}>
           <div className="relative w-full h-full max-w-none sm:w-[98vw] bg-neutral-900 border border-neutral-700/50 sm:rounded-t-2xl md:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/10">
             {/* Header */}
             <div className="flex items-center justify-between px-3 md:px-5 py-2 border-b border-white/5 bg-gradient-to-r from-neutral-900 to-neutral-800 shrink-0 relative z-10">
