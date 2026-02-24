@@ -17,7 +17,7 @@ export default function Home() {
   const [globalSearch, setGlobalSearch] = useState("");
   const [globalActive, setGlobalActive] = useState(false);
   const [period, setPeriod] = useState<string>('6M');
-  const [activeTab, setActiveTab] = useState<'info' | 'holdings' | 'chart'>('info');
+  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart'>('select');
 
   const [etfDictionary, setEtfDictionary] = useState<{ code: string, name: string }[]>([]);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState<number | null>(null);
@@ -32,20 +32,13 @@ export default function Home() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedDetailEtf, setSelectedDetailEtf] = useState<any>(null);
   const [popupPeriod, setPopupPeriod] = useState<string>('1Y');
-
-  const [showIntro, setShowIntro] = useState(true);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  useEffect(() => {
-    if (showIntro && isClient) {
-      const timer = setTimeout(() => setShowIntro(false), 2800);
-      return () => clearTimeout(timer);
-    }
-  }, [showIntro, isClient]);
+
 
   const handleReset = () => {
     setSlots([
@@ -60,8 +53,7 @@ export default function Home() {
     }
     setGlobalSearch("");
     setData(null);
-    setActiveTab('info');
-    setShowIntro(true);
+    setActiveTab('select');
   };
 
   useEffect(() => {
@@ -151,7 +143,7 @@ export default function Home() {
     }
     setGlobalSearch("");
     setData(null);
-    setActiveTab('info');
+    setActiveTab('select');
   };
 
   const selectEtfGlobal = (code: string, name: string, isMulti: boolean = false) => {
@@ -210,6 +202,7 @@ export default function Home() {
       });
       const result = await res.json();
       setData(result);
+      setActiveTab('info');
       setLoading(false);
       setIsLoadingHoldings(true);
 
@@ -643,271 +636,122 @@ export default function Home() {
   }, [data]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-4 md:p-8 md:pb-16 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0a0a0a] to-black text-gray-100 font-sans selection:bg-indigo-500/30 overflow-x-hidden relative">
-      {/* Elegant Deep Space Portal Intro */}
-      {showIntro && (
-        <div className="fixed inset-0 z-[1000] bg-[#030712] overflow-hidden pointer-events-none flex items-center justify-center transition-opacity duration-1000">
-          <style dangerouslySetInnerHTML={{
-            __html: `
-            @keyframes smooth-zoom {
-              0% { transform: scale(0.5); opacity: 0; filter: blur(20px); }
-              30% { opacity: 1; filter: blur(4px); }
-              70% { opacity: 1; filter: blur(0px); }
-              100% { transform: scale(30); opacity: 0; filter: blur(10px); }
-            }
-            @keyframes slow-spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-            @keyframes star-fly {
-              0% { transform: translate(-50%, -50%) translateZ(-500px) scale(0); opacity: 0; }
-              20% { opacity: 0.8; }
-              100% { transform: translate(-50%, -50%) translateZ(1000px) scale(3); opacity: 0; }
-            }
-            .perspective-wrap { perspective: 800px; transform-style: preserve-3d; }
-          `}} />
+    <main className="flex min-h-screen flex-col items-center p-4 md:p-8 md:pb-16 text-gray-100 font-sans selection:bg-indigo-500/30 overflow-x-hidden relative bg-[#050505]">
+      {/* Dynamic Lovable Gradient Background */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-600/20 blur-[130px] mix-blend-screen transition-all duration-1000"></div>
+        <div className="absolute top-[20%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-purple-600/20 blur-[130px] mix-blend-screen transition-all duration-1000"></div>
+        <div className="absolute bottom-[-10%] left-[10%] w-[60vw] h-[60vw] rounded-full bg-pink-600/10 blur-[150px] mix-blend-screen transition-all duration-1000"></div>
+      </div>
 
-          {/* Elegant Starfield */}
-          <div className="absolute inset-0 perspective-wrap">
-            {isClient && Array.from({ length: 60 }).map((_, i) => {
-              const angle = Math.random() * Math.PI * 2;
-              const radius = 10 + Math.random() * 50;
-              const startX = 50 + Math.cos(angle) * radius;
-              const startY = 50 + Math.sin(angle) * radius;
-              return (
-                <div key={i} className="absolute rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)]"
-                  style={{
-                    left: `${startX}%`,
-                    top: `${startY}%`,
-                    width: `${Math.random() * 2 + 1}px`,
-                    height: `${Math.random() * 2 + 1}px`,
-                    opacity: 0,
-                    animation: `star-fly ${1.5 + Math.random() * 1.5}s ease-in ${Math.random() * 0.5}s forwards`
-                  }}
-                />
-              );
-            })}
-          </div>
-
-          {/* Elegant Expanding Portal */}
-          <div className="absolute flex items-center justify-center animate-[smooth-zoom_2.8s_cubic-bezier(0.5,0,0.1,1)_forwards]">
-            {/* Outer Nebula Glow */}
-            <div className="absolute w-[40vh] h-[40vh] sm:w-[50vh] sm:h-[50vh] rounded-full border border-indigo-500/10 blur-md animate-[slow-spin_15s_linear_infinite]"
-              style={{ boxShadow: '0 0 150px rgba(79,70,229,0.3), inset 0 0 150px rgba(79,70,229,0.3)' }}>
-            </div>
-
-            {/* Inner Ring */}
-            <div className="absolute w-[25vh] h-[25vh] sm:w-[30vh] sm:h-[30vh] rounded-full border border-cyan-400/20 mix-blend-screen animate-[slow-spin_10s_linear_infinite_reverse]"
-              style={{ boxShadow: '0 0 80px rgba(34,211,238,0.4), inset 0 0 80px rgba(34,211,238,0.4)' }}>
-            </div>
-
-            {/* Core Lens */}
-            <Aperture className="w-[8vh] h-[8vh] sm:w-[12vh] sm:h-[12vh] text-white/90 drop-shadow-[0_0_30px_rgba(255,255,255,0.8)] animate-[slow-spin_6s_linear_infinite]" />
-          </div>
-        </div>
-      )}
-
-      <header className="w-full max-w-[95vw] xl:max-w-[1400px] mb-6 flex flex-col md:flex-row justify-between items-center gap-4 relative z-10">
+      <header className="w-full max-w-[95vw] xl:max-w-[1400px] mb-6 flex flex-col md:flex-row justify-between items-center gap-4 relative z-50 pt-2 lg:pt-6">
         <div className="flex flex-col items-start w-full md:w-auto cursor-pointer group" onClick={handleReset}>
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 drop-shadow-sm flex items-center gap-3 group-hover:opacity-80 transition-opacity">
             <Aperture className="w-8 h-8 md:w-10 md:h-10 text-indigo-400 group-hover:rotate-180 transition-transform duration-700" />
             ETF Lens
           </h1>
-          <p className="text-xs md:text-sm text-gray-400 mt-1 font-medium tracking-wide group-hover:text-gray-300 transition-colors">Understand ETFs, Through the Lens of Data.</p>
         </div>
-        <div className="flex flex-col items-end gap-1.5">
-          <div className="text-[10px] text-gray-500 font-medium tracking-wider">v.20260224_1555</div>
-          <div className="px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md shadow-[0_0_15px_rgba(79,70,229,0.1)] text-xs font-semibold text-indigo-300 tracking-wider">
-            PRO EDITION
-          </div>
+
+        <div className="flex items-center flex-wrap gap-4 md:gap-6">
+          <nav className="flex items-center gap-2 md:gap-6 bg-white/[0.03] px-6 py-2 rounded-full border border-white/10 backdrop-blur-md shadow-sm">
+            {[
+              { id: 'select', label: '종목선택' },
+              { id: 'info', label: '기본정보' },
+              { id: 'chart', label: '차트' },
+              { id: 'holdings', label: '구성종목' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  if (tab.id !== 'select' && !data) {
+                    alert('먼저 종목을 선택하고 비교를 실행해주세요.');
+                    return;
+                  }
+                  setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart');
+                }}
+                className={`text-sm md:text-base tracking-wide font-bold transition-all px-2 py-1 ${activeTab === tab.id ? 'text-indigo-300 drop-shadow-[0_0_8px_rgba(165,180,252,0.8)]' : 'text-gray-400/80 hover:text-gray-100'
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+          <div className="text-[10px] text-gray-500 font-medium tracking-wider hidden sm:block border-l border-white/10 pl-4">v.20260224_1555</div>
         </div>
       </header>
 
       {/* ETF Input Section */}
-      <section className="w-full max-w-[95vw] xl:max-w-[1400px] relative z-10 bg-white/[0.03] backdrop-blur-2xl rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.5)] px-3 py-2.5 md:px-4 md:py-3 mb-4 border border-white/10 transition-all hover:border-white/20 duration-500">
-        <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 mb-2.5 relative z-50 border-b border-white/10 pb-2.5">
-          <div className="flex items-center gap-4 whitespace-nowrap">
-            <h2 className="text-base md:text-lg font-bold flex items-center gap-2 text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">
-              <Search className="w-5 h-5 text-indigo-400" /> 종목 선택
-            </h2>
-            <button
-              onClick={clearAllSlots}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all text-xs font-semibold shadow-sm"
-              title="모든 종목 지우기"
-            >
-              <Trash2 className="w-3.5 h-3.5" /> 모두 삭제
-            </button>
+      {activeTab === 'select' && (
+        <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10 min-h-[50vh] animate-in fade-in zoom-in-95 duration-500">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-white drop-shadow-md">투자 아이디어를 데이터로 확인하세요</h2>
+            <p className="text-gray-400 text-sm md:text-base">최대 5개의 ETF를 선택하여 다각도로 성과와 포트폴리오를 비교 분석합니다.</p>
           </div>
-
-          <div className="flex-1 w-full max-w-3xl flex flex-col md:flex-row items-center gap-4">
-            {/* Global Search Interface */}
-            <div className="relative w-full">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                value={globalSearch}
-                onChange={(e) => { setGlobalSearch(e.target.value); setDropdownLimit(50); setFocusedGlobalIndex(-1); }}
-                onFocus={() => { setGlobalActive(true); setDropdownLimit(50); }}
-                onBlur={() => setTimeout(() => setGlobalActive(false), 250)}
-                onKeyDown={(e) => {
-                  if (!globalActive) return;
-                  const term = globalSearch.toLowerCase().replace(/\s/g, '');
-                  const filtered = etfDictionary.filter(etf => term === "" ? true : (etf.name.toLowerCase().replace(/\s/g, '').includes(term) || etf.code.includes(term)));
-                  const maxIndex = Math.min(filtered.length, dropdownLimit) - 1;
-
-                  if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    setFocusedGlobalIndex(prev => (prev < maxIndex ? prev + 1 : prev));
-                  } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    setFocusedGlobalIndex(prev => (prev > 0 ? prev - 1 : 0));
-                  } else if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (focusedGlobalIndex >= 0 && focusedGlobalIndex <= maxIndex) {
-                      selectEtfGlobal(filtered[focusedGlobalIndex].code, filtered[focusedGlobalIndex].name, e.ctrlKey || e.metaKey);
-                    }
-                  } else if (e.key === ' ') {
-                    if (focusedGlobalIndex >= 0 && focusedGlobalIndex <= maxIndex) {
-                      e.preventDefault();
-                      selectEtfGlobal(filtered[focusedGlobalIndex].code, filtered[focusedGlobalIndex].name, true);
-                    }
-                  }
-                }}
-                className="w-full pl-12 pr-4 py-2.5 bg-gradient-to-br from-black/60 to-indigo-950/20 border border-indigo-500/30 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400 outline-none transition-all text-white placeholder-gray-500 font-medium text-sm shadow-[0_0_20px_rgba(79,70,229,0.15)] backdrop-blur-md"
-                placeholder="전체 종목 통합 검색 (예: 테크, 배당, 2차전지)"
-              />
-
-              {/* Global Dropdown */}
-              {globalActive && (
-                <div
-                  id="global-dropdown"
-                  className="absolute top-[calc(100%+8px)] left-0 z-[100] w-full bg-[#0c0a18]/95 border border-indigo-500/30 rounded-2xl max-h-[300px] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.9)] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200"
-                  onScroll={handleDropdownScroll}
+          <section className="w-full max-w-[95vw] xl:max-w-[1200px] bg-white/[0.03] backdrop-blur-3xl rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] px-5 py-6 md:px-8 md:py-8 border border-white/10 transition-all hover:border-white/20 duration-500">
+            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 mb-2.5 relative z-50 border-b border-white/10 pb-2.5">
+              <div className="flex items-center gap-4 whitespace-nowrap">
+                <h2 className="text-base md:text-lg font-bold flex items-center gap-2 text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">
+                  <Search className="w-5 h-5 text-indigo-400" /> 종목 선택
+                </h2>
+                <button
+                  onClick={clearAllSlots}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all text-xs font-semibold shadow-sm"
+                  title="모든 종목 지우기"
                 >
-                  {etfDictionary.length === 0 ? (
-                    <div className="px-5 py-4 text-sm text-gray-400 flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />ETF DB 동기화 중...</div>
-                  ) : (
-                    (() => {
-                      const filtered = etfDictionary.filter(e => {
-                        const term = globalSearch.toLowerCase().replace(/\s/g, '');
-                        const nameMatch = e.name.toLowerCase().replace(/\s/g, '').includes(term);
-                        const codeMatch = e.code.includes(term);
-                        return term === "" ? true : (nameMatch || codeMatch);
-                      });
+                  <Trash2 className="w-3.5 h-3.5" /> 모두 삭제
+                </button>
+              </div>
 
-                      return (
-                        <>
-                          {filtered.slice(0, dropdownLimit).map((e, idx) => (
-                            <div
-                              id={`global-item-${idx}`}
-                              key={e.code}
-                              onClick={(evt) => selectEtfGlobal(e.code, e.name, evt.ctrlKey || evt.metaKey)}
-                              onMouseEnter={() => setFocusedGlobalIndex(idx)}
-                              className={`px-5 py-3 cursor-pointer text-[13px] md:text-sm border-b border-indigo-500/10 last:border-0 transition-all flex items-center justify-between group/item ${focusedGlobalIndex === idx ? 'bg-indigo-600/40 text-white' : 'hover:bg-indigo-600/40 text-gray-200'}`}
-                            >
-                              <div className="flex items-center">
-                                <span className={`truncate mr-4 font-medium tracking-wide ${focusedGlobalIndex === idx ? 'text-indigo-200' : 'group-hover/item:text-indigo-200'}`}>{e.name}</span>
-                                {slots.some(s => s.code === e.code) && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded ml-2">선택됨</span>}
-                              </div>
-                              <span className="font-mono text-[11px] md:text-xs text-indigo-400/80 bg-black/40 px-2 py-1 rounded-md border border-white/5">{e.code}</span>
-                            </div>
-                          ))}
-                          {filtered.length > dropdownLimit && (
-                            <div className="px-5 py-6 text-sm text-gray-400 flex items-center justify-center gap-2">
-                              <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-                              추가 데이터 로딩 중...
-                            </div>
-                          )}
-                          {globalSearch && filtered.length === 0 && (
-                            <div className="px-5 py-4 text-sm text-rose-400 text-center font-medium">검색 결과가 없습니다.</div>
-                          )}
-                        </>
-                      );
-                    })()
-                  )}
-                </div>
-              )}
-            </div>
+              <div className="flex-1 w-full max-w-3xl flex flex-col md:flex-row items-center gap-4">
+                {/* Global Search Interface */}
+                <div className="relative w-full">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    value={globalSearch}
+                    onChange={(e) => { setGlobalSearch(e.target.value); setDropdownLimit(50); setFocusedGlobalIndex(-1); }}
+                    onFocus={() => { setGlobalActive(true); setDropdownLimit(50); }}
+                    onBlur={() => setTimeout(() => setGlobalActive(false), 250)}
+                    onKeyDown={(e) => {
+                      if (!globalActive) return;
+                      const term = globalSearch.toLowerCase().replace(/\s/g, '');
+                      const filtered = etfDictionary.filter(etf => term === "" ? true : (etf.name.toLowerCase().replace(/\s/g, '').includes(term) || etf.code.includes(term)));
+                      const maxIndex = Math.min(filtered.length, dropdownLimit) - 1;
 
-            <div className="flex w-full md:w-auto gap-2 flex-shrink-0">
-              <button
-                onClick={() => setIsFavModalOpen(true)}
-                className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 border border-slate-600/50 text-white font-bold py-2.5 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 text-sm"
-              >
-                <Star className="w-5 h-5 text-yellow-400" /> 즐겨찾기
-              </button>
-
-              <button
-                onClick={fetchComparison}
-                disabled={loading || slots.map(s => s.code || s.search).filter(Boolean).length < 2}
-                className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none active:scale-95 text-sm"
-              >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "종목비교"}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 relative z-40">
-            {slots.map((slot, index) => (
-              <div key={index} className="flex-1 group relative">
-                <label className="block text-[10px] font-medium text-indigo-300/80 mb-0.5 uppercase tracking-widest pl-1">
-                  ETF Ticker {index + 1}
-                </label>
-                <div className="flex items-center gap-1.5 relative">
-                  <div className="relative w-full">
-                    <input
-                      value={slot.search}
-                      onChange={(e) => { updateSearch(index, e.target.value); setFocusedSlotIndex(-1); }}
-                      onFocus={() => { setActiveDropdownIndex(index); setDropdownLimit(50); }}
-                      onBlur={() => setTimeout(() => setActiveDropdownIndex(null), 250)}
-                      onKeyDown={(e) => {
-                        if (activeDropdownIndex !== index) return;
-                        const term = slot.search.toLowerCase().replace(/\s/g, '');
-                        const filtered = etfDictionary.filter(etf => term === "" ? true : (etf.name.toLowerCase().replace(/\s/g, '').includes(term) || etf.code.includes(term)));
-                        const maxIndex = Math.min(filtered.length, dropdownLimit) - 1;
-
-                        if (e.key === 'ArrowDown') {
-                          e.preventDefault();
-                          setFocusedSlotIndex(prev => (prev < maxIndex ? prev + 1 : prev));
-                        } else if (e.key === 'ArrowUp') {
-                          e.preventDefault();
-                          setFocusedSlotIndex(prev => (prev > 0 ? prev - 1 : 0));
-                        } else if (e.key === 'Enter') {
-                          e.preventDefault();
-                          if (focusedSlotIndex >= 0 && focusedSlotIndex <= maxIndex) {
-                            selectEtf(index, filtered[focusedSlotIndex].code, filtered[focusedSlotIndex].name);
-                          }
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        setFocusedGlobalIndex(prev => (prev < maxIndex ? prev + 1 : prev));
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        setFocusedGlobalIndex(prev => (prev > 0 ? prev - 1 : 0));
+                      } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (focusedGlobalIndex >= 0 && focusedGlobalIndex <= maxIndex) {
+                          selectEtfGlobal(filtered[focusedGlobalIndex].code, filtered[focusedGlobalIndex].name, e.ctrlKey || e.metaKey);
                         }
-                      }}
-                      className="w-full px-2.5 py-1.5 bg-black/40 border border-white/10 rounded-lg focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-400 outline-none transition-all text-white placeholder-gray-700 font-mono text-xs shadow-inner"
-                      placeholder="e.g. KODEX 성장"
-                    />
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-                  </div>
+                      } else if (e.key === ' ') {
+                        if (focusedGlobalIndex >= 0 && focusedGlobalIndex <= maxIndex) {
+                          e.preventDefault();
+                          selectEtfGlobal(filtered[focusedGlobalIndex].code, filtered[focusedGlobalIndex].name, true);
+                        }
+                      }
+                    }}
+                    className="w-full pl-12 pr-4 py-2.5 bg-gradient-to-br from-black/60 to-indigo-950/20 border border-indigo-500/30 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400 outline-none transition-all text-white placeholder-gray-500 font-medium text-sm shadow-[0_0_20px_rgba(79,70,229,0.15)] backdrop-blur-md"
+                    placeholder="전체 종목 통합 검색 (예: 테크, 배당, 2차전지)"
+                  />
 
-                  {slot.search !== "" && (
-                    <button
-                      onClick={() => clearSlot(index)}
-                      className="text-gray-500 hover:text-red-400 hover:bg-red-400/10 p-2 rounded-xl transition-colors flex-shrink-0"
-                      title="지우기"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  )}
-
-                  {/* Dropdown UI */}
-                  {activeDropdownIndex === index && (
+                  {/* Global Dropdown */}
+                  {globalActive && (
                     <div
-                      className="absolute top-[calc(100%+8px)] left-0 z-[100] w-[300px] bg-[#0c0a18] border border-white/10 rounded-xl max-h-64 overflow-y-auto shadow-[0_15px_40px_rgba(0,0,0,0.8)] backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-200"
+                      id="global-dropdown"
+                      className="absolute top-[calc(100%+8px)] left-0 z-[100] w-full bg-[#0c0a18]/95 border border-indigo-500/30 rounded-2xl max-h-[300px] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.9)] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200"
                       onScroll={handleDropdownScroll}
                     >
                       {etfDictionary.length === 0 ? (
-                        <div className="px-4 py-3 text-xs text-gray-500 flex items-center justify-center gap-2"><Loader2 className="w-3 h-3 animate-spin" />Loading DB...</div>
+                        <div className="px-5 py-4 text-sm text-gray-400 flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />ETF DB 동기화 중...</div>
                       ) : (
                         (() => {
                           const filtered = etfDictionary.filter(e => {
-                            const term = slot.search.toLowerCase().replace(/\s/g, '');
+                            const term = globalSearch.toLowerCase().replace(/\s/g, '');
                             const nameMatch = e.name.toLowerCase().replace(/\s/g, '').includes(term);
                             const codeMatch = e.code.includes(term);
                             return term === "" ? true : (nameMatch || codeMatch);
@@ -917,24 +761,27 @@ export default function Home() {
                             <>
                               {filtered.slice(0, dropdownLimit).map((e, idx) => (
                                 <div
-                                  id={`slot-item-${idx}`}
+                                  id={`global-item-${idx}`}
                                   key={e.code}
-                                  onClick={() => selectEtf(index, e.code, e.name)}
-                                  onMouseEnter={() => setFocusedSlotIndex(idx)}
-                                  className={`px-3 py-2 cursor-pointer text-[11px] md:text-[13px] border-b border-white/[0.03] last:border-0 transition-colors flex items-center justify-between group/item ${focusedSlotIndex === idx ? 'bg-indigo-600/30 text-white' : 'hover:bg-indigo-600/30 text-gray-200'}`}
+                                  onClick={(evt) => selectEtfGlobal(e.code, e.name, evt.ctrlKey || evt.metaKey)}
+                                  onMouseEnter={() => setFocusedGlobalIndex(idx)}
+                                  className={`px-5 py-3 cursor-pointer text-[13px] md:text-sm border-b border-indigo-500/10 last:border-0 transition-all flex items-center justify-between group/item ${focusedGlobalIndex === idx ? 'bg-indigo-600/40 text-white' : 'hover:bg-indigo-600/40 text-gray-200'}`}
                                 >
-                                  <span className={`truncate mr-3 font-medium ${focusedSlotIndex === idx ? 'text-indigo-100' : 'group-hover/item:text-indigo-100'}`}>{e.name}</span>
-                                  <span className="font-mono text-[10px] text-indigo-400/70">{e.code}</span>
+                                  <div className="flex items-center">
+                                    <span className={`truncate mr-4 font-medium tracking-wide ${focusedGlobalIndex === idx ? 'text-indigo-200' : 'group-hover/item:text-indigo-200'}`}>{e.name}</span>
+                                    {slots.some(s => s.code === e.code) && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded ml-2">선택됨</span>}
+                                  </div>
+                                  <span className="font-mono text-[11px] md:text-xs text-indigo-400/80 bg-black/40 px-2 py-1 rounded-md border border-white/5">{e.code}</span>
                                 </div>
                               ))}
                               {filtered.length > dropdownLimit && (
-                                <div className="px-4 py-4 text-xs text-gray-500 flex items-center justify-center gap-2">
-                                  <Loader2 className="w-3 h-3 animate-spin text-indigo-400" />
-                                  로딩 중...
+                                <div className="px-5 py-6 text-sm text-gray-400 flex items-center justify-center gap-2">
+                                  <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                                  추가 데이터 로딩 중...
                                 </div>
                               )}
-                              {slot.search && filtered.length === 0 && (
-                                <div className="px-4 py-3 text-xs text-rose-400 text-center">No matches found.</div>
+                              {globalSearch && filtered.length === 0 && (
+                                <div className="px-5 py-4 text-sm text-rose-400 text-center font-medium">검색 결과가 없습니다.</div>
                               )}
                             </>
                           );
@@ -942,91 +789,141 @@ export default function Home() {
                       )}
                     </div>
                   )}
+                </div>
 
+                <div className="flex w-full md:w-auto gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => setIsFavModalOpen(true)}
+                    className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 border border-slate-600/50 text-white font-bold py-2.5 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Star className="w-5 h-5 text-yellow-400" /> 즐겨찾기
+                  </button>
+
+                  <button
+                    onClick={fetchComparison}
+                    disabled={loading || slots.map(s => s.code || s.search).filter(Boolean).length < 2}
+                    className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none active:scale-95 text-sm"
+                  >
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "종목비교"}
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
 
-          {/* Cleaned up spacing from old button area */}
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 relative z-40">
+                {slots.map((slot, index) => (
+                  <div key={index} className="flex-1 group relative">
+                    <label className="block text-[10px] font-medium text-indigo-300/80 mb-0.5 uppercase tracking-widest pl-1">
+                      ETF Ticker {index + 1}
+                    </label>
+                    <div className="flex items-center gap-1.5 relative">
+                      <div className="relative w-full">
+                        <input
+                          value={slot.search}
+                          onChange={(e) => { updateSearch(index, e.target.value); setFocusedSlotIndex(-1); }}
+                          onFocus={() => { setActiveDropdownIndex(index); setDropdownLimit(50); }}
+                          onBlur={() => setTimeout(() => setActiveDropdownIndex(null), 250)}
+                          onKeyDown={(e) => {
+                            if (activeDropdownIndex !== index) return;
+                            const term = slot.search.toLowerCase().replace(/\s/g, '');
+                            const filtered = etfDictionary.filter(etf => term === "" ? true : (etf.name.toLowerCase().replace(/\s/g, '').includes(term) || etf.code.includes(term)));
+                            const maxIndex = Math.min(filtered.length, dropdownLimit) - 1;
+
+                            if (e.key === 'ArrowDown') {
+                              e.preventDefault();
+                              setFocusedSlotIndex(prev => (prev < maxIndex ? prev + 1 : prev));
+                            } else if (e.key === 'ArrowUp') {
+                              e.preventDefault();
+                              setFocusedSlotIndex(prev => (prev > 0 ? prev - 1 : 0));
+                            } else if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (focusedSlotIndex >= 0 && focusedSlotIndex <= maxIndex) {
+                                selectEtf(index, filtered[focusedSlotIndex].code, filtered[focusedSlotIndex].name);
+                              }
+                            }
+                          }}
+                          className="w-full px-2.5 py-1.5 bg-black/40 border border-white/10 rounded-lg focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-400 outline-none transition-all text-white placeholder-gray-700 font-mono text-xs shadow-inner"
+                          placeholder="e.g. KODEX 성장"
+                        />
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                      </div>
+
+                      {slot.search !== "" && (
+                        <button
+                          onClick={() => clearSlot(index)}
+                          className="text-gray-500 hover:text-red-400 hover:bg-red-400/10 p-2 rounded-xl transition-colors flex-shrink-0"
+                          title="지우기"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      )}
+
+                      {/* Dropdown UI */}
+                      {activeDropdownIndex === index && (
+                        <div
+                          className="absolute top-[calc(100%+8px)] left-0 z-[100] w-[300px] bg-[#0c0a18] border border-white/10 rounded-xl max-h-64 overflow-y-auto shadow-[0_15px_40px_rgba(0,0,0,0.8)] backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-200"
+                          onScroll={handleDropdownScroll}
+                        >
+                          {etfDictionary.length === 0 ? (
+                            <div className="px-4 py-3 text-xs text-gray-500 flex items-center justify-center gap-2"><Loader2 className="w-3 h-3 animate-spin" />Loading DB...</div>
+                          ) : (
+                            (() => {
+                              const filtered = etfDictionary.filter(e => {
+                                const term = slot.search.toLowerCase().replace(/\s/g, '');
+                                const nameMatch = e.name.toLowerCase().replace(/\s/g, '').includes(term);
+                                const codeMatch = e.code.includes(term);
+                                return term === "" ? true : (nameMatch || codeMatch);
+                              });
+
+                              return (
+                                <>
+                                  {filtered.slice(0, dropdownLimit).map((e, idx) => (
+                                    <div
+                                      id={`slot-item-${idx}`}
+                                      key={e.code}
+                                      onClick={() => selectEtf(index, e.code, e.name)}
+                                      onMouseEnter={() => setFocusedSlotIndex(idx)}
+                                      className={`px-3 py-2 cursor-pointer text-[11px] md:text-[13px] border-b border-white/[0.03] last:border-0 transition-colors flex items-center justify-between group/item ${focusedSlotIndex === idx ? 'bg-indigo-600/30 text-white' : 'hover:bg-indigo-600/30 text-gray-200'}`}
+                                    >
+                                      <span className={`truncate mr-3 font-medium ${focusedSlotIndex === idx ? 'text-indigo-100' : 'group-hover/item:text-indigo-100'}`}>{e.name}</span>
+                                      <span className="font-mono text-[10px] text-indigo-400/70">{e.code}</span>
+                                    </div>
+                                  ))}
+                                  {filtered.length > dropdownLimit && (
+                                    <div className="px-4 py-4 text-xs text-gray-500 flex items-center justify-center gap-2">
+                                      <Loader2 className="w-3 h-3 animate-spin text-indigo-400" />
+                                      로딩 중...
+                                    </div>
+                                  )}
+                                  {slot.search && filtered.length === 0 && (
+                                    <div className="px-4 py-3 text-xs text-rose-400 text-center">No matches found.</div>
+                                  )}
+                                </>
+                              );
+                            })()
+                          )}
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Cleaned up spacing from old button area */}
+            </div>
+          </section>
         </div>
-      </section>
+      )}
 
       {/* Results Section */}
       {
-        data && data.data_payload && (
+        data && data.data_payload && activeTab !== 'select' && (
           <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col relative z-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
 
-            {/* Tab Navigation and Period Selector Row */}
-            <div className="w-full z-40 relative">
-              <div className="flex bg-white/5 rounded-t-2xl p-1.5 border border-white/10 border-b-0 w-full shadow-2xl backdrop-blur-md relative">
-                <div className="flex w-full gap-1">
-                  {[
-                    { id: 'info', label: '기본정보' },
-                    { id: 'chart', label: '차트' },
-                    { id: 'holdings', label: '구성종목' }
-                  ].map(tab => (
-                    <div
-                      key={tab.id}
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      onClick={() => setActiveTab(tab.id as any)}
-                      role="button"
-                      tabIndex={0}
-                      className={`flex-1 py-3 px-4 text-sm md:text-base font-bold rounded-xl transition-all border border-transparent flex items-center justify-center relative cursor-pointer ${activeTab === tab.id
-                        ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_20px_rgba(79,70,229,0.5)]'
-                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                        }`}
-                    >
-                      {activeTab === 'chart' && tab.id === 'chart' ? (
-                        <>
-                          <span className="hidden xl:block absolute left-6">{tab.label}</span>
-                          <span className="xl:hidden">{tab.label}</span>
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2 hidden xl:flex bg-black/40 rounded-lg p-1 border border-white/10 overflow-x-auto shadow-2xl backdrop-blur-md z-50">
-                            {['1D', '1W', '1M', '6M', '1Y', '3Y', 'MAX'].map(p => (
-                              <button
-                                key={p}
-                                onClick={(e) => { e.stopPropagation(); setPeriod(p); }}
-                                className={`px-2 py-1 text-[11px] font-bold rounded-md transition-all whitespace-nowrap ${period === p
-                                  ? 'bg-indigo-500/80 text-white shadow-md'
-                                  : 'text-gray-300 hover:text-white hover:bg-white/10'
-                                  }`}
-                              >
-                                {p}
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      ) : (
-                        <span>{tab.label}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Mobile Period Selector (shown below tabs on small screens) */}
-              {activeTab === 'chart' && (
-                <div className="xl:hidden w-full flex justify-end bg-white/5 px-2 pb-2 border-x border-white/10">
-                  <div className="flex bg-black/40 rounded-lg p-1 overflow-x-auto shadow-2xl backdrop-blur-md z-50 max-w-full">
-                    {['1D', '1W', '1M', '6M', '1Y', '3Y', 'MAX'].map(p => (
-                      <button
-                        key={p}
-                        onClick={() => setPeriod(p)}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all whitespace-nowrap ${period === p
-                          ? 'bg-indigo-500/80 text-white shadow-md'
-                          : 'text-gray-400 hover:text-white hover:bg-white/5'
-                          }`}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
             {activeTab === 'info' && (
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white/[0.02] p-4 lg:p-5 border border-white/5 rounded-b-2xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white/[0.03] p-4 lg:p-5 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
                 {/* Table Details */}
                 <section className="col-span-1 lg:col-span-3 overflow-hidden flex flex-col relative group">
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -1427,7 +1324,7 @@ export default function Home() {
             )}
 
             {activeTab === 'chart' && (
-              <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-8 mt-0 bg-white/[0.02] p-4 lg:p-5 border border-white/5 rounded-b-2xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+              <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white/[0.03] p-4 lg:p-5 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
                 {/* Note on data sources for user - explicitly one long line without wrapping elements beside it */}
                 <div className="mb-1 w-full py-1.5 px-3 bg-indigo-500/10 border border-indigo-500/20 rounded-md hidden sm:block">
                   <p className="text-[11px] text-indigo-300 flex items-center gap-2 whitespace-nowrap overflow-hidden text-ellipsis">
