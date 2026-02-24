@@ -722,15 +722,17 @@ export default function Home() {
                 {/* 🚀 HOT Theme Quick Filters */}
                 <div className="flex flex-wrap items-center gap-1.5 md:gap-2 mr-auto md:mr-0 pl-1">
                   <span className="text-[10px] md:text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-1 flex items-center"><span className="mr-0.5">🔥</span> HOT:</span>
-                  {['월배당', '반도체', 'S&P500', 'AI전력', '인도', '금'].map(theme => (
+                  {['커버드콜', '배당', '반도체', '바이오', '금융', '로봇', '원자력', '방산', '조선', '2차전지'].map(theme => (
                     <button
                       key={theme}
-                      onClick={(e) => {
+                      onMouseDown={(e) => {
                         e.preventDefault();
                         setGlobalSearch(theme);
                         setGlobalActive(true);
                         setFocusedGlobalIndex(-1);
-                        document.getElementById('global-search-input')?.focus();
+                        setTimeout(() => {
+                          document.getElementById('global-search-input')?.focus();
+                        }, 10);
                       }}
                       className="text-[10px] md:text-xs font-medium px-2 py-0.5 bg-white/5 border border-white/10 rounded-full hover:bg-rose-500/10 hover:text-rose-300 hover:border-rose-400/30 transition-all text-gray-300"
                     >
@@ -2051,7 +2053,7 @@ export default function Home() {
       {/* Copyright */}
       <div className="mt-auto w-full text-center text-sm text-gray-500/80 font-medium flex items-center justify-center gap-3 pb-1">
         <span>Copyright &copy; Hoya 2026</span>
-        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2353</span>
+        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260225_0000</span>
       </div>
     </main >
   );
