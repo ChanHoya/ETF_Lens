@@ -1331,6 +1331,22 @@ export default function Home() {
                     <span className="text-xs">💡</span> <span className="opacity-90">오픈소스 API(한국거래소 등) 한계상 현재 제공하는 &apos;수익률&apos; 시계열 외의 &apos;순자금유입&apos; 및 &apos;배당률&apos; 과거 트렌드 값은 형태 구현을 위해 가격 변동성을 연동한</span> <b className="text-indigo-200">시뮬레이션 데이터</b><span className="opacity-90">로 대체되어 그려집니다. (UI 디자인 확인 목적)</span>
                   </p>
                 </div>
+                <div className="mb-4 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  <div className="flex items-center gap-1.5 bg-black/40 p-1.5 rounded-xl border border-white/10 shadow-inner">
+                    {['1D', '1W', '1M', '6M', '1Y', '3Y', 'MAX'].map(p => (
+                      <button
+                        key={p}
+                        onClick={() => setPeriod(p)}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${period === p
+                          ? 'bg-indigo-500/80 text-white shadow-md shadow-indigo-500/20'
+                          : 'text-gray-400 hover:text-white hover:bg-white/10'
+                          }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
 
