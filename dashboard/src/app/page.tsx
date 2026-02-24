@@ -416,7 +416,23 @@ export default function Home() {
     const rawChart = data?.visual_data?.line_chart || [];
     const etfKey = selectedDetailEtf.etf_name;
     const isKosdaq = etfKey.toUpperCase().includes('코스닥') || etfKey.toUpperCase().includes('KOSDAQ');
-    const benchmarkName = isKosdaq ? 'to KOSDAQ(좌)' : 'to KOSPI(좌)';
+    const isNasdaq = etfKey.toUpperCase().includes('나스닥') || etfKey.toUpperCase().includes('NASDAQ');
+    const isSP500 = etfKey.toUpperCase().includes('S&P') || etfKey.toUpperCase().includes('S&P500') || etfKey.includes('미국배당');
+    const isUS = etfKey.includes('미국') || isNasdaq || isSP500;
+
+    let benchmarkName = 'to KOSPI(좌)';
+    let benchKey = 'KOSPI';
+
+    if (isNasdaq) {
+      benchmarkName = 'to NASDAQ(좌)';
+      benchKey = 'NASDAQ';
+    } else if (isSP500 || isUS) {
+      benchmarkName = 'to S&P500(좌)';
+      benchKey = 'SP500';
+    } else if (isKosdaq) {
+      benchmarkName = 'to KOSDAQ(좌)';
+      benchKey = 'KOSDAQ';
+    }
 
     if (rawChart.length > 0) {
       const periodDaysMap: { [key: string]: number } = { '1M': 22, '3M': 63, '6M': 126, '1Y': 252 };
@@ -429,7 +445,6 @@ export default function Home() {
 
       oneYearGlimpse.forEach((d: any, idx: number) => {
         const price = d[etfKey] || d[`${etfKey}_raw`] || 0;
-        const benchKey = isKosdaq ? 'KOSDAQ' : 'KOSPI';
         const benchVal = d[benchKey] || 0;
 
         if (price > 0) {

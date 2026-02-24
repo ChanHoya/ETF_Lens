@@ -59,17 +59,24 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
     start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
     kospi_task = asyncio.to_thread(fdr.DataReader, "KS11", start_str)
     kosdaq_task = asyncio.to_thread(fdr.DataReader, "KQ11", start_str)
+    # Adding US Benchmark Indices (S&P 500 and NASDAQ)
+    sp500_task = asyncio.to_thread(fdr.DataReader, "US500", start_str)
+    nasdaq_task = asyncio.to_thread(fdr.DataReader, "IXIC", start_str)
 
     # Run the fetch for all ETFs concurrently to greatly improve response time along with benchmarks
     tasks = [
         harvester.fetch_naver_etf_data(code, request.skip_holdings)
         for code in request.etf_codes
     ]
-    results = await asyncio.gather(*tasks, kospi_task, kosdaq_task)
+    results = await asyncio.gather(
+        *tasks, kospi_task, kosdaq_task, sp500_task, nasdaq_task
+    )
 
-    etf_data_list = results[:-2]
-    kospi_df = results[-2]
-    kosdaq_df = results[-1]
+    etf_data_list = results[:-4]
+    kospi_df = results[-4]
+    kosdaq_df = results[-3]
+    sp500_df = results[-2]
+    nasdaq_df = results[-1]
 
     await harvester.close()
 
@@ -122,6 +129,18 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
             dt_str = str(dt_ts.date())
             if dt_str in chart_data_map:
                 chart_data_map[dt_str]["KOSDAQ"] = row["Close"]
+
+    if not sp500_df.empty:
+        for dt_ts, row in sp500_df.iterrows():
+            dt_str = str(dt_ts.date())
+            if dt_str in chart_data_map:
+                chart_data_map[dt_str]["SP500"] = row["Close"]
+
+    if not nasdaq_df.empty:
+        for dt_ts, row in nasdaq_df.iterrows():
+            dt_str = str(dt_ts.date())
+            if dt_str in chart_data_map:
+                chart_data_map[dt_str]["NASDAQ"] = row["Close"]
 
     sorted_dates = sorted(list(chart_data_map.keys()))
     # Downsample points for UI performance (~1000 points to retain high detail for zoom)
