@@ -38,6 +38,7 @@ export default function Home() {
   const [selectedDetailEtf, setSelectedDetailEtf] = useState<any>(null);
   const [popupPeriod, setPopupPeriod] = useState<string>('1Y');
   const [hoveredEtfName, setHoveredEtfName] = useState<string | null>(null);
+  const [isEtfCheckModalOpen, setIsEtfCheckModalOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -676,7 +677,7 @@ export default function Home() {
                 key={tab.id}
                 onClick={() => {
                   if (tab.id === 'etfcheck') {
-                    window.open('https://www.etfcheck.co.kr/mobile/main', '_blank', `width=${window.screen.width},height=${window.screen.height},left=0,top=0`);
+                    setIsEtfCheckModalOpen(true);
                     return;
                   }
                   if (tab.id !== 'select' && !data) {
@@ -1977,10 +1978,42 @@ export default function Home() {
         )
       }
 
+      {/* ETF Check Modal */}
+      {isEtfCheckModalOpen && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-2 md:p-6 lg:p-10">
+          <div className="relative w-full h-full max-w-7xl max-h-[90vh] bg-neutral-900 border border-neutral-700/50 rounded-2xl md:rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] flex flex-col overflow-hidden ring-1 ring-white/10">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-white/5 bg-gradient-to-r from-neutral-900 to-neutral-800 shrink-0 relative z-10">
+              <h2 className="text-base md:text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-400 flex items-center gap-3">
+                <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
+                ETF Check Mobile
+              </h2>
+              <button
+                onClick={() => setIsEtfCheckModalOpen(false)}
+                className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/5 text-gray-400 hover:text-white hover:bg-rose-500/20 hover:scale-105 active:scale-95 transition-all outline-none group border border-transparent hover:border-rose-500/50"
+              >
+                <X className="w-4 h-4 md:w-5 md:h-5 group-hover:rotate-90 transition-transform duration-300" />
+              </button>
+            </div>
+
+            {/* Iframe content with Dark Mode Filter */}
+            <div className="w-full flex-1 overflow-hidden relative bg-[#0b0f19]">
+              {/* CSS Trick: Invert colors + hue-rotate to fake a dark mode over white themed external sites */}
+              <iframe
+                src="https://www.etfcheck.co.kr/mobile/main"
+                className="w-full h-full border-none"
+                style={{ filter: "invert(0.92) hue-rotate(180deg)" }}
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Copyright */}
       <div className="mt-auto pt-8 w-full text-center text-sm text-gray-500/80 font-medium flex items-center justify-center gap-3">
         <span>Copyright &copy; Hoya 2026</span>
-        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2323</span>
+        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2327</span>
       </div>
     </main >
   );
