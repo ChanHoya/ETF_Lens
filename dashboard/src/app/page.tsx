@@ -1316,7 +1316,16 @@ export default function Home() {
                             ) : (
                               <div className="flex-1 flex flex-col items-center justify-center text-gray-500/50 min-h-[150px]">
                                 <span className="text-3xl font-black mb-1 opacity-20">N/A</span>
-                                <p className="text-xs font-medium">데이터 미제공 종목</p>
+                                <p className="text-xs font-medium mb-3">미국 ETF 등 데이터 미제공 종목</p>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(`https://finance.naver.com/item/main.naver?code=${etf.etf_code}`, '_blank', 'width=1000,height=800');
+                                  }}
+                                  className="px-3 py-1.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 rounded text-xs font-bold hover:bg-indigo-500/30 transition-colors"
+                                >
+                                  네이버 정보 검색
+                                </button>
                               </div>
                             )}
                           </section>
@@ -1760,10 +1769,9 @@ export default function Home() {
                         </tbody>
                       </table>
                     </div>
-                    <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col">
-                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-3 px-2">
-                        <span>[원]</span><span>[%]</span>
-                      </div>
+                    <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col relative pt-7">
+                      <span className="absolute left-[40px] top-3 text-[11px] text-gray-500 font-bold">[원]</span>
+                      <span className="absolute right-[5px] top-3 text-[11px] text-gray-500 font-bold">[%]</span>
                       <div className="flex-1 min-h-[250px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart data={detailMockData.nav} margin={{ top: 5, right: 0, left: 15, bottom: 5 }}>
@@ -1808,7 +1816,20 @@ export default function Home() {
                               </tr>
                             ))
                           ) : (
-                            <tr><td colSpan={3} className="p-8 text-center text-gray-500">구성종목 데이터가 아직 제공되지 않았습니다. 잠시 후 다시 조회를 시도해보세요.</td></tr>
+                            <tr>
+                              <td colSpan={3} className="p-8 text-center text-gray-500">
+                                미국 ETF 등 구성종목 데이터가 아직 제공되지 않았습니다.<br /><br />
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(`https://finance.naver.com/item/main.naver?code=${selectedDetailEtf.etf_code}`, '_blank', 'width=1000,height=800');
+                                  }}
+                                  className="px-4 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 rounded-lg text-sm font-bold hover:bg-indigo-500 hover:text-white transition-all shadow-md"
+                                >
+                                  네이버 정보 검색
+                                </button>
+                              </td>
+                            </tr>
                           )}
                         </tbody>
                       </table>
@@ -1911,7 +1932,7 @@ export default function Home() {
 
       {/* Copyright */}
       <div className="mt-auto pt-8 w-full text-center text-sm text-gray-500/80 font-medium">
-        Copyright &copy; Hoya
+        Copyright &copy; Hoya 2026
       </div>
     </main >
   );
