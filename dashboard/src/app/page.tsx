@@ -37,6 +37,7 @@ export default function Home() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedDetailEtf, setSelectedDetailEtf] = useState<any>(null);
   const [popupPeriod, setPopupPeriod] = useState<string>('1Y');
+  const [hoveredEtfName, setHoveredEtfName] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -954,7 +955,14 @@ export default function Home() {
                         {data.data_payload.rows.map((row: string[], i: number) => {
                           const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                           return (
-                            <tr key={i} className="hover:bg-white/[0.03] transition-colors group/row">
+                            <tr key={i} className="hover:bg-white/[0.03] transition-colors group/row"
+                              onMouseEnter={() => {
+                                const matchedEtf = data.raw_data ? data.raw_data.find((e: any) => row[0].includes(e.etf_name) || row[0].includes(e.etf_code)) : null;
+                                if (matchedEtf) setHoveredEtfName(matchedEtf.etf_name);
+                                else setHoveredEtfName(row[0]);
+                              }}
+                              onMouseLeave={() => setHoveredEtfName(null)}
+                            >
                               {row.map((cell: string, j: number) => {
                                 const isNegative = cell.includes('-') && cell.includes('%');
                                 const isPositive = cell.includes('%') && !isNegative && parseFloat(cell) > 0;
@@ -1006,8 +1014,19 @@ export default function Home() {
                         {data.visual_data && data.visual_data.etf_keys && data.visual_data.etf_keys.map((etfName: string, idx: number) => {
                           const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                           const c = glowColors[idx % glowColors.length];
+                          const isHovered = hoveredEtfName && (hoveredEtfName === etfName || etfName.includes(hoveredEtfName) || hoveredEtfName.includes(etfName));
+                          const isOthersHovered = hoveredEtfName && !isHovered;
                           return (
-                            <Radar key={etfName} name={etfName} dataKey={etfName} stroke={c} strokeWidth={2} fill={c} fillOpacity={0.3} />
+                            <Radar
+                              key={etfName}
+                              name={etfName}
+                              dataKey={etfName}
+                              stroke={c}
+                              strokeWidth={isHovered ? 4 : 2}
+                              fill={c}
+                              fillOpacity={isHovered ? 0.7 : (isOthersHovered ? 0.05 : 0.3)}
+                              className={isHovered ? 'animate-pulse' : 'transition-all duration-300'}
+                            />
                           );
                         })}
                         <Tooltip
@@ -1395,10 +1414,14 @@ export default function Home() {
                                 const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
                                 if (matchedEtf) setSelectedDetailEtf(matchedEtf);
                               }
-                            }} formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
+                            }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
+                              onMouseLeave={() => setHoveredEtfName(null)}
+                              formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
                             {data.visual_data.etf_keys.map((key: string, idx: number) => {
                               const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
-                              return <Line key={`${key}_raw`} type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={2} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} />;
+                              const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+                              const isOthersHovered = hoveredEtfName && !isHovered;
+                              return <Line key={`${key}_raw`} type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                             })}
                           </LineChart>
                         </ResponsiveContainer>
@@ -1432,10 +1455,14 @@ export default function Home() {
                                 const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
                                 if (matchedEtf) setSelectedDetailEtf(matchedEtf);
                               }
-                            }} formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
+                            }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
+                              onMouseLeave={() => setHoveredEtfName(null)}
+                              formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
                             {data.visual_data.etf_keys.map((key: string, idx: number) => {
                               const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
-                              return <Line key={key} type="monotone" dataKey={key} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={2} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} />;
+                              const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+                              const isOthersHovered = hoveredEtfName && !isHovered;
+                              return <Line key={key} type="monotone" dataKey={key} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                             })}
                           </LineChart>
                         </ResponsiveContainer>
@@ -1471,10 +1498,14 @@ export default function Home() {
                                 const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
                                 if (matchedEtf) setSelectedDetailEtf(matchedEtf);
                               }
-                            }} formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
+                            }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
+                              onMouseLeave={() => setHoveredEtfName(null)}
+                              formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
                             {data.visual_data.etf_keys.map((key: string, idx: number) => {
                               const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
-                              return <Line key={`${key}_inflow`} type="monotone" dataKey={`${key}_inflow`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />;
+                              const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+                              const isOthersHovered = hoveredEtfName && !isHovered;
+                              return <Line key={`${key}_inflow`} type="monotone" dataKey={`${key}_inflow`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 4 }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                             })}
                           </LineChart>
                         </ResponsiveContainer>
@@ -1510,10 +1541,14 @@ export default function Home() {
                                 const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
                                 if (matchedEtf) setSelectedDetailEtf(matchedEtf);
                               }
-                            }} formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
+                            }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
+                              onMouseLeave={() => setHoveredEtfName(null)}
+                              formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
                             {data.visual_data.etf_keys.map((key: string, idx: number) => {
                               const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
-                              return <Line key={`${key}_dividend`} type="monotone" dataKey={`${key}_dividend`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />;
+                              const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+                              const isOthersHovered = hoveredEtfName && !isHovered;
+                              return <Line key={`${key}_dividend`} type="monotone" dataKey={`${key}_dividend`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 4 }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                             })}
                           </LineChart>
                         </ResponsiveContainer>
@@ -1940,7 +1975,7 @@ export default function Home() {
       {/* Copyright */}
       <div className="mt-auto pt-8 w-full text-center text-sm text-gray-500/80 font-medium flex items-center justify-center gap-3">
         <span>Copyright &copy; Hoya 2026</span>
-        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2258</span>
+        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2306</span>
       </div>
     </main >
   );
