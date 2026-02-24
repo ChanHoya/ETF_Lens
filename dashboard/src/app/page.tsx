@@ -6,6 +6,9 @@ import { Search, Loader2, Plus, X, ChevronDown, Aperture, Star, Trash2, Edit2, C
 
 type FavGroup = { id: string; name: string; items: { code: string; name: string }[] };
 
+const BRAND_KEYWORDS = ['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'];
+const THEME_KEYWORDS = ['커버드콜', '배당', '반도체', '바이오', '금융', '로봇', '원자력', '방산', '조선', '2차전지'];
+
 export default function Home() {
   const [slots, setSlots] = useState<{ search: string, code: string }[]>([
     { search: "", code: "" },
@@ -704,73 +707,62 @@ export default function Home() {
             <p className="text-gray-400 text-sm md:text-base">최대 10개의 ETF를 선택하여 다각도로 성과와 포트폴리오를 비교 분석합니다.</p>
           </div>
           <section className="w-full max-w-[95vw] xl:max-w-[1200px] bg-white/[0.03] backdrop-blur-3xl rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] px-5 py-6 md:px-8 md:py-8 border border-white/10 transition-all hover:border-white/20 duration-500">
-            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 mb-2.5 relative z-50 border-b border-white/10 pb-2.5">
-              <div className="flex items-center gap-4 whitespace-nowrap">
-                <h2 className="text-base md:text-lg font-bold flex items-center gap-2 text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">
-                  <Search className="w-5 h-5 text-indigo-400" /> 종목 선택
-                </h2>
-                <button
-                  onClick={clearAllSlots}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all text-xs font-semibold shadow-sm"
-                  title="모든 종목 지우기"
-                >
-                  <Trash2 className="w-3.5 h-3.5" /> 모두 삭제
-                </button>
+            <div className="flex flex-col gap-4 mb-2.5 relative z-50 border-b border-white/10 pb-4">
+              {/* 🚀 Quick Filters (Brands & Themes Stacked Vertically) */}
+              <div className="flex flex-col gap-2 w-full">
+                {/* 1층: 운용사 */}
+                <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                  <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400 mr-1 flex items-center min-w-[40px]"><span className="mr-1">🏢</span> 운용:</span>
+                  {BRAND_KEYWORDS.map(brand => {
+                    const isActive = globalSearch.split(' ').includes(brand);
+                    return (
+                      <button
+                        key={brand}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          const terms = globalSearch.split(' ').filter(t => t.trim() !== '');
+                          const newSearch = terms.includes(brand) ? terms.filter(t => t !== brand).join(' ') : [...terms, brand].join(' ');
+                          setGlobalSearch(newSearch);
+                          setGlobalActive(true);
+                          setFocusedGlobalIndex(-1);
+                          setTimeout(() => document.getElementById('global-search-input')?.focus(), 10);
+                        }}
+                        className={`text-[10px] sm:text-xs font-medium px-2.5 py-1 rounded-full transition-all border ${isActive ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                      >
+                        {brand}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* 2층: HOT 테마 */}
+                <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                  <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-1 flex items-center min-w-[40px]"><span className="mr-1">🔥</span> HOT:</span>
+                  {THEME_KEYWORDS.map(theme => {
+                    const isActive = globalSearch.split(' ').includes(theme);
+                    return (
+                      <button
+                        key={theme}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          const terms = globalSearch.split(' ').filter(t => t.trim() !== '');
+                          const newSearch = terms.includes(theme) ? terms.filter(t => t !== theme).join(' ') : [...terms, theme].join(' ');
+                          setGlobalSearch(newSearch);
+                          setGlobalActive(true);
+                          setFocusedGlobalIndex(-1);
+                          setTimeout(() => document.getElementById('global-search-input')?.focus(), 10);
+                        }}
+                        className={`text-[10px] sm:text-xs font-medium px-2.5 py-1 rounded-full transition-all border ${isActive ? 'bg-rose-500/20 text-rose-300 border-rose-500/50' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}`}
+                      >
+                        {theme}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              <div className="flex-1 w-full max-w-3xl flex flex-col md:flex-row items-center gap-4">
-                {/* 🚀 Quick Filters (Themes & Brands) */}
-                <div className="flex flex-col gap-1.5 md:gap-2 mr-auto md:mr-4 pl-1 w-full xl:w-auto mt-2 xl:mt-0">
-                  <div className="flex flex-wrap items-center gap-1 md:gap-1.5">
-                    <span className="text-[10px] md:text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-1 flex items-center min-w-[36px]"><span className="mr-0.5">🔥</span> HOT:</span>
-                    {['커버드콜', '배당', '반도체', '바이오', '금융', '로봇', '원자력', '방산', '조선', '2차전지'].map(theme => {
-                      const isActive = globalSearch.split(' ').includes(theme);
-                      return (
-                        <button
-                          key={theme}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            const terms = globalSearch.split(' ').filter(t => t.trim() !== '');
-                            const newSearch = terms.includes(theme) ? terms.filter(t => t !== theme).join(' ') : [...terms, theme].join(' ');
-                            setGlobalSearch(newSearch);
-                            setGlobalActive(true);
-                            setFocusedGlobalIndex(-1);
-                            setTimeout(() => document.getElementById('global-search-input')?.focus(), 10);
-                          }}
-                          className={`text-[9px] sm:text-[10px] font-medium px-2 py-0.5 rounded-full transition-all border ${isActive ? 'bg-rose-500/20 text-rose-300 border-rose-500/50' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}`}
-                        >
-                          {theme}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1 md:gap-1.5">
-                    <span className="text-[10px] md:text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400 mr-1 flex items-center min-w-[36px]"><span className="mr-0.5">🏢</span> 운용:</span>
-                    {['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'].map(brand => {
-                      const isActive = globalSearch.split(' ').includes(brand);
-                      return (
-                        <button
-                          key={brand}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            const terms = globalSearch.split(' ').filter(t => t.trim() !== '');
-                            const newSearch = terms.includes(brand) ? terms.filter(t => t !== brand).join(' ') : [...terms, brand].join(' ');
-                            setGlobalSearch(newSearch);
-                            setGlobalActive(true);
-                            setFocusedGlobalIndex(-1);
-                            setTimeout(() => document.getElementById('global-search-input')?.focus(), 10);
-                          }}
-                          className={`text-[9px] sm:text-[10px] font-medium px-2 py-0.5 rounded-full transition-all border ${isActive ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
-                        >
-                          {brand}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Global Search Interface */}
-                <div className="relative w-full">
+              {/* 3층: Global Search Interface & Buttons */}
+              <div className="flex flex-col md:flex-row items-center gap-3 w-full">
+                <div className="relative flex-1 w-full">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     id="global-search-input"
@@ -783,9 +775,17 @@ export default function Home() {
                       const terms = globalSearch.toLowerCase().split(' ').filter(t => t.trim() !== '');
                       const filtered = etfDictionary.filter(etf => {
                         if (terms.length === 0) return true;
+                        const lowerBrands = BRAND_KEYWORDS.map(b => b.toLowerCase());
+                        const brandTerms = terms.filter(t => lowerBrands.includes(t));
+                        const themeTerms = terms.filter(t => !lowerBrands.includes(t));
+
                         const etfName = etf.name.toLowerCase().replace(/\s/g, '');
                         const etfCode = etf.code.toLowerCase();
-                        return terms.every(term => etfName.includes(term) || etfCode.includes(term));
+
+                        const brandMatch = brandTerms.length === 0 ? true : brandTerms.some(term => etfName.includes(term) || etfCode.includes(term));
+                        const themeMatch = themeTerms.length === 0 ? true : themeTerms.every(term => etfName.includes(term) || etfCode.includes(term));
+
+                        return brandMatch && themeMatch;
                       });
                       const maxIndex = Math.min(filtered.length, dropdownLimit) - 1;
 
@@ -807,7 +807,7 @@ export default function Home() {
                         }
                       }
                     }}
-                    className="w-full pl-12 pr-4 py-2.5 bg-gradient-to-br from-black/60 to-indigo-950/20 border border-indigo-500/30 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400 outline-none transition-all text-white placeholder-gray-500 font-medium text-sm shadow-[0_0_20px_rgba(79,70,229,0.15)] backdrop-blur-md"
+                    className="w-full pl-12 pr-4 py-3 bg-gradient-to-br from-black/60 to-indigo-950/20 border border-indigo-500/30 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400 outline-none transition-all text-white placeholder-gray-500 font-medium text-sm shadow-[0_0_20px_rgba(79,70,229,0.15)] backdrop-blur-md"
                     placeholder="전체 종목 통합 검색 (예: 테크, 배당, 2차전지)"
                   />
 
@@ -825,9 +825,17 @@ export default function Home() {
                           const filtered = etfDictionary.filter(e => {
                             const terms = globalSearch.toLowerCase().split(' ').filter(t => t.trim() !== '');
                             if (terms.length === 0) return true;
+                            const lowerBrands = BRAND_KEYWORDS.map(b => b.toLowerCase());
+                            const brandTerms = terms.filter(t => lowerBrands.includes(t));
+                            const themeTerms = terms.filter(t => !lowerBrands.includes(t));
+
                             const etfName = e.name.toLowerCase().replace(/\s/g, '');
                             const etfCode = e.code.toLowerCase();
-                            return terms.every(term => etfName.includes(term) || etfCode.includes(term));
+
+                            const brandMatch = brandTerms.length === 0 ? true : brandTerms.some(term => etfName.includes(term) || etfCode.includes(term));
+                            const themeMatch = themeTerms.length === 0 ? true : themeTerms.every(term => etfName.includes(term) || etfCode.includes(term));
+
+                            return brandMatch && themeMatch;
                           });
 
                           return (
@@ -864,10 +872,11 @@ export default function Home() {
                   )}
                 </div>
 
-                <div className="flex w-full md:w-auto gap-2 flex-shrink-0">
+                {/* Right Side Buttons */}
+                <div className="flex items-center gap-2 w-full md:w-auto flex-shrink-0">
                   <button
                     onClick={() => setIsFavModalOpen(true)}
-                    className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 border border-slate-600/50 text-white font-bold py-2.5 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 text-sm"
+                    className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 border border-slate-600/50 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 text-sm"
                   >
                     <Star className="w-5 h-5 text-yellow-400" /> 즐겨찾기
                   </button>
@@ -875,9 +884,17 @@ export default function Home() {
                   <button
                     onClick={fetchComparison}
                     disabled={loading || slots.map(s => s.code || s.search).filter(Boolean).length < 2}
-                    className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none active:scale-95 text-sm"
+                    className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none active:scale-95 text-sm whitespace-nowrap"
                   >
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "종목비교"}
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "비교하기"}
+                  </button>
+
+                  <button
+                    onClick={clearAllSlots}
+                    className="flex-1 md:flex-none bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/20 font-bold py-3 px-4 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 text-sm whitespace-nowrap"
+                    title="모든 종목 지우기"
+                  >
+                    <Trash2 className="w-4 h-4" /> 초기화
                   </button>
                 </div>
               </div>
@@ -1729,30 +1746,8 @@ export default function Home() {
                         {/* 🚀 Fav Search Quick Filters */}
                         <div className="flex flex-col gap-1 mb-2">
                           <div className="flex flex-wrap items-center gap-1">
-                            <span className="text-[9px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-1 flex items-center min-w-[32px]"><span className="mr-0.5">🔥</span> HOT:</span>
-                            {['커버드콜', '배당', '반도체', '바이오', '금융', '로봇', '원자력', '방산', '조선', '2차전지'].map(theme => {
-                              const currentQuery = favSearchQuery[group.id] || "";
-                              const isActive = currentQuery.split(' ').includes(theme);
-                              return (
-                                <button
-                                  key={theme}
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    const terms = currentQuery.split(' ').filter(t => t.trim() !== '');
-                                    const newSearch = terms.includes(theme) ? terms.filter(t => t !== theme).join(' ') : [...terms, theme].join(' ');
-                                    setFavSearchQuery(prev => ({ ...prev, [group.id]: newSearch }));
-                                    setTimeout(() => document.getElementById(`fav-search-${group.id}`)?.focus(), 10);
-                                  }}
-                                  className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full transition-all border ${isActive ? 'bg-rose-500/20 text-rose-300 border-rose-500/50' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
-                                >
-                                  {theme}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-1">
                             <span className="text-[9px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400 mr-1 flex items-center min-w-[32px]"><span className="mr-0.5">🏢</span> 운용:</span>
-                            {['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'].map(brand => {
+                            {BRAND_KEYWORDS.map(brand => {
                               const currentQuery = favSearchQuery[group.id] || "";
                               const isActive = currentQuery.split(' ').includes(brand);
                               return (
@@ -1768,6 +1763,28 @@ export default function Home() {
                                   className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full transition-all border ${isActive ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50' : 'bg-white/5 border-white/10 text-gray-500 hover:bg-white/10'}`}
                                 >
                                   {brand}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="text-[9px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-1 flex items-center min-w-[32px]"><span className="mr-0.5">🔥</span> HOT:</span>
+                            {THEME_KEYWORDS.map(theme => {
+                              const currentQuery = favSearchQuery[group.id] || "";
+                              const isActive = currentQuery.split(' ').includes(theme);
+                              return (
+                                <button
+                                  key={theme}
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    const terms = currentQuery.split(' ').filter(t => t.trim() !== '');
+                                    const newSearch = terms.includes(theme) ? terms.filter(t => t !== theme).join(' ') : [...terms, theme].join(' ');
+                                    setFavSearchQuery(prev => ({ ...prev, [group.id]: newSearch }));
+                                    setTimeout(() => document.getElementById(`fav-search-${group.id}`)?.focus(), 10);
+                                  }}
+                                  className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full transition-all border ${isActive ? 'bg-rose-500/20 text-rose-300 border-rose-500/50' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                                >
+                                  {theme}
                                 </button>
                               );
                             })}
@@ -1790,10 +1807,19 @@ export default function Home() {
                             {(() => {
                               const terms = (favSearchQuery[group.id] || "").toLowerCase().split(' ').filter(t => t.trim() !== '');
                               if (terms.length === 0) return null;
+
+                              const lowerBrands = BRAND_KEYWORDS.map(b => b.toLowerCase());
+                              const brandTerms = terms.filter(t => lowerBrands.includes(t));
+                              const themeTerms = terms.filter(t => !lowerBrands.includes(t));
+
                               const filtered = etfDictionary.filter(e => {
                                 const etfName = e.name.toLowerCase().replace(/\s/g, '');
                                 const etfCode = e.code.toLowerCase();
-                                return terms.every(term => etfName.includes(term) || etfCode.includes(term));
+
+                                const brandMatch = brandTerms.length === 0 ? true : brandTerms.some(term => etfName.includes(term) || etfCode.includes(term));
+                                const themeMatch = themeTerms.length === 0 ? true : themeTerms.every(term => etfName.includes(term) || etfCode.includes(term));
+
+                                return brandMatch && themeMatch;
                               }).slice(0, 30);
 
                               if (filtered.length === 0) return <div className="p-4 text-sm text-rose-400 font-medium text-center">검색 결과가 없습니다.</div>;
