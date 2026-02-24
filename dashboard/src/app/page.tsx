@@ -648,7 +648,7 @@ export default function Home() {
   }, [data]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-4 md:p-8 md:pb-16 text-gray-100 font-sans selection:bg-indigo-500/30 overflow-x-hidden relative bg-[#050505]">
+    <main className="flex min-h-screen flex-col items-center p-2 md:px-6 md:py-3 text-gray-100 font-sans selection:bg-indigo-500/30 overflow-x-hidden relative bg-[#050505]">
       {/* Dynamic Lovable Gradient Background */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-600/20 blur-[130px] mix-blend-screen transition-all duration-1000"></div>
@@ -656,7 +656,7 @@ export default function Home() {
         <div className="absolute bottom-[-10%] left-[10%] w-[60vw] h-[60vw] rounded-full bg-pink-600/10 blur-[150px] mix-blend-screen transition-all duration-1000"></div>
       </div>
 
-      <header className="w-full max-w-[95vw] xl:max-w-[1400px] mb-6 flex flex-col md:flex-row justify-between items-center gap-4 relative z-50 pt-2 lg:pt-6">
+      <header className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 flex flex-col md:flex-row justify-between items-center gap-3 relative z-50">
         <div className="flex flex-col items-start w-full md:w-auto cursor-pointer group" onClick={handleReset}>
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 drop-shadow-sm flex items-center gap-3 group-hover:opacity-80 transition-opacity">
             <Aperture className="w-8 h-8 md:w-10 md:h-10 text-indigo-400 group-hover:rotate-180 transition-transform duration-700" />
@@ -2049,9 +2049,9 @@ export default function Home() {
       )}
 
       {/* Copyright */}
-      <div className="mt-auto pt-8 w-full text-center text-sm text-gray-500/80 font-medium flex items-center justify-center gap-3">
+      <div className="mt-auto w-full text-center text-sm text-gray-500/80 font-medium flex items-center justify-center gap-3 pb-1">
         <span>Copyright &copy; Hoya 2026</span>
-        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2344</span>
+        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2353</span>
       </div>
     </main >
   );
