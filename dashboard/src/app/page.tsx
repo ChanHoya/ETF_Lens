@@ -2216,7 +2216,7 @@ export default function Home() {
       {/* Copyright */}
       <div className="mt-auto w-full text-center text-sm text-gray-500/80 font-medium flex items-center justify-center gap-3 pb-1">
         <span>Copyright &copy; Hoya 2026</span>
-        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260225_0000</span>
+        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260225_0719</span>
       </div>
     </main >
   );
