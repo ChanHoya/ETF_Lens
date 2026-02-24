@@ -684,7 +684,7 @@ export default function Home() {
       {activeTab === 'select' && (
         <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10 min-h-[50vh] animate-in fade-in zoom-in-95 duration-500">
           <div className="text-center mb-8">
-            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-white drop-shadow-md">투자 아이디어를 데이터로 확인하세요</h2>
+            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-white drop-shadow-md">ETF 투자는 데이터 기반으로 하세요</h2>
             <p className="text-gray-400 text-sm md:text-base">최대 5개의 ETF를 선택하여 다각도로 성과와 포트폴리오를 비교 분석합니다.</p>
           </div>
           <section className="w-full max-w-[95vw] xl:max-w-[1200px] bg-white/[0.03] backdrop-blur-3xl rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] px-5 py-6 md:px-8 md:py-8 border border-white/10 transition-all hover:border-white/20 duration-500">
@@ -1258,68 +1258,73 @@ export default function Home() {
             )}
 
             {activeTab === 'holdings' && (
-              <div className={`grid gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500 w-full bg-white/[0.02] p-4 lg:p-5 border border-white/5 rounded-b-2xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0 ${isLoadingHoldings || data.raw_data?.length === 1 ? 'grid-cols-1 max-w-2xl mx-auto' :
-                data.raw_data?.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
-                  data.raw_data?.length === 3 ? 'grid-cols-1 md:grid-cols-3' :
-                    data.raw_data?.length === 4 ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4' :
-                      'grid-cols-1 md:grid-cols-3 xl:grid-cols-5'
-                }`}>
-                {isLoadingHoldings ? (
-                  <div className="flex flex-col items-center justify-center p-12 text-center col-span-full w-full min-h-[300px]">
-                    <Loader2 className="w-10 h-10 text-emerald-400 animate-spin mb-4" />
-                    <h3 className="text-lg font-bold text-gray-200 mb-2">실시간 포트폴리오 데이터를 분석하고 있습니다</h3>
-                    <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                      각 ETF의 최신 구성종목 데이터를 KRX 서버에서 동기화 중입니다. 분석에는 평균 5~10초가 소요됩니다.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    {data.raw_data && data.raw_data.map((etf: any, idx: number) => {
-                      const glowColors = ["from-indigo-500", "from-emerald-500", "from-amber-500", "from-rose-500", "from-purple-500", "from-cyan-500"];
-                      const bgColors = ["bg-indigo-500/10", "bg-emerald-500/10", "bg-amber-500/10", "bg-rose-500/10", "bg-purple-500/10", "bg-cyan-500/10"];
-                      const borderColors = ["border-indigo-500/30", "border-emerald-500/30", "border-amber-500/30", "border-rose-500/30", "border-purple-500/30", "border-cyan-500/30"];
-                      const fillColors = ["bg-indigo-400", "bg-emerald-400", "bg-amber-400", "bg-rose-400", "bg-purple-400", "bg-cyan-400"];
+              <div className="w-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="w-full bg-rose-500/10 border-x border-b border-rose-500/30 text-rose-300 px-4 py-3 rounded-b-xl mb-4 text-center text-sm md:text-base font-medium shadow-md">
+                  미국 ETF 종목의 구성정보는 현재 제대로 구현되어 있지 않습니다.
+                </div>
+                <div className={`grid gap-3 w-full bg-white/[0.02] p-4 lg:p-5 border border-white/5 rounded-2xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0 ${isLoadingHoldings || data.raw_data?.length === 1 ? 'grid-cols-1 max-w-2xl mx-auto' :
+                  data.raw_data?.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
+                    data.raw_data?.length === 3 ? 'grid-cols-1 md:grid-cols-3' :
+                      data.raw_data?.length === 4 ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4' :
+                        'grid-cols-1 md:grid-cols-3 xl:grid-cols-5'
+                  }`}>
+                  {isLoadingHoldings ? (
+                    <div className="flex flex-col items-center justify-center p-12 text-center col-span-full w-full min-h-[300px]">
+                      <Loader2 className="w-10 h-10 text-emerald-400 animate-spin mb-4" />
+                      <h3 className="text-lg font-bold text-gray-200 mb-2">실시간 포트폴리오 데이터를 분석하고 있습니다</h3>
+                      <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                        각 ETF의 최신 구성종목 데이터를 KRX 서버에서 동기화 중입니다. 분석에는 평균 5~10초가 소요됩니다.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      {data.raw_data && data.raw_data.map((etf: any, idx: number) => {
+                        const glowColors = ["from-indigo-500", "from-emerald-500", "from-amber-500", "from-rose-500", "from-purple-500", "from-cyan-500"];
+                        const bgColors = ["bg-indigo-500/10", "bg-emerald-500/10", "bg-amber-500/10", "bg-rose-500/10", "bg-purple-500/10", "bg-cyan-500/10"];
+                        const borderColors = ["border-indigo-500/30", "border-emerald-500/30", "border-amber-500/30", "border-rose-500/30", "border-purple-500/30", "border-cyan-500/30"];
+                        const fillColors = ["bg-indigo-400", "bg-emerald-400", "bg-amber-400", "bg-rose-400", "bg-purple-400", "bg-cyan-400"];
 
-                      return (
-                        <section key={etf.etf_code} className={`backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border ${borderColors[idx % borderColors.length]} ${bgColors[idx % bgColors.length]} flex flex-col relative overflow-hidden min-w-[200px]`}>
-                          <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${glowColors[idx % glowColors.length]} to-transparent`} />
-                          <h3 className="text-sm md:text-base lg:text-lg font-bold mb-4 flex items-center justify-between gap-2 cursor-pointer group" onClick={() => setSelectedDetailEtf(etf)}>
-                            <span className="truncate group-hover:underline group-hover:text-indigo-300 transition-colors" title={etf.etf_name}>{etf.etf_name}</span>
-                            <span className="text-[10px] sm:text-xs font-medium text-gray-400 bg-black/40 px-2 flex-shrink-0 py-0.5 rounded-full border border-white/5">TOP 50</span>
-                          </h3>
+                        return (
+                          <section key={etf.etf_code} className={`backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border ${borderColors[idx % borderColors.length]} ${bgColors[idx % bgColors.length]} flex flex-col relative overflow-hidden min-w-[200px]`}>
+                            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${glowColors[idx % glowColors.length]} to-transparent`} />
+                            <h3 className="text-sm md:text-base lg:text-lg font-bold mb-4 flex items-center justify-between gap-2 cursor-pointer group" onClick={() => setSelectedDetailEtf(etf)}>
+                              <span className="truncate group-hover:underline group-hover:text-indigo-300 transition-colors" title={etf.etf_name}>{etf.etf_name}</span>
+                              <span className="text-[10px] sm:text-xs font-medium text-gray-400 bg-black/40 px-2 flex-shrink-0 py-0.5 rounded-full border border-white/5">TOP 50</span>
+                            </h3>
 
-                          {etf.holdings && etf.holdings.length > 0 ? (
-                            <div className="space-y-3 flex-1 pr-1 overflow-y-auto max-h-[600px] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                              {etf.holdings.map((h: any, hIdx: number) => (
-                                <div key={h.ticker} className="flex flex-col gap-1 group">
-                                  <div className="flex justify-between items-end text-[11px] sm:text-xs xl:text-[13px] mb-0.5">
-                                    <span className="font-medium text-gray-200 group-hover:text-white transition-colors truncate max-w-[75%]" title={h.ticker}>
-                                      <span className="text-gray-500 w-4 inline-block text-[10px] sm:text-[11px]">{hIdx + 1}.</span> {h.ticker}
-                                    </span>
-                                    <span className="font-bold text-gray-300 ml-1 flex-shrink-0">{h.weight.toFixed(2)}%</span>
+                            {etf.holdings && etf.holdings.length > 0 ? (
+                              <div className="space-y-3 flex-1 pr-1 overflow-y-auto max-h-[600px] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                {etf.holdings.map((h: any, hIdx: number) => (
+                                  <div key={h.ticker} className="flex flex-col gap-1 group">
+                                    <div className="flex justify-between items-end text-[11px] sm:text-xs xl:text-[13px] mb-0.5">
+                                      <span className="font-medium text-gray-200 group-hover:text-white transition-colors truncate max-w-[75%]" title={h.ticker}>
+                                        <span className="text-gray-500 w-4 inline-block text-[10px] sm:text-[11px]">{hIdx + 1}.</span> {h.ticker}
+                                      </span>
+                                      <span className="font-bold text-gray-300 ml-1 flex-shrink-0">{h.weight.toFixed(2)}%</span>
+                                    </div>
+                                    <div className="w-full bg-black/40 rounded-full h-1.5 overflow-hidden border border-white/5">
+                                      <div
+                                        className={`h-full ${fillColors[idx % fillColors.length]} rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(255,255,255,0.3)]`}
+                                        style={{ width: `${Math.min(100, (h.weight / (etf.holdings[0]?.weight || 100)) * 100)}%` }}
+                                      />
+                                    </div>
                                   </div>
-                                  <div className="w-full bg-black/40 rounded-full h-1.5 overflow-hidden border border-white/5">
-                                    <div
-                                      className={`h-full ${fillColors[idx % fillColors.length]} rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(255,255,255,0.3)]`}
-                                      style={{ width: `${Math.min(100, (h.weight / (etf.holdings[0]?.weight || 100)) * 100)}%` }}
-                                    />
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-gray-500/50 min-h-[150px]">
-                              <span className="text-3xl font-black mb-1 opacity-20">N/A</span>
-                              <p className="text-xs font-medium">데이터 미제공 종목</p>
-                            </div>
-                          )}
-                        </section>
-                      );
-                    })}
-                  </>
-                )}
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="flex-1 flex flex-col items-center justify-center text-gray-500/50 min-h-[150px]">
+                                <span className="text-3xl font-black mb-1 opacity-20">N/A</span>
+                                <p className="text-xs font-medium">데이터 미제공 종목</p>
+                              </div>
+                            )}
+                          </section>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1756,7 +1761,7 @@ export default function Home() {
                       </table>
                     </div>
                     <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col">
-                      <div className="flex justify-end text-xs text-gray-500 font-bold mb-3 gap-8">
+                      <div className="flex justify-between text-xs text-gray-500 font-bold mb-3 px-2">
                         <span>[원]</span><span>[%]</span>
                       </div>
                       <div className="flex-1 min-h-[250px] w-full">
@@ -1904,6 +1909,10 @@ export default function Home() {
         )
       }
 
+      {/* Copyright */}
+      <div className="mt-auto pt-8 w-full text-center text-sm text-gray-500/80 font-medium">
+        Copyright &copy; Hoya
+      </div>
     </main >
   );
 }
