@@ -686,7 +686,6 @@ export default function Home() {
               </button>
             ))}
           </nav>
-          <div className="text-[10px] text-gray-500 font-medium tracking-wider hidden sm:block border-l border-white/10 pl-4">v.20260224_1555</div>
         </div>
       </header>
 
@@ -1030,12 +1029,12 @@ export default function Home() {
                     <table className="w-full text-left border-collapse min-w-[800px]">
                       <thead className="sticky top-0 z-30 backdrop-blur-xl bg-[#0B0F19]/95 shadow-md border-b border-white/10">
                         <tr>
-                          <th className="py-3 px-4 text-sm font-bold text-gray-500 bg-white/5 w-48">항목</th>
+                          <th className="py-2 px-1 lg:px-2 text-[10px] md:text-sm font-bold text-gray-500 bg-white/5 w-16 md:w-24 break-keep">항목</th>
                           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                           {data.raw_data && data.raw_data.map((etf: any, idx: number) => {
                             const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                             return (
-                              <th key={etf.etf_code} className="py-3 px-4 text-sm font-bold text-center group cursor-pointer hover:bg-white/[0.05] transition-colors" onClick={() => setSelectedDetailEtf(etf)} style={{ color: glowColors[idx % glowColors.length] }}>
+                              <th key={etf.etf_code} className="py-2 px-1 xl:px-2 text-[10px] xl:text-xs font-bold text-center group cursor-pointer hover:bg-white/[0.05] transition-colors leading-tight whitespace-normal break-keep" onClick={() => setSelectedDetailEtf(etf)} style={{ color: glowColors[idx % glowColors.length] }}>
                                 <span className="group-hover:underline underline-offset-4">{etf.etf_name}</span>
                               </th>
                             );
@@ -1138,7 +1137,7 @@ export default function Home() {
                                 const secColors = ["bg-indigo-400/50", "bg-emerald-400/50", "bg-amber-400/50", "bg-rose-400/50", "bg-purple-400/50", "bg-cyan-400/50", "bg-blue-400/50", "bg-pink-400/50", "bg-lime-400/50", "bg-orange-400/50"];
 
                                 return (
-                                  <td key={etf.etf_code} className={`py-3 px-2 2xl:px-4 text-[13px] 2xl:text-sm font-medium ${textColor} h-full`}>
+                                  <td key={etf.etf_code} className={`py-2 px-1 lg:px-2 text-[10px] xl:text-xs font-medium ${textColor} h-full leading-tight break-keep text-center align-middle`}>
                                     {!isNumericRow ? (
                                       <div className="flex items-center justify-center h-full w-full">{val}</div>
                                     ) : (
@@ -1185,11 +1184,11 @@ export default function Home() {
                           <BarChart data={additionalStatsData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.03)" />
                             <XAxis type="number" tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(val) => Math.floor(val / 10000) > 0 ? `${Math.floor(val / 10000)}조` : val} stroke="rgba(255,255,255,0.05)" axisLine={false} />
-                            <YAxis dataKey="name" type="category" width={80} stroke="rgba(255,255,255,0.05)" axisLine={false} interval={0} tick={(props: any) => {
+                            <YAxis dataKey="name" type="category" width={140} stroke="rgba(255,255,255,0.05)" axisLine={false} interval={0} tick={(props: any) => {
                               const { x, y, payload } = props;
                               const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                               const dataIndex = additionalStatsData.findIndex((d: any) => d.name === payload.value);
-                              const val = payload.value.length > 7 ? payload.value.substring(0, 6) + '..' : payload.value;
+                              const val = payload.value;
                               return (
                                 <text
                                   onClick={() => {
@@ -1197,7 +1196,7 @@ export default function Home() {
                                     if (matchedEtf) setSelectedDetailEtf(matchedEtf);
                                   }}
                                   style={{ cursor: 'pointer' }}
-                                  x={x} y={y} dy={4} textAnchor="end" fill={glowColors[dataIndex >= 0 ? dataIndex % 5 : 0]} fontSize={11} fontWeight={600}
+                                  x={x} y={y} dy={4} textAnchor="end" fill={glowColors[dataIndex >= 0 ? dataIndex % 10 : 0]} fontSize={10} fontWeight={600}
                                 >
                                   {val}
                                 </text>
@@ -1206,7 +1205,7 @@ export default function Home() {
                             <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', borderColor: 'rgba(79, 70, 229, 0.2)', borderRadius: '12px', fontSize: '12px' }} itemStyle={{ color: '#818cf8', fontWeight: 'bold' }} />
                             <Bar dataKey="aum" name="순자산(억)" radius={[0, 4, 4, 0]}>
                               {additionalStatsData.map((_: any, idx: number) => (
-                                <Cell key={`cell-${idx}`} fill={['#818cf8', '#34d399', '#fbbf24', '#f87171', '#c084fc'][idx % 5]} fillOpacity={0.8} />
+                                <Cell key={`cell-${idx}`} fill={['#818cf8', '#34d399', '#fbbf24', '#f87171', '#c084fc', '#60a5fa', '#f472b6', '#a3e635', '#f97316', '#14b8a6'][idx % 10]} fillOpacity={0.8} />
                               ))}
                             </Bar>
                           </BarChart>
@@ -1230,7 +1229,7 @@ export default function Home() {
                             <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', borderColor: 'rgba(52, 211, 153, 0.2)', borderRadius: '12px', fontSize: '12px' }} itemStyle={{ color: '#34d399', fontWeight: 'bold' }} />
                             <Bar dataKey="dividend" name="배당률(%)" radius={[0, 4, 4, 0]}>
                               {additionalStatsData.map((_: any, idx: number) => (
-                                <Cell key={`cell-${idx}`} fill={['#818cf8', '#34d399', '#fbbf24', '#f87171', '#c084fc'][idx % 5]} fillOpacity={0.8} />
+                                <Cell key={`cell-${idx}`} fill={['#818cf8', '#34d399', '#fbbf24', '#f87171', '#c084fc', '#60a5fa', '#f472b6', '#a3e635', '#f97316', '#14b8a6'][idx % 10]} fillOpacity={0.8} />
                               ))}
                             </Bar>
                           </BarChart>
@@ -1254,7 +1253,7 @@ export default function Home() {
                             <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', borderColor: 'rgba(244, 63, 94, 0.2)', borderRadius: '12px', fontSize: '12px' }} itemStyle={{ color: '#f43f5e', fontWeight: 'bold' }} />
                             <Bar dataKey="fee" name="수수료(%)" radius={[0, 4, 4, 0]}>
                               {additionalStatsData.map((_: any, idx: number) => (
-                                <Cell key={`cell-${idx}`} fill={['#818cf8', '#34d399', '#fbbf24', '#f87171', '#c084fc'][idx % 5]} fillOpacity={0.8} />
+                                <Cell key={`cell-${idx}`} fill={['#818cf8', '#34d399', '#fbbf24', '#f87171', '#c084fc', '#60a5fa', '#f472b6', '#a3e635', '#f97316', '#14b8a6'][idx % 10]} fillOpacity={0.8} />
                               ))}
                             </Bar>
                           </BarChart>
@@ -1936,8 +1935,9 @@ export default function Home() {
       }
 
       {/* Copyright */}
-      <div className="mt-auto pt-8 w-full text-center text-sm text-gray-500/80 font-medium">
-        Copyright &copy; Hoya 2026
+      <div className="mt-auto pt-8 w-full text-center text-sm text-gray-500/80 font-medium flex items-center justify-center gap-3">
+        <span>Copyright &copy; Hoya 2026</span>
+        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2245</span>
       </div>
     </main >
   );
