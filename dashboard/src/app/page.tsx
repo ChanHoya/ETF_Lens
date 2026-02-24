@@ -1585,10 +1585,11 @@ export default function Home() {
                   <span className="text-sm font-mono text-gray-400 bg-white/5 px-2 py-1 rounded-md">{selectedDetailEtf.etf_code}</span>
                   <span className="text-sm font-medium text-gray-500 hidden sm:inline-block">| 기초지수: {selectedDetailEtf.basic_info?.['기초지수명'] || 'N/A'}</span>
                 </h2>
-                <div className="text-xs text-gray-400 mt-2 flex gap-4 hidden md:flex">
-                  <span>운용사: {selectedDetailEtf.basic_info?.['자산운용사'] || '-'}</span>
-                  <span>총보수: {selectedDetailEtf.basic_info?.['펀드보수'] || '-'}</span>
-                  <span>분류: {selectedDetailEtf.basic_info?.['유형'] || '-'}</span>
+                <div className="text-xs text-gray-400 mt-2 flex gap-4 hidden md:flex items-center">
+                  <span>운용사: {selectedDetailEtf.basic_info?.['자산운용사'] || selectedDetailEtf.basic_info?.['운용사'] || '-'}</span>
+                  <span className="flex items-center gap-1">총보수: <strong className="text-rose-400 bg-rose-400/10 px-1.5 py-0.5 rounded">{selectedDetailEtf.basic_info?.['펀드보수'] || '-'}</strong></span>
+                  <span className="flex items-center gap-1">분배율(TTM): <strong className="text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">{selectedDetailEtf.basic_info?.['최근 분배율(TTM)'] || '-'}</strong></span>
+                  <span className="flex items-center gap-1">1M 수익률: <strong className="text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded">{selectedDetailEtf.basic_info?.['1M 수익률'] || '-'}</strong></span>
                 </div>
               </div>
               <button onClick={() => setSelectedDetailEtf(null)} className="absolute top-5 right-5 text-gray-400 hover:text-white transition-colors bg-white/5 p-2 rounded-xl flex-shrink-0 z-10">
@@ -1606,12 +1607,18 @@ export default function Home() {
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="border-t border-slate-700">
-                    {['종가/전일대비/수익률', '52주 최고/최저', '상장주식수', '거래량/거래대금', '20일평균 거래량/대금', '시가총액', '최근 분배율(TTM)', '수익률(1M/3M/6M/1Y)'].map((k) => (
+                    {['종가/전일대비/수익률', '52주 최고/최저', '상장주식수', '거래량/거래대금', '20일평균 거래량/대금', '시가총액', '순자산총액'].map((k) => (
                       <div key={k} className="flex border-b border-slate-800 text-sm">
                         <div className="w-1/3 bg-slate-900/50 text-gray-400 p-3 font-medium flex items-center">{k.replace('20일평균 거래량/대금', '20일평균 거래량/거래대금')}</div>
                         <div className="w-2/3 p-3 text-right flex items-center justify-end text-gray-200 font-semibold">{selectedDetailEtf.basic_info?.[k] || '-'}</div>
                       </div>
                     ))}
+                    <div className="flex border-b border-slate-800 text-sm">
+                      <div className="w-1/3 bg-slate-900/50 text-gray-400 p-3 font-medium flex items-center">수익률(1M/3M/6M/1Y)</div>
+                      <div className="w-2/3 p-3 text-right flex items-center justify-end text-blue-400 font-bold tracking-tight">
+                        {selectedDetailEtf.basic_info?.['1M 수익률'] || '-'} / {selectedDetailEtf.basic_info?.['3M 수익률'] || '-'} / {selectedDetailEtf.basic_info?.['6M 수익률'] || '-'} / {selectedDetailEtf.basic_info?.['1Y 수익률'] || '-'}
+                      </div>
+                    </div>
                   </div>
                   <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col relative">
                     <div className="flex justify-between items-center mb-3">

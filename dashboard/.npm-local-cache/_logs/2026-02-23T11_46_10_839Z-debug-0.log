@@ -11,3 +11,9 @@
 10 verbose logfile /Users/chanhojung/ETF_One/dashboard/.npm-local-cache/_logs/2026-02-23T11_46_10_839Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
+13 verbose cwd /Users/chanhojung/ETF_One/dashboard
+14 verbose os Darwin 25.3.0
+15 verbose node v24.13.0
+16 verbose npm  v11.6.2
+17 verbose exit 0
+18 info ok
