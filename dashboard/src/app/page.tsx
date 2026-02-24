@@ -821,7 +821,7 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 relative z-40">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-y-4 gap-x-3 relative z-40">
                 {slots.map((slot, index) => (
                   <div key={index} className="flex-1 group relative">
                     <label className="block text-[10px] font-medium text-indigo-300/80 mb-0.5 uppercase tracking-widest pl-1">
@@ -953,7 +953,7 @@ export default function Home() {
                       </thead>
                       <tbody className="divide-y divide-white/[0.05]">
                         {data.data_payload.rows.map((row: string[], i: number) => {
-                          const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc"];
+                          const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                           return (
                             <tr key={i} className="hover:bg-white/[0.03] transition-colors group/row">
                               {row.map((cell: string, j: number) => {
@@ -1005,7 +1005,7 @@ export default function Home() {
                         <PolarAngleAxis dataKey="subject" tick={{ fill: '#a5b4fc', fontSize: 13, fontWeight: 500 }} />
                         <PolarRadiusAxis angle={30} domain={[0, 10]} tick={false} axisLine={false} />
                         {data.visual_data && data.visual_data.etf_keys && data.visual_data.etf_keys.map((etfName: string, idx: number) => {
-                          const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc"];
+                          const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                           const c = glowColors[idx % glowColors.length];
                           return (
                             <Radar key={etfName} name={etfName} dataKey={etfName} stroke={c} strokeWidth={2} fill={c} fillOpacity={0.3} />
@@ -1033,7 +1033,7 @@ export default function Home() {
                           <th className="py-3 px-4 text-sm font-bold text-gray-500 bg-white/5 w-48">항목</th>
                           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                           {data.raw_data && data.raw_data.map((etf: any, idx: number) => {
-                            const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc"];
+                            const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                             return (
                               <th key={etf.etf_code} className="py-3 px-4 text-sm font-bold text-center group cursor-pointer hover:bg-white/[0.05] transition-colors" onClick={() => setSelectedDetailEtf(etf)} style={{ color: glowColors[idx % glowColors.length] }}>
                                 <span className="group-hover:underline underline-offset-4">{etf.etf_name}</span>
@@ -1134,8 +1134,8 @@ export default function Home() {
 
                                 const widthH1 = isNumericRow ? formatVisHeight(num1, maxVal1) : 0;
                                 const widthH2 = isNumericRow && isSplitRow ? formatVisHeight(num2, maxVal2) : 0;
-                                const glowColors = ["bg-indigo-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-purple-500", "bg-cyan-500"];
-                                const secColors = ["bg-indigo-400/50", "bg-emerald-400/50", "bg-amber-400/50", "bg-rose-400/50", "bg-purple-400/50", "bg-cyan-400/50"];
+                                const glowColors = ["bg-indigo-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-purple-500", "bg-cyan-500", "bg-blue-500", "bg-pink-500", "bg-lime-500", "bg-orange-500"];
+                                const secColors = ["bg-indigo-400/50", "bg-emerald-400/50", "bg-amber-400/50", "bg-rose-400/50", "bg-purple-400/50", "bg-cyan-400/50", "bg-blue-400/50", "bg-pink-400/50", "bg-lime-400/50", "bg-orange-400/50"];
 
                                 return (
                                   <td key={etf.etf_code} className={`py-3 px-2 2xl:px-4 text-[13px] 2xl:text-sm font-medium ${textColor} h-full`}>
@@ -1187,7 +1187,7 @@ export default function Home() {
                             <XAxis type="number" tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(val) => Math.floor(val / 10000) > 0 ? `${Math.floor(val / 10000)}조` : val} stroke="rgba(255,255,255,0.05)" axisLine={false} />
                             <YAxis dataKey="name" type="category" width={80} stroke="rgba(255,255,255,0.05)" axisLine={false} interval={0} tick={(props: any) => {
                               const { x, y, payload } = props;
-                              const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc"];
+                              const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                               const dataIndex = additionalStatsData.findIndex((d: any) => d.name === payload.value);
                               const val = payload.value.length > 7 ? payload.value.substring(0, 6) + '..' : payload.value;
                               return (
@@ -1272,12 +1272,7 @@ export default function Home() {
                 <div className="w-full bg-rose-500/10 border-x border-b border-rose-500/30 text-rose-300 px-4 py-3 rounded-b-xl mb-4 text-center text-sm md:text-base font-medium shadow-md">
                   미국 ETF 종목의 구성정보는 현재 제대로 구현되어 있지 않습니다.
                 </div>
-                <div className={`grid gap-3 w-full bg-white/[0.02] p-4 lg:p-5 border border-white/5 rounded-2xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0 ${isLoadingHoldings || data.raw_data?.length === 1 ? 'grid-cols-1 max-w-2xl mx-auto' :
-                  data.raw_data?.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
-                    data.raw_data?.length === 3 ? 'grid-cols-1 md:grid-cols-3' :
-                      data.raw_data?.length === 4 ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4' :
-                        'grid-cols-1 md:grid-cols-3 xl:grid-cols-5'
-                  }`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 w-full bg-white/[0.02] p-4 lg:p-5 border border-white/5 rounded-2xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0 justify-center">
                   {isLoadingHoldings ? (
                     <div className="flex flex-col items-center justify-center p-12 text-center col-span-full w-full min-h-[300px]">
                       <Loader2 className="w-10 h-10 text-emerald-400 animate-spin mb-4" />
@@ -1290,10 +1285,10 @@ export default function Home() {
                     <>
                       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       {data.raw_data && data.raw_data.map((etf: any, idx: number) => {
-                        const glowColors = ["from-indigo-500", "from-emerald-500", "from-amber-500", "from-rose-500", "from-purple-500", "from-cyan-500"];
-                        const bgColors = ["bg-indigo-500/10", "bg-emerald-500/10", "bg-amber-500/10", "bg-rose-500/10", "bg-purple-500/10", "bg-cyan-500/10"];
-                        const borderColors = ["border-indigo-500/30", "border-emerald-500/30", "border-amber-500/30", "border-rose-500/30", "border-purple-500/30", "border-cyan-500/30"];
-                        const fillColors = ["bg-indigo-400", "bg-emerald-400", "bg-amber-400", "bg-rose-400", "bg-purple-400", "bg-cyan-400"];
+                        const glowColors = ["from-indigo-500", "from-emerald-500", "from-amber-500", "from-rose-500", "from-purple-500", "from-cyan-500", "from-blue-500", "from-pink-500", "from-lime-500", "from-orange-500"];
+                        const bgColors = ["bg-indigo-500/10", "bg-emerald-500/10", "bg-amber-500/10", "bg-rose-500/10", "bg-purple-500/10", "bg-cyan-500/10", "bg-blue-500/10", "bg-pink-500/10", "bg-lime-500/10", "bg-orange-500/10"];
+                        const borderColors = ["border-indigo-500/30", "border-emerald-500/30", "border-amber-500/30", "border-rose-500/30", "border-purple-500/30", "border-cyan-500/30", "border-blue-500/30", "border-pink-500/30", "border-lime-500/30", "border-orange-500/30"];
+                        const fillColors = ["bg-indigo-400", "bg-emerald-400", "bg-amber-400", "bg-rose-400", "bg-purple-400", "bg-cyan-400", "bg-blue-400", "bg-pink-400", "bg-lime-400", "bg-orange-400"];
 
                         return (
                           <section key={etf.etf_code} className={`backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border ${borderColors[idx % borderColors.length]} ${bgColors[idx % bgColors.length]} flex flex-col relative overflow-hidden min-w-[200px]`}>
@@ -1400,7 +1395,7 @@ export default function Home() {
                               }
                             }} formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
                             {data.visual_data.etf_keys.map((key: string, idx: number) => {
-                              const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc"];
+                              const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                               return <Line key={`${key}_raw`} type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={2} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} />;
                             })}
                           </LineChart>
@@ -1437,7 +1432,7 @@ export default function Home() {
                               }
                             }} formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
                             {data.visual_data.etf_keys.map((key: string, idx: number) => {
-                              const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc"];
+                              const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                               return <Line key={key} type="monotone" dataKey={key} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={2} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} />;
                             })}
                           </LineChart>
@@ -1476,7 +1471,7 @@ export default function Home() {
                               }
                             }} formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
                             {data.visual_data.etf_keys.map((key: string, idx: number) => {
-                              const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc"];
+                              const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                               return <Line key={`${key}_inflow`} type="monotone" dataKey={`${key}_inflow`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />;
                             })}
                           </LineChart>
@@ -1515,7 +1510,7 @@ export default function Home() {
                               }
                             }} formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
                             {data.visual_data.etf_keys.map((key: string, idx: number) => {
-                              const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc"];
+                              const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                               return <Line key={`${key}_dividend`} type="monotone" dataKey={`${key}_dividend`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />;
                             })}
                           </LineChart>
