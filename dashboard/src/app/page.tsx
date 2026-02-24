@@ -42,6 +42,7 @@ export default function Home() {
   const [popupPeriod, setPopupPeriod] = useState<string>('1Y');
   const [hoveredEtfName, setHoveredEtfName] = useState<string | null>(null);
   const [isEtfCheckModalOpen, setIsEtfCheckModalOpen] = useState(false);
+  const [hasOpenedEtfCheck, setHasOpenedEtfCheck] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -724,6 +725,7 @@ export default function Home() {
                 onClick={() => {
                   if (tab.id === 'etfcheck') {
                     setIsEtfCheckModalOpen(true);
+                    setHasOpenedEtfCheck(true);
                     return;
                   }
                   if (tab.id !== 'select' && !data) {
@@ -731,8 +733,10 @@ export default function Home() {
                     return;
                   }
                   setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart');
+                  setIsEtfCheckModalOpen(false);
+                  setSelectedDetailEtf(null);
                 }}
-                className={`text-sm md:text-base tracking-wide font-bold transition-all px-4 py-1.5 rounded-full ${activeTab === tab.id ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'
+                className={`text-sm md:text-base tracking-wide font-bold transition-all px-4 py-1.5 rounded-full ${((tab.id === 'etfcheck' && isEtfCheckModalOpen) || (tab.id !== 'etfcheck' && activeTab === tab.id && !isEtfCheckModalOpen)) ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'
                   }`}
               >
                 {tab.label}
@@ -1901,7 +1905,7 @@ export default function Home() {
       {/* Detail Information Modal (Naver UI style) */}
       {
         selectedDetailEtf && (
-          <div className="fixed top-[86px] md:top-[78px] inset-x-0 bottom-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-2 md:p-6 lg:p-8">
+          <div className="fixed top-[81px] md:top-[73px] inset-x-0 bottom-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-2 md:p-6 lg:p-8">
             <div className="bg-[#0B0F19] border border-white/10 rounded-2xl w-full max-w-[1400px] h-full max-h-[95vh] overflow-hidden flex flex-col shadow-2xl">
 
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 lg:px-8 border-b border-white/10 relative gap-3 bg-gradient-to-r from-blue-900/20 to-transparent">
@@ -2182,8 +2186,8 @@ export default function Home() {
       }
 
       {/* ETF Check Modal */}
-      {isEtfCheckModalOpen && (
-        <div className="fixed top-[86px] md:top-[78px] inset-x-0 bottom-0 z-[400] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300 sm:p-2 lg:p-4 pb-0">
+      {hasOpenedEtfCheck && (
+        <div className={`fixed top-[81px] md:top-[73px] inset-x-0 bottom-0 z-[400] items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300 sm:p-2 lg:p-4 pb-0 ${isEtfCheckModalOpen ? 'flex' : 'hidden'}`}>
           <div className="relative w-full h-full max-w-none sm:w-[98vw] bg-neutral-900 border border-neutral-700/50 sm:rounded-t-2xl md:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/10">
             {/* Header */}
             <div className="flex items-center justify-between px-3 md:px-5 py-2 border-b border-white/5 bg-gradient-to-r from-neutral-900 to-neutral-800 shrink-0 relative z-10">
