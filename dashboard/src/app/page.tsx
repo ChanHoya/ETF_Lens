@@ -715,8 +715,11 @@ export default function Home() {
           </h1>
           <p className="text-xs md:text-sm text-gray-400 mt-1 font-medium tracking-wide group-hover:text-gray-300 transition-colors">Understand ETFs, Through the Lens of Data.</p>
         </div>
-        <div className="px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md shadow-[0_0_15px_rgba(79,70,229,0.1)] text-xs font-semibold text-indigo-300 tracking-wider">
-          PRO EDITION
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="text-[10px] text-gray-500 font-medium tracking-wider">v.20260224_1555</div>
+          <div className="px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md shadow-[0_0_15px_rgba(79,70,229,0.1)] text-xs font-semibold text-indigo-300 tracking-wider">
+            PRO EDITION
+          </div>
         </div>
       </header>
 
