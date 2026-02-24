@@ -233,6 +233,12 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
                 "종목명",
                 "현재가",
                 "NAV",
+                "1M 수익률",
+                "3M 수익률",
+                "6M 수익률",
+                "1Y 수익률",
+                "분배율(TTM)",
+                "총보수",
                 "10년 총수익률",
                 "연변동성",
                 "MDD",
@@ -247,6 +253,12 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
                     f"{data['market_data']['nav']:,.0f}원"
                     if data["market_data"]["nav"]
                     else "N/A",
+                    data.get("basic_info", {}).get("1M 수익률", "N/A"),
+                    data.get("basic_info", {}).get("3M 수익률", "N/A"),
+                    data.get("basic_info", {}).get("6M 수익률", "N/A"),
+                    data.get("basic_info", {}).get("1Y 수익률", "N/A"),
+                    data.get("basic_info", {}).get("최근 분배율(TTM)", "N/A"),
+                    data.get("basic_info", {}).get("펀드보수", "N/A"),
                     f"{data['quant_metrics'].get('total_return_pct', 'N/A')}%"
                     if isinstance(
                         data["quant_metrics"].get("total_return_pct"), (int, float)

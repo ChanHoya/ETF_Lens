@@ -14,8 +14,11 @@ from dotenv import load_dotenv
 # Let's bypass SSL for urllib scraping Naver
 ssl._create_default_https_context = ssl._create_unverified_context
 
-# Load Environment Variables from .env
-load_dotenv()
+import os
+from dotenv import load_dotenv
+
+env_path = os.path.join(os.path.dirname(__file__), "..", "..", ".env")
+load_dotenv(env_path)
 
 
 class ETFHarvester:
@@ -26,8 +29,33 @@ class ETFHarvester:
 
     def __init__(self):
         print("ETFHarvester instance created.")
+        self.kis_token = None
+        self.kis_base = os.environ.get(
+            "KIS_URL_BASE", "https://openapi.koreainvestment.com:9443"
+        )
+        self.kis_app_key = os.environ.get("KIS_APP_KEY")
+        self.kis_app_secret = os.environ.get("KIS_APP_SECRET")
 
     async def initialize(self):
+        # Initialize KIS Token
+        if self.kis_app_key and self.kis_app_secret:
+            try:
+                res = await asyncio.to_thread(
+                    requests.post,
+                    f"{self.kis_base}/oauth2/tokenP",
+                    headers={"content-type": "application/json"},
+                    json={
+                        "grant_type": "client_credentials",
+                        "appkey": self.kis_app_key,
+                        "appsecret": self.kis_app_secret,
+                    },
+                )
+                self.kis_token = res.json().get("access_token")
+                if self.kis_token:
+                    print("Successfully acquired KIS API Token for real-time quotes.")
+            except Exception as e:
+                print(f"Failed to acquire KIS token: {e}")
+
         # fdr doesn't require complex async playwright startup, so this is non-blocking.
         print("Harvester initialized (using FinanceDataReader).")
         try:
@@ -56,6 +84,34 @@ class ETFHarvester:
             basic_info = {}
             if not df.empty:
                 current_price = df["Close"].iloc[-1]
+
+                # Fetch Real-Time Price from KIS API if available
+                if self.kis_token and not skip_holdings:
+                    try:
+                        headers = {
+                            "content-type": "application/json",
+                            "authorization": f"Bearer {self.kis_token}",
+                            "appkey": self.kis_app_key,
+                            "appsecret": self.kis_app_secret,
+                            "tr_id": "FHKST01010100",
+                        }
+                        params = {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code}
+                        res = await asyncio.to_thread(
+                            requests.get,
+                            f"{self.kis_base}/uapi/domestic-stock/v1/quotations/inquire-price",
+                            headers=headers,
+                            params=params,
+                            timeout=3,
+                        )
+                        if res.status_code == 200:
+                            kis_data = res.json()
+                            if kis_data.get("output") and kis_data["output"].get(
+                                "stck_prpr"
+                            ):
+                                current_price = float(kis_data["output"]["stck_prpr"])
+                    except Exception as e:
+                        print(f"Failed to fetch KIS real-time price for {code}: {e}")
+
                 historical_dates = [str(d.date()) for d in df.index]
                 historical_close = df["Close"].tolist()
 
