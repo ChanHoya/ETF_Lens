@@ -1025,8 +1025,8 @@ export default function Home() {
                     <span className="w-1.5 h-6 bg-gradient-to-b from-teal-400 to-emerald-500 rounded-full"></span>
                     기본 정보
                   </h3>
-                  <div className="w-full overflow-x-auto overflow-y-auto max-h-[65vh] border border-white/5 rounded-xl relative custom-scrollbar">
-                    <table className="w-full text-left border-collapse min-w-[800px]">
+                  <div className="w-full overflow-x-hidden overflow-y-auto max-h-[65vh] border border-white/5 rounded-xl relative custom-scrollbar">
+                    <table className="w-full text-left border-collapse min-w-full table-fixed">
                       <thead className="sticky top-0 z-30 backdrop-blur-xl bg-[#0B0F19]/95 shadow-md border-b border-white/10">
                         <tr>
                           <th className="py-2 px-1 lg:px-2 text-[10px] md:text-sm font-bold text-gray-500 bg-white/5 w-16 md:w-24 break-keep">항목</th>
@@ -1171,7 +1171,27 @@ export default function Home() {
 
                 {/* Sub-Charts Section Moved to Info Tab per Request */}
                 {additionalStatsData.length > 0 && (
-                  <div className="lg:col-span-4 grid grid-cols-1 lg:grid-cols-3 gap-4 mt-2">
+                  <div className="lg:col-span-4 grid grid-cols-1 lg:grid-cols-4 gap-2 md:gap-4 mt-2">
+                    {/* Dedicated ETF Names Box */}
+                    <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 flex flex-col min-h-[200px] relative overflow-hidden">
+                      <h3 className="text-sm font-bold mb-4 flex items-center gap-2 relative z-10 text-gray-200">
+                        <span className="w-1.5 h-4 bg-gray-400 rounded-full"></span>
+                        종목명
+                      </h3>
+                      <div className="flex-1 w-full h-[180px] flex flex-col justify-around py-2">
+                        {additionalStatsData.map((d: any, idx: number) => {
+                          const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
+                          return (
+                            <div key={idx} className="text-right pr-2 font-bold text-[10px] md:text-[11px] lg:text-[12px] truncate w-full cursor-pointer hover:underline" style={{ color: glowColors[idx % 10] }} onClick={() => {
+                              const matchedEtf = data.raw_data?.find((cd: any) => cd.etf_name === d.name || cd.etf_code === d.name);
+                              if (matchedEtf) setSelectedDetailEtf(matchedEtf);
+                            }}>
+                              {d.name.replace(/ /g, '\u00A0')}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
                     {/* AUM Chart */}
                     <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 flex flex-col min-h-[200px] relative overflow-hidden group">
                       <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -1184,24 +1204,7 @@ export default function Home() {
                           <BarChart data={additionalStatsData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.03)" />
                             <XAxis type="number" tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(val) => Math.floor(val / 10000) > 0 ? `${Math.floor(val / 10000)}조` : val} stroke="rgba(255,255,255,0.05)" axisLine={false} />
-                            <YAxis dataKey="name" type="category" width={140} stroke="rgba(255,255,255,0.05)" axisLine={false} interval={0} tick={(props: any) => {
-                              const { x, y, payload } = props;
-                              const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
-                              const dataIndex = additionalStatsData.findIndex((d: any) => d.name === payload.value);
-                              const val = payload.value;
-                              return (
-                                <text
-                                  onClick={() => {
-                                    const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === payload.value || d.etf_code === payload.value);
-                                    if (matchedEtf) setSelectedDetailEtf(matchedEtf);
-                                  }}
-                                  style={{ cursor: 'pointer' }}
-                                  x={x} y={y} dy={4} textAnchor="end" fill={glowColors[dataIndex >= 0 ? dataIndex % 10 : 0]} fontSize={10} fontWeight={600}
-                                >
-                                  {val}
-                                </text>
-                              );
-                            }} />
+                            <YAxis dataKey="name" type="category" hide={true} axisLine={false} />
                             <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', borderColor: 'rgba(79, 70, 229, 0.2)', borderRadius: '12px', fontSize: '12px' }} itemStyle={{ color: '#818cf8', fontWeight: 'bold' }} />
                             <Bar dataKey="aum" name="순자산(억)" radius={[0, 4, 4, 0]}>
                               {additionalStatsData.map((_: any, idx: number) => (
@@ -1366,7 +1369,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 lg:gap-6">
 
                   {/* 1. Raw Price Chart (가격 추이) */}
                   {data.visual_data.line_chart && data.visual_data.etf_keys && (
@@ -1380,7 +1383,7 @@ export default function Home() {
                         </h3>
                       </div>
 
-                      <div className="h-[250px] w-full relative z-10">
+                      <div className="h-[400px] w-full relative z-10">
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={simulatedChartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
@@ -1417,7 +1420,7 @@ export default function Home() {
                         </h3>
                       </div>
 
-                      <div className="h-[250px] w-full relative z-10">
+                      <div className="h-[400px] w-full relative z-10">
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={simulatedChartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
@@ -1451,7 +1454,7 @@ export default function Home() {
                         </h3>
                       </div>
 
-                      <div className="h-[250px] w-full relative z-10">
+                      <div className="h-[400px] w-full relative z-10">
                         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg overflow-hidden border border-white/5">
                           <div className="px-6 py-3 bg-indigo-600/90 text-white text-sm font-bold rounded-xl shadow-[0_0_30px_rgba(79,70,229,0.5)] border border-indigo-400/30">
                             🚧 추후 개발 예정 (To Be Developed)
@@ -1490,7 +1493,7 @@ export default function Home() {
                         </h3>
                       </div>
 
-                      <div className="h-[250px] w-full relative z-10">
+                      <div className="h-[400px] w-full relative z-10">
                         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg overflow-hidden border border-white/5">
                           <div className="px-6 py-3 bg-rose-600/90 text-white text-sm font-bold rounded-xl shadow-[0_0_30px_rgba(225,29,72,0.5)] border border-rose-400/30">
                             🚧 추후 개발 예정 (To Be Developed)
@@ -1937,7 +1940,7 @@ export default function Home() {
       {/* Copyright */}
       <div className="mt-auto pt-8 w-full text-center text-sm text-gray-500/80 font-medium flex items-center justify-center gap-3">
         <span>Copyright &copy; Hoya 2026</span>
-        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2245</span>
+        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2258</span>
       </div>
     </main >
   );
