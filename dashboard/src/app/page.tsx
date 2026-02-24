@@ -77,7 +77,8 @@ export default function Home() {
 
   // Fetch ETF Master List on mount
   useEffect(() => {
-    fetch("/api/v1/analyze/etfs")
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+    fetch(`${API_BASE}/api/v1/analyze/etfs`)
       .then(res => res.json())
       .then(data => setEtfDictionary(data))
       .catch(err => console.error("ETF load error", err));
@@ -145,7 +146,8 @@ export default function Home() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/analyze/compare", {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+      const res = await fetch(`${API_BASE}/api/v1/analyze/compare`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -158,7 +160,7 @@ export default function Home() {
       setIsLoadingHoldings(true);
 
       // Async fetch for slow holdings data
-      fetch("/api/v1/analyze/compare/holdings", {
+      fetch(`${API_BASE}/api/v1/analyze/compare/holdings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ etf_codes: validCodes }),
