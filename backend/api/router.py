@@ -44,6 +44,34 @@ class CompareRequest(BaseModel):
     skip_holdings: bool = False
 
 
+async def fetch_yahoo_finance(ticker: str, period_years: int = 10):
+    import urllib.request
+    import json
+    import pandas as pd
+    from datetime import datetime
+
+    url = f"https://query2.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range={period_years}y"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+
+    def _fetch():
+        try:
+            res_str = urllib.request.urlopen(req).read().decode("utf-8")
+            data = json.loads(res_str)
+            result = data["chart"]["result"][0]
+            timestamps = result["timestamp"]
+            close_prices = result["indicators"]["quote"][0]["close"]
+
+            dates = [datetime.fromtimestamp(ts).date() for ts in timestamps]
+            df = pd.DataFrame({"Close": close_prices}, index=pd.to_datetime(dates))
+            df = df.dropna()
+            return df
+        except Exception as e:
+            logger.error(f"Failed to fetch {ticker} from Yahoo: {e}")
+            return pd.DataFrame()
+
+    return await asyncio.to_thread(_fetch)
+
+
 @router.post("/compare")
 async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_db)):
     """
@@ -59,9 +87,9 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
     start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
     kospi_task = asyncio.to_thread(fdr.DataReader, "KS11", start_str)
     kosdaq_task = asyncio.to_thread(fdr.DataReader, "KQ11", start_str)
-    # Adding US Benchmark Indices (S&P 500 and NASDAQ)
-    sp500_task = asyncio.to_thread(fdr.DataReader, "US500", start_str)
-    nasdaq_task = asyncio.to_thread(fdr.DataReader, "IXIC", start_str)
+    # Adding US Benchmark Indices (S&P 500 and NASDAQ) via Yahoo Finance API
+    sp500_task = fetch_yahoo_finance("^GSPC", 10)
+    nasdaq_task = fetch_yahoo_finance("^IXIC", 10)
 
     # Run the fetch for all ETFs concurrently to greatly improve response time along with benchmarks
     tasks = [

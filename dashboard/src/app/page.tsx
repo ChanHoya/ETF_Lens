@@ -321,10 +321,10 @@ export default function Home() {
             newPoint[key] = 0;
           }
         } else {
-          // Standard cumulative normalization for other periods
+          // Standard cumulative return rate (%) for other periods
           newPoint[`${key}_raw`] = currentRaw;
           if (basePrices[key] && currentRaw != null) {
-            newPoint[key] = Number(((currentRaw / basePrices[key]) * 100).toFixed(2));
+            newPoint[key] = Number(((currentRaw / basePrices[key] - 1) * 100).toFixed(2));
           } else {
             newPoint[key] = null;
           }
@@ -357,7 +357,7 @@ export default function Home() {
           // 5분 단위 랜덤 워크 변화 (±0.3% 변동성)
           states[k] = states[k] * (1 + (Math.random() - 0.5) * 0.003);
           pt[`${k}_raw`] = Number(states[k].toFixed(0));
-          pt[k] = Number(((states[k] / baseStates[k]) * 100).toFixed(2));
+          pt[k] = Number(((states[k] / baseStates[k] - 1) * 100).toFixed(2));
         });
         simulated1D.push(pt);
         currentTime.setMinutes(currentTime.getMinutes() + 5);
@@ -1350,9 +1350,9 @@ export default function Home() {
                     <div className="flex justify-between items-center mb-4 relative z-10">
                       <h3 className="text-lg md:text-xl font-bold flex items-center gap-3">
                         <span className="w-1.5 h-6 bg-gradient-to-b from-indigo-400 to-pink-500 rounded-full"></span>
-                        {period === '1W' ? '수익률 일간 변동' : '수익률'}
+                        {period === '1W' ? '수익률 일간 변동' : '다중 ETF 수익률 매치업'}
                         <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">
-                          {period === '1W' ? '(전일 대비 %)' : period === '1D' ? '(당일 Base 100)' : '(Normalized Base 100)'}
+                          {period === '1W' ? '(전일 대비 %)' : '(누적 수익률 %)'}
                         </span>
                       </h3>
                     </div>
@@ -1362,7 +1362,7 @@ export default function Home() {
                         <LineChart data={simulatedChartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                           <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
-                          <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
+                          <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
                           <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }} contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '12px' }} labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold', fontSize: '13px' }} itemStyle={{ padding: '2px 0', fontSize: '12px' }} />
                           <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
                             if (e && e.value) {
