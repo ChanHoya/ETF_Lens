@@ -7,7 +7,7 @@ import { Search, Loader2, Plus, X, ChevronDown, Aperture, Star, Trash2, Edit2, C
 type FavGroup = { id: string; name: string; items: { code: string; name: string }[] };
 
 const BRAND_KEYWORDS = ['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'];
-const THEME_KEYWORDS = ['커버드콜', '배당', '반도체', '바이오', '금융', '로봇', '원자력', '방산', '조선', '2차전지'];
+const THEME_KEYWORDS = ['커버드콜', '배당', 'AI', '반도체', '로봇', '원자력', '2차전지', '조선', '방산', '금융', '바이오'];
 
 export default function Home() {
   const [slots, setSlots] = useState<{ search: string, code: string }[]>([
@@ -174,6 +174,49 @@ export default function Home() {
     }
 
     if (!isMulti) {
+      setGlobalSearch("");
+      setGlobalActive(false);
+      setFocusedGlobalIndex(-1);
+    }
+  };
+
+  const addAllFilteredEtfs = () => {
+    const terms = globalSearch.toLowerCase().split(' ').filter(t => t.trim() !== '');
+    if (terms.length < 1) return;
+
+    const filtered = etfDictionary.filter(etf => {
+      const lowerBrands = BRAND_KEYWORDS.map(b => b.toLowerCase());
+      const brandTerms = terms.filter(t => lowerBrands.includes(t));
+      const themeTerms = terms.filter(t => !lowerBrands.includes(t));
+
+      const etfName = etf.name.toLowerCase().replace(/\s/g, '');
+      const etfCode = etf.code.toLowerCase();
+
+      const brandMatch = brandTerms.length === 0 ? true : brandTerms.some(term => etfName.includes(term) || etfCode.includes(term));
+      const themeMatch = themeTerms.length === 0 ? true : themeTerms.some(term => etfName.includes(term) || etfCode.includes(term));
+
+      return brandMatch && themeMatch;
+    });
+
+    if (filtered.length === 0) return;
+
+    let newSlots = [...slots];
+    let addedCount = 0;
+
+    for (const etf of filtered) {
+      if (!newSlots.some(s => s.code === etf.code)) {
+        const emptyIndex = newSlots.findIndex(s => !s.search);
+        if (emptyIndex !== -1) {
+          newSlots[emptyIndex] = { search: etf.name, code: etf.code };
+          addedCount++;
+        } else {
+          break; // Full
+        }
+      }
+    }
+
+    if (addedCount > 0) {
+      setSlots(newSlots);
       setGlobalSearch("");
       setGlobalActive(false);
       setFocusedGlobalIndex(-1);
@@ -689,7 +732,7 @@ export default function Home() {
                   }
                   setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart');
                 }}
-                className={`text-sm md:text-base tracking-wide font-bold transition-all px-2 py-1 ${activeTab === tab.id ? 'text-indigo-300 drop-shadow-[0_0_8px_rgba(165,180,252,0.8)]' : 'text-gray-400/80 hover:text-gray-100'
+                className={`text-sm md:text-base tracking-wide font-bold transition-all px-4 py-1.5 rounded-full ${activeTab === tab.id ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'
                   }`}
               >
                 {tab.label}
@@ -770,6 +813,12 @@ export default function Home() {
                     onChange={(e) => { setGlobalSearch(e.target.value); setDropdownLimit(50); setFocusedGlobalIndex(-1); }}
                     onFocus={() => { setGlobalActive(true); setDropdownLimit(50); }}
                     onBlur={() => setTimeout(() => setGlobalActive(false), 250)}
+                    onClick={() => {
+                      const terms = globalSearch.split(' ').filter(t => t.trim() !== '');
+                      if (terms.length >= 2) {
+                        addAllFilteredEtfs();
+                      }
+                    }}
                     onKeyDown={(e) => {
                       if (!globalActive) return;
                       const terms = globalSearch.toLowerCase().split(' ').filter(t => t.trim() !== '');
@@ -783,7 +832,7 @@ export default function Home() {
                         const etfCode = etf.code.toLowerCase();
 
                         const brandMatch = brandTerms.length === 0 ? true : brandTerms.some(term => etfName.includes(term) || etfCode.includes(term));
-                        const themeMatch = themeTerms.length === 0 ? true : themeTerms.every(term => etfName.includes(term) || etfCode.includes(term));
+                        const themeMatch = themeTerms.length === 0 ? true : themeTerms.some(term => etfName.includes(term) || etfCode.includes(term));
 
                         return brandMatch && themeMatch;
                       });
@@ -797,7 +846,9 @@ export default function Home() {
                         setFocusedGlobalIndex(prev => (prev > 0 ? prev - 1 : 0));
                       } else if (e.key === 'Enter') {
                         e.preventDefault();
-                        if (focusedGlobalIndex >= 0 && focusedGlobalIndex <= maxIndex) {
+                        if (terms.length >= 2) {
+                          addAllFilteredEtfs();
+                        } else if (focusedGlobalIndex >= 0 && focusedGlobalIndex <= maxIndex) {
                           selectEtfGlobal(filtered[focusedGlobalIndex].code, filtered[focusedGlobalIndex].name, e.ctrlKey || e.metaKey);
                         }
                       } else if (e.key === ' ') {
@@ -833,7 +884,7 @@ export default function Home() {
                             const etfCode = e.code.toLowerCase();
 
                             const brandMatch = brandTerms.length === 0 ? true : brandTerms.some(term => etfName.includes(term) || etfCode.includes(term));
-                            const themeMatch = themeTerms.length === 0 ? true : themeTerms.every(term => etfName.includes(term) || etfCode.includes(term));
+                            const themeMatch = themeTerms.length === 0 ? true : themeTerms.some(term => etfName.includes(term) || etfCode.includes(term));
 
                             return brandMatch && themeMatch;
                           });
@@ -1817,7 +1868,7 @@ export default function Home() {
                                 const etfCode = e.code.toLowerCase();
 
                                 const brandMatch = brandTerms.length === 0 ? true : brandTerms.some(term => etfName.includes(term) || etfCode.includes(term));
-                                const themeMatch = themeTerms.length === 0 ? true : themeTerms.every(term => etfName.includes(term) || etfCode.includes(term));
+                                const themeMatch = themeTerms.length === 0 ? true : themeTerms.some(term => etfName.includes(term) || etfCode.includes(term));
 
                                 return brandMatch && themeMatch;
                               }).slice(0, 30);
