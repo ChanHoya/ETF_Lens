@@ -1986,7 +1986,7 @@ export default function Home() {
             <div className="flex items-center justify-between px-3 md:px-5 py-2 border-b border-white/5 bg-gradient-to-r from-neutral-900 to-neutral-800 shrink-0 relative z-10">
               <h2 className="text-sm md:text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-400 flex items-center gap-2">
                 <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
-                ETF Check Mobile
+                ETF Check
               </h2>
               <button
                 onClick={() => setIsEtfCheckModalOpen(false)}
@@ -2013,7 +2013,7 @@ export default function Home() {
       {/* Copyright */}
       <div className="mt-auto pt-8 w-full text-center text-sm text-gray-500/80 font-medium flex items-center justify-center gap-3">
         <span>Copyright &copy; Hoya 2026</span>
-        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2334</span>
+        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260224_2337</span>
       </div>
     </main >
   );
