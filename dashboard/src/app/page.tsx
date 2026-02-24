@@ -712,7 +712,7 @@ export default function Home() {
               <div className="flex flex-col gap-2 w-full">
                 {/* 1층: 운용사 */}
                 <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
-                  <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400 mr-1 flex items-center min-w-[40px]"><span className="mr-1">🏢</span> 운용:</span>
+                  <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400 mr-1 flex items-center min-w-[50px]"><span className="mr-1">🏢</span> 운용사:</span>
                   {BRAND_KEYWORDS.map(brand => {
                     const isActive = globalSearch.split(' ').includes(brand);
                     return (
@@ -736,7 +736,7 @@ export default function Home() {
                 </div>
                 {/* 2층: HOT 테마 */}
                 <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
-                  <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-1 flex items-center min-w-[40px]"><span className="mr-1">🔥</span> HOT:</span>
+                  <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-1 flex items-center min-w-[50px]"><span className="mr-1">🔥</span> HOT:</span>
                   {THEME_KEYWORDS.map(theme => {
                     const isActive = globalSearch.split(' ').includes(theme);
                     return (
@@ -1746,7 +1746,7 @@ export default function Home() {
                         {/* 🚀 Fav Search Quick Filters */}
                         <div className="flex flex-col gap-1 mb-2">
                           <div className="flex flex-wrap items-center gap-1">
-                            <span className="text-[9px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400 mr-1 flex items-center min-w-[32px]"><span className="mr-0.5">🏢</span> 운용:</span>
+                            <span className="text-[9px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400 mr-1 flex items-center min-w-[36px]"><span className="mr-0.5">🏢</span> 운용사:</span>
                             {BRAND_KEYWORDS.map(brand => {
                               const currentQuery = favSearchQuery[group.id] || "";
                               const isActive = currentQuery.split(' ').includes(brand);
@@ -1768,7 +1768,7 @@ export default function Home() {
                             })}
                           </div>
                           <div className="flex flex-wrap items-center gap-1">
-                            <span className="text-[9px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-1 flex items-center min-w-[32px]"><span className="mr-0.5">🔥</span> HOT:</span>
+                            <span className="text-[9px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-1 flex items-center min-w-[36px]"><span className="mr-0.5">🔥</span> HOT:</span>
                             {THEME_KEYWORDS.map(theme => {
                               const currentQuery = favSearchQuery[group.id] || "";
                               const isActive = currentQuery.split(' ').includes(theme);
