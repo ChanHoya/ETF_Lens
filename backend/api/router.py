@@ -511,6 +511,8 @@ async def get_chart_data(request: CompareRequest, db: AsyncSession = Depends(get
     benchmark_tasks = [
         fetch_benchmark_hybrid("KS11", db, cached_fdr_reader("KS11", start_str)),
         fetch_benchmark_hybrid("KQ11", db, cached_fdr_reader("KQ11", start_str)),
+        fetch_benchmark_hybrid("^GSPC", db, fetch_yahoo_finance("^GSPC", 10)),
+        fetch_benchmark_hybrid("^IXIC", db, fetch_yahoo_finance("^IXIC", 10)),
     ]
 
     tasks = [
@@ -521,14 +523,11 @@ async def get_chart_data(request: CompareRequest, db: AsyncSession = Depends(get
     ]
     results = await asyncio.gather(*tasks, *benchmark_tasks)
 
-    etf_data_list = results[:-2]
-    kospi_df = results[-2]
-    kosdaq_df = results[-1]
-
-    import pandas as pd
-
-    sp500_df = pd.DataFrame()
-    nasdaq_df = pd.DataFrame()
+    etf_data_list = results[:-4]
+    kospi_df = results[-4]
+    kosdaq_df = results[-3]
+    sp500_df = results[-2]
+    nasdaq_df = results[-1]
 
     await harvester.close()
 

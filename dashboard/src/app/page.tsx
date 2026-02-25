@@ -465,6 +465,15 @@ export default function Home() {
       }
     });
 
+    const benchKeys = ['KOSPI', 'KOSDAQ', 'SP500', 'NASDAQ'];
+    benchKeys.forEach((key: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const firstValid = rawData.find((d: any) => d[key] != null);
+      if (firstValid) {
+        basePrices[key] = firstValid[key];
+      }
+    });
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let baseMappedData = rawData.map((d: any, i: number, arr: any[]) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -555,7 +564,9 @@ export default function Home() {
       keys.forEach((key: string) => {
         if (i > 0) {
           // Provide a realistic random walk based on price changes if available, or just random
-          const priceChangeRatio = d[key] ? ((d[key] - chartData[i - 1][key]) / chartData[i - 1][key]) || 0 : 0;
+          const currentRaw = d[`${key}_raw`];
+          const prevRaw = chartData[i - 1][`${key}_raw`];
+          const priceChangeRatio = (currentRaw && prevRaw) ? ((currentRaw - prevRaw) / prevRaw) : 0;
           // Inflow tends to match performance momentum, plus random noise
           currentSimState[key].inflow += (priceChangeRatio * 1000) + (Math.random() - 0.45) * 15;
           // Dividend yield tends to drop slightly if price spikes (inverse relation) or random
@@ -767,8 +778,8 @@ export default function Home() {
             <Aperture className="w-8 h-8 md:w-10 md:h-10 text-indigo-400 group-hover:rotate-180 transition-transform duration-700" />
             ETF Lens
             <span className={`text-[10px] md:text-[12px] font-mono font-medium px-2 py-1 rounded-md ml-2 hidden sm:inline-block uppercase tracking-widest whitespace-nowrap ${dbVersion.includes("Loading") || dbVersion.includes("Updating")
-                ? "text-rose-400 bg-rose-400/10 border border-rose-400/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse"
-                : "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
+              ? "text-rose-400 bg-rose-400/10 border border-rose-400/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse"
+              : "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
               }`}>
               {dbVersion}
             </span>

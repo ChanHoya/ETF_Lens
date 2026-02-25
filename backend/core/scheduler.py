@@ -86,10 +86,8 @@ async def sync_etf_batch():
                 print(f"Error processing DB sync for {code}: {e}")
 
     codes_to_sync = harvester.etf_list[["Symbol", "Name"]].to_dict("records")
-    # For testing, we only sync first 20 ETFs, in prod we sync all
-    tasks = [
-        process_code(c["Symbol"], c["Name"], "Unknown") for c in codes_to_sync[:20]
-    ]
+    # In prod we sync all
+    tasks = [process_code(c["Symbol"], c["Name"], "Unknown") for c in codes_to_sync]
     await asyncio.gather(*tasks)
 
     # Sync benchmarks
