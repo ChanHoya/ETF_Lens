@@ -43,6 +43,7 @@ export default function Home() {
   const [hoveredEtfName, setHoveredEtfName] = useState<string | null>(null);
   const [isEtfCheckModalOpen, setIsEtfCheckModalOpen] = useState(false);
   const [hasOpenedEtfCheck, setHasOpenedEtfCheck] = useState(false);
+  const [naverEtfCode, setNaverEtfCode] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -734,6 +735,7 @@ export default function Home() {
                   }
                   setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart');
                   setIsEtfCheckModalOpen(false);
+                  setNaverEtfCode(null);
                   setSelectedDetailEtf(null);
                 }}
                 className={`text-sm md:text-base tracking-wide font-bold transition-all px-4 py-1.5 rounded-full ${((tab.id === 'etfcheck' && isEtfCheckModalOpen) || (tab.id !== 'etfcheck' && activeTab === tab.id && !isEtfCheckModalOpen)) ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'
@@ -1500,7 +1502,7 @@ export default function Home() {
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      window.open(`https://finance.naver.com/item/main.naver?code=${etf.etf_code}`, '_blank', 'width=1000,height=800');
+                                      setNaverEtfCode(etf.etf_code);
                                     }}
                                     className="px-3 py-1.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 rounded text-xs font-bold hover:bg-indigo-500/30 transition-colors"
                                   >
@@ -2079,7 +2081,7 @@ export default function Home() {
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      window.open(`https://finance.naver.com/item/main.naver?code=${selectedDetailEtf.etf_code}`, '_blank', 'width=1000,height=800');
+                                      setNaverEtfCode(selectedDetailEtf.etf_code);
                                     }}
                                     className="px-4 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 rounded-lg text-sm font-bold hover:bg-indigo-500 hover:text-white transition-all shadow-md"
                                   >
@@ -2210,6 +2212,38 @@ export default function Home() {
                 {/* CSS Trick: Invert colors + hue-rotate to fake a dark mode over white themed external sites */}
                 <iframe
                   src="https://www.etfcheck.co.kr/mobile/main"
+                  className="w-full h-full border-none"
+                  style={{ filter: "invert(0.92) hue-rotate(180deg)" }}
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Naver Modal */}
+        {naverEtfCode && (
+          <div className="absolute top-0 inset-x-0 bottom-2 md:bottom-4 z-[500] flex-col animate-in fade-in duration-300 flex">
+            <div className="w-full h-full bg-neutral-900 border border-neutral-700/50 rounded-2xl shadow-2xl shadow-blue-500/10 flex flex-col overflow-hidden ring-1 ring-white/10">
+              {/* Header */}
+              <div className="flex items-center justify-between px-3 md:px-5 py-2 border-b border-white/5 bg-gradient-to-r from-neutral-900 to-neutral-800 shrink-0 relative z-10">
+                <h2 className="text-sm md:text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 flex items-center gap-2">
+                  <span className="w-1.5 h-6 bg-blue-500 rounded-full"></span>
+                  네이버 금융 (Naver Finance)
+                </h2>
+                <button
+                  onClick={() => setNaverEtfCode(null)}
+                  className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-full bg-white/5 text-gray-400 hover:text-white hover:bg-rose-500/20 hover:scale-105 active:scale-95 transition-all outline-none group border border-transparent hover:border-rose-500/50"
+                >
+                  <X className="w-3 h-3 md:w-4 md:h-4 group-hover:rotate-90 transition-transform duration-300" />
+                </button>
+              </div>
+
+              {/* Iframe content with Dark Mode Filter */}
+              <div className="w-full flex-1 overflow-hidden relative bg-[#0b0f19]">
+                {/* CSS Trick: Invert colors + hue-rotate to fake a dark mode over white themed external sites */}
+                <iframe
+                  src={`https://finance.naver.com/item/main.naver?code=${naverEtfCode}`}
                   className="w-full h-full border-none"
                   style={{ filter: "invert(0.92) hue-rotate(180deg)" }}
                   allowFullScreen
