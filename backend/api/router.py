@@ -130,78 +130,6 @@ async def fetch_yahoo_finance(ticker: str, period_years: int = 10):
     return await asyncio.to_thread(_fetch)
 
 
-@router.post("/compare/chart")
-async def compare_chart(request: CompareRequest, db: AsyncSession = Depends(get_db)):
-    if len(request.etf_codes) < 2:
-        return {"error": "Provide at least two ETF codes for comparison."}
-
-    harvester = ETFHarvester()
-    await harvester.initialize()
-
-    start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
-    benchmark_tasks = [
-        asyncio.to_thread(fdr.DataReader, "KS11", start_str),
-        asyncio.to_thread(fdr.DataReader, "KQ11", start_str),
-        fetch_yahoo_finance("^GSPC", 10),
-        fetch_yahoo_finance("^IXIC", 10),
-    ]
-
-    tasks = [
-        harvester.fetch_naver_etf_data(code, skip_holdings=True, skip_chart=False)
-        for code in request.etf_codes
-    ]
-    results = await asyncio.gather(*tasks, *benchmark_tasks)
-
-    etf_data_list = results[:-4]
-    kospi_df = results[-4]
-    kosdaq_df = results[-3]
-    sp500_df = results[-2]
-    nasdaq_df = results[-1]
-
-    await harvester.close()
-
-    chart_data_map = {}
-    for data in etf_data_list:
-        hist = data.get("historical_data", {})
-        dates = hist.get("dates", [])
-        prices = hist.get("prices", [])
-        if not dates or not prices:
-            continue
-        for dt, pr in zip(dates, prices):
-            if dt not in chart_data_map:
-                chart_data_map[dt] = {"date": dt}
-            chart_data_map[dt][data["etf_name"]] = pr
-
-    if not kospi_df.empty:
-        for dt_ts, row in kospi_df.iterrows():
-            dt_str = str(dt_ts.date())
-            if dt_str in chart_data_map:
-                chart_data_map[dt_str]["KOSPI"] = row["Close"]
-    if not kosdaq_df.empty:
-        for dt_ts, row in kosdaq_df.iterrows():
-            dt_str = str(dt_ts.date())
-            if dt_str in chart_data_map:
-                chart_data_map[dt_str]["KOSDAQ"] = row["Close"]
-    if not sp500_df.empty:
-        for dt_ts, row in sp500_df.iterrows():
-            dt_str = str(dt_ts.date())
-            if dt_str in chart_data_map:
-                chart_data_map[dt_str]["SP500"] = row["Close"]
-    if not nasdaq_df.empty:
-        for dt_ts, row in nasdaq_df.iterrows():
-            dt_str = str(dt_ts.date())
-            if dt_str in chart_data_map:
-                chart_data_map[dt_str]["NASDAQ"] = row["Close"]
-
-    sorted_dates = sorted(list(chart_data_map.keys()))
-    step = max(1, len(sorted_dates) // 1000)
-    sampled_dates = sorted_dates[::step]
-    line_chart_data = [chart_data_map[dt] for dt in sampled_dates]
-    etf_keys = [data["etf_name"] for data in etf_data_list]
-
-    return {"line_chart_data": line_chart_data, "etf_keys": etf_keys}
-
-
 async def fetch_etf_hybrid(
     code: str,
     skip_holdings: bool,
@@ -654,29 +582,46 @@ async def get_chart_data(request: CompareRequest, db: AsyncSession = Depends(get
 
 
 @router.post("/compare/holdings")
-async def get_holdings(request: CompareRequest):
+async def get_holdings(request: CompareRequest, db: AsyncSession = Depends(get_db)):
     """
     Fetches only the holdings data for the given ETF codes and computes their overlap.
+    Reads from local SQLite DB first for near-instant response.
     """
     if len(request.etf_codes) < 2:
         return {"error": "Provide at least two ETF codes for comparison."}
 
     import traceback
+    from sqlalchemy import select
+    from db.models import ETFHoldings
 
     try:
         harvester = ETFHarvester()
         quant = ETFQuant()
 
-        tasks = [harvester.fetch_etf_holdings(code) for code in request.etf_codes]
-        holdings_list = await asyncio.gather(*tasks)
+        holdings_dict = {}
+        holdings_list = []
+
+        # We can fetch holdings sequentially or concurrently; DB reads are fast enough for sequential here
+        for code in request.etf_codes:
+            h_res = await db.execute(
+                select(ETFHoldings).where(ETFHoldings.code == code)
+            )
+            db_holdings = [
+                {"ticker": h.ticker, "weight": h.weight} for h in h_res.scalars().all()
+            ]
+
+            if db_holdings:
+                holdings_dict[code] = db_holdings
+                holdings_list.append(db_holdings)
+            else:
+                # Fallback to live scrape
+                live_holdings = await harvester.fetch_etf_holdings(code)
+                holdings_dict[code] = live_holdings
+                holdings_list.append(live_holdings)
 
         overlap_pct = 0.0
         if len(holdings_list) == 2:
             overlap_pct = quant.calculate_overlap(holdings_list[0], holdings_list[1])
-
-        holdings_dict = {}
-        for code, h_data in zip(request.etf_codes, holdings_list):
-            holdings_dict[code] = h_data
 
         return {"holdings_dict": holdings_dict, "overlap_pct": overlap_pct}
     except Exception as e:
