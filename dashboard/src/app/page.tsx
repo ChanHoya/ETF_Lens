@@ -46,9 +46,20 @@ export default function Home() {
   const [naverEtfCode, setNaverEtfCode] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isLoadingChart, setIsLoadingChart] = useState(false);
+  const [dbVersion, setDbVersion] = useState<string>("DB ver.Loading...");
 
   useEffect(() => {
     setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+    fetch(`${API_BASE}/api/v1/analyze/db-version`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.version) setDbVersion(data.version);
+      })
+      .catch(err => console.error("DB version load error", err));
   }, []);
 
 
@@ -755,6 +766,9 @@ export default function Home() {
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 drop-shadow-sm flex items-center gap-3 group-hover:opacity-80 transition-opacity">
             <Aperture className="w-8 h-8 md:w-10 md:h-10 text-indigo-400 group-hover:rotate-180 transition-transform duration-700" />
             ETF Lens
+            <span className="text-[10px] md:text-[12px] font-mono font-medium text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-1 rounded-md ml-2 hidden sm:inline-block shadow-[0_0_10px_rgba(52,211,153,0.15)] uppercase tracking-widest whitespace-nowrap">
+              {dbVersion}
+            </span>
           </h1>
         </div>
 

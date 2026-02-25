@@ -39,6 +39,27 @@ async def get_etf_list():
     return _etf_master_list
 
 
+@router.get("/db-version")
+async def get_db_version(db: AsyncSession = Depends(get_db)):
+    from db.models import ETFMaster
+    from sqlalchemy import func
+    from datetime import timedelta
+
+    try:
+        result = await db.execute(select(func.max(ETFMaster.last_updated)))
+        max_time = result.scalar()
+
+        if max_time:
+            # max_time is naive UTC. Add 9 hours for KST.
+            kst_time = max_time + timedelta(hours=9)
+            version_str = kst_time.strftime("DB ver.%Y%m%d%H%M")
+            return {"version": version_str}
+    except Exception as e:
+        logger.error(f"Error fetching DB version: {e}")
+
+    return {"version": "DB ver.Updating..."}
+
+
 class CompareRequest(BaseModel):
     etf_codes: List[str]
     skip_holdings: bool = False
