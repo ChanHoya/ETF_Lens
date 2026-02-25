@@ -1446,9 +1446,6 @@ export default function Home() {
 
               {activeTab === 'holdings' && (
                 <div className="w-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <div className="w-full bg-rose-500/10 border-x border-b border-rose-500/30 text-rose-300 px-4 py-3 rounded-b-xl mb-4 text-center text-sm md:text-base font-medium shadow-md">
-                    미국 ETF 종목의 구성정보는 현재 제대로 구현되어 있지 않습니다.
-                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 w-full bg-white/[0.02] p-4 lg:p-5 border border-white/5 rounded-2xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0 justify-center">
                     {isLoadingHoldings ? (
                       <div className="flex flex-col items-center justify-center p-12 text-center col-span-full w-full min-h-[300px]">
@@ -1520,14 +1517,8 @@ export default function Home() {
               )}
 
               {activeTab === 'chart' && (
-                <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white/[0.03] p-4 lg:p-5 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
-                  {/* Note on data sources for user - explicitly one long line without wrapping elements beside it */}
-                  <div className="mb-1 w-full py-1.5 px-3 bg-indigo-500/10 border border-indigo-500/20 rounded-md hidden sm:block">
-                    <p className="text-[11px] text-indigo-300 flex items-center gap-2 whitespace-nowrap overflow-hidden text-ellipsis">
-                      <span className="text-xs">💡</span> <span className="opacity-90">오픈소스 API(한국거래소 등) 한계상 현재 제공하는 &apos;수익률&apos; 시계열 외의 &apos;순자금유입&apos; 및 &apos;배당률&apos; 과거 트렌드 값은 형태 구현을 위해 가격 변동성을 연동한</span> <b className="text-indigo-200">시뮬레이션 데이터</b><span className="opacity-90">로 대체되어 그려집니다. (UI 디자인 확인 목적)</span>
-                    </p>
-                  </div>
-                  <div className="mb-4 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white/[0.03] p-4 lg:p-5 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
+                  <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
                     <div className="flex items-center gap-1.5 bg-black/40 p-1.5 rounded-xl border border-white/10 shadow-inner">
                       {['1D', '1W', '1M', '6M', '1Y', '3Y', 'MAX'].map(p => (
                         <button
