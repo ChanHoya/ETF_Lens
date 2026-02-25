@@ -1226,9 +1226,9 @@ export default function Home() {
                         <table className="w-full table-fixed text-center border-collapse min-w-[max-content]">
                           <thead>
                             <tr>
-                              <th className="px-2 py-0.5 text-[10px] md:text-[11px] text-gray-400 font-medium border-b border-white/10 whitespace-nowrap bg-black/20 w-24">종목</th>
+                              <th className="px-2 py-0.5 text-[10px] md:text-[11px] text-gray-400 font-medium border-b border-white/10 whitespace-nowrap bg-black/20 w-12">종목</th>
                               {radarData.map((row: any) => (
-                                <th key={row.subject} className="px-2 py-0.5 text-[10px] md:text-[11px] text-gray-400 font-medium border-b border-white/10 whitespace-nowrap bg-black/20">
+                                <th key={row.subject} className="px-2 py-0.5 text-[10px] md:text-[11px] text-gray-400 font-medium border-b border-white/10 whitespace-nowrap bg-black/20 w-auto">
                                   {row.subject === "수수료(저렴함)" ? "수수료" : row.subject}
                                 </th>
                               ))}
