@@ -478,7 +478,8 @@ export default function Home() {
     let baseMappedData = rawData.map((d: any, i: number, arr: any[]) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const newPoint: any = { date: d.date };
-      keys.forEach((key: string) => {
+      const allKeys = [...keys, ...benchKeys];
+      allKeys.forEach((key: string) => {
         const currentRaw = d[key] != null ? Number(d[key]) : null;
 
         if (period === '1W') {
