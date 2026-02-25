@@ -45,6 +45,7 @@ export default function Home() {
   const [hasOpenedEtfCheck, setHasOpenedEtfCheck] = useState(false);
   const [naverEtfCode, setNaverEtfCode] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [isLoadingChart, setIsLoadingChart] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -154,6 +155,11 @@ export default function Home() {
       { search: "", code: "" },
       { search: "", code: "" },
       { search: "", code: "" },
+      { search: "", code: "" },
+      { search: "", code: "" },
+      { search: "", code: "" },
+      { search: "", code: "" },
+      { search: "", code: "" },
     ]);
     if (typeof window !== "undefined") {
       localStorage.removeItem('etf_current_slots');
@@ -258,13 +264,53 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ etf_codes: validCodes, skip_holdings: true }),
+        body: JSON.stringify({ etf_codes: validCodes, skip_holdings: true, skip_chart: true }),
       });
       const result = await res.json();
+
+      // Preserve visual_data shell internally
+      result.visual_data = { ...result.visual_data, line_chart: [] };
+
       setData(result);
       setActiveTab('info');
       setLoading(false);
       setIsLoadingHoldings(true);
+      setIsLoadingChart(true);
+
+      // Async fetch for slow chart data
+      fetch(`${API_BASE}/api/v1/analyze/compare/chart`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ etf_codes: validCodes, skip_holdings: true }),
+      })
+        .then(async r => {
+          if (!r.ok) return null;
+          const text = await r.text();
+          if (!text) return null;
+          try { return JSON.parse(text); } catch (e) { return null; }
+        })
+        .then(chartData => {
+          if (!chartData) {
+            setIsLoadingChart(false);
+            return;
+          }
+          setData((prev: any) => {
+            if (!prev || !prev.visual_data) return prev;
+            return {
+              ...prev,
+              visual_data: {
+                ...prev.visual_data,
+                line_chart: chartData.line_chart_data,
+                etf_keys: chartData.etf_keys
+              }
+            };
+          });
+          setIsLoadingChart(false);
+        })
+        .catch(err => {
+          console.warn("Error fetching chart data:", err);
+          setIsLoadingChart(false);
+        });
 
       // Async fetch for slow holdings data
       fetch(`${API_BASE}/api/v1/analyze/compare/holdings`, {
@@ -754,7 +800,7 @@ export default function Home() {
         {activeTab === 'select' && (
           <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10 min-h-[50vh] animate-in fade-in zoom-in-95 duration-500">
             <div className="text-center mb-8">
-              <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-white drop-shadow-md">ETF 투자는 데이터 기반으로 하세요</h2>
+              <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-white drop-shadow-md">데이터 기반의 ETF 투자</h2>
               <p className="text-gray-400 text-sm md:text-base">최대 10개의 ETF를 선택하여 다각도로 성과와 포트폴리오를 비교 분석합니다.</p>
             </div>
             <section className="w-full max-w-[95vw] xl:max-w-[1200px] bg-white/[0.03] backdrop-blur-3xl rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] px-5 py-6 md:px-8 md:py-8 border border-white/10 transition-all hover:border-white/20 duration-500">
@@ -857,7 +903,7 @@ export default function Home() {
                           if (terms.length >= 2) {
                             addAllFilteredEtfs();
                           } else if (focusedGlobalIndex >= 0 && focusedGlobalIndex <= maxIndex) {
-                            selectEtfGlobal(filtered[focusedGlobalIndex].code, filtered[focusedGlobalIndex].name, e.ctrlKey || e.metaKey);
+                            selectEtfGlobal(filtered[focusedGlobalIndex].code, filtered[focusedGlobalIndex].name, true);
                           }
                         } else if (e.key === ' ') {
                           if (focusedGlobalIndex >= 0 && focusedGlobalIndex <= maxIndex) {
@@ -903,7 +949,10 @@ export default function Home() {
                                   <div
                                     id={`global-item-${idx}`}
                                     key={e.code}
-                                    onClick={(evt) => selectEtfGlobal(e.code, e.name, evt.ctrlKey || evt.metaKey)}
+                                    onMouseDown={(evt) => {
+                                      evt.preventDefault();
+                                      selectEtfGlobal(e.code, e.name, true);
+                                    }}
                                     onMouseEnter={() => setFocusedGlobalIndex(idx)}
                                     className={`px-5 py-3 cursor-pointer text-[13px] md:text-sm border-b border-indigo-500/10 last:border-0 transition-all flex items-center justify-between group/item ${focusedGlobalIndex === idx ? 'bg-indigo-600/40 text-white' : 'hover:bg-indigo-600/40 text-gray-200'}`}
                                   >
@@ -1168,13 +1217,73 @@ export default function Home() {
                               />
                             );
                           })}
-                          <Tooltip
-                            contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '16px', color: '#fff', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)' }}
-                            itemStyle={{ fontWeight: 'bold' }}
-                          />
                         </RadarChart>
                       </ResponsiveContainer>
                     </div>
+                    {/* Factor Score Heatmap Table */}
+                    {data.visual_data && data.visual_data.etf_keys && data.visual_data.etf_keys.length > 0 && radarData.length > 0 && (
+                      <div className="w-full mt-4 overflow-x-auto relative z-10 scrollbar-hide">
+                        <table className="w-full table-fixed text-center border-collapse min-w-[max-content]">
+                          <thead>
+                            <tr>
+                              <th className="px-2 py-1.5 text-[10px] md:text-[11px] text-gray-400 font-medium border-b border-white/10 whitespace-nowrap bg-black/20 w-24">종목</th>
+                              {radarData.map((row: any) => (
+                                <th key={row.subject} className="px-2 py-1.5 text-[10px] md:text-[11px] text-gray-400 font-medium border-b border-white/10 whitespace-nowrap bg-black/20">
+                                  {row.subject === "수수료(저렴함)" ? "수수료" : row.subject}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.visual_data.etf_keys.map((key: string, idx: number) => {
+                              const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
+                              const c = glowColors[idx % glowColors.length];
+                              const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+
+                              return (
+                                <tr
+                                  key={key}
+                                  className="hover:bg-white/5 transition-colors"
+                                  onMouseEnter={() => setHoveredEtfName(key)}
+                                  onMouseLeave={() => setHoveredEtfName(null)}
+                                >
+                                  <td className="px-2 py-2 border-b border-white/5">
+                                    <div className="flex justify-center items-center w-full h-full py-1">
+                                      <div className={`w-3 h-3 rounded-full ${isHovered ? 'animate-pulse scale-125' : ''}`} style={{ backgroundColor: c, boxShadow: `0 0 10px ${c}` }}></div>
+                                    </div>
+                                  </td>
+                                  {radarData.map((row: any) => {
+                                    const val = Math.max(0, Number(row[key]) || 0);
+                                    // Calculate min/max for this column factor
+                                    const allVals = data.visual_data.etf_keys.map((k: string) => Math.max(0, Number(row[k]) || 0));
+                                    const maxV = Math.max(...allVals);
+                                    const minV = Math.min(...allVals);
+                                    const norm = maxV === minV ? 0.5 : (val - minV) / (maxV - minV);
+
+                                    // 10: Dark Green (~140 hue, ~40% lightness)
+                                    // 1: Light Yellow (~60 hue, ~90% lightness)
+                                    const hue = 60 + (norm * 80);
+                                    const lightness = 90 - (norm * 50);
+                                    const textColor = norm > 0.6 ? 'text-white' : 'text-gray-900';
+
+                                    return (
+                                      <td key={row.subject} className="px-1 py-1 border-b border-white/5 relative">
+                                        <div
+                                          className={`w-full h-full min-h-[26px] flex items-center justify-center rounded text-[10px] md:text-[11px] font-mono transition-all duration-300 ${isHovered ? 'scale-110 shadow-[0_0_10px_rgba(255,255,255,0.3)] z-10 font-extrabold ring-1 ring-white/50' : 'font-bold'} ${textColor}`}
+                                          style={{ backgroundColor: `hsl(${hue}, 85%, ${lightness}%)` }}
+                                        >
+                                          {val}
+                                        </div>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </section>
 
                   {/* Detailed Basic Info Inverted Table */}
@@ -1536,171 +1645,182 @@ export default function Home() {
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 lg:gap-6">
-
-                    {/* 1. Raw Price Chart (가격 추이) */}
-                    {data.visual_data.line_chart && data.visual_data.etf_keys && (
-                      <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                        <div className="flex justify-between items-center mb-4 relative z-10">
-                          <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
-                            <span className="w-1.5 h-6 bg-gradient-to-b from-blue-400 to-indigo-500 rounded-full"></span>
-                            가격 추이
-                            <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(원)</span>
-                          </h3>
-                        </div>
-
-                        <div className="h-[400px] w-full relative z-10">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={simulatedChartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
-                              <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
-                              <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
-                              <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }} contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '12px' }} labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold', fontSize: '13px' }} itemStyle={{ padding: '2px 0', fontSize: '12px' }} />
-                              <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
-                                if (e && e.value) {
-                                  const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
-                                  if (matchedEtf) setSelectedDetailEtf(matchedEtf);
-                                }
-                              }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
-                                onMouseLeave={() => setHoveredEtfName(null)}
-                                formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
-                              {data.visual_data.etf_keys.map((key: string, idx: number) => {
-                                const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
-                                const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
-                                const isOthersHovered = hoveredEtfName && !isHovered;
-                                return <Line key={`${key}_raw`} type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
-                              })}
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </section>
-                    )}
-
-                    {/* 2. Historical Performance Line Chart (수익률) */}
-                    {data.visual_data.line_chart && data.visual_data.etf_keys && (
-                      <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
-                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                        <div className="flex justify-between items-center mb-4 relative z-10">
-                          <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
-                            <span className="w-1.5 h-6 bg-gradient-to-b from-indigo-400 to-pink-500 rounded-full"></span>
-                            {period === '1W' ? '수익률 일간 변동' : '다중 ETF 수익률 매치업'}
-                            <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">
-                              {period === '1W' ? '(전일 대비 %)' : '(누적 수익률 %)'}
-                            </span>
-                          </h3>
-                        </div>
-
-                        <div className="h-[400px] w-full relative z-10">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={simulatedChartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
-                              <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
-                              <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
-                              <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }} contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '12px' }} labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold', fontSize: '13px' }} itemStyle={{ padding: '2px 0', fontSize: '12px' }} />
-                              <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
-                                if (e && e.value) {
-                                  const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
-                                  if (matchedEtf) setSelectedDetailEtf(matchedEtf);
-                                }
-                              }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
-                                onMouseLeave={() => setHoveredEtfName(null)}
-                                formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
-                              {data.visual_data.etf_keys.map((key: string, idx: number) => {
-                                const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
-                                const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
-                                const isOthersHovered = hoveredEtfName && !isHovered;
-                                return <Line key={key} type="monotone" dataKey={key} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
-                              })}
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </section>
-                    )}
-
-                    {/* 3. Cumulative Fund Inflow Trend (순자금유입) */}
-                    {data.visual_data.line_chart && data.visual_data.etf_keys && (
-                      <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
-                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                        <div className="flex justify-between items-center mb-4 relative z-10">
-                          <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
-                            <span className="w-1.5 h-6 bg-emerald-400 rounded-full"></span>
-                            순자금유입 추이 <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(누적, 억 원)</span>
-                          </h3>
-                        </div>
-
-                        <div className="h-[400px] w-full relative z-10">
-                          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg overflow-hidden border border-white/5">
-                            <div className="px-6 py-3 bg-indigo-600/90 text-white text-sm font-bold rounded-xl shadow-[0_0_30px_rgba(79,70,229,0.5)] border border-indigo-400/30">
-                              🚧 추후 개발 예정 (To Be Developed)
+                    {isLoadingChart ? (
+                      <div className="flex flex-col items-center justify-center p-12 text-center col-span-full w-full min-h-[400px] bg-white/[0.02] border border-white/5 rounded-2xl">
+                        <Loader2 className="w-10 h-10 text-indigo-400 animate-spin mb-4" />
+                        <h3 className="text-lg font-bold text-gray-200 mb-2">10년치 시계열 데이터를 분석하고 있습니다</h3>
+                        <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                          과거 수익률 패턴과 변동성을 계산 중입니다. 잠시만 기다려주세요.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* 1. Raw Price Chart (가격 추이) */}
+                        {data.visual_data.line_chart && data.visual_data.etf_keys && data.visual_data.line_chart.length > 0 && (
+                          <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                            <div className="flex justify-between items-center mb-4 relative z-10">
+                              <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
+                                <span className="w-1.5 h-6 bg-gradient-to-b from-blue-400 to-indigo-500 rounded-full"></span>
+                                가격 추이
+                                <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(원)</span>
+                              </h3>
                             </div>
-                          </div>
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={simulatedChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
-                              <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={10} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
-                              <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
-                              <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.1)' }} contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px' }} labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontSize: '13px' }} itemStyle={{ padding: '2px 0', fontSize: '12px' }} />
-                              <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
-                                if (e && e.value) {
-                                  const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
-                                  if (matchedEtf) setSelectedDetailEtf(matchedEtf);
-                                }
-                              }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
-                                onMouseLeave={() => setHoveredEtfName(null)}
-                                formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
-                              {data.visual_data.etf_keys.map((key: string, idx: number) => {
-                                const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
-                                const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
-                                const isOthersHovered = hoveredEtfName && !isHovered;
-                                return <Line key={`${key}_inflow`} type="monotone" dataKey={`${key}_inflow`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 4 }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
-                              })}
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </section>
-                    )}
 
-                    {/* 4. Dividend Yield Trend (연간배당률) */}
-                    {data.visual_data.line_chart && data.visual_data.etf_keys && (
-                      <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
-                        <div className="absolute inset-0 bg-gradient-to-bl from-rose-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                        <div className="flex justify-between items-center mb-4 relative z-10">
-                          <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
-                            <span className="w-1.5 h-6 bg-rose-400 rounded-full"></span>
-                            연간배당률 트렌드 <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(TTM, %)</span>
-                          </h3>
-                        </div>
-
-                        <div className="h-[400px] w-full relative z-10">
-                          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg overflow-hidden border border-white/5">
-                            <div className="px-6 py-3 bg-rose-600/90 text-white text-sm font-bold rounded-xl shadow-[0_0_30px_rgba(225,29,72,0.5)] border border-rose-400/30">
-                              🚧 추후 개발 예정 (To Be Developed)
+                            <div className="h-[400px] w-full relative z-10">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={simulatedChartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                  <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
+                                  <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
+                                  <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }} contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '12px' }} labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold', fontSize: '13px' }} itemStyle={{ padding: '2px 0', fontSize: '12px' }} />
+                                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
+                                    if (e && e.value) {
+                                      const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
+                                      if (matchedEtf) setSelectedDetailEtf(matchedEtf);
+                                    }
+                                  }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
+                                    onMouseLeave={() => setHoveredEtfName(null)}
+                                    formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
+                                  {data.visual_data.etf_keys.map((key: string, idx: number) => {
+                                    const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
+                                    const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+                                    const isOthersHovered = hoveredEtfName && !isHovered;
+                                    return <Line key={`${key}_raw`} type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                  })}
+                                </LineChart>
+                              </ResponsiveContainer>
                             </div>
-                          </div>
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={simulatedChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
-                              <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={10} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
-                              <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
-                              <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.1)' }} contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px' }} labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontSize: '13px' }} itemStyle={{ padding: '2px 0', fontSize: '12px' }} />
-                              <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
-                                if (e && e.value) {
-                                  const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
-                                  if (matchedEtf) setSelectedDetailEtf(matchedEtf);
-                                }
-                              }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
-                                onMouseLeave={() => setHoveredEtfName(null)}
-                                formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
-                              {data.visual_data.etf_keys.map((key: string, idx: number) => {
-                                const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
-                                const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
-                                const isOthersHovered = hoveredEtfName && !isHovered;
-                                return <Line key={`${key}_dividend`} type="monotone" dataKey={`${key}_dividend`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 4 }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
-                              })}
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </section>
+                          </section>
+                        )}
+
+                        {/* 2. Historical Performance Line Chart (수익률) */}
+                        {data.visual_data.line_chart && data.visual_data.etf_keys && (
+                          <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
+                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                            <div className="flex justify-between items-center mb-4 relative z-10">
+                              <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
+                                <span className="w-1.5 h-6 bg-gradient-to-b from-indigo-400 to-pink-500 rounded-full"></span>
+                                {period === '1W' ? '수익률 일간 변동' : '다중 ETF 수익률 매치업'}
+                                <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">
+                                  {period === '1W' ? '(전일 대비 %)' : '(누적 수익률 %)'}
+                                </span>
+                              </h3>
+                            </div>
+
+                            <div className="h-[400px] w-full relative z-10">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={simulatedChartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                  <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
+                                  <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
+                                  <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }} contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '12px' }} labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold', fontSize: '13px' }} itemStyle={{ padding: '2px 0', fontSize: '12px' }} />
+                                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
+                                    if (e && e.value) {
+                                      const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
+                                      if (matchedEtf) setSelectedDetailEtf(matchedEtf);
+                                    }
+                                  }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
+                                    onMouseLeave={() => setHoveredEtfName(null)}
+                                    formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
+                                  {data.visual_data.etf_keys.map((key: string, idx: number) => {
+                                    const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
+                                    const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+                                    const isOthersHovered = hoveredEtfName && !isHovered;
+                                    return <Line key={key} type="monotone" dataKey={key} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                  })}
+                                </LineChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </section>
+                        )}
+
+                        {/* 3. Cumulative Fund Inflow Trend (순자금유입) */}
+                        {data.visual_data.line_chart && data.visual_data.etf_keys && (
+                          <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                            <div className="flex justify-between items-center mb-4 relative z-10">
+                              <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
+                                <span className="w-1.5 h-6 bg-emerald-400 rounded-full"></span>
+                                순자금유입 추이 <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(누적, 억 원)</span>
+                              </h3>
+                            </div>
+
+                            <div className="h-[400px] w-full relative z-10">
+                              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg overflow-hidden border border-white/5">
+                                <div className="px-6 py-3 bg-indigo-600/90 text-white text-sm font-bold rounded-xl shadow-[0_0_30px_rgba(79,70,229,0.5)] border border-indigo-400/30">
+                                  🚧 추후 개발 예정 (To Be Developed)
+                                </div>
+                              </div>
+                              <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={simulatedChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                  <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={10} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
+                                  <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
+                                  <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.1)' }} contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px' }} labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontSize: '13px' }} itemStyle={{ padding: '2px 0', fontSize: '12px' }} />
+                                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
+                                    if (e && e.value) {
+                                      const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
+                                      if (matchedEtf) setSelectedDetailEtf(matchedEtf);
+                                    }
+                                  }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
+                                    onMouseLeave={() => setHoveredEtfName(null)}
+                                    formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
+                                  {data.visual_data.etf_keys.map((key: string, idx: number) => {
+                                    const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
+                                    const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+                                    const isOthersHovered = hoveredEtfName && !isHovered;
+                                    return <Line key={`${key}_inflow`} type="monotone" dataKey={`${key}_inflow`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 4 }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                  })}
+                                </LineChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </section>
+                        )}
+
+                        {/* 4. Dividend Yield Trend (연간배당률) */}
+                        {data.visual_data.line_chart && data.visual_data.etf_keys && (
+                          <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
+                            <div className="absolute inset-0 bg-gradient-to-bl from-rose-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                            <div className="flex justify-between items-center mb-4 relative z-10">
+                              <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
+                                <span className="w-1.5 h-6 bg-rose-400 rounded-full"></span>
+                                연간배당률 트렌드 <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(TTM, %)</span>
+                              </h3>
+                            </div>
+
+                            <div className="h-[400px] w-full relative z-10">
+                              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-lg overflow-hidden border border-white/5">
+                                <div className="px-6 py-3 bg-rose-600/90 text-white text-sm font-bold rounded-xl shadow-[0_0_30px_rgba(225,29,72,0.5)] border border-rose-400/30">
+                                  🚧 추후 개발 예정 (To Be Developed)
+                                </div>
+                              </div>
+                              <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={simulatedChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                  <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={10} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
+                                  <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
+                                  <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.1)' }} contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px' }} labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontSize: '13px' }} itemStyle={{ padding: '2px 0', fontSize: '12px' }} />
+                                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
+                                    if (e && e.value) {
+                                      const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
+                                      if (matchedEtf) setSelectedDetailEtf(matchedEtf);
+                                    }
+                                  }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
+                                    onMouseLeave={() => setHoveredEtfName(null)}
+                                    formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
+                                  {data.visual_data.etf_keys.map((key: string, idx: number) => {
+                                    const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
+                                    const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+                                    const isOthersHovered = hoveredEtfName && !isHovered;
+                                    return <Line key={`${key}_dividend`} type="monotone" dataKey={`${key}_dividend`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 4 }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                  })}
+                                </LineChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </section>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

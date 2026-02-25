@@ -1,71 +1,9 @@
-import asyncio
-import FinanceDataReader as fdr
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
-import os
-import requests
-from bs4 import BeautifulSoup
-import urllib.request
-import urllib.parse
-import glob
-import ssl
-from dotenv import load_dotenv
+import re
 
-# Let's bypass SSL for urllib scraping Naver
-ssl._create_default_https_context = ssl._create_unverified_context
+with open("agents/harvester/harvester.py", "r") as f:
+    content = f.read()
 
-import os
-from dotenv import load_dotenv
-
-env_path = os.path.join(os.path.dirname(__file__), "..", "..", ".env")
-load_dotenv(env_path)
-
-
-class ETFHarvester:
-    """
-    Agent 1: Data Harvester
-    Uses FinanceDataReader to fetch KRX/ETF real data.
-    """
-
-    def __init__(self):
-        print("ETFHarvester instance created.")
-        self.kis_token = None
-        self.kis_base = os.environ.get(
-            "KIS_URL_BASE", "https://openapi.koreainvestment.com:9443"
-        )
-        self.kis_app_key = os.environ.get("KIS_APP_KEY")
-        self.kis_app_secret = os.environ.get("KIS_APP_SECRET")
-
-    async def initialize(self):
-        # Initialize KIS Token
-        if self.kis_app_key and self.kis_app_secret:
-            try:
-                res = await asyncio.to_thread(
-                    requests.post,
-                    f"{self.kis_base}/oauth2/tokenP",
-                    headers={"content-type": "application/json"},
-                    json={
-                        "grant_type": "client_credentials",
-                        "appkey": self.kis_app_key,
-                        "appsecret": self.kis_app_secret,
-                    },
-                )
-                self.kis_token = res.json().get("access_token")
-                if self.kis_token:
-                    print("Successfully acquired KIS API Token for real-time quotes.")
-            except Exception as e:
-                print(f"Failed to acquire KIS token: {e}")
-
-        # fdr doesn't require complex async playwright startup, so this is non-blocking.
-        print("Harvester initialized (using FinanceDataReader).")
-        try:
-            self.etf_list = await asyncio.to_thread(fdr.StockListing, "ETF/KR")
-            print("Successfully loaded KRX ETF Master List.")
-        except Exception as e:
-            print(f"Error loading ETF list: {e}")
-            self.etf_list = None
-
-    async def fetch_naver_etf_data(
+new_method = '''    async def fetch_naver_etf_data(
         self, code: str, skip_holdings: bool = False, skip_chart: bool = False
     ):
         """
@@ -278,125 +216,12 @@ class ETFHarvester:
         else:
             data["holdings"] = []
             
-        return data
+        return data'''
 
-    async def fetch_etf_holdings(self, code: str) -> list:
-        """
-        [Option A] KRX API via pykrx (Official Stock Exchange Data).
-        [Option B] Fallback to Naver Scraping / Mocks.
-        """
-        holdings = []
-        is_krx_success = False
+pattern = r"    async def fetch_naver_etf_data\(.*?return data"
+content = re.sub(pattern, new_method, content, flags=re.DOTALL)
 
-        try:
-            from pykrx import stock
+with open("agents/harvester/harvester.py", "w") as f:
+    f.write(content)
 
-            print(f"[{code}] Attempting Option A: KRX API Data...")
-            # Run blocking pykrx call in background thread
-            df = await asyncio.to_thread(stock.get_etf_portfolio_deposit_file, code)
-            if not df.empty:
-                # Some ETFs (like leveraged/synthetic/global) return 0.0 for '비중'.
-                # In this case, we manually calculate weight using '시가총액' or '금액'.
-                if "비중" in df.columns and df["비중"].sum() == 0:
-                    if "시가총액" in df.columns and df["시가총액"].abs().sum() > 0:
-                        df["비중"] = (
-                            df["시가총액"].abs() / df["시가총액"].abs().sum()
-                        ) * 100
-                    elif "금액" in df.columns and df["금액"].abs().sum() > 0:
-                        df["비중"] = (df["금액"].abs() / df["금액"].abs().sum()) * 100
-
-                for idx, row in df.iterrows():
-                    name = row["구성종목명"] if "구성종목명" in df.columns else str(idx)
-                    weight = row["비중"] if "비중" in df.columns else 0.0
-                    holdings.append({"ticker": name, "weight": float(weight)})
-
-                max_w = max(
-                    (
-                        h["weight"]
-                        for h in holdings
-                        if "현금" not in h["ticker"]
-                        and "원화" not in h["ticker"]
-                        and "FX스왑" not in h["ticker"]
-                    ),
-                    default=0,
-                )
-                if max_w > 0:
-                    # Sort by weight and keep Top 20 for UI display limits natively
-                    holdings = sorted(
-                        holdings, key=lambda x: x["weight"], reverse=True
-                    )[:50]
-                    is_krx_success = True
-                    print(
-                        f"[{code}] KRX API successful. Found {len(holdings)} holdings."
-                    )
-                else:
-                    holdings = []
-                    print(
-                        f"[{code}] KRX API weights are all 0.0 (overseas/synthetic). Falling back."
-                    )
-            else:
-                print(f"[{code}] KRX API returned empty holdings.")
-        except Exception as e:
-            print(f"[{code}] KRX API (Option A) failed: {e}. Falling back.")
-
-        if not is_krx_success:
-            holdings = []
-            print(f"[{code}] KRX Data unavailable, returning empty holdings.")
-
-            # --- START US PROXY FALLBACK ---
-            etf_name = None
-            if getattr(self, "etf_list", None) is not None:
-                match = self.etf_list[self.etf_list["Symbol"] == code]
-                if not match.empty:
-                    etf_name = match["Name"].values[0]
-
-            if etf_name:
-                name_upper = etf_name.upper()
-                if "S&P500" in name_upper or "S&P 500" in name_upper:
-                    print(f"[{code}] S&P 500 ETF matched. Generating proxy holdings.")
-                    holdings = [
-                        {"ticker": "Apple Inc.", "weight": 7.02},
-                        {"ticker": "Microsoft Corp.", "weight": 6.96},
-                        {"ticker": "NVIDIA Corp.", "weight": 6.64},
-                        {"ticker": "Amazon.com Inc.", "weight": 3.44},
-                        {"ticker": "Meta Platforms Inc.", "weight": 2.40},
-                        {"ticker": "Alphabet Inc. Class A", "weight": 2.02},
-                        {"ticker": "Alphabet Inc. Class C", "weight": 1.70},
-                        {"ticker": "Berkshire Hathaway Inc.", "weight": 1.68},
-                        {"ticker": "Eli Lilly & Co.", "weight": 1.41},
-                        {"ticker": "Broadcom Inc.", "weight": 1.34},
-                    ]
-                elif "나스닥" in name_upper or "NASDAQ" in name_upper:
-                    print(f"[{code}] NASDAQ ETF matched. Generating proxy holdings.")
-                    holdings = [
-                        {"ticker": "Apple Inc.", "weight": 8.71},
-                        {"ticker": "Microsoft Corp.", "weight": 8.44},
-                        {"ticker": "NVIDIA Corp.", "weight": 7.82},
-                        {"ticker": "Amazon.com Inc.", "weight": 4.67},
-                        {"ticker": "Meta Platforms Inc.", "weight": 4.31},
-                        {"ticker": "Broadcom Inc.", "weight": 4.16},
-                        {"ticker": "Alphabet Inc. Class A", "weight": 2.50},
-                        {"ticker": "Alphabet Inc. Class C", "weight": 2.45},
-                        {"ticker": "Tesla Inc.", "weight": 2.41},
-                        {"ticker": "Costco Wholesale Corp", "weight": 2.38},
-                    ]
-            # --- END US PROXY FALLBACK ---
-
-        return holdings
-
-    async def close(self):
-        print("Harvester closed.")
-
-
-async def main():
-    harvester = ETFHarvester()
-    await harvester.initialize()
-    data = await harvester.fetch_naver_etf_data(
-        "453850"
-    )  # TIGER 미국테크TOP10+10%프리미엄
-    print(f"Sample data for {data['etf_code']} fetched successfully.")
-    await harvester.close()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+print("Replaced!")

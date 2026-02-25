@@ -42,6 +42,7 @@ async def get_etf_list():
 class CompareRequest(BaseModel):
     etf_codes: List[str]
     skip_holdings: bool = False
+    skip_chart: bool = False
 
 
 async def fetch_yahoo_finance(ticker: str, period_years: int = 10):
@@ -72,6 +73,78 @@ async def fetch_yahoo_finance(ticker: str, period_years: int = 10):
     return await asyncio.to_thread(_fetch)
 
 
+@router.post("/compare/chart")
+async def compare_chart(request: CompareRequest, db: AsyncSession = Depends(get_db)):
+    if len(request.etf_codes) < 2:
+        return {"error": "Provide at least two ETF codes for comparison."}
+
+    harvester = ETFHarvester()
+    await harvester.initialize()
+
+    start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
+    benchmark_tasks = [
+        asyncio.to_thread(fdr.DataReader, "KS11", start_str),
+        asyncio.to_thread(fdr.DataReader, "KQ11", start_str),
+        fetch_yahoo_finance("^GSPC", 10),
+        fetch_yahoo_finance("^IXIC", 10),
+    ]
+
+    tasks = [
+        harvester.fetch_naver_etf_data(code, skip_holdings=True, skip_chart=False)
+        for code in request.etf_codes
+    ]
+    results = await asyncio.gather(*tasks, *benchmark_tasks)
+
+    etf_data_list = results[:-4]
+    kospi_df = results[-4]
+    kosdaq_df = results[-3]
+    sp500_df = results[-2]
+    nasdaq_df = results[-1]
+
+    await harvester.close()
+
+    chart_data_map = {}
+    for data in etf_data_list:
+        hist = data.get("historical_data", {})
+        dates = hist.get("dates", [])
+        prices = hist.get("prices", [])
+        if not dates or not prices:
+            continue
+        for dt, pr in zip(dates, prices):
+            if dt not in chart_data_map:
+                chart_data_map[dt] = {"date": dt}
+            chart_data_map[dt][data["etf_name"]] = pr
+
+    if not kospi_df.empty:
+        for dt_ts, row in kospi_df.iterrows():
+            dt_str = str(dt_ts.date())
+            if dt_str in chart_data_map:
+                chart_data_map[dt_str]["KOSPI"] = row["Close"]
+    if not kosdaq_df.empty:
+        for dt_ts, row in kosdaq_df.iterrows():
+            dt_str = str(dt_ts.date())
+            if dt_str in chart_data_map:
+                chart_data_map[dt_str]["KOSDAQ"] = row["Close"]
+    if not sp500_df.empty:
+        for dt_ts, row in sp500_df.iterrows():
+            dt_str = str(dt_ts.date())
+            if dt_str in chart_data_map:
+                chart_data_map[dt_str]["SP500"] = row["Close"]
+    if not nasdaq_df.empty:
+        for dt_ts, row in nasdaq_df.iterrows():
+            dt_str = str(dt_ts.date())
+            if dt_str in chart_data_map:
+                chart_data_map[dt_str]["NASDAQ"] = row["Close"]
+
+    sorted_dates = sorted(list(chart_data_map.keys()))
+    step = max(1, len(sorted_dates) // 1000)
+    sampled_dates = sorted_dates[::step]
+    line_chart_data = [chart_data_map[dt] for dt in sampled_dates]
+    etf_keys = [data["etf_name"] for data in etf_data_list]
+
+    return {"line_chart_data": line_chart_data, "etf_keys": etf_keys}
+
+
 @router.post("/compare")
 async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_db)):
     """
@@ -85,26 +158,37 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
     await harvester.initialize()
 
     start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
-    kospi_task = asyncio.to_thread(fdr.DataReader, "KS11", start_str)
-    kosdaq_task = asyncio.to_thread(fdr.DataReader, "KQ11", start_str)
-    # Adding US Benchmark Indices (S&P 500 and NASDAQ) via Yahoo Finance API
-    sp500_task = fetch_yahoo_finance("^GSPC", 10)
-    nasdaq_task = fetch_yahoo_finance("^IXIC", 10)
+
+    benchmark_tasks = []
+    if not request.skip_chart:
+        benchmark_tasks = [
+            asyncio.to_thread(fdr.DataReader, "KS11", start_str),
+            asyncio.to_thread(fdr.DataReader, "KQ11", start_str),
+            fetch_yahoo_finance("^GSPC", 10),
+            fetch_yahoo_finance("^IXIC", 10),
+        ]
 
     # Run the fetch for all ETFs concurrently to greatly improve response time along with benchmarks
     tasks = [
-        harvester.fetch_naver_etf_data(code, request.skip_holdings)
+        harvester.fetch_naver_etf_data(code, request.skip_holdings, request.skip_chart)
         for code in request.etf_codes
     ]
-    results = await asyncio.gather(
-        *tasks, kospi_task, kosdaq_task, sp500_task, nasdaq_task
-    )
+    results = await asyncio.gather(*tasks, *benchmark_tasks)
 
-    etf_data_list = results[:-4]
-    kospi_df = results[-4]
-    kosdaq_df = results[-3]
-    sp500_df = results[-2]
-    nasdaq_df = results[-1]
+    if not request.skip_chart:
+        etf_data_list = results[:-4]
+        kospi_df = results[-4]
+        kosdaq_df = results[-3]
+        sp500_df = results[-2]
+        nasdaq_df = results[-1]
+    else:
+        etf_data_list = results
+        import pandas as pd
+
+        kospi_df = pd.DataFrame()
+        kosdaq_df = pd.DataFrame()
+        sp500_df = pd.DataFrame()
+        nasdaq_df = pd.DataFrame()
 
     await harvester.close()
 
@@ -339,6 +423,94 @@ async def get_recent_history(limit: int = 10, db: AsyncSession = Depends(get_db)
     except Exception as e:
         logger.error(f"Error fetching history: {e}")
         return []
+
+
+@router.post("/compare/chart")
+async def get_chart_data(request: CompareRequest):
+    """
+    Fetches the computationally heavy 10-year line chart data for ETFs and benchmarks.
+    """
+    if len(request.etf_codes) < 2:
+        return {"error": "Provide at least two ETF codes for comparison."}
+
+    from datetime import datetime, timedelta
+    import asyncio
+    import FinanceDataReader as fdr
+
+    harvester = ETFHarvester()
+    await harvester.initialize()
+
+    start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
+
+    benchmark_tasks = [
+        asyncio.to_thread(fdr.DataReader, "KS11", start_str),
+        asyncio.to_thread(fdr.DataReader, "KQ11", start_str),
+    ]
+
+    tasks = [
+        harvester.fetch_naver_etf_data(code, skip_holdings=True, skip_chart=False)
+        for code in request.etf_codes
+    ]
+    results = await asyncio.gather(*tasks, *benchmark_tasks)
+
+    etf_data_list = results[:-2]
+    kospi_df = results[-2]
+    kosdaq_df = results[-1]
+
+    import pandas as pd
+
+    sp500_df = pd.DataFrame()
+    nasdaq_df = pd.DataFrame()
+
+    await harvester.close()
+
+    chart_data_map = {}
+    for data in etf_data_list:
+        hist = data.get("historical_data", {})
+        dates = hist.get("dates", [])
+        prices = hist.get("prices", [])
+
+        if not dates or not prices:
+            continue
+
+        for dt, pr in zip(dates, prices):
+            if dt not in chart_data_map:
+                chart_data_map[dt] = {"date": dt}
+            chart_data_map[dt][data["etf_name"]] = pr
+
+    if not kospi_df.empty:
+        for dt_ts, row in kospi_df.iterrows():
+            dt_str = str(dt_ts.date())
+            if dt_str in chart_data_map:
+                chart_data_map[dt_str]["KOSPI"] = row["Close"]
+
+    if not kosdaq_df.empty:
+        for dt_ts, row in kosdaq_df.iterrows():
+            dt_str = str(dt_ts.date())
+            if dt_str in chart_data_map:
+                chart_data_map[dt_str]["KOSDAQ"] = row["Close"]
+
+    if not sp500_df.empty:
+        for dt_ts, row in sp500_df.iterrows():
+            dt_str = str(dt_ts.date())
+            if dt_str in chart_data_map:
+                chart_data_map[dt_str]["SP500"] = row["Close"]
+
+    if not nasdaq_df.empty:
+        for dt_ts, row in nasdaq_df.iterrows():
+            dt_str = str(dt_ts.date())
+            if dt_str in chart_data_map:
+                chart_data_map[dt_str]["NASDAQ"] = row["Close"]
+
+    sorted_dates = sorted(list(chart_data_map.keys()))
+    step = max(1, len(sorted_dates) // 1000)
+    sampled_dates = sorted_dates[::step]
+    line_chart_data = [chart_data_map[dt] for dt in sampled_dates]
+
+    return {
+        "line_chart_data": line_chart_data,
+        "etf_keys": [d["etf_name"] for d in etf_data_list],
+    }
 
 
 @router.post("/compare/holdings")
