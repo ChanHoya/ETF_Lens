@@ -1715,7 +1715,7 @@ export default function Home() {
                                     const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                                     const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
                                     const isOthersHovered = hoveredEtfName && !isHovered;
-                                    return <Line key={`${key}_raw`} type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                    return <Line key={`${key}_raw`} type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                                   })}
                                 </LineChart>
                               </ResponsiveContainer>
@@ -1756,7 +1756,7 @@ export default function Home() {
                                     const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                                     const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
                                     const isOthersHovered = hoveredEtfName && !isHovered;
-                                    return <Line key={key} type="monotone" dataKey={key} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                    return <Line key={key} type="monotone" dataKey={key} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                                   })}
                                 </LineChart>
                               </ResponsiveContainer>
@@ -1799,7 +1799,7 @@ export default function Home() {
                                     const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                                     const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
                                     const isOthersHovered = hoveredEtfName && !isHovered;
-                                    return <Line key={`${key}_inflow`} type="monotone" dataKey={`${key}_inflow`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 4 }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                    return <Line key={`${key}_inflow`} type="monotone" dataKey={`${key}_inflow`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 4 }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                                   })}
                                 </LineChart>
                               </ResponsiveContainer>
@@ -1842,7 +1842,7 @@ export default function Home() {
                                     const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                                     const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
                                     const isOthersHovered = hoveredEtfName && !isHovered;
-                                    return <Line key={`${key}_dividend`} type="monotone" dataKey={`${key}_dividend`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} activeDot={{ r: 4 }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                    return <Line key={`${key}_dividend`} type="monotone" dataKey={`${key}_dividend`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 4 }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                                   })}
                                 </LineChart>
                               </ResponsiveContainer>
