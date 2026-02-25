@@ -181,6 +181,87 @@ async def compare_chart(request: CompareRequest, db: AsyncSession = Depends(get_
     return {"line_chart_data": line_chart_data, "etf_keys": etf_keys}
 
 
+async def fetch_etf_hybrid(
+    code: str,
+    skip_holdings: bool,
+    skip_chart: bool,
+    db: AsyncSession,
+    harvester: ETFHarvester,
+):
+    from db.models import ETFMaster, ETFDailyPrice, ETFHoldings
+    from sqlalchemy import select
+
+    res = await db.execute(select(ETFMaster).where(ETFMaster.code == code))
+    master = res.scalars().first()
+
+    if master:
+        # Load from DB
+        import json
+
+        b_info = json.loads(master.basic_info_json) if master.basic_info_json else {}
+
+        # Fetch holdings
+        holdings = []
+        if not skip_holdings:
+            h_res = await db.execute(
+                select(ETFHoldings).where(ETFHoldings.code == code)
+            )
+            for h in h_res.scalars().all():
+                holdings.append({"ticker": h.ticker, "weight": h.weight})
+
+        # Fetch prices
+        dates = []
+        prices = []
+        if not skip_chart:
+            p_res = await db.execute(
+                select(ETFDailyPrice)
+                .where(ETFDailyPrice.code == code)
+                .order_by(ETFDailyPrice.id)
+            )
+            for p in p_res.scalars().all():
+                dates.append(p.date)
+                prices.append(p.close)
+
+        # We can implement a fast real-time NAV/Price fetch here later.
+        # For now, rely on yesterday's price from DB or trigger an asynchronous KIS update.
+        live_price = master.price
+
+        return {
+            "etf_code": code,
+            "etf_name": master.name,
+            "market_data": {
+                "price": live_price,
+                "nav": master.nav,
+            },
+            "basic_info": b_info,
+            "historical_data": {"dates": dates, "prices": prices},
+            "holdings": holdings,
+        }
+    else:
+        # Fallback to pure live fetching (e.g. for un-cached or non-KRX ETFs)
+        return await harvester.fetch_naver_etf_data(code, skip_holdings, skip_chart)
+
+
+async def fetch_benchmark_hybrid(symbol: str, db: AsyncSession, fallback_coro):
+    from db.models import BenchmarkPrice
+    from sqlalchemy import select
+    import pandas as pd
+
+    res = await db.execute(
+        select(BenchmarkPrice)
+        .where(BenchmarkPrice.symbol == symbol)
+        .order_by(BenchmarkPrice.id)
+    )
+    rows = res.scalars().all()
+    if rows:
+        dates = [r.date for r in rows]
+        closes = [r.close for r in rows]
+        df = pd.DataFrame({"Close": closes}, index=pd.to_datetime(dates))
+        return df
+    # Fallback
+    return await fallback_coro
+
+
 @router.post("/compare")
 async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_db)):
     """
@@ -198,15 +279,15 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
     benchmark_tasks = []
     if not request.skip_chart:
         benchmark_tasks = [
-            cached_fdr_reader("KS11", start_str),
-            cached_fdr_reader("KQ11", start_str),
-            fetch_yahoo_finance("^GSPC", 10),
-            fetch_yahoo_finance("^IXIC", 10),
+            fetch_benchmark_hybrid("KS11", db, cached_fdr_reader("KS11", start_str)),
+            fetch_benchmark_hybrid("KQ11", db, cached_fdr_reader("KQ11", start_str)),
+            fetch_benchmark_hybrid("^GSPC", db, fetch_yahoo_finance("^GSPC", 10)),
+            fetch_benchmark_hybrid("^IXIC", db, fetch_yahoo_finance("^IXIC", 10)),
         ]
 
     # Run the fetch for all ETFs concurrently to greatly improve response time along with benchmarks
     tasks = [
-        harvester.fetch_naver_etf_data(code, request.skip_holdings, request.skip_chart)
+        fetch_etf_hybrid(code, request.skip_holdings, request.skip_chart, db, harvester)
         for code in request.etf_codes
     ]
     results = await asyncio.gather(*tasks, *benchmark_tasks)
@@ -462,16 +543,16 @@ async def get_recent_history(limit: int = 10, db: AsyncSession = Depends(get_db)
 
 
 @router.post("/compare/chart")
-async def get_chart_data(request: CompareRequest):
+async def get_chart_data(request: CompareRequest, db: AsyncSession = Depends(get_db)):
     """
     Fetches the computationally heavy 10-year line chart data for ETFs and benchmarks.
+    Reads from local SQLite DB first for near-instant response.
     """
     if len(request.etf_codes) < 2:
         return {"error": "Provide at least two ETF codes for comparison."}
 
     from datetime import datetime, timedelta
     import asyncio
-    import FinanceDataReader as fdr
 
     harvester = ETFHarvester()
     await harvester.initialize()
@@ -479,12 +560,14 @@ async def get_chart_data(request: CompareRequest):
     start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
 
     benchmark_tasks = [
-        cached_fdr_reader("KS11", start_str),
-        cached_fdr_reader("KQ11", start_str),
+        fetch_benchmark_hybrid("KS11", db, cached_fdr_reader("KS11", start_str)),
+        fetch_benchmark_hybrid("KQ11", db, cached_fdr_reader("KQ11", start_str)),
     ]
 
     tasks = [
-        harvester.fetch_naver_etf_data(code, skip_holdings=True, skip_chart=False)
+        fetch_etf_hybrid(
+            code, skip_holdings=True, skip_chart=False, db=db, harvester=harvester
+        )
         for code in request.etf_codes
     ]
     results = await asyncio.gather(*tasks, *benchmark_tasks)

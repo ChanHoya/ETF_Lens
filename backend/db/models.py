@@ -1,17 +1,16 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    Float,
+    ForeignKey,
+    Boolean,
+)
+from sqlalchemy.orm import relationship
 from db.database import Base
 from datetime import datetime
-
-
-class EtfCache(Base):
-    __tablename__ = "etf_cache"
-
-    code = Column(String, primary_key=True, index=True)
-    name = Column(String)
-    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    data_payload = Column(
-        Text
-    )  # JSON string of all standard data (holdings, metrics, historic)
 
 
 class SimulationHistory(Base):
@@ -21,3 +20,59 @@ class SimulationHistory(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     codes = Column(String)  # comma separated codes like "069500,453850"
     result_payload = Column(Text)  # JSON string of frontend ready payload
+
+
+class ETFMaster(Base):
+    __tablename__ = "etf_master"
+
+    code = Column(String, primary_key=True, index=True)
+    name = Column(String, index=True)
+    issuer = Column(String)
+    nav = Column(Float)
+    price = Column(Float)
+    base_fee = Column(Float)  # e.g 0.15
+    tot_fee = Column(Float)  # e.g 0.22 (TER)
+    aum = Column(String)  # String because it's stored as e.g. "1,200억"
+
+    # Pre-calculated Basic Info caching as JSON String
+    basic_info_json = Column(Text)
+    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationship to historical prices
+    prices = relationship(
+        "ETFDailyPrice", back_populates="etf", cascade="all, delete-orphan"
+    )
+    holdings = relationship(
+        "ETFHoldings", back_populates="etf", cascade="all, delete-orphan"
+    )
+
+
+class ETFDailyPrice(Base):
+    __tablename__ = "etf_daily_prices"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String, ForeignKey("etf_master.code"), index=True)
+    date = Column(String, index=True)  # Format 'YYYY-MM-DD'
+    close = Column(Float)
+
+    etf = relationship("ETFMaster", back_populates="prices")
+
+
+class ETFHoldings(Base):
+    __tablename__ = "etf_holdings"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String, ForeignKey("etf_master.code"), index=True)
+    ticker = Column(String)  # e.g. "AAPL"
+    weight = Column(Float)
+
+    etf = relationship("ETFMaster", back_populates="holdings")
+
+
+class BenchmarkPrice(Base):
+    __tablename__ = "benchmark_prices"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    symbol = Column(String, index=True)  # e.g. "KS11", "KQ11", "^GSPC", "^IXIC"
+    date = Column(String, index=True)  # "YYYY-MM-DD"
+    close = Column(Float)
