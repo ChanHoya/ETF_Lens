@@ -1226,9 +1226,9 @@ export default function Home() {
                         <table className="w-full table-fixed text-center border-collapse min-w-[max-content]">
                           <thead>
                             <tr>
-                              <th className="px-2 py-1.5 text-[10px] md:text-[11px] text-gray-400 font-medium border-b border-white/10 whitespace-nowrap bg-black/20 w-24">종목</th>
+                              <th className="px-2 py-0.5 text-[10px] md:text-[11px] text-gray-400 font-medium border-b border-white/10 whitespace-nowrap bg-black/20 w-24">종목</th>
                               {radarData.map((row: any) => (
-                                <th key={row.subject} className="px-2 py-1.5 text-[10px] md:text-[11px] text-gray-400 font-medium border-b border-white/10 whitespace-nowrap bg-black/20">
+                                <th key={row.subject} className="px-2 py-0.5 text-[10px] md:text-[11px] text-gray-400 font-medium border-b border-white/10 whitespace-nowrap bg-black/20">
                                   {row.subject === "수수료(저렴함)" ? "수수료" : row.subject}
                                 </th>
                               ))}
@@ -1247,9 +1247,9 @@ export default function Home() {
                                   onMouseEnter={() => setHoveredEtfName(key)}
                                   onMouseLeave={() => setHoveredEtfName(null)}
                                 >
-                                  <td className="px-2 py-2 border-b border-white/5">
-                                    <div className="flex justify-center items-center w-full h-full py-1">
-                                      <div className={`w-3 h-3 rounded-full ${isHovered ? 'animate-pulse scale-125' : ''}`} style={{ backgroundColor: c, boxShadow: `0 0 10px ${c}` }}></div>
+                                  <td className="px-2 py-0.5 border-b border-white/5">
+                                    <div className="flex justify-center items-center w-full h-full">
+                                      <div className={`w-2 h-2 rounded-full ${isHovered ? 'animate-pulse scale-125' : ''}`} style={{ backgroundColor: c, boxShadow: `0 0 8px ${c}` }}></div>
                                     </div>
                                   </td>
                                   {radarData.map((row: any) => {
@@ -1267,9 +1267,9 @@ export default function Home() {
                                     const textColor = norm > 0.6 ? 'text-white' : 'text-gray-900';
 
                                     return (
-                                      <td key={row.subject} className="px-1 py-1 border-b border-white/5 relative">
+                                      <td key={row.subject} className="px-1 py-0.5 border-b border-white/5 relative">
                                         <div
-                                          className={`w-full h-full min-h-[26px] flex items-center justify-center rounded text-[10px] md:text-[11px] font-mono transition-all duration-300 ${isHovered ? 'scale-110 shadow-[0_0_10px_rgba(255,255,255,0.3)] z-10 font-extrabold ring-1 ring-white/50' : 'font-bold'} ${textColor}`}
+                                          className={`w-full h-full min-h-[20px] flex items-center justify-center rounded text-[10px] md:text-[11px] font-mono transition-all duration-300 ${isHovered ? 'scale-110 shadow-[0_0_10px_rgba(255,255,255,0.3)] z-10 font-extrabold ring-1 ring-white/50' : 'font-bold'} ${textColor}`}
                                           style={{ backgroundColor: `hsl(${hue}, 85%, ${lightness}%)` }}
                                         >
                                           {val}
