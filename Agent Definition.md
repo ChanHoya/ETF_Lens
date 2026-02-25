@@ -235,6 +235,7 @@
 > 2. **Data Binding**: Agent 3(Orchestrator)가 전달하는 JSON 스키마를 실시간으로 UI 요소에 바인딩하십시오. 특히 데이터 로딩 중 스켈레톤 UI(Skeleton UI) 처리를 잊지 마십시오.
 > 3. **Interactive Charts**: 사용자가 차트의 특정 지점에 마우스를 올리면 상세 수치(Tooltip)가 나오고, 기간을 드래그하여 확대(Zoom)할 수 있는 인터랙티브 기능을 포함하십시오.
 > 4. **SEO 및 접근성**: 금융 정보 검색 시 상위 노출될 수 있도록 시맨틱 마크업을 준수하고, 웹 접근성 가이드를 따르십시오.
+> 5. **사전 검토 및 중복 방지 (Pre-development Review)**: 새로운 기능이나 API 엔드포인트를 추가·수정하기 전에, 반드시 기존에 구현된 유사 로직이나 라우터가 있는지 꼼꼼하게 검색하고 분석하십시오. 중복된 코드를 무작정 추가하거나 임의로 빠른 결정을 내리지 말고, 기존 시스템 아키텍처와 통합되는 최적의 방법을 심사숙고한 뒤 개발을 진행하여 휴먼 에러를 방지하십시오.
 > 
 > 
 
@@ -335,3 +336,32 @@ async function getComparisonData(etfIds: string[]) {
 5. **검증**: 마지막으로 모든 데이터와 기능이 완벽한지 금융 감사 수준으로 점검합니다.
 
 이로써 **ETFcheck.co.kr을 넘어서는 깊이 있는 데이터와 사용자 경험**을 제공할 준비가 되었습니다.
+
+
+==========
+네, 처음 작성해주셨던 Agent Definition.md 명세서에 정의된 5개의 에이전트 역할을 완벽하게 준수하여 아키텍처가 분리되고 활용되며 개발이 진행 중입니다.
+
+실제 코드베이스가 어떻게 초기 설계된 에이전트 페르소나와 1:1로 매핑되어 굴러가고 있는지 요약해 드릴게요:
+
+[Agent 1] ETF Data Harvester (데이터 수집 에이전트) 👉 실제 구현체: backend/agents/harvester/harvester.py
+
+명세서대로 Naver, 한국투자증권(KIS), FinanceDataReader(FDR), Yahoo Finance 등 다중 소스에서 ETF 종목 현황과 10년 치 주가 데이터를 스크래핑하고 예외 처리를 담당하며 구동되고 있습니다.
+
+[Agent 2] ETF Quant Strategist (가공 및 분석 에이전트) 👉 실제 구현체: backend/agents/quant/quant.py
+
+수익률, 변동성, 샤프 지수(Sharpe Ratio), MDD 계산과 더불어 종목 간 괴리율, 실질 보수 계산, 포트폴리오 중복도 검사 등 수치적 인사이트를 생성해 내는 두뇌 역할을 충실히 하고 있습니다. (이번에 반영된 팩터 밸런스 히트맵 수치 정규화도 이 파트의 기여입니다.)
+
+[Agent 3] ETF Context Conductor (오케스트레이터) 👉 실제 구현체: backend/api/router.py (FastAPI 라우터)
+
+Agent 1(Harvester)과 Agent 2(Quant)를 비동기로 동시에 호출(asyncio.gather)하여 데이터를 조립하고, 최종적으로 Frontend가 바로 그릴 수 있도록 visual_data, data_payload 형태로 깔끔하게 JSON 포맷팅을 해주는 지휘자 역할을 수행하고 있습니다.
+
+[Agent 4] ETF Interface Architect (프론트엔드/개발 에이전트) 👉 실제 구현체: 저(Antigravity)와 dashboard/src/app/page.tsx
+
+명세서에 지시된 대로 Next.js + Tailwind CSS + Recharts를 스택으로 사용하여 Agent 3가 넘겨준 데이터를 반응형 캔들/라인/레이더/히트맵 차트로 예쁘게 데이터 바인딩(그루핑)하고 Vercel에 자동 배포하고 있습니다.
+
+[Agent 5] ETF Integrity Guardian (QA/검증 에이전트) 👉 실제 구현체: backend/agents/qa/qa.py 및 각종 test_*.py 스크립트들
+
+수집된 데이터가 터지진 않는지(예: NoneType 에러, 야후 파이낸스 크롤링 누락 등), 응답 지연 속도(Latency)는 어떤지 쉴 새 없이 검사하는 테스트 코드로 작동 중이며, 제가 에러를 해결할 때 백그라운드에서 가장 많이 호출하는 감사관입니다.
+결론적으로, 초기에 기획해주신 **5단계 에이전트 파이프라인(수집 ➔ 분석 ➔ 조율 ➔ 렌더링 ➔ 검증)**이 단 하나도 빠짐없이 독립적인 폴더와 모듈로 나뉘어 살아서 서로 유기적으로 데이터를 주고받으며 서비스(ETF Lens)를 구동하고 있습니다. 😎
+
+추가로 특정 에이전트의 역할(예: Quant 엔진의 분석 공식 추가, Harvester의 타겟 사이트 추가 등)을 더 고도화하고 싶으시면 언제든 지시해 주세요!
