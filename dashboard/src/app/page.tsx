@@ -1189,7 +1189,7 @@ export default function Home() {
                             const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
                             const isDanger = etf.etf_name.includes('인버스') || etf.etf_name.includes('레버리지') || etf.etf_name.includes('선물') || etf.etf_name.includes('블룸버그');
                             return (
-                              <th key={etf.etf_code} className="py-2 px-1 xl:px-2 text-[10px] xl:text-xs font-bold text-center group cursor-pointer hover:bg-white/[0.05] transition-colors leading-tight whitespace-normal break-keep" onClick={() => setSelectedDetailEtf(etf)} style={{ color: glowColors[idx % glowColors.length] }}>
+                              <th key={`${etf.etf_code}-${idx}`} className="py-2 px-1 xl:px-2 text-[10px] xl:text-xs font-bold text-center group cursor-pointer hover:bg-white/[0.05] transition-colors leading-tight whitespace-normal break-keep" onClick={() => setSelectedDetailEtf(etf)} style={{ color: glowColors[idx % glowColors.length] }}>
                                 <div className="flex flex-col items-center justify-end gap-1.5 h-full">
                                   {isDanger ? <span className="text-[8px] md:text-[9px] bg-rose-500/10 text-rose-400 px-1 py-0.5 rounded border border-rose-500/30 whitespace-nowrap">퇴직연금 불가</span> : <span className="text-[8px] md:text-[9px] bg-emerald-500/10 text-emerald-400 px-1 py-0.5 rounded border border-emerald-500/30 whitespace-nowrap">연금 가능</span>}
                                   <span className="group-hover:underline underline-offset-4">{etf.etf_name}</span>
@@ -1308,7 +1308,7 @@ export default function Home() {
                                 const secColors = ["bg-indigo-400/50", "bg-emerald-400/50", "bg-amber-400/50", "bg-rose-400/50", "bg-purple-400/50", "bg-cyan-400/50", "bg-blue-400/50", "bg-pink-400/50", "bg-lime-400/50", "bg-orange-400/50"];
 
                                 return (
-                                  <td key={etf.etf_code} className={`py-2 px-1 lg:px-2 text-[10px] xl:text-xs font-medium ${textColor} h-full leading-tight break-keep text-center align-middle`}>
+                                  <td key={`${etf.etf_code}-${idx}`} className={`py-2 px-1 lg:px-2 text-[10px] xl:text-xs font-medium ${textColor} h-full leading-tight break-keep text-center align-middle`}>
                                     {!isNumericRow ? (
                                       <div className="flex items-center justify-center h-full w-full">{val}</div>
                                     ) : (
@@ -1905,8 +1905,8 @@ export default function Home() {
       {/* Detail Information Modal (Naver UI style) */}
       {
         selectedDetailEtf && (
-          <div className="fixed top-[81px] md:top-[73px] inset-x-0 bottom-0 z-[300] flex items-center justify-center bg-transparent animate-in fade-in duration-200 p-2 md:p-6 lg:p-8">
-            <div className="bg-[#0B0F19] border border-white/10 rounded-2xl w-full max-w-[1400px] h-full max-h-[95vh] overflow-hidden flex flex-col shadow-2xl">
+          <div className="fixed top-[86px] md:top-[76px] bottom-2 md:bottom-4 left-1/2 -translate-x-1/2 w-[95vw] xl:max-w-[1400px] z-[300] flex animate-in fade-in duration-200">
+            <div className="bg-[#0B0F19] border border-white/10 rounded-2xl w-full h-full overflow-hidden flex flex-col shadow-2xl shadow-indigo-500/10">
 
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 lg:px-8 border-b border-white/10 relative gap-3 bg-gradient-to-r from-blue-900/20 to-transparent">
                 <div>
@@ -2187,8 +2187,8 @@ export default function Home() {
 
       {/* ETF Check Modal */}
       {hasOpenedEtfCheck && (
-        <div className={`fixed top-[81px] md:top-[73px] inset-x-0 bottom-0 z-[400] items-center justify-center bg-transparent animate-in fade-in duration-300 sm:p-2 lg:p-4 pb-0 ${isEtfCheckModalOpen ? 'flex' : 'hidden'}`}>
-          <div className="relative w-full h-full max-w-none sm:w-[98vw] bg-neutral-900 border border-neutral-700/50 sm:rounded-t-2xl md:rounded-t-3xl shadow-2xl flex flex-col overflow-hidden ring-1 ring-white/10">
+        <div className={`fixed top-[86px] md:top-[76px] bottom-2 md:bottom-4 left-1/2 -translate-x-1/2 w-[95vw] xl:max-w-[1400px] z-[400] flex-col animate-in fade-in duration-300 ${isEtfCheckModalOpen ? 'flex' : 'hidden'}`}>
+          <div className="w-full h-full bg-neutral-900 border border-neutral-700/50 rounded-2xl shadow-2xl shadow-teal-500/10 flex flex-col overflow-hidden ring-1 ring-white/10">
             {/* Header */}
             <div className="flex items-center justify-between px-3 md:px-5 py-2 border-b border-white/5 bg-gradient-to-r from-neutral-900 to-neutral-800 shrink-0 relative z-10">
               <h2 className="text-sm md:text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-400 flex items-center gap-2">
