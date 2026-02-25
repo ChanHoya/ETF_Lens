@@ -766,7 +766,10 @@ export default function Home() {
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 drop-shadow-sm flex items-center gap-3 group-hover:opacity-80 transition-opacity">
             <Aperture className="w-8 h-8 md:w-10 md:h-10 text-indigo-400 group-hover:rotate-180 transition-transform duration-700" />
             ETF Lens
-            <span className="text-[10px] md:text-[12px] font-mono font-medium text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-1 rounded-md ml-2 hidden sm:inline-block shadow-[0_0_10px_rgba(52,211,153,0.15)] uppercase tracking-widest whitespace-nowrap">
+            <span className={`text-[10px] md:text-[12px] font-mono font-medium px-2 py-1 rounded-md ml-2 hidden sm:inline-block uppercase tracking-widest whitespace-nowrap ${dbVersion.includes("Loading") || dbVersion.includes("Updating")
+                ? "text-rose-400 bg-rose-400/10 border border-rose-400/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse"
+                : "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
+              }`}>
               {dbVersion}
             </span>
           </h1>
