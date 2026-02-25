@@ -45,7 +45,42 @@ class CompareRequest(BaseModel):
     skip_chart: bool = False
 
 
+import time
+
+_bench_cache = {}
+CACHE_TTL = 3600  # 1 hour for market benchmarks
+
+
+def get_bench_cached(key):
+    if key in _bench_cache:
+        val, ts = _bench_cache[key]
+        if time.time() - ts < CACHE_TTL:
+            return val
+    return None
+
+
+def set_bench_cached(key, val):
+    _bench_cache[key] = (val, time.time())
+
+
+async def cached_fdr_reader(symbol: str, start: str):
+    cache_key = f"fdr_{symbol}_{start}"
+    cached = get_bench_cached(cache_key)
+    if cached is not None:
+        return cached
+    import FinanceDataReader as fdr
+
+    df = await asyncio.to_thread(fdr.DataReader, symbol, start)
+    set_bench_cached(cache_key, df)
+    return df
+
+
 async def fetch_yahoo_finance(ticker: str, period_years: int = 10):
+    cache_key = f"yahoo_{ticker}_{period_years}"
+    cached = get_bench_cached(cache_key)
+    if cached is not None:
+        return cached
+
     import urllib.request
     import json
     import pandas as pd
@@ -65,6 +100,7 @@ async def fetch_yahoo_finance(ticker: str, period_years: int = 10):
             dates = [datetime.fromtimestamp(ts).date() for ts in timestamps]
             df = pd.DataFrame({"Close": close_prices}, index=pd.to_datetime(dates))
             df = df.dropna()
+            set_bench_cached(cache_key, df)
             return df
         except Exception as e:
             logger.error(f"Failed to fetch {ticker} from Yahoo: {e}")
@@ -162,8 +198,8 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
     benchmark_tasks = []
     if not request.skip_chart:
         benchmark_tasks = [
-            asyncio.to_thread(fdr.DataReader, "KS11", start_str),
-            asyncio.to_thread(fdr.DataReader, "KQ11", start_str),
+            cached_fdr_reader("KS11", start_str),
+            cached_fdr_reader("KQ11", start_str),
             fetch_yahoo_finance("^GSPC", 10),
             fetch_yahoo_finance("^IXIC", 10),
         ]
@@ -443,8 +479,8 @@ async def get_chart_data(request: CompareRequest):
     start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
 
     benchmark_tasks = [
-        asyncio.to_thread(fdr.DataReader, "KS11", start_str),
-        asyncio.to_thread(fdr.DataReader, "KQ11", start_str),
+        cached_fdr_reader("KS11", start_str),
+        cached_fdr_reader("KQ11", start_str),
     ]
 
     tasks = [

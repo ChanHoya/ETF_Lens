@@ -16,9 +16,25 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 import os
 from dotenv import load_dotenv
+import time
 
 env_path = os.path.join(os.path.dirname(__file__), "..", "..", ".env")
 load_dotenv(env_path)
+
+_CACHE = {}
+CACHE_TTL = 300  # 5 minutes caching
+
+
+def get_cached(key):
+    if key in _CACHE:
+        val, ts = _CACHE[key]
+        if time.time() - ts < CACHE_TTL:
+            return val
+    return None
+
+
+def set_cached(key, val):
+    _CACHE[key] = (val, time.time())
 
 
 class ETFHarvester:
@@ -70,11 +86,18 @@ class ETFHarvester:
     ):
         """
         Fetches historical data and current price concurrently.
+        Uses TTL cache to avoid redundant fetches.
         """
+        cache_key = f"naver_data_{code}_{skip_holdings}_{skip_chart}"
+        cached = get_cached(cache_key)
+        if cached:
+            print(f"[{code}] Serving fetch_naver_etf_data from cache.")
+            return cached
+
         import json
         import urllib.request
         from bs4 import BeautifulSoup
-        
+
         end_date = datetime.now()
         start_date = end_date - relativedelta(years=1 if skip_chart else 10)
         start_str = start_date.strftime("%Y-%m-%d")
@@ -85,6 +108,7 @@ class ETFHarvester:
             except Exception as e:
                 print(f"Error fdr {code}: {e}")
                 import pandas as pd
+
                 return pd.DataFrame()
 
         async def fetch_kis():
@@ -132,13 +156,22 @@ class ETFHarvester:
                     html_url, headers={"User-Agent": "Mozilla/5.0"}
                 )
                 html_raw = await asyncio.to_thread(
-                    lambda: urllib.request.urlopen(req_html).read().decode("utf-8", errors="ignore")
+                    lambda: (
+                        urllib.request.urlopen(req_html)
+                        .read()
+                        .decode("utf-8", errors="ignore")
+                    )
                 )
                 soup = BeautifulSoup(html_raw, "html.parser")
                 scraped = {}
                 for tbl in soup.select("table"):
                     summary = tbl.get("summary", "")
-                    if summary in ["시가총액 정보", "기초지수 정보", "펀드보수 정보", "1개월 수익률 정보"]:
+                    if summary in [
+                        "시가총액 정보",
+                        "기초지수 정보",
+                        "펀드보수 정보",
+                        "1개월 수익률 정보",
+                    ]:
                         for tr in tbl.select("tr"):
                             ths = tr.select("th")
                             tds = tr.select("td")
@@ -176,7 +209,9 @@ class ETFHarvester:
                     f"{int(current_price):,}원 / {p_mark} {abs(int(p_diff)):,} / {p_diff_pct:+.2f}%"
                 )
             else:
-                basic_info["종가/전일대비/수익률"] = f"{int(current_price):,}원 / - / 0.00%"
+                basic_info["종가/전일대비/수익률"] = (
+                    f"{int(current_price):,}원 / - / 0.00%"
+                )
 
             last_252 = df.tail(252)
             basic_info["52주 최고/최저"] = (
@@ -185,12 +220,16 @@ class ETFHarvester:
 
             last_vol = df["Volume"].iloc[-1]
             last_val = last_vol * current_price
-            basic_info["거래량/거래대금"] = f"{int(last_vol):,}주 / {int(last_val // 1000000):,}백만원"
+            basic_info["거래량/거래대금"] = (
+                f"{int(last_vol):,}주 / {int(last_val // 1000000):,}백만원"
+            )
 
             last_20 = df.tail(20)
             avg_vol = last_20["Volume"].mean()
             avg_val = (last_20["Volume"] * last_20["Close"]).mean()
-            basic_info["20일평균 거래량/대금"] = f"{int(avg_vol):,}주 / {int(avg_val // 1000000):,}백만원"
+            basic_info["20일평균 거래량/대금"] = (
+                f"{int(avg_vol):,}주 / {int(avg_val // 1000000):,}백만원"
+            )
 
             if len(df) >= 126:
                 price_6m_ago = df["Close"].iloc[-126]
@@ -202,27 +241,38 @@ class ETFHarvester:
         if etf_key:
             basic_info["운용사"] = etf_key.get("issuerName", "-")
             basic_info["순자산총액"] = etf_key.get("marketValue", "-")
-            if "totalFee" in etf_key: basic_info["펀드보수"] = f"연 {etf_key['totalFee']}%"
-            if "returnRate1m" in etf_key: basic_info["1M 수익률"] = f"{etf_key['returnRate1m']}%"
-            if "returnRate3m" in etf_key: basic_info["3M 수익률"] = f"{etf_key['returnRate3m']}%"
-            if "returnRate1y" in etf_key: basic_info["1Y 수익률"] = f"{etf_key['returnRate1y']}%"
-            if "dividendYieldTtm" in etf_key: basic_info["최근 분배율(TTM)"] = f"{etf_key['dividendYieldTtm']}%"
+            if "totalFee" in etf_key:
+                basic_info["펀드보수"] = f"연 {etf_key['totalFee']}%"
+            if "returnRate1m" in etf_key:
+                basic_info["1M 수익률"] = f"{etf_key['returnRate1m']}%"
+            if "returnRate3m" in etf_key:
+                basic_info["3M 수익률"] = f"{etf_key['returnRate3m']}%"
+            if "returnRate1y" in etf_key:
+                basic_info["1Y 수익률"] = f"{etf_key['returnRate1y']}%"
+            if "dividendYieldTtm" in etf_key:
+                basic_info["최근 분배율(TTM)"] = f"{etf_key['dividendYieldTtm']}%"
 
         if len(historical_dates) > 0:
             basic_info["최초데이터(상장추정)"] = historical_dates[0]
 
         key_map = {
-            "시가총액": "시가총액", "상장주식수": "상장주식수", 
-            "52주최고l최저": "52주 최고/최저", "기초지수": "기초지수명",
-            "유형": "펀드형태", "상장일": "최초설정일/상장일",
-            "자산운용사": "자산운용사", "1개월 수익률": "1M 수익률",
-            "3개월 수익률": "3M 수익률", "6개월 수익률": "6M 수익률",
+            "시가총액": "시가총액",
+            "상장주식수": "상장주식수",
+            "52주최고l최저": "52주 최고/최저",
+            "기초지수": "기초지수명",
+            "유형": "펀드형태",
+            "상장일": "최초설정일/상장일",
+            "자산운용사": "자산운용사",
+            "1개월 수익률": "1M 수익률",
+            "3개월 수익률": "3M 수익률",
+            "6개월 수익률": "6M 수익률",
             "1년 수익률": "1Y 수익률",
         }
         for raw_k, disp_k in key_map.items():
             if raw_k in html_info:
                 val = html_info[raw_k]
-                if raw_k == "52주최고l최저": val = val.replace("l", "/")
+                if raw_k == "52주최고l최저":
+                    val = val.replace("l", "/")
                 if disp_k not in basic_info or basic_info[disp_k] == "-":
                     basic_info[disp_k] = val
 
@@ -249,6 +299,7 @@ class ETFHarvester:
             if not match.empty:
                 etf_name = match["Name"].values[0]
                 import pandas as pd
+
                 marcap = match["MarCap"].values[0]
                 price_krx = match["Price"].values[0]
                 if pd.notna(marcap) and pd.notna(price_krx) and price_krx > 0:
@@ -267,8 +318,10 @@ class ETFHarvester:
             "historical_data": {"dates": historical_dates, "prices": historical_close},
         }
 
-        print(f"Fetched 10-year data for {code}: {len(historical_dates)} trading days found.")
-        
+        print(
+            f"Fetched 10-year data for {code}: {len(historical_dates)} trading days found."
+        )
+
         if not skip_holdings:
             try:
                 data["holdings"] = await self.fetch_etf_holdings(code)
@@ -277,7 +330,8 @@ class ETFHarvester:
                 data["holdings"] = []
         else:
             data["holdings"] = []
-            
+
+        set_cached(cache_key, data)
         return data
 
     async def fetch_etf_holdings(self, code: str) -> list:
