@@ -1156,6 +1156,7 @@ export default function Home() {
                 <CompareTable
                   data={data}
                   radarData={radarData}
+                  additionalStatsData={additionalStatsData}
                   hoveredEtfName={hoveredEtfName}
                   setHoveredEtfName={setHoveredEtfName}
                   setSelectedDetailEtf={setSelectedDetailEtf}
