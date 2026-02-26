@@ -43,5 +43,6 @@ app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get("/health")
+@app.head("/health")
 def health_check():
     return {"status": "ok", "message": "ETF Analysis Platform API is running"}
