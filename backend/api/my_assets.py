@@ -17,6 +17,9 @@ async def get_my_portfolio(
     appkey: str = Header(..., description="KIS App Key"),
     appsecret: str = Header(..., description="KIS App Secret"),
     account_no: str = Header(..., description="KIS Account Number (e.g., 12345678-01)"),
+    account_type: str = Header(
+        "real", alias="account-type", description="KIS Account Type (real or mock)"
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -27,7 +30,11 @@ async def get_my_portfolio(
 
     try:
         # 1. Get KIS Access Token
-        kis_base = "https://openapi.koreainvestment.com:9443"
+        kis_base = (
+            "https://openapi.koreainvestment.com:9443"
+            if account_type == "real"
+            else "https://openapivts.koreainvestment.com:29443"
+        )
         token_url = f"{kis_base}/oauth2/tokenP"
         token_body = {
             "grant_type": "client_credentials",
@@ -63,7 +70,7 @@ async def get_my_portfolio(
                 "appkey": appkey,
                 "appsecret": appsecret,
                 "tr_id": "VTTC8434R"
-                if "mock" in kis_base
+                if account_type == "mock"
                 else "TTTC8434R",  # Mock vs real, need to handle TR ID carefully
                 "custtype": "P",
             }
