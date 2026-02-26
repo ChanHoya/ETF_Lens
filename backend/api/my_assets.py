@@ -44,10 +44,17 @@ async def get_my_portfolio(
             token = token_res.json().get("access_token")
 
             # 2. Fetch Account Balance (TTTC8434R)
-            # CANO and ACNT_PRDT_CD from account_no (format: 12345678-01)
-            parts = account_no.split("-")
-            cano = parts[0] if len(parts) > 0 else account_no
-            acnt_prdt_cd = parts[1] if len(parts) > 1 else "01"
+            # Parse and clean account_no
+            account_no_clean = "".join(filter(str.isdigit, account_no))
+            if len(account_no_clean) >= 10:
+                cano = account_no_clean[:8]
+                acnt_prdt_cd = account_no_clean[8:10]
+            elif len(account_no_clean) >= 8:
+                cano = account_no_clean[:8]
+                acnt_prdt_cd = "01"  # Default PRDT_CD
+            else:
+                cano = account_no_clean.ljust(8, "0")
+                acnt_prdt_cd = "01"
 
             balance_url = f"{kis_base}/uapi/domestic-stock/v1/trading/inquire-balance"
             headers = {
