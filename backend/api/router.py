@@ -225,21 +225,31 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
 
     start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
 
-    benchmark_tasks = []
-    if not request.skip_chart:
-        benchmark_tasks = [
-            fetch_benchmark_hybrid("KS11", db, cached_fdr_reader("KS11", start_str)),
-            fetch_benchmark_hybrid("KQ11", db, cached_fdr_reader("KQ11", start_str)),
-            fetch_benchmark_hybrid("^GSPC", db, fetch_yahoo_finance("^GSPC", 10)),
-            fetch_benchmark_hybrid("^IXIC", db, fetch_yahoo_finance("^IXIC", 10)),
-        ]
+    # Run the fetch for all ETFs and benchmarks sequentially to prevent SQLAlchemy concurrent session errors
+    results = []
+    for code in request.etf_codes:
+        res = await fetch_etf_hybrid(
+            code, request.skip_holdings, request.skip_chart, db, harvester
+        )
+        results.append(res)
 
-    # Run the fetch for all ETFs concurrently to greatly improve response time along with benchmarks
-    tasks = [
-        fetch_etf_hybrid(code, request.skip_holdings, request.skip_chart, db, harvester)
-        for code in request.etf_codes
-    ]
-    results = await asyncio.gather(*tasks, *benchmark_tasks)
+    if not request.skip_chart:
+        results.append(
+            await fetch_benchmark_hybrid(
+                "KS11", db, cached_fdr_reader("KS11", start_str)
+            )
+        )
+        results.append(
+            await fetch_benchmark_hybrid(
+                "KQ11", db, cached_fdr_reader("KQ11", start_str)
+            )
+        )
+        results.append(
+            await fetch_benchmark_hybrid("^GSPC", db, fetch_yahoo_finance("^GSPC", 10))
+        )
+        results.append(
+            await fetch_benchmark_hybrid("^IXIC", db, fetch_yahoo_finance("^IXIC", 10))
+        )
 
     if not request.skip_chart:
         etf_data_list = results[:-4]
@@ -508,20 +518,27 @@ async def get_chart_data(request: CompareRequest, db: AsyncSession = Depends(get
 
     start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
 
-    benchmark_tasks = [
-        fetch_benchmark_hybrid("KS11", db, cached_fdr_reader("KS11", start_str)),
-        fetch_benchmark_hybrid("KQ11", db, cached_fdr_reader("KQ11", start_str)),
-        fetch_benchmark_hybrid("^GSPC", db, fetch_yahoo_finance("^GSPC", 10)),
-        fetch_benchmark_hybrid("^IXIC", db, fetch_yahoo_finance("^IXIC", 10)),
-    ]
-
-    tasks = [
-        fetch_etf_hybrid(
-            code, skip_holdings=True, skip_chart=False, db=db, harvester=harvester
+    # Fetch sequentially to prevent SQLAlchemy concurrent session errors
+    results = []
+    for code in request.etf_codes:
+        results.append(
+            await fetch_etf_hybrid(
+                code, skip_holdings=True, skip_chart=False, db=db, harvester=harvester
+            )
         )
-        for code in request.etf_codes
-    ]
-    results = await asyncio.gather(*tasks, *benchmark_tasks)
+
+    results.append(
+        await fetch_benchmark_hybrid("KS11", db, cached_fdr_reader("KS11", start_str))
+    )
+    results.append(
+        await fetch_benchmark_hybrid("KQ11", db, cached_fdr_reader("KQ11", start_str))
+    )
+    results.append(
+        await fetch_benchmark_hybrid("^GSPC", db, fetch_yahoo_finance("^GSPC", 10))
+    )
+    results.append(
+        await fetch_benchmark_hybrid("^IXIC", db, fetch_yahoo_finance("^IXIC", 10))
+    )
 
     etf_data_list = results[:-4]
     kospi_df = results[-4]
