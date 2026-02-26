@@ -24,12 +24,26 @@ async def get_my_portfolio(
     """
     Fetch user portfolio from KIS API and calculate factor balances.
     """
+    from dotenv import load_dotenv
+
+    load_dotenv()
+
     appkey = os.environ.get("KIS_APP_KEY")
     appsecret = os.environ.get("KIS_APP_SECRET")
+
+    if appkey:
+        appkey = appkey.strip('"').strip("'")
+    if appsecret:
+        appsecret = appsecret.strip('"').strip("'")
+
+    print(
+        f"DEBUG: appkey={bool(appkey)}, appsecret={bool(appsecret)}, account_no='{account_no}'"
+    )
+
     if not appkey or not appsecret or not account_no:
         raise HTTPException(
             status_code=400,
-            detail="Missing KIS credentials in .env or Account Number in Header",
+            detail=f"Missing variables. key:{bool(appkey)} sec:{bool(appsecret)} acc:{bool(account_no)}",
         )
 
     try:

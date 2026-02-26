@@ -35,9 +35,9 @@ export default function MyPage() {
         setError(null);
         try {
             // Determine API URL based on environment
-            const isLocal = window.location.hostname === 'localhost';
+            const isLocal = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             const apiUrl = isLocal
-                ? 'http://localhost:8000/api/v1/my/portfolio'
+                ? `http://${window.location.hostname}:8000/api/v1/my/portfolio`
                 : 'https://etf-lens.onrender.com/api/v1/my/portfolio';
 
             const response = await fetch(apiUrl, {
