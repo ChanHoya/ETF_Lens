@@ -50,101 +50,169 @@ async def get_my_portfolio(
 
             token = token_res.json().get("access_token")
 
-            # 2. Fetch Account Balance (TTTC8434R)
-            # Parse and clean account_no
-            account_no_clean = "".join(filter(str.isdigit, account_no))
-            if len(account_no_clean) >= 10:
-                cano = account_no_clean[:8]
-                acnt_prdt_cd = account_no_clean[8:10]
-            elif len(account_no_clean) >= 8:
-                cano = account_no_clean[:8]
-                acnt_prdt_cd = "01"  # Default PRDT_CD
-            else:
-                cano = account_no_clean.ljust(8, "0")
-                acnt_prdt_cd = "01"
+            # 2. Parse and split account numbers
+            raw_accounts = [
+                acc.strip()
+                for acc in account_no.replace("\n", ",").split(",")
+                if acc.strip()
+            ]
 
-            balance_url = f"{kis_base}/uapi/domestic-stock/v1/trading/inquire-balance"
-            headers = {
-                "content-type": "application/json",
-                "authorization": f"Bearer {token}",
-                "appkey": appkey,
-                "appsecret": appsecret,
-                "tr_id": "VTTC8434R"
-                if account_type == "mock"
-                else "TTTC8434R",  # Mock vs real, need to handle TR ID carefully
-                "custtype": "P",
-            }
-            params = {
-                "CANO": cano,
-                "ACNT_PRDT_CD": acnt_prdt_cd,
-                "AFHR_FLPR_YN": "N",
-                "OFL_YN": "",
-                "INQR_DVSN": "02",  # 01: Loan, 02: All
-                "UNPR_DVSN": "01",  # 01: Average price
-                "FUND_STTL_ICLD_YN": "N",
-                "FNCG_AMT_AUTO_RDPT_YN": "N",
-                "PRCS_DVSN": "00",  # 00: Previous day, 01: Current day
-                "CTX_AREA_FK100": "",
-                "CTX_AREA_NK100": "",
-            }
+            async def fetch_single_account(acc_str):
+                account_no_clean = "".join(filter(str.isdigit, acc_str))
+                if not account_no_clean:
+                    return None
 
-            balance_res = await client.get(balance_url, headers=headers, params=params)
+                if len(account_no_clean) >= 10:
+                    cano = account_no_clean[:8]
+                    acnt_prdt_cd = account_no_clean[8:10]
+                elif len(account_no_clean) >= 8:
+                    cano = account_no_clean[:8]
+                    acnt_prdt_cd = "01"  # Default PRDT_CD
+                else:
+                    cano = account_no_clean.ljust(8, "0")
+                    acnt_prdt_cd = "01"
 
-            if balance_res.status_code != 200:
-                logger.error(f"KIS Balance Error: {balance_res.text}")
-                # Sometimes KIS requires different TR_ID for virtual accounts, try VTTC8434R
-                headers["tr_id"] = "VTTC8434R"
-                balance_res = await client.get(
-                    balance_url, headers=headers, params=params
+                formatted_account = f"{cano}-{acnt_prdt_cd}"
+
+                balance_url = (
+                    f"{kis_base}/uapi/domestic-stock/v1/trading/inquire-balance"
                 )
-                if balance_res.status_code != 200:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Failed to fetch KIS balance. Check account number.",
+                headers = {
+                    "content-type": "application/json",
+                    "authorization": f"Bearer {token}",
+                    "appkey": appkey,
+                    "appsecret": appsecret,
+                    "tr_id": "VTTC8434R" if account_type == "mock" else "TTTC8434R",
+                    "custtype": "P",
+                }
+                params = {
+                    "CANO": cano,
+                    "ACNT_PRDT_CD": acnt_prdt_cd,
+                    "AFHR_FLPR_YN": "N",
+                    "OFL_YN": "",
+                    "INQR_DVSN": "02",  # 01: Loan, 02: All
+                    "UNPR_DVSN": "01",  # 01: Average price
+                    "FUND_STTL_ICLD_YN": "N",
+                    "FNCG_AMT_AUTO_RDPT_YN": "N",
+                    "PRCS_DVSN": "00",  # 00: Previous day, 01: Current day
+                    "CTX_AREA_FK100": "",
+                    "CTX_AREA_NK100": "",
+                }
+
+                try:
+                    balance_res = await client.get(
+                        balance_url, headers=headers, params=params
                     )
+                    if balance_res.status_code != 200:
+                        headers["tr_id"] = "VTTC8434R"
+                        balance_res = await client.get(
+                            balance_url, headers=headers, params=params
+                        )
+                        if balance_res.status_code != 200:
+                            logger.error(
+                                f"KIS Balance Error for {acc_str}: {balance_res.text}"
+                            )
+                            return None
 
-            balance_data = balance_res.json()
+                    balance_data = balance_res.json()
+                    if balance_data.get("rt_cd") != "0":
+                        logger.error(
+                            f"KIS Error for {acc_str}: {balance_data.get('msg1')}"
+                        )
+                        return None
 
-            if balance_data.get("rt_cd") != "0":
-                raise HTTPException(
-                    status_code=400, detail=balance_data.get("msg1", "KIS Error")
-                )
+                    output1 = balance_data.get("output1", [])
+                    output2 = balance_data.get("output2", [{}])[0]
 
-            # Parse KIS Output
-            output1 = balance_data.get("output1", [])  # Stock list
-            output2 = balance_data.get("output2", [{}])[0]  # Account summary
+                    total_asset = float(output2.get("tot_asst_amt", 0))
+                    if total_asset < 10000:
+                        return None  # Filter out accounts with less than 10k KRW
 
-            # Format raw holdings
-            holdings = []
-            for item in output1:
-                holdings.append(
-                    {
-                        "code": item.get("pdno"),  # Product No (Ticker)
-                        "name": item.get("prdt_name"),
-                        "qty": int(item.get("hldg_qty", 0)),
-                        "avg_price": float(item.get("pchs_avg_pric", 0)),
-                        "current_price": float(item.get("prpr", 0)),
-                        "eval_amount": float(
-                            item.get("evlu_amt", 0)
-                        ),  # Total evaluation amount
-                        "profit_loss": float(item.get("evlu_pfls_amt", 0)),
-                        "return_rate": float(item.get("evlu_pfls_rt", 0)),
+                    local_holdings = []
+                    for item in output1:
+                        local_holdings.append(
+                            {
+                                "code": item.get("pdno"),
+                                "name": item.get("prdt_name"),
+                                "qty": int(item.get("hldg_qty", 0)),
+                                "avg_price": float(item.get("pchs_avg_pric", 0)),
+                                "current_price": float(item.get("prpr", 0)),
+                                "eval_amount": float(item.get("evlu_amt", 0)),
+                                "profit_loss": float(item.get("evlu_pfls_amt", 0)),
+                                "return_rate": float(item.get("evlu_pfls_rt", 0)),
+                                "account_no": formatted_account,
+                            }
+                        )
+
+                    return {
+                        "account_no": formatted_account,
+                        "account_name": "연동계좌",  # Placeholder as KIS api TTTC8434R doesn't give account names
+                        "summary": {
+                            "total_eval_amount": float(output2.get("tot_evlu_amt", 0)),
+                            "total_profit_loss": float(
+                                output2.get("evlu_pfls_smtl_amt", 0)
+                            ),
+                            "cash_balance": float(output2.get("dnca_tot_amt", 0)),
+                            "total_asset": total_asset,
+                        },
+                        "holdings": local_holdings,
                     }
+                except Exception as e:
+                    logger.error(f"Exception fetching {acc_str}: {e}")
+                    return None
+
+            # 3. Fetch all accounts concurrently
+            tasks = [fetch_single_account(acc) for acc in raw_accounts]
+            import asyncio
+
+            results = await asyncio.gather(*tasks)
+
+            # 4. Aggregate
+            valid_results = [r for r in results if r is not None]
+
+            if not valid_results:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No active accounts found with balance >= 10,000 KRW.",
                 )
 
-            summary = {
-                "total_eval_amount": float(output2.get("tot_evlu_amt", 0)),
-                "total_profit_loss": float(output2.get("evlu_pfls_smtl_amt", 0)),
-                "cash_balance": float(output2.get("dnca_tot_amt", 0)),
-                "total_asset": float(output2.get("tot_asst_amt", 0)),
+            aggregated_summary = {
+                "total_eval_amount": sum(
+                    r["summary"]["total_eval_amount"] for r in valid_results
+                ),
+                "total_profit_loss": sum(
+                    r["summary"]["total_profit_loss"] for r in valid_results
+                ),
+                "cash_balance": sum(
+                    r["summary"]["cash_balance"] for r in valid_results
+                ),
+                "total_asset": sum(r["summary"]["total_asset"] for r in valid_results),
             }
 
-            # Enrich data with etf_master data
-            analyzed_data = await analyze_portfolio(holdings, db)
+            all_holdings = []
+            for r in valid_results:
+                all_holdings.extend(r["holdings"])
+
+            accounts_list = [
+                {
+                    "account_no": r["account_no"],
+                    "account_name": r["account_name"],
+                    "total_asset": r["summary"]["total_asset"],
+                    "cash_balance": r["summary"]["cash_balance"],
+                }
+                for r in valid_results
+            ]
+
+            # 5. Enrich data with etf_master data
+            analyzed_data = await analyze_portfolio(all_holdings, db)
 
             return {
                 "status": "success",
-                "kis_raw": {"holdings": holdings, "summary": summary},
+                "kis_raw": {
+                    "summary": aggregated_summary,
+                    "holdings": all_holdings,
+                    "accounts": accounts_list,
+                },
                 "analyzed": analyzed_data,
             }
 

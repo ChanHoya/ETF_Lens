@@ -10,7 +10,7 @@ export default function MyDashboard({ data }: MyDashboardProps) {
     if (!data || !data.kis_raw) return null;
 
     const { kis_raw } = data;
-    const { summary, holdings } = kis_raw;
+    const { summary, holdings, accounts = [] } = kis_raw;
 
     // Formatting Helpers
     const formatNumber = (val: number) => new Intl.NumberFormat('ko-KR').format(Math.floor(val));
@@ -141,7 +141,7 @@ export default function MyDashboard({ data }: MyDashboardProps) {
                             <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
                             계좌내역
                         </div>
-                        <span className="text-sm font-normal text-gray-400">(유잔고 1개)</span>
+                        <span className="text-sm font-normal text-gray-400">(유잔고 {accounts.length}개)</span>
                     </h2>
                     <div className="flex gap-2">
                         <button className="px-4 py-2 text-sm border border-white/10 rounded-md hover:bg-white/5 transition-colors text-gray-300">전체 계좌보기</button>
@@ -161,21 +161,26 @@ export default function MyDashboard({ data }: MyDashboardProps) {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            <tr className="hover:bg-white/[0.02] transition-colors">
-                                <td className="p-4 text-center font-mono text-gray-200">연동계좌</td>
-                                <td className="p-4 text-center text-gray-300">위탁계좌</td>
-                                <td className="p-4 text-center text-gray-300">KOREA INV.</td>
-                                <td className="p-4 text-right font-bold text-gray-200">{formatNumber(totalAsset)}</td>
-                                <td className="p-4 text-center text-gray-400">
-                                    <button className="px-3 py-1 border border-white/10 rounded text-xs hover:bg-white/10">조회</button>
-                                </td>
-                                <td className="p-4 text-center">
-                                    <div className="flex items-center justify-center gap-3 text-sm">
-                                        <button className="text-gray-400 hover:text-white underline underline-offset-2">이체</button>
-                                        <button className="text-gray-400 hover:text-white underline underline-offset-2">거래내역</button>
-                                    </div>
-                                </td>
-                            </tr>
+                            {accounts.map((acc: any, idx: number) => (
+                                <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                                    <td className="p-4 text-center font-mono text-gray-200">{acc.account_no}</td>
+                                    <td className="p-4 text-center text-gray-300">위탁계좌</td>
+                                    <td className="p-4 text-center text-gray-300">{acc.account_name}</td>
+                                    <td className="p-4 text-right font-bold text-gray-200">{formatNumber(acc.total_asset)}</td>
+                                    <td className="p-4 text-center text-gray-400">
+                                        <div className="flex justify-between items-center w-full px-4">
+                                            <span>{formatNumber(acc.cash_balance)}</span>
+                                            <button className="px-3 py-1 border border-white/10 rounded text-xs hover:bg-white/10 ml-2">조회</button>
+                                        </div>
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        <div className="flex items-center justify-center gap-3 text-sm">
+                                            <button className="text-gray-400 hover:text-white underline underline-offset-2">이체</button>
+                                            <button className="text-gray-400 hover:text-white underline underline-offset-2">거래내역</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
