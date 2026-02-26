@@ -53,3 +53,4 @@ urllib3==2.6.3
 uvicorn==0.41.0
 wrapt==2.1.1
 yfinance==0.2.37
+httpx==0.28.1
