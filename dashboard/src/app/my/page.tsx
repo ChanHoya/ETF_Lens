@@ -52,6 +52,10 @@ export default function MyPage() {
             const data = await response.json();
 
             if (!response.ok) {
+                if (Array.isArray(data.detail)) {
+                    // FastAPI validation error array
+                    throw new Error(data.detail.map((err: any) => err.msg).join(", "));
+                }
                 throw new Error(data.detail || "Failed to fetch portfolio data");
             }
 
@@ -59,7 +63,8 @@ export default function MyPage() {
             setIsAuthorized(true);
         } catch (err: any) {
             console.error(err);
-            setError(err.message || "Failed to load data");
+            const errMsg = typeof err.message === 'object' ? JSON.stringify(err.message) : (err.message || "Failed to load data");
+            setError(errMsg);
             setIsAuthorized(false); // Make them re-enter or check keys
             // If the error is an auth error, we might want to clear keys, but let's let the user do that
         } finally {
