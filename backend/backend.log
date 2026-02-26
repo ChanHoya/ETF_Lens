@@ -1,11 +1,9 @@
-INFO:     Will watch for changes in these directories: ['/Users/chanhojung/ETF_One/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [97249] using StatReload
-INFO:     Started server process [97251]
+INFO:     Started server process [97871]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 KIS Error for 12345: ERROR : INPUT INVALID_CHECK_ACNO
 DB Scheduler started.
 DEBUG: appkey=True, appsecret=True, account_no='12345'
 [12345] KIS LOGIC ERROR [rt_cd!=0]: OPSQ2000 ERROR : INPUT INVALID_CHECK_ACNO
-INFO:     127.0.0.1:63791 - "GET /api/v1/my/portfolio HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:64238 - "GET /api/v1/my/portfolio HTTP/1.1" 400 Bad Request

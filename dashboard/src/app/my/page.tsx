@@ -35,10 +35,12 @@ export default function MyPage() {
         setError(null);
         try {
             // Determine API URL based on environment
-            const isLocal = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const apiUrl = isLocal
-                ? `http://${window.location.hostname}:8000/api/v1/my/portfolio`
-                : 'https://etf-lens.onrender.com/api/v1/my/portfolio';
+            // By checking if the hostname includes 'onrender.com' or 'vercel.app', we ensure that 
+            // even if accessed via a local IP (e.g. 192.168.1.100) instead of localhost, we still hit the local backend.
+            const isCloudDeployment = window.location.hostname.includes('onrender.com') || window.location.hostname.includes('vercel.app');
+            const apiUrl = isCloudDeployment
+                ? 'https://etf-lens.onrender.com/api/v1/my/portfolio'
+                : `http://${window.location.hostname}:8000/api/v1/my/portfolio`;
 
             const response = await fetch(apiUrl, {
                 method: 'GET',
