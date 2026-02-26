@@ -44,8 +44,6 @@ export default function MyPage() {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'appkey': keys.appKey,
-                    'appsecret': keys.appSecret,
                     'account-no': keys.accountNo,
                     'account-type': keys.accountType || 'real'
                 }

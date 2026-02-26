@@ -6,7 +6,7 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: (k
     const [isPinMode, setIsPinMode] = useState(!!localStorage.getItem("etf_lens_kis_keys"));
     const [kisKeys, setKisKeys] = useState(() => {
         const stored = localStorage.getItem("etf_lens_kis_keys");
-        return stored ? JSON.parse(stored) : { appKey: '', appSecret: '', accountNo: '', accountType: 'real' };
+        return stored ? JSON.parse(stored) : { accountNo: '', accountType: 'real' };
     });
     const [setupPin, setSetupPin] = useState('');
     const [error, setError] = useState(initialError || '');
@@ -27,8 +27,8 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: (k
             setError("PIN 번호는 4자리 이상이어야 합니다.");
             return;
         }
-        if (!kisKeys.appKey || !kisKeys.appSecret || !kisKeys.accountNo) {
-            setError("모든 정보를 입력해주세요.");
+        if (!kisKeys.accountNo) {
+            setError("계좌번호를 입력해주세요.");
             return;
         }
 
@@ -41,7 +41,7 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: (k
         localStorage.removeItem("etf_lens_pin");
         localStorage.removeItem("etf_lens_kis_keys");
         setIsPinMode(false);
-        setKisKeys({ appKey: '', appSecret: '', accountNo: '', accountType: 'real' });
+        setKisKeys({ accountNo: '', accountType: 'real' });
         setPin('');
         setSetupPin('');
         setError('');
@@ -125,32 +125,7 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: (k
                             </label>
                         </div>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                            <Key className="w-4 h-4 text-gray-400" /> App Key
-                        </label>
-                        <input
-                            type="text"
-                            value={kisKeys.appKey}
-                            onChange={(e) => setKisKeys({ ...kisKeys, appKey: e.target.value })}
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50"
-                            placeholder="KIS App Key (실전/모의투자 공용)"
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                            <Key className="w-4 h-4 text-gray-400" /> App Secret
-                        </label>
-                        <input
-                            type="password"
-                            value={kisKeys.appSecret}
-                            onChange={(e) => setKisKeys({ ...kisKeys, appSecret: e.target.value })}
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50"
-                            placeholder="KIS App Secret"
-                            required
-                        />
-                    </div>
+
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
                             <UserRound className="w-4 h-4 text-gray-400" /> 계좌번호

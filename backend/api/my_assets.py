@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List, Dict, Any
 import httpx
+import os
 import logging
 from db.database import get_db
 from core.portfolio_analyzer import analyze_portfolio
@@ -14,8 +15,6 @@ router = APIRouter()
 @router.get("/portfolio")
 async def get_my_portfolio(
     request: Request,
-    appkey: str = Header(..., description="KIS App Key"),
-    appsecret: str = Header(..., description="KIS App Secret"),
     account_no: str = Header(..., description="KIS Account Number (e.g., 12345678-01)"),
     account_type: str = Header(
         "real", alias="account-type", description="KIS Account Type (real or mock)"
@@ -25,8 +24,13 @@ async def get_my_portfolio(
     """
     Fetch user portfolio from KIS API and calculate factor balances.
     """
+    appkey = os.environ.get("KIS_APP_KEY")
+    appsecret = os.environ.get("KIS_APP_SECRET")
     if not appkey or not appsecret or not account_no:
-        raise HTTPException(status_code=400, detail="Missing KIS credentials")
+        raise HTTPException(
+            status_code=400,
+            detail="Missing KIS credentials in .env or Account Number in Header",
+        )
 
     try:
         # 1. Get KIS Access Token
@@ -104,6 +108,7 @@ async def get_my_portfolio(
                         balance_url, headers=headers, params=params
                     )
                     if balance_res.status_code != 200:
+                        print(f"[{acc_str}] KIS TR Retry after TR_ID VTTC8434R...")
                         headers["tr_id"] = "VTTC8434R"
                         balance_res = await client.get(
                             balance_url, headers=headers, params=params
@@ -112,12 +117,19 @@ async def get_my_portfolio(
                             logger.error(
                                 f"KIS Balance Error for {acc_str}: {balance_res.text}"
                             )
+                            print(
+                                f"[{acc_str}] FINAL KIS HTTP ERROR: {balance_res.status_code} {balance_res.text}"
+                            )
                             return None
 
                     balance_data = balance_res.json()
+
                     if balance_data.get("rt_cd") != "0":
                         logger.error(
                             f"KIS Error for {acc_str}: {balance_data.get('msg1')}"
+                        )
+                        print(
+                            f"[{acc_str}] KIS LOGIC ERROR [rt_cd!=0]: {balance_data.get('msg_cd')} {balance_data.get('msg1')}"
                         )
                         return None
 
@@ -125,7 +137,10 @@ async def get_my_portfolio(
                     output2 = balance_data.get("output2", [{}])[0]
 
                     total_asset = float(output2.get("tot_asst_amt", 0))
+
+                    print(f"[{acc_str}] SUCCESS! tot_asst_amt: {total_asset}")
                     if total_asset < 10000:
+                        print(f"[{acc_str}] SKIPPED: total_asset is under 10000")
                         return None  # Filter out accounts with less than 10k KRW
 
                     local_holdings = []
@@ -178,15 +193,17 @@ async def get_my_portfolio(
 
             aggregated_summary = {
                 "total_eval_amount": sum(
-                    r["summary"]["total_eval_amount"] for r in valid_results
+                    float(r["summary"]["total_eval_amount"]) for r in valid_results
                 ),
                 "total_profit_loss": sum(
-                    r["summary"]["total_profit_loss"] for r in valid_results
+                    float(r["summary"]["total_profit_loss"]) for r in valid_results
                 ),
                 "cash_balance": sum(
-                    r["summary"]["cash_balance"] for r in valid_results
+                    float(r["summary"]["cash_balance"]) for r in valid_results
                 ),
-                "total_asset": sum(r["summary"]["total_asset"] for r in valid_results),
+                "total_asset": sum(
+                    float(r["summary"]["total_asset"]) for r in valid_results
+                ),
             }
 
             all_holdings = []
