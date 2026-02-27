@@ -1,9 +1,14 @@
-INFO:     Started server process [97871]
+INFO:     Started server process [99303]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-KIS Error for 12345: ERROR : INPUT INVALID_CHECK_ACNO
+KIS Error for 64490078-01: ERROR : INPUT INVALID_CHECK_ACNO
+KIS Error for 64896732-01: ERROR : INPUT INVALID_CHECK_ACNO
 DB Scheduler started.
-DEBUG: appkey=True, appsecret=True, account_no='12345'
-[12345] KIS LOGIC ERROR [rt_cd!=0]: OPSQ2000 ERROR : INPUT INVALID_CHECK_ACNO
-INFO:     127.0.0.1:64238 - "GET /api/v1/my/portfolio HTTP/1.1" 400 Bad Request
+[81060777-01] SUCCESS! tot_asst_amt: 0.0
+[81060777-01] SKIPPED: total_asset is under 10000
+[64490078-01] KIS LOGIC ERROR [rt_cd!=0]: OPSQ2000 ERROR : INPUT INVALID_CHECK_ACNO
+[64896732-01] KIS LOGIC ERROR [rt_cd!=0]: OPSQ2000 ERROR : INPUT INVALID_CHECK_ACNO
+[81060777-22] SUCCESS! tot_asst_amt: 0.0
+[81060777-22] SKIPPED: total_asset is under 10000
+INFO:     127.0.0.1:65344 - "GET /api/v1/my/portfolio HTTP/1.1" 400 Bad Request

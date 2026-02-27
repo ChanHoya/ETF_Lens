@@ -15,10 +15,6 @@ router = APIRouter()
 @router.get("/portfolio")
 async def get_my_portfolio(
     request: Request,
-    account_no: str = Header(..., description="KIS Account Number (e.g., 12345678-01)"),
-    account_type: str = Header(
-        "real", alias="account-type", description="KIS Account Type (real or mock)"
-    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -32,25 +28,28 @@ async def get_my_portfolio(
 
     appkey = os.environ.get("KIS_APP_KEY")
     appsecret = os.environ.get("KIS_APP_SECRET")
+    kis_base = os.environ.get(
+        "KIS_URL_BASE", "https://openapi.koreainvestment.com:9443"
+    )
 
     if appkey:
         appkey = appkey.strip('"').strip("'")
     if appsecret:
         appsecret = appsecret.strip('"').strip("'")
 
-    if not appkey or not appsecret or not account_no:
+    raw_accounts = []
+    for key, value in os.environ.items():
+        if key.startswith("KIS_ACC") and value.strip():
+            raw_accounts.append(value.strip())
+
+    if not appkey or not appsecret or not raw_accounts:
         raise HTTPException(
             status_code=400,
-            detail=f"Missing variables. key:{bool(appkey)} sec:{bool(appsecret)} acc:{bool(account_no)}",
+            detail=f"Missing variables. key:{bool(appkey)} sec:{bool(appsecret)} acc_count:{len(raw_accounts)}",
         )
 
     try:
         # 1. Get KIS Access Token
-        kis_base = (
-            "https://openapi.koreainvestment.com:9443"
-            if account_type == "real"
-            else "https://openapivts.koreainvestment.com:29443"
-        )
         token_url = f"{kis_base}/oauth2/tokenP"
         token_body = {
             "grant_type": "client_credentials",
@@ -66,12 +65,7 @@ async def get_my_portfolio(
 
             token = token_res.json().get("access_token")
 
-            # 2. Parse and split account numbers
-            raw_accounts = [
-                acc.strip()
-                for acc in account_no.replace("\n", ",").split(",")
-                if acc.strip()
-            ]
+            # 2. Iterate dynamically over raw_accounts (already collected)
 
             async def fetch_single_account(acc_str):
                 account_no_clean = "".join(filter(str.isdigit, acc_str))
@@ -98,7 +92,7 @@ async def get_my_portfolio(
                     "authorization": f"Bearer {token}",
                     "appkey": appkey,
                     "appsecret": appsecret,
-                    "tr_id": "VTTC8434R" if account_type == "mock" else "TTTC8434R",
+                    "tr_id": "VTTC8434R" if "vts" in kis_base else "TTTC8434R",
                     "custtype": "P",
                 }
                 params = {

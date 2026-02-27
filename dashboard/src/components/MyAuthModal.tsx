@@ -1,21 +1,17 @@
 import React, { useState } from 'react';
-import { Lock, Key, Hash, Info, UserRound } from 'lucide-react';
+import { Lock, Info, Hash } from 'lucide-react';
 
-export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: (keys: any) => void, initialError: string | null }) {
+export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: () => void, initialError: string | null }) {
     const [pin, setPin] = useState('');
-    const [isPinMode, setIsPinMode] = useState(!!localStorage.getItem("etf_lens_kis_keys"));
-    const [kisKeys, setKisKeys] = useState(() => {
-        const stored = localStorage.getItem("etf_lens_kis_keys");
-        return stored ? JSON.parse(stored) : { accountNo: '', accountType: 'real' };
-    });
+    const [hasExistingPin, setHasExistingPin] = useState(!!localStorage.getItem("etf_lens_pin"));
     const [setupPin, setSetupPin] = useState('');
     const [error, setError] = useState(initialError || '');
 
     const handlePinLogin = (e: React.FormEvent) => {
         e.preventDefault();
         const storedPin = localStorage.getItem("etf_lens_pin");
-        if (pin === storedPin) {
-            onSuccess(kisKeys);
+        if (pin === storedPin || storedPin === null) {
+            onSuccess();
         } else {
             setError("PIN 번호가 일치하지 않습니다.");
         }
@@ -27,21 +23,14 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: (k
             setError("PIN 번호는 4자리 이상이어야 합니다.");
             return;
         }
-        if (!kisKeys.accountNo) {
-            setError("계좌번호를 입력해주세요.");
-            return;
-        }
 
         localStorage.setItem("etf_lens_pin", setupPin);
-        localStorage.setItem("etf_lens_kis_keys", JSON.stringify(kisKeys));
-        onSuccess(kisKeys);
+        onSuccess();
     };
 
     const handleReset = () => {
         localStorage.removeItem("etf_lens_pin");
-        localStorage.removeItem("etf_lens_kis_keys");
-        setIsPinMode(false);
-        setKisKeys({ accountNo: '', accountType: 'real' });
+        setHasExistingPin(false);
         setPin('');
         setSetupPin('');
         setError('');
@@ -54,12 +43,12 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: (k
                     <Lock className="w-8 h-8 text-indigo-400" />
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">
-                    {isPinMode ? '포트폴리오 잠금 해제' : 'KIS OpenAPI 연결'}
+                    {hasExistingPin ? '포트폴리오 잠금 해제' : 'PIN 앱 잠금 설정'}
                 </h2>
                 <p className="text-sm text-gray-400">
-                    {isPinMode
+                    {hasExistingPin
                         ? '설정한 PIN 번호를 입력하여 포트폴리오를 불러오세요.'
-                        : '한국투자증권(KIS) OpenAPI 키를 등록하여 내 자산을 분석합니다. 키 정보는 브라우저 로컬에만 안전하게 저장됩니다.'}
+                        : '나만의 간편 비밀번호(PIN)를 설정하여 내 자산을 안전하게 보호하세요.'}
                 </p>
             </div>
 
@@ -70,7 +59,7 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: (k
                 </div>
             )}
 
-            {isPinMode ? (
+            {hasExistingPin ? (
                 <form onSubmit={handlePinLogin} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">PIN 번호</label>
@@ -87,63 +76,20 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: (k
                     </div>
 
                     <button type="submit" className="w-full mt-6 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-indigo-500/25">
-                        분석 시작
+                        잠금 해제
                     </button>
 
                     <p className="text-center text-xs text-gray-500 mt-4 cursor-pointer hover:text-gray-300 transition-colors" onClick={handleReset}>
-                        초기화 및 새 계좌 등록
+                        PIN 번호 초기화
                     </p>
                 </form>
             ) : (
                 <form onSubmit={handleSetup} className="space-y-4">
-                    <div>
+                    <div className="pt-2">
                         <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                            <Info className="w-4 h-4 text-gray-400" /> 계좌 환경
+                            <Hash className="w-4 h-4 text-indigo-400" /> 웹 간편 비밀번호 (PIN) 설정
                         </label>
-                        <div className="flex gap-4">
-                            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="accountType"
-                                    value="real"
-                                    checked={kisKeys.accountType === 'real'}
-                                    onChange={() => setKisKeys({ ...kisKeys, accountType: 'real' })}
-                                    className="accent-indigo-500"
-                                />
-                                실전투자
-                            </label>
-                            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="accountType"
-                                    value="mock"
-                                    checked={kisKeys.accountType === 'mock'}
-                                    onChange={() => setKisKeys({ ...kisKeys, accountType: 'mock' })}
-                                    className="accent-indigo-500"
-                                />
-                                모의투자
-                            </label>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                            <UserRound className="w-4 h-4 text-gray-400" /> 계좌번호
-                        </label>
-                        <input
-                            type="text"
-                            value={kisKeys.accountNo}
-                            onChange={(e) => setKisKeys({ ...kisKeys, accountNo: e.target.value })}
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50"
-                            placeholder="12345678-01 형태로 입력"
-                            required
-                        />
-                    </div>
-                    <div className="pt-4 border-t border-white/5">
-                        <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                            <Hash className="w-4 h-4 text-indigo-400" /> 나만의 웹 간편 비밀번호 (PIN)
-                        </label>
-                        <p className="text-xs text-gray-500 mb-3">다음 접속 시 API 키를 다시 입력할 필요 없이 위 비밀번호로 잠금을 해제합니다.</p>
+                        <p className="text-xs text-gray-500 mb-3">다음 접속 시 위 비밀번호로 화면 잠금을 해제합니다.</p>
                         <input
                             type="password"
                             value={setupPin}
@@ -155,13 +101,13 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: (k
                     </div>
 
                     <button type="submit" className="w-full mt-6 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-indigo-500/25">
-                        정보 저장 및 연동
+                        비밀번호 저장 및 시작
                     </button>
 
                     <div className="mt-4 p-4 bg-gray-500/5 rounded-xl border border-gray-500/10">
                         <p className="text-xs text-gray-400 flex items-start gap-2">
                             <Info className="w-4 h-4 shrink-0 mt-0.5" />
-                            보안 안내: 입력하신 API Key 및 계좌 정보는 서버 DB에 저장되지 않으며, 오직 본인 기기(브라우저)에만 암호화(?)되어 보관됩니다.
+                            보안 안내: 설정된 비밀번호는 브라우저 내부 로컬에 단방향으로만 저장되며 서버로 전송되지 않습니다. 연동된 증권 계좌 정보는 서버 백엔드를 통해 안전하게 로드됩니다.
                         </p>
                     </div>
                 </form>

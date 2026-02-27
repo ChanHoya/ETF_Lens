@@ -15,10 +15,8 @@ export default function MyPage() {
     useEffect(() => {
         const checkAuth = () => {
             const storedPin = localStorage.getItem("etf_lens_pin");
-            const storedKeys = localStorage.getItem("etf_lens_kis_keys");
 
-            if (storedPin && storedKeys) {
-                // If keys exist but we haven't unlocked yet, we show modal. 
+            if (storedPin) {
                 // Wait, if PIN exists, we need them to enter it.
                 // We'll manage this state in the MyAuthModal.
                 setIsAuthorized(false);
@@ -30,7 +28,7 @@ export default function MyPage() {
         checkAuth();
     }, []);
 
-    const fetchPortfolioData = async (keys: any) => {
+    const fetchPortfolioData = async () => {
         setIsLoading(true);
         setError(null);
         try {
@@ -45,9 +43,7 @@ export default function MyPage() {
             const response = await fetch(apiUrl, {
                 method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'account-no': keys.accountNo,
-                    'account-type': keys.accountType || 'real'
+                    'Content-Type': 'application/json'
                 }
             });
 
@@ -74,13 +70,12 @@ export default function MyPage() {
         }
     };
 
-    const handleAuthSuccess = (keys: any) => {
-        fetchPortfolioData(keys);
+    const handleAuthSuccess = () => {
+        fetchPortfolioData();
     };
 
     const handleLogout = () => {
         localStorage.removeItem("etf_lens_pin");
-        localStorage.removeItem("etf_lens_kis_keys");
         setIsAuthorized(false);
         setKisData(null);
     };
