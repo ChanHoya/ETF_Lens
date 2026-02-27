@@ -67,6 +67,46 @@ async def get_my_portfolio(
         )
 
     try:
+        # Pre-fetch and cache access tokens for all distinct keys to avoid EGW00133 rate limits
+        active_keys = []
+        import json
+
+        async with httpx.AsyncClient() as client:
+            token_url = f"{kis_url_base}/oauth2/tokenP"
+            for keypair in global_keys:
+                app_key = keypair["app_key"]
+                app_secret = keypair["app_secret"]
+
+                token_payload = {
+                    "grant_type": "client_credentials",
+                    "appkey": app_key,
+                    "appsecret": app_secret,
+                }
+                try:
+                    token_res = await client.post(token_url, json=token_payload)
+                    if token_res.status_code == 200:
+                        access_token = token_res.json().get("access_token")
+                        if access_token:
+                            active_keys.append(
+                                {
+                                    "app_key": app_key,
+                                    "app_secret": app_secret,
+                                    "access_token": access_token,
+                                }
+                            )
+                    else:
+                        logger.warning(
+                            f"Failed to fetch initial KIS token for {app_key}: {token_res.text}"
+                        )
+                except Exception as e:
+                    logger.error(f"Error caching token for {app_key}: {e}")
+
+        if not active_keys:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate any valid KIS Access Tokens from the provided App Keys. Check rate limit or key validity.",
+            )
+
         # 2. Define a helper function to fetch a single account using a brute-force key strategy
         async def fetch_single_account(acc_str: str):
             import json
@@ -78,36 +118,10 @@ async def get_my_portfolio(
             acnt_prdt_cd = account_no_clean[8:] or "01"
             formatted_account = f"{cano}-{acnt_prdt_cd}"
 
-            for keypair in global_keys:
+            for keypair in active_keys:
                 app_key = keypair["app_key"]
                 app_secret = keypair["app_secret"]
-
-                access_token = None
-                async with httpx.AsyncClient() as client:
-                    token_url = f"{kis_url_base}/oauth2/tokenP"
-                    token_payload = {
-                        "grant_type": "client_credentials",
-                        "appkey": app_key,
-                        "appsecret": app_secret,
-                    }
-                    try:
-                        token_res = await client.post(token_url, json=token_payload)
-                        if token_res.status_code == 200:
-                            access_token = token_res.json().get("access_token")
-                        else:
-                            # Usually EGW00133 rate limit or bad key, skip to next key
-                            logger.debug(
-                                f"KIS Token Error for {app_key} (acc {acc_str}): {token_res.text}"
-                            )
-                            continue
-                    except Exception as e:
-                        logger.debug(
-                            f"Exception fetching KIS token for {app_key} (acc {acc_str}): {e}"
-                        )
-                        continue
-
-                if not access_token:
-                    continue
+                access_token = keypair["access_token"]
 
                 try:
                     balance_url = (
