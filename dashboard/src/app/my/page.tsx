@@ -17,8 +17,6 @@ export default function MyPage() {
             const storedPin = localStorage.getItem("etf_lens_pin");
 
             if (storedPin) {
-                // Wait, if PIN exists, we need them to enter it.
-                // We'll manage this state in the MyAuthModal.
                 setIsAuthorized(false);
             } else {
                 setIsAuthorized(false);
@@ -63,8 +61,7 @@ export default function MyPage() {
             console.error(err);
             const errMsg = typeof err.message === 'object' ? JSON.stringify(err.message) : (err.message || "Failed to load data");
             setError(errMsg);
-            setIsAuthorized(false); // Make them re-enter or check keys
-            // If the error is an auth error, we might want to clear keys, but let's let the user do that
+            setIsAuthorized(false);
         } finally {
             setIsLoading(false);
         }
@@ -127,6 +124,14 @@ export default function MyPage() {
                         <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
                         <h2 className="text-xl font-bold mb-2">My 포트폴리오 분석 중</h2>
                         <p className="text-gray-400 text-center max-w-md">한국투자증권(KIS) API에서 데이터를 불러와 ETF Lens의 데이터와 교차 분석을 진행하고 있습니다. 최대수 십초가 소요될 수 있습니다.</p>
+                    </div>
+                ) : error ? (
+                    <div className="flex flex-col items-center justify-center p-20 w-full max-w-4xl bg-white/[0.02] border border-white/5 rounded-3xl backdrop-blur-xl">
+                        <div className="text-red-400 mb-4 text-center">
+                            <p className="font-bold text-lg mb-2">데이터를 불러오는 중 오류가 발생했습니다.</p>
+                            <p className="text-sm">{error}</p>
+                        </div>
+                        <button onClick={fetchPortfolioData} className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-xl transition-colors">다시 시도</button>
                     </div>
                 ) : (
                     <MyDashboard data={kisData} />
