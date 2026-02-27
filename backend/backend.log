@@ -1,6 +1,7 @@
-INFO:     Started server process [7332]
+INFO:     Started server process [7603]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 DB Scheduler started.
-INFO:     127.0.0.1:54056 - "GET /api/v1/my/portfolio HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54392 - "GET /api/v1/my/portfolio HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54404 - "GET /api/v1/my/portfolio HTTP/1.1" 200 OK

@@ -9,6 +9,10 @@ from core.portfolio_analyzer import analyze_portfolio
 
 logger = logging.getLogger(__name__)
 
+# Global in-memory cache for KIS tokens to prevent EGW00133 rate limits
+# Format: { app_key: {"access_token": "...", "expires_at": timestamp} }
+TOKEN_CACHE = {}
+
 router = APIRouter()
 
 
@@ -70,12 +74,25 @@ async def get_my_portfolio(
         # Pre-fetch and cache access tokens for all distinct keys to avoid EGW00133 rate limits
         active_keys = []
         import json
+        import time
 
         async with httpx.AsyncClient() as client:
             token_url = f"{kis_url_base}/oauth2/tokenP"
             for keypair in global_keys:
                 app_key = keypair["app_key"]
                 app_secret = keypair["app_secret"]
+
+                # Check cache first
+                cached = TOKEN_CACHE.get(app_key)
+                if cached and cached["expires_at"] > time.time():
+                    active_keys.append(
+                        {
+                            "app_key": app_key,
+                            "app_secret": app_secret,
+                            "access_token": cached["access_token"],
+                        }
+                    )
+                    continue
 
                 token_payload = {
                     "grant_type": "client_credentials",
@@ -86,7 +103,14 @@ async def get_my_portfolio(
                     token_res = await client.post(token_url, json=token_payload)
                     if token_res.status_code == 200:
                         access_token = token_res.json().get("access_token")
+                        expires_in_sec = token_res.json().get("expires_in", 82800)
                         if access_token:
+                            TOKEN_CACHE[app_key] = {
+                                "access_token": access_token,
+                                "expires_at": time.time()
+                                + expires_in_sec
+                                - 3600,  # 1 hr buffer
+                            }
                             active_keys.append(
                                 {
                                     "app_key": app_key,
