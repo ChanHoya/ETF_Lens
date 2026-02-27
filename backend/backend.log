@@ -1,4 +1,8 @@
-INFO:     Started server process [2078]
+INFO:     Started server process [3839]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+Failed to fetch account 81060777-01 with any provided API key pair.
+Failed to fetch account 64490078-01 with any provided API key pair.
+DB Scheduler started.
+INFO:     127.0.0.1:50979 - "GET /api/v1/my/portfolio HTTP/1.1" 200 OK
