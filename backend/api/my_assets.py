@@ -142,9 +142,14 @@ async def get_my_portfolio(
                     output1 = balance_data.get("output1", [])
                     output2 = balance_data.get("output2", [{}])[0]
 
-                    total_asset = float(output2.get("tot_asst_amt", 0))
+                    tot_asst_amt_raw = float(output2.get("tot_asst_amt", 0))
+                    tot_evlu_amt = float(output2.get("tot_evlu_amt", 0))
+                    dnca_tot_amt = float(output2.get("dnca_tot_amt", 0))
 
-                    print(f"[{acc_str}] SUCCESS! tot_asst_amt: {total_asset}")
+                    # If KIS returns 0 for tot_asst_amt but we have evaluation amounts, use the computed sum
+                    total_asset = max(tot_asst_amt_raw, tot_evlu_amt + dnca_tot_amt)
+
+                    print(f"[{acc_str}] SUCCESS! computed total_asset: {total_asset}")
                     print(f"[{acc_str}] SUCCESS! tot_asst_amt: {total_asset}")
                     # if total_asset < 10000:
                     #     print(f"[{acc_str}] SKIPPED: total_asset is under 10000")
@@ -195,7 +200,7 @@ async def get_my_portfolio(
             if not valid_results:
                 raise HTTPException(
                     status_code=400,
-                    detail="No active accounts found with balance >= 10,000 KRW.",
+                    detail="No valid connected accounts could be retrieved. Please check if your accounts are properly registered to your KIS App Key.",
                 )
 
             aggregated_summary = {
