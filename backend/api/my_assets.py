@@ -145,9 +145,10 @@ async def get_my_portfolio(
                     total_asset = float(output2.get("tot_asst_amt", 0))
 
                     print(f"[{acc_str}] SUCCESS! tot_asst_amt: {total_asset}")
-                    if total_asset < 10000:
-                        print(f"[{acc_str}] SKIPPED: total_asset is under 10000")
-                        return None  # Filter out accounts with less than 10k KRW
+                    print(f"[{acc_str}] SUCCESS! tot_asst_amt: {total_asset}")
+                    # if total_asset < 10000:
+                    #     print(f"[{acc_str}] SKIPPED: total_asset is under 10000")
+                    #     return None  # Filter out accounts with less than 10k KRW
 
                     local_holdings = []
                     for item in output1:
