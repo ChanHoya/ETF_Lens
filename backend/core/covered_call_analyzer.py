@@ -1,6 +1,6 @@
 import yfinance as yf
 import pandas as pd
-from typing import Dict
+from typing import Dict, Tuple
 
 
 class CoveredCallAnalyzer:
@@ -16,11 +16,11 @@ class CoveredCallAnalyzer:
 
     async def fetch_historical_tr(
         self, symbol: str, period: str = "3y"
-    ) -> pd.DataFrame:
+    ) -> Tuple[pd.DataFrame, bool]:
         """
-        Fetches historical data using yfinance, focusing on 'Adj Close'
-        which automatically adjusts for dividends and stock splits,
-        giving us a Total Return (TR) time series.
+        Fetches historical data using yfinance, focusing on 'Adj Close'.
+        If purely missing (e.g. new Korean ETF), fallbacks to KIS API which returns PR.
+        Returns: (DataFrame, is_pr boolean flag)
         """
         try:
             # Map symbol if it's a known benchmark
@@ -47,10 +47,33 @@ class CoveredCallAnalyzer:
             if df.index.tz is not None:
                 df.index = df.index.tz_localize(None)
 
-            return df[["Close", "Adj Close"]].copy()
+            if not df.empty:
+                return df[["Close", "Adj Close"]].copy(), False
+
+            # --- KIS Fallback for completely empty sets (likely missing YF coverage) ---
+            from .kis_client import fetch_kis_domestic_daily_price
+
+            kis_data = await fetch_kis_domestic_daily_price(mapped_symbol, period)
+
+            if kis_data and len(kis_data) > 0:
+                # KIS data returns sorted by date descending (latest first). We must reverse it.
+                # Format: [{'stck_bsop_date': '20250828', 'stck_clpr': '10000', ...}]
+                records = []
+                for row in reversed(kis_data):
+                    dt_str = row.get("stck_bsop_date")
+                    if dt_str:
+                        dt = pd.to_datetime(dt_str, format="%Y%m%d")
+                        price = float(row.get("stck_clpr", 0))
+                        records.append({"Date": dt, "Close": price, "Adj Close": price})
+
+                if records:
+                    kdf = pd.DataFrame(records).set_index("Date")
+                    return kdf, True  # True means it's PR data
+
+            return pd.DataFrame(), False
         except Exception as e:
             print(f"Error fetching data for {symbol}: {e}")
-            return pd.DataFrame()
+            return pd.DataFrame(), False
 
     def calculate_capture_ratios(
         self, fund_prices: pd.Series, bench_prices: pd.Series

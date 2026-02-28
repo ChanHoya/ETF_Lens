@@ -95,6 +95,7 @@ export default function CoveredCallTab() {
     const [chartPeriod, setChartPeriod] = useState('1Y');
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
     const [realChartData, setRealChartData] = useState<any[]>([]);
+    const [isPrMap, setIsPrMap] = useState<any>({});
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [apiError, setApiError] = useState<string | null>(null);
 
@@ -235,7 +236,7 @@ export default function CoveredCallTab() {
                             }).then(r => r.ok ? r.json() : null).catch(() => null)
                         ]);
 
-                        return { ticker: item.ticker, chartData: chartRes?.chart_data, analyzeData: analyzeRes?.results?.[0] };
+                        return { ticker: item.ticker, chartData: chartRes?.chart_data, analyzeData: analyzeRes?.results?.[0], isPrMapPart: chartRes?.is_pr_map };
                     });
 
                     const results = await Promise.all(promises);
@@ -244,19 +245,20 @@ export default function CoveredCallTab() {
                     let combinedChartMap: any = {};
                     let statsMap: any = {};
                     let success = false;
+                    let newIsPrMap: any = {};
 
                     results.forEach((res) => {
                         if (res.analyzeData) {
                             statsMap[res.ticker] = res.analyzeData;
                         }
+                        if (res.isPrMapPart) {
+                            Object.assign(newIsPrMap, res.isPrMapPart);
+                        }
                         if (res.chartData) {
                             success = true;
-                            res.chartData.forEach((d: any, idx: number) => {
+                            res.chartData.forEach((d: any) => {
                                 if (!combinedChartMap[d.date]) combinedChartMap[d.date] = { date: d.date, originalIndex: Object.keys(combinedChartMap).length };
                                 combinedChartMap[d.date][res.ticker] = d[res.ticker];
-                                // We also take benchmark from the first ETF for visual comparison if needed, or we just plot tickers. 
-                                // Let's just plot the TRs of the funds. They can compare them visually.
-                                // If they want benchmark, let's keep the main benchmark of the first selected item
                                 if (res.ticker === selectedForCompare[0].ticker) {
                                     combinedChartMap[d.date]['Benchmark'] = d.Benchmark;
                                 }
@@ -269,6 +271,7 @@ export default function CoveredCallTab() {
                     if (success) {
                         setRealChartData(finalChartData);
                         setRealStats(statsMap);
+                        setIsPrMap(newIsPrMap); // Store the is_pr map
                         setIsLoadingData(false);
                         return;
                     } else {
@@ -774,8 +777,9 @@ export default function CoveredCallTab() {
                                                 {selectedForCompare.map((item, idx) => {
                                                     const colors = ['#818cf8', '#34d399', '#fbbf24', '#a78bfa', '#60a5fa', '#f87171', '#34d399'];
                                                     const isHovered = hoveredLine === item.ticker;
+                                                    const isPr = isPrMap[item.ticker] === true;
                                                     return (
-                                                        <Line key={item.ticker} type="monotone" name={item.name} dataKey={item.ticker} stroke={colors[idx % colors.length]} strokeWidth={isHovered ? 5 : 2.5} opacity={hoveredLine && !isHovered ? 0.2 : 1} dot={false} activeDot={{ r: isHovered ? 6 : 4 }} connectNulls={false} onMouseEnter={() => setHoveredLine(item.ticker)} onMouseLeave={() => setHoveredLine(null)} />
+                                                        <Line key={item.ticker} type="monotone" name={`${item.name}${isPr ? ' (PR)' : ''}`} dataKey={item.ticker} stroke={colors[idx % colors.length]} strokeWidth={isHovered ? 5 : 2.5} opacity={hoveredLine && !isHovered ? 0.2 : 1} dot={false} activeDot={{ r: isHovered ? 6 : 4 }} connectNulls={false} onMouseEnter={() => setHoveredLine(item.ticker)} onMouseLeave={() => setHoveredLine(null)} />
                                                     )
                                                 })}
                                             </LineChart>
@@ -796,8 +800,8 @@ export default function CoveredCallTab() {
                                                 <tr className="text-[11px] font-semibold text-gray-400 text-center tracking-wider">
                                                     <th className="py-3 px-4 text-left">종목명 (운용사)</th>
                                                     <th className="py-3 px-3">비교 벤치마크</th>
-                                                    <th className="py-3 px-3 bg-indigo-500/10 text-indigo-400/80">종목 {chartPeriod} 수익률(TR)</th>
-                                                    <th className="py-3 px-3 bg-rose-500/10 text-rose-400/80">벤치마크 {chartPeriod} 수익률(TR)</th>
+                                                    <th className="py-3 px-3 bg-indigo-500/10 text-indigo-400/80">종목 {chartPeriod} 수익률</th>
+                                                    <th className="py-3 px-3 bg-rose-500/10 text-rose-400/80">벤치마크 수익률(TR/PR)</th>
                                                     <th className="py-3 px-3 bg-slate-500/10 text-slate-300/80">초과 수익 (괴리)</th>
                                                     <th className="py-3 px-3 text-emerald-400/80">상승 참여율(Upside)</th>
                                                     <th className="py-3 px-3 text-blue-400/80">하락 방어율(Downside)</th>
@@ -832,13 +836,25 @@ export default function CoveredCallTab() {
                                                                 <span className="text-[11px] font-medium bg-white/10 px-2 py-1 rounded text-gray-400">{item.index}</span>
                                                             </td>
                                                             <td className="py-3 px-3 text-center bg-indigo-500/[0.02] font-mono text-[13px] text-indigo-300 font-bold">
-                                                                {(trPeriod > 0 ? '+' : '') + trPeriod.toFixed(2)}%
+                                                                {(trPeriod > 0 ? '+' : '') + trPeriod.toFixed(2)}% <span className="text-[10px] text-gray-500 font-normal">{stats.is_pr ? '(PR)' : '(TR)'}</span>
                                                             </td>
-                                                            <td className="py-3 px-3 text-center bg-rose-500/[0.02] font-mono text-[13px] text-rose-300 font-bold">
-                                                                {(bmTrPeriod > 0 ? '+' : '') + bmTrPeriod.toFixed(2)}%
+                                                            <td className="py-2 px-3 text-center bg-rose-500/[0.02] font-mono text-[13px] text-rose-300">
+                                                                <div className="flex flex-col items-center gap-0.5">
+                                                                    <span className="font-bold">{(bmTrPeriod > 0 ? '+' : '') + bmTrPeriod.toFixed(2)}% <span className="text-[10px] text-rose-500/60 font-normal">(TR)</span></span>
+                                                                    {stats.benchmark_pr_period !== undefined && (
+                                                                        <span className="text-[11px] text-rose-300/60 font-medium">={(stats.benchmark_pr_period > 0 ? '+' : '') + stats.benchmark_pr_period.toFixed(2)}% <span className="text-[9px] text-rose-500/50 font-normal">(PR)</span></span>
+                                                                    )}
+                                                                </div>
                                                             </td>
                                                             <td className="py-3 px-3 text-center bg-slate-500/[0.02] font-mono text-[13px] text-gray-300 font-bold">
-                                                                {(diffPeriod > 0 ? '+' : '') + diffPeriod.toFixed(2)}%
+                                                                <div className="flex items-center gap-1.5 justify-center">
+                                                                    {(diffPeriod > 0 ? '+' : '') + diffPeriod.toFixed(2)}%
+                                                                    {stats.is_pr ? (
+                                                                        <span className="text-[9px] text-amber-500/70 border border-amber-500/30 px-1 rounded">PR비교</span>
+                                                                    ) : (
+                                                                        <span className="text-[9px] text-indigo-400/70 border border-indigo-400/30 px-1 rounded">TR비교</span>
+                                                                    )}
+                                                                </div>
                                                             </td>
                                                             <td className="py-3 px-3 text-center font-mono text-[13px] text-emerald-400 font-bold">
                                                                 {upCap.toFixed(1)}%

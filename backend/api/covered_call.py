@@ -22,12 +22,13 @@ async def analyze_covered_calls(request: CoveredCallRequest):
     analyzer = CoveredCallAnalyzer()
 
     # 1. Fetch benchmark data
-    bench_df = await analyzer.fetch_historical_tr(
+    bench_df, bench_is_pr = await analyzer.fetch_historical_tr(
         request.benchmark_symbol, period=request.period
     )
     if bench_df.empty:
         return {
-            "error": f"Could not fetch benchmark data for {request.benchmark_symbol}"
+            "status": "error",
+            "error": f"Could not fetch benchmark data for {request.benchmark_symbol}",
         }
 
     bench_adj_close = bench_df["Adj Close"]
@@ -35,12 +36,17 @@ async def analyze_covered_calls(request: CoveredCallRequest):
     results = []
     # 2. Fetch and analyze each fund
     for symbol in request.fund_symbols:
-        fund_df = await analyzer.fetch_historical_tr(symbol, period=request.period)
+        fund_df, fund_is_pr = await analyzer.fetch_historical_tr(
+            symbol, period=request.period
+        )
         if fund_df.empty:
             results.append({"symbol": symbol, "error": "Failed to fetch data"})
             continue
 
         fund_adj_close = fund_df["Adj Close"]
+        fund_close = fund_df["Close"]
+        bench_adj_close = bench_df["Adj Close"]
+        bench_close = bench_df["Close"]
 
         # Calculate Capture Ratios
         captures = analyzer.calculate_capture_ratios(fund_adj_close, bench_adj_close)
@@ -48,8 +54,17 @@ async def analyze_covered_calls(request: CoveredCallRequest):
         # Calculate TR difference
         tr_diff = analyzer.calculate_tr_difference(fund_adj_close, bench_adj_close)
 
+        # Calculate PR difference for Benchmark PR
+        pr_diff = analyzer.calculate_tr_difference(fund_close, bench_close)
+
         # Check for insufficient data (e.g., newly listed)
         data_insufficient = len(fund_df) < len(bench_df) * 0.9
+
+        actual_diff = (
+            tr_diff["tr_difference"]
+            if not fund_is_pr
+            else (tr_diff["fund_tr"] - pr_diff["bench_tr"])
+        )
 
         # Aggregate stats
         results.append(
@@ -59,8 +74,10 @@ async def analyze_covered_calls(request: CoveredCallRequest):
                 "downside_capture": captures["downside_capture"],
                 "tr_period": tr_diff["fund_tr"],
                 "benchmark_tr_period": tr_diff["bench_tr"],
-                "diff_benchmark_period": tr_diff["tr_difference"],
+                "benchmark_pr_period": pr_diff["bench_tr"],
+                "diff_benchmark_period": actual_diff,
                 "data_insufficient": data_insufficient,
+                "is_pr": fund_is_pr,
             }
         )
 
@@ -78,7 +95,7 @@ async def get_covered_call_chart(request: CoveredCallRequest):
     for the requested period (1mo, 3mo, 1y).
     """
     analyzer = CoveredCallAnalyzer()
-    bench_df = await analyzer.fetch_historical_tr(
+    bench_df, bench_is_pr = await analyzer.fetch_historical_tr(
         request.benchmark_symbol, period=request.period
     )
 
@@ -88,10 +105,12 @@ async def get_covered_call_chart(request: CoveredCallRequest):
     bench_series = bench_df["Adj Close"]
 
     fund_series_list = {}
+    is_pr_map = {}
     for sym in request.fund_symbols:
-        df = await analyzer.fetch_historical_tr(sym, period=request.period)
+        df, is_pr = await analyzer.fetch_historical_tr(sym, period=request.period)
         if not df.empty:
             fund_series_list[sym] = df["Adj Close"]
+            is_pr_map[sym] = is_pr
 
     # Combine into single DataFrame
     df_all = pd.DataFrame({"Benchmark": bench_series})
@@ -125,4 +144,4 @@ async def get_covered_call_chart(request: CoveredCallRequest):
 
         chart_data.append(entry)
 
-    return {"chart_data": chart_data}
+    return {"chart_data": chart_data, "is_pr_map": is_pr_map}
