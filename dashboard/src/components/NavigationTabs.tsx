@@ -4,8 +4,8 @@ import { Aperture, Star } from "lucide-react";
 import { useRouter, usePathname } from 'next/navigation';
 
 type NavigationTabsProps = {
-    activeTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover';
-    setActiveTab?: (tab: 'select' | 'info' | 'holdings' | 'chart' | 'discover') => void;
+    activeTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call';
+    setActiveTab?: (tab: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call') => void;
     isEtfCheckModalOpen?: boolean;
     setIsEtfCheckModalOpen?: (val: boolean) => void;
     isFavModalOpen?: boolean;
@@ -27,12 +27,13 @@ export default function NavigationTabs({
     const pathname = usePathname();
     const isMyPage = pathname === '/my';
 
-    const navItems: { id: 'select' | 'info' | 'holdings' | 'chart' | 'discover', label: string, icon?: string }[] = [
+    const navItems: { id: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call', label: string, icon?: string }[] = [
         { id: 'select', label: '종목선택' },
         { id: 'info', label: '기본정보' },
         { id: 'chart', label: '수익률차트' },
         { id: 'holdings', label: '구성종목' },
-        { id: 'discover', label: 'Discover' }
+        { id: 'discover', label: 'Discover' },
+        { id: 'covered_call', label: 'Covered Call' }
     ];
 
     return (

@@ -7,6 +7,7 @@ import CompareChart from "@/components/CompareChart";
 import CompareTable from "@/components/CompareTable";
 import Modals from "@/components/Modals";
 import DiscoverTab from "@/components/DiscoverTab";
+import CoveredCallTab from "@/components/CoveredCallTab";
 
 type FavGroup = { id: string; name: string; items: { code: string; name: string }[] };
 
@@ -29,7 +30,7 @@ export default function Home() {
   const [globalSearch, setGlobalSearch] = useState("");
   const [globalActive, setGlobalActive] = useState(false);
   const [period, setPeriod] = useState<string>('6M');
-  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover'>('select');
+  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call'>('select');
 
   const [etfDictionary, setEtfDictionary] = useState<{ code: string, name: string }[]>([]);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState<number | null>(null);
@@ -799,6 +800,7 @@ export default function Home() {
               { id: 'chart', label: '차트' },
               { id: 'holdings', label: '구성종목' },
               { id: 'discover', label: 'Discover' },
+              { id: 'covered_call', label: 'Covered Call' },
               { id: 'etfcheck', label: 'ETF Check' }
             ].map(tab => (
               <button
@@ -809,11 +811,11 @@ export default function Home() {
                     setHasOpenedEtfCheck(true);
                     return;
                   }
-                  if (tab.id !== 'select' && tab.id !== 'discover' && !data) {
+                  if (tab.id !== 'select' && tab.id !== 'discover' && tab.id !== 'covered_call' && !data) {
                     alert('먼저 종목을 선택하고 비교를 실행해주세요.');
                     return;
                   }
-                  setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover');
+                  setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call');
                   setIsEtfCheckModalOpen(false);
                   setNaverEtfCode(null);
                   setSelectedDetailEtf(null);
@@ -1260,6 +1262,11 @@ export default function Home() {
         {/* Discover Section */}
         {activeTab === 'discover' && (
           <DiscoverTab />
+        )}
+
+        {/* Covered Call Section */}
+        {activeTab === 'covered_call' && (
+          <CoveredCallTab />
         )}
 
         <Modals
