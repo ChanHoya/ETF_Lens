@@ -4,16 +4,32 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, TrendingUp, TrendingDown, X, Info, ShieldAlert, BarChart3, Activity, Hourglass } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
-// Mock Data for Table
-const mockCCData = [
-    { id: 1, name: "TIGER 미국배당+7%프리미엄다우존스", ticker: "458730", price: 10540, yield: 10.2, tr1y: 12.5, diffBenchmark: -4.8, country: 'US', index: 'Dow Jones U.S. Dividend 100', theme: '고배당', issuer: '미래에셋자산운용', aum: '1조 2천억', ter: '0.39%', launchDate: '2023-06-20', distFreq: '월분배' },
-    { id: 2, name: "KODEX 미국AI테크TOP10+15%프리미엄", ticker: "474500", price: 11230, yield: 14.5, tr1y: 32.4, diffBenchmark: -18.2, country: 'US', index: 'Nasdaq100', theme: '고성장', issuer: '삼성자산운용', aum: '8천억', ter: '0.45%', launchDate: '2024-01-15', distFreq: '월분배' },
-    { id: 3, name: "TIGER 200커버드콜ATM", ticker: "289480", price: 8900, yield: 8.5, tr1y: 5.2, diffBenchmark: +1.2, country: 'KR', index: 'KOSPI200', theme: '옵션프리미엄', issuer: '미래에셋자산운용', aum: '3천억', ter: '0.30%', launchDate: '2018-05-10', distFreq: '월분배' },
-    { id: 4, name: "ACE 미국나스닥100데일리커버드콜", ticker: "000000", price: 9800, yield: 12.1, tr1y: 25.4, diffBenchmark: -11.5, country: 'US', index: 'Nasdaq100', theme: '고성장', issuer: '한국투자신탁운용', aum: '4천억', ter: '0.40%', launchDate: '2023-11-20', distFreq: '월분배' },
-    { id: 5, name: "KBSTAR 200고배당커버드콜ATM", ticker: "123456", price: 10100, yield: 9.8, tr1y: 7.5, diffBenchmark: -0.5, country: 'KR', index: 'KOSPI200', theme: '고배당', issuer: 'KB자산운용', aum: '1천5백억', ter: '0.35%', launchDate: '2019-10-15', distFreq: '월분배' },
-];
+// Mock Data template for dynamically added ETFs
+const createETFEntry = (etf: any, id: number) => {
+    let index = 'KOSPI200';
+    let country = 'KR';
+    if (etf.name.includes('나스닥') || etf.name.includes('테크')) { index = 'Nasdaq100'; country = 'US'; }
+    else if (etf.name.includes('다우존스') || etf.name.includes('배당')) { index = 'Dow Jones U.S. Dividend 100'; country = 'US'; }
+    else if (etf.name.includes('S&P') || etf.name.includes('미국')) { index = 'S&P500'; country = 'US'; }
 
-// Mock Chart Data for Modal
+    return {
+        id,
+        name: etf.name,
+        ticker: etf.code,
+        price: 0,
+        yield: 0,
+        tr1y: 0,
+        diffBenchmark: 0,
+        country,
+        index,
+        theme: etf.name.includes('배당') ? '고배당' : '옵션프리미엄',
+        issuer: etf.name.split(' ')[0],
+        aum: '-',
+        ter: '-',
+        launchDate: '-',
+        distFreq: '월분배'
+    };
+};
 const generateMockChartData = (period: string) => {
     const data = [];
     let ccBase = 100;
@@ -47,6 +63,10 @@ const generateMockChartData = (period: string) => {
 
 export default function CoveredCallTab() {
     const [searchTerm, setSearchTerm] = useState('');
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
+    const [etfDictionary, setEtfDictionary] = useState<any[]>([]);
+    const [ccDataList, setCcDataList] = useState<any[]>([]);
+
     const [selectedCountry, setSelectedCountry] = useState('All');
     const [selectedDetail, setSelectedDetail] = useState<any>(null);
     const [chartPeriod, setChartPeriod] = useState('1Y');
@@ -56,6 +76,22 @@ export default function CoveredCallTab() {
 
     // For storing real stats mapped by ticker
     const [realStats, setRealStats] = useState<any>({});
+
+    useEffect(() => {
+        const fetchEtfs = async () => {
+            const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/analyze/etfs`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setEtfDictionary(data);
+                }
+            } catch (err) {
+                console.error("ETF load error", err);
+            }
+        };
+        fetchEtfs();
+    }, []);
 
     useEffect(() => {
         const fetchRealStats = async () => {
@@ -183,11 +219,28 @@ export default function CoveredCallTab() {
         fetchChart();
     }, [selectedDetail, chartPeriod]);
 
-    const filteredData = mockCCData.filter(item => {
-        const matchSearch = item.name.includes(searchTerm) || item.ticker.includes(searchTerm) || item.issuer.includes(searchTerm);
-        const matchCountry = selectedCountry === 'All' || item.country === selectedCountry;
+    const filteredDropdown = etfDictionary.filter(etf =>
+        (etf.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            etf.code.toLowerCase().includes(searchTerm.toLowerCase())) &&
+        !ccDataList.some((item: any) => item.ticker === etf.code)
+    ).slice(0, 10);
+
+    const filteredData = ccDataList.filter((item: any) => {
+        const matchSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.ticker.includes(searchTerm);
+        const matchCountry = selectedCountry === 'All' ? true : item.country === selectedCountry;
         return matchSearch && matchCountry;
     });
+
+    const handleAddEtf = (etf: any) => {
+        const newEntry = createETFEntry(etf, ccDataList.length + 1);
+        setCcDataList(prev => [...prev, newEntry]);
+        setSearchTerm('');
+        setIsSearchFocused(false);
+    };
+
+    const handleRemoveEtf = (idToRemove: number) => {
+        setCcDataList(prev => prev.filter(item => item.id !== idToRemove));
+    };
 
     const formatRate = (rate: number) => {
         const sign = rate > 0 ? '+' : '';
@@ -212,17 +265,42 @@ export default function CoveredCallTab() {
 
                 {/* Search & Filters */}
                 <div className="flex flex-col md:flex-row gap-4 mb-6">
-                    <div className="relative flex-1">
+                    <div className="relative flex-1 group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="종목명, 티커, 운용사 검색..."
+                            placeholder="커버드콜 종목 검색 및 추가 (이름 또는 코드)"
                             value={searchTerm}
+                            onFocus={() => setIsSearchFocused(true)}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl focus:ring-1 focus:ring-indigo-500/50 outline-none text-sm text-white transition-all shadow-inner"
                         />
+                        {isSearchFocused && searchTerm && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-[#121217] border border-white/10 rounded-xl shadow-2xl z-50 max-h-[300px] overflow-y-auto">
+                                {filteredDropdown.length > 0 ? (
+                                    <ul>
+                                        {filteredDropdown.map(etf => (
+                                            <li
+                                                key={etf.code}
+                                                onClick={() => handleAddEtf(etf)}
+                                                className="px-4 py-3 hover:bg-white/5 cursor-pointer flex justify-between items-center border-b border-white/5 last:border-0"
+                                            >
+                                                <span className="text-sm text-gray-200">{etf.name}</span>
+                                                <span className="text-xs text-indigo-400 font-mono">{etf.code}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <div className="px-4 py-4 text-sm text-gray-500 text-center">검색 결과가 없습니다.</div>
+                                )}
+                            </div>
+                        )}
+                        {isSearchFocused && (
+                            <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsSearchFocused(false)} />
+                        )}
                     </div>
-                    <div className="flex gap-2">
+                    {/* Keep z-index higher relative to dropdowns */}
+                    <div className="flex gap-2 relative z-10">
                         {['All', 'US', 'KR'].map(c => (
                             <button
                                 key={c}
@@ -252,7 +330,8 @@ export default function CoveredCallTab() {
                                     <th className="py-4 px-3 text-right">현재가</th>
                                     <th className="py-4 px-3 bg-emerald-500/10 text-emerald-400/80">분배율(%)</th>
                                     <th className="py-4 px-3 bg-indigo-500/10 text-indigo-400/80">1년 수익률(TR)</th>
-                                    <th className="py-4 px-4 bg-rose-500/10 text-rose-400/80 rounded-tr-2xl">벤치마크 대비 차이(1Y)</th>
+                                    <th className="py-4 px-4 bg-rose-500/10 text-rose-400/80">벤치마크 대비 차이(1Y)</th>
+                                    <th className="py-4 px-2 w-10 text-center rounded-tr-2xl"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5 text-sm">
@@ -294,11 +373,21 @@ export default function CoveredCallTab() {
                                                 </span>
                                             </div>
                                         </td>
+                                        <td className="py-4 px-2 text-center" onClick={(e) => { e.stopPropagation(); handleRemoveEtf(item.id); }}>
+                                            <button className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
+                                                <X size={16} />
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                                 {filteredData.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="py-12 text-center text-gray-500">검색 결과가 없습니다.</td>
+                                        <td colSpan={7} className="py-16 text-center text-gray-500">
+                                            <div className="flex flex-col items-center justify-center gap-3">
+                                                <Search className="w-8 h-8 text-gray-700 mb-2" />
+                                                <span className="text-sm">검색창에서 커버드콜 종목을 검색하여 추가해주세요.</span>
+                                            </div>
+                                        </td>
                                     </tr>
                                 )}
                             </tbody>
@@ -444,6 +533,6 @@ export default function CoveredCallTab() {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }
