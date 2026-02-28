@@ -4,53 +4,54 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 
 // Mock Data for the 1-year Historical Trends (12 Months)
 const mockDollarData = [
-    { month: '25.03', val: 104.2 },
-    { month: '25.04', val: 103.8 },
-    { month: '25.05', val: 105.1 }, // Peak danger
-    { month: '25.06', val: 104.5 },
-    { month: '25.07', val: 102.3 },
-    { month: '25.08', val: 101.8 },
-    { month: '25.09', val: 100.9 },
-    { month: '25.10', val: 99.5 },
-    { month: '25.11', val: 98.2 },
-    { month: '25.12', val: 97.4 },
-    { month: '26.01', val: 96.8 },
-    { month: '26.02 (현재)', val: 97.77 },
+    { month: '03월', val: 104.2, krw: 1350 },
+    { month: '04월', val: 103.8, krw: 1345 },
+    { month: '05월', val: 105.1, krw: 1370 }, // Peak danger
+    { month: '06월', val: 104.5, krw: 1362 },
+    { month: '07월', val: 102.3, krw: 1330 },
+    { month: '08월', val: 101.8, krw: 1325 },
+    { month: '09월', val: 100.9, krw: 1310 },
+    { month: '10월', val: 99.5, krw: 1290 },
+    { month: '11월', val: 98.2, krw: 1285 },
+    { month: '12월', val: 97.4, krw: 1270 },
+    { month: '01월', val: 96.8, krw: 1265 },
+    { month: '02월', val: 97.77, krw: 1280 },
 ];
 
 const mockPerData = [
-    { month: '25.03', val: 9.8 },
-    { month: '25.04', val: 9.5 },
-    { month: '25.05', val: 9.1 },
-    { month: '25.06', val: 9.9 },
-    { month: '25.07', val: 10.4 },
-    { month: '25.08', val: 10.9 },
-    { month: '25.09', val: 11.2 },
-    { month: '25.10', val: 11.5 },
-    { month: '25.11', val: 11.8 },
-    { month: '25.12', val: 12.1 },
-    { month: '26.01', val: 12.6 }, // Touch danger line
-    { month: '26.02 (현재)', val: 12.4 }, // Trend reversal dropping
+    { month: '03월', val: 9.8 },
+    { month: '04월', val: 9.5 },
+    { month: '05월', val: 9.1 },
+    { month: '06월', val: 9.9 },
+    { month: '07월', val: 10.4 },
+    { month: '08월', val: 10.9 },
+    { month: '09월', val: 11.2 },
+    { month: '10월', val: 11.5 },
+    { month: '11월', val: 11.8 },
+    { month: '12월', val: 12.1 },
+    { month: '01월', val: 12.6 }, // Touch danger line
+    { month: '02월', val: 12.4 }, // Trend reversal dropping
 ];
 
 const mockCliData = [
-    { month: '25.03', val: 99.1 },
-    { month: '25.04', val: 99.5 },
-    { month: '25.05', val: 99.8 },
-    { month: '25.06', val: 99.9 },
-    { month: '25.07', val: 100.1 },
-    { month: '25.08', val: 100.3 },
-    { month: '25.09', val: 100.5 },
-    { month: '25.10', val: 100.7 },
-    { month: '25.11', val: 100.9 },
-    { month: '25.12', val: 101.1 }, // Peak
-    { month: '26.01', val: 100.8 }, // Drop 1
-    { month: '26.02 (현재)', val: 100.4 }, // Drop 2 (Danger)
+    { month: '03월', val: 99.1 },
+    { month: '04월', val: 99.5 },
+    { month: '05월', val: 99.8 },
+    { month: '06월', val: 99.9 },
+    { month: '07월', val: 100.1 },
+    { month: '08월', val: 100.3 },
+    { month: '09월', val: 100.5 },
+    { month: '10월', val: 100.7 },
+    { month: '11월', val: 100.9 },
+    { month: '12월', val: 101.1 }, // Peak
+    { month: '01월', val: 100.8 }, // Drop 1
+    { month: '02월', val: 100.4 }, // Drop 2 (Danger)
 ];
 
 export default function KospiExitAnalyzer() {
     // State to hold mock values for the 3 key indicators
     const [dollarIndex, setDollarIndex] = useState(mockDollarData[11].val);
+    const [dollarKrw, setDollarKrw] = useState(mockDollarData[11].krw);
     const [forwardPer, setForwardPer] = useState(mockPerData[11].val);
     const [oecdCliValue, setOecdCliValue] = useState(mockCliData[11].val);
     const [oecdCliDownMonths, setOecdCliDownMonths] = useState(2); // Based on recent mock drops
@@ -58,6 +59,7 @@ export default function KospiExitAnalyzer() {
     // Mock functions to allow user to simulate different scenarios
     const simulateDanger = () => {
         setDollarIndex(102.1);
+        setDollarKrw(1360);
         setForwardPer(12.6);
         setOecdCliValue(100.4);
         setOecdCliDownMonths(2);
@@ -65,6 +67,7 @@ export default function KospiExitAnalyzer() {
 
     const simulateSafe = () => {
         setDollarIndex(97.77);
+        setDollarKrw(1280);
         setForwardPer(10.5);
         setOecdCliValue(101.2);
         setOecdCliDownMonths(0);
@@ -72,19 +75,20 @@ export default function KospiExitAnalyzer() {
 
     const simulateWarning = () => {
         setDollarIndex(100.5);
+        setDollarKrw(1310);
         setForwardPer(11.8);
         setOecdCliValue(100.8);
         setOecdCliDownMonths(1);
     };
 
     // When simulators run, update out mock charts to visually reflect the new end-state
-    const getChartData = (baseData: any[], currentVal: number) => {
+    const getChartData = (baseData: any[], currentVal: number, extraProps?: any) => {
         const newData = [...baseData];
-        newData[newData.length - 1] = { ...newData[newData.length - 1], val: currentVal };
+        newData[newData.length - 1] = { ...newData[newData.length - 1], val: currentVal, ...extraProps };
         return newData;
     };
 
-    const chartDollar = getChartData(mockDollarData, dollarIndex);
+    const chartDollar = getChartData(mockDollarData, dollarIndex, { krw: dollarKrw });
     const chartPer = getChartData(mockPerData, forwardPer);
     const chartCli = getChartData(mockCliData, oecdCliValue);
 
@@ -173,20 +177,23 @@ export default function KospiExitAnalyzer() {
                         </span>
                     </div>
 
-                    <div className="h-[80px] w-full mt-2 -ml-2">
+                    <div className="h-[120px] w-full mt-2 -ml-2 -mb-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartDollar}>
+                            <LineChart data={chartDollar} margin={{ top: 5, right: -15, left: -25, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <YAxis domain={['auto', 'auto']} hide={true} />
+                                <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
+                                <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
+                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
                                 <RechartsTooltip
-                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px' }}
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     itemStyle={{ color: '#fff' }}
-                                    formatter={(value: any) => [`${value}`, 'Index']}
+                                    formatter={(value: any, name: any) => [name === 'val' ? value : `${value}원`, name === 'val' ? '달러 인덱스' : 'USD/KRW']}
                                     labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                                 />
-                                <ReferenceLine y={100} stroke="#f59e0b" strokeDasharray="3 3" />
-                                <ReferenceLine y={101.5} stroke="#f43f5e" strokeDasharray="3 3" />
-                                <Line type="monotone" dataKey="val" stroke={dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
+                                <ReferenceLine yAxisId="left" y={100} stroke="#f59e0b" strokeDasharray="3 3" />
+                                <ReferenceLine yAxisId="left" y={101.5} stroke="#f43f5e" strokeDasharray="3 3" />
+                                <Line yAxisId="left" type="monotone" dataKey="val" stroke={dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
+                                <Line yAxisId="right" type="monotone" dataKey="krw" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={{ r: 4 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -209,13 +216,14 @@ export default function KospiExitAnalyzer() {
                         </span>
                     </div>
 
-                    <div className="h-[80px] w-full mt-2 -ml-2">
+                    <div className="h-[120px] w-full mt-2 -ml-2 -mb-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartPer}>
+                            <LineChart data={chartPer} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <YAxis domain={['auto', 'auto']} hide={true} />
+                                <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
+                                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
                                 <RechartsTooltip
-                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px' }}
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     itemStyle={{ color: '#fff' }}
                                     formatter={(value: any) => [`${value}x`, 'P/E']}
                                     labelStyle={{ color: '#aaa', marginBottom: '4px' }}
@@ -249,13 +257,14 @@ export default function KospiExitAnalyzer() {
                         </span>
                     </div>
 
-                    <div className="h-[80px] w-full mt-2 -ml-2">
+                    <div className="h-[120px] w-full mt-2 -ml-2 -mb-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartCli}>
+                            <LineChart data={chartCli} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <YAxis domain={['auto', 'auto']} hide={true} />
+                                <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
+                                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
                                 <RechartsTooltip
-                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px' }}
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     itemStyle={{ color: '#fff' }}
                                     formatter={(value: any) => [`${value.toFixed(1)}`, 'CLI']}
                                     labelStyle={{ color: '#aaa', marginBottom: '4px' }}
