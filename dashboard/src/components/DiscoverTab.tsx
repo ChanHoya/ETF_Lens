@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, TrendingUp, ShieldCheck, Zap, Activity, AlertCircle } from 'lucide-react';
 import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip as RechartsTooltip } from 'recharts';
 import TaxSimulator from '@/components/TaxSimulator';
+import KospiExitAnalyzer from '@/components/KospiExitAnalyzer';
 import MacroRotation from '@/components/MacroRotation';
 
 export default function DiscoverTab() {
@@ -80,10 +81,13 @@ export default function DiscoverTab() {
         <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-500 bg-[#121217]/80 p-4 lg:p-6 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
             <div className="flex flex-col gap-3 w-full h-full">
 
-                {/* Top: Macro Rotation */}
+                {/* Top: KOSPI Exit Analyzer */}
+                <KospiExitAnalyzer />
+
+                {/* Middle: Macro Rotation */}
                 <MacroRotation />
 
-                {/* Middle: Selection List (Left) and Radar Details (Right) */}
+                {/* Bottom: Selection List (Left) and Radar Details (Right) */}
                 <div className="flex flex-col lg:flex-row gap-3 w-full">
 
                     {/* Left Panel: ETF Leaderboard List (formerly Right Panel) */}
