@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, TrendingUp, TrendingDown, X, Info, ShieldAlert, BarChart3, Activity, Hourglass } from 'lucide-react';
+import { Search, Filter, TrendingUp, TrendingDown, X, Info, ShieldAlert, BarChart3, Activity, Hourglass, Check, Plus } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
 // Mock Data template for dynamically added ETFs
@@ -219,12 +219,15 @@ export default function CoveredCallTab() {
         fetchChart();
     }, [selectedDetail, chartPeriod]);
 
+    const [selectedDropdownItems, setSelectedDropdownItems] = useState<any[]>([]);
+    const BRAND_KEYWORDS = ['KODEX', 'TIGER', 'KBSTAR', 'ACE', 'SOL', 'HANARO', 'ARIRANG', 'KOSEF'];
+
     const filteredDropdown = etfDictionary.filter(etf =>
         (etf.name.includes('커버드콜') || etf.name.includes('프리미엄') || etf.name.includes('타겟')) &&
         (etf.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             etf.code.toLowerCase().includes(searchTerm.toLowerCase())) &&
         !ccDataList.some((item: any) => item.ticker === etf.code)
-    ).slice(0, 50);
+    );
 
     const filteredData = ccDataList.filter((item: any) => {
         const matchSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.ticker.includes(searchTerm);
@@ -232,9 +235,22 @@ export default function CoveredCallTab() {
         return matchSearch && matchCountry;
     });
 
-    const handleAddEtf = (etf: any) => {
-        const newEntry = createETFEntry(etf, ccDataList.length + 1);
-        setCcDataList(prev => [...prev, newEntry]);
+    const handleToggleDropdownItem = (etf: any) => {
+        setSelectedDropdownItems(prev => {
+            if (prev.some(item => item.code === etf.code)) {
+                return prev.filter(item => item.code !== etf.code);
+            } else {
+                if (prev.length >= 10) return prev; // Limit to 10
+                return [...prev, etf];
+            }
+        });
+    };
+
+    const handleConfirmAdd = () => {
+        if (selectedDropdownItems.length === 0) return;
+        const newEntries = selectedDropdownItems.map((etf, idx) => createETFEntry(etf, ccDataList.length + idx + 1));
+        setCcDataList(prev => [...prev, ...newEntries]);
+        setSelectedDropdownItems([]);
         setSearchTerm('');
         setIsSearchFocused(false);
     };
@@ -267,35 +283,72 @@ export default function CoveredCallTab() {
                 {/* Search & Filters */}
                 <div className="flex flex-col md:flex-row gap-4 mb-6">
                     <div className="relative flex-1 group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="커버드콜 종목 검색 및 추가 (이름 또는 코드)"
-                            value={searchTerm}
-                            onFocus={() => setIsSearchFocused(true)}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl focus:ring-1 focus:ring-indigo-500/50 outline-none text-sm text-white transition-all shadow-inner"
-                        />
-                        {isSearchFocused && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-[#121217] border border-white/10 rounded-xl shadow-2xl z-50 max-h-[300px] overflow-y-auto">
-                                {filteredDropdown.length > 0 ? (
-                                    <ul>
-                                        {filteredDropdown.map(etf => (
-                                            <li
-                                                key={etf.code}
-                                                onClick={() => handleAddEtf(etf)}
-                                                className="px-4 py-3 hover:bg-white/5 cursor-pointer flex justify-between items-center border-b border-white/5 last:border-0"
+
+                        {/* Quick Filters for Brands */}
+                        <div className="flex flex-wrap gap-x-2 gap-y-2 mb-3 items-center">
+                            <span className="text-xs text-gray-400 font-semibold mr-1">운용사</span>
+                            {BRAND_KEYWORDS.map(brand => (
+                                <button
+                                    key={brand}
+                                    onClick={() => setSearchTerm(prev => prev.includes(brand) ? prev.replace(brand, '').trim() : `${prev} ${brand}`.trim())}
+                                    className={`text-xs px-2.5 py-1 rounded-full border transition-all ${searchTerm.includes(brand) ? 'bg-sky-500/20 border-sky-400/50 text-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.2)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-gray-300'}`}
+                                >
+                                    {brand}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="relative z-50">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="커버드콜 종목 검색 및 추가 (이름 또는 코드)"
+                                value={searchTerm}
+                                onFocus={() => setIsSearchFocused(true)}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl focus:ring-1 focus:ring-indigo-500/50 outline-none text-sm text-white transition-all shadow-inner"
+                            />
+                            {isSearchFocused && (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-[#121217] border border-white/10 rounded-xl shadow-2xl overflow-y-auto max-h-[400px]">
+                                    <div className="sticky top-0 bg-[#121217]/95 backdrop-blur-md p-2 border-b border-white/10 flex justify-between items-center z-10">
+                                        <span className="text-xs text-gray-400 font-medium px-2">
+                                            검색 결과 ({filteredDropdown.length}건)
+                                            {selectedDropdownItems.length > 0 && <span className="ml-2 text-indigo-400">({selectedDropdownItems.length}/10 선택됨)</span>}
+                                        </span>
+                                        {selectedDropdownItems.length > 0 && (
+                                            <button
+                                                onClick={handleConfirmAdd}
+                                                className="text-xs bg-indigo-500 text-white hover:bg-indigo-400 font-bold px-3 py-1.5 rounded-md transition-colors flex items-center gap-1 shadow-lg shadow-indigo-500/20"
                                             >
-                                                <span className="text-sm text-gray-200">{etf.name}</span>
-                                                <span className="text-xs text-indigo-400 font-mono">{etf.code}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <div className="px-4 py-4 text-sm text-gray-500 text-center">검색 결과가 없습니다.</div>
-                                )}
-                            </div>
-                        )}
+                                                <Plus size={12} /> 추가 완료
+                                            </button>
+                                        )}
+                                    </div>
+                                    {filteredDropdown.length > 0 ? (
+                                        <ul>
+                                            {filteredDropdown.map(etf => {
+                                                const isSelected = selectedDropdownItems.some(item => item.code === etf.code);
+                                                return (
+                                                    <li
+                                                        key={etf.code}
+                                                        onClick={() => handleToggleDropdownItem(etf)}
+                                                        className={`px-4 py-3 cursor-pointer border-b border-white/5 last:border-0 flex justify-between items-center group transition-colors ${isSelected ? 'bg-indigo-500/10' : 'hover:bg-white/5'}`}
+                                                    >
+                                                        <span className={`text-sm ${isSelected ? 'text-indigo-300 font-bold' : 'text-gray-200 group-hover:text-white'}`}>{etf.name}</span>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className={`text-xs font-mono transition-colors ${isSelected ? 'text-indigo-400' : 'text-gray-500'}`}>{etf.code}</span>
+                                                            {isSelected && <Check size={16} className="text-indigo-400" />}
+                                                        </div>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    ) : (
+                                        <div className="px-4 py-8 text-sm text-gray-500 text-center">검색 결과가 없습니다.</div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                         {isSearchFocused && (
                             <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsSearchFocused(false)} />
                         )}
