@@ -165,32 +165,67 @@ export default function CoveredCallTab() {
         // fetchRealStats();
     }, []);
 
-    // Metric Fetching Simulation for Table Rows
+    // Metric Fetching via Real API for Table Rows
     useEffect(() => {
-        const needsLoading = ccDataList.some(item => item.isLoadingMetrics);
-        if (!needsLoading) return;
+        const itemsToFetch = ccDataList.filter(item => item.isLoadingMetrics && !item.isFetching);
+        if (itemsToFetch.length === 0) return;
 
-        const timer = setTimeout(() => {
-            setCcDataList(prev => prev.map(item => {
-                if (!item.isLoadingMetrics) return item;
-                // Assign realistic looking mock metrics until live endpoint is ready
-                const mockPrice = Math.floor(Math.random() * 5000) + 8000;
-                const mockYield = (Math.random() * 5) + 5; // 5~10%
-                const mockTr = (Math.random() * 15) - 2; // -2~13%
-                const mockDiff = (Math.random() * 6) - 3; // -3~3%
+        // Mark as fetching immediately to prevent duplicate calls
+        setCcDataList(prev => prev.map(item => itemsToFetch.some(f => f.ticker === item.ticker) ? { ...item, isFetching: true } : item));
 
-                return {
-                    ...item,
-                    isLoadingMetrics: false,
-                    price: mockPrice,
-                    yield: mockYield,
-                    tr1y: mockTr,
-                    diffBenchmark: mockDiff
-                };
-            }));
-        }, 800); // 0.8s fake loading
+        const fetchMetrics = async () => {
+            try {
+                const promises = itemsToFetch.map(async (item) => {
+                    const payload = {
+                        fund_symbols: [item.ticker],
+                        benchmark_symbol: item.indexTicker || '^KS200',
+                        period: '1y'
+                    };
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/covered-calls/analyze`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = res.ok ? await res.json() : null;
+                    return { ticker: item.ticker, result: data?.results?.[0] };
+                });
 
-        return () => clearTimeout(timer);
+                const results = await Promise.all(promises);
+
+                setCcDataList(prev => prev.map(item => {
+                    const match = results.find(r => r.ticker === item.ticker);
+                    if (match && match.result && !match.result.error) {
+                        return {
+                            ...item,
+                            isLoadingMetrics: false,
+                            isFetching: false,
+                            price: Math.floor(Math.random() * 5000) + 8000, // Still mock price for now until real-time proxy
+                            yield: (Math.random() * 5) + 5, // Still mock yield
+                            tr1y: match.result.tr_period,
+                            diffBenchmark: match.result.diff_benchmark_period,
+                            isPr: match.result.is_pr
+                        };
+                    } else if (match) {
+                        return {
+                            ...item,
+                            isLoadingMetrics: false,
+                            isFetching: false,
+                            price: 0,
+                            yield: 0,
+                            tr1y: 0,
+                            diffBenchmark: 0,
+                            isPr: false
+                        };
+                    }
+                    return item;
+                }));
+            } catch (e) {
+                console.error("Failed to fetch table metrics:", e);
+                setCcDataList(prev => prev.map(item => itemsToFetch.some(f => f.ticker === item.ticker) ? { ...item, isLoadingMetrics: false, isFetching: false } : item));
+            }
+        };
+
+        fetchMetrics();
     }, [ccDataList]);
 
     useEffect(() => {
@@ -609,7 +644,7 @@ export default function CoveredCallTab() {
                                     <th className="py-2 px-3 w-40">분류 / 기초지수</th>
                                     <th className="py-2 px-3 text-right">현재가</th>
                                     <th className="py-2 px-3 bg-emerald-500/10 text-emerald-400/80">분배율(%)</th>
-                                    <th className="py-2 px-3 bg-indigo-500/10 text-indigo-400/80">1년 수익률(TR)</th>
+                                    <th className="py-2 px-3 bg-indigo-500/10 text-indigo-400/80">1년 수익률</th>
                                     <th className="py-2 px-4 bg-rose-500/10 text-rose-400/80">벤치마크 대비 차이(1Y)</th>
                                     <th className="py-2 px-2 w-10 text-center rounded-tr-2xl"></th>
                                 </tr>
@@ -659,7 +694,12 @@ export default function CoveredCallTab() {
                                                 {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : `${item.yield.toFixed(1)}%`}
                                             </td>
                                             <td className="py-2 px-3 text-center bg-indigo-500/[0.02]">
-                                                {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : formatRate(item.tr1y)}
+                                                {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : (
+                                                    <div className="flex flex-col items-center">
+                                                        <span>{formatRate(item.tr1y)}</span>
+                                                        <span className="text-[10px] text-gray-500 font-normal">{item.isPr ? '(PR)' : '(TR)'}</span>
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="py-2 px-4 text-center bg-rose-500/[0.02]">
                                                 <div className="flex items-center justify-center gap-1.5">
@@ -710,8 +750,8 @@ export default function CoveredCallTab() {
 
                 {/* Multi-Compare Overlay Modal */}
                 {isCompareModalOpen && selectedForCompare.length > 0 && (
-                    <div className="fixed inset-0 top-16 z-[300] flex animate-in fade-in duration-200 bg-black/60 backdrop-blur-md p-2 md:p-6 items-start justify-center">
-                        <div className="bg-[#0B0F19] border border-white/10 w-full max-w-7xl h-[calc(100vh-5rem)] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+                    <div className="absolute inset-0 z-[300] flex animate-in fade-in duration-200 bg-[#0c0a18]/95 backdrop-blur-3xl p-0 m-0 rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
+                        <div className="w-full h-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
 
                             {/* Modal Header */}
                             <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-indigo-500/10 to-transparent shrink-0">

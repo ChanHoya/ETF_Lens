@@ -795,40 +795,74 @@ export default function Home() {
         <div className="flex items-center flex-wrap gap-4 md:gap-6">
           <nav className="flex items-center gap-2 md:gap-6 bg-white/[0.03] px-6 py-2 rounded-full border border-white/10 backdrop-blur-md shadow-sm">
             {[
+              { id: 'analysis', label: '종목분석' },
+              { id: 'discover', label: 'Discover' },
+              { id: 'covered_call', label: 'Covered Call' },
+              { id: 'etfcheck', label: 'ETF Check' }
+            ].map(tab => {
+              const isAnalysisActive = ['select', 'info', 'chart', 'holdings'].includes(activeTab);
+              const isActive = (tab.id === 'etfcheck' && isEtfCheckModalOpen) ||
+                (tab.id === 'analysis' && isAnalysisActive && !isEtfCheckModalOpen) ||
+                (activeTab === tab.id && !isEtfCheckModalOpen);
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    if (tab.id === 'etfcheck') {
+                      setIsEtfCheckModalOpen(true);
+                      setHasOpenedEtfCheck(true);
+                      return;
+                    }
+                    if (tab.id === 'analysis') {
+                      setActiveTab('select');
+                      setIsEtfCheckModalOpen(false);
+                      return;
+                    }
+
+                    setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call');
+                    setIsEtfCheckModalOpen(false);
+                    setNaverEtfCode(null);
+                    setSelectedDetailEtf(null);
+                  }}
+                  className={`text-sm md:text-base tracking-wide font-bold transition-all px-4 py-1.5 rounded-full ${isActive ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'
+                    }`}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+      </header>
+
+      {['select', 'info', 'chart', 'holdings'].includes(activeTab) && !isEtfCheckModalOpen && (
+        <div className="w-full flex justify-center mb-6 z-40 relative">
+          <nav className="flex items-center gap-2 md:gap-4 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 shadow-sm">
+            {[
               { id: 'select', label: '종목선택' },
               { id: 'info', label: '기본정보' },
               { id: 'chart', label: '차트' },
               { id: 'holdings', label: '구성종목' },
-              { id: 'discover', label: 'Discover' },
-              { id: 'covered_call', label: 'Covered Call' },
-              { id: 'etfcheck', label: 'ETF Check' }
-            ].map(tab => (
+            ].map(subTab => (
               <button
-                key={tab.id}
+                key={subTab.id}
                 onClick={() => {
-                  if (tab.id === 'etfcheck') {
-                    setIsEtfCheckModalOpen(true);
-                    setHasOpenedEtfCheck(true);
-                    return;
-                  }
-                  if (tab.id !== 'select' && tab.id !== 'discover' && tab.id !== 'covered_call' && !data) {
+                  if (subTab.id !== 'select' && !data) {
                     alert('먼저 종목을 선택하고 비교를 실행해주세요.');
                     return;
                   }
-                  setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call');
-                  setIsEtfCheckModalOpen(false);
+                  setActiveTab(subTab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call');
                   setNaverEtfCode(null);
                   setSelectedDetailEtf(null);
                 }}
-                className={`text-sm md:text-base tracking-wide font-bold transition-all px-4 py-1.5 rounded-full ${((tab.id === 'etfcheck' && isEtfCheckModalOpen) || (tab.id !== 'etfcheck' && activeTab === tab.id && !isEtfCheckModalOpen)) ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'
-                  }`}
+                className={`text-xs md:text-sm font-bold transition-all px-3 py-1 rounded-full ${activeTab === subTab.id ? 'bg-white/20 text-white shadow-inner border border-white/20' : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'}`}
               >
-                {tab.label}
+                {subTab.label}
               </button>
             ))}
           </nav>
         </div>
-      </header>
+      )}
 
       <div className="relative flex-1 flex flex-col w-full max-w-[95vw] xl:max-w-[1400px]">
 
