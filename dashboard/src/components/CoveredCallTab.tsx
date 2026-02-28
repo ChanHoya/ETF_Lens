@@ -103,6 +103,7 @@ export default function CoveredCallTab() {
     const [isFavoritesMenuOpen, setIsFavoritesMenuOpen] = useState(false);
     const [showSaveInput, setShowSaveInput] = useState(false);
     const [newGroupName, setNewGroupName] = useState('');
+    const [deletingGroupIdx, setDeletingGroupIdx] = useState<number | null>(null);
 
     // For storing real stats mapped by ticker
     const [realStats, setRealStats] = useState<any>({});
@@ -162,6 +163,34 @@ export default function CoveredCallTab() {
         // We comment this out for now until mapping is complete
         // fetchRealStats();
     }, []);
+
+    // Metric Fetching Simulation for Table Rows
+    useEffect(() => {
+        const needsLoading = ccDataList.some(item => item.isLoadingMetrics);
+        if (!needsLoading) return;
+
+        const timer = setTimeout(() => {
+            setCcDataList(prev => prev.map(item => {
+                if (!item.isLoadingMetrics) return item;
+                // Assign realistic looking mock metrics until live endpoint is ready
+                const mockPrice = Math.floor(Math.random() * 5000) + 8000;
+                const mockYield = (Math.random() * 5) + 5; // 5~10%
+                const mockTr = (Math.random() * 15) - 2; // -2~13%
+                const mockDiff = (Math.random() * 6) - 3; // -3~3%
+
+                return {
+                    ...item,
+                    isLoadingMetrics: false,
+                    price: mockPrice,
+                    yield: mockYield,
+                    tr1y: mockTr,
+                    diffBenchmark: mockDiff
+                };
+            }));
+        }, 800); // 0.8s fake loading
+
+        return () => clearTimeout(timer);
+    }, [ccDataList]);
 
     useEffect(() => {
         if (!isCompareModalOpen || selectedForCompare.length === 0) return;
@@ -348,12 +377,11 @@ export default function CoveredCallTab() {
         setIsFavoritesMenuOpen(false);
     };
 
-    const handleDeleteFavoriteGroup = (e: React.MouseEvent, idx: number) => {
-        e.stopPropagation();
-        if (!confirm('해당 즐겨찾기 그룹을 삭제하시겠습니까?')) return;
+    const handleDeleteFavoriteGroup = (idx: number) => {
         const newGroups = savedFavorites.filter((_, i) => i !== idx);
         setSavedFavorites(newGroups);
         localStorage.setItem('ccFavorites', JSON.stringify(newGroups));
+        setDeletingGroupIdx(null);
     };
 
     return (
@@ -425,20 +453,30 @@ export default function CoveredCallTab() {
                                                         <div className="text-xs text-gray-500">포함 종목: {group.list.length}개</div>
                                                     </div>
                                                     <div className="flex items-center gap-1">
-                                                        <button
-                                                            onClick={() => handleLoadFavoriteGroup(group)}
-                                                            className="p-1.5 text-indigo-400 hover:bg-indigo-500/20 rounded-md"
-                                                            title="이 그룹 불러오기"
-                                                        >
-                                                            <Download size={14} />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => handleDeleteFavoriteGroup(e, idx)}
-                                                            className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-md"
-                                                            title="삭제"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
+                                                        {deletingGroupIdx === idx ? (
+                                                            <div className="flex items-center gap-1.5 mr-2">
+                                                                <span className="text-[10px] text-rose-400 font-bold">삭제할까요?</span>
+                                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteFavoriteGroup(idx); }} className="px-2 py-1 bg-rose-500 hover:bg-rose-400 text-white text-[10px] font-bold rounded">예</button>
+                                                                <button onClick={(e) => { e.stopPropagation(); setDeletingGroupIdx(null); }} className="px-2 py-1 bg-white/10 hover:bg-white/20 text-gray-300 text-[10px] font-bold rounded">아니오</button>
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleLoadFavoriteGroup(group); }}
+                                                                    className="p-1.5 text-indigo-400 hover:bg-indigo-500/20 rounded-md"
+                                                                    title="이 그룹 불러오기"
+                                                                >
+                                                                    <Download size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); setDeletingGroupIdx(idx); }}
+                                                                    className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-md"
+                                                                    title="삭제"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </li>
                                             ))}
