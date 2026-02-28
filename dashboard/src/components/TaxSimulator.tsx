@@ -93,12 +93,12 @@ export default function TaxSimulator() {
                     <div>
                         <label className="text-sm text-gray-400 mb-1.5 flex items-center gap-1.5">
                             기타 연간 금융소득 (원)
-                            <div className="relative group">
+                            <span className="relative group">
                                 <Info className="w-3.5 h-3.5 text-gray-500 cursor-help" />
-                                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 bg-gray-900 border border-white/10 text-xs p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 bg-gray-900 border border-white/10 text-xs p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex text-center">
                                     예금 이자, 타 주식 배당금 등 종합과세 대상 소득
-                                </div>
-                            </div>
+                                </span>
+                            </span>
                         </label>
                         <div className="relative">
                             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
