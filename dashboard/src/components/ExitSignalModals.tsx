@@ -38,27 +38,27 @@ export function DollarModalContent() {
     if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading data...</div>;
 
     return (
-        <div className="flex flex-col h-full w-full min-h-[500px]">
-            <div className="flex justify-end gap-2 mb-4 shrink-0">
+        <div className="relative flex flex-col h-full w-full min-h-[700px]">
+            <div className="absolute -top-16 right-12 flex gap-2 shrink-0">
                 {['6M', '1Y', '3Y', '10Y'].map(p => (
                     <button
                         key={p}
                         onClick={() => setPeriod(p)}
-                        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${period === p ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${period === p ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
                     >
                         {p}
                     </button>
                 ))}
             </div>
 
-            <div className="flex-1 min-h-[400px] w-full bg-black/20 rounded-xl p-4 border border-white/5">
+            <div className="flex-1 min-h-[600px] w-full bg-black/20 rounded-xl p-4 border border-white/5">
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={filteredData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                         <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickMargin={12} />
 
                         <YAxis yAxisId="left" domain={['auto', 'auto']} stroke="#34d399" fontSize={11} width={45} tickFormatter={(val) => Math.round(val).toString()} />
-                        <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} stroke="#60a5fa" fontSize={11} width={45} />
+                        <YAxis yAxisId="right" orientation="right" domain={[1000, 'dataMax']} stroke="#60a5fa" fontSize={11} width={45} />
 
                         <RechartsTooltip
                             contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
