@@ -723,9 +723,9 @@ export default function CoveredCallTab() {
                                                     labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}
                                                     formatter={(val: number) => [`${val}%`, '']}
                                                 />
-                                                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" onMouseEnter={(e: any) => setHoveredLine(e.dataKey as string)} onMouseLeave={() => setHoveredLine(null)} />
+                                                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" onMouseEnter={(e: any) => setHoveredLine(e?.dataKey || null)} onMouseLeave={() => setHoveredLine(null)} />
                                                 {/* Render main benchmark from the first item */}
-                                                <Line type="monotone" name={`${selectedForCompare[0].index} (TR 기준)`} dataKey="Benchmark" stroke="#f43f5e" strokeWidth={hoveredLine === 'Benchmark' ? 5 : 3} strokeDasharray="5 5" dot={false} connectNulls={false} opacity={hoveredLine && hoveredLine !== 'Benchmark' ? 0.2 : 1} onMouseEnter={() => setHoveredLine('Benchmark')} onMouseLeave={() => setHoveredLine(null)} />
+                                                <Line type="monotone" name={`${selectedForCompare[0].index} (TR 기준)`} dataKey="Benchmark" stroke="#f43f5e" strokeWidth={hoveredLine === 'Benchmark' || hoveredLine !== null ? 4 : 3} strokeDasharray="5 5" dot={false} connectNulls={false} opacity={hoveredLine === 'Benchmark' ? 1.0 : (hoveredLine ? 0.8 : 1.0)} onMouseEnter={() => setHoveredLine('Benchmark')} onMouseLeave={() => setHoveredLine(null)} />
 
                                                 {/* Render lines for each selected ETF */}
                                                 {selectedForCompare.map((item, idx) => {
@@ -802,8 +802,8 @@ export default function CoveredCallTab() {
                                     <p className="text-[11px] text-gray-500 mt-2 text-right">
                                         * 상승/하락 참여율은 지수 움직임 대비 커버드콜 상품의 민감도(Capture Ratio)를 백분율 산출한 값입니다.
                                     </p>
-                                    <p className="text-[11px] text-gray-500 mt-1 text-right">
-                                        ※ (참고) 벤치마크는 TR 데이터가 우선되며, 커버드콜 종목은 종가(PR) 데이터로 산출될 수 있습니다. 분배금을 제외한 주가 등락만 반영한 결과이므로 투자 시 유의 바랍니다.
+                                    <p className="text-[11px] text-gray-400 mt-1 text-right">
+                                        ※ 본 메뉴의 모든 수익률 데이터(벤치마크 지수 및 개별 종목)는 실제 분배금 지급 내역을 가격에 재투자한 가상의 누적 <b>총수익률(Total Return, TR)</b>을 기준으로 합니다.
                                     </p>
                                 </div>
 

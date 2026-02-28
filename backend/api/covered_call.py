@@ -104,7 +104,7 @@ async def get_covered_call_chart(request: CoveredCallRequest):
     # Format for UI
     chart_data = []
     for dt, row in df_all.iterrows():
-        entry = {"date": dt.strftime("%m/%d")}
+        entry = {"date": dt.strftime("%y/%m/%d")}
         entry["Benchmark"] = round(row["Benchmark"] - 100, 2)
         for sym in request.fund_symbols:
             if sym in row:
