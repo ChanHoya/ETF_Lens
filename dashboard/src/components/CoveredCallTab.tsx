@@ -22,10 +22,13 @@ const createETFEntry = (etf: any, id: number) => {
     let country = 'KR';
     const n = etf.name.toLowerCase();
 
-    if (n.includes('나스닥') || n.includes('테크') || n.includes('빅테크') || n.includes('qyld')) { indexName = '나스닥 100 (NDX)'; indexTicker = '^NDX'; country = 'US'; }
+    // Specific match Priority
+    if (n.includes('국채') || n.includes('장기채') || n.includes('tlt') || n.includes('만기')) { indexName = '미국채 20년+ (TLT)'; indexTicker = 'TLT'; country = 'US'; }
+    else if (n.includes('200')) { indexName = '코스피 200 (TR)'; indexTicker = '^KS200'; country = 'KR'; }
+    else if (n.includes('s&p') || n.includes('sp500')) { indexName = 'S&P 500 (TR)'; indexTicker = '^SP500TR'; country = 'US'; }
+    else if (n.includes('나스닥') || n.includes('테크') || n.includes('빅테크') || n.includes('qyld') || n.includes('ndx')) { indexName = '나스닥 100 (NDX)'; indexTicker = '^NDX'; country = 'US'; }
     else if (n.includes('다우존스') || n.includes('배당') || n.includes('schd')) { indexName = '다우존스 미국 배당 100'; indexTicker = 'SCHD'; country = 'US'; }
-    else if (n.includes('s&p') || n.includes('sp500') || n.includes('미국')) { indexName = 'S&P 500 (TR)'; indexTicker = '^SP500TR'; country = 'US'; }
-    else if (n.includes('국채') || n.includes('장기채') || n.includes('tlt') || n.includes('만기')) { indexName = '미국채 20년+ (TLT)'; indexTicker = 'TLT'; country = 'US'; }
+    else if (n.includes('미국')) { indexName = 'S&P 500 (TR)'; indexTicker = '^SP500TR'; country = 'US'; }
     else if (n.includes('금') || n.includes('골드') || n.includes('gold')) { indexName = '골드 (GLD)'; indexTicker = 'GLD'; country = 'US'; }
     else if (n.includes('은') || n.includes('실버') || n.includes('silver')) { indexName = '은 (SLV)'; indexTicker = 'SLV'; country = 'US'; }
 
@@ -316,7 +319,9 @@ export default function CoveredCallTab() {
     const handleUpdateBenchmark = (id: number, newTicker: string) => {
         const option = BENCHMARK_OPTIONS.find(o => o.symbol === newTicker);
         if (option) {
-            setCcDataList(prev => prev.map(item => item.id === id ? { ...item, indexTicker: option.symbol, index: option.label } : item));
+            // Determine country based on selected benchmark for accurate flag display
+            const isKorea = newTicker === '^KS200';
+            setCcDataList(prev => prev.map(item => item.id === id ? { ...item, indexTicker: option.symbol, index: option.label, country: isKorea ? 'KR' : 'US' } : item));
         }
     };
 

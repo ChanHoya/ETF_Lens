@@ -94,21 +94,31 @@ async def get_covered_call_chart(request: CoveredCallRequest):
     for sym, series in fund_series_list.items():
         df_all[sym] = series
 
-    df_all = df_all.ffill().bfill()
+    # df_all = df_all.ffill().bfill() # We should NOT bfill, because it forces a flat line before the ETF was listed
+    df_all = df_all.ffill()  # Only ffill to handle minor daily gaps (e.g., holidays)
     if len(df_all) == 0:
         return {"error": "No overlapping data"}
 
-    # Rebase to 100
-    df_all = (df_all / df_all.iloc[0]) * 100
+    # Rebase to 100 based on the FIRST VALID item for each column, not necessarily iloc[0].
+    # This ensures that recently listed ETFs start at 100 on their listing day rather than NaN.
+    for col in df_all.columns:
+        first_valid = df_all[col].first_valid_index()
+        if first_valid is not None:
+            df_all[col] = (df_all[col] / df_all[col].loc[first_valid]) * 100
 
     # Format for UI
     chart_data = []
     for dt, row in df_all.iterrows():
         entry = {"date": dt.strftime("%y/%m/%d")}
-        entry["Benchmark"] = round(row["Benchmark"] - 100, 2)
+        # Check for NaN and assign None (null in JSON) so Recharts won't draw a line
+        entry["Benchmark"] = (
+            round(row["Benchmark"] - 100, 2) if pd.notna(row["Benchmark"]) else None
+        )
+
         for sym in request.fund_symbols:
             if sym in row:
-                entry[sym] = round(row[sym] - 100, 2)
+                entry[sym] = round(row[sym] - 100, 2) if pd.notna(row[sym]) else None
+
         chart_data.append(entry)
 
     return {"chart_data": chart_data}
