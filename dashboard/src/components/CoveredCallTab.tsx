@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, TrendingUp, TrendingDown, X, Info, ShieldAlert, BarChart3, Activity } from 'lucide-react';
+import { Search, Filter, TrendingUp, TrendingDown, X, Info, ShieldAlert, BarChart3, Activity, Hourglass } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
 // Mock Data for Table
@@ -92,6 +92,8 @@ export default function CoveredCallTab() {
     useEffect(() => {
         if (!selectedDetail) return;
 
+        setRealChartData([]); // clear old data before fetching new ones
+
         const fetchChart = async () => {
             setIsLoadingData(true);
             try {
@@ -115,31 +117,41 @@ export default function CoveredCallTab() {
                     else if (chartPeriod === 'YTD') yfPeriod = 'ytd';
                     else if (chartPeriod === '1Y') yfPeriod = '1y';
 
-                    const response = await fetch('http://localhost:8000/api/v1/covered-calls/chart', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            fund_symbols: [tickerQuery],
-                            benchmark_symbol: '^SP500TR',
-                            period: yfPeriod
-                        })
-                    });
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.chart_data && data.chart_data.length > 0) {
-                            const formatted = data.chart_data.map((d: any) => ({
-                                date: d.date,
-                                bmTotalReturn: d.Benchmark,
-                                ccTotalReturn: d[tickerQuery]
-                            }));
-                            setRealChartData(formatted);
-                            setIsLoadingData(false);
-                            return;
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
+
+                    try {
+                        const response = await fetch('http://localhost:8000/api/v1/covered-calls/chart', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                fund_symbols: [tickerQuery],
+                                benchmark_symbol: '^SP500TR',
+                                period: yfPeriod
+                            }),
+                            signal: controller.signal
+                        });
+                        clearTimeout(timeoutId);
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.chart_data && data.chart_data.length > 0) {
+                                const formatted = data.chart_data.map((d: any) => ({
+                                    date: d.date,
+                                    bmTotalReturn: d.Benchmark,
+                                    ccTotalReturn: d[tickerQuery]
+                                }));
+                                setRealChartData(formatted);
+                                setIsLoadingData(false);
+                                return;
+                            }
                         }
+                    } catch (fetchError) {
+                        console.error("Fetch API timeout or network error:", fetchError);
                     }
                 }
 
-                // Fallback to mock if API fails or no mapping
+                // Fallback to mock if API fails, times out, or no mapping
                 setRealChartData(generateMockChartData(chartPeriod));
             } catch (e) {
                 console.error("API error", e);
@@ -280,18 +292,17 @@ export default function CoveredCallTab() {
                         <div className="bg-[#0B0F19] border border-white/10 w-full h-full rounded-2xl shadow-2xl shadow-indigo-500/10 flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
 
                             {/* Modal Header */}
-                            <div className="px-5 py-4 border-b border-white/5 flex justify-between items-start bg-gradient-to-r from-indigo-500/10 to-transparent">
-                                <div>
-                                    <div className="flex gap-2 mb-1.5 items-center">
-                                        <span className="px-2 py-0.5 text-[10px] font-bold bg-white/10 text-white rounded-md flex items-center gap-1.5">
-                                            {selectedDetail.issuer}
-                                            <span className="font-mono text-gray-400 border-l border-white/20 pl-1.5">{selectedDetail.ticker}</span>
-                                        </span>
-                                        <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-md">기초지수: {selectedDetail.index}</span>
-                                    </div>
-                                    <h3 className="text-xl md:text-2xl font-extrabold text-white mb-0">{selectedDetail.name}</h3>
+                            <div className="px-5 py-3 border-b border-white/5 flex gap-4 justify-between items-center bg-gradient-to-r from-indigo-500/10 to-transparent shrink-0">
+                                <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full">
+                                    <span className="px-2 py-0.5 text-[10px] font-bold bg-white/10 text-white rounded-md">{selectedDetail.issuer}</span>
+                                    <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-md">기초지수: {selectedDetail.index}</span>
+                                    <span className="font-mono flex items-center bg-[#1e1e23] border border-white/10 rounded overflow-hidden">
+                                        <span className="px-2 py-0.5 text-[10px] bg-indigo-600/30 text-indigo-300 font-bold">TICKER</span>
+                                        <span className="px-2 py-0.5 text-[11px] text-gray-300 font-bold">{selectedDetail.ticker}</span>
+                                    </span>
+                                    <h3 className="text-xl md:text-2xl font-extrabold text-white truncate max-w-[200px] sm:max-w-2xl">{selectedDetail.name}</h3>
                                 </div>
-                                <button onClick={() => setSelectedDetail(null)} className="p-1.5 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 rounded-full text-gray-400 transition-colors">
+                                <button onClick={() => setSelectedDetail(null)} className="p-1.5 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 rounded-full text-gray-400 transition-colors shrink-0">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
@@ -322,7 +333,7 @@ export default function CoveredCallTab() {
                                 </div>
 
                                 {/* Chart Area */}
-                                <div className="bg-black/30 border border-white/5 rounded-2xl p-3 mb-3 flex flex-col flex-1">
+                                <div className="bg-black/30 border border-white/5 rounded-2xl p-3 mb-3 shrink-0">
                                     <div className="flex justify-between items-center mb-2">
                                         <h4 className="font-bold text-gray-200 flex items-center gap-2">
                                             누적 수익률 (TR) 비교 차트
@@ -346,11 +357,11 @@ export default function CoveredCallTab() {
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="h-[280px] w-full min-h-0 flex-1 relative">
+                                    <div className="h-[220px] sm:h-[260px] w-full relative">
                                         {isLoadingData && (
                                             <div className="absolute inset-0 bg-[#0B0F19]/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-xl border border-white/5">
-                                                <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-                                                <span className="text-sm font-bold text-indigo-400">데이터를 분석 중입니다...</span>
+                                                <Hourglass className="w-8 h-8 text-indigo-400 animate-pulse mb-3" />
+                                                <span className="text-sm font-bold text-indigo-400 animate-pulse">데이터를 분석 중입니다...</span>
                                             </div>
                                         )}
                                         <ResponsiveContainer width="100%" height="100%">
