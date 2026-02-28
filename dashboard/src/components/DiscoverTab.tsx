@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, TrendingUp, ShieldCheck, Zap, Activity, AlertCircle } from 'lucide-react';
 import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip as RechartsTooltip } from 'recharts';
-import TaxSimulator from '@/components/TaxSimulator';
 import KospiExitAnalyzer from '@/components/KospiExitAnalyzer';
 import MacroRotation from '@/components/MacroRotation';
 
@@ -267,10 +266,6 @@ export default function DiscoverTab() {
                         )}
                     </div>
                 </div>
-
-                {/* Bottom: Tax Simulator */}
-                <TaxSimulator />
-
             </div>
         </div>
     );

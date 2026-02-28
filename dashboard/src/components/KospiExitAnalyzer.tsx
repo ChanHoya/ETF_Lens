@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, TrendingDown, DollarSign, Activity, AlertTriangle, ArrowRight, Info, ChevronRight, BarChart2 } from 'lucide-react';
+import { ShieldAlert, TrendingDown, DollarSign, Activity, AlertTriangle, ArrowRight, Info, ChevronRight, BarChart2, X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { DollarModalContent, PerModalContent, CliModalContent } from './ExitSignalModals';
 
 // Mock Data for the 1-year Historical Trends (12 Months)
 const mockDollarData = [
@@ -19,18 +20,18 @@ const mockDollarData = [
 ];
 
 const mockPerData = [
-    { month: '03월', val: 9.8 },
-    { month: '04월', val: 9.5 },
-    { month: '05월', val: 9.1 },
-    { month: '06월', val: 9.9 },
-    { month: '07월', val: 10.4 },
-    { month: '08월', val: 10.9 },
-    { month: '09월', val: 11.2 },
-    { month: '10월', val: 11.5 },
-    { month: '11월', val: 11.8 },
-    { month: '12월', val: 12.1 },
-    { month: '01월', val: 12.6 }, // Touch danger line
-    { month: '02월', val: 12.4 }, // Trend reversal dropping
+    { month: '03월', val: 9.8, kospi: 2750 },
+    { month: '04월', val: 9.5, kospi: 2680 },
+    { month: '05월', val: 9.1, kospi: 2600 },
+    { month: '06월', val: 9.9, kospi: 2700 },
+    { month: '07월', val: 10.4, kospi: 2780 },
+    { month: '08월', val: 10.9, kospi: 2850 },
+    { month: '09월', val: 11.2, kospi: 2900 },
+    { month: '10월', val: 11.5, kospi: 2930 },
+    { month: '11월', val: 11.8, kospi: 2880 },
+    { month: '12월', val: 12.1, kospi: 2800 },
+    { month: '01월', val: 12.6, kospi: 2500 }, // Touch danger line
+    { month: '02월', val: 12.4, kospi: 2450 }, // Trend reversal dropping
 ];
 
 const mockCliData = [
@@ -60,6 +61,9 @@ export default function KospiExitAnalyzer() {
     const [baseDollar, setBaseDollar] = useState([...mockDollarData]);
     const [basePer, setBasePer] = useState([...mockPerData]);
     const [baseCli, setBaseCli] = useState([...mockCliData]);
+
+    // Popup State
+    const [activePopup, setActivePopup] = useState<'dollar' | 'per' | 'cli' | null>(null);
 
     // API State
     const [loading, setLoading] = useState(true);
@@ -170,7 +174,7 @@ export default function KospiExitAnalyzer() {
     const overall = getOverallStatus();
 
     return (
-        <div className="w-full flex flex-col gap-4 mb-6">
+        <div className="w-full flex flex-col gap-4 mb-6 relative">
             <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold flex items-center gap-2 text-white">
                     <ShieldAlert className="w-6 h-6 text-indigo-400" />
@@ -208,10 +212,10 @@ export default function KospiExitAnalyzer() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* 1. Dollar Index */}
-                <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.04] transition-colors relative overflow-hidden">
+                <div onClick={() => setActivePopup('dollar')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-start mb-4">
                         <div className="flex flex-col">
-                            <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><DollarSign className="w-4 h-4" /> 달러 인덱스</h4>
+                            <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><DollarSign className="w-4 h-4" /> 달러 인덱스/환율 추이</h4>
                             <span className="text-3xl font-black text-white mt-2 font-mono">{dollarIndex.toFixed(2)}</span>
                         </div>
                         <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${dStatus.bg} ${dStatus.color} ${dStatus.border}`}>
@@ -247,7 +251,7 @@ export default function KospiExitAnalyzer() {
                 </div>
 
                 {/* 2. Forward P/E */}
-                <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.04] transition-colors relative overflow-hidden">
+                <div onClick={() => setActivePopup('per')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex flex-col">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><BarChart2 className="w-4 h-4" /> 포워드 PER</h4>
@@ -260,18 +264,20 @@ export default function KospiExitAnalyzer() {
 
                     <div className="h-[120px] w-full mt-2 -ml-2 -mb-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartPer} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
+                            <LineChart data={chartPer} margin={{ top: 5, right: -15, left: -25, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
-                                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
+                                <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
+                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     itemStyle={{ color: '#fff' }}
-                                    formatter={(value: any) => [`${value}x`, 'P/E']}
+                                    formatter={(value: any, name: any) => [name === 'val' ? `${value}x` : value, name === 'val' ? 'P/E' : 'KOSPI']}
                                     labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                                 />
-                                <ReferenceLine y={12.5} stroke="#f59e0b" strokeDasharray="3 3" />
-                                <Line type="monotone" dataKey="val" stroke={forwardPer >= 12.5 || pStatus.level === 'danger' ? '#f43f5e' : '#34d399'} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
+                                <ReferenceLine yAxisId="left" y={12.5} stroke="#f59e0b" strokeDasharray="3 3" />
+                                <Line yAxisId="left" type="monotone" dataKey="val" stroke={forwardPer >= 12.5 || pStatus.level === 'danger' ? '#f43f5e' : '#34d399'} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
+                                <Line yAxisId="right" type="monotone" dataKey="kospi" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -283,7 +289,7 @@ export default function KospiExitAnalyzer() {
                 </div>
 
                 {/* 3. OECD CLI */}
-                <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.04] transition-colors relative overflow-hidden">
+                <div onClick={() => setActivePopup('cli')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-start mb-4">
                         <div className="flex flex-col">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><TrendingDown className="w-4 h-4" /> 경기 선행 지수 (CLI)</h4>
@@ -330,6 +336,30 @@ export default function KospiExitAnalyzer() {
                     <span className="font-bold text-indigo-300">💡 환율-증시 디커플링 예외 안내:</span> 원·달러 환율이 상승함에도 코스피가 동반 리레이팅되는 최근의 예외적 현상(원화 약세 요인)을 고려하여, 단순 환율뿐 아니라 PER 추세 및 매크로 지표(CLI) 가중치를 종합 계산합니다.
                 </p>
             </div>
+
+            {/* Popup Modals */}
+            {activePopup && (
+                <div className="absolute inset-0 z-[100] bg-[#121217] border border-white/10 rounded-3xl p-6 flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-between items-center mb-6 shrink-0">
+                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                            {activePopup === 'dollar' && <DollarSign className="w-6 h-6 text-emerald-400" />}
+                            {activePopup === 'per' && <BarChart2 className="w-6 h-6 text-blue-400" />}
+                            {activePopup === 'cli' && <TrendingDown className="w-6 h-6 text-rose-400" />}
+                            {activePopup === 'dollar' ? '달러 인덱스 & 환율 장기 추이 상세분석' : (activePopup === 'per' ? '주요 종목 포워드 PER 추이 비교' : '경기 선행 지수 (CLI) 기반 매크로 사이클 집중분석')}
+                        </h2>
+                        <button onClick={() => setActivePopup(null)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {/* Modal Content Placeholder */}
+                    <div className="flex-1 w-full overflow-y-auto pr-2 pb-6">
+                        {activePopup === 'dollar' && <DollarModalContent />}
+                        {activePopup === 'per' && <PerModalContent />}
+                        {activePopup === 'cli' && <CliModalContent />}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

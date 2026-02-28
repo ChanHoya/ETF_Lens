@@ -17,8 +17,9 @@ export default function MacroRotation() {
                         <div>
                             <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
                                 AI 매크로 로테이션 나침반
+                                <span className="text-[10px] bg-gray-500/20 text-gray-300 px-2 py-0.5 rounded-md border border-gray-500/30 whitespace-nowrap ml-2">향후 개발예정</span>
                             </h2>
-                            <p className="text-sm text-gray-400 font-medium">현재 글로벌 매크로 환경 기반 자산배분 전략</p>
+                            <p className="text-sm text-gray-400 font-medium">현재 글로벌 매크로 환경 기반 자산배분 전략 구상도</p>
                         </div>
                     </div>
 
