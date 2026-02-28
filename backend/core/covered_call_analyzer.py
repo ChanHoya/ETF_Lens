@@ -1,7 +1,6 @@
 import yfinance as yf
 import pandas as pd
-import numpy as np
-from typing import Dict, Any
+from typing import Dict
 
 
 class CoveredCallAnalyzer:
@@ -92,23 +91,20 @@ class CoveredCallAnalyzer:
         self, fund_prices: pd.Series, bench_prices: pd.Series
     ) -> dict:
         """
-        Calculates 1-year TR for both, and the difference.
+        Calculates TR across the entire provided timeseries, and the difference.
         """
         df = pd.concat(
             [fund_prices.rename("Fund"), bench_prices.rename("Bench")], axis=1
         ).dropna()
-        if len(df) < 5:
-            return {"fund_tr": 0.0, "bench_tr": 0.0, "diff": 0.0}
+        if len(df) < 2:
+            return {"fund_tr": 0.0, "bench_tr": 0.0, "tr_difference": 0.0}
 
-        # 1-year return approx 252 trading days
-        lb = min(252, len(df) - 1)
-
-        fund_ret = (df["Fund"].iloc[-1] / df["Fund"].iloc[-lb] - 1) * 100
-        bench_ret = (df["Bench"].iloc[-1] / df["Bench"].iloc[-lb] - 1) * 100
+        fund_ret = (df["Fund"].iloc[-1] / df["Fund"].iloc[0] - 1) * 100
+        bench_ret = (df["Bench"].iloc[-1] / df["Bench"].iloc[0] - 1) * 100
         diff = fund_ret - bench_ret
 
         return {
-            "fund_tr_1y": round(fund_ret, 2),
-            "bench_tr_1y": round(bench_ret, 2),
-            "tr_difference_1y": round(diff, 2),
+            "fund_tr": round(fund_ret, 2),
+            "bench_tr": round(bench_ret, 2),
+            "tr_difference": round(diff, 2),
         }

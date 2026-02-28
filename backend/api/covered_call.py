@@ -1,10 +1,8 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-import asyncio
 import pandas as pd
-from typing import List, Dict, Any
+from typing import List
 from core.covered_call_analyzer import CoveredCallAnalyzer
-import yfinance as yf
 
 router = APIRouter(prefix="/covered-calls", tags=["covered-calls"])
 
@@ -24,7 +22,9 @@ async def analyze_covered_calls(request: CoveredCallRequest):
     analyzer = CoveredCallAnalyzer()
 
     # 1. Fetch benchmark data
-    bench_df = await analyzer.fetch_historical_tr(request.benchmark_symbol, period="5y")
+    bench_df = await analyzer.fetch_historical_tr(
+        request.benchmark_symbol, period=request.period
+    )
     if bench_df.empty:
         return {
             "error": f"Could not fetch benchmark data for {request.benchmark_symbol}"
@@ -35,7 +35,7 @@ async def analyze_covered_calls(request: CoveredCallRequest):
     results = []
     # 2. Fetch and analyze each fund
     for symbol in request.fund_symbols:
-        fund_df = await analyzer.fetch_historical_tr(symbol, period="5y")
+        fund_df = await analyzer.fetch_historical_tr(symbol, period=request.period)
         if fund_df.empty:
             results.append({"symbol": symbol, "error": "Failed to fetch data"})
             continue
@@ -45,7 +45,7 @@ async def analyze_covered_calls(request: CoveredCallRequest):
         # Calculate Capture Ratios
         captures = analyzer.calculate_capture_ratios(fund_adj_close, bench_adj_close)
 
-        # Calculate 1Y TR difference
+        # Calculate TR difference
         tr_diff = analyzer.calculate_tr_difference(fund_adj_close, bench_adj_close)
 
         # Aggregate stats
@@ -54,9 +54,9 @@ async def analyze_covered_calls(request: CoveredCallRequest):
                 "ticker": symbol,
                 "upside_capture": captures["upside_capture"],
                 "downside_capture": captures["downside_capture"],
-                "tr_1y": tr_diff["fund_tr_1y"],
-                "benchmark_tr_1y": tr_diff["bench_tr_1y"],
-                "diff_benchmark_1y": tr_diff["tr_difference_1y"],
+                "tr_period": tr_diff["fund_tr"],
+                "benchmark_tr_period": tr_diff["bench_tr"],
+                "diff_benchmark_period": tr_diff["tr_difference"],
             }
         )
 

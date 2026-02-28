@@ -111,20 +111,32 @@ export default function CoveredCallTab() {
                 const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
 
                 try {
-                    const response = await fetch('http://localhost:8000/api/v1/covered-calls/chart', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            fund_symbols: [tickerQuery],
-                            benchmark_symbol: bmQuery,
-                            period: yfPeriod
+                    const payload = {
+                        fund_symbols: [tickerQuery],
+                        benchmark_symbol: bmQuery,
+                        period: yfPeriod
+                    };
+
+                    const [chartRes, analyzeRes] = await Promise.all([
+                        fetch('http://localhost:8000/api/v1/covered-calls/chart', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload),
+                            signal: controller.signal
                         }),
-                        signal: controller.signal
-                    });
+                        fetch('http://localhost:8000/api/v1/covered-calls/analyze', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload),
+                            signal: controller.signal
+                        })
+                    ]);
+
                     clearTimeout(timeoutId);
 
-                    if (response.ok) {
-                        const data = await response.json();
+                    let success = false;
+                    if (chartRes.ok) {
+                        const data = await chartRes.json();
                         if (data.chart_data && data.chart_data.length > 0) {
                             const formatted = data.chart_data.map((d: any) => ({
                                 date: d.date,
@@ -132,13 +144,28 @@ export default function CoveredCallTab() {
                                 ccTotalReturn: d[tickerQuery]
                             }));
                             setRealChartData(formatted);
-                            setIsLoadingData(false);
-                            return;
+                            success = true;
                         }
+                    }
+
+                    if (analyzeRes.ok) {
+                        const analyzeData = await analyzeRes.json();
+                        if (analyzeData.results && analyzeData.results.length > 0) {
+                            setRealStats(analyzeData.results[0]);
+                        }
+                    }
+
+                    if (success) {
+                        setIsLoadingData(false);
+                        return;
                     }
                 } catch (fetchError) {
                     console.error("Fetch API timeout or network error:", fetchError);
                 }
+
+                // Fallback to mock if API fails, times out, or no mapping
+                setRealChartData(generateMockChartData(chartPeriod));
+                setRealStats(null); // Clear real stats so UI uses defaults
 
                 // Fallback to mock if API fails, times out, or no mapping
                 setRealChartData(generateMockChartData(chartPeriod));
@@ -304,16 +331,22 @@ export default function CoveredCallTab() {
                                         <span className="font-bold text-gray-200 text-sm">{selectedDetail.ter} / {selectedDetail.aum.replace('억', '')}억</span>
                                     </div>
                                     <div className="bg-indigo-500/[0.05] border border-indigo-500/20 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
-                                        <span className="text-[10px] text-indigo-400 mb-0.5">ETF 수익률 (1Y)</span>
-                                        <span className="font-extrabold text-indigo-300 text-base">{selectedDetail.tr1y > 0 ? '+' : ''}{selectedDetail.tr1y.toFixed(2)}%</span>
+                                        <span className="text-[10px] text-indigo-400 mb-0.5">ETF 수익률 ({chartPeriod})</span>
+                                        <span className="font-extrabold text-indigo-300 text-base">
+                                            {realStats?.tr_period !== undefined ? (realStats.tr_period > 0 ? '+' : '') + realStats.tr_period.toFixed(2) : (selectedDetail.tr1y > 0 ? '+' : '') + selectedDetail.tr1y.toFixed(2)}%
+                                        </span>
                                     </div>
                                     <div className="bg-rose-500/[0.05] border border-rose-500/20 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
-                                        <span className="text-[10px] text-rose-400 mb-0.5">벤치마크 지수 (1Y TR)</span>
-                                        <span className="font-extrabold text-rose-300 text-base">{((selectedDetail.tr1y) - (selectedDetail.diffBenchmark)).toFixed(2)}%</span>
+                                        <span className="text-[10px] text-rose-400 mb-0.5">벤치마크 지수 ({chartPeriod} TR)</span>
+                                        <span className="font-extrabold text-rose-300 text-base">
+                                            {realStats?.benchmark_tr_period !== undefined ? realStats.benchmark_tr_period.toFixed(2) : ((selectedDetail.tr1y) - (selectedDetail.diffBenchmark)).toFixed(2)}%
+                                        </span>
                                     </div>
                                     <div className="bg-slate-500/[0.05] border border-slate-500/20 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
                                         <span className="text-[10px] text-slate-400 mb-0.5">초과 수익 (괴리)</span>
-                                        <span className="font-extrabold text-white text-base">{selectedDetail.diffBenchmark > 0 ? '+' : ''}{selectedDetail.diffBenchmark.toFixed(2)}%</span>
+                                        <span className="font-extrabold text-white text-base">
+                                            {realStats?.diff_benchmark_period !== undefined ? (realStats.diff_benchmark_period > 0 ? '+' : '') + realStats.diff_benchmark_period.toFixed(2) : (selectedDetail.diffBenchmark > 0 ? '+' : '') + selectedDetail.diffBenchmark.toFixed(2)}%
+                                        </span>
                                     </div>
                                     <div className="bg-emerald-500/[0.05] border border-emerald-500/20 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
                                         <span className="text-[10px] text-emerald-500/70 mb-0.5 flex items-center gap-1 justify-center"><BarChart3 className="w-3 h-3" /> 연환산 분배율</span>
@@ -380,17 +413,17 @@ export default function CoveredCallTab() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20 rounded-2xl p-3">
                                             <div className="flex justify-between items-end mb-2">
-                                                <span className="text-sm font-medium text-indigo-300">상승장 참여율 (Upside)</span>
-                                                <span className="text-2xl font-black text-white">45.0%</span>
+                                                <span className="text-sm font-medium text-indigo-300 flex items-center gap-1">상승장 참여율 (Upside) {realStats?.upside_capture !== undefined ? <span className="bg-indigo-500/30 text-indigo-200 text-[9px] px-1.5 py-0.5 rounded ml-1">REAL DATA</span> : null}</span>
+                                                <span className="text-2xl font-black text-white">{realStats?.upside_capture !== undefined ? realStats.upside_capture.toFixed(1) : '45.0'}%</span>
                                             </div>
-                                            <p className="text-[11px] text-gray-400">지수가 상승할 때, 콜옵션 매도로 인해 상승분의 45.0% 수준만 추종하는 경향이 있습니다.</p>
+                                            <p className="text-[11px] text-gray-400">지수가 상승할 때, 콜옵션 매도로 인해 상승분의 {realStats?.upside_capture !== undefined ? realStats.upside_capture.toFixed(1) : '45.0'}% 수준만 추종하는 경향이 있습니다.</p>
                                         </div>
                                         <div className="bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 rounded-2xl p-3">
                                             <div className="flex justify-between items-end mb-1">
-                                                <span className="text-sm font-medium text-blue-300">하락장 방어율 (Downside)</span>
-                                                <span className="text-2xl font-black text-white">82.0%</span>
+                                                <span className="text-sm font-medium text-blue-300 flex items-center gap-1">하락장 방어율 (Downside) {realStats?.downside_capture !== undefined ? <span className="bg-blue-500/30 text-blue-200 text-[9px] px-1.5 py-0.5 rounded ml-1">REAL DATA</span> : null}</span>
+                                                <span className="text-2xl font-black text-white">{realStats?.downside_capture !== undefined ? realStats.downside_capture.toFixed(1) : '82.0'}%</span>
                                             </div>
-                                            <p className="text-[11px] text-gray-400">지수가 하락할 때, 프리미엄 수익으로 인해 82.0% 변동성으로 상대적 방어력을 보입니다.</p>
+                                            <p className="text-[11px] text-gray-400">지수가 하락할 때, 프리미엄 수익으로 인해 {realStats?.downside_capture !== undefined ? realStats.downside_capture.toFixed(1) : '82.0'}% 변동성으로 상대적 방어력을 보입니다.</p>
                                         </div>
                                     </div>
                                 </div>
