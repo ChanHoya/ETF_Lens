@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, TrendingUp, TrendingDown, X, Info, ShieldAlert, BarChart3, Activity, Hourglass, Check, Plus, Star, Bookmark, Save, Download, Trash2 } from 'lucide-react';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, ZAxis, ReferenceLine } from 'recharts';
 
 // Benchmark Options for Users to Select
 export const BENCHMARK_OPTIONS = [
@@ -856,7 +856,7 @@ export default function CoveredCallTab() {
                                                 <th className="py-3 px-3 bg-rose-500/10 text-rose-400/80">벤치마크 수익률(TR/PR)</th>
                                                 <th className="py-3 px-3 bg-slate-500/10 text-slate-300/80">초과 수익 (괴리)</th>
                                                 <th className="py-3 px-3 text-emerald-400/80">상승 참여율(Upside)</th>
-                                                <th className="py-3 px-3 text-blue-400/80">하락 방어율(Downside)</th>
+                                                <th className="py-3 px-3 text-blue-400/80">하락 참여율(Downside)</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-white/5 text-sm">
@@ -927,8 +927,72 @@ export default function CoveredCallTab() {
                                     ※ 본 메뉴의 모든 수익률 데이터(벤치마크 지수 및 개별 종목)는 실제 분배금 지급 내역을 가격에 재투자한 가상의 누적 <b>총수익률(Total Return, TR)</b>을 기준으로 합니다.
                                 </p>
                             </div>
-
                         </div>
+
+                        {/* Scatter Chart Area for Capture Ratios */}
+                        <div className="bg-black/30 border border-white/5 rounded-2xl p-4 shrink-0 flex flex-col mx-6 mb-6 mt-0">
+                            <h4 className="font-bold text-gray-200 flex items-center gap-2 mb-4">
+                                업 & 다운 캡처 (Capture Ratio) 분포도
+                            </h4>
+                            <div className="h-[300px] w-full relative">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 10 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                        <XAxis
+                                            type="number"
+                                            dataKey="downside"
+                                            name="하락 참여율"
+                                            unit="%"
+                                            domain={[120, 0]}
+                                            reversed={true}
+                                            stroke="rgba(255,255,255,0.3)"
+                                            tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
+                                            label={{ value: "하락 참여율 (낮을수록 우측 이동/좋음 ➡️)", position: "bottom", style: { fill: 'rgba(255,255,255,0.5)', fontSize: 11 }, offset: 0 }}
+                                        />
+                                        <YAxis
+                                            type="number"
+                                            dataKey="upside"
+                                            name="상승 참여율"
+                                            unit="%"
+                                            domain={[0, 120]}
+                                            stroke="rgba(255,255,255,0.3)"
+                                            tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
+                                            label={{ value: "상승 참여율 (높을수록 좋음 ⬆️)", angle: -90, position: "left", style: { fill: 'rgba(255,255,255,0.5)', fontSize: 11 } }}
+                                        />
+                                        <ZAxis type="category" dataKey="ticker" name="종목" />
+                                        <RechartsTooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: 'rgba(12,10,24,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
+                                        <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} iconType="circle" />
+
+                                        <ReferenceLine x={100} stroke="#f43f5e" strokeDasharray="3 3" label={{ position: 'top', value: '지수 하락(100%)', fill: '#f43f5e', fontSize: 10 }} />
+                                        <ReferenceLine y={100} stroke="#f43f5e" strokeDasharray="3 3" label={{ position: 'right', value: '지수 상승(100%)', fill: '#f43f5e', fontSize: 10 }} />
+
+                                        {selectedForCompare.map((item, idx) => {
+                                            const colors = ['#818cf8', '#34d399', '#fbbf24', '#a78bfa', '#60a5fa', '#f87171', '#34d399'];
+                                            const stats = realStats[item.ticker] || {};
+                                            const upCap = stats.upside_capture !== undefined ? stats.upside_capture : 45.0;
+                                            const downCap = stats.downside_capture !== undefined ? stats.downside_capture : 82.0;
+                                            const scatterData = [{
+                                                ticker: item.ticker,
+                                                name: item.name,
+                                                upside: Number(upCap.toFixed(1)),
+                                                downside: Number(downCap.toFixed(1))
+                                            }];
+
+                                            return (
+                                                <Scatter
+                                                    key={item.ticker}
+                                                    name={item.name}
+                                                    data={scatterData}
+                                                    fill={colors[idx % colors.length]}
+                                                    shape="circle"
+                                                />
+                                            );
+                                        })}
+                                    </ScatterChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             )}

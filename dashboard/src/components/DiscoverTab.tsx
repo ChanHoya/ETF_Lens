@@ -77,7 +77,7 @@ export default function DiscoverTab() {
     };
 
     return (
-        <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white/[0.03] p-3 lg:p-4 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
+        <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-500 bg-[#121217]/80 p-4 lg:p-6 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
             <div className="flex flex-col gap-3 w-full h-full">
 
                 {/* Top: Macro Rotation */}
