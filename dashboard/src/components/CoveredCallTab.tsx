@@ -758,8 +758,8 @@ export default function CoveredCallTab() {
                                                 <tr className="text-[11px] font-semibold text-gray-400 text-center tracking-wider">
                                                     <th className="py-3 px-4 text-left">종목명 (운용사)</th>
                                                     <th className="py-3 px-3">비교 벤치마크</th>
-                                                    <th className="py-3 px-3 bg-indigo-500/10 text-indigo-400/80">종목 누적 수익률(TR)</th>
-                                                    <th className="py-3 px-3 bg-rose-500/10 text-rose-400/80">벤치마크 수익률(TR)</th>
+                                                    <th className="py-3 px-3 bg-indigo-500/10 text-indigo-400/80">종목 {chartPeriod} 수익률(TR)</th>
+                                                    <th className="py-3 px-3 bg-rose-500/10 text-rose-400/80">벤치마크 {chartPeriod} 수익률(TR)</th>
                                                     <th className="py-3 px-3 bg-slate-500/10 text-slate-300/80">초과 수익 (괴리)</th>
                                                     <th className="py-3 px-3 text-emerald-400/80">상승 참여율(Upside)</th>
                                                     <th className="py-3 px-3 text-blue-400/80">하락 방어율(Downside)</th>
@@ -777,7 +777,17 @@ export default function CoveredCallTab() {
                                                     return (
                                                         <tr key={item.ticker} className="hover:bg-white/[0.04] transition-colors">
                                                             <td className="py-3 px-4 text-left">
-                                                                <div className="font-bold text-gray-200 text-[13px]">{item.name}</div>
+                                                                <div className="font-bold text-gray-200 text-[13px] flex items-center gap-1.5">
+                                                                    {item.name}
+                                                                    {stats.data_insufficient && (
+                                                                        <span className="relative group/warning flex items-center justify-center">
+                                                                            <ShieldAlert className="w-3 h-3 text-amber-500 cursor-help" />
+                                                                            <span className="absolute bottom-full mb-1 left-0 w-max max-w-xs bg-gray-900 border border-amber-500/30 text-[10px] p-2 rounded-lg opacity-0 group-hover/warning:opacity-100 transition-opacity pointer-events-none z-10 font-normal text-left shadow-xl whitespace-normal break-words text-amber-200 leading-tight">
+                                                                                상장일이 최근이라 선택한 기간({chartPeriod})보다 데이터가 짧습니다. 표시된 수익률은 실제 존재하는 기간 동안만의 수익률입니다.
+                                                                            </span>
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                                 <div className="text-[11px] text-gray-500 font-mono mt-0.5">{item.ticker} | {item.issuer}</div>
                                                             </td>
                                                             <td className="py-3 px-3 text-center">

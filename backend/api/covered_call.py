@@ -48,6 +48,9 @@ async def analyze_covered_calls(request: CoveredCallRequest):
         # Calculate TR difference
         tr_diff = analyzer.calculate_tr_difference(fund_adj_close, bench_adj_close)
 
+        # Check for insufficient data (e.g., newly listed)
+        data_insufficient = len(fund_df) < len(bench_df) * 0.9
+
         # Aggregate stats
         results.append(
             {
@@ -57,6 +60,7 @@ async def analyze_covered_calls(request: CoveredCallRequest):
                 "tr_period": tr_diff["fund_tr"],
                 "benchmark_tr_period": tr_diff["bench_tr"],
                 "diff_benchmark_period": tr_diff["tr_difference"],
+                "data_insufficient": data_insufficient,
             }
         )
 
