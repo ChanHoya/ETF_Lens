@@ -45,7 +45,8 @@ const createETFEntry = (etf: any, id: number) => {
         aum: '-',
         ter: '-',
         launchDate: '-',
-        distFreq: '월분배'
+        distFreq: '월분배',
+        isLoadingMetrics: true
     };
 };
 const generateMockChartData = (period: string) => {
@@ -96,6 +97,8 @@ export default function CoveredCallTab() {
     // Favorites States
     const [savedFavorites, setSavedFavorites] = useState<{ name: string, list: any[] }[]>([]);
     const [isFavoritesMenuOpen, setIsFavoritesMenuOpen] = useState(false);
+    const [showSaveInput, setShowSaveInput] = useState(false);
+    const [newGroupName, setNewGroupName] = useState('');
 
     // For storing real stats mapped by ticker
     const [realStats, setRealStats] = useState<any>({});
@@ -258,14 +261,17 @@ export default function CoveredCallTab() {
     }, [isCompareModalOpen, chartPeriod]);
 
     const [selectedDropdownItems, setSelectedDropdownItems] = useState<any[]>([]);
+    const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
     const BRAND_KEYWORDS = ['KODEX', 'TIGER', 'KBSTAR', 'ACE', 'SOL', 'HANARO', 'ARIRANG', 'KOSEF'];
 
-    const filteredDropdown = etfDictionary.filter(etf =>
-        (etf.name.includes('커버드콜') || etf.name.includes('프리미엄') || etf.name.includes('타겟')) &&
-        (etf.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            etf.code.toLowerCase().includes(searchTerm.toLowerCase())) &&
-        !ccDataList.some((item: any) => item.ticker === etf.code)
-    );
+    const filteredDropdown = etfDictionary.filter(etf => {
+        if (!etf.name.includes('커버드콜') && !etf.name.includes('프리미엄') && !etf.name.includes('타겟')) return false;
+        if (ccDataList.some((item: any) => item.ticker === etf.code)) return false;
+
+        const matchSearch = etf.name.toLowerCase().includes(searchTerm.toLowerCase()) || etf.code.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchBrand = selectedBrands.length === 0 || selectedBrands.some(brand => etf.name.includes(brand));
+        return matchSearch && matchBrand;
+    });
 
     const filteredData = ccDataList.filter((item: any) => {
         const matchSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.ticker.includes(searchTerm);
@@ -320,13 +326,13 @@ export default function CoveredCallTab() {
 
     const handleSaveFavoriteGroup = () => {
         if (ccDataList.length === 0) return alert('저장할 종목이 목록에 없습니다. 종목을 추가한 후 시도하세요.');
-        const groupName = prompt('현재 비교 그룹의 이름을 입력하세요 (예: 미국 배당 커버드콜)');
-        if (!groupName) return;
+        if (!newGroupName.trim()) return alert('그룹 이름을 입력하세요.');
 
-        const newGroups = [...savedFavorites, { name: groupName, list: ccDataList }];
+        const newGroups = [...savedFavorites, { name: newGroupName.trim(), list: ccDataList.map(item => ({ ...item, isLoadingMetrics: true })) }];
         setSavedFavorites(newGroups);
         localStorage.setItem('ccFavorites', JSON.stringify(newGroups));
-        alert(`'${groupName}' 그룹으로 저장되었습니다.`);
+        setNewGroupName('');
+        setShowSaveInput(false);
         setIsFavoritesMenuOpen(false);
     };
 
@@ -372,12 +378,28 @@ export default function CoveredCallTab() {
                         {isFavoritesMenuOpen && (
                             <div className="absolute right-0 top-full mt-2 w-72 bg-[#121217] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
                                 <div className="p-3 border-b border-white/5 bg-white/[0.02]">
-                                    <button
-                                        onClick={handleSaveFavoriteGroup}
-                                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-colors"
-                                    >
-                                        <Save size={16} /> 현재 목록을 즐겨찾기로 저장
-                                    </button>
+                                    {showSaveInput ? (
+                                        <div className="flex flex-col gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="그룹 이름 입력"
+                                                value={newGroupName}
+                                                onChange={e => setNewGroupName(e.target.value)}
+                                                className="w-full bg-black/50 border border-white/10 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                            />
+                                            <div className="flex gap-2">
+                                                <button onClick={handleSaveFavoriteGroup} className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-1.5 rounded text-xs font-bold transition-colors">저장</button>
+                                                <button onClick={() => setShowSaveInput(false)} className="flex-1 bg-white/10 hover:bg-white/20 text-white py-1.5 rounded text-xs font-bold transition-colors">취소</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setShowSaveInput(true)}
+                                            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-colors"
+                                        >
+                                            <Save size={16} /> 현재 목록을 즐겨찾기로 저장
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="max-h-64 overflow-y-auto">
                                     {savedFavorites.length === 0 ? (
@@ -430,12 +452,12 @@ export default function CoveredCallTab() {
 
                         {/* Quick Filters for Brands */}
                         <div className="flex flex-wrap gap-x-2 gap-y-2 mb-3 items-center">
-                            <span className="text-xs text-gray-400 font-semibold mr-1">운용사</span>
+                            <span className="text-xs text-gray-400 font-semibold mr-1">운용사 복수선택</span>
                             {BRAND_KEYWORDS.map(brand => (
                                 <button
                                     key={brand}
-                                    onClick={() => setSearchTerm(prev => prev.includes(brand) ? prev.replace(brand, '').trim() : `${prev} ${brand}`.trim())}
-                                    className={`text-xs px-2.5 py-1 rounded-full border transition-all ${searchTerm.includes(brand) ? 'bg-sky-500/20 border-sky-400/50 text-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.2)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-gray-300'}`}
+                                    onClick={() => setSelectedBrands(prev => prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand])}
+                                    className={`text-xs px-2.5 py-1 rounded-full border transition-all ${selectedBrands.includes(brand) ? 'bg-sky-500/20 border-sky-400/50 text-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.2)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-gray-300'}`}
                                 >
                                     {brand}
                                 </button>
@@ -511,6 +533,9 @@ export default function CoveredCallTab() {
                                 {c === 'All' ? '전체 국가' : c === 'US' ? '미국 지수' : '한국 지수'}
                             </button>
                         ))}
+                        <button onClick={() => { setCcDataList([]); setSelectedForCompare([]); }} className="px-4 py-2 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-xl text-sm font-medium hover:bg-rose-500/20 flex items-center gap-2">
+                            <Trash2 className="w-4 h-4" /> 전체 삭제
+                        </button>
                         <button className="px-4 py-2 bg-white/5 text-gray-400 border border-white/10 rounded-xl text-sm font-medium hover:bg-white/10 flex items-center gap-2">
                             <Filter className="w-4 h-4" /> 상세 필터
                         </button>
@@ -574,17 +599,17 @@ export default function CoveredCallTab() {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-3 text-right font-mono font-medium text-gray-300">
-                                                {item.price.toLocaleString()}원
+                                                {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">로딩중...</span> : `${item.price.toLocaleString()}원`}
                                             </td>
                                             <td className="py-4 px-3 text-center font-bold text-emerald-400 bg-emerald-500/[0.02]">
-                                                {item.yield.toFixed(1)}%
+                                                {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : `${item.yield.toFixed(1)}%`}
                                             </td>
                                             <td className="py-4 px-3 text-center bg-indigo-500/[0.02]">
-                                                {formatRate(item.tr1y)}
+                                                {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : formatRate(item.tr1y)}
                                             </td>
                                             <td className="py-4 px-4 text-center bg-rose-500/[0.02]">
                                                 <div className="flex items-center justify-center gap-1.5">
-                                                    {formatRate(item.diffBenchmark)}
+                                                    {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : formatRate(item.diffBenchmark)}
                                                     <span className="relative group/tooltip flex items-center justify-center">
                                                         <Info className="w-3.5 h-3.5 text-gray-500 cursor-help" />
                                                         <span className="absolute bottom-full mb-2 -left-10 w-48 bg-gray-900 border border-white/10 text-[10px] p-2 rounded-lg opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-10 font-normal text-left shadow-xl break-words whitespace-normal text-gray-300 leading-tight">
