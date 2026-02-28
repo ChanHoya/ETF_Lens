@@ -176,8 +176,8 @@ export default function CoveredCallTab() {
 
                 {/* Overaly Modal */}
                 {selectedDetail && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="bg-[#121217] border border-white/10 w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300">
+                    <div className="fixed inset-0 z-[100] flex items-start pt-24 justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-[#121217] border border-white/10 w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-300">
 
                             {/* Modal Header */}
                             <div className="p-6 border-b border-white/5 flex justify-between items-start bg-gradient-to-r from-indigo-500/10 to-transparent">
