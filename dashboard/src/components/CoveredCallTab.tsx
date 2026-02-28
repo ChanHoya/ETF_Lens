@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, TrendingUp, TrendingDown, X, Info, ShieldAlert, BarChart3, Activity, Hourglass, Check, Plus } from 'lucide-react';
+import { Search, Filter, TrendingUp, TrendingDown, X, Info, ShieldAlert, BarChart3, Activity, Hourglass, Check, Plus, Star, Bookmark, Save, Download, Trash2 } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
 // Benchmark Options for Users to Select
@@ -20,11 +20,14 @@ const createETFEntry = (etf: any, id: number) => {
     let indexName = '코스피 200 (TR)';
     let indexTicker = '^KS200';
     let country = 'KR';
+    const n = etf.name.toLowerCase();
 
-    if (etf.name.includes('나스닥') || etf.name.includes('테크')) { indexName = '나스닥 100 (NDX)'; indexTicker = '^NDX'; country = 'US'; }
-    else if (etf.name.includes('다우존스') || etf.name.includes('배당')) { indexName = '다우존스 미국 배당 100'; indexTicker = 'SCHD'; country = 'US'; }
-    else if (etf.name.includes('S&P') || etf.name.includes('미국')) { indexName = 'S&P 500 (TR)'; indexTicker = '^SP500TR'; country = 'US'; }
-    else if (etf.name.includes('골드') || etf.name.includes('금')) { indexName = '골드 (GLD)'; indexTicker = 'GLD'; country = 'US'; }
+    if (n.includes('나스닥') || n.includes('테크') || n.includes('빅테크') || n.includes('qyld')) { indexName = '나스닥 100 (NDX)'; indexTicker = '^NDX'; country = 'US'; }
+    else if (n.includes('다우존스') || n.includes('배당') || n.includes('schd')) { indexName = '다우존스 미국 배당 100'; indexTicker = 'SCHD'; country = 'US'; }
+    else if (n.includes('s&p') || n.includes('sp500') || n.includes('미국')) { indexName = 'S&P 500 (TR)'; indexTicker = '^SP500TR'; country = 'US'; }
+    else if (n.includes('국채') || n.includes('장기채') || n.includes('tlt') || n.includes('만기')) { indexName = '미국채 20년+ (TLT)'; indexTicker = 'TLT'; country = 'US'; }
+    else if (n.includes('금') || n.includes('골드') || n.includes('gold')) { indexName = '골드 (GLD)'; indexTicker = 'GLD'; country = 'US'; }
+    else if (n.includes('은') || n.includes('실버') || n.includes('silver')) { indexName = '은 (SLV)'; indexTicker = 'SLV'; country = 'US'; }
 
     return {
         id,
@@ -89,10 +92,21 @@ export default function CoveredCallTab() {
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [apiError, setApiError] = useState<string | null>(null);
 
+    // Favorites States
+    const [savedFavorites, setSavedFavorites] = useState<{ name: string, list: any[] }[]>([]);
+    const [isFavoritesMenuOpen, setIsFavoritesMenuOpen] = useState(false);
+
     // For storing real stats mapped by ticker
     const [realStats, setRealStats] = useState<any>({});
 
     useEffect(() => {
+        const stored = localStorage.getItem('ccFavorites');
+        if (stored) {
+            try {
+                setSavedFavorites(JSON.parse(stored));
+            } catch (e) { }
+        }
+
         const fetchEtfs = async () => {
             const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
             try {
@@ -287,19 +301,110 @@ export default function CoveredCallTab() {
         return <span className={`font-bold ${color}`}>{sign}{rate.toFixed(2)}%</span>;
     };
 
+    const handleSaveFavoriteGroup = () => {
+        if (ccDataList.length === 0) return alert('저장할 종목이 목록에 없습니다. 종목을 추가한 후 시도하세요.');
+        const groupName = prompt('현재 비교 그룹의 이름을 입력하세요 (예: 미국 배당 커버드콜)');
+        if (!groupName) return;
+
+        const newGroups = [...savedFavorites, { name: groupName, list: ccDataList }];
+        setSavedFavorites(newGroups);
+        localStorage.setItem('ccFavorites', JSON.stringify(newGroups));
+        alert(`'${groupName}' 그룹으로 저장되었습니다.`);
+        setIsFavoritesMenuOpen(false);
+    };
+
+    const handleLoadFavoriteGroup = (group: { name: string, list: any[] }) => {
+        setCcDataList(group.list);
+        setIsFavoritesMenuOpen(false);
+    };
+
+    const handleDeleteFavoriteGroup = (e: React.MouseEvent, idx: number) => {
+        e.stopPropagation();
+        if (!confirm('해당 즐겨찾기 그룹을 삭제하시겠습니까?')) return;
+        const newGroups = savedFavorites.filter((_, i) => i !== idx);
+        setSavedFavorites(newGroups);
+        localStorage.setItem('ccFavorites', JSON.stringify(newGroups));
+    };
+
     return (
         <div className="w-full flex justify-center animate-in fade-in slide-in-from-bottom-2 duration-500 mt-2">
             <div className="relative w-full bg-[#121217]/80 p-5 lg:p-8 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] min-h-[700px]">
 
                 {/* Header & Description */}
-                <div className="mb-6 border-b border-white/10 pb-6">
-                    <h2 className="text-2xl font-extrabold text-white mb-2 flex items-center gap-3">
-                        <Activity className="w-6 h-6 text-indigo-400" />
-                        커버드콜 (Covered Call) 상품 비교 분석
-                    </h2>
-                    <p className="text-sm text-gray-400">
-                        기초 지수와의 수익률 차이(괴리)와 TR(분배금 재투자) 기준 실질 성과를 비교하여 최적의 인컴형 ETF를 발굴하세요.
-                    </p>
+                <div className="mb-6 border-b border-white/10 pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 className="text-2xl font-extrabold text-white mb-2 flex items-center gap-3">
+                            <Activity className="w-6 h-6 text-indigo-400" />
+                            커버드콜 (Covered Call) 상품 비교 분석
+                        </h2>
+                        <p className="text-sm text-gray-400">
+                            기초 지수와의 수익률 차이(괴리)와 TR(분배금 재투자) 기준 실질 성과를 비교하여 최적의 인컴형 ETF를 발굴하세요.
+                        </p>
+                    </div>
+
+                    {/* Favorites Menu Button */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsFavoritesMenuOpen(!isFavoritesMenuOpen)}
+                            className="bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-4 py-2 rounded-xl flex items-center gap-2 font-bold text-sm transition-colors"
+                        >
+                            <Bookmark size={16} className={savedFavorites.length > 0 ? 'fill-indigo-400 text-indigo-400' : ''} />
+                            나의 비교 그룹 즐겨찾기
+                        </button>
+
+                        {isFavoritesMenuOpen && (
+                            <div className="absolute right-0 top-full mt-2 w-72 bg-[#121217] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                                <div className="p-3 border-b border-white/5 bg-white/[0.02]">
+                                    <button
+                                        onClick={handleSaveFavoriteGroup}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-colors"
+                                    >
+                                        <Save size={16} /> 현재 목록을 즐겨찾기로 저장
+                                    </button>
+                                </div>
+                                <div className="max-h-64 overflow-y-auto">
+                                    {savedFavorites.length === 0 ? (
+                                        <div className="p-6 text-center text-sm text-gray-500">
+                                            저장된 모델 포트폴리오(비교 그룹)가 없습니다.
+                                        </div>
+                                    ) : (
+                                        <ul className="divide-y divide-white/5">
+                                            {savedFavorites.map((group, idx) => (
+                                                <li key={idx} className="flex justify-between items-center px-4 py-3 hover:bg-white/5 cursor-pointer group" onClick={() => handleLoadFavoriteGroup(group)}>
+                                                    <div>
+                                                        <div className="text-gray-200 font-bold text-sm mb-0.5 group-hover:text-indigo-300 flex items-center gap-1.5">
+                                                            <Star size={12} className="text-yellow-500 fill-yellow-500/30" />
+                                                            {group.name}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500">포함 종목: {group.list.length}개</div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={() => handleLoadFavoriteGroup(group)}
+                                                            className="p-1.5 text-indigo-400 hover:bg-indigo-500/20 rounded-md"
+                                                            title="이 그룹 불러오기"
+                                                        >
+                                                            <Download size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => handleDeleteFavoriteGroup(e, idx)}
+                                                            className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-md"
+                                                            title="삭제"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                        {isFavoritesMenuOpen && (
+                            <div className="fixed inset-0 z-40" onClick={() => setIsFavoritesMenuOpen(false)} />
+                        )}
+                    </div>
                 </div>
 
                 {/* Search & Filters */}
