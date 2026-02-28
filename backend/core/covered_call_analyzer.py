@@ -27,8 +27,12 @@ class CoveredCallAnalyzer:
             mapped_symbol = self.benchmark_map.get(symbol, symbol)
 
             # If it's a 6-digit Korean ticker without .KS, append it
+            is_korean = False
             if mapped_symbol.isdigit() and len(mapped_symbol) == 6:
                 mapped_symbol += ".KS"
+
+            if ".KS" in mapped_symbol or ".KQ" in mapped_symbol:
+                is_korean = True
 
             # Using loop.run_in_executor or direct yfinance call
             ticker = yf.Ticker(mapped_symbol)
@@ -44,10 +48,10 @@ class CoveredCallAnalyzer:
                 df["Adj Close"] = df["Close"]
 
             # Remove timezone so dates align perfectly across different countries
-            if df.index.tz is not None:
+            if hasattr(df.index, "tz") and getattr(df.index, "tz", None) is not None:
                 df.index = df.index.tz_localize(None)
 
-            if not df.empty:
+            if not df.empty and not (is_korean and len(df) < 10):
                 return df[["Close", "Adj Close"]].copy(), False
 
             # --- KIS Fallback for completely empty sets (likely missing YF coverage) ---
