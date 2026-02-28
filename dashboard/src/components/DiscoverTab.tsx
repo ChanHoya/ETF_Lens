@@ -249,7 +249,7 @@ export default function DiscoverTab() {
                             </div>
                         ) : (
                             <div className="bg-[#121217]/50 border border-white/5 rounded-3xl p-6 h-[600px] flex items-center justify-center backdrop-blur-md">
-                                <span className="text-gray-500 flex flex-col items-center gap-4">
+                                <div className="text-gray-500 flex flex-col items-center gap-4">
                                     {isLoading ? (
                                         <>
                                             <div className="w-8 h-8 rounded-full border-4 border-indigo-500/30 border-t-indigo-500 animate-spin"></div>
@@ -258,7 +258,7 @@ export default function DiscoverTab() {
                                     ) : (
                                         "분석할 ETF를 선택하세요"
                                     )}
-                                </span>
+                                </div>
                             </div>
                         )}
                     </div>
