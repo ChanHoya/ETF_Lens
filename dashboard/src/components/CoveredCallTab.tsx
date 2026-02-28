@@ -86,7 +86,8 @@ export default function CoveredCallTab() {
     const [ccDataList, setCcDataList] = useState<any[]>([]);
 
     const [selectedCountry, setSelectedCountry] = useState('All');
-    const [selectedDetail, setSelectedDetail] = useState<any>(null);
+    const [selectedForCompare, setSelectedForCompare] = useState<any[]>([]);
+    const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
     const [chartPeriod, setChartPeriod] = useState('1Y');
     const [realChartData, setRealChartData] = useState<any[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
@@ -156,7 +157,7 @@ export default function CoveredCallTab() {
     }, []);
 
     useEffect(() => {
-        if (!selectedDetail) return;
+        if (!isCompareModalOpen || selectedForCompare.length === 0) return;
 
         setRealChartData([]); // clear old data before fetching new ones
         setApiError(null);
@@ -164,9 +165,6 @@ export default function CoveredCallTab() {
         const fetchChart = async () => {
             setIsLoadingData(true);
             try {
-                let tickerQuery = selectedDetail.ticker;
-                let bmQuery = selectedDetail.indexTicker || '^SP500TR'; // Default fallback
-
                 // Map UI period to yfinance period
                 let yfPeriod = '1y';
                 if (chartPeriod === '1M') yfPeriod = '1mo';
@@ -178,55 +176,66 @@ export default function CoveredCallTab() {
                 const timeoutId = setTimeout(() => controller.abort(), 15000); // increased to 15s timeout
 
                 try {
-                    const payload = {
-                        fund_symbols: [tickerQuery],
-                        benchmark_symbol: bmQuery,
-                        period: yfPeriod
-                    };
+                    const promises = selectedForCompare.map(async (item) => {
+                        const payload = {
+                            fund_symbols: [item.ticker],
+                            benchmark_symbol: item.indexTicker || '^SP500TR',
+                            period: yfPeriod
+                        };
 
-                    const [chartRes, analyzeRes] = await Promise.all([
-                        fetch('http://localhost:8000/api/v1/covered-calls/chart', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload),
-                            signal: controller.signal
-                        }),
-                        fetch('http://localhost:8000/api/v1/covered-calls/analyze', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload),
-                            signal: controller.signal
-                        })
-                    ]);
+                        const [chartRes, analyzeRes] = await Promise.all([
+                            fetch('http://localhost:8000/api/v1/covered-calls/chart', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload),
+                                signal: controller.signal
+                            }).then(r => r.ok ? r.json() : null).catch(() => null),
+                            fetch('http://localhost:8000/api/v1/covered-calls/analyze', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload),
+                                signal: controller.signal
+                            }).then(r => r.ok ? r.json() : null).catch(() => null)
+                        ]);
 
+                        return { ticker: item.ticker, chartData: chartRes?.chart_data, analyzeData: analyzeRes?.results?.[0] };
+                    });
+
+                    const results = await Promise.all(promises);
                     clearTimeout(timeoutId);
 
+                    let combinedChartMap: any = {};
+                    let statsMap: any = {};
                     let success = false;
-                    if (chartRes.ok) {
-                        const data = await chartRes.json();
-                        if (data.chart_data && data.chart_data.length > 0) {
-                            const formatted = data.chart_data.map((d: any) => ({
-                                date: d.date,
-                                bmTotalReturn: d.Benchmark,
-                                ccTotalReturn: d[tickerQuery]
-                            }));
-                            setRealChartData(formatted);
-                            success = true;
-                        }
-                    }
 
-                    if (analyzeRes.ok) {
-                        const analyzeData = await analyzeRes.json();
-                        if (analyzeData.results && analyzeData.results.length > 0) {
-                            setRealStats(analyzeData.results[0]);
+                    results.forEach((res) => {
+                        if (res.analyzeData) {
+                            statsMap[res.ticker] = res.analyzeData;
                         }
-                    }
+                        if (res.chartData) {
+                            success = true;
+                            res.chartData.forEach((d: any) => {
+                                if (!combinedChartMap[d.date]) combinedChartMap[d.date] = { date: d.date };
+                                combinedChartMap[d.date][res.ticker] = d[res.ticker];
+                                // We also take benchmark from the first ETF for visual comparison if needed, or we just plot tickers. 
+                                // Let's just plot the TRs of the funds. They can compare them visually.
+                                // If they want benchmark, let's keep the main benchmark of the first selected item
+                                if (res.ticker === selectedForCompare[0].ticker) {
+                                    combinedChartMap[d.date]['Benchmark'] = d.Benchmark;
+                                }
+                            });
+                        }
+                    });
+
+                    const finalChartData = Object.values(combinedChartMap).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
                     if (success) {
+                        setRealChartData(finalChartData);
+                        setRealStats(statsMap);
                         setIsLoadingData(false);
                         return;
                     } else {
-                        setApiError("해당 종목 또는 벤치마크 지수의 데이터를 서버에서 불러오지 못했습니다. (상장폐지 또는 데이터 부족)");
+                        setApiError("해당 종목 데이터를 서버에서 불러오지 못했습니다. (상장폐지 또는 데이터 부족)");
                     }
                 } catch (fetchError: any) {
                     console.error("Fetch API timeout or network error:", fetchError);
@@ -237,7 +246,7 @@ export default function CoveredCallTab() {
                     }
                 }
 
-                setRealStats(null); // Clear real stats so UI uses defaults
+                setRealStats({}); // Clear real stats so UI uses defaults
             } catch (e) {
                 console.error("API error", e);
                 setApiError("알 수 없는 오류가 발생했습니다.");
@@ -246,7 +255,7 @@ export default function CoveredCallTab() {
             }
         };
         fetchChart();
-    }, [selectedDetail, chartPeriod]);
+    }, [isCompareModalOpen, chartPeriod]);
 
     const [selectedDropdownItems, setSelectedDropdownItems] = useState<any[]>([]);
     const BRAND_KEYWORDS = ['KODEX', 'TIGER', 'KBSTAR', 'ACE', 'SOL', 'HANARO', 'ARIRANG', 'KOSEF'];
@@ -286,6 +295,14 @@ export default function CoveredCallTab() {
 
     const handleRemoveEtf = (idToRemove: number) => {
         setCcDataList(prev => prev.filter(item => item.id !== idToRemove));
+        setSelectedForCompare(prev => prev.filter(item => item.id !== idToRemove));
+    };
+
+    const handleToggleCompareToggle = (item: any) => {
+        setSelectedForCompare(prev => {
+            if (prev.find(x => x.id === item.id)) return prev.filter(x => x.id !== item.id);
+            return [...prev, item];
+        });
     };
 
     const handleUpdateBenchmark = (id: number, newTicker: string) => {
@@ -501,11 +518,14 @@ export default function CoveredCallTab() {
                 </div>
 
                 {/* Data Table */}
-                <div className="bg-black/20 border border-white/5 rounded-2xl overflow-hidden shadow-xl">
-                    <div className="overflow-x-auto">
+                <div className="bg-black/20 border border-white/5 rounded-2xl overflow-hidden shadow-xl mb-6">
+                    <div className="overflow-x-auto pb-10">
                         <table className="w-full text-left border-collapse whitespace-nowrap min-w-[900px]">
                             <thead className="bg-[#09090b] border-b border-white/10">
                                 <tr className="text-xs font-semibold text-gray-400 text-center tracking-wider">
+                                    <th className="py-4 px-4 w-12 text-center">
+                                        비교
+                                    </th>
                                     <th className="py-4 px-4 text-left">종목명 / 티커</th>
                                     <th className="py-4 px-3 w-40">분류 / 기초지수</th>
                                     <th className="py-4 px-3 text-right">현재가</th>
@@ -516,66 +536,74 @@ export default function CoveredCallTab() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5 text-sm">
-                                {filteredData.map(item => (
-                                    <tr
-                                        key={item.id}
-                                        onClick={() => setSelectedDetail(item)}
-                                        className="hover:bg-white/[0.04] transition-colors cursor-pointer group"
-                                    >
-                                        <td className="py-4 px-4">
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-gray-100 group-hover:text-indigo-300 transition-colors">{item.name}</span>
-                                                <span className="text-xs text-gray-500 font-mono mt-0.5">{item.ticker} | {item.issuer}</span>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-3 text-center w-40">
-                                            <div className="flex flex-col gap-1 items-center justify-center relative z-10">
-                                                <div className="flex gap-1 justify-center">
-                                                    <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-gray-300 whitespace-nowrap">{item.country === 'US' ? '🇺🇸 미국' : '🇰🇷 한국'}</span>
-                                                    <span className="text-[10px] text-gray-400 bg-black/40 px-2 py-0.5 rounded whitespace-nowrap">{item.theme}</span>
+                                {filteredData.map(item => {
+                                    const isSelected = selectedForCompare.some(x => x.id === item.id);
+                                    return (
+                                        <tr
+                                            key={item.id}
+                                            onClick={() => handleToggleCompareToggle(item)}
+                                            className={`transition-colors cursor-pointer group ${isSelected ? 'bg-indigo-500/10' : 'hover:bg-white/[0.04]'}`}
+                                        >
+                                            <td className="py-4 px-4 text-center">
+                                                <div className={`w-5 h-5 mx-auto rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-500'} `}>
+                                                    {isSelected && <Check size={14} strokeWidth={3} />}
                                                 </div>
-                                                <select
-                                                    value={item.indexTicker || '^SP500TR'}
-                                                    onChange={(e) => handleUpdateBenchmark(item.id, e.target.value)}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    className="bg-black/40 border border-white/20 rounded px-1.5 py-1 text-[10px] text-gray-300 w-full max-w-[140px] appearance-none focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer text-center"
-                                                >
-                                                    {BENCHMARK_OPTIONS.map(opt => (
-                                                        <option key={opt.symbol} value={opt.symbol}>{opt.label}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-3 text-right font-mono font-medium text-gray-300">
-                                            {item.price.toLocaleString()}원
-                                        </td>
-                                        <td className="py-4 px-3 text-center font-bold text-emerald-400 bg-emerald-500/[0.02]">
-                                            {item.yield.toFixed(1)}%
-                                        </td>
-                                        <td className="py-4 px-3 text-center bg-indigo-500/[0.02]">
-                                            {formatRate(item.tr1y)}
-                                        </td>
-                                        <td className="py-4 px-4 text-center bg-rose-500/[0.02]">
-                                            <div className="flex items-center justify-center gap-1.5">
-                                                {formatRate(item.diffBenchmark)}
-                                                <span className="relative group/tooltip flex items-center justify-center">
-                                                    <Info className="w-3.5 h-3.5 text-gray-500 cursor-help" />
-                                                    <span className="absolute bottom-full mb-2 -left-10 w-48 bg-gray-900 border border-white/10 text-[10px] p-2 rounded-lg opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-10 font-normal text-left shadow-xl break-words whitespace-normal text-gray-300 leading-tight">
-                                                        기초 지수(TR) 대비 커버드콜 상품의 1년 성과 차이입니다. 지수 상승분 포기로 인해 주로 음수(-)를 기록합니다.
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <div className="flex flex-col">
+                                                    <span className={`font-bold transition-colors ${isSelected ? 'text-indigo-300' : 'text-gray-100 group-hover:text-indigo-300'}`}>{item.name}</span>
+                                                    <span className="text-xs text-gray-500 font-mono mt-0.5">{item.ticker} | {item.issuer}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-3 text-center w-40">
+                                                <div className="flex flex-col gap-1 items-center justify-center relative z-10">
+                                                    <div className="flex gap-1 justify-center">
+                                                        <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-gray-300 whitespace-nowrap">{item.country === 'US' ? '🇺🇸 미국' : '🇰🇷 한국'}</span>
+                                                        <span className="text-[10px] text-gray-400 bg-black/40 px-2 py-0.5 rounded whitespace-nowrap">{item.theme}</span>
+                                                    </div>
+                                                    <select
+                                                        value={item.indexTicker || '^SP500TR'}
+                                                        onChange={(e) => handleUpdateBenchmark(item.id, e.target.value)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="bg-black/40 border border-white/20 rounded px-1.5 py-1 text-[10px] text-gray-300 w-full max-w-[140px] appearance-none focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer text-center"
+                                                    >
+                                                        {BENCHMARK_OPTIONS.map(opt => (
+                                                            <option key={opt.symbol} value={opt.symbol}>{opt.label}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-3 text-right font-mono font-medium text-gray-300">
+                                                {item.price.toLocaleString()}원
+                                            </td>
+                                            <td className="py-4 px-3 text-center font-bold text-emerald-400 bg-emerald-500/[0.02]">
+                                                {item.yield.toFixed(1)}%
+                                            </td>
+                                            <td className="py-4 px-3 text-center bg-indigo-500/[0.02]">
+                                                {formatRate(item.tr1y)}
+                                            </td>
+                                            <td className="py-4 px-4 text-center bg-rose-500/[0.02]">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    {formatRate(item.diffBenchmark)}
+                                                    <span className="relative group/tooltip flex items-center justify-center">
+                                                        <Info className="w-3.5 h-3.5 text-gray-500 cursor-help" />
+                                                        <span className="absolute bottom-full mb-2 -left-10 w-48 bg-gray-900 border border-white/10 text-[10px] p-2 rounded-lg opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-10 font-normal text-left shadow-xl break-words whitespace-normal text-gray-300 leading-tight">
+                                                            기초 지수(TR) 대비 커버드콜 상품의 1년 성과 차이입니다. 지수 상승분 포기로 인해 주로 음수(-)를 기록합니다.
+                                                        </span>
                                                     </span>
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-2 text-center" onClick={(e) => { e.stopPropagation(); handleRemoveEtf(item.id); }}>
-                                            <button className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
-                                                <X size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-2 text-center" onClick={(e) => { e.stopPropagation(); handleRemoveEtf(item.id); }}>
+                                                <button className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
+                                                    <X size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                                 {filteredData.length === 0 && (
                                     <tr>
-                                        <td colSpan={7} className="py-16 text-center text-gray-500">
+                                        <td colSpan={8} className="py-16 text-center text-gray-500">
                                             <div className="flex flex-col items-center justify-center gap-3">
                                                 <Search className="w-8 h-8 text-gray-700 mb-2" />
                                                 <span className="text-sm">검색창에서 커버드콜 종목을 검색하여 추가해주세요.</span>
@@ -588,88 +616,60 @@ export default function CoveredCallTab() {
                     </div>
                 </div>
 
-                {/* Overlay Modal */}
-                {selectedDetail && (
-                    <div className="absolute top-0 inset-x-0 bottom-0 z-[300] flex animate-in fade-in duration-200 bg-black/40 backdrop-blur-md rounded-3xl p-2 md:p-6">
-                        <div className="bg-[#0B0F19] border border-white/10 w-full h-full rounded-2xl shadow-2xl shadow-indigo-500/10 flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+                {/* Floating Compare Button */}
+                {selectedForCompare.length > 0 && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5">
+                        <button
+                            onClick={() => setIsCompareModalOpen(true)}
+                            className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3.5 rounded-full font-bold shadow-[0_10px_40px_rgba(99,102,241,0.5)] flex items-center gap-3 transition-all transform hover:scale-105"
+                        >
+                            <BarChart3 size={20} />
+                            선택 종목 상세 비교 ({selectedForCompare.length}개)
+                        </button>
+                    </div>
+                )}
+
+                {/* Multi-Compare Overlay Modal */}
+                {isCompareModalOpen && selectedForCompare.length > 0 && (
+                    <div className="fixed inset-0 z-[300] flex animate-in fade-in duration-200 bg-black/60 backdrop-blur-md p-2 md:p-6 items-center justify-center">
+                        <div className="bg-[#0B0F19] border border-white/10 w-full max-w-7xl h-[95vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
 
                             {/* Modal Header */}
-                            <div className="px-5 py-3 border-b border-white/5 flex gap-4 justify-between items-center bg-gradient-to-r from-indigo-500/10 to-transparent shrink-0">
-                                <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full">
-                                    <span className="px-2 py-0.5 text-[10px] font-bold bg-white/10 text-white rounded-md">{selectedDetail.issuer}</span>
-                                    <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-md">기초지수: {selectedDetail.index}</span>
-                                    <span className="font-mono flex items-center bg-[#1e1e23] border border-white/10 rounded overflow-hidden">
-                                        <span className="px-2 py-0.5 text-[10px] bg-indigo-600/30 text-indigo-300 font-bold">TICKER</span>
-                                        <span className="px-2 py-0.5 text-[11px] text-gray-300 font-bold">{selectedDetail.ticker}</span>
-                                    </span>
-                                    <h3 className="text-xl md:text-2xl font-extrabold text-white truncate max-w-[200px] sm:max-w-2xl">{selectedDetail.name}</h3>
-                                </div>
-                                <button onClick={() => setSelectedDetail(null)} className="p-1.5 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 rounded-full text-gray-400 transition-colors shrink-0">
-                                    <X className="w-5 h-5" />
+                            <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-indigo-500/10 to-transparent shrink-0">
+                                <h3 className="text-2xl font-extrabold text-white flex items-center gap-3">
+                                    <BarChart3 className="w-6 h-6 text-indigo-400" />
+                                    선택 종목 정밀 비교 분석 ({selectedForCompare.length}건)
+                                </h3>
+                                <button onClick={() => setIsCompareModalOpen(false)} className="p-2 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 rounded-full text-gray-400 transition-colors shrink-0">
+                                    <X className="w-6 h-6" />
                                 </button>
                             </div>
 
-                            <div className="overflow-y-auto px-5 py-4 flex-1 custom-scrollbar">
-                                {/* Summary Cards */}
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
-                                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
-                                        <span className="text-[10px] text-gray-500 mb-0.5">총보수 / AUM</span>
-                                        <span className="font-bold text-gray-200 text-sm">{selectedDetail.ter} / {selectedDetail.aum.replace('억', '')}억</span>
-                                    </div>
-                                    <div className="bg-indigo-500/[0.05] border border-indigo-500/20 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
-                                        <span className="text-[10px] text-indigo-400 mb-0.5">ETF 수익률 ({chartPeriod})</span>
-                                        <span className="font-extrabold text-indigo-300 text-base">
-                                            {realStats?.tr_period !== undefined ? (realStats.tr_period > 0 ? '+' : '') + realStats.tr_period.toFixed(2) : (selectedDetail.tr1y > 0 ? '+' : '') + selectedDetail.tr1y.toFixed(2)}%
-                                        </span>
-                                    </div>
-                                    <div className="bg-rose-500/[0.05] border border-rose-500/20 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
-                                        <span className="text-[10px] text-rose-400 mb-0.5">벤치마크 지수 ({chartPeriod} TR)</span>
-                                        <span className="font-extrabold text-rose-300 text-base">
-                                            {realStats?.benchmark_tr_period !== undefined ? realStats.benchmark_tr_period.toFixed(2) : ((selectedDetail.tr1y) - (selectedDetail.diffBenchmark)).toFixed(2)}%
-                                        </span>
-                                    </div>
-                                    <div className="bg-slate-500/[0.05] border border-slate-500/20 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
-                                        <span className="text-[10px] text-slate-400 mb-0.5">초과 수익 (괴리)</span>
-                                        <span className="font-extrabold text-white text-base">
-                                            {realStats?.diff_benchmark_period !== undefined ? (realStats.diff_benchmark_period > 0 ? '+' : '') + realStats.diff_benchmark_period.toFixed(2) : (selectedDetail.diffBenchmark > 0 ? '+' : '') + selectedDetail.diffBenchmark.toFixed(2)}%
-                                        </span>
-                                    </div>
-                                    <div className="bg-emerald-500/[0.05] border border-emerald-500/20 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
-                                        <span className="text-[10px] text-emerald-500/70 mb-0.5 flex items-center gap-1 justify-center"><BarChart3 className="w-3 h-3" /> 연환산 분배율</span>
-                                        <span className="font-extrabold text-emerald-400 text-base">{selectedDetail.yield.toFixed(1)}%</span>
-                                    </div>
-                                </div>
+                            <div className="overflow-y-auto px-6 py-6 flex-1 custom-scrollbar flex flex-col gap-6">
 
                                 {/* Chart Area */}
-                                <div className="bg-black/30 border border-white/5 rounded-2xl p-3 mb-3 shrink-0">
-                                    <div className="flex justify-between items-center mb-2">
+                                <div className="bg-black/30 border border-white/5 rounded-2xl p-4 shrink-0 flex flex-col">
+                                    <div className="flex justify-between items-center mb-4">
                                         <h4 className="font-bold text-gray-200 flex items-center gap-2">
-                                            누적 수익률 (TR) 비교 차트
-                                            <span className="relative group/info cursor-help">
-                                                <Info className="w-4 h-4 text-indigo-400" />
-                                                <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-900 border border-indigo-500/30 text-xs p-3 rounded-lg opacity-0 group-hover/info:opacity-100 transition-opacity pointer-events-none z-50 text-gray-300 shadow-xl leading-relaxed">
-                                                    <strong className="text-white block mb-1">공정한 수익률 비교 (TR)</strong>
-                                                    커버드콜과 기초 자산의 정확한 비교를 위해, 벤치마크 지수 역시 배당금이 재투자된 총수익률(Total Return) 기준으로 산출 및 표기됩니다.
-                                                </span>
-                                            </span>
+                                            누적 수익률 (TR) 멀티 비교 차트
                                         </h4>
                                         <div className="flex bg-white/5 p-1 rounded-lg">
                                             {['1M', '3M', 'YTD', '1Y'].map(pd => (
                                                 <button
                                                     key={pd}
                                                     onClick={() => setChartPeriod(pd)}
-                                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${chartPeriod === pd ? 'bg-indigo-500 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+                                                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${chartPeriod === pd ? 'bg-indigo-500 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
                                                 >
                                                     {pd}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="h-[220px] sm:h-[260px] w-full relative">
+                                    <div className="h-[300px] sm:h-[400px] w-full relative">
                                         {isLoadingData && (
                                             <div className="absolute inset-0 bg-[#0B0F19]/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-xl border border-white/5">
                                                 <Hourglass className="w-8 h-8 text-indigo-400 animate-pulse mb-3" />
-                                                <span className="text-sm font-bold text-indigo-400 animate-pulse">데이터를 분석 중입니다...</span>
+                                                <span className="text-sm font-bold text-indigo-400 animate-pulse">상세 데이터를 분석 중입니다...</span>
                                             </div>
                                         )}
                                         {apiError && !isLoadingData && (
@@ -691,36 +691,85 @@ export default function CoveredCallTab() {
                                                     formatter={(val: number) => [`${val}%`, '']}
                                                 />
                                                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" />
-                                                <Line type="monotone" name={`${selectedDetail.name} (TR)`} dataKey="ccTotalReturn" stroke="#818cf8" strokeWidth={3} dot={false} activeDot={{ r: 4 }} connectNulls={false} />
-                                                <Line type="monotone" name={`${selectedDetail.index} 지수 (TR)`} dataKey="bmTotalReturn" stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls={false} />
+                                                {/* Render main benchmark from the first item */}
+                                                <Line type="monotone" name={`${selectedForCompare[0].index} (TR 기준)`} dataKey="Benchmark" stroke="#f43f5e" strokeWidth={3} strokeDasharray="5 5" dot={false} connectNulls={false} />
+
+                                                {/* Render lines for each selected ETF */}
+                                                {selectedForCompare.map((item, idx) => {
+                                                    const colors = ['#818cf8', '#34d399', '#fbbf24', '#a78bfa', '#60a5fa', '#f87171', '#34d399'];
+                                                    return (
+                                                        <Line key={item.ticker} type="monotone" name={item.name} dataKey={item.ticker} stroke={colors[idx % colors.length]} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} connectNulls={false} />
+                                                    )
+                                                })}
                                             </LineChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </div>
 
-                                {/* Capture Ratios */}
+                                {/* Comparison Table containing Returns and Capture Ratios */}
                                 <div>
                                     <h4 className="font-bold text-gray-200 mb-3 flex items-center gap-2">
                                         <ShieldAlert className="w-5 h-5 text-amber-500" />
-                                        민감도 지표 (Capture Ratios)
+                                        선택 종목 데이터 상세 비교
+                                        {Object.keys(realStats).length > 0 && <span className="bg-indigo-500/30 text-indigo-200 text-[10px] px-2 py-0.5 rounded ml-1 font-bold">REAL DATA</span>}
                                     </h4>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20 rounded-2xl p-3">
-                                            <div className="flex justify-between items-end mb-2">
-                                                <span className="text-sm font-medium text-indigo-300 flex items-center gap-1">상승장 참여율 (Upside) {realStats?.upside_capture !== undefined ? <span className="bg-indigo-500/30 text-indigo-200 text-[9px] px-1.5 py-0.5 rounded ml-1">REAL DATA</span> : null}</span>
-                                                <span className="text-2xl font-black text-white">{realStats?.upside_capture !== undefined ? realStats.upside_capture.toFixed(1) : '45.0'}%</span>
-                                            </div>
-                                            <p className="text-[11px] text-gray-400">지수가 상승할 때, 콜옵션 매도로 인해 상승분의 {realStats?.upside_capture !== undefined ? realStats.upside_capture.toFixed(1) : '45.0'}% 수준만 추종하는 경향이 있습니다.</p>
-                                        </div>
-                                        <div className="bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 rounded-2xl p-3">
-                                            <div className="flex justify-between items-end mb-1">
-                                                <span className="text-sm font-medium text-blue-300 flex items-center gap-1">하락장 방어율 (Downside) {realStats?.downside_capture !== undefined ? <span className="bg-blue-500/30 text-blue-200 text-[9px] px-1.5 py-0.5 rounded ml-1">REAL DATA</span> : null}</span>
-                                                <span className="text-2xl font-black text-white">{realStats?.downside_capture !== undefined ? realStats.downside_capture.toFixed(1) : '82.0'}%</span>
-                                            </div>
-                                            <p className="text-[11px] text-gray-400">지수가 하락할 때, 프리미엄 수익으로 인해 {realStats?.downside_capture !== undefined ? realStats.downside_capture.toFixed(1) : '82.0'}% 변동성으로 상대적 방어력을 보입니다.</p>
-                                        </div>
+                                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl overflow-x-auto shadow-inner">
+                                        <table className="w-full text-left border-collapse whitespace-nowrap min-w-[1000px]">
+                                            <thead className="bg-[#09090b] border-b border-white/10">
+                                                <tr className="text-[11px] font-semibold text-gray-400 text-center tracking-wider">
+                                                    <th className="py-3 px-4 text-left">종목명 (운용사)</th>
+                                                    <th className="py-3 px-3">비교 벤치마크</th>
+                                                    <th className="py-3 px-3 bg-indigo-500/10 text-indigo-400/80">종목 누적 수익률(TR)</th>
+                                                    <th className="py-3 px-3 bg-rose-500/10 text-rose-400/80">벤치마크 수익률(TR)</th>
+                                                    <th className="py-3 px-3 bg-slate-500/10 text-slate-300/80">초과 수익 (괴리)</th>
+                                                    <th className="py-3 px-3 text-emerald-400/80">상승 참여율(Upside)</th>
+                                                    <th className="py-3 px-3 text-blue-400/80">하락 방어율(Downside)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5 text-sm">
+                                                {selectedForCompare.map(item => {
+                                                    const stats = realStats[item.ticker] || {};
+                                                    const trPeriod = stats.tr_period !== undefined ? stats.tr_period : item.tr1y;
+                                                    const bmTrPeriod = stats.benchmark_tr_period !== undefined ? stats.benchmark_tr_period : (item.tr1y - item.diffBenchmark);
+                                                    const diffPeriod = stats.diff_benchmark_period !== undefined ? stats.diff_benchmark_period : item.diffBenchmark;
+                                                    const upCap = stats.upside_capture !== undefined ? stats.upside_capture : 45.0;
+                                                    const downCap = stats.downside_capture !== undefined ? stats.downside_capture : 82.0;
+
+                                                    return (
+                                                        <tr key={item.ticker} className="hover:bg-white/[0.04] transition-colors">
+                                                            <td className="py-3 px-4 text-left">
+                                                                <div className="font-bold text-gray-200 text-[13px]">{item.name}</div>
+                                                                <div className="text-[11px] text-gray-500 font-mono mt-0.5">{item.ticker} | {item.issuer}</div>
+                                                            </td>
+                                                            <td className="py-3 px-3 text-center">
+                                                                <span className="text-[11px] font-medium bg-white/10 px-2 py-1 rounded text-gray-400">{item.index}</span>
+                                                            </td>
+                                                            <td className="py-3 px-3 text-center bg-indigo-500/[0.02] font-mono text-[13px] text-indigo-300 font-bold">
+                                                                {(trPeriod > 0 ? '+' : '') + trPeriod.toFixed(2)}%
+                                                            </td>
+                                                            <td className="py-3 px-3 text-center bg-rose-500/[0.02] font-mono text-[13px] text-rose-300 font-bold">
+                                                                {(bmTrPeriod > 0 ? '+' : '') + bmTrPeriod.toFixed(2)}%
+                                                            </td>
+                                                            <td className="py-3 px-3 text-center bg-slate-500/[0.02] font-mono text-[13px] text-gray-300 font-bold">
+                                                                {(diffPeriod > 0 ? '+' : '') + diffPeriod.toFixed(2)}%
+                                                            </td>
+                                                            <td className="py-3 px-3 text-center font-mono text-[13px] text-emerald-400 font-bold">
+                                                                {upCap.toFixed(1)}%
+                                                            </td>
+                                                            <td className="py-3 px-3 text-center font-mono text-[13px] text-blue-400 font-bold">
+                                                                {downCap.toFixed(1)}%
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                })}
+                                            </tbody>
+                                        </table>
                                     </div>
+                                    <p className="text-[11px] text-gray-500 mt-2 text-right">
+                                        * 상승/하락 참여율은 지수 움직임 대비 커버드콜 상품의 민감도(Capture Ratio)를 백분율 산출한 값입니다.
+                                    </p>
                                 </div>
+
                             </div>
                         </div>
                     </div>
