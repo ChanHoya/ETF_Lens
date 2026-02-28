@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, TrendingUp, TrendingDown, X, Info, ShieldAlert, BarChart3, Activity } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
@@ -50,6 +50,106 @@ export default function CoveredCallTab() {
     const [selectedCountry, setSelectedCountry] = useState('All');
     const [selectedDetail, setSelectedDetail] = useState<any>(null);
     const [chartPeriod, setChartPeriod] = useState('1Y');
+    const [realChartData, setRealChartData] = useState<any[]>([]);
+    const [isLoadingData, setIsLoadingData] = useState(false);
+
+    // For storing real stats mapped by ticker
+    const [realStats, setRealStats] = useState<any>({});
+
+    useEffect(() => {
+        const fetchRealStats = async () => {
+            try {
+                // Here we fetch the list. To avoid too many calls, only doing it once.
+                // S&P500TR and Nasdaq are common.
+                // We'll map S&P500/Dow to SP500TR, Nasdaq to NDX or QQQ proxy.
+                const response = await fetch('http://localhost:8000/api/v1/covered-calls/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fund_symbols: ['JEPI', 'JEPQ', 'DIVO', 'SPYI', 'QYLD'],
+                        benchmark_symbol: '^SP500TR',
+                        period: '1y'
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const statsMap: any = {};
+                    if (data.results) {
+                        data.results.forEach((r: any) => {
+                            statsMap[r.ticker] = r;
+                        });
+                    }
+                    setRealStats(statsMap);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        };
+        // We comment this out for now until mapping is complete
+        // fetchRealStats();
+    }, []);
+
+    useEffect(() => {
+        if (!selectedDetail) return;
+
+        const fetchChart = async () => {
+            setIsLoadingData(true);
+            try {
+                // Map ticker to standard US ones if possible, else fallback to mock.
+                // e.g. TIGER US Dividend +7% is 458730.KS, but data might not be rich yet.
+                let tickerQuery = selectedDetail.ticker;
+                if (selectedDetail.country === 'KR') tickerQuery = tickerQuery + '.KS';
+                if (selectedDetail.country === 'US' && selectedDetail.name.includes("미국배당")) tickerQuery = 'JEPI'; // Mapped for demo
+                if (selectedDetail.country === 'US' && selectedDetail.name.includes("나스닥")) tickerQuery = 'JEPQ'; // Mapped for demo
+
+                let bmQuery = '^SP500TR';
+                if (selectedDetail.index.includes("Nasdaq")) bmQuery = '^IXIC';
+                if (selectedDetail.index.includes("KOSPI")) bmQuery = 'KODEX 200'; // mock
+
+                // Demo fallback logic:
+                if (tickerQuery === 'JEPI' || tickerQuery === 'JEPQ') {
+                    // Map UI period to yfinance period
+                    let yfPeriod = '1y';
+                    if (chartPeriod === '1M') yfPeriod = '1mo';
+                    else if (chartPeriod === '3M') yfPeriod = '3mo';
+                    else if (chartPeriod === 'YTD') yfPeriod = 'ytd';
+                    else if (chartPeriod === '1Y') yfPeriod = '1y';
+
+                    const response = await fetch('http://localhost:8000/api/v1/covered-calls/chart', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            fund_symbols: [tickerQuery],
+                            benchmark_symbol: '^SP500TR',
+                            period: yfPeriod
+                        })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.chart_data && data.chart_data.length > 0) {
+                            const formatted = data.chart_data.map((d: any) => ({
+                                date: d.date,
+                                bmTotalReturn: d.Benchmark,
+                                ccTotalReturn: d[tickerQuery]
+                            }));
+                            setRealChartData(formatted);
+                            setIsLoadingData(false);
+                            return;
+                        }
+                    }
+                }
+
+                // Fallback to mock if API fails or no mapping
+                setRealChartData(generateMockChartData(chartPeriod));
+            } catch (e) {
+                console.error("API error", e);
+                setRealChartData(generateMockChartData(chartPeriod));
+            } finally {
+                setIsLoadingData(false);
+            }
+        };
+        fetchChart();
+    }, [selectedDetail, chartPeriod]);
 
     const filteredData = mockCCData.filter(item => {
         const matchSearch = item.name.includes(searchTerm) || item.ticker.includes(searchTerm) || item.issuer.includes(searchTerm);
@@ -198,31 +298,31 @@ export default function CoveredCallTab() {
 
                             <div className="overflow-y-auto px-5 py-4 flex-1 custom-scrollbar">
                                 {/* Summary Cards */}
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-                                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col justify-center items-center text-center">
-                                        <span className="text-xs text-gray-500 mb-1">총보수 / AUM</span>
-                                        <span className="font-bold text-gray-200">{selectedDetail.ter} / {selectedDetail.aum.replace('억', '')}억</span>
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
+                                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
+                                        <span className="text-[10px] text-gray-500 mb-0.5">총보수 / AUM</span>
+                                        <span className="font-bold text-gray-200 text-sm">{selectedDetail.ter} / {selectedDetail.aum.replace('억', '')}억</span>
                                     </div>
-                                    <div className="bg-indigo-500/[0.05] border border-indigo-500/20 rounded-2xl p-4 flex flex-col justify-center items-center text-center">
-                                        <span className="text-xs text-indigo-400 mb-1">ETF 수익률 (1Y)</span>
-                                        <span className="font-extrabold text-indigo-300 text-lg">{selectedDetail.tr1y > 0 ? '+' : ''}{selectedDetail.tr1y.toFixed(2)}%</span>
+                                    <div className="bg-indigo-500/[0.05] border border-indigo-500/20 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
+                                        <span className="text-[10px] text-indigo-400 mb-0.5">ETF 수익률 (1Y)</span>
+                                        <span className="font-extrabold text-indigo-300 text-base">{selectedDetail.tr1y > 0 ? '+' : ''}{selectedDetail.tr1y.toFixed(2)}%</span>
                                     </div>
-                                    <div className="bg-rose-500/[0.05] border border-rose-500/20 rounded-2xl p-4 flex flex-col justify-center items-center text-center">
-                                        <span className="text-xs text-rose-400 mb-1">벤치마크 지수 (1Y TR)</span>
-                                        <span className="font-extrabold text-rose-300 text-lg">{((selectedDetail.tr1y) - (selectedDetail.diffBenchmark)).toFixed(2)}%</span>
+                                    <div className="bg-rose-500/[0.05] border border-rose-500/20 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
+                                        <span className="text-[10px] text-rose-400 mb-0.5">벤치마크 지수 (1Y TR)</span>
+                                        <span className="font-extrabold text-rose-300 text-base">{((selectedDetail.tr1y) - (selectedDetail.diffBenchmark)).toFixed(2)}%</span>
                                     </div>
-                                    <div className="bg-slate-500/[0.05] border border-slate-500/20 rounded-2xl p-4 flex flex-col justify-center items-center text-center">
-                                        <span className="text-xs text-slate-400 mb-1">초과 수익 (괴리)</span>
-                                        <span className="font-extrabold text-white text-lg">{selectedDetail.diffBenchmark > 0 ? '+' : ''}{selectedDetail.diffBenchmark.toFixed(2)}%</span>
+                                    <div className="bg-slate-500/[0.05] border border-slate-500/20 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
+                                        <span className="text-[10px] text-slate-400 mb-0.5">초과 수익 (괴리)</span>
+                                        <span className="font-extrabold text-white text-base">{selectedDetail.diffBenchmark > 0 ? '+' : ''}{selectedDetail.diffBenchmark.toFixed(2)}%</span>
                                     </div>
-                                    <div className="bg-emerald-500/[0.05] border border-emerald-500/20 rounded-2xl p-4 flex flex-col justify-center items-center text-center">
-                                        <span className="text-xs text-emerald-500/70 mb-1 flex items-center gap-1 justify-center"><BarChart3 className="w-3 h-3" /> 연환산 분배율</span>
-                                        <span className="font-extrabold text-emerald-400 text-lg">{selectedDetail.yield.toFixed(1)}%</span>
+                                    <div className="bg-emerald-500/[0.05] border border-emerald-500/20 rounded-2xl p-2.5 flex flex-col justify-center items-center text-center">
+                                        <span className="text-[10px] text-emerald-500/70 mb-0.5 flex items-center gap-1 justify-center"><BarChart3 className="w-3 h-3" /> 연환산 분배율</span>
+                                        <span className="font-extrabold text-emerald-400 text-base">{selectedDetail.yield.toFixed(1)}%</span>
                                     </div>
                                 </div>
 
                                 {/* Chart Area */}
-                                <div className="bg-black/30 border border-white/5 rounded-2xl p-4 mb-4">
+                                <div className="bg-black/30 border border-white/5 rounded-2xl p-3 mb-3 flex flex-col flex-1">
                                     <div className="flex justify-between items-center mb-2">
                                         <h4 className="font-bold text-gray-200 flex items-center gap-2">
                                             누적 수익률 (TR) 비교 차트
@@ -246,9 +346,15 @@ export default function CoveredCallTab() {
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="h-[200px] w-full">
+                                    <div className="h-[280px] w-full min-h-0 flex-1 relative">
+                                        {isLoadingData && (
+                                            <div className="absolute inset-0 bg-[#0B0F19]/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-xl border border-white/5">
+                                                <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                                                <span className="text-sm font-bold text-indigo-400">데이터를 분석 중입니다...</span>
+                                            </div>
+                                        )}
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart data={generateMockChartData(chartPeriod)} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                                            <LineChart data={realChartData.length > 0 ? realChartData : generateMockChartData(chartPeriod)} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                                                 <XAxis dataKey="date" stroke="rgba(255,255,255,0.3)" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} tickMargin={10} minTickGap={30} />
                                                 <YAxis stroke="rgba(255,255,255,0.3)" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} tickFormatter={(val) => `${val}%`} />
@@ -272,19 +378,19 @@ export default function CoveredCallTab() {
                                         민감도 지표 (Capture Ratios)
                                     </h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20 rounded-2xl p-4">
+                                        <div className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20 rounded-2xl p-3">
                                             <div className="flex justify-between items-end mb-2">
                                                 <span className="text-sm font-medium text-indigo-300">상승장 참여율 (Upside)</span>
-                                                <span className="text-2xl font-black text-white">45%</span>
+                                                <span className="text-2xl font-black text-white">45.0%</span>
                                             </div>
-                                            <p className="text-[11px] text-gray-400">지수가 10% 상승할 때, 콜옵션 매도로 인해 평균 4.5% 상승하는 경향이 있습니다.</p>
+                                            <p className="text-[11px] text-gray-400">지수가 상승할 때, 콜옵션 매도로 인해 상승분의 45.0% 수준만 추종하는 경향이 있습니다.</p>
                                         </div>
-                                        <div className="bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 rounded-2xl p-4">
+                                        <div className="bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 rounded-2xl p-3">
                                             <div className="flex justify-between items-end mb-1">
                                                 <span className="text-sm font-medium text-blue-300">하락장 방어율 (Downside)</span>
-                                                <span className="text-2xl font-black text-white">82%</span>
+                                                <span className="text-2xl font-black text-white">82.0%</span>
                                             </div>
-                                            <p className="text-[11px] text-gray-400">지수가 10% 하락할 때, 프리미엄 수익으로 인해 8.2% 하락하며 상대적 방어력을 보입니다.</p>
+                                            <p className="text-[11px] text-gray-400">지수가 하락할 때, 프리미엄 수익으로 인해 82.0% 변동성으로 상대적 방어력을 보입니다.</p>
                                         </div>
                                     </div>
                                 </div>
