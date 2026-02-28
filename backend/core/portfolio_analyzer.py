@@ -130,6 +130,40 @@ async def analyze_portfolio(holdings: list, db: AsyncSession):
                 analyzed["true_holdings"].get(h["name"], 0) + w
             )
 
+    # --- Category Heuristics ---
+    for item in analyzed["matched_holdings"]:
+        name = item["name"]
+        code = item["code"]
+
+        # Region Heuristic
+        # US: purely alphabetical codes (like PLTR) OR name includes '미국', '나스닥', 'S&P', '다우존스', 'US'
+        if (
+            code.isalpha()
+            or "미국" in name
+            or "나스닥" in name
+            or "S&P" in name
+            or "다우존스" in name
+            or "US" in name
+        ):
+            item["category_region"] = "미국"
+        else:
+            item["category_region"] = "한국"
+
+        # Asset Type Heuristic
+        # Cash: 머니마켓, KOFR, CD금리, 파킹, 단기
+        # Gold: 금현물, 골드, 국제금
+        # Bond: 채권, 국고채, 회사채, 만기매칭
+        if any(kw in name for kw in ["머니마켓", "KOFR", "CD금리", "파킹", "단기"]):
+            item["category_asset"] = "현금"
+        elif any(kw in name for kw in ["금현물", "골드", "국제금"]):
+            item["category_asset"] = "금"
+        elif any(
+            kw in name for kw in ["채권", "국고채", "회사채", "만기매칭", "크레딧"]
+        ):
+            item["category_asset"] = "채권"
+        else:
+            item["category_asset"] = "주식"
+
     analyzed["metrics"]["etf_ratio"] = (
         matched_eval / total_eval if total_eval > 0 else 0
     )

@@ -209,7 +209,7 @@ async def get_my_portfolio(
                     # If KIS returns 0 for tot_asst_amt but we have evaluation amounts, use the computed sum
                     total_asset = max(tot_asst_amt_raw, tot_evlu_amt + dnca_tot_amt)
 
-                    logger.info(
+                    print(
                         f"[{acc_str}] SUCCESS! computed total_asset: {total_asset} with app_key: {app_key}"
                     )
 
@@ -229,15 +229,94 @@ async def get_my_portfolio(
                             }
                         )
 
+                    total_eval_amount = float(output2.get("tot_evlu_amt", 0))
+                    total_profit_loss = float(output2.get("evlu_pfls_smtl_amt", 0))
+                    cash_balance = float(output2.get("dnca_tot_amt", 0))
+
+                    # 4. Fetch Overseas Stocks (CTRP6504R)
+                    try:
+                        async with httpx.AsyncClient() as ovrs_client:
+                            ovrs_balance_url = f"{kis_url_base}/uapi/overseas-stock/v1/trading/inquire-present-balance"
+                            ovrs_headers = headers.copy()
+                            ovrs_headers["tr_id"] = (
+                                "CTRP6504R"
+                                if "openapi" in kis_url_base
+                                else "VTRP6504R"
+                            )
+                            ovrs_params = {
+                                "CANO": cano,
+                                "ACNT_PRDT_CD": acnt_prdt_cd,
+                                "WCRC_FRCR_DVSN_CD": "01",
+                                "NATN_CD": "840",
+                                "TR_MKET_CD": "00",
+                                "INQR_DVSN_CD": "00",
+                            }
+                            ovrs_res = await ovrs_client.get(
+                                ovrs_balance_url,
+                                headers=ovrs_headers,
+                                params=ovrs_params,
+                            )
+
+                            if ovrs_res.status_code == 200:
+                                ovrs_data = ovrs_res.json()
+                                if ovrs_data.get("rt_cd") == "0":
+                                    ovrs_output1 = ovrs_data.get("output1", [])
+                                    ovrs_output3 = ovrs_data.get("output3", {})
+
+                                    ovrs_tot_asst_amt = float(
+                                        ovrs_output3.get("tot_asst_amt", 0)
+                                    )
+                                    ovrs_tot_evlu_amt = float(
+                                        ovrs_output3.get("evlu_amt_smtl_amt", 0)
+                                    )
+                                    ovrs_evlu_pfls_amt = float(
+                                        ovrs_output3.get("tot_evlu_pfls_amt", 0)
+                                    )
+                                    ovrs_cash_balance = float(
+                                        ovrs_output3.get("tot_frcr_cblc_smtl", 0)
+                                    )
+
+                                    total_asset += ovrs_tot_asst_amt
+                                    total_eval_amount += ovrs_tot_evlu_amt
+                                    total_profit_loss += ovrs_evlu_pfls_amt
+                                    cash_balance += ovrs_cash_balance
+
+                                    for item in ovrs_output1:
+                                        local_holdings.append(
+                                            {
+                                                "code": item.get("pdno"),
+                                                "name": item.get("prdt_name"),
+                                                "qty": int(
+                                                    float(item.get("ccld_qty_smtl1", 0))
+                                                ),
+                                                "avg_price": float(
+                                                    item.get("avg_unpr3", 0)
+                                                ),
+                                                "current_price": float(
+                                                    item.get("ovrs_now_pric1", 0)
+                                                ),
+                                                "eval_amount": float(
+                                                    item.get("frcr_evlu_amt2", 0)
+                                                ),
+                                                "profit_loss": float(
+                                                    item.get("evlu_pfls_amt2", 0)
+                                                ),
+                                                "return_rate": float(
+                                                    item.get("evlu_pfls_rt1", 0)
+                                                ),
+                                                "account_no": formatted_account,
+                                            }
+                                        )
+                    except Exception as ex:
+                        logger.error(f"[{acc_str}] Overseas Test Error: {ex}")
+
                     return {
                         "account_no": formatted_account,
                         "account_name": "연동계좌",
                         "summary": {
-                            "total_eval_amount": float(output2.get("tot_evlu_amt", 0)),
-                            "total_profit_loss": float(
-                                output2.get("evlu_pfls_smtl_amt", 0)
-                            ),
-                            "cash_balance": float(output2.get("dnca_tot_amt", 0)),
+                            "total_eval_amount": total_eval_amount,
+                            "total_profit_loss": total_profit_loss,
+                            "cash_balance": cash_balance,
                             "total_asset": total_asset,
                         },
                         "holdings": local_holdings,

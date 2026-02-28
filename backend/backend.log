@@ -1,7 +1,65 @@
-INFO:     Started server process [7603]
+INFO:     Started server process [17760]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 DB Scheduler started.
-INFO:     127.0.0.1:54392 - "GET /api/v1/my/portfolio HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54404 - "GET /api/v1/my/portfolio HTTP/1.1" 200 OK
+[81060777-01] SUCCESS! computed total_asset: 140735769.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[81060777-22] SUCCESS! computed total_asset: 497075203.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[64490078-01] SUCCESS! computed total_asset: 41036879.0 with app_key: PS15aIQ1b2V8cqNNSezVcVxO91izsAHjf3GW
+[64896732-01] SUCCESS! computed total_asset: 100454044.0 with app_key: PSHySfZsM5O2RzHHuEzy6ccyEVzoeEEMp1Ur
+INFO:     127.0.0.1:56036 - "GET /api/v1/my/portfolio HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56139 - "OPTIONS /api/v1/my/portfolio HTTP/1.1" 200 OK
+[81060777-01] SUCCESS! computed total_asset: 140716064.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[81060777-22] SUCCESS! computed total_asset: 497441223.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[64896732-01] SUCCESS! computed total_asset: 100456948.0 with app_key: PSHySfZsM5O2RzHHuEzy6ccyEVzoeEEMp1Ur
+[64490078-01] SUCCESS! computed total_asset: 41053984.0 with app_key: PS15aIQ1b2V8cqNNSezVcVxO91izsAHjf3GW
+INFO:     127.0.0.1:56139 - "GET /api/v1/my/portfolio HTTP/1.1" 200 OK
+[81060777-22] SUCCESS! computed total_asset: 497295748.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[81060777-01] SUCCESS! computed total_asset: 140598554.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[64896732-01] SUCCESS! computed total_asset: 100456948.0 with app_key: PSHySfZsM5O2RzHHuEzy6ccyEVzoeEEMp1Ur
+[64490078-01] SUCCESS! computed total_asset: 41023423.0 with app_key: PS15aIQ1b2V8cqNNSezVcVxO91izsAHjf3GW
+INFO:     127.0.0.1:56347 - "GET /api/v1/my/portfolio HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59209 - "OPTIONS /api/v1/my/portfolio HTTP/1.1" 200 OK
+[81060777-22] SUCCESS! computed total_asset: 498207198.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[81060777-01] SUCCESS! computed total_asset: 140822089.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[64896732-01] SUCCESS! computed total_asset: 100456948.0 with app_key: PSHySfZsM5O2RzHHuEzy6ccyEVzoeEEMp1Ur
+[64490078-01] SUCCESS! computed total_asset: 41114808.0 with app_key: PS15aIQ1b2V8cqNNSezVcVxO91izsAHjf3GW
+INFO:     127.0.0.1:59209 - "GET /api/v1/my/portfolio HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59684 - "OPTIONS /api/v1/my/portfolio HTTP/1.1" 200 OK
+[81060777-01] SUCCESS! computed total_asset: 140822089.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[81060777-22] SUCCESS! computed total_asset: 498207198.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[64896732-01] SUCCESS! computed total_asset: 100456948.0 with app_key: PSHySfZsM5O2RzHHuEzy6ccyEVzoeEEMp1Ur
+[64490078-01] SUCCESS! computed total_asset: 41114808.0 with app_key: PS15aIQ1b2V8cqNNSezVcVxO91izsAHjf3GW
+INFO:     127.0.0.1:59684 - "GET /api/v1/my/portfolio HTTP/1.1" 200 OK
+[81060777-01] SUCCESS! computed total_asset: 140822089.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[81060777-22] SUCCESS! computed total_asset: 498207198.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[64896732-01] SUCCESS! computed total_asset: 100456948.0 with app_key: PSHySfZsM5O2RzHHuEzy6ccyEVzoeEEMp1Ur
+[64490078-01] SUCCESS! computed total_asset: 41114808.0 with app_key: PS15aIQ1b2V8cqNNSezVcVxO91izsAHjf3GW
+INFO:     127.0.0.1:59803 - "GET /api/v1/my/portfolio HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63303 - "OPTIONS /api/v1/my/portfolio HTTP/1.1" 200 OK
+[81060777-01] SUCCESS! computed total_asset: 140822089.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[81060777-22] SUCCESS! computed total_asset: 498207198.0 with app_key: PSWkEnloxeSo9ejLZ0rP55iJCVvdWq0aN0lM
+[64896732-01] SUCCESS! computed total_asset: 100456948.0 with app_key: PSHySfZsM5O2RzHHuEzy6ccyEVzoeEEMp1Ur
+[64490078-01] SUCCESS! computed total_asset: 41114808.0 with app_key: PS15aIQ1b2V8cqNNSezVcVxO91izsAHjf3GW
+INFO:     127.0.0.1:63303 - "GET /api/v1/my/portfolio HTTP/1.1" 200 OK
+Run time of job "sync_etf_batch (trigger: cron[hour='18', minute='0'], next run at: 2026-02-28 18:00:00 KST)" was missed by 2:10:48.711235
+INFO:     127.0.0.1:65207 - "GET /analyze/evaluate HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65219 - "GET /analyze/evaluate HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65235 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65235 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65237 - "GET /api/v1/analyze/etfs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65237 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65265 - "GET /analyze/evaluate HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65281 - "GET /analyze/evaluate HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65300 - "GET /analyze/evaluate HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65245 - "GET /api/v1/analyze/evaluate HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65350 - "GET /api/v1/analyze/evaluate HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65368 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65368 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65370 - "GET /api/v1/analyze/history HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65422 - "GET /api/v1/analyze/evaluate HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65462 - "GET /api/v1/analyze/evaluate HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65492 - "GET /api/v1/analyze/evaluate HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65501 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49160 - "GET /api/v1/analyze/evaluate HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49178 - "GET /api/v1/analyze/evaluate HTTP/1.1" 404 Not Found

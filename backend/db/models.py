@@ -45,6 +45,33 @@ class ETFMaster(Base):
     holdings = relationship(
         "ETFHoldings", back_populates="etf", cascade="all, delete-orphan"
     )
+    evaluation = relationship(
+        "ETFEvaluation",
+        back_populates="etf",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+
+class ETFEvaluation(Base):
+    __tablename__ = "etf_evaluation"
+
+    code = Column(String, ForeignKey("etf_master.code"), primary_key=True, index=True)
+
+    # Scores (0-100 scale)
+    liquidity_score = Column(Float, nullable=True)  # AUM, Volume, Spread
+    cost_score = Column(Float, nullable=True)  # TER, hidden costs
+    tracking_score = Column(Float, nullable=True)  # Tracking error, disparity
+    performance_score = Column(Float, nullable=True)  # Returns, Sharpe
+    fundamental_score = Column(Float, nullable=True)  # P/E, EPS Growth
+
+    # Overall summary rating
+    total_score = Column(Float, nullable=True)
+    rating = Column(String, nullable=True)  # e.g. "최우수", "우수", "보통", "주의"
+
+    last_evaluated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    etf = relationship("ETFMaster", back_populates="evaluation")
 
 
 class ETFDailyPrice(Base):

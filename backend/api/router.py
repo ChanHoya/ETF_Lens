@@ -9,7 +9,7 @@ import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from db.database import get_db
-from db.models import SimulationHistory
+from db.models import SimulationHistory, ETFEvaluation, ETFMaster
 import FinanceDataReader as fdr
 from datetime import datetime, timedelta
 
@@ -58,6 +58,45 @@ async def get_db_version(db: AsyncSession = Depends(get_db)):
         logger.error(f"Error fetching DB version: {e}")
 
     return {"version": "DB ver.Updating..."}
+
+
+@router.get("/evaluate", tags=["evaluate"])
+async def get_evaluated_etfs(db: AsyncSession = Depends(get_db)):
+    """
+    Returns the list of ETFs with their evaluation scores from the DB.
+    """
+    try:
+        query = select(ETFEvaluation, ETFMaster).join(
+            ETFMaster, ETFEvaluation.code == ETFMaster.code
+        )
+        result = await db.execute(query)
+
+        response = []
+        for eval_obj, master_obj in result.all():
+            response.append(
+                {
+                    "code": master_obj.code,
+                    "name": master_obj.name,
+                    "issuer": master_obj.issuer,
+                    "aum": master_obj.aum,
+                    "scores": {
+                        "liquidity": eval_obj.liquidity_score,
+                        "cost": eval_obj.cost_score,
+                        "tracking": eval_obj.tracking_score,
+                        "performance": eval_obj.performance_score,
+                        "fundamental": eval_obj.fundamental_score,
+                        "total": eval_obj.total_score,
+                        "rating": eval_obj.rating,
+                    },
+                }
+            )
+
+        # Sort by total score descending
+        response.sort(key=lambda x: x["scores"]["total"] or 0, reverse=True)
+        return response
+    except Exception as e:
+        logger.error(f"Error fetching evaluated ETFs: {e}")
+        return {"status": "error", "message": str(e)}
 
 
 class CompareRequest(BaseModel):
