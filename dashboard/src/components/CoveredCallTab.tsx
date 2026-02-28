@@ -97,58 +97,47 @@ export default function CoveredCallTab() {
         const fetchChart = async () => {
             setIsLoadingData(true);
             try {
-                // Map ticker to standard US ones if possible, else fallback to mock.
-                // e.g. TIGER US Dividend +7% is 458730.KS, but data might not be rich yet.
                 let tickerQuery = selectedDetail.ticker;
-                if (selectedDetail.country === 'KR') tickerQuery = tickerQuery + '.KS';
-                if (selectedDetail.country === 'US' && selectedDetail.name.includes("미국배당")) tickerQuery = 'JEPI'; // Mapped for demo
-                if (selectedDetail.country === 'US' && selectedDetail.name.includes("나스닥")) tickerQuery = 'JEPQ'; // Mapped for demo
+                let bmQuery = selectedDetail.index;
 
-                let bmQuery = '^SP500TR';
-                if (selectedDetail.index.includes("Nasdaq")) bmQuery = '^IXIC';
-                if (selectedDetail.index.includes("KOSPI")) bmQuery = 'KODEX 200'; // mock
+                // Map UI period to yfinance period
+                let yfPeriod = '1y';
+                if (chartPeriod === '1M') yfPeriod = '1mo';
+                else if (chartPeriod === '3M') yfPeriod = '3mo';
+                else if (chartPeriod === 'YTD') yfPeriod = 'ytd';
+                else if (chartPeriod === '1Y') yfPeriod = '1y';
 
-                // Demo fallback logic:
-                if (tickerQuery === 'JEPI' || tickerQuery === 'JEPQ') {
-                    // Map UI period to yfinance period
-                    let yfPeriod = '1y';
-                    if (chartPeriod === '1M') yfPeriod = '1mo';
-                    else if (chartPeriod === '3M') yfPeriod = '3mo';
-                    else if (chartPeriod === 'YTD') yfPeriod = 'ytd';
-                    else if (chartPeriod === '1Y') yfPeriod = '1y';
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
 
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
+                try {
+                    const response = await fetch('http://localhost:8000/api/v1/covered-calls/chart', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            fund_symbols: [tickerQuery],
+                            benchmark_symbol: bmQuery,
+                            period: yfPeriod
+                        }),
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
 
-                    try {
-                        const response = await fetch('http://localhost:8000/api/v1/covered-calls/chart', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                fund_symbols: [tickerQuery],
-                                benchmark_symbol: '^SP500TR',
-                                period: yfPeriod
-                            }),
-                            signal: controller.signal
-                        });
-                        clearTimeout(timeoutId);
-
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data.chart_data && data.chart_data.length > 0) {
-                                const formatted = data.chart_data.map((d: any) => ({
-                                    date: d.date,
-                                    bmTotalReturn: d.Benchmark,
-                                    ccTotalReturn: d[tickerQuery]
-                                }));
-                                setRealChartData(formatted);
-                                setIsLoadingData(false);
-                                return;
-                            }
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.chart_data && data.chart_data.length > 0) {
+                            const formatted = data.chart_data.map((d: any) => ({
+                                date: d.date,
+                                bmTotalReturn: d.Benchmark,
+                                ccTotalReturn: d[tickerQuery]
+                            }));
+                            setRealChartData(formatted);
+                            setIsLoadingData(false);
+                            return;
                         }
-                    } catch (fetchError) {
-                        console.error("Fetch API timeout or network error:", fetchError);
                     }
+                } catch (fetchError) {
+                    console.error("Fetch API timeout or network error:", fetchError);
                 }
 
                 // Fallback to mock if API fails, times out, or no mapping

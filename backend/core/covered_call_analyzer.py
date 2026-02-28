@@ -7,12 +7,12 @@ from typing import Dict, Any
 class CoveredCallAnalyzer:
     def __init__(self):
         # Default fallback symbols or mapping
+        # Default fallback symbols or mapping
         self.benchmark_map = {
             "S&P500": "^SP500TR",  # Yahoo Finance S&P 500 Total Return TR
-            "Nasdaq100": "^NDX",  # Nasdaq 100
-            # Depending on availability, SPY or QQQ can be used as proxies for TR if dividends are adjusted
-            "SPY_PROXY": "SPY",
-            "QQQ_PROXY": "QQQ",
+            "Nasdaq100": "QQQ",  # Best accessible proxy for Nasdaq 100 TR
+            "KOSPI200": "069500.KS",  # KODEX 200 (Adj Close includes dividends -> KOSPI 200 TR proxy)
+            "Dow Jones U.S. Dividend 100": "SCHD",  # Proxy for US Dividend 100 TR
         }
 
     async def fetch_historical_tr(
@@ -24,8 +24,15 @@ class CoveredCallAnalyzer:
         giving us a Total Return (TR) time series.
         """
         try:
+            # Map symbol if it's a known benchmark
+            mapped_symbol = self.benchmark_map.get(symbol, symbol)
+
+            # If it's a 6-digit Korean ticker without .KS, append it
+            if mapped_symbol.isdigit() and len(mapped_symbol) == 6:
+                mapped_symbol += ".KS"
+
             # Using loop.run_in_executor or direct yfinance call
-            ticker = yf.Ticker(symbol)
+            ticker = yf.Ticker(mapped_symbol)
             df = ticker.history(period=period, auto_adjust=False)
             if df.empty:
                 # auto_adjust=False provides both 'Close' and 'Adj Close'
