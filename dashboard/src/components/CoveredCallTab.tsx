@@ -6,7 +6,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 
 // Mock Data for Table
 const mockCCData = [
-    { id: 1, name: "TIGER 미국배당+7%프리미엄다우존스", ticker: "458730", price: 10540, yield: 10.2, tr1y: 12.5, diffBenchmark: -4.8, country: 'US', index: 'Dividend', theme: '고배당', issuer: '미래에셋자산운용', aum: '1조 2천억', ter: '0.39%', launchDate: '2023-06-20', distFreq: '월분배' },
+    { id: 1, name: "TIGER 미국배당+7%프리미엄다우존스", ticker: "458730", price: 10540, yield: 10.2, tr1y: 12.5, diffBenchmark: -4.8, country: 'US', index: 'Dow Jones U.S. Dividend 100', theme: '고배당', issuer: '미래에셋자산운용', aum: '1조 2천억', ter: '0.39%', launchDate: '2023-06-20', distFreq: '월분배' },
     { id: 2, name: "KODEX 미국AI테크TOP10+15%프리미엄", ticker: "474500", price: 11230, yield: 14.5, tr1y: 32.4, diffBenchmark: -18.2, country: 'US', index: 'Nasdaq100', theme: '고성장', issuer: '삼성자산운용', aum: '8천억', ter: '0.45%', launchDate: '2024-01-15', distFreq: '월분배' },
     { id: 3, name: "TIGER 200커버드콜ATM", ticker: "289480", price: 8900, yield: 8.5, tr1y: 5.2, diffBenchmark: +1.2, country: 'KR', index: 'KOSPI200', theme: '옵션프리미엄', issuer: '미래에셋자산운용', aum: '3천억', ter: '0.30%', launchDate: '2018-05-10', distFreq: '월분배' },
     { id: 4, name: "ACE 미국나스닥100데일리커버드콜", ticker: "000000", price: 9800, yield: 12.1, tr1y: 25.4, diffBenchmark: -11.5, country: 'US', index: 'Nasdaq100', theme: '고성장', issuer: '한국투자신탁운용', aum: '4천억', ter: '0.40%', launchDate: '2023-11-20', distFreq: '월분배' },
@@ -65,7 +65,7 @@ export default function CoveredCallTab() {
 
     return (
         <div className="w-full flex justify-center animate-in fade-in slide-in-from-bottom-2 duration-500 mt-2">
-            <div className="w-full bg-[#121217]/80 p-5 lg:p-8 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+            <div className="relative w-full bg-[#121217]/80 p-5 lg:p-8 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] min-h-[700px]">
 
                 {/* Header & Description */}
                 <div className="mb-6 border-b border-white/10 pb-6">
@@ -174,10 +174,10 @@ export default function CoveredCallTab() {
                     </div>
                 </div>
 
-                {/* Overaly Modal */}
+                {/* Overlay Modal */}
                 {selectedDetail && (
-                    <div className="fixed inset-0 z-[100] flex items-start pt-24 justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="bg-[#121217] border border-white/10 w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-300">
+                    <div className="absolute top-0 inset-x-0 bottom-0 z-[300] flex animate-in fade-in duration-200 bg-black/40 backdrop-blur-md rounded-3xl p-2 md:p-6">
+                        <div className="bg-[#0B0F19] border border-white/10 w-full h-full rounded-2xl shadow-2xl shadow-indigo-500/10 flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
 
                             {/* Modal Header */}
                             <div className="p-6 border-b border-white/5 flex justify-between items-start bg-gradient-to-r from-indigo-500/10 to-transparent">
@@ -196,22 +196,26 @@ export default function CoveredCallTab() {
 
                             <div className="overflow-y-auto p-6 flex-1 custom-scrollbar">
                                 {/* Summary Cards */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col justify-center">
-                                        <span className="text-xs text-gray-500 mb-1">상장일</span>
-                                        <span className="font-medium text-gray-200">{selectedDetail.launchDate}</span>
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+                                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col justify-center items-center text-center">
+                                        <span className="text-xs text-gray-500 mb-1">총보수 / AUM</span>
+                                        <span className="font-bold text-gray-200">{selectedDetail.ter} / {selectedDetail.aum.replace('억', '')}억</span>
                                     </div>
-                                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col justify-center">
-                                        <span className="text-xs text-gray-500 mb-1">총보수 (TER)</span>
-                                        <span className="font-bold text-gray-100">{selectedDetail.ter}</span>
+                                    <div className="bg-indigo-500/[0.05] border border-indigo-500/20 rounded-2xl p-4 flex flex-col justify-center items-center text-center">
+                                        <span className="text-xs text-indigo-400 mb-1">ETF 수익률 (1Y)</span>
+                                        <span className="font-extrabold text-indigo-300 text-lg">{selectedDetail.tr1y > 0 ? '+' : ''}{selectedDetail.tr1y.toFixed(2)}%</span>
                                     </div>
-                                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col justify-center">
-                                        <span className="text-xs text-gray-500 mb-1">순자산규모 (AUM)</span>
-                                        <span className="font-bold text-gray-100">{selectedDetail.aum}</span>
+                                    <div className="bg-rose-500/[0.05] border border-rose-500/20 rounded-2xl p-4 flex flex-col justify-center items-center text-center">
+                                        <span className="text-xs text-rose-400 mb-1">벤치마크 지수 (1Y TR)</span>
+                                        <span className="font-extrabold text-rose-300 text-lg">{((selectedDetail.tr1y) - (selectedDetail.diffBenchmark)).toFixed(2)}%</span>
                                     </div>
-                                    <div className="bg-emerald-500/[0.05] border border-emerald-500/20 rounded-2xl p-4 flex flex-col justify-center">
-                                        <span className="text-xs text-emerald-500/70 mb-1 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> 연환산 분배율</span>
-                                        <span className="font-extrabold text-emerald-400 text-lg">{selectedDetail.yield.toFixed(1)}% <span className="text-xs font-normal text-gray-400">({selectedDetail.distFreq})</span></span>
+                                    <div className="bg-slate-500/[0.05] border border-slate-500/20 rounded-2xl p-4 flex flex-col justify-center items-center text-center">
+                                        <span className="text-xs text-slate-400 mb-1">초과 수익 (괴리)</span>
+                                        <span className="font-extrabold text-white text-lg">{selectedDetail.diffBenchmark > 0 ? '+' : ''}{selectedDetail.diffBenchmark.toFixed(2)}%</span>
+                                    </div>
+                                    <div className="bg-emerald-500/[0.05] border border-emerald-500/20 rounded-2xl p-4 flex flex-col justify-center items-center text-center">
+                                        <span className="text-xs text-emerald-500/70 mb-1 flex items-center gap-1 justify-center"><BarChart3 className="w-3 h-3" /> 연환산 분배율</span>
+                                        <span className="font-extrabold text-emerald-400 text-lg">{selectedDetail.yield.toFixed(1)}%</span>
                                     </div>
                                 </div>
 
