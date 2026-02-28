@@ -90,6 +90,7 @@ export default function CoveredCallTab() {
     const [selectedForCompare, setSelectedForCompare] = useState<any[]>([]);
     const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
     const [chartPeriod, setChartPeriod] = useState('1Y');
+    const [hoveredLine, setHoveredLine] = useState<string | null>(null);
     const [realChartData, setRealChartData] = useState<any[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [apiError, setApiError] = useState<string | null>(null);
@@ -172,6 +173,7 @@ export default function CoveredCallTab() {
                 let yfPeriod = '1y';
                 if (chartPeriod === '1M') yfPeriod = '1mo';
                 else if (chartPeriod === '3M') yfPeriod = '3mo';
+                else if (chartPeriod === '6M') yfPeriod = '6mo';
                 else if (chartPeriod === 'YTD') yfPeriod = 'ytd';
                 else if (chartPeriod === '1Y') yfPeriod = '1y';
 
@@ -217,8 +219,8 @@ export default function CoveredCallTab() {
                         }
                         if (res.chartData) {
                             success = true;
-                            res.chartData.forEach((d: any) => {
-                                if (!combinedChartMap[d.date]) combinedChartMap[d.date] = { date: d.date };
+                            res.chartData.forEach((d: any, idx: number) => {
+                                if (!combinedChartMap[d.date]) combinedChartMap[d.date] = { date: d.date, originalIndex: Object.keys(combinedChartMap).length };
                                 combinedChartMap[d.date][res.ticker] = d[res.ticker];
                                 // We also take benchmark from the first ETF for visual comparison if needed, or we just plot tickers. 
                                 // Let's just plot the TRs of the funds. They can compare them visually.
@@ -230,7 +232,7 @@ export default function CoveredCallTab() {
                         }
                     });
 
-                    const finalChartData = Object.values(combinedChartMap).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                    const finalChartData = Object.values(combinedChartMap).sort((a: any, b: any) => a.originalIndex - b.originalIndex);
 
                     if (success) {
                         setRealChartData(finalChartData);
@@ -351,10 +353,10 @@ export default function CoveredCallTab() {
 
     return (
         <div className="w-full flex justify-center animate-in fade-in slide-in-from-bottom-2 duration-500 mt-2">
-            <div className="relative w-full bg-[#121217]/80 p-5 lg:p-8 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] min-h-[700px]">
+            <div className="relative w-full bg-[#121217]/80 p-4 lg:p-6 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] min-h-[700px]">
 
                 {/* Header & Description */}
-                <div className="mb-6 border-b border-white/10 pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="mb-4 border-b border-white/10 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h2 className="text-2xl font-extrabold text-white mb-2 flex items-center gap-3">
                             <Activity className="w-6 h-6 text-indigo-400" />
@@ -447,7 +449,7 @@ export default function CoveredCallTab() {
                 </div>
 
                 {/* Search & Filters */}
-                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="flex flex-col md:flex-row gap-4 mb-4">
                     <div className="relative flex-1 group">
 
                         {/* Quick Filters for Brands */}
@@ -543,21 +545,27 @@ export default function CoveredCallTab() {
                 </div>
 
                 {/* Data Table */}
-                <div className="bg-black/20 border border-white/5 rounded-2xl overflow-hidden shadow-xl mb-6">
-                    <div className="overflow-x-auto pb-10">
+                <div className="bg-black/20 border border-white/5 rounded-2xl overflow-hidden shadow-xl mb-4">
+                    <div className="overflow-x-auto pb-4">
                         <table className="w-full text-left border-collapse whitespace-nowrap min-w-[900px]">
                             <thead className="bg-[#09090b] border-b border-white/10">
-                                <tr className="text-xs font-semibold text-gray-400 text-center tracking-wider">
-                                    <th className="py-4 px-4 w-12 text-center">
-                                        비교
+                                <tr className="text-xs font-semibold text-gray-400 text-center tracking-wider hover:bg-white/[0.02]">
+                                    <th className="py-2 px-4 w-12 text-center relative">
+                                        <div className="w-5 h-5 mx-auto rounded border flex items-center justify-center transition-colors cursor-pointer border-gray-500 hover:border-indigo-400" onClick={() => {
+                                            if (selectedForCompare.length === filteredData.length && filteredData.length > 0) setSelectedForCompare([]);
+                                            else setSelectedForCompare([...filteredData]);
+                                        }}>
+                                            {selectedForCompare.length > 0 && selectedForCompare.length === filteredData.length && <Check size={14} className="text-indigo-400" strokeWidth={3} />}
+                                            {selectedForCompare.length > 0 && selectedForCompare.length !== filteredData.length && <div className="w-2.5 h-0.5 bg-indigo-400 rounded-full" />}
+                                        </div>
                                     </th>
-                                    <th className="py-4 px-4 text-left">종목명 / 티커</th>
-                                    <th className="py-4 px-3 w-40">분류 / 기초지수</th>
-                                    <th className="py-4 px-3 text-right">현재가</th>
-                                    <th className="py-4 px-3 bg-emerald-500/10 text-emerald-400/80">분배율(%)</th>
-                                    <th className="py-4 px-3 bg-indigo-500/10 text-indigo-400/80">1년 수익률(TR)</th>
-                                    <th className="py-4 px-4 bg-rose-500/10 text-rose-400/80">벤치마크 대비 차이(1Y)</th>
-                                    <th className="py-4 px-2 w-10 text-center rounded-tr-2xl"></th>
+                                    <th className="py-2 px-4 text-left">종목명 / 티커</th>
+                                    <th className="py-2 px-3 w-40">분류 / 기초지수</th>
+                                    <th className="py-2 px-3 text-right">현재가</th>
+                                    <th className="py-2 px-3 bg-emerald-500/10 text-emerald-400/80">분배율(%)</th>
+                                    <th className="py-2 px-3 bg-indigo-500/10 text-indigo-400/80">1년 수익률(TR)</th>
+                                    <th className="py-2 px-4 bg-rose-500/10 text-rose-400/80">벤치마크 대비 차이(1Y)</th>
+                                    <th className="py-2 px-2 w-10 text-center rounded-tr-2xl"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5 text-sm">
@@ -569,18 +577,18 @@ export default function CoveredCallTab() {
                                             onClick={() => handleToggleCompareToggle(item)}
                                             className={`transition-colors cursor-pointer group ${isSelected ? 'bg-indigo-500/10' : 'hover:bg-white/[0.04]'}`}
                                         >
-                                            <td className="py-4 px-4 text-center">
+                                            <td className="py-2 px-4 text-center">
                                                 <div className={`w-5 h-5 mx-auto rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-500'} `}>
                                                     {isSelected && <Check size={14} strokeWidth={3} />}
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-4">
+                                            <td className="py-2 px-4">
                                                 <div className="flex flex-col">
                                                     <span className={`font-bold transition-colors ${isSelected ? 'text-indigo-300' : 'text-gray-100 group-hover:text-indigo-300'}`}>{item.name}</span>
                                                     <span className="text-xs text-gray-500 font-mono mt-0.5">{item.ticker} | {item.issuer}</span>
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-3 text-center w-40">
+                                            <td className="py-2 px-3 text-center w-40">
                                                 <div className="flex flex-col gap-1 items-center justify-center relative z-10">
                                                     <div className="flex gap-1 justify-center">
                                                         <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-gray-300 whitespace-nowrap">{item.country === 'US' ? '🇺🇸 미국' : '🇰🇷 한국'}</span>
@@ -598,16 +606,16 @@ export default function CoveredCallTab() {
                                                     </select>
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-3 text-right font-mono font-medium text-gray-300">
+                                            <td className="py-2 px-3 text-right font-mono font-medium text-gray-300">
                                                 {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">로딩중...</span> : `${item.price.toLocaleString()}원`}
                                             </td>
-                                            <td className="py-4 px-3 text-center font-bold text-emerald-400 bg-emerald-500/[0.02]">
+                                            <td className="py-2 px-3 text-center font-bold text-emerald-400 bg-emerald-500/[0.02]">
                                                 {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : `${item.yield.toFixed(1)}%`}
                                             </td>
-                                            <td className="py-4 px-3 text-center bg-indigo-500/[0.02]">
+                                            <td className="py-2 px-3 text-center bg-indigo-500/[0.02]">
                                                 {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : formatRate(item.tr1y)}
                                             </td>
-                                            <td className="py-4 px-4 text-center bg-rose-500/[0.02]">
+                                            <td className="py-2 px-4 text-center bg-rose-500/[0.02]">
                                                 <div className="flex items-center justify-center gap-1.5">
                                                     {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : formatRate(item.diffBenchmark)}
                                                     <span className="relative group/tooltip flex items-center justify-center">
@@ -618,7 +626,7 @@ export default function CoveredCallTab() {
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-2 text-center" onClick={(e) => { e.stopPropagation(); handleRemoveEtf(item.id); }}>
+                                            <td className="py-2 px-2 text-center" onClick={(e) => { e.stopPropagation(); handleRemoveEtf(item.id); }}>
                                                 <button className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
                                                     <X size={16} />
                                                 </button>
@@ -656,8 +664,8 @@ export default function CoveredCallTab() {
 
                 {/* Multi-Compare Overlay Modal */}
                 {isCompareModalOpen && selectedForCompare.length > 0 && (
-                    <div className="fixed inset-0 z-[300] flex animate-in fade-in duration-200 bg-black/60 backdrop-blur-md p-2 md:p-6 items-center justify-center">
-                        <div className="bg-[#0B0F19] border border-white/10 w-full max-w-7xl h-[95vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+                    <div className="fixed inset-0 top-16 z-[300] flex animate-in fade-in duration-200 bg-black/60 backdrop-blur-md p-2 md:p-6 items-start justify-center">
+                        <div className="bg-[#0B0F19] border border-white/10 w-full max-w-7xl h-[calc(100vh-5rem)] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
 
                             {/* Modal Header */}
                             <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-indigo-500/10 to-transparent shrink-0">
@@ -679,7 +687,7 @@ export default function CoveredCallTab() {
                                             누적 수익률 (TR) 멀티 비교 차트
                                         </h4>
                                         <div className="flex bg-white/5 p-1 rounded-lg">
-                                            {['1M', '3M', 'YTD', '1Y'].map(pd => (
+                                            {['1M', '3M', '6M', 'YTD', '1Y'].map(pd => (
                                                 <button
                                                     key={pd}
                                                     onClick={() => setChartPeriod(pd)}
@@ -715,15 +723,16 @@ export default function CoveredCallTab() {
                                                     labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}
                                                     formatter={(val: number) => [`${val}%`, '']}
                                                 />
-                                                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" />
+                                                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" onMouseEnter={(e: any) => setHoveredLine(e.dataKey as string)} onMouseLeave={() => setHoveredLine(null)} />
                                                 {/* Render main benchmark from the first item */}
-                                                <Line type="monotone" name={`${selectedForCompare[0].index} (TR 기준)`} dataKey="Benchmark" stroke="#f43f5e" strokeWidth={3} strokeDasharray="5 5" dot={false} connectNulls={false} />
+                                                <Line type="monotone" name={`${selectedForCompare[0].index} (TR 기준)`} dataKey="Benchmark" stroke="#f43f5e" strokeWidth={hoveredLine === 'Benchmark' ? 5 : 3} strokeDasharray="5 5" dot={false} connectNulls={false} opacity={hoveredLine && hoveredLine !== 'Benchmark' ? 0.2 : 1} onMouseEnter={() => setHoveredLine('Benchmark')} onMouseLeave={() => setHoveredLine(null)} />
 
                                                 {/* Render lines for each selected ETF */}
                                                 {selectedForCompare.map((item, idx) => {
                                                     const colors = ['#818cf8', '#34d399', '#fbbf24', '#a78bfa', '#60a5fa', '#f87171', '#34d399'];
+                                                    const isHovered = hoveredLine === item.ticker;
                                                     return (
-                                                        <Line key={item.ticker} type="monotone" name={item.name} dataKey={item.ticker} stroke={colors[idx % colors.length]} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} connectNulls={false} />
+                                                        <Line key={item.ticker} type="monotone" name={item.name} dataKey={item.ticker} stroke={colors[idx % colors.length]} strokeWidth={isHovered ? 5 : 2.5} opacity={hoveredLine && !isHovered ? 0.2 : 1} dot={false} activeDot={{ r: isHovered ? 6 : 4 }} connectNulls={false} onMouseEnter={() => setHoveredLine(item.ticker)} onMouseLeave={() => setHoveredLine(null)} />
                                                     )
                                                 })}
                                             </LineChart>
@@ -792,6 +801,9 @@ export default function CoveredCallTab() {
                                     </div>
                                     <p className="text-[11px] text-gray-500 mt-2 text-right">
                                         * 상승/하락 참여율은 지수 움직임 대비 커버드콜 상품의 민감도(Capture Ratio)를 백분율 산출한 값입니다.
+                                    </p>
+                                    <p className="text-[11px] text-gray-500 mt-1 text-right">
+                                        ※ (참고) 벤치마크는 TR 데이터가 우선되며, 커버드콜 종목은 종가(PR) 데이터로 산출될 수 있습니다. 분배금을 제외한 주가 등락만 반영한 결과이므로 투자 시 유의 바랍니다.
                                     </p>
                                 </div>
 
