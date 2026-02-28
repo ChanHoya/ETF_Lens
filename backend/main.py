@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from api.router import router as api_router
 from api.my_assets import router as my_assets_router
 from api.covered_call import router as cc_router
+from api.exit_signal import router as exit_signal_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -44,6 +45,7 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api/v1")
 app.include_router(my_assets_router, prefix="/api/v1/my")
 app.include_router(cc_router, prefix="/api/v1")
+app.include_router(exit_signal_router, prefix="/api/v1/exit-signal")
 
 
 @app.get("/health")

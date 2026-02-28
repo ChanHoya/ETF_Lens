@@ -49,15 +49,54 @@ const mockCliData = [
 ];
 
 export default function KospiExitAnalyzer() {
-    // State to hold mock values for the 3 key indicators
+    // Current Active Status
     const [dollarIndex, setDollarIndex] = useState(mockDollarData[11].val);
     const [dollarKrw, setDollarKrw] = useState(mockDollarData[11].krw);
     const [forwardPer, setForwardPer] = useState(mockPerData[11].val);
     const [oecdCliValue, setOecdCliValue] = useState(mockCliData[11].val);
     const [oecdCliDownMonths, setOecdCliDownMonths] = useState(2); // Based on recent mock drops
 
+    // Chart Data State
+    const [baseDollar, setBaseDollar] = useState([...mockDollarData]);
+    const [basePer, setBasePer] = useState([...mockPerData]);
+    const [baseCli, setBaseCli] = useState([...mockCliData]);
+
+    // API State
+    const [loading, setLoading] = useState(true);
+    const [isSimulating, setIsSimulating] = useState(false);
+
+    // Fetch Real Data on Mount
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const res = await fetch('http://localhost:8000/api/v1/exit-signal');
+                if (res.ok) {
+                    const data = await res.json();
+
+                    // Update base chart data
+                    setBaseDollar(data.indicators.dollar);
+                    setBasePer(data.indicators.per);
+                    setBaseCli(data.indicators.cli);
+
+                    // Update current values
+                    setDollarIndex(data.current_status.dollar);
+                    setDollarKrw(data.current_status.krw);
+                    setForwardPer(data.current_status.per);
+                    setOecdCliValue(data.current_status.cli);
+                    setOecdCliDownMonths(data.current_status.cli_down_months);
+                }
+            } catch (err) {
+                console.error("Failed to fetch Exit Signal data:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
+
     // Mock functions to allow user to simulate different scenarios
     const simulateDanger = () => {
+        setIsSimulating(true);
         setDollarIndex(102.1);
         setDollarKrw(1360);
         setForwardPer(12.6);
@@ -66,6 +105,7 @@ export default function KospiExitAnalyzer() {
     };
 
     const simulateSafe = () => {
+        setIsSimulating(true);
         setDollarIndex(97.77);
         setDollarKrw(1280);
         setForwardPer(10.5);
@@ -74,6 +114,7 @@ export default function KospiExitAnalyzer() {
     };
 
     const simulateWarning = () => {
+        setIsSimulating(true);
         setDollarIndex(100.5);
         setDollarKrw(1310);
         setForwardPer(11.8);
@@ -83,14 +124,15 @@ export default function KospiExitAnalyzer() {
 
     // When simulators run, update out mock charts to visually reflect the new end-state
     const getChartData = (baseData: any[], currentVal: number, extraProps?: any) => {
+        if (!isSimulating) return baseData; // Show raw data if not simulating
         const newData = [...baseData];
         newData[newData.length - 1] = { ...newData[newData.length - 1], val: currentVal, ...extraProps };
         return newData;
     };
 
-    const chartDollar = getChartData(mockDollarData, dollarIndex, { krw: dollarKrw });
-    const chartPer = getChartData(mockPerData, forwardPer);
-    const chartCli = getChartData(mockCliData, oecdCliValue);
+    const chartDollar = getChartData(baseDollar, dollarIndex, { krw: dollarKrw });
+    const chartPer = getChartData(basePer, forwardPer);
+    const chartCli = getChartData(baseCli, oecdCliValue);
 
     // Calculate status levels
     const getDollarStatus = () => {
