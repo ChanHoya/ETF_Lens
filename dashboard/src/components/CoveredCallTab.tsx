@@ -4,13 +4,27 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, TrendingUp, TrendingDown, X, Info, ShieldAlert, BarChart3, Activity, Hourglass, Check, Plus } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
+// Benchmark Options for Users to Select
+export const BENCHMARK_OPTIONS = [
+    { label: 'S&P 500 (TR)', symbol: '^SP500TR' },
+    { label: '나스닥 100 (NDX)', symbol: '^NDX' },
+    { label: '다우존스 미국 배당 100', symbol: 'SCHD' },
+    { label: '코스피 200 (TR)', symbol: '^KS200' },
+    { label: '골드 (GLD)', symbol: 'GLD' },
+    { label: '은 (SLV)', symbol: 'SLV' },
+    { label: '미국채 20년+ (TLT)', symbol: 'TLT' }
+];
+
 // Mock Data template for dynamically added ETFs
 const createETFEntry = (etf: any, id: number) => {
-    let index = 'KOSPI200';
+    let indexName = '코스피 200 (TR)';
+    let indexTicker = '^KS200';
     let country = 'KR';
-    if (etf.name.includes('나스닥') || etf.name.includes('테크')) { index = 'Nasdaq100'; country = 'US'; }
-    else if (etf.name.includes('다우존스') || etf.name.includes('배당')) { index = 'Dow Jones U.S. Dividend 100'; country = 'US'; }
-    else if (etf.name.includes('S&P') || etf.name.includes('미국')) { index = 'S&P500'; country = 'US'; }
+
+    if (etf.name.includes('나스닥') || etf.name.includes('테크')) { indexName = '나스닥 100 (NDX)'; indexTicker = '^NDX'; country = 'US'; }
+    else if (etf.name.includes('다우존스') || etf.name.includes('배당')) { indexName = '다우존스 미국 배당 100'; indexTicker = 'SCHD'; country = 'US'; }
+    else if (etf.name.includes('S&P') || etf.name.includes('미국')) { indexName = 'S&P 500 (TR)'; indexTicker = '^SP500TR'; country = 'US'; }
+    else if (etf.name.includes('골드') || etf.name.includes('금')) { indexName = '골드 (GLD)'; indexTicker = 'GLD'; country = 'US'; }
 
     return {
         id,
@@ -21,7 +35,8 @@ const createETFEntry = (etf: any, id: number) => {
         tr1y: 0,
         diffBenchmark: 0,
         country,
-        index,
+        index: indexName,
+        indexTicker,
         theme: etf.name.includes('배당') ? '고배당' : '옵션프리미엄',
         issuer: etf.name.split(' ')[0],
         aum: '-',
@@ -136,7 +151,7 @@ export default function CoveredCallTab() {
             setIsLoadingData(true);
             try {
                 let tickerQuery = selectedDetail.ticker;
-                let bmQuery = selectedDetail.index;
+                let bmQuery = selectedDetail.indexTicker || '^SP500TR'; // Default fallback
 
                 // Map UI period to yfinance period
                 let yfPeriod = '1y';
@@ -257,6 +272,13 @@ export default function CoveredCallTab() {
 
     const handleRemoveEtf = (idToRemove: number) => {
         setCcDataList(prev => prev.filter(item => item.id !== idToRemove));
+    };
+
+    const handleUpdateBenchmark = (id: number, newTicker: string) => {
+        const option = BENCHMARK_OPTIONS.find(o => o.symbol === newTicker);
+        if (option) {
+            setCcDataList(prev => prev.map(item => item.id === id ? { ...item, indexTicker: option.symbol, index: option.label } : item));
+        }
     };
 
     const formatRate = (rate: number) => {
@@ -380,7 +402,7 @@ export default function CoveredCallTab() {
                             <thead className="bg-[#09090b] border-b border-white/10">
                                 <tr className="text-xs font-semibold text-gray-400 text-center tracking-wider">
                                     <th className="py-4 px-4 text-left">종목명 / 티커</th>
-                                    <th className="py-4 px-3">분류/테마</th>
+                                    <th className="py-4 px-3 w-40">분류 / 기초지수</th>
                                     <th className="py-4 px-3 text-right">현재가</th>
                                     <th className="py-4 px-3 bg-emerald-500/10 text-emerald-400/80">분배율(%)</th>
                                     <th className="py-4 px-3 bg-indigo-500/10 text-indigo-400/80">1년 수익률(TR)</th>
@@ -401,10 +423,22 @@ export default function CoveredCallTab() {
                                                 <span className="text-xs text-gray-500 font-mono mt-0.5">{item.ticker} | {item.issuer}</span>
                                             </div>
                                         </td>
-                                        <td className="py-4 px-3 text-center">
-                                            <div className="flex flex-col gap-1 items-center justify-center">
-                                                <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-gray-300">{item.country === 'US' ? '🇺🇸 미국' : '🇰🇷 한국'}</span>
-                                                <span className="text-[10px] text-gray-400">{item.theme}</span>
+                                        <td className="py-4 px-3 text-center w-40">
+                                            <div className="flex flex-col gap-1 items-center justify-center relative z-10">
+                                                <div className="flex gap-1 justify-center">
+                                                    <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-gray-300 whitespace-nowrap">{item.country === 'US' ? '🇺🇸 미국' : '🇰🇷 한국'}</span>
+                                                    <span className="text-[10px] text-gray-400 bg-black/40 px-2 py-0.5 rounded whitespace-nowrap">{item.theme}</span>
+                                                </div>
+                                                <select
+                                                    value={item.indexTicker || '^SP500TR'}
+                                                    onChange={(e) => handleUpdateBenchmark(item.id, e.target.value)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="bg-black/40 border border-white/20 rounded px-1.5 py-1 text-[10px] text-gray-300 w-full max-w-[140px] appearance-none focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer text-center"
+                                                >
+                                                    {BENCHMARK_OPTIONS.map(opt => (
+                                                        <option key={opt.symbol} value={opt.symbol}>{opt.label}</option>
+                                                    ))}
+                                                </select>
                                             </div>
                                         </td>
                                         <td className="py-4 px-3 text-right font-mono font-medium text-gray-300">
