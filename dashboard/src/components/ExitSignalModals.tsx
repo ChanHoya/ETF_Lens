@@ -4,7 +4,7 @@ import { Search } from 'lucide-react';
 
 export function DollarModalContent() {
     const [period, setPeriod] = useState('1Y');
-    const [data, setData] = useState([]);
+    const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -32,7 +32,23 @@ export function DollarModalContent() {
         if (period === '1Y') months = 12;
         if (period === '3Y') months = 36;
         if (period === '10Y') months = 120;
-        return data.slice(-months);
+
+        const sliced = data.slice(-months);
+        if (sliced.length === 0) return [];
+
+        // Base everything off 100 at the start of the period to see relative flows
+        const baseKrw = sliced[0].krw || 1;
+        const baseVal = sliced[0].val || 1;
+        const baseKospi = sliced[0].kospi || 1;
+        const baseSp = sliced[0].sp500 || 1;
+
+        return sliced.map((d: any) => ({
+            ...d,
+            indexedVal: (d.val / baseVal) * 100,
+            indexedKrw: (d.krw / baseKrw) * 100,
+            indexedKospi: (d.kospi / baseKospi) * 100,
+            indexedSp500: (d.sp500 / baseSp) * 100,
+        }));
     }, [data, period]);
 
     if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading data...</div>;
@@ -57,27 +73,35 @@ export function DollarModalContent() {
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                         <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickMargin={12} />
 
-                        <YAxis yAxisId="left" domain={['auto', 'auto']} stroke="#34d399" fontSize={11} width={45} tickFormatter={(val) => Math.round(val).toString()} />
-                        <YAxis yAxisId="right" orientation="right" domain={[1000, 'dataMax']} stroke="#60a5fa" fontSize={11} width={45} />
+                        <YAxis yAxisId="left" domain={['auto', 'auto']} stroke="#a1a1aa" fontSize={11} width={45} tickFormatter={(val) => Math.round(val).toString()} />
 
                         <RechartsTooltip
                             contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                             itemStyle={{ fontSize: '12px' }}
+                            formatter={(value: any, name: any, props: any) => {
+                                if (!props || !props.payload) return [value, name];
+                                if (name === '달러 인덱스 (지수화)') return [props.payload.val?.toFixed(2), '달러 인덱스'];
+                                if (name === 'USD/KRW (지수화)') return [`${Math.round(props.payload.krw || 0).toLocaleString()}원`, 'USD/KRW'];
+                                if (name === 'KOSPI (지수화)') return [Math.round(props.payload.kospi || 0).toLocaleString(), 'KOSPI'];
+                                if (name === 'S&P 500 (지수화)') return [Math.round(props.payload.sp500 || 0).toLocaleString(), 'S&P 500'];
+                                return [value, name];
+                            }}
+                            labelStyle={{ color: '#aaa', marginBottom: '8px', fontSize: '12px' }}
                         />
 
-                        <Line yAxisId="left" type="monotone" name="달러 인덱스" dataKey="dollar" stroke="#34d399" strokeWidth={3} dot={false} />
-                        <Line yAxisId="right" type="stepAfter" name="USD/KRW" dataKey="krw" stroke="#60a5fa" strokeWidth={2} strokeDasharray="4 4" dot={false} />
-                        <Line yAxisId="right" type="monotone" name="KOSPI" dataKey="kospi" stroke="#f43f5e" strokeWidth={1.5} dot={false} />
-                        <Line yAxisId="right" type="monotone" name="S&P 500" dataKey="sp500" stroke="#a78bfa" strokeWidth={1.5} dot={false} />
+                        <Line yAxisId="left" type="monotone" name="달러 인덱스 (지수화)" dataKey="indexedVal" stroke="#34d399" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                        <Line yAxisId="left" type="stepAfter" name="USD/KRW (지수화)" dataKey="indexedKrw" stroke="#60a5fa" strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={{ r: 6 }} />
+                        <Line yAxisId="left" type="monotone" name="KOSPI (지수화)" dataKey="indexedKospi" stroke="#f43f5e" strokeWidth={1.5} dot={false} />
+                        <Line yAxisId="left" type="monotone" name="S&P 500 (지수화)" dataKey="indexedSp500" stroke="#a78bfa" strokeWidth={1.5} dot={false} />
                     </LineChart>
                 </ResponsiveContainer>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-400 justify-center">
-                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-400 rounded-sm"></div> 달러 인덱스 (좌축)</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 border-2 border-blue-400 border-dashed rounded-sm"></div> 원/달러 환율 (우축)</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-rose-400 rounded-sm"></div> KOSPI (우축)</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-purple-400 rounded-sm"></div> S&P 500 (우축)</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-400 rounded-sm"></div> 달러 인덱스</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 border-2 border-blue-400 border-dashed rounded-sm"></div> 원/달러 환율</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-rose-400 rounded-sm"></div> KOSPI</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-purple-400 rounded-sm"></div> S&P 500</div>
             </div>
         </div>
     );
