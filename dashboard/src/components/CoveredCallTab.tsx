@@ -52,6 +52,7 @@ export default function CoveredCallTab() {
     const [chartPeriod, setChartPeriod] = useState('1Y');
     const [realChartData, setRealChartData] = useState<any[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(false);
+    const [apiError, setApiError] = useState<string | null>(null);
 
     // For storing real stats mapped by ticker
     const [realStats, setRealStats] = useState<any>({});
@@ -93,6 +94,7 @@ export default function CoveredCallTab() {
         if (!selectedDetail) return;
 
         setRealChartData([]); // clear old data before fetching new ones
+        setApiError(null);
 
         const fetchChart = async () => {
             setIsLoadingData(true);
@@ -108,7 +110,7 @@ export default function CoveredCallTab() {
                 else if (chartPeriod === '1Y') yfPeriod = '1y';
 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // increased to 15s timeout
 
                 try {
                     const payload = {
@@ -158,20 +160,22 @@ export default function CoveredCallTab() {
                     if (success) {
                         setIsLoadingData(false);
                         return;
+                    } else {
+                        setApiError("해당 종목 또는 벤치마크 지수의 데이터를 서버에서 불러오지 못했습니다. (상장폐지 또는 데이터 부족)");
                     }
-                } catch (fetchError) {
+                } catch (fetchError: any) {
                     console.error("Fetch API timeout or network error:", fetchError);
+                    if (fetchError.name === 'AbortError') {
+                        setApiError("서버 응답이 15초를 초과하여 데이터를 불러오지 못했습니다.");
+                    } else {
+                        setApiError("서버 연결에 실패했습니다.");
+                    }
                 }
 
-                // Fallback to mock if API fails, times out, or no mapping
-                setRealChartData(generateMockChartData(chartPeriod));
                 setRealStats(null); // Clear real stats so UI uses defaults
-
-                // Fallback to mock if API fails, times out, or no mapping
-                setRealChartData(generateMockChartData(chartPeriod));
             } catch (e) {
                 console.error("API error", e);
-                setRealChartData(generateMockChartData(chartPeriod));
+                setApiError("알 수 없는 오류가 발생했습니다.");
             } finally {
                 setIsLoadingData(false);
             }
@@ -386,8 +390,15 @@ export default function CoveredCallTab() {
                                                 <span className="text-sm font-bold text-indigo-400 animate-pulse">데이터를 분석 중입니다...</span>
                                             </div>
                                         )}
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart data={realChartData.length > 0 ? realChartData : generateMockChartData(chartPeriod)} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                                        {apiError && !isLoadingData && (
+                                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl p-4 text-center">
+                                                <ShieldAlert className="w-10 h-10 text-rose-500/80 mb-3" />
+                                                <span className="text-sm font-bold text-rose-400 mb-1">데이터 오류</span>
+                                                <span className="text-xs text-rose-400/70">{apiError}</span>
+                                            </div>
+                                        )}
+                                        <ResponsiveContainer width="100%" height="100%" className={apiError ? "opacity-20" : ""}>
+                                            <LineChart data={realChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                                                 <XAxis dataKey="date" stroke="rgba(255,255,255,0.3)" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} tickMargin={10} minTickGap={30} />
                                                 <YAxis stroke="rgba(255,255,255,0.3)" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} tickFormatter={(val) => `${val}%`} />
@@ -395,10 +406,11 @@ export default function CoveredCallTab() {
                                                     contentStyle={{ backgroundColor: 'rgba(12,10,24,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
                                                     itemStyle={{ fontWeight: 600 }}
                                                     labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}
+                                                    formatter={(val: number) => [`${val}%`, '']}
                                                 />
                                                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" />
-                                                <Line type="monotone" name={`${selectedDetail.name} (TR)`} dataKey="ccTotalReturn" stroke="#818cf8" strokeWidth={3} dot={false} activeDot={{ r: 4 }} />
-                                                <Line type="monotone" name={`${selectedDetail.index} 지수 (TR)`} dataKey="bmTotalReturn" stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                                                <Line type="monotone" name={`${selectedDetail.name} (TR)`} dataKey="ccTotalReturn" stroke="#818cf8" strokeWidth={3} dot={false} activeDot={{ r: 4 }} connectNulls={false} />
+                                                <Line type="monotone" name={`${selectedDetail.index} 지수 (TR)`} dataKey="bmTotalReturn" stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls={false} />
                                             </LineChart>
                                         </ResponsiveContainer>
                                     </div>
