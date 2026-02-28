@@ -10,7 +10,7 @@ class CoveredCallAnalyzer:
         self.benchmark_map = {
             "S&P500": "^SP500TR",  # Yahoo Finance S&P 500 Total Return TR
             "Nasdaq100": "QQQ",  # Best accessible proxy for Nasdaq 100 TR
-            "KOSPI200": "069500.KS",  # KODEX 200 (Adj Close includes dividends -> KOSPI 200 TR proxy)
+            "KOSPI200": "^KS200",  # KOSPI 200 Index
             "Dow Jones U.S. Dividend 100": "SCHD",  # Proxy for US Dividend 100 TR
         }
 
@@ -43,6 +43,10 @@ class CoveredCallAnalyzer:
             if "Adj Close" not in df.columns and "Close" in df.columns:
                 df["Adj Close"] = df["Close"]
 
+            # Remove timezone so dates align perfectly across different countries
+            if df.index.tz is not None:
+                df.index = df.index.tz_localize(None)
+
             return df[["Close", "Adj Close"]].copy()
         except Exception as e:
             print(f"Error fetching data for {symbol}: {e}")
@@ -55,10 +59,14 @@ class CoveredCallAnalyzer:
         Calculates Upside and Downside Capture Ratios using Monthly or Daily Returns.
         Assuming daily returns for precision here.
         """
-        # Align dates
-        df = pd.concat(
-            [fund_prices.rename("Fund"), bench_prices.rename("Bench")], axis=1
-        ).dropna()
+        # Align dates and remove missing due to timezone/holiday differences
+        df = (
+            pd.concat(
+                [fund_prices.rename("Fund"), bench_prices.rename("Bench")], axis=1
+            )
+            .ffill()
+            .bfill()
+        )
         if df.empty or len(df) < 2:
             return {"upside_capture": 0.0, "downside_capture": 0.0}
 
@@ -93,9 +101,13 @@ class CoveredCallAnalyzer:
         """
         Calculates TR across the entire provided timeseries, and the difference.
         """
-        df = pd.concat(
-            [fund_prices.rename("Fund"), bench_prices.rename("Bench")], axis=1
-        ).dropna()
+        df = (
+            pd.concat(
+                [fund_prices.rename("Fund"), bench_prices.rename("Bench")], axis=1
+            )
+            .ffill()
+            .bfill()
+        )
         if len(df) < 2:
             return {"fund_tr": 0.0, "bench_tr": 0.0, "tr_difference": 0.0}
 

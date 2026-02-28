@@ -94,7 +94,7 @@ async def get_covered_call_chart(request: CoveredCallRequest):
     for sym, series in fund_series_list.items():
         df_all[sym] = series
 
-    df_all = df_all.dropna()
+    df_all = df_all.ffill().bfill()
     if len(df_all) == 0:
         return {"error": "No overlapping data"}
 
