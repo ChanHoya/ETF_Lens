@@ -96,8 +96,8 @@ export default function CoveredCallTab() {
                                 key={c}
                                 onClick={() => setSelectedCountry(c)}
                                 className={`px-4 py-2 rounded-xl text-sm font-bold border transition-colors ${selectedCountry === c
-                                        ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50'
-                                        : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
+                                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50'
+                                    : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
                                     }`}
                             >
                                 {c === 'All' ? '전체 국가' : c === 'US' ? '미국 지수' : '한국 지수'}
@@ -217,8 +217,17 @@ export default function CoveredCallTab() {
 
                                 {/* Chart Area */}
                                 <div className="bg-black/30 border border-white/5 rounded-2xl p-5 mb-6">
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h4 className="font-bold text-gray-200">누적 수익률 (TR) 비교 차트</h4>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h4 className="font-bold text-gray-200 flex items-center gap-2">
+                                            누적 수익률 (TR) 비교 차트
+                                            <span className="relative group/info cursor-help">
+                                                <Info className="w-4 h-4 text-indigo-400" />
+                                                <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-900 border border-indigo-500/30 text-xs p-3 rounded-lg opacity-0 group-hover/info:opacity-100 transition-opacity pointer-events-none z-50 text-gray-300 shadow-xl leading-relaxed">
+                                                    <strong className="text-white block mb-1">공정한 수익률 비교 (TR)</strong>
+                                                    커버드콜과 기초 자산의 정확한 비교를 위해, 벤치마크 지수 역시 배당금이 재투자된 총수익률(Total Return) 기준으로 산출 및 표기됩니다.
+                                                </span>
+                                            </span>
+                                        </h4>
                                         <div className="flex bg-white/5 p-1 rounded-lg">
                                             {['1M', '3M', 'YTD', '1Y'].map(pd => (
                                                 <button
@@ -242,9 +251,9 @@ export default function CoveredCallTab() {
                                                     itemStyle={{ fontWeight: 600 }}
                                                     labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}
                                                 />
-                                                <Legend wrapperStyle={{ fontSize: '12px' }} iconType="circle" />
+                                                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" />
                                                 <Line type="monotone" name={`${selectedDetail.name} (TR)`} dataKey="ccTotalReturn" stroke="#818cf8" strokeWidth={3} dot={false} activeDot={{ r: 4 }} />
-                                                <Line type="monotone" name={`${selectedDetail.index} (TR)`} dataKey="bmTotalReturn" stroke="#34d399" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                                                <Line type="monotone" name={`${selectedDetail.index} 지수 (TR)`} dataKey="bmTotalReturn" stroke="#34d399" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                                             </LineChart>
                                         </ResponsiveContainer>
                                     </div>
