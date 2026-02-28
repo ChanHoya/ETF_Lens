@@ -116,6 +116,31 @@ export default function CoveredCallTab() {
         return null;
     };
 
+    const CustomReturnTooltip = ({ active, payload }: any) => {
+        if (active && payload && payload.length) {
+            const data = payload[0].payload;
+            return (
+                <div className="bg-[#0c0a18]/95 border border-white/10 p-4 rounded-xl shadow-2xl z-50">
+                    <p className="font-bold text-gray-200 mb-2">{data.name}</p>
+                    <div className="flex flex-col gap-1.5">
+                        <p className="text-indigo-400 text-[13px] flex justify-between gap-6"><span>수익률 ({chartPeriod}):</span> <span className="font-mono font-bold">{data.trPeriod > 0 ? '+' : ''}{data.trPeriod}%</span></p>
+                        <p className="text-slate-300 text-[13px] flex justify-between gap-6"><span>초과 수익(괴리):</span> <span className="font-mono font-bold">{data.diffBenchmark > 0 ? '+' : ''}{data.diffBenchmark}%</span></p>
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
+
+    const handleLegendMouseEnter = (o: any) => {
+        const item = selectedForCompare.find(x => x.name === o.value);
+        if (item) setHoveredScatterItem(item.ticker);
+    };
+
+    const handleLegendMouseLeave = () => {
+        setHoveredScatterItem(null);
+    };
+
     // Favorites States
     const [savedFavorites, setSavedFavorites] = useState<{ name: string, list: any[] }[]>([]);
     const [isFavoritesMenuOpen, setIsFavoritesMenuOpen] = useState(false);
@@ -950,87 +975,172 @@ export default function CoveredCallTab() {
                                 </p>
                             </div>
 
-                            {/* Scatter Chart Area for Capture Ratios */}
-                            <div className="bg-black/30 border border-white/5 rounded-2xl p-4 shrink-0 flex flex-col">
-                                <h4 className="font-bold text-gray-200 flex items-center gap-2 mb-4">
-                                    업 & 다운 캡처 (Capture Ratio) 분포도
-                                </h4>
-                                <div className="h-[300px] w-full relative">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 10 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                            <XAxis
-                                                type="number"
-                                                dataKey="downside"
-                                                name="하락 참여율"
-                                                unit="%"
-                                                domain={[120, 0]}
-                                                reversed={true}
-                                                stroke="rgba(255,255,255,0.3)"
-                                                tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
-                                                label={{ value: "하락 참여율 (낮을수록 우측 이동/좋음 ➡️)", position: "bottom", style: { fill: 'rgba(255,255,255,0.5)', fontSize: 11 }, offset: 0 }}
-                                            />
-                                            <YAxis
-                                                type="number"
-                                                dataKey="upside"
-                                                name="상승 참여율"
-                                                unit="%"
-                                                domain={[0, 120]}
-                                                stroke="rgba(255,255,255,0.3)"
-                                                tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
-                                                label={{ value: "상승 참여율 (높을수록 좋음 ⬆️)", angle: -90, position: "left", style: { fill: 'rgba(255,255,255,0.5)', fontSize: 11 } }}
-                                            />
-                                            <ZAxis type="category" dataKey="ticker" name="종목" />
-                                            <RechartsTooltip content={<CustomScatterTooltip />} cursor={{ strokeDasharray: '3 3' }} />
-                                            <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} iconType="circle" />
+                            {/* Scatter Charts Area: Returns vs Capture Ratios */}
+                            <div className="bg-black/30 border border-white/5 rounded-2xl p-4 shrink-0 flex flex-col xl:flex-row gap-6">
 
-                                            <ReferenceLine x={100} stroke="#f43f5e" strokeDasharray="3 3" label={{ position: 'top', value: '지수 하락(100%)', fill: '#f43f5e', fontSize: 10 }} />
-                                            <ReferenceLine y={100} stroke="#f43f5e" strokeDasharray="3 3" label={{ position: 'right', value: '지수 상승(100%)', fill: '#f43f5e', fontSize: 10 }} />
+                                {/* Left Chart: Excess Return vs Total Return */}
+                                <div className="flex-1 flex flex-col">
+                                    <h4 className="font-bold text-gray-200 flex items-center gap-2 mb-4">
+                                        수익률 vs 초과 수익률 (괴리) 분포도
+                                    </h4>
+                                    <div className="h-[300px] w-full relative">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 10 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                                <XAxis
+                                                    type="number"
+                                                    dataKey="diffBenchmark"
+                                                    name="초과 수익률"
+                                                    unit="%"
+                                                    stroke="rgba(255,255,255,0.3)"
+                                                    tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
+                                                    label={{ value: "초과 수익 (괴리) % (우측이 벤치마크 상회 ➡️)", position: "bottom", style: { fill: 'rgba(255,255,255,0.5)', fontSize: 11 }, offset: 0 }}
+                                                />
+                                                <YAxis
+                                                    type="number"
+                                                    dataKey="trPeriod"
+                                                    name={`수익률 (${chartPeriod})`}
+                                                    unit="%"
+                                                    stroke="rgba(255,255,255,0.3)"
+                                                    tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
+                                                    label={{ value: `수익률 (${chartPeriod}) (높을수록 좋음 ⬆️)`, angle: -90, position: "left", style: { fill: 'rgba(255,255,255,0.5)', fontSize: 11 } }}
+                                                />
+                                                <ZAxis type="category" dataKey="ticker" name="종목" />
+                                                <RechartsTooltip content={<CustomReturnTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+                                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} iconType="circle" onMouseEnter={handleLegendMouseEnter} onMouseLeave={handleLegendMouseLeave} />
 
-                                            {selectedForCompare.map((item, idx) => {
-                                                const colors = ['#818cf8', '#34d399', '#fbbf24', '#a78bfa', '#60a5fa', '#f87171', '#34d399'];
-                                                const stats = realStats[item.ticker] || {};
-                                                const upCap = stats.upside_capture !== undefined ? stats.upside_capture : 45.0;
-                                                const downCap = stats.downside_capture !== undefined ? stats.downside_capture : 82.0;
-                                                const scatterData = [{
-                                                    ticker: item.ticker,
-                                                    name: item.name,
-                                                    upside: Number(upCap.toFixed(1)),
-                                                    downside: Number(downCap.toFixed(1))
-                                                }];
+                                                <ReferenceLine x={0} stroke="#f43f5e" strokeDasharray="3 3" label={{ position: 'top', value: '지수 일치(0%)', fill: '#f43f5e', fontSize: 10 }} />
+                                                <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3" />
 
-                                                // Custom dot rendering for animated highlight
-                                                const CustomDot = (props: any) => {
-                                                    const { cx, cy, fill } = props;
-                                                    const isHovered = hoveredScatterItem === item.ticker;
+                                                {selectedForCompare.map((item, idx) => {
+                                                    const colors = ['#818cf8', '#34d399', '#fbbf24', '#a78bfa', '#60a5fa', '#f87171', '#34d399'];
+                                                    const stats = realStats[item.ticker] || {};
+                                                    const trPeriod = stats.tr_period !== undefined ? stats.tr_period : item.tr1y;
+                                                    const diffPeriod = stats.diff_benchmark_period !== undefined ? stats.diff_benchmark_period : item.diffBenchmark;
+
+                                                    const scatterData = [{
+                                                        ticker: item.ticker,
+                                                        name: item.name,
+                                                        trPeriod: Number(trPeriod.toFixed(2)),
+                                                        diffBenchmark: Number(diffPeriod.toFixed(2))
+                                                    }];
+
+                                                    // Custom dot rendering for animated highlight
+                                                    const CustomDot = (props: any) => {
+                                                        const { cx, cy, fill } = props;
+                                                        const isHovered = hoveredScatterItem === item.ticker;
+                                                        return (
+                                                            <circle
+                                                                cx={cx}
+                                                                cy={cy}
+                                                                r={isHovered ? 12 : 7}
+                                                                fill={fill}
+                                                                className={isHovered ? "animate-pulse shadow-lg" : "transition-all duration-300"}
+                                                                opacity={hoveredScatterItem && !isHovered ? 0.3 : 1}
+                                                            />
+                                                        );
+                                                    };
+
                                                     return (
-                                                        <circle
-                                                            cx={cx}
-                                                            cy={cy}
-                                                            r={isHovered ? 12 : 7}
-                                                            fill={fill}
-                                                            className={isHovered ? "animate-pulse shadow-lg" : "transition-all duration-300"}
-                                                            opacity={hoveredScatterItem && !isHovered ? 0.3 : 1}
+                                                        <Scatter
+                                                            key={item.ticker}
+                                                            name={item.name}
+                                                            data={scatterData}
+                                                            fill={colors[idx % colors.length]}
+                                                            shape={<CustomDot />}
+                                                            onMouseEnter={() => setHoveredScatterItem(item.ticker)}
+                                                            onMouseLeave={() => setHoveredScatterItem(null)}
                                                         />
                                                     );
-                                                };
+                                                })}
+                                            </ScatterChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
 
-                                                return (
-                                                    <Scatter
-                                                        key={item.ticker}
-                                                        name={item.name}
-                                                        data={scatterData}
-                                                        fill={colors[idx % colors.length]}
-                                                        shape={<CustomDot />}
-                                                        onMouseEnter={() => setHoveredScatterItem(item.ticker)}
-                                                        onMouseLeave={() => setHoveredScatterItem(null)}
-                                                    />
-                                                );
-                                            })}
-                                        </ScatterChart>
-                                    </ResponsiveContainer>
+                                {/* Right Chart: Capture Ratios */}
+                                <div className="flex-1 flex flex-col">
+                                    <h4 className="font-bold text-gray-200 flex items-center gap-2 mb-4">
+                                        업 & 다운 캡처 (Capture Ratio) 분포도
+                                    </h4>
+                                    <div className="h-[300px] w-full relative">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 10 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                                <XAxis
+                                                    type="number"
+                                                    dataKey="downside"
+                                                    name="하락 참여율"
+                                                    unit="%"
+                                                    domain={[100, 0]}
+                                                    reversed={true}
+                                                    stroke="rgba(255,255,255,0.3)"
+                                                    tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
+                                                    label={{ value: "하락 참여율 (낮을수록 우측 이동/좋음 ➡️)", position: "bottom", style: { fill: 'rgba(255,255,255,0.5)', fontSize: 11 }, offset: 0 }}
+                                                />
+                                                <YAxis
+                                                    type="number"
+                                                    dataKey="upside"
+                                                    name="상승 참여율"
+                                                    unit="%"
+                                                    domain={[0, 100]}
+                                                    stroke="rgba(255,255,255,0.3)"
+                                                    tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
+                                                    label={{ value: "상승 참여율 (높을수록 좋음 ⬆️)", angle: -90, position: "left", style: { fill: 'rgba(255,255,255,0.5)', fontSize: 11 } }}
+                                                />
+                                                <ZAxis type="category" dataKey="ticker" name="종목" />
+                                                <RechartsTooltip content={<CustomScatterTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+                                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} iconType="circle" onMouseEnter={handleLegendMouseEnter} onMouseLeave={handleLegendMouseLeave} />
+
+                                                <ReferenceLine x={100} stroke="#f43f5e" strokeDasharray="3 3" label={{ position: 'top', value: '지수 하락(100%)', fill: '#f43f5e', fontSize: 10 }} />
+                                                <ReferenceLine y={100} stroke="#f43f5e" strokeDasharray="3 3" label={{ position: 'right', value: '지수 상승(100%)', fill: '#f43f5e', fontSize: 10 }} />
+
+                                                {selectedForCompare.map((item, idx) => {
+                                                    const colors = ['#818cf8', '#34d399', '#fbbf24', '#a78bfa', '#60a5fa', '#f87171', '#34d399'];
+                                                    const stats = realStats[item.ticker] || {};
+                                                    const upCap = stats.upside_capture !== undefined ? stats.upside_capture : 45.0;
+                                                    const downCap = stats.downside_capture !== undefined ? stats.downside_capture : 82.0;
+                                                    const scatterData = [{
+                                                        ticker: item.ticker,
+                                                        name: item.name,
+                                                        upside: Number(upCap.toFixed(1)),
+                                                        downside: Number(downCap.toFixed(1))
+                                                    }];
+
+                                                    // Custom dot rendering for animated highlight
+                                                    const CustomDot = (props: any) => {
+                                                        const { cx, cy, fill } = props;
+                                                        const isHovered = hoveredScatterItem === item.ticker;
+                                                        return (
+                                                            <circle
+                                                                cx={cx}
+                                                                cy={cy}
+                                                                r={isHovered ? 12 : 7}
+                                                                fill={fill}
+                                                                className={isHovered ? "animate-pulse shadow-lg" : "transition-all duration-300"}
+                                                                opacity={hoveredScatterItem && !isHovered ? 0.3 : 1}
+                                                            />
+                                                        );
+                                                    };
+
+                                                    return (
+                                                        <Scatter
+                                                            key={item.ticker}
+                                                            name={item.name}
+                                                            data={scatterData}
+                                                            fill={colors[idx % colors.length]}
+                                                            shape={<CustomDot />}
+                                                            onMouseEnter={() => setHoveredScatterItem(item.ticker)}
+                                                            onMouseLeave={() => setHoveredScatterItem(null)}
+                                                        />
+                                                    );
+                                                })}
+                                            </ScatterChart>
+                                        </ResponsiveContainer>
+                                    </div>
                                 </div>
                             </div>
+
 
                         </div>
                     </div>
