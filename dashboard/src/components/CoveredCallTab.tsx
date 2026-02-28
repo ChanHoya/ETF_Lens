@@ -220,10 +220,11 @@ export default function CoveredCallTab() {
     }, [selectedDetail, chartPeriod]);
 
     const filteredDropdown = etfDictionary.filter(etf =>
+        (etf.name.includes('커버드콜') || etf.name.includes('프리미엄') || etf.name.includes('타겟')) &&
         (etf.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             etf.code.toLowerCase().includes(searchTerm.toLowerCase())) &&
         !ccDataList.some((item: any) => item.ticker === etf.code)
-    ).slice(0, 10);
+    ).slice(0, 50);
 
     const filteredData = ccDataList.filter((item: any) => {
         const matchSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.ticker.includes(searchTerm);
@@ -275,7 +276,7 @@ export default function CoveredCallTab() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-11 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl focus:ring-1 focus:ring-indigo-500/50 outline-none text-sm text-white transition-all shadow-inner"
                         />
-                        {isSearchFocused && searchTerm && (
+                        {isSearchFocused && (
                             <div className="absolute top-full left-0 right-0 mt-2 bg-[#121217] border border-white/10 rounded-xl shadow-2xl z-50 max-h-[300px] overflow-y-auto">
                                 {filteredDropdown.length > 0 ? (
                                     <ul>
