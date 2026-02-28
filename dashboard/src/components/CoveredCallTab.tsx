@@ -203,6 +203,8 @@ export default function CoveredCallTab() {
                             yield: (Math.random() * 5) + 5, // Still mock yield
                             tr1y: match.result.tr_period,
                             diffBenchmark: match.result.diff_benchmark_period,
+                            benchTr: match.result.benchmark_tr_period,
+                            benchPr: match.result.benchmark_pr_period,
                             isPr: match.result.is_pr
                         };
                     } else if (match) {
@@ -214,6 +216,8 @@ export default function CoveredCallTab() {
                             yield: 0,
                             tr1y: 0,
                             diffBenchmark: 0,
+                            benchTr: 0,
+                            benchPr: 0,
                             isPr: false
                         };
                     }
@@ -644,8 +648,9 @@ export default function CoveredCallTab() {
                                     <th className="py-2 px-3 w-40">분류 / 기초지수</th>
                                     <th className="py-2 px-3 text-right">현재가</th>
                                     <th className="py-2 px-3 bg-emerald-500/10 text-emerald-400/80">분배율(%)</th>
-                                    <th className="py-2 px-3 bg-indigo-500/10 text-indigo-400/80">1년 수익률</th>
-                                    <th className="py-2 px-4 bg-rose-500/10 text-rose-400/80">벤치마크 대비 차이(1Y)</th>
+                                    <th className="py-2 px-3 bg-indigo-500/10 text-indigo-400/80">종목 수익률(1Y)</th>
+                                    <th className="py-2 px-3 bg-fuchsia-500/10 text-fuchsia-400/80">벤치마크(1Y)</th>
+                                    <th className="py-2 px-4 bg-rose-500/10 text-rose-400/80">초과 수익(괴리)</th>
                                     <th className="py-2 px-2 w-10 text-center rounded-tr-2xl"></th>
                                 </tr>
                             </thead>
@@ -698,6 +703,14 @@ export default function CoveredCallTab() {
                                                     <div className="flex flex-col items-center">
                                                         <span>{formatRate(item.tr1y)}</span>
                                                         <span className="text-[10px] text-gray-500 font-normal">{item.isPr ? '(PR)' : '(TR)'}</span>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="py-2 px-3 text-center bg-fuchsia-500/[0.02]">
+                                                {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : (
+                                                    <div className="flex flex-col items-center">
+                                                        <span>{formatRate(item.isPr ? item.benchPr : item.benchTr)}</span>
+                                                        <span className="text-[10px] text-gray-500 font-normal">{item.isPr ? '벤치마크(PR)' : '벤치마크(TR)'}</span>
                                                     </div>
                                                 )}
                                             </td>
@@ -811,7 +824,7 @@ export default function CoveredCallTab() {
                                                 />
                                                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" onMouseEnter={(e: any) => setHoveredLine(e?.dataKey || null)} onMouseLeave={() => setHoveredLine(null)} />
                                                 {/* Render main benchmark from the first item */}
-                                                <Line type="monotone" name={`${selectedForCompare[0].index} (TR 기준)`} dataKey="Benchmark" stroke="#f43f5e" strokeWidth={hoveredLine === 'Benchmark' || hoveredLine !== null ? 4 : 3} strokeDasharray="5 5" dot={false} connectNulls={false} opacity={hoveredLine === 'Benchmark' ? 1.0 : (hoveredLine ? 0.8 : 1.0)} onMouseEnter={() => setHoveredLine('Benchmark')} onMouseLeave={() => setHoveredLine(null)} />
+                                                <Line type="monotone" name={`${selectedForCompare[0].index} (TR 기준)`} dataKey="Benchmark" stroke="#f43f5e" strokeWidth={hoveredLine === 'Benchmark' || hoveredLine !== null ? 4 : 3} strokeDasharray="5 5" dot={false} connectNulls={true} opacity={hoveredLine === 'Benchmark' ? 1.0 : (hoveredLine ? 0.8 : 1.0)} onMouseEnter={() => setHoveredLine('Benchmark')} onMouseLeave={() => setHoveredLine(null)} />
 
                                                 {/* Render lines for each selected ETF */}
                                                 {selectedForCompare.map((item, idx) => {
@@ -819,7 +832,7 @@ export default function CoveredCallTab() {
                                                     const isHovered = hoveredLine === item.ticker;
                                                     const isPr = isPrMap[item.ticker] === true;
                                                     return (
-                                                        <Line key={item.ticker} type="monotone" name={`${item.name}${isPr ? ' (PR)' : ''}`} dataKey={item.ticker} stroke={colors[idx % colors.length]} strokeWidth={isHovered ? 5 : 2.5} opacity={hoveredLine && !isHovered ? 0.2 : 1} dot={false} activeDot={{ r: isHovered ? 6 : 4 }} connectNulls={false} onMouseEnter={() => setHoveredLine(item.ticker)} onMouseLeave={() => setHoveredLine(null)} />
+                                                        <Line key={item.ticker} type="monotone" name={`${item.name}${isPr ? ' (PR)' : ''}`} dataKey={item.ticker} stroke={colors[idx % colors.length]} strokeWidth={isHovered ? 5 : 2.5} opacity={hoveredLine && !isHovered ? 0.2 : 1} dot={false} activeDot={{ r: isHovered ? 6 : 4 }} connectNulls={true} onMouseEnter={() => setHoveredLine(item.ticker)} onMouseLeave={() => setHoveredLine(null)} />
                                                     )
                                                 })}
                                             </LineChart>

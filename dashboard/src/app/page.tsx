@@ -739,17 +739,18 @@ export default function Home() {
 
       // Parse AUM
       const aumRaw = basic["순자산총액"] || "0";
+      const aumStr = String(aumRaw);
       // e.g. "17조 1,478억" or "500억"
       let parsedAum = 0;
-      if (aumRaw.includes("조") && aumRaw.includes("억")) {
-        const parts = aumRaw.split("조");
+      if (aumStr.includes("조") && aumStr.includes("억")) {
+        const parts = aumStr.split("조");
         const jo = parseFloat(parts[0].replace(/,/g, "")) || 0;
         const uk = parseFloat(parts[1].replace("억", "").replace(/,/g, "")) || 0;
         parsedAum = jo * 10000 + uk; // in 억 unit
-      } else if (aumRaw.includes("조")) {
-        parsedAum = parseFloat(aumRaw.replace("조", "").replace(/,/g, "")) * 10000 || 0;
+      } else if (aumStr.includes("조")) {
+        parsedAum = parseFloat(aumStr.replace("조", "").replace(/,/g, "")) * 10000 || 0;
       } else {
-        parsedAum = parseFloat(aumRaw.replace("억", "").replace(/,/g, "")) || 0;
+        parsedAum = parseFloat(aumStr.replace("억", "").replace(/,/g, "")) || 0;
       }
 
       // Parse Fee
@@ -793,6 +794,33 @@ export default function Home() {
         </div>
 
         <div className="flex items-center flex-wrap gap-4 md:gap-6">
+          {['select', 'info', 'chart', 'holdings'].includes(activeTab) && !isEtfCheckModalOpen && (
+            <nav className="flex items-center gap-2 md:gap-4 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 shadow-sm mr-2 md:mr-4">
+              {[
+                { id: 'select', label: '종목선택' },
+                { id: 'info', label: '기본정보' },
+                { id: 'chart', label: '차트' },
+                { id: 'holdings', label: '구성종목' },
+              ].map(subTab => (
+                <button
+                  key={subTab.id}
+                  onClick={() => {
+                    if (subTab.id !== 'select' && !data) {
+                      alert('먼저 종목을 선택하고 비교를 실행해주세요.');
+                      return;
+                    }
+                    setActiveTab(subTab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call');
+                    setNaverEtfCode(null);
+                    setSelectedDetailEtf(null);
+                  }}
+                  className={`text-xs md:text-sm font-bold transition-all px-3 py-1 rounded-full ${activeTab === subTab.id ? 'bg-white/20 text-white shadow-inner border border-white/20' : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'}`}
+                >
+                  {subTab.label}
+                </button>
+              ))}
+            </nav>
+          )}
+
           <nav className="flex items-center gap-2 md:gap-6 bg-white/[0.03] px-6 py-2 rounded-full border border-white/10 backdrop-blur-md shadow-sm">
             {[
               { id: 'analysis', label: '종목분석' },
@@ -834,35 +862,6 @@ export default function Home() {
           </nav>
         </div>
       </header>
-
-      {['select', 'info', 'chart', 'holdings'].includes(activeTab) && !isEtfCheckModalOpen && (
-        <div className="w-full flex justify-center mb-6 z-40 relative">
-          <nav className="flex items-center gap-2 md:gap-4 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 shadow-sm">
-            {[
-              { id: 'select', label: '종목선택' },
-              { id: 'info', label: '기본정보' },
-              { id: 'chart', label: '차트' },
-              { id: 'holdings', label: '구성종목' },
-            ].map(subTab => (
-              <button
-                key={subTab.id}
-                onClick={() => {
-                  if (subTab.id !== 'select' && !data) {
-                    alert('먼저 종목을 선택하고 비교를 실행해주세요.');
-                    return;
-                  }
-                  setActiveTab(subTab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call');
-                  setNaverEtfCode(null);
-                  setSelectedDetailEtf(null);
-                }}
-                className={`text-xs md:text-sm font-bold transition-all px-3 py-1 rounded-full ${activeTab === subTab.id ? 'bg-white/20 text-white shadow-inner border border-white/20' : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'}`}
-              >
-                {subTab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      )}
 
       <div className="relative flex-1 flex flex-col w-full max-w-[95vw] xl:max-w-[1400px]">
 
