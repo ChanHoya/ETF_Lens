@@ -266,16 +266,16 @@ async def get_macro_detail():
             progress=False,
         )
 
-        # resample monthly
+        # do not resample, return daily
         if isinstance(df.columns, pd.MultiIndex):
             close_prices = df["Close"]
         else:
             close_prices = df
 
-        monthly = close_prices.resample("ME").last().dropna(how="all")
+        daily = close_prices.dropna(how="all")
 
         results = []
-        for dt, row in monthly.iterrows():
+        for dt, row in daily.iterrows():
             if isinstance(dt, tuple):
                 dt = dt[0]
             if isinstance(dt, str):
@@ -283,7 +283,7 @@ async def get_macro_detail():
 
             results.append(
                 {
-                    "date": f"{dt.year}-{dt.month:02d}",
+                    "date": dt.strftime("%Y-%m-%d"),
                     "dollar": round(float(row.get("DX-Y.NYB", 100)), 2),
                     "krw": round(float(row.get("KRW=X", 1300)), 0),
                     "kospi": round(float(row.get("^KS11", 2500)), 0),
@@ -401,18 +401,18 @@ async def get_pe_detail(symbol: str = "005930"):
             return []
 
         if isinstance(df.columns, pd.MultiIndex):
-            monthly = df["Close"].iloc[:, 0].resample("ME").last()
+            daily = df["Close"].iloc[:, 0]
         else:
-            monthly = df["Close"].resample("ME").last()
+            daily = df["Close"]
 
         # Scale based on reasonable starting point to mimic Forward P/E (e.g. 10x-15x)
-        base_eps = float(monthly.iloc[-1]) / 12.0
+        base_eps = float(daily.iloc[-1]) / 12.0
 
         results = []
-        for dt, val in monthly.items():
+        for dt, val in daily.items():
             if pd.isna(val) or val <= 0:
                 continue
-            year_month = f"{dt.year}-{dt.month:02d}"
+            year_month = dt.strftime("%Y-%m-%d")
             growth_factor = 1.0 + ((dt.month - 6) * 0.005)
             pe_val = float(val) / (base_eps * growth_factor)
 
