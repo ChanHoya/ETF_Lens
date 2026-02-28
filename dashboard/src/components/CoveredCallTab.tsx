@@ -180,23 +180,25 @@ export default function CoveredCallTab() {
                         <div className="bg-[#0B0F19] border border-white/10 w-full h-full rounded-2xl shadow-2xl shadow-indigo-500/10 flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
 
                             {/* Modal Header */}
-                            <div className="p-6 border-b border-white/5 flex justify-between items-start bg-gradient-to-r from-indigo-500/10 to-transparent">
+                            <div className="px-5 py-4 border-b border-white/5 flex justify-between items-start bg-gradient-to-r from-indigo-500/10 to-transparent">
                                 <div>
-                                    <div className="flex gap-2 mb-2">
-                                        <span className="px-2.5 py-1 text-[10px] font-bold bg-white/10 text-white rounded-md">{selectedDetail.issuer}</span>
-                                        <span className="px-2.5 py-1 text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-md">기초지수: {selectedDetail.index}</span>
+                                    <div className="flex gap-2 mb-1.5 items-center">
+                                        <span className="px-2 py-0.5 text-[10px] font-bold bg-white/10 text-white rounded-md flex items-center gap-1.5">
+                                            {selectedDetail.issuer}
+                                            <span className="font-mono text-gray-400 border-l border-white/20 pl-1.5">{selectedDetail.ticker}</span>
+                                        </span>
+                                        <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-md">기초지수: {selectedDetail.index}</span>
                                     </div>
-                                    <h3 className="text-2xl font-extrabold text-white mb-1">{selectedDetail.name}</h3>
-                                    <p className="font-mono text-gray-400 text-sm">{selectedDetail.ticker}</p>
+                                    <h3 className="text-xl md:text-2xl font-extrabold text-white mb-0">{selectedDetail.name}</h3>
                                 </div>
-                                <button onClick={() => setSelectedDetail(null)} className="p-2 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 rounded-full text-gray-400 transition-colors">
+                                <button onClick={() => setSelectedDetail(null)} className="p-1.5 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 rounded-full text-gray-400 transition-colors">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
 
-                            <div className="overflow-y-auto p-6 flex-1 custom-scrollbar">
+                            <div className="overflow-y-auto px-5 py-4 flex-1 custom-scrollbar">
                                 {/* Summary Cards */}
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
                                     <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col justify-center items-center text-center">
                                         <span className="text-xs text-gray-500 mb-1">총보수 / AUM</span>
                                         <span className="font-bold text-gray-200">{selectedDetail.ter} / {selectedDetail.aum.replace('억', '')}억</span>
@@ -220,7 +222,7 @@ export default function CoveredCallTab() {
                                 </div>
 
                                 {/* Chart Area */}
-                                <div className="bg-black/30 border border-white/5 rounded-2xl p-5 mb-6">
+                                <div className="bg-black/30 border border-white/5 rounded-2xl p-4 mb-4">
                                     <div className="flex justify-between items-center mb-2">
                                         <h4 className="font-bold text-gray-200 flex items-center gap-2">
                                             누적 수익률 (TR) 비교 차트
@@ -244,7 +246,7 @@ export default function CoveredCallTab() {
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="h-[250px] w-full">
+                                    <div className="h-[200px] w-full">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <LineChart data={generateMockChartData(chartPeriod)} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -257,7 +259,7 @@ export default function CoveredCallTab() {
                                                 />
                                                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" />
                                                 <Line type="monotone" name={`${selectedDetail.name} (TR)`} dataKey="ccTotalReturn" stroke="#818cf8" strokeWidth={3} dot={false} activeDot={{ r: 4 }} />
-                                                <Line type="monotone" name={`${selectedDetail.index} 지수 (TR)`} dataKey="bmTotalReturn" stroke="#34d399" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                                                <Line type="monotone" name={`${selectedDetail.index} 지수 (TR)`} dataKey="bmTotalReturn" stroke="#f43f5e" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                                             </LineChart>
                                         </ResponsiveContainer>
                                     </div>
@@ -269,16 +271,16 @@ export default function CoveredCallTab() {
                                         <ShieldAlert className="w-5 h-5 text-amber-500" />
                                         민감도 지표 (Capture Ratios)
                                     </h4>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="bg-gradient-to-br from-rose-500/10 to-transparent border border-rose-500/20 rounded-2xl p-5">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20 rounded-2xl p-4">
                                             <div className="flex justify-between items-end mb-2">
-                                                <span className="text-sm font-medium text-rose-300">상승장 참여율 (Upside)</span>
+                                                <span className="text-sm font-medium text-indigo-300">상승장 참여율 (Upside)</span>
                                                 <span className="text-2xl font-black text-white">45%</span>
                                             </div>
                                             <p className="text-[11px] text-gray-400">지수가 10% 상승할 때, 콜옵션 매도로 인해 평균 4.5% 상승하는 경향이 있습니다.</p>
                                         </div>
-                                        <div className="bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 rounded-2xl p-5">
-                                            <div className="flex justify-between items-end mb-2">
+                                        <div className="bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 rounded-2xl p-4">
+                                            <div className="flex justify-between items-end mb-1">
                                                 <span className="text-sm font-medium text-blue-300">하락장 방어율 (Downside)</span>
                                                 <span className="text-2xl font-black text-white">82%</span>
                                             </div>
