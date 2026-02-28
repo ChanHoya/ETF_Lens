@@ -94,10 +94,27 @@ export default function CoveredCallTab() {
     const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
     const [chartPeriod, setChartPeriod] = useState('1Y');
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
+    const [hoveredScatterItem, setHoveredScatterItem] = useState<string | null>(null);
     const [realChartData, setRealChartData] = useState<any[]>([]);
     const [isPrMap, setIsPrMap] = useState<any>({});
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [apiError, setApiError] = useState<string | null>(null);
+
+    const CustomScatterTooltip = ({ active, payload }: any) => {
+        if (active && payload && payload.length) {
+            const data = payload[0].payload;
+            return (
+                <div className="bg-[#0c0a18]/95 border border-white/10 p-4 rounded-xl shadow-2xl z-50">
+                    <p className="font-bold text-gray-200 mb-2">{data.name}</p>
+                    <div className="flex flex-col gap-1.5">
+                        <p className="text-emerald-400 text-[13px] flex justify-between gap-6"><span>상승 참여율:</span> <span className="font-mono font-bold">{data.upside}%</span></p>
+                        <p className="text-blue-400 text-[13px] flex justify-between gap-6"><span>하락 참여율:</span> <span className="font-mono font-bold">{data.downside}%</span></p>
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
 
     // Favorites States
     const [savedFavorites, setSavedFavorites] = useState<{ name: string, list: any[] }[]>([]);
@@ -869,7 +886,12 @@ export default function CoveredCallTab() {
                                                 const downCap = stats.downside_capture !== undefined ? stats.downside_capture : 82.0;
 
                                                 return (
-                                                    <tr key={item.ticker} className="hover:bg-white/[0.04] transition-colors">
+                                                    <tr
+                                                        key={item.ticker}
+                                                        className={`transition-colors cursor-pointer ${hoveredScatterItem === item.ticker ? 'bg-white/10' : 'hover:bg-white/[0.04]'}`}
+                                                        onMouseEnter={() => setHoveredScatterItem(item.ticker)}
+                                                        onMouseLeave={() => setHoveredScatterItem(null)}
+                                                    >
                                                         <td className="py-3 px-4 text-left">
                                                             <div className="font-bold text-gray-200 text-[13px] flex items-center gap-1.5">
                                                                 {item.name}
@@ -959,7 +981,7 @@ export default function CoveredCallTab() {
                                                 label={{ value: "상승 참여율 (높을수록 좋음 ⬆️)", angle: -90, position: "left", style: { fill: 'rgba(255,255,255,0.5)', fontSize: 11 } }}
                                             />
                                             <ZAxis type="category" dataKey="ticker" name="종목" />
-                                            <RechartsTooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: 'rgba(12,10,24,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }} />
+                                            <RechartsTooltip content={<CustomScatterTooltip />} cursor={{ strokeDasharray: '3 3' }} />
                                             <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} iconType="circle" />
 
                                             <ReferenceLine x={100} stroke="#f43f5e" strokeDasharray="3 3" label={{ position: 'top', value: '지수 하락(100%)', fill: '#f43f5e', fontSize: 10 }} />
@@ -977,13 +999,31 @@ export default function CoveredCallTab() {
                                                     downside: Number(downCap.toFixed(1))
                                                 }];
 
+                                                // Custom dot rendering for animated highlight
+                                                const CustomDot = (props: any) => {
+                                                    const { cx, cy, fill } = props;
+                                                    const isHovered = hoveredScatterItem === item.ticker;
+                                                    return (
+                                                        <circle
+                                                            cx={cx}
+                                                            cy={cy}
+                                                            r={isHovered ? 12 : 7}
+                                                            fill={fill}
+                                                            className={isHovered ? "animate-pulse shadow-lg" : "transition-all duration-300"}
+                                                            opacity={hoveredScatterItem && !isHovered ? 0.3 : 1}
+                                                        />
+                                                    );
+                                                };
+
                                                 return (
                                                     <Scatter
                                                         key={item.ticker}
                                                         name={item.name}
                                                         data={scatterData}
                                                         fill={colors[idx % colors.length]}
-                                                        shape="circle"
+                                                        shape={<CustomDot />}
+                                                        onMouseEnter={() => setHoveredScatterItem(item.ticker)}
+                                                        onMouseLeave={() => setHoveredScatterItem(null)}
                                                     />
                                                 );
                                             })}
