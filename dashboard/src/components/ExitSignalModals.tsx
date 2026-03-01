@@ -9,8 +9,9 @@ export function DollarModalContent() {
 
     useEffect(() => {
         const fetchMacro = async () => {
+            setLoading(true);
             try {
-                const res = await fetch('http://localhost:8000/api/v1/exit-signal/macro');
+                const res = await fetch(`http://localhost:8000/api/v1/exit-signal/macro?period=${period}`);
                 if (res.ok) {
                     const json = await res.json();
                     setData(json);
@@ -22,18 +23,19 @@ export function DollarModalContent() {
             }
         };
         fetchMacro();
-    }, []);
+    }, [period]);
 
     // Filter by period (data is monthly 10Y max)
     const filteredData = React.useMemo(() => {
         if (!data || data.length === 0) return [];
-        let months = 12;
-        if (period === '6M') months = 6;
-        if (period === '1Y') months = 12;
-        if (period === '3Y') months = 36;
-        if (period === '10Y') months = 120;
+        const endDt = new Date();
+        const startDt = new Date();
+        if (period === '6M') startDt.setMonth(startDt.getMonth() - 6);
+        else if (period === '1Y') startDt.setFullYear(startDt.getFullYear() - 1);
+        else if (period === '3Y') startDt.setFullYear(startDt.getFullYear() - 3);
+        else if (period === '10Y') startDt.setFullYear(startDt.getFullYear() - 10);
 
-        const sliced = data.slice(-months);
+        const sliced = data.filter((d: any) => new Date(d.date) >= startDt);
         if (sliced.length === 0) return [];
 
         // Base everything off 100 at the start of the period to see relative flows, finding the first valid value
@@ -83,6 +85,7 @@ export function DollarModalContent() {
                         <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickMargin={12} />
 
                         <YAxis yAxisId="left" domain={['auto', 'auto']} stroke="#a1a1aa" fontSize={11} width={45} tickFormatter={(val) => Math.round(val).toString()} />
+                        <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} stroke="#a1a1aa" fontSize={11} width={45} tickFormatter={(val) => Math.round(val).toString()} />
 
                         <RechartsTooltip
                             contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
@@ -100,8 +103,8 @@ export function DollarModalContent() {
 
                         <Line yAxisId="left" connectNulls type="monotone" name="달러 인덱스" dataKey="dollar" stroke="#34d399" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
                         <Line yAxisId="left" connectNulls type="stepAfter" name="USD/KRW" dataKey="krw" stroke="#60a5fa" strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={{ r: 6 }} />
-                        <Line yAxisId="left" connectNulls type="monotone" name="KOSPI" dataKey="kospi" stroke="#f43f5e" strokeWidth={1.5} dot={false} />
-                        <Line yAxisId="left" connectNulls type="monotone" name="S&P 500" dataKey="sp500" stroke="#a78bfa" strokeWidth={1.5} dot={false} />
+                        <Line yAxisId="right" connectNulls type="monotone" name="KOSPI" dataKey="kospi" stroke="#f43f5e" strokeWidth={1.5} dot={false} />
+                        <Line yAxisId="right" connectNulls type="monotone" name="S&P 500" dataKey="sp500" stroke="#a78bfa" strokeWidth={1.5} dot={false} />
                     </LineChart>
                 </ResponsiveContainer>
             </div>

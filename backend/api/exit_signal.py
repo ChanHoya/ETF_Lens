@@ -247,15 +247,26 @@ async def get_exit_signal_data():
 
 
 @router.get("/macro")
-async def get_macro_detail():
+async def get_macro_detail(period: str = "10Y"):
     global _macro_cache
+
+    # We will use 'daily' for 6M, 1Y, and 'monthly' for 3Y, 10Y
+    is_daily = period in ["6M", "1Y"]
+    cache_key = "daily" if is_daily else "monthly"
+
     now = datetime.now().timestamp()
-    if "data" in _macro_cache and (now - _macro_cache.get("timestamp", 0) < CACHE_TTL):
-        return _macro_cache["data"]
+    if cache_key in _macro_cache and (
+        now - _macro_cache[cache_key].get("timestamp", 0) < CACHE_TTL
+    ):
+        return _macro_cache[cache_key]["data"]
 
     try:
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=365 * 10)  # 10 years
+        start_date = (
+            end_date - timedelta(days=365)
+            if is_daily
+            else end_date - timedelta(days=365 * 10)
+        )
 
         tickers = ["DX-Y.NYB", "KRW=X", "^KS11", "^GSPC"]
         df = await asyncio.to_thread(
@@ -266,32 +277,49 @@ async def get_macro_detail():
             progress=False,
         )
 
-        # do not resample, return daily
         if isinstance(df.columns, pd.MultiIndex):
             close_prices = df["Close"]
         else:
             close_prices = df
 
-        daily = close_prices.dropna(how="all")
+        if is_daily:
+            # Forward fill weekend/holiday gaps in daily data up to a few days
+            series_data = close_prices.ffill(limit=5).dropna(how="all")
+        else:
+            series_data = close_prices.resample("ME").last().dropna(how="all")
 
         results = []
-        for dt, row in daily.iterrows():
+        for dt, row in series_data.iterrows():
             if isinstance(dt, tuple):
                 dt = dt[0]
             if isinstance(dt, str):
                 dt = pd.to_datetime(dt)
 
+            date_str = (
+                f"{dt.year}-{dt.month:02d}-{dt.day:02d}"
+                if is_daily
+                else f"{dt.year}-{dt.month:02d}"
+            )
+
             results.append(
                 {
-                    "date": dt.strftime("%Y-%m-%d"),
-                    "dollar": round(float(row.get("DX-Y.NYB", 100)), 2),
-                    "krw": round(float(row.get("KRW=X", 1300)), 0),
-                    "kospi": round(float(row.get("^KS11", 2500)), 0),
-                    "sp500": round(float(row.get("^GSPC", 4000)), 0),
+                    "date": date_str,
+                    "dollar": round(float(row.get("DX-Y.NYB", 100)), 2)
+                    if pd.notna(row.get("DX-Y.NYB"))
+                    else None,
+                    "krw": round(float(row.get("KRW=X", 1300)), 0)
+                    if pd.notna(row.get("KRW=X"))
+                    else None,
+                    "kospi": round(float(row.get("^KS11", 2500)), 0)
+                    if pd.notna(row.get("^KS11"))
+                    else None,
+                    "sp500": round(float(row.get("^GSPC", 4000)), 0)
+                    if pd.notna(row.get("^GSPC"))
+                    else None,
                 }
             )
 
-        _macro_cache = {"data": results, "timestamp": now}
+        _macro_cache[cache_key] = {"data": results, "timestamp": now}
         return results
     except Exception as e:
         logger.error(f"Error fetching macro detail: {e}")
@@ -401,18 +429,18 @@ async def get_pe_detail(symbol: str = "005930"):
             return []
 
         if isinstance(df.columns, pd.MultiIndex):
-            daily = df["Close"].iloc[:, 0]
+            monthly = df["Close"].iloc[:, 0].resample("ME").last()
         else:
-            daily = df["Close"]
+            monthly = df["Close"].resample("ME").last()
 
         # Scale based on reasonable starting point to mimic Forward P/E (e.g. 10x-15x)
-        base_eps = float(daily.iloc[-1]) / 12.0
+        base_eps = float(monthly.iloc[-1]) / 12.0
 
         results = []
-        for dt, val in daily.items():
+        for dt, val in monthly.items():
             if pd.isna(val) or val <= 0:
                 continue
-            year_month = dt.strftime("%Y-%m-%d")
+            year_month = f"{dt.year}-{dt.month:02d}"
             growth_factor = 1.0 + ((dt.month - 6) * 0.005)
             pe_val = float(val) / (base_eps * growth_factor)
 
