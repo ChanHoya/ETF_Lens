@@ -24,7 +24,7 @@ export function DollarModalContent() {
         fetchMacro();
     }, []);
 
-    // Filter by period (data is daily 10Y max)
+    // Filter by period (data is monthly 10Y max)
     const filteredData = React.useMemo(() => {
         if (!data || data.length === 0) return [];
         let months = 12;
@@ -33,11 +33,7 @@ export function DollarModalContent() {
         if (period === '3Y') months = 36;
         if (period === '10Y') months = 120;
 
-        const targetDate = new Date();
-        targetDate.setMonth(targetDate.getMonth() - months);
-        const targetStr = targetDate.toISOString().split('T')[0];
-
-        const sliced = data.filter((d: any) => d.date >= targetStr);
+        const sliced = data.slice(-months);
         if (sliced.length === 0) return [];
 
         // Base everything off 100 at the start of the period to see relative flows
@@ -48,7 +44,7 @@ export function DollarModalContent() {
 
         return sliced.map((d: any) => ({
             ...d,
-            indexedVal: (d.dollar / baseDollar) * 100,
+            indexedDollar: (d.dollar / baseDollar) * 100,
             indexedKrw: (d.krw / baseKrw) * 100,
             indexedKospi: (d.kospi / baseKospi) * 100,
             indexedSp500: (d.sp500 / baseSp) * 100,
@@ -78,14 +74,13 @@ export function DollarModalContent() {
                         <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickMargin={12} />
 
                         <YAxis yAxisId="left" domain={['auto', 'auto']} stroke="#a1a1aa" fontSize={11} width={45} tickFormatter={(val) => Math.round(val).toString()} />
-                        <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} stroke="#a78bfa" fontSize={11} width={45} tickFormatter={(val) => Math.round(val).toString()} />
 
                         <RechartsTooltip
                             contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                             itemStyle={{ fontSize: '12px' }}
                             formatter={(value: any, name: any, props: any) => {
                                 if (!props || !props.payload) return [value, name];
-                                if (name === '달러 인덱스 (지수화)') return [props.payload.val?.toFixed(2), '달러 인덱스'];
+                                if (name === '달러 인덱스 (지수화)') return [props.payload.dollar?.toFixed(2), '달러 인덱스'];
                                 if (name === 'USD/KRW (지수화)') return [`${Math.round(props.payload.krw || 0).toLocaleString()}원`, 'USD/KRW'];
                                 if (name === 'KOSPI (지수화)') return [Math.round(props.payload.kospi || 0).toLocaleString(), 'KOSPI'];
                                 if (name === 'S&P 500 (지수화)') return [Math.round(props.payload.sp500 || 0).toLocaleString(), 'S&P 500'];
@@ -94,10 +89,10 @@ export function DollarModalContent() {
                             labelStyle={{ color: '#aaa', marginBottom: '8px', fontSize: '12px' }}
                         />
 
-                        <Line yAxisId="left" type="monotone" name="달러 인덱스 (지수화)" dataKey="indexedVal" stroke="#34d399" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                        <Line yAxisId="left" type="monotone" name="달러 인덱스 (지수화)" dataKey="indexedDollar" stroke="#34d399" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
                         <Line yAxisId="left" type="stepAfter" name="USD/KRW (지수화)" dataKey="indexedKrw" stroke="#60a5fa" strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={{ r: 6 }} />
-                        <Line yAxisId="right" type="monotone" name="KOSPI (지수화)" dataKey="indexedKospi" stroke="#f43f5e" strokeWidth={1.5} dot={false} />
-                        <Line yAxisId="right" type="monotone" name="S&P 500 (지수화)" dataKey="indexedSp500" stroke="#a78bfa" strokeWidth={1.5} dot={false} />
+                        <Line yAxisId="left" type="monotone" name="KOSPI (지수화)" dataKey="indexedKospi" stroke="#f43f5e" strokeWidth={1.5} dot={false} />
+                        <Line yAxisId="left" type="monotone" name="S&P 500 (지수화)" dataKey="indexedSp500" stroke="#a78bfa" strokeWidth={1.5} dot={false} />
                     </LineChart>
                 </ResponsiveContainer>
             </div>

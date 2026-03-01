@@ -368,7 +368,7 @@ export default function KospiExitAnalyzer() {
                     </div>
 
                     {/* Modal Content Placeholder */}
-                    <div className="flex-1 w-full overflow-y-auto pr-2 pb-6">
+                    <div className="flex-1 w-full pr-2 pb-6">
                         {activePopup === 'dollar' && <DollarModalContent />}
                         {activePopup === 'per' && <PerModalContent />}
                         {activePopup === 'cli' && <CliModalContent />}
