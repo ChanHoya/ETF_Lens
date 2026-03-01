@@ -354,7 +354,7 @@ export default function KospiExitAnalyzer() {
 
             {/* Popup Modals */}
             {activePopup && (
-                <div className="absolute left-0 right-0 top-0 h-auto min-h-full z-[100] bg-[#121217] border border-white/10 rounded-3xl p-6 flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                <div className="absolute left-0 right-0 top-0 h-[85vh] z-[100] bg-[#121217] border border-white/10 rounded-3xl p-6 flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-between items-center mb-6 shrink-0">
                         <h2 className="text-xl font-bold text-white flex items-center gap-2">
                             {activePopup === 'dollar' && <DollarSign className="w-6 h-6 text-emerald-400" />}
@@ -368,7 +368,7 @@ export default function KospiExitAnalyzer() {
                     </div>
 
                     {/* Modal Content Placeholder */}
-                    <div className="flex-1 w-full pr-2 pb-6">
+                    <div className="flex-1 w-full pr-2 pb-6 min-h-[600px]">
                         {activePopup === 'dollar' && <DollarModalContent />}
                         {activePopup === 'per' && <PerModalContent />}
                         {activePopup === 'cli' && <CliModalContent />}

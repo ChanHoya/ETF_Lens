@@ -38,8 +38,8 @@ export function DollarModalContent() {
 
         // Base everything off 100 at the start of the period to see relative flows, finding the first valid value
         const getBase = (key: string) => {
-            const validItem = sliced.find((item: any) => item[key] && item[key] > 0);
-            return validItem ? validItem[key] : 1;
+            const validItem = sliced.find((item: any) => typeof item[key] === 'number' && item[key] > 0);
+            return validItem ? validItem[key] : 0;
         };
 
         const baseKrw = getBase('krw');
@@ -49,11 +49,15 @@ export function DollarModalContent() {
 
         return sliced.map((d: any) => ({
             ...d,
-            indexedDollar: d.dollar ? (d.dollar / baseDollar) * 100 : null,
-            indexedKrw: d.krw ? (d.krw / baseKrw) * 100 : null,
-            indexedKospi: d.kospi ? (d.kospi / baseKospi) * 100 : null,
-            indexedSp500: d.sp500 ? (d.sp500 / baseSp) * 100 : null,
-        }));
+            rawDollar: d.dollar,
+            rawKrw: d.krw,
+            rawKospi: d.kospi,
+            rawSp500: d.sp500,
+            dollar: (typeof d.dollar === 'number' && baseDollar > 0) ? parseFloat(((d.dollar / baseDollar) * 100).toFixed(2)) : null,
+            krw: (typeof d.krw === 'number' && baseKrw > 0) ? parseFloat(((d.krw / baseKrw) * 100).toFixed(2)) : null,
+            kospi: (typeof d.kospi === 'number' && baseKospi > 0) ? parseFloat(((d.kospi / baseKospi) * 100).toFixed(2)) : null,
+            sp500: (typeof d.sp500 === 'number' && baseSp > 0) ? parseFloat(((d.sp500 / baseSp) * 100).toFixed(2)) : null,
+        })).filter((d: any) => d.dollar !== null && isFinite(d.dollar));
     }, [data, period]);
 
     if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading data...</div>;
@@ -72,7 +76,7 @@ export function DollarModalContent() {
                 ))}
             </div>
 
-            <div className="flex-1 min-h-[600px] w-full bg-black/20 rounded-xl p-4 border border-white/5">
+            <div className="w-full bg-black/20 rounded-xl p-4 border border-white/5" style={{ minHeight: '600px', flex: '1 1 auto' }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={filteredData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -85,19 +89,19 @@ export function DollarModalContent() {
                             itemStyle={{ fontSize: '12px' }}
                             formatter={(value: any, name: any, props: any) => {
                                 if (!props || !props.payload) return [value, name];
-                                if (name === '달러 인덱스 (지수화)') return [props.payload.dollar?.toFixed(2), '달러 인덱스'];
-                                if (name === 'USD/KRW (지수화)') return [`${Math.round(props.payload.krw || 0).toLocaleString()}원`, 'USD/KRW'];
-                                if (name === 'KOSPI (지수화)') return [Math.round(props.payload.kospi || 0).toLocaleString(), 'KOSPI'];
-                                if (name === 'S&P 500 (지수화)') return [Math.round(props.payload.sp500 || 0).toLocaleString(), 'S&P 500'];
+                                if (name === '달러 인덱스') return [props.payload.rawDollar?.toFixed(2), '달러 인덱스'];
+                                if (name === 'USD/KRW') return [`${Math.round(props.payload.rawKrw || 0).toLocaleString()}원`, 'USD/KRW'];
+                                if (name === 'KOSPI') return [Math.round(props.payload.rawKospi || 0).toLocaleString(), 'KOSPI'];
+                                if (name === 'S&P 500') return [Math.round(props.payload.rawSp500 || 0).toLocaleString(), 'S&P 500'];
                                 return [value, name];
                             }}
                             labelStyle={{ color: '#aaa', marginBottom: '8px', fontSize: '12px' }}
                         />
 
-                        <Line yAxisId="left" type="monotone" name="달러 인덱스 (지수화)" dataKey="indexedDollar" stroke="#34d399" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                        <Line yAxisId="left" type="stepAfter" name="USD/KRW (지수화)" dataKey="indexedKrw" stroke="#60a5fa" strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={{ r: 6 }} />
-                        <Line yAxisId="left" type="monotone" name="KOSPI (지수화)" dataKey="indexedKospi" stroke="#f43f5e" strokeWidth={1.5} dot={false} />
-                        <Line yAxisId="left" type="monotone" name="S&P 500 (지수화)" dataKey="indexedSp500" stroke="#a78bfa" strokeWidth={1.5} dot={false} />
+                        <Line yAxisId="left" connectNulls type="monotone" name="달러 인덱스" dataKey="dollar" stroke="#34d399" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                        <Line yAxisId="left" connectNulls type="stepAfter" name="USD/KRW" dataKey="krw" stroke="#60a5fa" strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={{ r: 6 }} />
+                        <Line yAxisId="left" connectNulls type="monotone" name="KOSPI" dataKey="kospi" stroke="#f43f5e" strokeWidth={1.5} dot={false} />
+                        <Line yAxisId="left" connectNulls type="monotone" name="S&P 500" dataKey="sp500" stroke="#a78bfa" strokeWidth={1.5} dot={false} />
                     </LineChart>
                 </ResponsiveContainer>
             </div>
