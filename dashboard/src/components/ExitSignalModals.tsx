@@ -49,10 +49,10 @@ export function DollarModalContent() {
 
         return sliced.map((d: any) => ({
             ...d,
-            indexedDollar: (d.dollar / baseDollar) * 100,
-            indexedKrw: (d.krw / baseKrw) * 100,
-            indexedKospi: (d.kospi / baseKospi) * 100,
-            indexedSp500: (d.sp500 / baseSp) * 100,
+            indexedDollar: d.dollar ? (d.dollar / baseDollar) * 100 : null,
+            indexedKrw: d.krw ? (d.krw / baseKrw) * 100 : null,
+            indexedKospi: d.kospi ? (d.kospi / baseKospi) * 100 : null,
+            indexedSp500: d.sp500 ? (d.sp500 / baseSp) * 100 : null,
         }));
     }, [data, period]);
 
