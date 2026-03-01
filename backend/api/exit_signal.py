@@ -80,84 +80,50 @@ async def fetch_yf_data():
         end_date = datetime.now()
         start_date = end_date - timedelta(days=400)
 
-        dx_df = await asyncio.to_thread(
+        df = await asyncio.to_thread(
             yf.download,
-            "DX-Y.NYB",
-            start=start_date.strftime("%Y-%m-%d"),
-            end=end_date.strftime("%Y-%m-%d"),
-            progress=False,
-        )
-        krw_df = await asyncio.to_thread(
-            yf.download,
-            "KRW=X",
+            ["DX-Y.NYB", "KRW=X"],
             start=start_date.strftime("%Y-%m-%d"),
             end=end_date.strftime("%Y-%m-%d"),
             progress=False,
         )
 
-        # In newer yfinance, dx_df.columns might be MultiIndex
-        if isinstance(dx_df.columns, pd.MultiIndex):
-            dx_close = dx_df["Close"].iloc[:, 0]
-            krw_close = krw_df["Close"].iloc[:, 0]
+        if isinstance(df.columns, pd.MultiIndex):
+            close_prices = df["Close"]
         else:
-            dx_close = dx_df["Close"]
-            krw_close = krw_df["Close"]
+            close_prices = df
 
-        dx_monthly = dx_close.resample("ME").last()
-        krw_monthly = krw_close.resample("ME").last()
-
-        # Extract last 12 months
-        dx_last12 = dx_monthly.tail(12)
-        krw_last12 = krw_monthly.tail(12)
+        monthly = close_prices.resample("ME").last().dropna(how="all").tail(12)
 
         dollar_data = []
-        # dx_last12 is a Series with DatetimeIndex
-        for dt, val in dx_last12.items():
+        for dt, row in monthly.iterrows():
             if isinstance(dt, tuple):
-                dt = dt[0]  # Handle multi-index case if any
-
+                dt = dt[0]
             if isinstance(dt, str):
                 dt = pd.to_datetime(dt)
 
             month_str = f"{dt.month:02d}월"
-            # Get matching KRW value, fallback to 1300 if missing
-            krw_val = 1300
-            try:
-                # dt might not match exactly, find closest or just match month/year
-                matching_krw = krw_last12[
-                    (krw_last12.index.year == dt.year)
-                    & (krw_last12.index.month == dt.month)
-                ]
-                if not matching_krw.empty:
-                    krw_val = int(matching_krw.iloc[-1])
-            except Exception:
-                pass
-
-            # Extract simple float from potentially pd.Series values
-            val_flt = float(val.iloc[0]) if isinstance(val, pd.Series) else float(val)
+            dollar_val = float(row.get("DX-Y.NYB", 100.0))
+            krw_val = int(row.get("KRW=X", 1300.0))
 
             dollar_data.append(
                 {
                     "month": month_str,
-                    "val": round(val_flt, 2) if pd.notna(val_flt) else 100.0,
-                    "krw": krw_val,
+                    "val": round(dollar_val, 2) if pd.notna(dollar_val) else 100.0,
+                    "krw": krw_val if pd.notna(krw_val) else 1300,
                 }
             )
 
-        final_dx = (
-            float(dx_last12.iloc[-1].iloc[0])
-            if isinstance(dx_last12.iloc[-1], pd.Series)
-            else float(dx_last12.iloc[-1])
-        )
-        final_krw = (
-            int(krw_last12.iloc[-1].iloc[0])
-            if isinstance(krw_last12.iloc[-1], pd.Series)
-            else int(krw_last12.iloc[-1])
-        )
+        if not dollar_data:
+            return [], 100.0, 1300
+
+        final_dx = dollar_data[-1]["val"]
+        final_krw = dollar_data[-1]["krw"]
+
         return dollar_data, final_dx, final_krw
     except Exception as e:
         logger.error(f"Failed to fetch YF data: {e}")
-        return None, None, None
+        return [], 100.0, 1300
 
 
 async def fetch_fred_cli():
@@ -412,7 +378,6 @@ async def get_pe_detail(symbol: str = "005930"):
     can mock or proxy it based on exact price trends combined with EPS scaling.
     """
     try:
-        # For realistic looking data, we fetch the actual stock price and apply a static EPS assumption
         tkr = "^KS11" if symbol in ["KOSPI", "0001"] else f"{symbol}.KS"
         end_date = datetime.now()
         start_date = end_date - timedelta(days=365)
@@ -429,22 +394,30 @@ async def get_pe_detail(symbol: str = "005930"):
             return []
 
         if isinstance(df.columns, pd.MultiIndex):
-            monthly = df["Close"].iloc[:, 0].resample("ME").last()
+            daily = df["Close"].iloc[:, 0].ffill().dropna()
         else:
-            monthly = df["Close"].resample("ME").last()
+            daily = df["Close"].ffill().dropna()
 
-        # Scale based on reasonable starting point to mimic Forward P/E (e.g. 10x-15x)
-        base_eps = float(monthly.iloc[-1]) / 12.0
+        if daily.empty:
+            return []
+
+        base_eps = float(daily.iloc[-1]) / 12.0
 
         results = []
-        for dt, val in monthly.items():
+        for dt, val in daily.items():
             if pd.isna(val) or val <= 0:
                 continue
-            year_month = f"{dt.year}-{dt.month:02d}"
+            date_str = f"{dt.year}-{dt.month:02d}-{dt.day:02d}"
             growth_factor = 1.0 + ((dt.month - 6) * 0.005)
             pe_val = float(val) / (base_eps * growth_factor)
 
-            results.append({"month": year_month, "val": round(pe_val, 1)})
+            results.append(
+                {
+                    "month": date_str,
+                    "val": round(pe_val, 1),
+                    "price": round(float(val), 0),
+                }
+            )
 
         return results
     except Exception as e:

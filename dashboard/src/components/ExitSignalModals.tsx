@@ -232,17 +232,24 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
             <div className="flex-1 w-full min-h-[0px] mt-2">
                 {!loading && data.length > 0 && (
                     <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                        <LineChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                             <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
-                            <YAxis domain={['auto', 'auto']} hide />
+
+                            <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
+                            <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 9, fill: '#666' }} tickLine={false} axisLine={false} width={50} tickFormatter={(val) => Math.round(val).toLocaleString()} />
+
                             <RechartsTooltip
                                 contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                                 itemStyle={{ fontSize: '12px', color: '#fff' }}
-                                formatter={(value: any) => [`${value}x`, 'P/E']}
+                                formatter={(value: any, name: any) => {
+                                    if (name === 'P/E') return [`${value}x`, 'P/E'];
+                                    return [Math.round(value).toLocaleString(), 'Price'];
+                                }}
                                 labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                             />
-                            <Line type="monotone" name="P/E" dataKey="val" stroke={isKospi ? '#60a5fa' : '#a1a1aa'} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
+                            <Line yAxisId="left" type="monotone" name="P/E" dataKey="val" stroke={isKospi ? '#60a5fa' : '#a1a1aa'} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                            <Line yAxisId="right" type="stepAfter" name="Price" dataKey="price" stroke="#f43f5e" strokeWidth={1} dot={false} strokeDasharray="3 3" />
                         </LineChart>
                     </ResponsiveContainer>
                 )}

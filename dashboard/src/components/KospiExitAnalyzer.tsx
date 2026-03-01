@@ -240,7 +240,7 @@ export default function KospiExitAnalyzer() {
 
                     <div className="h-[120px] w-full mt-2 -ml-2 -mb-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartDollar} margin={{ top: 5, right: -15, left: -25, bottom: 0 }}>
+                            <LineChart data={chartDollar} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
                                 <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
@@ -279,7 +279,7 @@ export default function KospiExitAnalyzer() {
 
                     <div className="h-[120px] w-full mt-2 -ml-2 -mb-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartPer} margin={{ top: 5, right: -15, left: -25, bottom: 0 }}>
+                            <LineChart data={chartPer} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
                                 <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
@@ -322,7 +322,7 @@ export default function KospiExitAnalyzer() {
 
                     <div className="h-[120px] w-full mt-2 -ml-2 -mb-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartCli} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
+                            <LineChart data={chartCli} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
                                 <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
