@@ -36,11 +36,16 @@ export function DollarModalContent() {
         const sliced = data.slice(-months);
         if (sliced.length === 0) return [];
 
-        // Base everything off 100 at the start of the period to see relative flows
-        const baseKrw = sliced[0].krw || 1;
-        const baseDollar = sliced[0].dollar || 1;
-        const baseKospi = sliced[0].kospi || 1;
-        const baseSp = sliced[0].sp500 || 1;
+        // Base everything off 100 at the start of the period to see relative flows, finding the first valid value
+        const getBase = (key: string) => {
+            const validItem = sliced.find((item: any) => item[key] && item[key] > 0);
+            return validItem ? validItem[key] : 1;
+        };
+
+        const baseKrw = getBase('krw');
+        const baseDollar = getBase('dollar');
+        const baseKospi = getBase('kospi');
+        const baseSp = getBase('sp500');
 
         return sliced.map((d: any) => ({
             ...d,
