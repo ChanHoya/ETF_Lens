@@ -20,18 +20,18 @@ const mockDollarData = [
 ];
 
 const mockPerData = [
-    { month: '03월', val: 9.8, kospi: 2750 },
-    { month: '04월', val: 9.5, kospi: 2680 },
-    { month: '05월', val: 9.1, kospi: 2600 },
-    { month: '06월', val: 9.9, kospi: 2700 },
-    { month: '07월', val: 10.4, kospi: 2780 },
-    { month: '08월', val: 10.9, kospi: 2850 },
-    { month: '09월', val: 11.2, kospi: 2900 },
-    { month: '10월', val: 11.5, kospi: 2930 },
-    { month: '11월', val: 11.8, kospi: 2880 },
-    { month: '12월', val: 12.1, kospi: 2800 },
-    { month: '01월', val: 12.6, kospi: 2500 }, // Touch danger line
-    { month: '02월', val: 12.4, kospi: 2450 }, // Trend reversal dropping
+    { month: '03월', val: 9.8, kospi: 2750, price: 2750 },
+    { month: '04월', val: 9.5, kospi: 2680, price: 2680 },
+    { month: '05월', val: 9.1, kospi: 2600, price: 2600 },
+    { month: '06월', val: 9.9, kospi: 2700, price: 2700 },
+    { month: '07월', val: 10.4, kospi: 2780, price: 2780 },
+    { month: '08월', val: 10.9, kospi: 2850, price: 2850 },
+    { month: '09월', val: 11.2, kospi: 2900, price: 2900 },
+    { month: '10월', val: 11.5, kospi: 2930, price: 2930 },
+    { month: '11월', val: 11.8, kospi: 2880, price: 2880 },
+    { month: '12월', val: 12.1, kospi: 2800, price: 2800 },
+    { month: '01월', val: 12.6, kospi: 2500, price: 2500 }, // Touch danger line
+    { month: '02월', val: 12.4, kospi: 2450, price: 2450 }, // Trend reversal dropping
 ];
 
 const mockCliData = [
@@ -135,7 +135,7 @@ export default function KospiExitAnalyzer() {
     };
 
     const chartDollar = getChartData(baseDollar, dollarIndex, { krw: dollarKrw });
-    const chartPer = getChartData(basePer, forwardPer);
+    const chartPer = getChartData(basePer, forwardPer, { price: basePer.length > 0 ? basePer[basePer.length - 1].price : 2500 });
     const chartCli = getChartData(baseCli, oecdCliValue);
 
     // Calculate status levels
@@ -283,16 +283,16 @@ export default function KospiExitAnalyzer() {
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
                                 <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
-                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
+                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 9, fill: '#666' }} tickLine={false} axisLine={false} width={45} tickFormatter={(val) => Math.round(val).toLocaleString()} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     itemStyle={{ color: '#fff' }}
-                                    formatter={(value: any, name: any) => [name === 'val' ? `${value}x` : value, name === 'val' ? 'P/E' : 'KOSPI']}
+                                    formatter={(value: any, name: any) => [name === 'val' ? `${value}x` : `${Math.round(value).toLocaleString()}pt`, name === 'val' ? 'P/E' : 'KOSPI']}
                                     labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                                 />
                                 <ReferenceLine yAxisId="left" y={12.5} stroke="#f59e0b" strokeDasharray="3 3" />
                                 <Line yAxisId="left" type="monotone" dataKey="val" stroke={forwardPer >= 12.5 || pStatus.level === 'danger' ? '#f43f5e' : '#34d399'} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
-                                <Line yAxisId="right" type="monotone" dataKey="kospi" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
+                                <Line yAxisId="right" type="stepAfter" dataKey="price" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>

@@ -178,12 +178,21 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         if (searchInput.trim()) {
-            // For MVP, just assume the input is a 6-digit symbol. In real app, we'd search by name.
             let s = searchInput.trim();
-            // Basic naive fallback - if they type a name, just use a dummy code or mapping
             if (isNaN(Number(s))) {
                 setDisplayTitle(s);
-                s = "005930"; // Dummy fallback to Samsung if not a number
+                if (s.includes("삼성")) s = "005930";
+                else if (s.includes("하이닉스")) s = "000660";
+                else if (s.includes("현대차") || s.includes("현대자동차")) s = "005380";
+                else if (s.includes("기아")) s = "000270";
+                else if (s.includes("네이버") || s.toLowerCase() === "naver") s = "035420";
+                else if (s.includes("카카오")) s = "035720";
+                else if (s.includes("셀트리온")) s = "068270";
+                else if (s.includes("포스코") || s.toLowerCase() === "posco") s = "005490";
+                else if (s.includes("LG엔에솔") || s.includes("에너지솔루션")) s = "373220";
+                else if (s.includes("LG화학")) s = "051910";
+                else if (s.includes("에코프로")) s = "086520";
+                else s = "005930"; // Fallback
             } else {
                 setDisplayTitle(s);
             }

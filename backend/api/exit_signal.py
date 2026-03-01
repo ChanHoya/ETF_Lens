@@ -191,6 +191,7 @@ async def get_exit_signal_data():
     try:
         dollar_data, current_dollar, current_krw = await fetch_yf_data()
         cli_data, current_cli, cli_down_months = await fetch_fred_cli()
+        pe_data = await get_pe_detail("KOSPI")
 
         # Merge fetched data with mock fallback
         if dollar_data and current_dollar:
@@ -202,6 +203,10 @@ async def get_exit_signal_data():
             mock["indicators"]["cli"] = cli_data
             mock["current_status"]["cli"] = current_cli
             mock["current_status"]["cli_down_months"] = cli_down_months
+
+        if pe_data and len(pe_data) > 0:
+            mock["indicators"]["per"] = pe_data
+            mock["current_status"]["per"] = pe_data[-1]["val"]
 
         _cache["data"] = mock
         _cache["timestamp"] = now
@@ -216,9 +221,7 @@ async def get_exit_signal_data():
 async def get_macro_detail(period: str = "10Y"):
     global _macro_cache
 
-    # We will use 'daily' for 6M, 1Y, and 'monthly' for 3Y, 10Y
-    is_daily = period in ["6M", "1Y"]
-    cache_key = "daily" if is_daily else "monthly"
+    cache_key = f"daily_{period}"
 
     now = datetime.now().timestamp()
     if cache_key in _macro_cache and (
@@ -228,11 +231,13 @@ async def get_macro_detail(period: str = "10Y"):
 
     try:
         end_date = datetime.now()
-        start_date = (
-            end_date - timedelta(days=365)
-            if is_daily
-            else end_date - timedelta(days=365 * 10)
-        )
+        start_date = end_date - timedelta(days=365)
+        if period == "6M":
+            start_date = end_date - timedelta(days=180)
+        elif period == "3Y":
+            start_date = end_date - timedelta(days=365 * 3)
+        elif period == "10Y":
+            start_date = end_date - timedelta(days=365 * 10)
 
         tickers = ["DX-Y.NYB", "KRW=X", "^KS11", "^GSPC"]
         df = await asyncio.to_thread(
@@ -248,11 +253,8 @@ async def get_macro_detail(period: str = "10Y"):
         else:
             close_prices = df
 
-        if is_daily:
-            # Forward fill weekend/holiday gaps in daily data up to a few days
-            series_data = close_prices.ffill(limit=5).dropna(how="all")
-        else:
-            series_data = close_prices.resample("ME").last().dropna(how="all")
+        # Always daily data with forward fill for weekends
+        series_data = close_prices.ffill(limit=5).dropna(how="all")
 
         results = []
         for dt, row in series_data.iterrows():
@@ -261,11 +263,7 @@ async def get_macro_detail(period: str = "10Y"):
             if isinstance(dt, str):
                 dt = pd.to_datetime(dt)
 
-            date_str = (
-                f"{dt.year}-{dt.month:02d}-{dt.day:02d}"
-                if is_daily
-                else f"{dt.year}-{dt.month:02d}"
-            )
+            date_str = f"{dt.year}-{dt.month:02d}-{dt.day:02d}"
 
             results.append(
                 {
