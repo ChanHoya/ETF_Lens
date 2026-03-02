@@ -2,10 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
 import { Search } from 'lucide-react';
 
+const useVisualSort = (data: any[], keys: string[]) => {
+    return React.useMemo(() => {
+        const ranges: any = {};
+        keys.forEach(k => {
+            if (!data) return;
+            const vals = data.map(d => d[k]).filter(v => typeof v === 'number' && isFinite(v));
+            ranges[k] = vals.length > 0 ? { min: Math.min(...vals), max: Math.max(...vals) } : { min: 0, max: 1 };
+        });
+
+        return (key: string, val: number) => {
+            if (val == null || !ranges[key]) return -Infinity;
+            const { min, max } = ranges[key];
+            return max > min ? (val - min) / (max - min) : 0;
+        };
+    }, [data, keys]);
+};
+
 export function DollarModalContent() {
     const [period, setPeriod] = useState('1Y');
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchMacro = async () => {
@@ -64,6 +82,8 @@ export function DollarModalContent() {
 
     if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading data...</div>;
 
+    const getNorm = useVisualSort(filteredData, ['dollar', 'krw', 'kospi', 'sp500']);
+
     return (
         <div className="relative flex flex-col h-full w-full min-h-[700px]">
             <div className="absolute -top-16 right-12 flex gap-2 shrink-0">
@@ -80,7 +100,10 @@ export function DollarModalContent() {
 
             <div className="w-full bg-black/20 rounded-xl p-4 border border-white/5" style={{ minHeight: '600px', flex: '1 1 auto' }}>
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={filteredData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                    <LineChart data={filteredData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                        onMouseMove={(e) => setHoverIndex(e?.activeTooltipIndex ?? null)}
+                        onMouseLeave={() => setHoverIndex(null)}
+                    >
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                         <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickMargin={12} />
 
@@ -91,7 +114,7 @@ export function DollarModalContent() {
                             contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                             content={({ active, payload, label }) => {
                                 if (active && payload && payload.length) {
-                                    const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                    const sortedPayload = [...payload].sort((a: any, b: any) => getNorm(b.dataKey, b.value) - getNorm(a.dataKey, a.value));
                                     return (
                                         <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
                                             <p className="text-gray-400 mb-2">{label}</p>
@@ -127,13 +150,16 @@ export function DollarModalContent() {
 
             <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-400 justify-center">
                 {(() => {
-                    const lastD = filteredData.length > 0 ? filteredData[filteredData.length - 1] : null;
+                    const currentD = hoverIndex !== null && filteredData[hoverIndex] ? filteredData[hoverIndex] : (filteredData.length > 0 ? filteredData[filteredData.length - 1] : null);
                     const items = [
-                        { name: '원/달러 환율', val: lastD?.krw || 0, node: <><div className="w-3 h-3 border-2 border-blue-400 border-dashed rounded-sm"></div> 원/달러 환율</> },
-                        { name: '달러 인덱스', val: lastD?.dollar || 0, node: <><div className="w-3 h-3 bg-emerald-400 rounded-sm"></div> 달러 인덱스</> },
-                        { name: 'S&P 500', val: lastD?.sp500 || 0, node: <><div className="w-3 h-3 bg-purple-400 rounded-sm"></div> S&P 500</> },
-                        { name: 'KOSPI', val: lastD?.kospi || 0, node: <><div className="w-3 h-3 bg-rose-400 rounded-sm"></div> KOSPI</> }
-                    ].sort((a, b) => b.val - a.val);
+                        { name: '원/달러 환율', dataKey: 'krw', node: <><div className="w-3 h-3 border-2 border-blue-400 border-dashed rounded-sm"></div> 원/달러 환율</> },
+                        { name: '달러 인덱스', dataKey: 'dollar', node: <><div className="w-3 h-3 bg-emerald-400 rounded-sm"></div> 달러 인덱스</> },
+                        { name: 'S&P 500', dataKey: 'sp500', node: <><div className="w-3 h-3 bg-purple-400 rounded-sm"></div> S&P 500</> },
+                        { name: 'KOSPI', dataKey: 'kospi', node: <><div className="w-3 h-3 bg-rose-400 rounded-sm"></div> KOSPI</> }
+                    ];
+                    if (currentD) {
+                        items.sort((a, b) => getNorm(b.dataKey, currentD[b.dataKey]) - getNorm(a.dataKey, currentD[a.dataKey]));
+                    }
                     return items.map(item => (
                         <div key={item.name} className="flex items-center gap-2">{item.node}</div>
                     ));
@@ -226,6 +252,7 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
     };
 
     const currentVal = data.length > 0 ? data[data.length - 1].val : 0;
+    const getNormPer = useVisualSort(data, ['val', 'kospi']);
 
     return (
         <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 flex flex-col min-h-[250px] flex-1">
@@ -276,7 +303,7 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
                                 contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                                 content={({ active, payload, label }) => {
                                     if (active && payload && payload.length) {
-                                        const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                        const sortedPayload = [...payload].sort((a: any, b: any) => getNormPer(b.dataKey, b.value) - getNormPer(a.dataKey, a.value));
                                         return (
                                             <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[11px]">
                                                 <p className="text-gray-400 mb-1">{label}</p>
@@ -353,6 +380,9 @@ export function CliModalContent() {
         }
     }
 
+    const getNormLeft = useVisualSort(data, ['kospi', 'kor_cli']);
+    const getNormRight = useVisualSort(data, ['kor_cli', 'usa_cli', 'oecd_cli']);
+
     return (
         <div className="flex flex-col h-full w-full gap-4 flex-1">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-[450px]">
@@ -369,7 +399,7 @@ export function CliModalContent() {
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
-                                            const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                            const sortedPayload = [...payload].sort((a: any, b: any) => getNormLeft(b.dataKey, b.value) - getNormLeft(a.dataKey, a.value));
                                             return (
                                                 <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
                                                     <p className="text-gray-400 mb-2">{label}</p>
@@ -410,7 +440,7 @@ export function CliModalContent() {
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
-                                            const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                            const sortedPayload = [...payload].sort((a: any, b: any) => getNormRight(b.dataKey, b.value) - getNormRight(a.dataKey, a.value));
                                             return (
                                                 <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
                                                     <p className="text-gray-400 mb-2">{label}</p>
@@ -503,6 +533,8 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
     const rightMin = displayData.length > 0 ? Math.min(...displayData.map(d => Math.min(d.kospi || Infinity, d.sp500 || Infinity))) * 0.95 : 'auto';
     const rightMax = displayData.length > 0 ? Math.max(...displayData.map(d => Math.max(d.kospi || -Infinity, d.sp500 || -Infinity))) * 1.05 : 'auto';
 
+    const getNorm = useVisualSort(displayData, isFgi ? ['fgi', 'kospi', 'sp500'] : ['vix', 'kospi', 'sp500']);
+
     return (
         <div className="flex flex-col h-full w-full gap-4 flex-1">
             <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col flex-1 min-h-[450px]">
@@ -541,7 +573,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                                 contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                                 content={({ active, payload, label }) => {
                                     if (active && payload && payload.length) {
-                                        const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                        const sortedPayload = [...payload].sort((a: any, b: any) => getNorm(b.dataKey, b.value) - getNorm(a.dataKey, a.value));
                                         return (
                                             <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
                                                 <p className="text-gray-400 mb-2">{label}</p>

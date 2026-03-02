@@ -49,6 +49,23 @@ const mockCliData = [
     { month: '02월', val: 100.4 }, // Drop 2 (Danger)
 ];
 
+const useVisualSort = (data: any[], keys: string[]) => {
+    return React.useMemo(() => {
+        const ranges: any = {};
+        keys.forEach(k => {
+            if (!data) return;
+            const vals = data.map(d => d[k]).filter(v => typeof v === 'number' && isFinite(v));
+            ranges[k] = vals.length > 0 ? { min: Math.min(...vals), max: Math.max(...vals) } : { min: 0, max: 1 };
+        });
+
+        return (key: string, val: number) => {
+            if (val == null || !ranges[key]) return -Infinity;
+            const { min, max } = ranges[key];
+            return max > min ? (val - min) / (max - min) : 0;
+        };
+    }, [data, keys]);
+};
+
 export default function KospiExitAnalyzer() {
     // Current Active Status
     const [dollarIndex, setDollarIndex] = useState(mockDollarData[11].val);
@@ -158,6 +175,10 @@ export default function KospiExitAnalyzer() {
     const chartPer = basePer;
     const chartCli = baseCli;
     const chartSentiment = baseSentiment.length > 0 ? baseSentiment : [];
+
+    const getNormDollar = useVisualSort(chartDollar, ['dollar', 'krw']);
+    const getNormPer = useVisualSort(chartPer, ['val', 'kospi']);
+    const getNormCli = useVisualSort(chartCli, ['kor_cli', 'usa_cli', 'oecd_cli']);
 
     // Calculate status levels
     const getDollarStatus = () => {
@@ -283,7 +304,7 @@ export default function KospiExitAnalyzer() {
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
-                                            const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                            const sortedPayload = [...payload].sort((a: any, b: any) => getNormDollar(b.dataKey, b.value) - getNormDollar(a.dataKey, a.value));
                                             return (
                                                 <div className="bg-black/80 border border-white/10 p-2 rounded-lg text-[11px]">
                                                     <p className="text-gray-400 mb-1">{label}</p>
@@ -336,7 +357,7 @@ export default function KospiExitAnalyzer() {
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
-                                            const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                            const sortedPayload = [...payload].sort((a: any, b: any) => getNormPer(b.dataKey, b.value) - getNormPer(a.dataKey, a.value));
                                             return (
                                                 <div className="bg-black/80 border border-white/10 p-2 rounded-lg text-[11px]">
                                                     <p className="text-gray-400 mb-1">{label}</p>
@@ -392,7 +413,7 @@ export default function KospiExitAnalyzer() {
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
-                                            const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                            const sortedPayload = [...payload].sort((a: any, b: any) => getNormCli(b.dataKey, b.value) - getNormCli(a.dataKey, a.value));
                                             return (
                                                 <div className="bg-black/80 border border-white/10 p-2 rounded-lg text-[11px]">
                                                     <p className="text-gray-400 mb-1">{label}</p>
