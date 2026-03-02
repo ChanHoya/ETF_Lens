@@ -394,11 +394,9 @@ async def get_cli_detail():
         import ssl
         import io
 
-        kor_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=KORLORSGPNOSTSAM"
-        usa_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=USALORSGPNOSTSAM"
-        oecd_url = (
-            "https://fred.stlouisfed.org/graph/fredgraph.csv?id=OECDLORSGPNOSTSAM"
-        )
+        kor_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=KORLOLITOAASTSAM"
+        usa_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=USALOLITOAASTSAM"
+        oecd_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=G7LOLITOAASTSAM"
 
         def fetch_fred_csv(url):
             try:
