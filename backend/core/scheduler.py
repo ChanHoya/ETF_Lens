@@ -129,9 +129,19 @@ async def sync_etf_batch():
 
 
 def setup_scheduler():
-    # Run at 18:00 every day
-    scheduler.add_job(sync_etf_batch, "cron", hour=18, minute=00, id="daily_db_sync")
+    # Run at 18:00 every day for big ETF DB sync
+    scheduler.add_job(sync_etf_batch, "cron", hour=18, minute=0, id="daily_db_sync")
+
+    # Run at 08:00 every day for morning briefing email and macro data updates
+    from scheduler.daily_fetch import run_morning_briefing
+
+    scheduler.add_job(
+        run_morning_briefing, "cron", hour=8, minute=0, id="morning_briefing_email"
+    )
+
     # For dev testing, uncomment to run immediately
     # scheduler.add_job(sync_etf_batch, next_run_time=datetime.now())
+    # scheduler.add_job(run_morning_briefing, next_run_time=datetime.now())
+
     scheduler.start()
-    print("DB Scheduler started.")
+    print("DB and Email Scheduler started.")

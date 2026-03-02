@@ -103,3 +103,24 @@ class BenchmarkPrice(Base):
     symbol = Column(String, index=True)  # e.g. "KS11", "KQ11", "^GSPC", "^IXIC"
     date = Column(String, index=True)  # "YYYY-MM-DD"
     close = Column(Float)
+
+
+class StockEPSHistory(Base):
+    __tablename__ = "stock_eps_history"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    symbol = Column(String, index=True)  # e.g., '005930'
+    date = Column(String, index=True)  # e.g., '2023-10-25'
+    forward_eps = Column(Float, nullable=True)  # e.g., 5000.5
+    price = Column(Float, nullable=True)  # e.g., 70000.0
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class IndicatorHistory(Base):
+    __tablename__ = "indicator_history"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    indicator_name = Column(String, index=True)  # e.g., 'VIX', 'FEAR_GREED'
+    date = Column(String, index=True)  # e.g., '2023-10-25'
+    value = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

@@ -346,3 +346,77 @@ export function CliModalContent() {
         </div>
     );
 }
+
+export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
+    const [data, setData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchSentiment = async () => {
+            try {
+                const res = await fetch('http://localhost:8000/api/v1/exit-signal');
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.indicators && json.indicators.sentiment) {
+                        setData(json.indicators.sentiment);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch sentiment detail:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchSentiment();
+    }, []);
+
+    if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading data...</div>;
+
+    const currentVal = data.length > 0 ? data[data.length - 1] : null;
+    const maxVix = data.length > 0 ? Math.max(100, ...data.map(d => (d.vix || 0) + 10)) : 100;
+
+    return (
+        <div className="flex flex-col h-full w-full gap-6 min-h-[500px]">
+            <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col h-[400px]">
+                <h3 className="text-white font-bold mb-4 text-center">최근 30영업일 {isFgi ? '공포/탐욕 지수' : 'VIX (변동성 지수)'} 궤적</h3>
+                <div className="flex-1 w-full relative">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                            <XAxis dataKey="date" stroke="#71717a" fontSize={10} tickMargin={8} />
+                            <YAxis yAxisId="left" domain={isFgi ? [0, 100] : ['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
+                            <RechartsTooltip
+                                contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                itemStyle={{ color: '#fff', fontSize: '12px' }}
+                                formatter={(val: any, name: any) => [val, name === 'vix' ? 'VIX' : 'Fear & Greed']}
+                            />
+
+                            {/* FGI Elements */}
+                            {isFgi && <ReferenceArea yAxisId="left" y1={0} y2={25} strokeOpacity={0} fill="#f43f5e" fillOpacity={0.15} />}
+                            {isFgi && <ReferenceArea yAxisId="left" y1={75} y2={100} strokeOpacity={0} fill="#34d399" fillOpacity={0.15} />}
+                            {isFgi && <ReferenceLine yAxisId="left" y={25} stroke="#f43f5e" strokeDasharray="3 3" />}
+                            {isFgi && <ReferenceLine yAxisId="left" y={75} stroke="#34d399" strokeDasharray="3 3" />}
+                            {isFgi && <Line yAxisId="left" type="monotone" name="fgi" dataKey="fgi" stroke={currentVal && currentVal.fgi < 30 ? '#f43f5e' : '#34d399'} strokeWidth={3} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />}
+
+                            {/* VIX Elements */}
+                            {!isFgi && <ReferenceArea yAxisId="left" y1={0} y2={15} strokeOpacity={0} fill="#34d399" fillOpacity={0.15} />}
+                            {!isFgi && <ReferenceArea yAxisId="left" y1={20} y2={maxVix} strokeOpacity={0} fill="#f43f5e" fillOpacity={0.15} />}
+                            {!isFgi && <ReferenceLine yAxisId="left" y={15} stroke="#34d399" strokeDasharray="3 3" />}
+                            {!isFgi && <ReferenceLine yAxisId="left" y={20} stroke="#f43f5e" strokeDasharray="3 3" />}
+                            {!isFgi && <Line yAxisId="left" type="monotone" name="vix" dataKey="vix" stroke={currentVal && currentVal.vix >= 20 ? '#f43f5e' : '#f59e0b'} strokeWidth={3} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />}
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            <div className="bg-indigo-900/20 border border-indigo-500/20 p-4 rounded-xl">
+                <h4 className="font-bold text-indigo-300 mb-2">💡 시장 단기 방향성 점검</h4>
+                <p className="text-sm text-indigo-100/80 leading-relaxed">
+                    {isFgi
+                        ? "공포/탐욕 지수는 0~100 사이로 산출됩니다. 25 미만(붉은 음영)은 시장에 극단적 공포가 만연하여 단기 과매도(매수 기회) 상태일 수 있음을, 75 초과(녹색 음영)는 극단적 탐욕으로 단기 과매수(매도/현금화 경고) 상태임을 시사합니다."
+                        : "VIX(변동성 지수)는 시장의 단기 가격 변동 위험을 나타냅니다. 통상 15 미만(녹색 음영)은 안정장, 20 초과(붉은 음영)는 공포장 진입을 뜻합니다. 급격한 기울기로 20을 돌파 시 즉각적인 보유선 축소가 요구됩니다."}
+                </p>
+            </div>
+        </div>
+    );
+}

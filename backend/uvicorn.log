@@ -1,0 +1,93 @@
+INFO:     Will watch for changes in these directories: ['/Users/chanhojung/ETF_One/backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [4881] using StatReload
+INFO:     Started server process [4883]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+DB and Email Scheduler started.
+INFO:     127.0.0.1:50342 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+Failed to fetch Sentiment data: Unknown datetime string format, unable to parse: ^VIX, at position 0
+INFO:     127.0.0.1:50337 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50353 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50353 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50382 - "GET /api/v1/exit-signal/macro?period=10Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50389 - "GET /api/v1/etfs?page=1&limit=10 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50398 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50398 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50400 - "GET /api/v1/exit-signal/pe?symbol=005930 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50403 - "GET /api/v1/exit-signal/pe?symbol=000660 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50404 - "GET /api/v1/exit-signal/pe?symbol=005380 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50505 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51120 - "GET /api/v1/analyze/evaluate HTTP/1.1" 200 OK
+WARNING:  StatReload detected changes in 'api/exit_signal.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [4883]
+INFO:     Started server process [5913]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+DB and Email Scheduler started.
+INFO:     127.0.0.1:51241 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51332 - "GET /api/v1/analyze/etfs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51839 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51839 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51843 - "GET /api/v1/exit-signal/pe?symbol=000660 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51845 - "GET /api/v1/exit-signal/pe?symbol=005380 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51841 - "GET /api/v1/exit-signal/pe?symbol=005930 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51863 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+FRED CSV fetch failed: Missing column provided to 'parse_dates': 'DATE'
+FRED CSV fetch failed: Missing column provided to 'parse_dates': 'DATE'
+INFO:     127.0.0.1:51863 - "GET /api/v1/exit-signal/cli HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52150 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52160 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52170 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52170 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52205 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52205 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52206 - "GET /api/v1/analyze/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52205 - "GET /api/v1/analyze/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52208 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52212 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52221 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52223 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52249 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52251 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52255 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52257 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52260 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52260 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52294 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52356 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52391 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52394 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52392 - "GET /api/v1/analyze/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52394 - "GET /api/v1/analyze/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52394 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52392 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52404 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52404 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52493 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52493 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52495 - "GET /api/v1/analyze/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52495 - "GET /api/v1/analyze/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52502 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52502 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52533 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52533 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52559 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52559 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52561 - "GET /api/v1/analyze/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52561 - "GET /api/v1/analyze/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52581 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52581 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52658 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52660 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52743 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52747 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52745 - "GET /api/v1/analyze/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52745 - "GET /api/v1/analyze/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52757 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52757 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52783 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52783 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK

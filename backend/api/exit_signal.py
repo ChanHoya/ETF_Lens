@@ -126,6 +126,65 @@ async def fetch_yf_data():
         return [], 100.0, 1300
 
 
+async def fetch_market_sentiment():
+    """Fetch VIX and calculate proxy Fear & Greed Index."""
+    try:
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=200)
+
+        df = await asyncio.to_thread(
+            yf.download,
+            "^VIX",
+            start=start_date.strftime("%Y-%m-%d"),
+            end=end_date.strftime("%Y-%m-%d"),
+            progress=False,
+        )
+
+        # Extract Close price series
+        if isinstance(df.columns, pd.MultiIndex):
+            close_prices = (
+                df["Close"].iloc[:, 0]
+                if "Close" in df.columns.levels[0]
+                else df.iloc[:, 0]
+            )
+        else:
+            close_prices = df["Close"] if "Close" in df.columns else df.iloc[:, 0]
+
+        close_prices = close_prices.ffill().dropna()
+        if close_prices.empty:
+            return [], 20.0, 50.0
+
+        daily = close_prices.tail(30)  # Fetch last 30 days for short-term sentiment
+        sentiment_data = []
+
+        for dt, val in daily.items():
+            if isinstance(dt, tuple):
+                dt = dt[0]
+            if isinstance(dt, str):
+                dt = pd.to_datetime(dt)
+            vix_val = float(val)
+
+            # Proxy formula: FGI = 50 - (VIX - 18) * 3
+            # Bound between 0 and 100
+            fgi_val = max(0.0, min(100.0, 50.0 - (vix_val - 18.0) * 3.0))
+
+            sentiment_data.append(
+                {
+                    "date": f"{dt.month:02d}-{dt.day:02d}",
+                    "vix": round(vix_val, 2),
+                    "fgi": round(fgi_val, 1),
+                }
+            )
+
+        final_vix = sentiment_data[-1]["vix"]
+        final_fgi = sentiment_data[-1]["fgi"]
+
+        return sentiment_data, final_vix, final_fgi
+    except Exception as e:
+        logger.error(f"Failed to fetch Sentiment data: {e}")
+        return [], 20.0, 50.0
+
+
 async def fetch_fred_cli():
     try:
         url = "https://fred.stlouisfed.org/series/KORLORSGPNOSTSAM"
@@ -207,6 +266,12 @@ async def get_exit_signal_data():
         if pe_data and len(pe_data) > 0:
             mock["indicators"]["per"] = pe_data
             mock["current_status"]["per"] = pe_data[-1]["val"]
+
+        sentiment_data, current_vix, current_fgi = await fetch_market_sentiment()
+        if sentiment_data:
+            mock["indicators"]["sentiment"] = sentiment_data
+            mock["current_status"]["vix"] = current_vix
+            mock["current_status"]["fgi"] = current_fgi
 
         _cache["data"] = mock
         _cache["timestamp"] = now

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, TrendingDown, DollarSign, Activity, AlertTriangle, ArrowRight, Info, ChevronRight, BarChart2, X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { DollarModalContent, PerModalContent, CliModalContent } from './ExitSignalModals';
+import { DollarModalContent, PerModalContent, CliModalContent, SentimentModalContent } from './ExitSignalModals';
 
 // Mock Data for the 1-year Historical Trends (12 Months)
 const mockDollarData = [
@@ -56,14 +56,17 @@ export default function KospiExitAnalyzer() {
     const [forwardPer, setForwardPer] = useState(mockPerData[11].val);
     const [oecdCliValue, setOecdCliValue] = useState(mockCliData[11].val);
     const [oecdCliDownMonths, setOecdCliDownMonths] = useState(2); // Based on recent mock drops
+    const [vixValue, setVixValue] = useState(18.5);
+    const [fgiValue, setFgiValue] = useState(50.0);
 
     // Chart Data State
     const [baseDollar, setBaseDollar] = useState([...mockDollarData]);
     const [basePer, setBasePer] = useState([...mockPerData]);
     const [baseCli, setBaseCli] = useState([...mockCliData]);
+    const [baseSentiment, setBaseSentiment] = useState<any[]>([]);
 
     // Popup State
-    const [activePopup, setActivePopup] = useState<'dollar' | 'per' | 'cli' | null>(null);
+    const [activePopup, setActivePopup] = useState<'dollar' | 'per' | 'cli' | 'vix' | 'fgi' | null>(null);
 
     // API State
     const [loading, setLoading] = useState(true);
@@ -88,6 +91,12 @@ export default function KospiExitAnalyzer() {
                     setForwardPer(data.current_status.per);
                     setOecdCliValue(data.current_status.cli);
                     setOecdCliDownMonths(data.current_status.cli_down_months);
+
+                    if (data.indicators.sentiment) {
+                        setBaseSentiment(data.indicators.sentiment);
+                        setVixValue(data.current_status.vix);
+                        setFgiValue(data.current_status.fgi);
+                    }
                 }
             } catch (err) {
                 console.error("Failed to fetch Exit Signal data:", err);
@@ -106,6 +115,8 @@ export default function KospiExitAnalyzer() {
         setForwardPer(12.6);
         setOecdCliValue(100.4);
         setOecdCliDownMonths(2);
+        setVixValue(28.5);
+        setFgiValue(22.0);
     };
 
     const simulateSafe = () => {
@@ -115,6 +126,8 @@ export default function KospiExitAnalyzer() {
         setForwardPer(10.5);
         setOecdCliValue(101.2);
         setOecdCliDownMonths(0);
+        setVixValue(14.2);
+        setFgiValue(65.0);
     };
 
     const simulateWarning = () => {
@@ -124,6 +137,8 @@ export default function KospiExitAnalyzer() {
         setForwardPer(11.8);
         setOecdCliValue(100.8);
         setOecdCliDownMonths(1);
+        setVixValue(21.5);
+        setFgiValue(42.0);
     };
 
     // When simulators run, update out mock charts to visually reflect the new end-state
@@ -137,6 +152,7 @@ export default function KospiExitAnalyzer() {
     const chartDollar = getChartData(baseDollar, dollarIndex, { krw: dollarKrw });
     const chartPer = getChartData(basePer, forwardPer, { price: basePer.length > 0 ? basePer[basePer.length - 1].price : 2500 });
     const chartCli = getChartData(baseCli, oecdCliValue);
+    const chartSentiment = getChartData(baseSentiment.length > 0 ? baseSentiment : [], vixValue, { fgi: fgiValue });
 
     // Calculate status levels
     const getDollarStatus = () => {
@@ -158,11 +174,25 @@ export default function KospiExitAnalyzer() {
         return { level: 'danger', text: '수축 국면', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/30', desc: '2개월 연속 하락' };
     };
 
+    const getVixStatus = () => {
+        if (vixValue < 15) return { level: 'safe', text: '안정', color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' };
+        if (vixValue <= 20) return { level: 'warning', text: '경계', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/30' };
+        return { level: 'danger', text: '공포 확산', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/30' };
+    };
+
+    const getFgiStatus = () => {
+        if (fgiValue < 25) return { level: 'safe', text: '극단적 공포(매수 기회)', color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' };
+        if (fgiValue <= 75) return { level: 'warning', text: '중립/탐욕', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/30' };
+        return { level: 'danger', text: '극단적 탐욕(매도 경고)', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/30' };
+    };
+
     const dStatus = getDollarStatus();
     const pStatus = getPerStatus();
     const cStatus = getCliStatus();
+    const vStatus = getVixStatus();
+    const fStatus = getFgiStatus();
 
-    const statuses = [dStatus.level, pStatus.level, cStatus.level];
+    const statuses = [dStatus.level, pStatus.level, cStatus.level, vStatus.level, fStatus.level];
     const dangerCount = statuses.filter(s => s === 'danger').length;
     const warningCount = statuses.filter(s => s === 'warning').length;
     const safeCount = statuses.filter(s => s === 'safe').length;
@@ -344,6 +374,66 @@ export default function KospiExitAnalyzer() {
                 </div>
             </div>
 
+            {/* Sentiment Indicators Row */}
+            <h3 className="text-lg font-bold mt-2 mb-1 text-white flex items-center gap-2">
+                시장 심리 지표 <Activity className="w-5 h-5 text-indigo-400" />
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* VIX */}
+                <div onClick={() => setActivePopup('vix')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex flex-col">
+                            <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> VIX 지수 (변동성)</h4>
+                            <span className="text-3xl font-black text-white mt-2 font-mono">{vixValue.toFixed(2)}</span>
+                        </div>
+                        <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${vStatus.bg} ${vStatus.color} ${vStatus.border}`}>
+                            {vStatus.text}
+                        </span>
+                    </div>
+
+                    <div className="h-[80px] w-full mt-2 -ml-2 -mb-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
+                                <YAxis domain={['auto', 'auto']} hide />
+                                <Line type="monotone" dataKey="vix" stroke={vStatus.level === 'danger' ? '#f43f5e' : (vStatus.level === 'warning' ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    <div className="mt-4 text-xs text-gray-400 bg-black/40 p-3 rounded-xl flex items-start gap-2">
+                        <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-400" />
+                        <p>평상시 15~20 구간 유지. 20을 돌파하여 급등하는 추세가 나타날 경우 단기 급락 위험 경고.</p>
+                    </div>
+                </div>
+
+                {/* Fear & Greed */}
+                <div onClick={() => setActivePopup('fgi')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex flex-col">
+                            <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> 공포 / 탐욕 지수</h4>
+                            <span className="text-3xl font-black text-white mt-2 font-mono">{fgiValue.toFixed(1)}</span>
+                        </div>
+                        <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${fStatus.bg} ${fStatus.color} ${fStatus.border}`}>
+                            {fStatus.text}
+                        </span>
+                    </div>
+
+                    <div className="h-[80px] w-full mt-2 -ml-2 -mb-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
+                                <YAxis domain={['auto', 'auto']} hide />
+                                <Line type="monotone" dataKey="fgi" stroke={fStatus.level === 'danger' ? '#f43f5e' : (fgiValue < 30 ? '#34d399' : '#f59e0b')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    <div className="mt-4 text-xs text-gray-400 bg-black/40 p-3 rounded-xl flex items-start gap-2">
+                        <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-400" />
+                        <p>'극단적 탐욕 (75 이상)' 구간 진입 시 단기 고점 형성 가능성을 경고하며 분할 매도를 권고합니다.</p>
+                    </div>
+                </div>
+            </div>
+
             {/* 환율-증시 디커플링 현상 안내 */}
             <div className="bg-indigo-900/20 border border-indigo-500/20 rounded-xl p-3 flex items-start sm:items-center gap-3 mt-2 text-xs">
                 <AlertTriangle className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5 sm:mt-0" />
@@ -360,7 +450,12 @@ export default function KospiExitAnalyzer() {
                             {activePopup === 'dollar' && <DollarSign className="w-6 h-6 text-emerald-400" />}
                             {activePopup === 'per' && <BarChart2 className="w-6 h-6 text-blue-400" />}
                             {activePopup === 'cli' && <TrendingDown className="w-6 h-6 text-rose-400" />}
-                            {activePopup === 'dollar' ? '달러 인덱스 & 환율 장기 추이 상세분석' : (activePopup === 'per' ? '주요 종목 포워드 PER 추이 비교' : '경기 선행 지수 (CLI) 기반 매크로 사이클 집중분석')}
+                            {activePopup === 'vix' && <Activity className="w-6 h-6 text-amber-400" />}
+                            {activePopup === 'fgi' && <Activity className="w-6 h-6 text-amber-400" />}
+                            {activePopup === 'dollar' ? '달러 인덱스 & 환율 장기 추이 상세분석' :
+                                (activePopup === 'per' ? '주요 종목 포워드 PER 추이 비교' :
+                                    (activePopup === 'cli' ? '경기 선행 지수 (CLI) 기반 매크로 사이클 집중분석' :
+                                        (activePopup === 'vix' ? 'VIX 지수 (변동성) 사이클 분석' : '공포/탐욕 지수 투자자 심리도')))}
                         </h2>
                         <button onClick={() => setActivePopup(null)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white">
                             <X className="w-5 h-5" />
@@ -372,6 +467,8 @@ export default function KospiExitAnalyzer() {
                         {activePopup === 'dollar' && <DollarModalContent />}
                         {activePopup === 'per' && <PerModalContent />}
                         {activePopup === 'cli' && <CliModalContent />}
+                        {activePopup === 'vix' && <SentimentModalContent isFgi={false} />}
+                        {activePopup === 'fgi' && <SentimentModalContent isFgi={true} />}
                     </div>
                 </div>
             )}
