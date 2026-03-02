@@ -6,3 +6,22 @@ INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 DB and Email Scheduler started.
 INFO:     127.0.0.1:61711 - "GET /api/v1/exit-signal/cli HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61770 - "GET /api/v1/exit-signal/cli HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61760 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61785 - "GET /api/v1/exit-signal/cli HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61792 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61797 - "GET /api/v1/exit-signal/pe?symbol=005380 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61793 - "GET /api/v1/exit-signal/pe?symbol=005930 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61795 - "GET /api/v1/exit-signal/pe?symbol=000660 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61819 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61819 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61832 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61854 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61863 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61870 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61886 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61888 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61906 - "GET /api/v1/exit-signal/cli HTTP/1.1" 200 OK
+Failed to send email to chanho.jung@kt.com: (535, b'5.7.8 Username and Password not accepted. For more information, go to\n5.7.8  https://support.google.com/mail/?p=BadCredentials d2e1a72fcca58-82739db3e4asm14070940b3a.28 - gsmtp')
+[2026-03-03 08:00:03.541302] Morning briefing email failed to send.
+INFO:     127.0.0.1:62089 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK

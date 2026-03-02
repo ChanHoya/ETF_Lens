@@ -96,6 +96,40 @@ export default function KospiExitAnalyzer() {
                         setVixValue(data.current_status.vix);
                         setFgiValue(data.current_status.fgi);
                     }
+
+                    // Fetch real CLI data for 3 lines (Dashboard)
+                    try {
+                        const cliRes = await fetch('http://localhost:8000/api/v1/exit-signal/cli');
+                        if (cliRes.ok) {
+                            const cliDataRaw = await cliRes.json();
+                            if (cliDataRaw.length > 0) {
+                                // Take last 12 items for dashboard mini chart
+                                const recent12 = cliDataRaw.slice(-12).map((item: any) => ({
+                                    month: item.date.substring(5, 7) + '월', // format "YYYY-MM" -> "MM월"
+                                    kor_cli: item.kor_cli,
+                                    usa_cli: item.usa_cli,
+                                    oecd_cli: item.oecd_cli
+                                }));
+                                setBaseCli(recent12);
+
+                                const lastItem = cliDataRaw[cliDataRaw.length - 1];
+                                setOecdCliValue(lastItem.kor_cli);
+
+                                // Recalculate down months for Korea CLI
+                                let downMonths = 0;
+                                for (let i = cliDataRaw.length - 1; i > 0; i--) {
+                                    if (cliDataRaw[i].kor_cli < cliDataRaw[i - 1].kor_cli) {
+                                        downMonths++;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                setOecdCliDownMonths(downMonths);
+                            }
+                        }
+                    } catch (cliErr) {
+                        console.error("Failed to fetch CLI 3-line data:", cliErr);
+                    }
                 }
             } catch (err) {
                 console.error("Failed to fetch Exit Signal data:", err);
@@ -188,7 +222,7 @@ export default function KospiExitAnalyzer() {
     const sentOverall = getSentimentStatus();
 
     return (
-        <div className="w-full flex flex-col gap-4 mb-6 relative">
+        <div className="w-full flex flex-col gap-4 mb-2 relative">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
@@ -229,8 +263,8 @@ export default function KospiExitAnalyzer() {
                             <LineChart data={chartDollar} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
-                                <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
-                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
+                                <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#34d399') }} tickLine={false} axisLine={false} width={45} />
+                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#60a5fa' }} tickLine={false} axisLine={false} width={45} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     itemStyle={{ color: '#fff' }}
@@ -268,8 +302,8 @@ export default function KospiExitAnalyzer() {
                             <LineChart data={chartPer} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
-                                <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
-                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 9, fill: '#666' }} tickLine={false} axisLine={false} width={45} tickFormatter={(val) => Math.round(val).toLocaleString()} />
+                                <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: forwardPer >= 12.5 || pStatus.level === 'danger' ? '#f43f5e' : '#34d399' }} tickLine={false} axisLine={false} width={45} />
+                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 9, fill: '#60a5fa' }} tickLine={false} axisLine={false} width={45} tickFormatter={(val) => Math.round(val).toLocaleString()} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     itemStyle={{ color: '#fff' }}
@@ -311,14 +345,16 @@ export default function KospiExitAnalyzer() {
                             <LineChart data={chartCli} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
-                                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
+                                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#f43f5e' }} tickLine={false} axisLine={false} width={45} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     itemStyle={{ color: '#fff' }}
-                                    formatter={(value: any) => [`${value.toFixed(1)}`, 'CLI']}
+                                    formatter={(value: any, name: any) => [`${value.toFixed(1)}`, name === 'kor_cli' ? `한국 CLI` : (name === 'usa_cli' ? '미국 CLI' : 'G7(OECD Proxy)')]}
                                     labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                                 />
-                                <Line type="monotone" dataKey="val" stroke={cStatus.level === 'danger' ? '#f43f5e' : (cStatus.level === 'warning' ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
+                                <Line type="monotone" dataKey="kor_cli" stroke={cStatus.level === 'danger' ? '#f43f5e' : (cStatus.level === 'warning' ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
+                                <Line type="monotone" dataKey="usa_cli" stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
+                                <Line type="monotone" dataKey="oecd_cli" stroke="#10b981" strokeWidth={1.5} strokeDasharray="3 3" dot={false} activeDot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -331,7 +367,7 @@ export default function KospiExitAnalyzer() {
             </div>
 
             {/* Sentiment Indicators Row */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-6 mb-4 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2 mb-2 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
                         <Activity className="w-6 h-6 text-white" />
@@ -368,7 +404,7 @@ export default function KospiExitAnalyzer() {
                     <div className="h-[80px] w-full mt-2 -ml-2 -mb-2">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
-                                <YAxis domain={['auto', 'auto']} hide />
+                                <YAxis domain={['auto', 'auto']} width={35} tick={{ fontSize: 10, fill: vStatus.level === 'danger' ? '#f43f5e' : (vStatus.level === 'warning' ? '#f59e0b' : '#34d399') }} tickLine={false} axisLine={false} />
                                 <Line type="monotone" dataKey="vix" stroke={vStatus.level === 'danger' ? '#f43f5e' : (vStatus.level === 'warning' ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
                             </LineChart>
                         </ResponsiveContainer>
@@ -395,7 +431,7 @@ export default function KospiExitAnalyzer() {
                     <div className="h-[80px] w-full mt-2 -ml-2 -mb-2">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
-                                <YAxis domain={['auto', 'auto']} hide />
+                                <YAxis domain={['auto', 'auto']} width={35} tick={{ fontSize: 10, fill: fStatus.level === 'danger' ? '#f43f5e' : (fgiValue < 30 ? '#34d399' : '#f59e0b') }} tickLine={false} axisLine={false} />
                                 <Line type="monotone" dataKey="fgi" stroke={fStatus.level === 'danger' ? '#f43f5e' : (fgiValue < 30 ? '#34d399' : '#f59e0b')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
                             </LineChart>
                         </ResponsiveContainer>

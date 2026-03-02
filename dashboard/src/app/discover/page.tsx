@@ -78,6 +78,9 @@ export default function DiscoverPage() {
                     <span className="text-gray-400 text-sm font-medium pb-1.5 hidden sm:inline-block">
                         AI-Driven ETF Evaluation System
                     </span>
+                    <span className="text-gray-500 text-xs pb-1.5 hidden md:inline-block ml-1">
+                        본 서비스는 PC에서 정상적으로 보입니다.
+                    </span>
                 </div>
                 <div className="flex gap-4 text-sm font-medium">
                     <a href="/" className="text-gray-400 hover:text-white transition-colors">Home</a>
