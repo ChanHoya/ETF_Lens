@@ -214,11 +214,18 @@ export default function KospiExitAnalyzer() {
 
     return (
         <div className="w-full flex flex-col gap-4 mb-6 relative">
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-                    <ShieldAlert className="w-6 h-6 text-indigo-400" />
-                    코스피 출구 전략 모니터링 (Exit-Signal)
-                </h2>
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                        <ShieldAlert className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
+                            코스피 출구 전략 모니터링 (Exit-Signal)
+                        </h2>
+                        <p className="text-sm text-gray-400 font-medium mt-0.5">거시경제 및 밸류에이션 기반 위기 감지 시스템</p>
+                    </div>
+                </div>
                 <div className="flex gap-2">
                     <button onClick={simulateSafe} className="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs rounded-lg hover:bg-emerald-500/30 transition-colors">안정 테스트</button>
                     <button onClick={simulateWarning} className="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs rounded-lg hover:bg-amber-500/30 transition-colors">경계 테스트</button>
@@ -375,15 +382,24 @@ export default function KospiExitAnalyzer() {
             </div>
 
             {/* Sentiment Indicators Row */}
-            <h3 className="text-lg font-bold mt-2 mb-1 text-white flex items-center gap-2">
-                시장 심리 지표 <Activity className="w-5 h-5 text-indigo-400" />
-            </h3>
+            {/* Sentiment Indicators Row */}
+            <div className="flex items-center gap-3 mt-6 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <Activity className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                    <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
+                        시장 심리 지표
+                    </h3>
+                    <p className="text-sm text-gray-400 font-medium mt-0.5">투자자들의 단기 변동성 우려와 탐욕 수준을 나타내는 지수</p>
+                </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* VIX */}
                 <div onClick={() => setActivePopup('vix')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-start mb-4">
                         <div className="flex flex-col">
-                            <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> VIX 지수 (변동성)</h4>
+                            <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> VIX(CBOE Volatility Index)</h4>
                             <span className="text-3xl font-black text-white mt-2 font-mono">{vixValue.toFixed(2)}</span>
                         </div>
                         <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${vStatus.bg} ${vStatus.color} ${vStatus.border}`}>
@@ -410,7 +426,7 @@ export default function KospiExitAnalyzer() {
                 <div onClick={() => setActivePopup('fgi')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-start mb-4">
                         <div className="flex flex-col">
-                            <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> 공포 / 탐욕 지수</h4>
+                            <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> Fear & Greed Index (공포탐욕지수)</h4>
                             <span className="text-3xl font-black text-white mt-2 font-mono">{fgiValue.toFixed(1)}</span>
                         </div>
                         <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${fStatus.bg} ${fStatus.color} ${fStatus.border}`}>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
 import { Search } from 'lucide-react';
 
 export function DollarModalContent() {
@@ -389,7 +389,14 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
         <div className="flex flex-col h-full w-full gap-6 min-h-[500px]">
             <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col h-[400px]">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-white font-bold ml-2">{isFgi ? '공포/탐욕 지수' : 'VIX (변동성 지수)'} 및 KOSPI 추이</h3>
+                    <div className="flex flex-col">
+                        <h3 className="text-white font-bold ml-2 text-lg">
+                            {isFgi ? 'Fear & Greed Index (공포탐욕지수)' : 'VIX (CBOE Volatility Index)'}
+                        </h3>
+                        <span className="text-xs text-gray-500 ml-2 mt-1">
+                            출처: {isFgi ? 'CNN Business (Proxy by Proxy 계산)' : 'Yahoo Finance (^VIX)'}
+                        </span>
+                    </div>
                     <div className="flex gap-1 bg-black/40 p-1 rounded-xl shrink-0">
                         {periods.map(p => (
                             <button
@@ -411,41 +418,103 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                             <XAxis dataKey="date" stroke="#71717a" fontSize={10} tickMargin={8} minTickGap={30} />
                             <YAxis yAxisId="left" domain={isFgi ? [0, 100] : ['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
-                            <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} width={50} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} tickFormatter={(val) => Math.round(val).toLocaleString()} />
+                            <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} width={45} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} tickFormatter={(val) => Math.round(val).toLocaleString()} />
                             <RechartsTooltip
                                 contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                                 itemStyle={{ color: '#fff', fontSize: '12px' }}
-                                formatter={(val: any, name: any) => [val, name === 'vix' ? 'VIX' : (name === 'fgi' ? 'Fear & Greed' : 'KOSPI')]}
+                                formatter={(val: any, name: any) => {
+                                    if (name === 'VIX' || name === 'Fear & Greed') return [val, name];
+                                    return [val, name]; // KOSPI and S&P 500 are handled directly by the Line name prop
+                                }}
                             />
+                            <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
 
                             {/* FGI Elements */}
                             {isFgi && <ReferenceArea yAxisId="left" y1={0} y2={25} strokeOpacity={0} fill="#f43f5e" fillOpacity={0.15} />}
                             {isFgi && <ReferenceArea yAxisId="left" y1={75} y2={100} strokeOpacity={0} fill="#34d399" fillOpacity={0.15} />}
                             {isFgi && <ReferenceLine yAxisId="left" y={25} stroke="#f43f5e" strokeDasharray="3 3" />}
                             {isFgi && <ReferenceLine yAxisId="left" y={75} stroke="#34d399" strokeDasharray="3 3" />}
-                            {isFgi && <Line yAxisId="left" type="monotone" name="fgi" dataKey="fgi" stroke={currentVal && currentVal.fgi < 30 ? '#f43f5e' : '#34d399'} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />}
+                            {isFgi && <Line yAxisId="left" type="monotone" name="Fear & Greed" dataKey="fgi" stroke={currentVal && currentVal.fgi < 30 ? '#f43f5e' : '#34d399'} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />}
 
                             {/* VIX Elements */}
                             {!isFgi && <ReferenceArea yAxisId="left" y1={0} y2={15} strokeOpacity={0} fill="#34d399" fillOpacity={0.15} />}
                             {!isFgi && <ReferenceArea yAxisId="left" y1={20} y2={maxVix} strokeOpacity={0} fill="#f43f5e" fillOpacity={0.15} />}
                             {!isFgi && <ReferenceLine yAxisId="left" y={15} stroke="#34d399" strokeDasharray="3 3" />}
                             {!isFgi && <ReferenceLine yAxisId="left" y={20} stroke="#f43f5e" strokeDasharray="3 3" />}
-                            {!isFgi && <Line yAxisId="left" type="monotone" name="vix" dataKey="vix" stroke={currentVal && currentVal.vix >= 20 ? '#f43f5e' : '#f59e0b'} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />}
+                            {!isFgi && <Line yAxisId="left" type="monotone" name="VIX" dataKey="vix" stroke={currentVal && currentVal.vix >= 20 ? '#f43f5e' : '#f59e0b'} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />}
 
-                            {/* KOSPI Line */}
-                            <Line yAxisId="right" type="monotone" name="kospi" dataKey="kospi" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
+                            {/* KOSPI & S&P500 Line */}
+                            <Line yAxisId="right" type="monotone" name="KOSPI" dataKey="kospi" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
+                            <Line yAxisId="right" type="monotone" name="S&P 500" dataKey="sp500" stroke="#c084fc" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
             </div>
 
             <div className="bg-indigo-900/20 border border-indigo-500/20 p-4 rounded-xl">
-                <h4 className="font-bold text-indigo-300 mb-2">💡 시장 단기 방향성 점검</h4>
-                <p className="text-sm text-indigo-100/80 leading-relaxed">
-                    {isFgi
-                        ? "공포/탐욕 지수는 0~100 사이로 산출됩니다. 25 미만(붉은 음영)은 시장에 극단적 공포가 만연하여 단기 과매도(매수 기회) 상태일 수 있음을, 75 초과(녹색 음영)는 극단적 탐욕으로 단기 과매수(매도/현금화 경고) 상태임을 시사합니다."
-                        : "VIX(변동성 지수)는 시장의 단기 가격 변동 위험을 나타냅니다. 통상 15 미만(녹색 음영)은 안정장, 20 초과(붉은 음영)는 공포장 진입을 뜻합니다. 급격한 기울기로 20을 돌파 시 즉각적인 보유선 축소가 요구됩니다."}
-                </p>
+                <h4 className="font-bold text-indigo-300 mb-4 px-2">💡 시장 심리 가이드</h4>
+                {isFgi ? (
+                    <div className="flex w-full gap-2 px-2 pb-2">
+                        <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-rose-500/80">
+                            <h5 className="font-bold text-rose-400 text-sm mb-1">0 - 25</h5>
+                            <span className="text-white font-semibold text-xs mb-1 block">Extreme Fear (극단적 공포)</span>
+                            <p className="text-[11px] text-gray-400 leading-tight">극단적 공포는 시장 참여자들이 지나치게 우려하고 있음을 나타내며, 이는 좋은 매수 기회가 될 수 있습니다.</p>
+                        </div>
+                        <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-orange-400/80">
+                            <h5 className="font-bold text-orange-400 text-sm mb-1">26 - 45</h5>
+                            <span className="text-white font-semibold text-xs mb-1 block">Fear (공포)</span>
+                            <p className="text-[11px] text-gray-400 leading-tight">일반적으로 시장의 동요를 나타냅니다.</p>
+                        </div>
+                        <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-gray-400/80">
+                            <h5 className="font-bold text-gray-400 text-sm mb-1">46 - 55</h5>
+                            <span className="text-white font-semibold text-xs mb-1 block">Neutral (중립)</span>
+                            <p className="text-[11px] text-gray-400 leading-tight">정상적인 시장 환경을 나타냅니다.</p>
+                        </div>
+                        <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-emerald-400/80">
+                            <h5 className="font-bold text-emerald-400 text-sm mb-1">56 - 75</h5>
+                            <span className="text-white font-semibold text-xs mb-1 block">Greed (탐욕)</span>
+                            <p className="text-[11px] text-gray-400 leading-tight">시장이 긍정적인 추세를 보이고 있음을 나타냅니다.</p>
+                        </div>
+                        <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-emerald-500/80">
+                            <h5 className="font-bold text-emerald-500 text-sm mb-1">76 - 100</h5>
+                            <span className="text-white font-semibold text-xs mb-1 block">Extreme Greed (극단적 탐욕)</span>
+                            <p className="text-[11px] text-gray-400 leading-tight">투자자들이 지나치게 탐욕스러워졌을 때(극단적 탐욕) 시장이 조정(하락)을 겪을 가능성을 경고합니다.</p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col gap-4 px-2">
+                        <p className="text-sm text-indigo-100/80 leading-relaxed text-justify">
+                            내재변동성은 일반적으로 시장이 불안정하거나 경제가 흔들릴 때 증가합니다. 이와 대조적으로 주가가 상승하고 있고 극적인 변화가 없을 것 같으면 VIX는 하락하거나 범위의 하단에서 안정을 유지하는 경향이 있습니다. 즉, VIX는 주가와 음의 상관관계를 갖습니다.
+                        </p>
+                        <div className="flex w-full gap-2 mt-2">
+                            <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-emerald-500/80">
+                                <h5 className="font-bold text-emerald-500 text-sm mb-1">0 - 15</h5>
+                                <span className="text-white font-semibold text-xs mb-1 block">낮은 수준 (안정)</span>
+                                <p className="text-[11px] text-gray-400 leading-tight">일반적으로 시장의 낙관론을 나타냅니다.</p>
+                            </div>
+                            <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-gray-400/80">
+                                <h5 className="font-bold text-gray-400 text-sm mb-1">15 - 20</h5>
+                                <span className="text-white font-semibold text-xs mb-1 block">보통 수준</span>
+                                <p className="text-[11px] text-gray-400 leading-tight">일반적으로 정상적인 시장 환경을 나타냅니다.</p>
+                            </div>
+                            <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-orange-400/80">
+                                <h5 className="font-bold text-orange-400 text-sm mb-1">20 - 25</h5>
+                                <span className="text-white font-semibold text-xs mb-1 block">중간 (경계)</span>
+                                <p className="text-[11px] text-gray-400 leading-tight">일반적으로 시장에서 우려가 커지고 있음을 나타냅니다.</p>
+                            </div>
+                            <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-rose-400/80">
+                                <h5 className="font-bold text-rose-400 text-sm mb-1">25 - 30</h5>
+                                <span className="text-white font-semibold text-xs mb-1 block">높은 수준 (공포)</span>
+                                <p className="text-[11px] text-gray-400 leading-tight">일반적으로 시장의 동요를 나타냅니다.</p>
+                            </div>
+                            <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-rose-600/80">
+                                <h5 className="font-bold text-rose-600 text-sm mb-1">&gt; 30+</h5>
+                                <span className="text-white font-semibold text-xs mb-1 block">매우 높은 수준 (극심한 공포)</span>
+                                <p className="text-[11px] text-gray-400 leading-tight">일반적으로 시장에 극심한 혼란이 있음을 나타냅니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

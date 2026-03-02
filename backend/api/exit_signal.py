@@ -134,7 +134,7 @@ async def fetch_market_sentiment():
 
         df = await asyncio.to_thread(
             yf.download,
-            ["^VIX", "^KS11"],
+            ["^VIX", "^KS11", "^GSPC"],
             start=start_date.strftime("%Y-%m-%d"),
             end=end_date.strftime("%Y-%m-%d"),
             progress=False,
@@ -153,19 +153,27 @@ async def fetch_market_sentiment():
                     if "^KS11" in df["Close"].columns
                     else df["Close"].iloc[:, 1]
                 )
+                sp500_close = (
+                    df["Close"]["^GSPC"]
+                    if "^GSPC" in df["Close"].columns
+                    else df["Close"].iloc[:, 2]
+                )
             else:
                 vix_close = df.iloc[:, 0]
                 kospi_close = df.iloc[:, 1]
+                sp500_close = df.iloc[:, 2]
         else:
             vix_close = df["^VIX"] if "^VIX" in df.columns else df.iloc[:, 0]
             kospi_close = df["^KS11"] if "^KS11" in df.columns else df.iloc[:, 1]
+            sp500_close = df["^GSPC"] if "^GSPC" in df.columns else df.iloc[:, 2]
 
         vix_close = vix_close.ffill().dropna()
         kospi_close = kospi_close.ffill().dropna()
+        sp500_close = sp500_close.ffill().dropna()
 
-        # Align series to keep dates where both exist
-        aligned = pd.concat([vix_close, kospi_close], axis=1).dropna()
-        aligned.columns = ["vix", "kospi"]
+        # Align series to keep dates where all exist
+        aligned = pd.concat([vix_close, kospi_close, sp500_close], axis=1).dropna()
+        aligned.columns = ["vix", "kospi", "sp500"]
 
         if aligned.empty:
             return [], 20.0, 50.0
@@ -179,6 +187,7 @@ async def fetch_market_sentiment():
                 dt = pd.to_datetime(dt)
             vix_val = float(row["vix"])
             kospi_val = float(row["kospi"])
+            sp500_val = float(row["sp500"])
 
             # Proxy formula: FGI = 50 - (VIX - 18) * 3
             # Bound between 0 and 100
@@ -190,6 +199,7 @@ async def fetch_market_sentiment():
                     "vix": round(vix_val, 2),
                     "fgi": round(fgi_val, 1),
                     "kospi": round(kospi_val, 2),
+                    "sp500": round(sp500_val, 2),
                 }
             )
 
