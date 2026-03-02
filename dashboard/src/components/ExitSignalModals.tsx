@@ -89,16 +89,32 @@ export function DollarModalContent() {
 
                         <RechartsTooltip
                             contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                            itemStyle={{ fontSize: '12px' }}
-                            formatter={(value: any, name: any, props: any) => {
-                                if (!props || !props.payload) return [value, name];
-                                if (name === '달러 인덱스') return [props.payload.rawDollar?.toFixed(2), '달러 인덱스'];
-                                if (name === 'USD/KRW') return [`${Math.round(props.payload.rawKrw || 0).toLocaleString()}원`, 'USD/KRW'];
-                                if (name === 'KOSPI') return [Math.round(props.payload.rawKospi || 0).toLocaleString(), 'KOSPI'];
-                                if (name === 'S&P 500') return [Math.round(props.payload.rawSp500 || 0).toLocaleString(), 'S&P 500'];
-                                return [value, name];
+                            content={({ active, payload, label }) => {
+                                if (active && payload && payload.length) {
+                                    const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                    return (
+                                        <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
+                                            <p className="text-gray-400 mb-2">{label}</p>
+                                            {sortedPayload.map((entry: any, index: number) => {
+                                                let displayValue = entry.value;
+                                                let name = entry.name;
+                                                if (name === '달러 인덱스') displayValue = entry.payload.rawDollar?.toFixed(2);
+                                                else if (name === 'USD/KRW') displayValue = `${Math.round(entry.payload.rawKrw || 0).toLocaleString()}원`;
+                                                else if (name === 'KOSPI') displayValue = `${Math.round(entry.payload.rawKospi || 0).toLocaleString()}pt`;
+                                                else if (name === 'S&P 500') displayValue = `${Math.round(entry.payload.rawSp500 || 0).toLocaleString()}pt`;
+
+                                                return (
+                                                    <div key={`item-${index}`} className="flex items-center gap-2 mb-1 font-medium" style={{ color: entry.color }}>
+                                                        <span>{name} :</span>
+                                                        <span>{displayValue}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                }
+                                return null;
                             }}
-                            labelStyle={{ color: '#aaa', marginBottom: '8px', fontSize: '12px' }}
                         />
 
                         <Line yAxisId="left" connectNulls type="monotone" name="달러 인덱스" dataKey="dollar" stroke="#34d399" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
@@ -110,10 +126,18 @@ export function DollarModalContent() {
             </div>
 
             <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-400 justify-center">
-                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-400 rounded-sm"></div> 달러 인덱스</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 border-2 border-blue-400 border-dashed rounded-sm"></div> 원/달러 환율</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-rose-400 rounded-sm"></div> KOSPI</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-purple-400 rounded-sm"></div> S&P 500</div>
+                {(() => {
+                    const lastD = filteredData.length > 0 ? filteredData[filteredData.length - 1] : null;
+                    const items = [
+                        { name: '원/달러 환율', val: lastD?.krw || 0, node: <><div className="w-3 h-3 border-2 border-blue-400 border-dashed rounded-sm"></div> 원/달러 환율</> },
+                        { name: '달러 인덱스', val: lastD?.dollar || 0, node: <><div className="w-3 h-3 bg-emerald-400 rounded-sm"></div> 달러 인덱스</> },
+                        { name: 'S&P 500', val: lastD?.sp500 || 0, node: <><div className="w-3 h-3 bg-purple-400 rounded-sm"></div> S&P 500</> },
+                        { name: 'KOSPI', val: lastD?.kospi || 0, node: <><div className="w-3 h-3 bg-rose-400 rounded-sm"></div> KOSPI</> }
+                    ].sort((a, b) => b.val - a.val);
+                    return items.map(item => (
+                        <div key={item.name} className="flex items-center gap-2">{item.node}</div>
+                    ));
+                })()}
             </div>
         </div>
     );
@@ -250,15 +274,26 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
 
                             <RechartsTooltip
                                 contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                itemStyle={{ fontSize: '12px', color: '#fff' }}
-                                formatter={(value: any, name: any) => {
-                                    if (name === 'P/E') return [`${value}x`, 'P/E'];
-                                    return [Math.round(value).toLocaleString(), 'Price'];
+                                content={({ active, payload, label }) => {
+                                    if (active && payload && payload.length) {
+                                        const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                        return (
+                                            <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[11px]">
+                                                <p className="text-gray-400 mb-1">{label}</p>
+                                                {sortedPayload.map((entry: any, index: number) => (
+                                                    <div key={`item-${index}`} className="flex items-center gap-2 mb-0.5 font-medium" style={{ color: entry.color }}>
+                                                        <span>{entry.name} :</span>
+                                                        <span>{entry.name === 'P/E' ? `${entry.value.toFixed(1)}x` : `${Math.round(entry.value).toLocaleString()}${isKospi ? 'pt' : '원'}`}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    }
+                                    return null;
                                 }}
-                                labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                             />
-                            <Line yAxisId="left" type="monotone" name="P/E" dataKey="val" stroke={isKospi ? '#60a5fa' : '#a1a1aa'} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                            <Line yAxisId="right" type="stepAfter" name="Price" dataKey="price" stroke="#f43f5e" strokeWidth={1} dot={false} strokeDasharray="3 3" />
+                            <Line yAxisId="left" type="monotone" name="P/E" dataKey="val" stroke={isKospi ? '#34d399' : '#a1a1aa'} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                            <Line yAxisId="right" type="monotone" name={isKospi ? "KOSPI" : "주가"} dataKey="price" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
                         </LineChart>
                     </ResponsiveContainer>
                 )}
@@ -330,15 +365,34 @@ export function CliModalContent() {
                                 <XAxis dataKey="year" stroke="#71717a" fontSize={10} minTickGap={20} tickMargin={8} />
                                 <YAxis yAxisId="cli" domain={['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
                                 <YAxis yAxisId="kospi" orientation="right" domain={['auto', 'auto']} width={45} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
-                                <RechartsTooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} itemStyle={{ color: '#fff', fontSize: '12px' }} formatter={(val, name) => [val, name]} />
+                                <RechartsTooltip
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                            return (
+                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
+                                                    <p className="text-gray-400 mb-2">{label}</p>
+                                                    {sortedPayload.map((entry: any, index: number) => (
+                                                        <div key={`item-${index}`} className="flex items-center gap-2 mb-1 font-medium" style={{ color: entry.color }}>
+                                                            <span>{entry.name} :</span>
+                                                            <span>{entry.name === 'KOSPI' ? Math.round(entry.value).toLocaleString() + 'pt' : entry.value.toFixed(1)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
+                                />
                                 <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#aaa' }} />
 
                                 {/* Crisis Highlights */}
                                 <ReferenceArea yAxisId="cli" x1="2020-01" x2="2020-12" strokeOpacity={0} fill="#f43f5e" fillOpacity={0.15} />
                                 <ReferenceArea yAxisId="cli" x1="2022-01" x2="2022-12" strokeOpacity={0} fill="#f43f5e" fillOpacity={0.15} />
 
-                                <Line yAxisId="cli" type="monotone" name="한국 CLI" dataKey="kor_cli" stroke="#f43f5e" strokeWidth={3} dot={false} />
                                 <Line yAxisId="kospi" type="monotone" name="KOSPI" dataKey="kospi" stroke="#60a5fa" strokeWidth={2} dot={false} />
+                                <Line yAxisId="cli" type="monotone" name="한국 CLI" dataKey="kor_cli" stroke="#f43f5e" strokeWidth={3} dot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -352,15 +406,44 @@ export function CliModalContent() {
                             <LineChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                                 <XAxis dataKey="year" stroke="#71717a" fontSize={10} minTickGap={20} tickMargin={8} />
                                 <YAxis domain={['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
-                                <RechartsTooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} itemStyle={{ color: '#fff', fontSize: '12px' }} formatter={(val, name) => [val, name]} />
+                                <RechartsTooltip
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                            return (
+                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
+                                                    <p className="text-gray-400 mb-2">{label}</p>
+                                                    {sortedPayload.map((entry: any, index: number) => (
+                                                        <div key={`item-${index}`} className="flex items-center gap-2 mb-1 font-medium" style={{ color: entry.color }}>
+                                                            <span>{entry.name} :</span>
+                                                            <span>{entry.value.toFixed(1)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
+                                />
                                 <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#aaa' }} />
 
                                 <ReferenceArea x1="2020-01" x2="2020-12" strokeOpacity={0} fill="#64748b" fillOpacity={0.2} />
                                 <ReferenceArea x1="2022-01" x2="2022-12" strokeOpacity={0} fill="#64748b" fillOpacity={0.2} />
 
-                                <Line type="monotone" name="한국 CLI" dataKey="kor_cli" stroke="#f43f5e" strokeWidth={3} dot={false} />
-                                <Line type="monotone" name="미국 CLI" dataKey="usa_cli" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                                <Line type="monotone" name="G7 (OECD Proxy)" dataKey="oecd_cli" stroke="#10b981" strokeWidth={2} strokeDasharray="3 3" dot={false} />
+                                {(() => {
+                                    const lines = [
+                                        { key: 'kor_cli', name: '한국 CLI', stroke: '#f43f5e', width: 3, dash: '' },
+                                        { key: 'usa_cli', name: '미국 CLI', stroke: '#3b82f6', width: 2, dash: '5 5' },
+                                        { key: 'oecd_cli', name: 'G7 (OECD Proxy)', stroke: '#10b981', width: 2, dash: '3 3' },
+                                    ];
+                                    if (lastData) {
+                                        lines.sort((a, b) => (lastData[b.key] || 0) - (lastData[a.key] || 0));
+                                    }
+                                    return lines.map(l => (
+                                        <Line key={l.key} type="monotone" name={l.name} dataKey={l.key} stroke={l.stroke} strokeWidth={l.width} strokeDasharray={l.dash || undefined} dot={false} />
+                                    ));
+                                })()}
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -456,10 +539,22 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                             <YAxis yAxisId="right" orientation="right" domain={[rightMin, rightMax]} width={45} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} tickFormatter={(val) => typeof val === 'number' ? Math.round(val).toLocaleString() : val} />
                             <RechartsTooltip
                                 contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                itemStyle={{ color: '#fff', fontSize: '12px' }}
-                                formatter={(val: any, name: any) => {
-                                    if (name === 'VIX' || name === 'Fear & Greed') return [val, name];
-                                    return [val, name]; // KOSPI and S&P 500 are handled directly by the Line name prop
+                                content={({ active, payload, label }) => {
+                                    if (active && payload && payload.length) {
+                                        const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                        return (
+                                            <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
+                                                <p className="text-gray-400 mb-2">{label}</p>
+                                                {sortedPayload.map((entry: any, index: number) => (
+                                                    <div key={`item-${index}`} className="flex items-center gap-2 mb-1 font-medium" style={{ color: entry.color }}>
+                                                        <span>{entry.name} :</span>
+                                                        <span>{entry.name === 'Fear & Greed' || entry.name === 'VIX' ? entry.value.toFixed(1) : Math.round(entry.value).toLocaleString() + 'pt'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    }
+                                    return null;
                                 }}
                             />
                             <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
@@ -469,18 +564,31 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                             {isFgi && <ReferenceArea yAxisId="left" y1={75} y2={100} strokeOpacity={0} fill="#34d399" fillOpacity={0.15} />}
                             {isFgi && <ReferenceLine yAxisId="left" y={25} stroke="#f43f5e" strokeDasharray="3 3" />}
                             {isFgi && <ReferenceLine yAxisId="left" y={75} stroke="#34d399" strokeDasharray="3 3" />}
-                            {isFgi && <Line yAxisId="left" type="monotone" name="Fear & Greed" dataKey="fgi" stroke={currentVal && currentVal.fgi < 30 ? '#f43f5e' : '#34d399'} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />}
 
                             {/* VIX Elements */}
                             {!isFgi && <ReferenceArea yAxisId="left" y1={0} y2={15} strokeOpacity={0} fill="#34d399" fillOpacity={0.15} />}
                             {!isFgi && <ReferenceArea yAxisId="left" y1={20} y2={maxVix} strokeOpacity={0} fill="#f43f5e" fillOpacity={0.15} />}
                             {!isFgi && <ReferenceLine yAxisId="left" y={15} stroke="#34d399" strokeDasharray="3 3" />}
                             {!isFgi && <ReferenceLine yAxisId="left" y={20} stroke="#f43f5e" strokeDasharray="3 3" />}
-                            {!isFgi && <Line yAxisId="left" type="monotone" name="VIX" dataKey="vix" stroke={currentVal && currentVal.vix >= 20 ? '#f43f5e' : '#f59e0b'} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />}
 
-                            {/* KOSPI & S&P500 Line */}
-                            <Line yAxisId="right" type="monotone" name="KOSPI" dataKey="kospi" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
-                            <Line yAxisId="right" type="monotone" name="S&P 500" dataKey="sp500" stroke="#c084fc" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
+                            {(() => {
+                                const lData = displayData.length > 0 ? displayData[displayData.length - 1] : null;
+                                const lines = isFgi ? [
+                                    { yAxisId: "left", name: "Fear & Greed", dataKey: "fgi", color: currentVal && currentVal.fgi < 30 ? '#f43f5e' : '#34d399', width: 3, dash: '' },
+                                    { yAxisId: "right", name: "KOSPI", dataKey: "kospi", color: "#60a5fa", width: 1.5, dash: '4 4' },
+                                    { yAxisId: "right", name: "S&P 500", dataKey: "sp500", color: "#c084fc", width: 1.5, dash: '4 4' },
+                                ] : [
+                                    { yAxisId: "left", name: "VIX", dataKey: "vix", color: currentVal && currentVal.vix >= 20 ? '#f43f5e' : '#f59e0b', width: 3, dash: '' },
+                                    { yAxisId: "right", name: "KOSPI", dataKey: "kospi", color: "#60a5fa", width: 1.5, dash: '4 4' },
+                                    { yAxisId: "right", name: "S&P 500", dataKey: "sp500", color: "#c084fc", width: 1.5, dash: '4 4' },
+                                ];
+                                if (lData) {
+                                    lines.sort((a, b) => (lData[b.dataKey] || 0) - (lData[a.dataKey] || 0));
+                                }
+                                return lines.map(l => (
+                                    <Line key={l.dataKey} yAxisId={l.yAxisId} type="monotone" name={l.name} dataKey={l.dataKey} stroke={l.color} strokeWidth={l.width} strokeDasharray={l.dash || undefined} dot={false} activeDot={l.yAxisId === 'left' ? { r: 5 } : false} />
+                                ));
+                            })()}
                         </LineChart>
                     </ResponsiveContainer>
                 </div>

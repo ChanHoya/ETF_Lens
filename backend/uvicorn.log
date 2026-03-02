@@ -60,3 +60,24 @@ INFO:     127.0.0.1:62719 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
 INFO:     127.0.0.1:62721 - "GET /api/v1/exit-signal/pe?symbol=005930 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:62726 - "GET /api/v1/exit-signal/pe?symbol=005380 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:62724 - "GET /api/v1/exit-signal/pe?symbol=000660 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62735 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62735 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62757 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62757 - "GET /api/v1/exit-signal/cli HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62757 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62759 - "GET /api/v1/exit-signal/per?period=1Y HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62757 - "GET /api/v1/exit-signal/cli HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62764 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62764 - "GET /api/v1/exit-signal/cli HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62764 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62766 - "GET /api/v1/exit-signal/per?period=1Y HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62786 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62789 - "GET /api/v1/exit-signal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62787 - "GET /api/v1/analyze/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62786 - "GET /api/v1/exit-signal/cli HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62787 - "GET /api/v1/analyze/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62787 - "GET /api/v1/exit-signal/cli HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62786 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62789 - "GET /api/v1/exit-signal/per?period=1Y HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62786 - "GET /api/v1/exit-signal/macro?period=1Y HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62789 - "GET /api/v1/exit-signal/per?period=1Y HTTP/1.1" 404 Not Found
