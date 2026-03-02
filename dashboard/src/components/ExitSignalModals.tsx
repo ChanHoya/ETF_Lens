@@ -386,6 +386,10 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
     const currentVal = displayData.length > 0 ? displayData[displayData.length - 1] : null;
     const maxVix = displayData.length > 0 ? Math.max(100, ...displayData.map(d => (d.vix || 0) + 10)) : 100;
 
+    // Fix Recharts bug where `auto` domain only considers the first line (KOSPI) and clips S&P 500.
+    const rightMin = displayData.length > 0 ? Math.min(...displayData.map(d => Math.min(d.kospi || Infinity, d.sp500 || Infinity))) * 0.95 : 'auto';
+    const rightMax = displayData.length > 0 ? Math.max(...displayData.map(d => Math.max(d.kospi || -Infinity, d.sp500 || -Infinity))) * 1.05 : 'auto';
+
     return (
         <div className="flex flex-col h-full w-full gap-4 flex-1">
             <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col flex-1 min-h-[450px]">
@@ -419,7 +423,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                             <XAxis dataKey="date" stroke="#71717a" fontSize={10} tickMargin={8} minTickGap={30} />
                             <YAxis yAxisId="left" domain={isFgi ? [0, 100] : ['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
-                            <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} width={45} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} tickFormatter={(val) => Math.round(val).toLocaleString()} />
+                            <YAxis yAxisId="right" orientation="right" domain={[rightMin, rightMax]} width={45} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} tickFormatter={(val) => typeof val === 'number' ? Math.round(val).toLocaleString() : val} />
                             <RechartsTooltip
                                 contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                                 itemStyle={{ color: '#fff', fontSize: '12px' }}

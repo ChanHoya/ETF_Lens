@@ -469,29 +469,25 @@ async def get_pe_detail(symbol: str = "005930"):
     """
     try:
         tkr = "^KS11" if symbol in ["KOSPI", "0001"] else f"{symbol}.KS"
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=365)
 
-        df = await asyncio.to_thread(
-            yf.download,
-            tkr,
-            start=start_date.strftime("%Y-%m-%d"),
-            end=end_date.strftime("%Y-%m-%d"),
-            progress=False,
-        )
+        def fetch_pe_data(ticker_symbol):
+            ticker = yf.Ticker(ticker_symbol)
+            hist = ticker.history(period="1y")
+            info = ticker.info
+            # Attempt to get real PE from Yahoo Finance, fallback to 12.2 (typical Kospi average)
+            pe = info.get("forwardPE") or info.get("trailingPE") or 12.2
+            return hist, float(pe)
 
-        if df.empty:
+        hist, real_pe = await asyncio.to_thread(fetch_pe_data, tkr)
+
+        if hist.empty or "Close" not in hist:
             return []
 
-        if isinstance(df.columns, pd.MultiIndex):
-            daily = df["Close"].iloc[:, 0].ffill().dropna()
-        else:
-            daily = df["Close"].ffill().dropna()
-
+        daily = hist["Close"].ffill().dropna()
         if daily.empty:
             return []
 
-        base_eps = float(daily.iloc[-1]) / 12.0
+        base_eps = float(daily.iloc[-1]) / real_pe
 
         results = []
         for dt, val in daily.items():
