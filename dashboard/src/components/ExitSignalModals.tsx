@@ -290,6 +290,34 @@ export function CliModalContent() {
 
     if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading data...</div>;
 
+    const lastData: any = data.length > 0 ? data[data.length - 1] : null;
+    let analysisTitle = "💡 경제 위기 하이라이트 분석";
+    let analysisText = "차트의 붉은색/회색 음영 구간은 2020년(팬데믹), 2022년(글로벌 금리 인상) 등 매크로 지표가 급격히 수축되었던 시점을 나타냅니다. 현재 한국 CLI가 과거 이 음영 구간들의 진입 시점과 유사한 각도로 꺾이고 있는지, 아니면 단순 소프트 랜딩인지 비교하여 판단하세요. 한국의 하락 추세가 미국/OECD 평균 하락과 동반된다면 강력한 주식 비중 축소 시그널입니다.";
+    let bannerBgClass = "bg-indigo-900/20 border-indigo-500/20";
+    let textTitleClass = "text-indigo-300";
+
+    if (lastData) {
+        const { kor_cli, usa_cli, oecd_cli } = lastData;
+        const below100Count = [kor_cli, usa_cli, oecd_cli].filter(v => v !== null && v < 100).length;
+
+        if (below100Count >= 2) {
+            analysisTitle = "🚨 [수축 국면] 글로벌 매크로 하락세 뚜렷";
+            analysisText = `현재 한국 CLI(${kor_cli}), 미국 CLI(${usa_cli}), OECD 평균(${oecd_cli}) 중 다수가 기준선(100)을 하회하며 수축 국면을 나타내고 있습니다. 과거 2020년, 2022년처럼 매크로 지표가 급격히 하락하는 시기와 유사할 가능성이 높습니다. 글로벌 동조화 하락이 뚜렷히 확인되므로 위험 자산(주식) 비중을 방어적으로 축소할 것을 강력 권고합니다.`;
+            bannerBgClass = "bg-rose-900/20 border-rose-500/30";
+            textTitleClass = "text-rose-400";
+        } else if (below100Count === 1) {
+            analysisTitle = "⚠️ [둔화 우려] 일부 특정 지표 악화 진행 중";
+            analysisText = `현재 한국 CLI(${kor_cli}), 미국 CLI(${usa_cli}), OECD 평균(${oecd_cli}) 지표들의 방향성이 엇갈리며 일부 국가에서 경기 둔화 징후가 나타납니다. 만약 한국 CLI가 미국/OECD의 하락 추세와 향후 동반적으로 꺾인다면 단기 약세장이 올 수 있으므로 다음 달 지표 발표까지 포트폴리오 리스크를 관리하세요.`;
+            bannerBgClass = "bg-amber-900/20 border-amber-500/30";
+            textTitleClass = "text-amber-400";
+        } else if (kor_cli && usa_cli && oecd_cli) {
+            analysisTitle = "✅ [확장 국면] 글로벌 경기 견조한 회복세 지속";
+            analysisText = `현재 한국 CLI(${kor_cli}), 미국 CLI(${usa_cli}), OECD 평균(${oecd_cli}) 모두 기준선인 100 위에 위치하며 양호한 흐름을 보이고 있습니다. 경기 침체 리스크는 제한적이며, 코스피를 포함한 주식 시장 투자에 여전히 우호적인 거시경제 환경입니다. 현재의 긍정적인 추세가 꺾이기 전까지는 주식 비중 확대를 유지해도 좋습니다.`;
+            bannerBgClass = "bg-emerald-900/20 border-emerald-500/30";
+            textTitleClass = "text-emerald-400";
+        }
+    }
+
     return (
         <div className="flex flex-col h-full w-full gap-4 flex-1">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-[450px]">
@@ -337,10 +365,10 @@ export function CliModalContent() {
                 </div>
             </div>
 
-            <div className="bg-indigo-900/20 border border-indigo-500/20 p-3 rounded-xl shrink-0">
-                <h4 className="font-bold text-indigo-300 text-xs mb-1">💡 경제 위기 하이라이트 분석</h4>
-                <p className="text-[11px] text-indigo-100/80 leading-tight">
-                    차트의 붉은색/회색 음영 구간은 2020년(팬데믹), 2022년(글로벌 금리 인상) 등 매크로 지표가 급격히 수축되었던 시점을 나타냅니다. 현재 한국 CLI가 과거 이 음영 구간들의 진입 시점과 유사한 각도로 꺾이고 있는지, 아니면 단순 소프트 랜딩인지 비교하여 판단하세요. 한국의 하락 추세가 미국/OECD 평균 하락과 동반된다면 강력한 주식 비중 축소 시그널입니다.
+            <div className={`p-4 rounded-xl shrink-0 border transition-colors ${bannerBgClass}`}>
+                <h4 className={`font-bold text-sm mb-1.5 ${textTitleClass}`}>{analysisTitle}</h4>
+                <p className="text-[12px] text-gray-300 leading-relaxed">
+                    {analysisText}
                 </p>
             </div>
         </div>

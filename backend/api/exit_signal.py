@@ -390,26 +390,52 @@ async def get_cli_detail():
         return _cli_cache["data"]
 
     try:
-        # FRED Series: KORLORSGPNOSTSAM (KOR), USALORSGPNOSTSAM (USA), OECDLORSGPNOSTSAM (OECD)
-        # However, FRED usually blocks simple requests for multiple datasets without an API key easily.
-        # So we'll fetch KOR from our existing logic, and add some mock or static fallback if we can't get the others.
+        import urllib.request
+        import ssl
+        import io
 
         kor_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=KORLORSGPNOSTSAM"
         usa_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=USALORSGPNOSTSAM"
+        oecd_url = (
+            "https://fred.stlouisfed.org/graph/fredgraph.csv?id=OECDLORSGPNOSTSAM"
+        )
 
         def fetch_fred_csv(url):
             try:
-                df = pd.read_csv(url, parse_dates=["DATE"])
-                df.set_index("DATE", inplace=True)
-                df.columns = ["value"]
-                df["value"] = pd.to_numeric(df["value"], errors="coerce")
-                return df["value"]
+                # Bypass SSL verification for local dev environments that lack proper certs
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, context=ctx) as response:
+                    csv_data = response.read().decode("utf-8")
+
+                df = pd.read_csv(io.StringIO(csv_data))
+
+                # Column is usually 'observation_date', fallback to 'DATE' if changed
+                date_col = (
+                    "observation_date" if "observation_date" in df.columns else "DATE"
+                )
+                if date_col not in df.columns:
+                    # In case of completely unstructured data, assume 1st col is date and 2nd is value
+                    date_col = df.columns[0]
+
+                df[date_col] = pd.to_datetime(df[date_col])
+                df["YM"] = df[date_col].dt.strftime("%Y-%m")
+                df.set_index("YM", inplace=True)
+
+                # Assume 2nd column is the value
+                val_col = df.columns[1] if df.columns[1] != "YM" else df.columns[0]
+                df[val_col] = pd.to_numeric(df[val_col], errors="coerce")
+                return df[val_col]
             except Exception as e:
-                logger.error(f"FRED CSV fetch failed: {e}")
+                logger.error(f"FRED CSV fetch failed for {url}: {e}")
                 return pd.Series(dtype=float)
 
         kor_data = await asyncio.to_thread(fetch_fred_csv, kor_url)
         usa_data = await asyncio.to_thread(fetch_fred_csv, usa_url)
+        oecd_data = await asyncio.to_thread(fetch_fred_csv, oecd_url)
 
         # Get KOSPI for overlay
         end_date = datetime.now()
@@ -427,34 +453,44 @@ async def get_cli_detail():
             kospi_monthly = kospi_df["Close"].resample("ME").last()
 
         results = []
-        # Fallback realistic dummy data if API fails to parse full 10 years
-        # But let's build from kospi index as base
         for dt, kospi_val in kospi_monthly.tail(120).items():
             year_month = f"{dt.year}-{dt.month:02d}"
 
-            k_val = kor_data.get(dt, None) if not kor_data.empty else None
-            u_val = usa_data.get(dt, None) if not usa_data.empty else None
+            k_val = kor_data.get(year_month, None) if not kor_data.empty else None
+            u_val = usa_data.get(year_month, None) if not usa_data.empty else None
+            o_val = oecd_data.get(year_month, None) if not oecd_data.empty else None
 
-            # Simple fallback extrapolation if data is missing
-            # In production we would use full OECD API, but for MVP we interpolate
-
+            # Optional forward filling can be done if missing due to API lag,
+            # but for now we present none or last known fallback
             results.append(
                 {
                     "year": dt.year,
                     "date": year_month,
-                    "kor_cli": round(k_val, 2) if pd.notna(k_val) else 100.0,
-                    "usa_cli": round(u_val, 2) if pd.notna(u_val) else 100.0,
-                    "oecd_cli": round(u_val, 2)
-                    if pd.notna(u_val)
-                    else 100.0,  # Approximate OECD with USA
+                    "kor_cli": round(float(k_val), 2)
+                    if k_val and pd.notna(k_val)
+                    else None,
+                    "usa_cli": round(float(u_val), 2)
+                    if u_val and pd.notna(u_val)
+                    else None,
+                    "oecd_cli": round(float(o_val), 2)
+                    if o_val and pd.notna(o_val)
+                    else None,
                     "kospi": round(float(kospi_val), 0)
                     if pd.notna(kospi_val)
                     else 2500,
                 }
             )
 
-        _cli_cache = {"data": results, "timestamp": now}
-        return results
+        # If recent months are None because FRED delays data by 1-2 months, fill forward from previous
+        df_res = pd.DataFrame(results)
+        df_res[["kor_cli", "usa_cli", "oecd_cli"]] = df_res[
+            ["kor_cli", "usa_cli", "oecd_cli"]
+        ].ffill()
+
+        filled_results = df_res.to_dict("records")
+
+        _cli_cache = {"data": filled_results, "timestamp": now}
+        return filled_results
     except Exception as e:
         logger.error(f"Error fetching CLI detail: {e}")
         return []

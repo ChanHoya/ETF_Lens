@@ -70,7 +70,6 @@ export default function KospiExitAnalyzer() {
 
     // API State
     const [loading, setLoading] = useState(true);
-    const [isSimulating, setIsSimulating] = useState(false);
 
     // Fetch Real Data on Mount
     useEffect(() => {
@@ -107,52 +106,10 @@ export default function KospiExitAnalyzer() {
         fetchData();
     }, []);
 
-    // Mock functions to allow user to simulate different scenarios
-    const simulateDanger = () => {
-        setIsSimulating(true);
-        setDollarIndex(102.1);
-        setDollarKrw(1360);
-        setForwardPer(12.6);
-        setOecdCliValue(100.4);
-        setOecdCliDownMonths(2);
-        setVixValue(28.5);
-        setFgiValue(22.0);
-    };
-
-    const simulateSafe = () => {
-        setIsSimulating(true);
-        setDollarIndex(97.77);
-        setDollarKrw(1280);
-        setForwardPer(10.5);
-        setOecdCliValue(101.2);
-        setOecdCliDownMonths(0);
-        setVixValue(14.2);
-        setFgiValue(65.0);
-    };
-
-    const simulateWarning = () => {
-        setIsSimulating(true);
-        setDollarIndex(100.5);
-        setDollarKrw(1310);
-        setForwardPer(11.8);
-        setOecdCliValue(100.8);
-        setOecdCliDownMonths(1);
-        setVixValue(21.5);
-        setFgiValue(42.0);
-    };
-
-    // When simulators run, update out mock charts to visually reflect the new end-state
-    const getChartData = (baseData: any[], currentVal: number, extraProps?: any) => {
-        if (!isSimulating) return baseData; // Show raw data if not simulating
-        const newData = [...baseData];
-        newData[newData.length - 1] = { ...newData[newData.length - 1], val: currentVal, ...extraProps };
-        return newData;
-    };
-
-    const chartDollar = getChartData(baseDollar, dollarIndex, { krw: dollarKrw });
-    const chartPer = getChartData(basePer, forwardPer, { price: basePer.length > 0 ? basePer[basePer.length - 1].price : 2500 });
-    const chartCli = getChartData(baseCli, oecdCliValue);
-    const chartSentiment = getChartData(baseSentiment.length > 0 ? baseSentiment : [], vixValue, { fgi: fgiValue });
+    const chartDollar = baseDollar;
+    const chartPer = basePer;
+    const chartCli = baseCli;
+    const chartSentiment = baseSentiment.length > 0 ? baseSentiment : [];
 
     // Calculate status levels
     const getDollarStatus = () => {
@@ -192,74 +149,66 @@ export default function KospiExitAnalyzer() {
     const vStatus = getVixStatus();
     const fStatus = getFgiStatus();
 
-    const statuses = [dStatus.level, pStatus.level, cStatus.level, vStatus.level, fStatus.level];
-    const dangerCount = statuses.filter(s => s === 'danger').length;
-    const warningCount = statuses.filter(s => s === 'warning').length;
-    const safeCount = statuses.filter(s => s === 'safe').length;
+    const exitStatuses = [dStatus.level, pStatus.level, cStatus.level];
+    const exitDangerCount = exitStatuses.filter(s => s === 'danger').length;
+    const exitWarningCount = exitStatuses.filter(s => s === 'warning').length;
+    const exitSafeCount = exitStatuses.filter(s => s === 'safe').length;
 
-    const getOverallStatus = () => {
-        if (dangerCount === 3) return { label: '강력 매도포지션 경계경보 발령', color: 'text-rose-500', bannerBg: 'bg-rose-600/30 border-rose-500/60 shadow-[0_0_20px_rgba(225,29,72,0.3)]', isExit: true, isWarn: false, isCritical: true };
-        if (dangerCount >= 2) return { label: '위험/매도준비', color: 'text-rose-400', bannerBg: 'bg-rose-500/20 border-rose-500/40', isExit: true, isWarn: false, isCritical: false };
-        if (warningCount >= 2) return { label: '시장 경계 강화', color: 'text-amber-400', bannerBg: 'bg-amber-500/20 border-amber-500/40', isExit: false, isWarn: true, isCritical: false };
-        if (safeCount === 3) return { label: '안정 (보유 유지)', color: 'text-emerald-400', bannerBg: 'bg-emerald-500/20 border-emerald-500/40', isExit: false, isWarn: false, isCritical: false };
-
-        // Mixed states fallback
-        if (dangerCount === 1) return { label: '일부 지표 위험 (주의 요망)', color: 'text-rose-300', bannerBg: 'bg-rose-500/10 border-rose-500/30', isExit: false, isWarn: true, isCritical: false };
-        if (warningCount === 1) return { label: '양호 (부분 관망)', color: 'text-emerald-300', bannerBg: 'bg-emerald-500/10 border-emerald-500/30', isExit: false, isWarn: false, isCritical: false };
-
-        return { label: '상태 분석 중', color: 'text-gray-400', bannerBg: 'bg-gray-500/10 border-gray-500/20', isExit: false, isWarn: false, isCritical: false };
+    const getExitStatus = () => {
+        if (exitDangerCount >= 2) return { label: '위험 (매도 준비)', color: 'text-rose-400', border: 'border-rose-500/40', bg: 'bg-rose-500/20' };
+        if (exitWarningCount >= 2 || exitDangerCount === 1) return { label: '경계 (비중 조절)', color: 'text-amber-400', border: 'border-amber-500/40', bg: 'bg-amber-500/20' };
+        if (exitSafeCount >= 2) return { label: '안정 (비중 확대)', color: 'text-emerald-400', border: 'border-emerald-500/40', bg: 'bg-emerald-500/20' };
+        return { label: '중립 (관망)', color: 'text-gray-300', border: 'border-gray-500/40', bg: 'bg-gray-500/20' };
     };
 
-    const overall = getOverallStatus();
+    const getExitAnalysisText = () => {
+        if (exitDangerCount >= 2) return "거시 경제 및 밸류에이션 지표가 위험 수준입니다. 주식 비중을 최소화하고 보수적으로 대응하세요.";
+        if (exitWarningCount >= 2 || exitDangerCount === 1) return "일부 지표에서 경고 신호가 확인됩니다. 리스크 관리를 강화하고 시장의 변화를 예의주시하세요.";
+        if (exitSafeCount >= 2) return "거시 지표와 밸류에이션이 전반적으로 양호합니다. 주식 자산 편입에 우호적인 환경입니다.";
+        return "거시 지표가 방향성을 탐색 중입니다. 추가적인 데이터 확인이 필요합니다.";
+    };
+
+    const sentimentStatuses = [vStatus.level, fStatus.level];
+    const sentDangerCount = sentimentStatuses.filter(s => s === 'danger').length;
+    const sentWarningCount = sentimentStatuses.filter(s => s === 'warning').length;
+
+    const getSentimentStatus = () => {
+        if (sentDangerCount >= 1) return { label: '추세 반전 경고', color: 'text-rose-400', border: 'border-rose-500/40', bg: 'bg-rose-500/20' };
+        if (sentWarningCount >= 1) return { label: '변동성 확대 주의', color: 'text-amber-400', border: 'border-amber-500/40', bg: 'bg-amber-500/20' };
+        return { label: '시장 심리 안정', color: 'text-emerald-400', border: 'border-emerald-500/40', bg: 'bg-emerald-500/20' };
+    };
+
+    const getSentimentAnalysisText = () => {
+        if (sentDangerCount >= 1) return "시장 심리가 극단적인 방향으로 쏠려 있어, 단기 충격 가능성에 대비해야 합니다.";
+        if (sentWarningCount >= 1) return "시장 변동성이 다소 커질 수 있는 구간입니다. 방어적 포지션을 점검해보세요.";
+        return "시장 심리와 변동성이 안정적으로 유지되고 있어, 큰 충격 없이 순항할 가능성이 높습니다.";
+    };
+
+    const exitOverall = getExitStatus();
+    const sentOverall = getSentimentStatus();
 
     return (
         <div className="w-full flex flex-col gap-4 mb-6 relative">
-            <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
                         <ShieldAlert className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
-                            코스피 출구 전략 모니터링 (Exit-Signal)
-                        </h2>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <h2 className="text-xl font-extrabold text-white">
+                                코스피 출구 전략 모니터링 (Exit-Signal)
+                            </h2>
+                            <span className={`px-2.5 py-1 text-xs font-bold flex items-center gap-1.5 rounded-lg border ${exitOverall.bg} ${exitOverall.color} ${exitOverall.border}`}>
+                                {exitOverall.label}
+                            </span>
+                        </div>
                         <p className="text-sm text-gray-400 font-medium mt-0.5">거시경제 및 밸류에이션 기반 위기 감지 시스템</p>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <button onClick={simulateSafe} className="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs rounded-lg hover:bg-emerald-500/30 transition-colors">안정 테스트</button>
-                    <button onClick={simulateWarning} className="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs rounded-lg hover:bg-amber-500/30 transition-colors">경계 테스트</button>
-                    <button onClick={simulateDanger} className="px-3 py-1 bg-rose-500/20 text-rose-300 text-xs rounded-lg hover:bg-rose-500/30 transition-colors">위험 테스트</button>
+                <div className="text-sm text-gray-300 md:text-right md:max-w-xs border-t md:border-t-0 md:border-l border-white/10 pt-3 md:pt-0 md:pl-4">
+                    {getExitAnalysisText()}
                 </div>
-            </div>
-
-            <div className={`w-full p-4 rounded-2xl border backdrop-blur-md flex flex-col sm:flex-row items-center justify-between transition-colors duration-500 ${overall.bannerBg}`}>
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-black/40 rounded-xl relative">
-                        {overall.isCritical && <span className="absolute inset-0 bg-rose-500 blur-md opacity-50 animate-pulse rounded-xl"></span>}
-                        {overall.isExit ? <AlertTriangle className="w-8 h-8 text-rose-400 relative z-10" /> : (overall.isWarn ? <Activity className="w-8 h-8 text-amber-400" /> : <ShieldAlert className="w-8 h-8 text-emerald-400" />)}
-                    </div>
-                    <div>
-                        <h3 className={`text-lg font-bold flex items-center gap-2 ${overall.color}`}>
-                            {overall.label}
-                            {overall.isCritical && <span className="text-[10px] bg-rose-500 text-white px-2 py-0.5 rounded-full animate-bounce">CRITICAL</span>}
-                        </h3>
-                        <p className="text-sm text-gray-300 mt-1">
-                            {overall.isCritical
-                                ? "즉시 주식 비중을 최소화하고 ETF 인버스 등 현금화 출구 전략을 강력히 실행하세요!"
-                                : (overall.isExit
-                                    ? "3-No 원칙에 따라 감정적 투매를 자제하고, 10~30% 분할 익절표를 통한 스위칭을 검토하세요."
-                                    : (overall.isWarn
-                                        ? "지표가 경계 수준에 도달했습니다. 포트폴리오 다각화(안전자산 편입)를 준비할 시점입니다."
-                                        : "현재 시장 환경은 주식 자산 편입에 우호적입니다. 수익 추구형 포트폴리오를 유지하세요."))}
-                        </p>
-                    </div>
-                </div>
-                {overall.isExit && (
-                    <button className="mt-4 sm:mt-0 px-6 py-3 bg-rose-500 hover:bg-rose-600 text-white font-bold text-sm rounded-xl shadow-[0_0_15px_rgba(244,63,94,0.5)] transition-all flex items-center gap-2 shrink-0">
-                        비중 축소 시뮬레이터 <ChevronRight className="w-4 h-4" />
-                    </button>
-                )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -382,16 +331,25 @@ export default function KospiExitAnalyzer() {
             </div>
 
             {/* Sentiment Indicators Row */}
-            {/* Sentiment Indicators Row */}
-            <div className="flex items-center gap-3 mt-6 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                    <Activity className="w-6 h-6 text-white" />
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-6 mb-4 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
+                        <Activity className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <h3 className="text-xl font-extrabold text-white">
+                                시장 심리 지표
+                            </h3>
+                            <span className={`px-2.5 py-1 text-xs font-bold flex items-center gap-1.5 rounded-lg border ${sentOverall.bg} ${sentOverall.color} ${sentOverall.border}`}>
+                                {sentOverall.label}
+                            </span>
+                        </div>
+                        <p className="text-sm text-gray-400 font-medium mt-0.5">투자자들의 단기 변동성 우려와 탐욕 수준을 나타내는 지수</p>
+                    </div>
                 </div>
-                <div>
-                    <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
-                        시장 심리 지표
-                    </h3>
-                    <p className="text-sm text-gray-400 font-medium mt-0.5">투자자들의 단기 변동성 우려와 탐욕 수준을 나타내는 지수</p>
+                <div className="text-sm text-gray-300 md:text-right md:max-w-xs border-t md:border-t-0 md:border-l border-white/10 pt-3 md:pt-0 md:pl-4">
+                    {getSentimentAnalysisText()}
                 </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
