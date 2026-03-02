@@ -127,6 +127,20 @@ export default function KospiExitAnalyzer() {
                                 setOecdCliDownMonths(downMonths);
                             }
                         }
+
+                        // Fetch Daily 1Y data for Dollar and PER to match Popup Charts
+                        const [macroRes, perRes] = await Promise.all([
+                            fetch('http://localhost:8000/api/v1/exit-signal/macro?period=1Y'),
+                            fetch('http://localhost:8000/api/v1/exit-signal/per?period=1Y')
+                        ]);
+                        if (macroRes.ok) {
+                            const macro1Y = await macroRes.json();
+                            setBaseDollar(macro1Y);
+                        }
+                        if (perRes.ok) {
+                            const per1Y = await perRes.json();
+                            setBasePer(per1Y);
+                        }
                     } catch (cliErr) {
                         console.error("Failed to fetch CLI 3-line data:", cliErr);
                     }
@@ -262,18 +276,17 @@ export default function KospiExitAnalyzer() {
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartDollar} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
+                                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
                                 <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#34d399') }} tickLine={false} axisLine={false} width={45} />
                                 <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#60a5fa' }} tickLine={false} axisLine={false} width={45} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#fff' }}
-                                    formatter={(value: any, name: any) => [name === 'val' ? value : `${value}원`, name === 'val' ? '달러 인덱스' : 'USD/KRW']}
+                                    formatter={(value: any, name: any) => [name === 'dollar' ? value : `${Math.round(value)}원`, name === 'dollar' ? '달러 인덱스' : 'USD/KRW']}
                                     labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                                 />
                                 <ReferenceLine yAxisId="left" y={100} stroke="#f59e0b" strokeDasharray="3 3" />
                                 <ReferenceLine yAxisId="left" y={101.5} stroke="#f43f5e" strokeDasharray="3 3" />
-                                <Line yAxisId="left" type="monotone" dataKey="val" stroke={dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
+                                <Line yAxisId="left" type="monotone" dataKey="dollar" stroke={dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
                                 <Line yAxisId="right" type="monotone" dataKey="krw" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={{ r: 4 }} />
                             </LineChart>
                         </ResponsiveContainer>
@@ -301,18 +314,17 @@ export default function KospiExitAnalyzer() {
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartPer} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
+                                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
                                 <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: forwardPer >= 12.5 || pStatus.level === 'danger' ? '#f43f5e' : '#34d399' }} tickLine={false} axisLine={false} width={45} />
                                 <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 9, fill: '#60a5fa' }} tickLine={false} axisLine={false} width={45} tickFormatter={(val) => Math.round(val).toLocaleString()} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#fff' }}
                                     formatter={(value: any, name: any) => [name === 'val' ? `${value}x` : `${Math.round(value).toLocaleString()}pt`, name === 'val' ? 'P/E' : 'KOSPI']}
                                     labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                                 />
                                 <ReferenceLine yAxisId="left" y={12.5} stroke="#f59e0b" strokeDasharray="3 3" />
-                                <Line yAxisId="left" type="monotone" dataKey="val" stroke={forwardPer >= 12.5 || pStatus.level === 'danger' ? '#f43f5e' : '#34d399'} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
-                                <Line yAxisId="right" type="stepAfter" dataKey="price" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
+                                <Line yAxisId="left" type="monotone" dataKey="val" stroke={forwardPer >= 12.5 || pStatus.level === 'danger' ? '#f43f5e' : '#34d399'} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                                <Line yAxisId="right" type="monotone" dataKey="kospi" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -348,7 +360,6 @@ export default function KospiExitAnalyzer() {
                                 <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#f43f5e' }} tickLine={false} axisLine={false} width={45} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#fff' }}
                                     formatter={(value: any, name: any) => [`${value.toFixed(1)}`, name === 'kor_cli' ? `한국 CLI` : (name === 'usa_cli' ? '미국 CLI' : 'G7(OECD Proxy)')]}
                                     labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                                 />
@@ -401,10 +412,16 @@ export default function KospiExitAnalyzer() {
                         </span>
                     </div>
 
-                    <div className="h-[80px] w-full mt-2 -ml-2 -mb-2">
+                    <div className="h-[90px] w-full mt-2 -ml-2 -mb-1">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
+                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 10 }}>
+                                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={4} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
                                 <YAxis domain={['auto', 'auto']} width={35} tick={{ fontSize: 10, fill: vStatus.level === 'danger' ? '#f43f5e' : (vStatus.level === 'warning' ? '#f59e0b' : '#34d399') }} tickLine={false} axisLine={false} />
+                                <RechartsTooltip
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
+                                    formatter={(value: any) => [value, 'VIX']}
+                                    labelStyle={{ color: '#aaa', marginBottom: '4px' }}
+                                />
                                 <Line type="monotone" dataKey="vix" stroke={vStatus.level === 'danger' ? '#f43f5e' : (vStatus.level === 'warning' ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
                             </LineChart>
                         </ResponsiveContainer>
@@ -428,10 +445,16 @@ export default function KospiExitAnalyzer() {
                         </span>
                     </div>
 
-                    <div className="h-[80px] w-full mt-2 -ml-2 -mb-2">
+                    <div className="h-[90px] w-full mt-2 -ml-2 -mb-1">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
+                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 10 }}>
+                                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={4} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
                                 <YAxis domain={['auto', 'auto']} width={35} tick={{ fontSize: 10, fill: fStatus.level === 'danger' ? '#f43f5e' : (fgiValue < 30 ? '#34d399' : '#f59e0b') }} tickLine={false} axisLine={false} />
+                                <RechartsTooltip
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
+                                    formatter={(value: any) => [value, 'FGI']}
+                                    labelStyle={{ color: '#aaa', marginBottom: '4px' }}
+                                />
                                 <Line type="monotone" dataKey="fgi" stroke={fStatus.level === 'danger' ? '#f43f5e' : (fgiValue < 30 ? '#34d399' : '#f59e0b')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
                             </LineChart>
                         </ResponsiveContainer>
