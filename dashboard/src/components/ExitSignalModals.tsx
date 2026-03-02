@@ -350,6 +350,15 @@ export function CliModalContent() {
 export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [period, setPeriod] = useState<number>(60); // Default to 3M (60 business days)
+
+    const periods = [
+        { label: '1M', days: 20 },
+        { label: '3M', days: 60 },
+        { label: '6M', days: 120 },
+        { label: '1Y', days: 250 },
+        { label: '3Y', days: 750 },
+    ];
 
     useEffect(() => {
         const fetchSentiment = async () => {
@@ -372,23 +381,41 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
 
     if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading data...</div>;
 
-    const currentVal = data.length > 0 ? data[data.length - 1] : null;
-    const maxVix = data.length > 0 ? Math.max(100, ...data.map(d => (d.vix || 0) + 10)) : 100;
+    const displayData = data.slice(-period);
+    const currentVal = displayData.length > 0 ? displayData[displayData.length - 1] : null;
+    const maxVix = displayData.length > 0 ? Math.max(100, ...displayData.map(d => (d.vix || 0) + 10)) : 100;
 
     return (
         <div className="flex flex-col h-full w-full gap-6 min-h-[500px]">
             <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col h-[400px]">
-                <h3 className="text-white font-bold mb-4 text-center">최근 30영업일 {isFgi ? '공포/탐욕 지수' : 'VIX (변동성 지수)'} 궤적</h3>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-white font-bold ml-2">{isFgi ? '공포/탐욕 지수' : 'VIX (변동성 지수)'} 및 KOSPI 추이</h3>
+                    <div className="flex gap-1 bg-black/40 p-1 rounded-xl shrink-0">
+                        {periods.map(p => (
+                            <button
+                                key={p.label}
+                                onClick={() => setPeriod(p.days)}
+                                className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${period === p.days
+                                    ? 'bg-indigo-500 text-white shadow-lg'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/10'
+                                    }`}
+                            >
+                                {p.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
                 <div className="flex-1 w-full relative">
                     <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={data} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
+                        <LineChart data={displayData} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                            <XAxis dataKey="date" stroke="#71717a" fontSize={10} tickMargin={8} />
+                            <XAxis dataKey="date" stroke="#71717a" fontSize={10} tickMargin={8} minTickGap={30} />
                             <YAxis yAxisId="left" domain={isFgi ? [0, 100] : ['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
+                            <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} width={50} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} tickFormatter={(val) => Math.round(val).toLocaleString()} />
                             <RechartsTooltip
                                 contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                                 itemStyle={{ color: '#fff', fontSize: '12px' }}
-                                formatter={(val: any, name: any) => [val, name === 'vix' ? 'VIX' : 'Fear & Greed']}
+                                formatter={(val: any, name: any) => [val, name === 'vix' ? 'VIX' : (name === 'fgi' ? 'Fear & Greed' : 'KOSPI')]}
                             />
 
                             {/* FGI Elements */}
@@ -396,14 +423,17 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                             {isFgi && <ReferenceArea yAxisId="left" y1={75} y2={100} strokeOpacity={0} fill="#34d399" fillOpacity={0.15} />}
                             {isFgi && <ReferenceLine yAxisId="left" y={25} stroke="#f43f5e" strokeDasharray="3 3" />}
                             {isFgi && <ReferenceLine yAxisId="left" y={75} stroke="#34d399" strokeDasharray="3 3" />}
-                            {isFgi && <Line yAxisId="left" type="monotone" name="fgi" dataKey="fgi" stroke={currentVal && currentVal.fgi < 30 ? '#f43f5e' : '#34d399'} strokeWidth={3} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />}
+                            {isFgi && <Line yAxisId="left" type="monotone" name="fgi" dataKey="fgi" stroke={currentVal && currentVal.fgi < 30 ? '#f43f5e' : '#34d399'} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />}
 
                             {/* VIX Elements */}
                             {!isFgi && <ReferenceArea yAxisId="left" y1={0} y2={15} strokeOpacity={0} fill="#34d399" fillOpacity={0.15} />}
                             {!isFgi && <ReferenceArea yAxisId="left" y1={20} y2={maxVix} strokeOpacity={0} fill="#f43f5e" fillOpacity={0.15} />}
                             {!isFgi && <ReferenceLine yAxisId="left" y={15} stroke="#34d399" strokeDasharray="3 3" />}
                             {!isFgi && <ReferenceLine yAxisId="left" y={20} stroke="#f43f5e" strokeDasharray="3 3" />}
-                            {!isFgi && <Line yAxisId="left" type="monotone" name="vix" dataKey="vix" stroke={currentVal && currentVal.vix >= 20 ? '#f43f5e' : '#f59e0b'} strokeWidth={3} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />}
+                            {!isFgi && <Line yAxisId="left" type="monotone" name="vix" dataKey="vix" stroke={currentVal && currentVal.vix >= 20 ? '#f43f5e' : '#f59e0b'} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />}
+
+                            {/* KOSPI Line */}
+                            <Line yAxisId="right" type="monotone" name="kospi" dataKey="kospi" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>

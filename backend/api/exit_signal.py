@@ -127,14 +127,14 @@ async def fetch_yf_data():
 
 
 async def fetch_market_sentiment():
-    """Fetch VIX and calculate proxy Fear & Greed Index."""
+    """Fetch VIX and calculate proxy Fear & Greed Index, and fetch KOSPI."""
     try:
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=200)
+        start_date = end_date - timedelta(days=1100)  # Support up to 3 years
 
         df = await asyncio.to_thread(
             yf.download,
-            "^VIX",
+            ["^VIX", "^KS11"],
             start=start_date.strftime("%Y-%m-%d"),
             end=end_date.strftime("%Y-%m-%d"),
             progress=False,
@@ -142,27 +142,43 @@ async def fetch_market_sentiment():
 
         # Extract Close price series
         if isinstance(df.columns, pd.MultiIndex):
-            close_prices = (
-                df["Close"].iloc[:, 0]
-                if "Close" in df.columns.levels[0]
-                else df.iloc[:, 0]
-            )
+            if "Close" in df.columns.levels[0]:
+                vix_close = (
+                    df["Close"]["^VIX"]
+                    if "^VIX" in df["Close"].columns
+                    else df["Close"].iloc[:, 0]
+                )
+                kospi_close = (
+                    df["Close"]["^KS11"]
+                    if "^KS11" in df["Close"].columns
+                    else df["Close"].iloc[:, 1]
+                )
+            else:
+                vix_close = df.iloc[:, 0]
+                kospi_close = df.iloc[:, 1]
         else:
-            close_prices = df["Close"] if "Close" in df.columns else df.iloc[:, 0]
+            vix_close = df["^VIX"] if "^VIX" in df.columns else df.iloc[:, 0]
+            kospi_close = df["^KS11"] if "^KS11" in df.columns else df.iloc[:, 1]
 
-        close_prices = close_prices.ffill().dropna()
-        if close_prices.empty:
+        vix_close = vix_close.ffill().dropna()
+        kospi_close = kospi_close.ffill().dropna()
+
+        # Align series to keep dates where both exist
+        aligned = pd.concat([vix_close, kospi_close], axis=1).dropna()
+        aligned.columns = ["vix", "kospi"]
+
+        if aligned.empty:
             return [], 20.0, 50.0
 
-        daily = close_prices.tail(30)  # Fetch last 30 days for short-term sentiment
         sentiment_data = []
 
-        for dt, val in daily.items():
+        for dt, row in aligned.iterrows():
             if isinstance(dt, tuple):
                 dt = dt[0]
             if isinstance(dt, str):
                 dt = pd.to_datetime(dt)
-            vix_val = float(val)
+            vix_val = float(row["vix"])
+            kospi_val = float(row["kospi"])
 
             # Proxy formula: FGI = 50 - (VIX - 18) * 3
             # Bound between 0 and 100
@@ -170,9 +186,10 @@ async def fetch_market_sentiment():
 
             sentiment_data.append(
                 {
-                    "date": f"{dt.month:02d}-{dt.day:02d}",
+                    "date": dt.strftime("%Y-%m-%d"),
                     "vix": round(vix_val, 2),
                     "fgi": round(fgi_val, 1),
+                    "kospi": round(kospi_val, 2),
                 }
             )
 
