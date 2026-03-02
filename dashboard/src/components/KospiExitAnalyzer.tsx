@@ -281,8 +281,23 @@ export default function KospiExitAnalyzer() {
                                 <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#60a5fa' }} tickLine={false} axisLine={false} width={45} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
-                                    formatter={(value: any, name: any) => [name === 'dollar' ? value : `${Math.round(value)}원`, name === 'dollar' ? '달러 인덱스' : 'USD/KRW']}
-                                    labelStyle={{ color: '#aaa', marginBottom: '4px' }}
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                            return (
+                                                <div className="bg-black/80 border border-white/10 p-2 rounded-lg text-[11px]">
+                                                    <p className="text-gray-400 mb-1">{label}</p>
+                                                    {sortedPayload.map((entry: any, index: number) => (
+                                                        <div key={`item-${index}`} className="flex items-center gap-2 mb-0.5 font-medium" style={{ color: entry.color }}>
+                                                            <span>{entry.name === 'krw' ? 'USD/KRW' : '달러 인덱스'} :</span>
+                                                            <span>{entry.name === 'krw' ? `${Math.round(entry.value)}원` : entry.value.toFixed(2)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
                                 />
                                 <ReferenceLine yAxisId="left" y={100} stroke="#f59e0b" strokeDasharray="3 3" />
                                 <ReferenceLine yAxisId="left" y={101.5} stroke="#f43f5e" strokeDasharray="3 3" />
@@ -319,8 +334,23 @@ export default function KospiExitAnalyzer() {
                                 <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 9, fill: '#60a5fa' }} tickLine={false} axisLine={false} width={45} tickFormatter={(val) => Math.round(val).toLocaleString()} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
-                                    formatter={(value: any, name: any) => [name === 'val' ? `${value}x` : `${Math.round(value).toLocaleString()}pt`, name === 'val' ? 'P/E' : 'KOSPI']}
-                                    labelStyle={{ color: '#aaa', marginBottom: '4px' }}
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                            return (
+                                                <div className="bg-black/80 border border-white/10 p-2 rounded-lg text-[11px]">
+                                                    <p className="text-gray-400 mb-1">{label}</p>
+                                                    {sortedPayload.map((entry: any, index: number) => (
+                                                        <div key={`item-${index}`} className="flex items-center gap-2 mb-0.5 font-medium" style={{ color: entry.color }}>
+                                                            <span>{entry.name === 'kospi' ? 'KOSPI' : 'P/E'} :</span>
+                                                            <span>{entry.name === 'kospi' ? `${Math.round(entry.value).toLocaleString()}pt` : `${entry.value.toFixed(1)}x`}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
                                 />
                                 <ReferenceLine yAxisId="left" y={12.5} stroke="#f59e0b" strokeDasharray="3 3" />
                                 <Line yAxisId="left" type="monotone" dataKey="val" stroke={forwardPer >= 12.5 || pStatus.level === 'danger' ? '#f43f5e' : '#34d399'} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
@@ -360,8 +390,26 @@ export default function KospiExitAnalyzer() {
                                 <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#f43f5e' }} tickLine={false} axisLine={false} width={45} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
-                                    formatter={(value: any, name: any) => [`${value.toFixed(1)}`, name === 'kor_cli' ? `한국 CLI` : (name === 'usa_cli' ? '미국 CLI' : 'G7(OECD Proxy)')]}
-                                    labelStyle={{ color: '#aaa', marginBottom: '4px' }}
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            const sortedPayload = [...payload].sort((a: any, b: any) => b.value - a.value);
+                                            return (
+                                                <div className="bg-black/80 border border-white/10 p-2 rounded-lg text-[11px]">
+                                                    <p className="text-gray-400 mb-1">{label}</p>
+                                                    {sortedPayload.map((entry: any, index: number) => {
+                                                        const nameMap: any = { kor_cli: '한국 CLI', usa_cli: '미국 CLI', oecd_cli: 'G7(OECD Proxy)' };
+                                                        return (
+                                                            <div key={`item-${index}`} className="flex items-center gap-2 mb-0.5 font-medium" style={{ color: entry.color }}>
+                                                                <span>{nameMap[entry.name]} :</span>
+                                                                <span>{entry.value.toFixed(1)}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
                                 />
                                 <Line type="monotone" dataKey="kor_cli" stroke={cStatus.level === 'danger' ? '#f43f5e' : (cStatus.level === 'warning' ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
                                 <Line type="monotone" dataKey="usa_cli" stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
