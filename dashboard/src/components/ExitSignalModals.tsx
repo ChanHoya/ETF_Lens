@@ -131,13 +131,13 @@ export function PerModalContent() {
 
     return (
         <div className="w-full flex-1 flex flex-col space-y-4 min-h-[500px]">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                 <PerMiniChart title="KOSPI (기준 지수)" isKospi={true} />
                 <PerMiniChart title={defaultStocks[0].name} symbol={defaultStocks[0].id} />
                 <PerMiniChart title={defaultStocks[1].name} symbol={defaultStocks[1].id} />
                 <PerMiniChart title={defaultStocks[2].name} symbol={defaultStocks[2].id} />
             </div>
-            <p className="text-xs text-gray-500 text-center mt-4">KOSPI 주요 종목별 1년 포워드 PER 궤적입니다.</p>
+            <p className="text-[11px] text-gray-500 text-center mt-2 shrink-0">KOSPI 주요 종목별 1년 포워드 PER 궤적입니다.</p>
         </div>
     );
 }
@@ -204,8 +204,8 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
     const currentVal = data.length > 0 ? data[data.length - 1].val : 0;
 
     return (
-        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 flex flex-col h-[230px]">
-            <div className="flex justify-between items-start mb-2 shrink-0">
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 flex flex-col min-h-[250px] flex-1">
+            <div className="flex justify-between items-start mb-1 shrink-0">
                 <div className="flex flex-col">
                     {isKospi ? (
                         <h3 className="font-bold text-blue-400">{displayTitle}</h3>
@@ -291,8 +291,8 @@ export function CliModalContent() {
     if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading data...</div>;
 
     return (
-        <div className="flex flex-col h-full w-full gap-6 min-h-[500px]">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[400px]">
+        <div className="flex flex-col h-full w-full gap-4 flex-1">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-[450px]">
                 {/* 1. Long term KOSPI overlay */}
                 <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col">
                     <h3 className="text-white font-bold mb-4 text-center">한국 CLI vs KOSPI 10년 장기 궤적</h3>
@@ -337,9 +337,9 @@ export function CliModalContent() {
                 </div>
             </div>
 
-            <div className="bg-indigo-900/20 border border-indigo-500/20 p-4 rounded-xl">
-                <h4 className="font-bold text-indigo-300 mb-2">💡 경제 위기 하이라이트 분석</h4>
-                <p className="text-sm text-indigo-100/80 leading-relaxed">
+            <div className="bg-indigo-900/20 border border-indigo-500/20 p-3 rounded-xl shrink-0">
+                <h4 className="font-bold text-indigo-300 text-xs mb-1">💡 경제 위기 하이라이트 분석</h4>
+                <p className="text-[11px] text-indigo-100/80 leading-tight">
                     차트의 붉은색/회색 음영 구간은 2020년(팬데믹), 2022년(글로벌 금리 인상) 등 매크로 지표가 급격히 수축되었던 시점을 나타냅니다. 현재 한국 CLI가 과거 이 음영 구간들의 진입 시점과 유사한 각도로 꺾이고 있는지, 아니면 단순 소프트 랜딩인지 비교하여 판단하세요. 한국의 하락 추세가 미국/OECD 평균 하락과 동반된다면 강력한 주식 비중 축소 시그널입니다.
                 </p>
             </div>
@@ -358,6 +358,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
         { label: '6M', days: 120 },
         { label: '1Y', days: 250 },
         { label: '3Y', days: 750 },
+        { label: '10Y', days: 2500 }
     ];
 
     useEffect(() => {
@@ -386,9 +387,9 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
     const maxVix = displayData.length > 0 ? Math.max(100, ...displayData.map(d => (d.vix || 0) + 10)) : 100;
 
     return (
-        <div className="flex flex-col h-full w-full gap-6 min-h-[500px]">
-            <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col h-[400px]">
-                <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col h-full w-full gap-4 flex-1">
+            <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col flex-1 min-h-[450px]">
+                <div className="flex justify-between items-center mb-2 shrink-0">
                     <div className="flex flex-col">
                         <h3 className="text-white font-bold ml-2 text-lg">
                             {isFgi ? 'Fear & Greed Index (공포탐욕지수)' : 'VIX (CBOE Volatility Index)'}
@@ -451,8 +452,8 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                 </div>
             </div>
 
-            <div className="bg-indigo-900/20 border border-indigo-500/20 p-4 rounded-xl">
-                <h4 className="font-bold text-indigo-300 mb-4 px-2">💡 시장 심리 가이드</h4>
+            <div className="bg-indigo-900/20 border border-indigo-500/20 p-3 rounded-xl shrink-0">
+                <h4 className="font-bold text-indigo-300 mb-2 text-xs">💡 시장 심리 가이드</h4>
                 {isFgi ? (
                     <div className="flex w-full gap-2 px-2 pb-2">
                         <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-rose-500/80">
@@ -482,11 +483,11 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                         </div>
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-4 px-2">
-                        <p className="text-sm text-indigo-100/80 leading-relaxed text-justify">
+                    <div className="flex flex-col gap-2">
+                        <p className="text-[11px] text-indigo-100/80 leading-tight text-justify">
                             내재변동성은 일반적으로 시장이 불안정하거나 경제가 흔들릴 때 증가합니다. 이와 대조적으로 주가가 상승하고 있고 극적인 변화가 없을 것 같으면 VIX는 하락하거나 범위의 하단에서 안정을 유지하는 경향이 있습니다. 즉, VIX는 주가와 음의 상관관계를 갖습니다.
                         </p>
-                        <div className="flex w-full gap-2 mt-2">
+                        <div className="flex w-full gap-2">
                             <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-emerald-500/80">
                                 <h5 className="font-bold text-emerald-500 text-sm mb-1">0 - 15</h5>
                                 <span className="text-white font-semibold text-xs mb-1 block">낮은 수준 (안정)</span>

@@ -130,7 +130,7 @@ async def fetch_market_sentiment():
     """Fetch VIX and calculate proxy Fear & Greed Index, and fetch KOSPI."""
     try:
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=1100)  # Support up to 3 years
+        start_date = end_date - timedelta(days=3700)  # Support up to 10 years
 
         df = await asyncio.to_thread(
             yf.download,
