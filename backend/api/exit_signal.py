@@ -18,6 +18,14 @@ _macro_cache = {}
 _cli_cache = {}
 CACHE_TTL = 3600 * 12  # 12 hours
 
+# Setup a custom session for yfinance to bypass cloud bot-blocking
+_yf_session = requests.Session()
+_yf_session.headers.update(
+    {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+)
+
 
 def get_mock_data():
     return {
@@ -86,6 +94,7 @@ async def fetch_yf_data():
             start=start_date.strftime("%Y-%m-%d"),
             end=end_date.strftime("%Y-%m-%d"),
             progress=False,
+            session=_yf_session,
         )
 
         if isinstance(df.columns, pd.MultiIndex):
@@ -138,6 +147,7 @@ async def fetch_market_sentiment():
             start=start_date.strftime("%Y-%m-%d"),
             end=end_date.strftime("%Y-%m-%d"),
             progress=False,
+            session=_yf_session,
         )
 
         # Extract Close price series
@@ -338,6 +348,7 @@ async def get_macro_detail(period: str = "10Y"):
             start=start_date.strftime("%Y-%m-%d"),
             end=end_date.strftime("%Y-%m-%d"),
             progress=False,
+            session=_yf_session,
         )
 
         if isinstance(df.columns, pd.MultiIndex):
@@ -444,6 +455,7 @@ async def get_cli_detail():
             start=start_date.strftime("%Y-%m-%d"),
             end=end_date.strftime("%Y-%m-%d"),
             progress=False,
+            session=_yf_session,
         )
         if isinstance(kospi_df.columns, pd.MultiIndex):
             kospi_monthly = kospi_df["Close"].iloc[:, 0].resample("ME").last()
@@ -505,7 +517,7 @@ async def get_pe_detail(symbol: str = "005930"):
         tkr = "^KS11" if symbol in ["KOSPI", "0001"] else f"{symbol}.KS"
 
         def fetch_pe_data(ticker_symbol):
-            ticker = yf.Ticker(ticker_symbol)
+            ticker = yf.Ticker(ticker_symbol, session=_yf_session)
             hist = ticker.history(period="1y")
             info = ticker.info
             # Attempt to get real PE from Yahoo Finance, fallback to 12.2 (typical Kospi average)
