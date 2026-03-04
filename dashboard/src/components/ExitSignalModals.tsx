@@ -184,7 +184,7 @@ export function PerModalContent() {
     ];
 
     return (
-        <div className="w-full flex-1 flex flex-col space-y-4 min-h-[500px]">
+        <div className="w-full flex-1 flex flex-col space-y-4 min-h-[700px]">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                 <PerMiniChart title="KOSPI (기준 지수)" isKospi={true} />
                 <PerMiniChart title={defaultStocks[0].name} symbol={defaultStocks[0].id} />
@@ -260,11 +260,11 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
     const getNormPer = useVisualSort(data, ['val', 'kospi']);
 
     return (
-        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 flex flex-col min-h-[250px] flex-1">
-            <div className="flex justify-between items-start mb-1 shrink-0">
-                <div className="flex flex-col">
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 flex flex-col min-h-[300px] flex-1">
+            <div className="flex justify-between items-start mb-3 shrink-0">
+                <div className="flex items-baseline gap-3">
                     {isKospi ? (
-                        <h3 className="font-bold text-blue-400">{displayTitle}</h3>
+                        <h3 className="font-bold text-blue-400 text-lg">{displayTitle}</h3>
                     ) : (
                         <div className="flex items-center gap-2">
                             {isEditing ? (
@@ -280,17 +280,17 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
                                     />
                                 </form>
                             ) : (
-                                <h3 className="font-bold text-gray-200 cursor-pointer hover:text-white transition-colors" onClick={() => setIsEditing(true)}>
-                                    {displayTitle} <Search className="w-3 h-3 inline-block ml-1 opacity-50" />
+                                <h3 className="font-bold text-gray-200 text-lg cursor-pointer hover:text-white transition-colors flex items-center" onClick={() => setIsEditing(true)}>
+                                    {displayTitle} <Search className="w-4 h-4 inline-block ml-1 opacity-50" />
                                 </h3>
                             )}
                         </div>
                     )}
 
                     {loading ? (
-                        <p className="text-lg font-black text-gray-500 mt-1">...</p>
+                        <p className="text-xl font-black text-gray-500">...</p>
                     ) : (
-                        <p className="text-2xl font-black text-white mt-1">{currentVal.toFixed(1)}x</p>
+                        <p className="text-2xl font-black text-white">{currentVal.toFixed(1)}x</p>
                     )}
                 </div>
             </div>
