@@ -397,44 +397,86 @@ class ETFHarvester:
             holdings = []
             print(f"[{code}] KRX Data unavailable, returning empty holdings.")
 
-            # --- START US PROXY FALLBACK ---
-            etf_name = None
-            if getattr(self, "etf_list", None) is not None:
-                match = self.etf_list[self.etf_list["Symbol"] == code]
-                if not match.empty:
-                    etf_name = match["Name"].values[0]
+            # --- START NAVER HTML FALLBACK ---
+            try:
+                import urllib.request
+                from bs4 import BeautifulSoup
+                import ssl
 
-            if etf_name:
-                name_upper = etf_name.upper()
-                if "S&P500" in name_upper or "S&P 500" in name_upper:
-                    print(f"[{code}] S&P 500 ETF matched. Generating proxy holdings.")
-                    holdings = [
-                        {"ticker": "Apple Inc.", "weight": 7.02},
-                        {"ticker": "Microsoft Corp.", "weight": 6.96},
-                        {"ticker": "NVIDIA Corp.", "weight": 6.64},
-                        {"ticker": "Amazon.com Inc.", "weight": 3.44},
-                        {"ticker": "Meta Platforms Inc.", "weight": 2.40},
-                        {"ticker": "Alphabet Inc. Class A", "weight": 2.02},
-                        {"ticker": "Alphabet Inc. Class C", "weight": 1.70},
-                        {"ticker": "Berkshire Hathaway Inc.", "weight": 1.68},
-                        {"ticker": "Eli Lilly & Co.", "weight": 1.41},
-                        {"ticker": "Broadcom Inc.", "weight": 1.34},
-                    ]
-                elif "나스닥" in name_upper or "NASDAQ" in name_upper:
-                    print(f"[{code}] NASDAQ ETF matched. Generating proxy holdings.")
-                    holdings = [
-                        {"ticker": "Apple Inc.", "weight": 8.71},
-                        {"ticker": "Microsoft Corp.", "weight": 8.44},
-                        {"ticker": "NVIDIA Corp.", "weight": 7.82},
-                        {"ticker": "Amazon.com Inc.", "weight": 4.67},
-                        {"ticker": "Meta Platforms Inc.", "weight": 4.31},
-                        {"ticker": "Broadcom Inc.", "weight": 4.16},
-                        {"ticker": "Alphabet Inc. Class A", "weight": 2.50},
-                        {"ticker": "Alphabet Inc. Class C", "weight": 2.45},
-                        {"ticker": "Tesla Inc.", "weight": 2.41},
-                        {"ticker": "Costco Wholesale Corp", "weight": 2.38},
-                    ]
-            # --- END US PROXY FALLBACK ---
+                context = ssl._create_unverified_context()
+                url = f"https://finance.naver.com/item/main.naver?code={code}"
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                # Let BeautifulSoup handle character encoding
+                html_bytes = await asyncio.to_thread(
+                    lambda: urllib.request.urlopen(req, context=context).read()
+                )
+                soup = BeautifulSoup(html_bytes, "html.parser")
+
+                table = soup.find("table", class_="tb_type1_a")
+                if table:
+                    trs = table.find_all("tr")
+                    for tr in trs:
+                        tds = tr.find_all("td")
+                        if len(tds) >= 3:
+                            name = tds[0].text.strip()
+                            weight_text = (
+                                tds[2].text.strip().replace("%", "").replace(",", "")
+                            )
+                            try:
+                                weight = float(weight_text)
+                                if name and weight > 0:
+                                    holdings.append({"ticker": name, "weight": weight})
+                            except ValueError:
+                                pass
+                if holdings:
+                    print(
+                        f"[{code}] Naver HTML fallback successful. Found {len(holdings)} holdings."
+                    )
+            except Exception as e:
+                print(f"[{code}] Naver HTML fallback failed: {e}")
+
+            # --- START US PROXY FALLBACK (if HTML also fails or is empty) ---
+            if not holdings:
+                etf_name = None
+                if getattr(self, "etf_list", None) is not None:
+                    match = self.etf_list[self.etf_list["Symbol"] == code]
+                    if not match.empty:
+                        etf_name = match["Name"].values[0]
+
+                if etf_name:
+                    name_upper = etf_name.upper()
+                    if "S&P500" in name_upper or "S&P 500" in name_upper:
+                        print(
+                            f"[{code}] S&P 500 ETF matched. Generating proxy holdings."
+                        )
+                        holdings = [
+                            {"ticker": "Apple Inc.", "weight": 7.02},
+                            {"ticker": "Microsoft Corp.", "weight": 6.96},
+                            {"ticker": "NVIDIA Corp.", "weight": 6.64},
+                            {"ticker": "Amazon.com Inc.", "weight": 3.44},
+                            {"ticker": "Meta Platforms Inc.", "weight": 2.40},
+                            {"ticker": "Alphabet Inc. Class A", "weight": 2.02},
+                            {"ticker": "Alphabet Inc. Class C", "weight": 1.70},
+                            {"ticker": "Berkshire Hathaway Inc.", "weight": 1.68},
+                            {"ticker": "Eli Lilly & Co.", "weight": 1.41},
+                            {"ticker": "Broadcom Inc.", "weight": 1.34},
+                        ]
+                    elif "나스닥" in name_upper or "NASDAQ" in name_upper:
+                        print(
+                            f"[{code}] NASDAQ ETF matched. Generating proxy holdings."
+                        )
+                        holdings = [
+                            {"ticker": "Apple Inc.", "weight": 8.71},
+                            {"ticker": "Microsoft Corp.", "weight": 8.44},
+                            {"ticker": "NVIDIA Corp.", "weight": 7.82},
+                            {"ticker": "Amazon.com Inc.", "weight": 4.67},
+                            {"ticker": "Meta Platforms Inc.", "weight": 4.31},
+                            {"ticker": "Broadcom Inc.", "weight": 4.16},
+                            {"ticker": "Alphabet Inc. Class A", "weight": 2.50},
+                            {"ticker": "Alphabet Inc. Class C", "weight": 2.45},
+                            {"ticker": "Tesla Inc.", "weight": 2.41},
+                            {"ticker": "Costco Wholesale Corp", "weight": 2.38},
+                        ]
 
         return holdings
 
