@@ -54,6 +54,7 @@ export default function Home() {
   const [isLoadingChart, setIsLoadingChart] = useState(false);
   const [dbVersion, setDbVersion] = useState<string>("DB ver.Loading...");
   const [healthStatus, setHealthStatus] = useState<'pending' | 'ok' | 'error'>('pending');
+  const [failedServices, setFailedServices] = useState<string[]>([]);
 
   useEffect(() => {
     setIsClient(true);
@@ -72,10 +73,12 @@ export default function Home() {
       .then(res => res.json())
       .then(data => {
         if (data.overall) setHealthStatus(data.overall);
+        if (data.failed_services) setFailedServices(data.failed_services);
       })
       .catch(err => {
         console.error("Health check error", err);
         setHealthStatus("error");
+        setFailedServices(["서버 통신"]);
       });
   }, []);
 
@@ -810,7 +813,7 @@ export default function Home() {
               )}
               {healthStatus === 'error' && (
                 <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-rose-500 bg-rose-500/10 border border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] flex items-center gap-1">
-                  <AlertCircle size={12} /> 현재 연동에 문제가 있습니다. 체크바람
+                  <AlertCircle size={12} /> {failedServices.length > 0 ? `${failedServices.join(', ')} 오류 체크바람` : '현재 연동에 문제가 있습니다. 체크바람'}
                 </span>
               )}
             </div>

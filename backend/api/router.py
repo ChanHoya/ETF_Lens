@@ -65,8 +65,15 @@ async def check_health(db: AsyncSession = Depends(get_db)):
     import yfinance as yf
     import requests
     from sqlalchemy import text
+    from agents.harvester.harvester import ETFHarvester
 
-    status = {"db": "pending", "yfinance": "pending", "fred": "pending"}
+    status = {
+        "db": "pending",
+        "yfinance": "pending",
+        "fred": "pending",
+        "naver": "pending",
+    }
+    failed_services = []
 
     # DB Check
     try:
@@ -74,6 +81,7 @@ async def check_health(db: AsyncSession = Depends(get_db)):
         status["db"] = "ok"
     except Exception as e:
         status["db"] = "error"
+        failed_services.append("DB")
         logger.error(f"Health check DB error: {e}")
 
     # YF Check
@@ -83,8 +91,10 @@ async def check_health(db: AsyncSession = Depends(get_db)):
             status["yfinance"] = "ok"
         else:
             status["yfinance"] = "error"
+            failed_services.append("Yahoo Finance")
     except Exception as e:
         status["yfinance"] = "error"
+        failed_services.append("Yahoo Finance")
         logger.error(f"Health check YF error: {e}")
 
     # FRED Check
@@ -99,11 +109,33 @@ async def check_health(db: AsyncSession = Depends(get_db)):
             status["fred"] = "ok"
         else:
             status["fred"] = "error"
+            failed_services.append("FRED API")
     except Exception as e:
         status["fred"] = "error"
+        failed_services.append("FRED API")
         logger.error(f"Health check FRED error: {e}")
 
-    all_ok = all(v == "ok" for v in status.values())
+    # Naver Scraping Check
+    try:
+        harvester = ETFHarvester()
+        # "069500" KODEX 200 is a reliable domestic ETF to test table scraping
+        holdings = await harvester.fetch_etf_holdings("069500")
+        if len(holdings) > 0:
+            status["naver"] = "ok"
+        else:
+            status["naver"] = "error"
+            failed_services.append("Naver Scraping")
+    except Exception as e:
+        status["naver"] = "error"
+        failed_services.append("Naver Scraping")
+        logger.error(f"Health check Naver error: {e}")
+
+    all_ok = all(
+        v == "ok"
+        for k, v in status.items()
+        if k != "overall" and k != "failed_services"
+    )
+    status["failed_services"] = failed_services
     status["overall"] = "ok" if all_ok else "error"
     return status
 
