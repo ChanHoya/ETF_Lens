@@ -92,7 +92,7 @@ export default function KospiExitAnalyzer() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000');
+                const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : (process.env.NEXT_PUBLIC_API_URL || 'https://etf-lens.onrender.com');
                 const res = await fetch(`${API_BASE}/api/v1/exit-signal`);
                 if (res.ok) {
                     const data = await res.json();
