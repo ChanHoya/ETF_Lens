@@ -796,22 +796,24 @@ export default function Home() {
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 drop-shadow-sm flex items-center gap-3 group-hover:opacity-80 transition-opacity">
             <Aperture className="w-8 h-8 md:w-10 md:h-10 text-indigo-400 group-hover:rotate-180 transition-transform duration-700" />
             ETF Lens
-            <span className={`text-[10px] md:text-[12px] font-mono font-medium px-2 py-1 rounded-md ml-2 hidden sm:inline-block uppercase tracking-widest whitespace-nowrap ${dbVersion.includes("Loading") || dbVersion.includes("Updating")
-              ? "text-rose-400 bg-rose-400/10 border border-rose-400/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse"
-              : "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
-              }`}>
-              {dbVersion}
-            </span>
-            {healthStatus === 'ok' && (
-              <span className="text-[10px] md:text-[12px] font-bold px-2 py-1 rounded-md ml-2 hidden sm:inline-block whitespace-nowrap text-sky-400 bg-sky-400/10 border border-sky-400/20 animate-pulse shadow-[0_0_10px_rgba(56,189,248,0.2)]">
-                모든 연동기능이 정상작동중 입니다.
+            <div className="hidden sm:flex flex-col gap-1 items-start ml-2">
+              <span className={`text-[10px] md:text-[11px] font-mono font-medium px-2 py-0.5 rounded-md uppercase tracking-widest whitespace-nowrap ${dbVersion.includes("Loading") || dbVersion.includes("Updating")
+                ? "text-rose-400 bg-rose-400/10 border border-rose-400/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse"
+                : "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
+                }`}>
+                {dbVersion}
               </span>
-            )}
-            {healthStatus === 'error' && (
-              <span className="text-[10px] md:text-[12px] font-bold px-2 py-1 rounded-md ml-2 hidden sm:inline-block whitespace-nowrap text-rose-500 bg-rose-500/10 border border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] flex items-center gap-1">
-                <AlertCircle size={14} /> 연동 시스템 점검 필요
-              </span>
-            )}
+              {healthStatus === 'ok' && (
+                <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-sky-400 bg-sky-400/10 border border-sky-400/20 animate-pulse shadow-[0_0_10px_rgba(56,189,248,0.2)]">
+                  모든 연동기능이 정상작동중 입니다.
+                </span>
+              )}
+              {healthStatus === 'error' && (
+                <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-rose-500 bg-rose-500/10 border border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] flex items-center gap-1">
+                  <AlertCircle size={12} /> 현재 연동에 문제가 있습니다. 체크바람
+                </span>
+              )}
+            </div>
           </h1>
         </div>
 
