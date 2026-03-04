@@ -53,6 +53,7 @@ export default function Home() {
   const [isClient, setIsClient] = useState(false);
   const [isLoadingChart, setIsLoadingChart] = useState(false);
   const [dbVersion, setDbVersion] = useState<string>("DB ver.Loading...");
+  const [healthStatus, setHealthStatus] = useState<'pending' | 'ok' | 'error'>('pending');
 
   useEffect(() => {
     setIsClient(true);
@@ -66,6 +67,16 @@ export default function Home() {
         if (data.version) setDbVersion(data.version);
       })
       .catch(err => console.error("DB version load error", err));
+
+    fetch(`${API_BASE}/api/v1/analyze/health`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.overall) setHealthStatus(data.overall);
+      })
+      .catch(err => {
+        console.error("Health check error", err);
+        setHealthStatus("error");
+      });
   }, []);
 
 
@@ -791,6 +802,16 @@ export default function Home() {
               }`}>
               {dbVersion}
             </span>
+            {healthStatus === 'ok' && (
+              <span className="text-[10px] md:text-[12px] font-bold px-2 py-1 rounded-md ml-2 hidden sm:inline-block whitespace-nowrap text-sky-400 bg-sky-400/10 border border-sky-400/20 animate-pulse shadow-[0_0_10px_rgba(56,189,248,0.2)]">
+                모든 연동기능이 정상작동중 입니다.
+              </span>
+            )}
+            {healthStatus === 'error' && (
+              <span className="text-[10px] md:text-[12px] font-bold px-2 py-1 rounded-md ml-2 hidden sm:inline-block whitespace-nowrap text-rose-500 bg-rose-500/10 border border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] flex items-center gap-1">
+                <AlertCircle size={14} /> 연동 시스템 점검 필요
+              </span>
+            )}
           </h1>
         </div>
 

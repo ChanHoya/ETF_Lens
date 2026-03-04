@@ -60,6 +60,54 @@ async def get_db_version(db: AsyncSession = Depends(get_db)):
     return {"version": "DB ver.Updating..."}
 
 
+@router.get("/health")
+async def check_health(db: AsyncSession = Depends(get_db)):
+    import yfinance as yf
+    import requests
+    from sqlalchemy import text
+
+    status = {"db": "pending", "yfinance": "pending", "fred": "pending"}
+
+    # DB Check
+    try:
+        await db.execute(text("SELECT 1"))
+        status["db"] = "ok"
+    except Exception as e:
+        status["db"] = "error"
+        logger.error(f"Health check DB error: {e}")
+
+    # YF Check
+    try:
+        res = await asyncio.to_thread(yf.download, "SPY", period="1d", progress=False)
+        if not res.empty:
+            status["yfinance"] = "ok"
+        else:
+            status["yfinance"] = "error"
+    except Exception as e:
+        status["yfinance"] = "error"
+        logger.error(f"Health check YF error: {e}")
+
+    # FRED Check
+    try:
+        r = await asyncio.to_thread(
+            requests.get,
+            "https://fred.stlouisfed.org/",
+            timeout=5,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
+        if r.status_code == 200:
+            status["fred"] = "ok"
+        else:
+            status["fred"] = "error"
+    except Exception as e:
+        status["fred"] = "error"
+        logger.error(f"Health check FRED error: {e}")
+
+    all_ok = all(v == "ok" for v in status.values())
+    status["overall"] = "ok" if all_ok else "error"
+    return status
+
+
 @router.get("/evaluate", tags=["evaluate"])
 async def get_evaluated_etfs(db: AsyncSession = Depends(get_db)):
     """
@@ -123,47 +171,59 @@ def set_bench_cached(key, val):
     _bench_cache[key] = (val, time.time())
 
 
-async def cached_fdr_reader(symbol: str, start: str):
-    cache_key = f"fdr_{symbol}_{start}"
-    cached = get_bench_cached(cache_key)
-    if cached is not None:
-        return cached
-    import FinanceDataReader as fdr
-
-    df = await asyncio.to_thread(fdr.DataReader, symbol, start)
-    set_bench_cached(cache_key, df)
-    return df
-
-
 async def fetch_yahoo_finance(ticker: str, period_years: int = 10):
     cache_key = f"yahoo_{ticker}_{period_years}"
     cached = get_bench_cached(cache_key)
     if cached is not None:
         return cached
 
-    import urllib.request
-    import json
+    import yfinance as yf
+    import requests
     import pandas as pd
-    from datetime import datetime
+    from datetime import datetime, timedelta
 
-    url = f"https://query2.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range={period_years}y"
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    _yf_session = requests.Session()
+    _yf_session.headers.update(
+        {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+    )
 
     def _fetch():
         try:
-            res_str = urllib.request.urlopen(req).read().decode("utf-8")
-            data = json.loads(res_str)
-            result = data["chart"]["result"][0]
-            timestamps = result["timestamp"]
-            close_prices = result["indicators"]["quote"][0]["close"]
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=period_years * 365 + 10)
+            df = yf.download(
+                ticker,
+                start=start_date.strftime("%Y-%m-%d"),
+                end=end_date.strftime("%Y-%m-%d"),
+                progress=False,
+            )
+            if df.empty:
+                return pd.DataFrame()
 
-            dates = [datetime.fromtimestamp(ts).date() for ts in timestamps]
-            df = pd.DataFrame({"Close": close_prices}, index=pd.to_datetime(dates))
-            df = df.dropna()
-            set_bench_cached(cache_key, df)
-            return df
+            if isinstance(df.columns, pd.MultiIndex):
+                if "Close" in df.columns.levels[0]:
+                    close_prices = (
+                        df["Close"][ticker]
+                        if ticker in df["Close"].columns
+                        else df["Close"].iloc[:, 0]
+                    )
+                else:
+                    close_prices = df.iloc[:, 0]
+            else:
+                close_prices = df["Close"] if "Close" in df.columns else df.iloc[:, 0]
+
+            df_out = pd.DataFrame({"Close": close_prices})
+            df_out = df_out.dropna()
+
+            if df_out.index.tz is not None:
+                df_out.index = df_out.index.tz_localize(None)
+
+            set_bench_cached(cache_key, df_out)
+            return df_out
         except Exception as e:
-            logger.error(f"Failed to fetch {ticker} from Yahoo: {e}")
+            logger.error(f"Failed to fetch {ticker} from yfinance: {e}")
             return pd.DataFrame()
 
     return await asyncio.to_thread(_fetch)
@@ -274,14 +334,10 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
 
     if not request.skip_chart:
         results.append(
-            await fetch_benchmark_hybrid(
-                "KS11", db, cached_fdr_reader("KS11", start_str)
-            )
+            await fetch_benchmark_hybrid("^KS11", db, fetch_yahoo_finance("^KS11", 10))
         )
         results.append(
-            await fetch_benchmark_hybrid(
-                "KQ11", db, cached_fdr_reader("KQ11", start_str)
-            )
+            await fetch_benchmark_hybrid("^KQ11", db, fetch_yahoo_finance("^KQ11", 10))
         )
         results.append(
             await fetch_benchmark_hybrid("^GSPC", db, fetch_yahoo_finance("^GSPC", 10))
@@ -567,10 +623,10 @@ async def get_chart_data(request: CompareRequest, db: AsyncSession = Depends(get
         )
 
     results.append(
-        await fetch_benchmark_hybrid("KS11", db, cached_fdr_reader("KS11", start_str))
+        await fetch_benchmark_hybrid("^KS11", db, fetch_yahoo_finance("^KS11", 10))
     )
     results.append(
-        await fetch_benchmark_hybrid("KQ11", db, cached_fdr_reader("KQ11", start_str))
+        await fetch_benchmark_hybrid("^KQ11", db, fetch_yahoo_finance("^KQ11", 10))
     )
     results.append(
         await fetch_benchmark_hybrid("^GSPC", db, fetch_yahoo_finance("^GSPC", 10))
