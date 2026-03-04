@@ -387,7 +387,7 @@ export default function Modals({
                                             <thead className="bg-slate-900/80 text-gray-400">
                                                 <tr>
                                                     <th className="p-3 text-left border-b border-slate-700 font-medium pl-5">구성종목명</th>
-                                                    <th className="p-3 border-b border-slate-700 font-medium">주식수(가설)</th>
+                                                    <th className="p-3 border-b border-slate-700 font-medium">주식수(계약수)</th>
                                                     <th className="p-3 border-b border-slate-700 font-medium pr-5">구성비중(%)</th>
                                                 </tr>
                                             </thead>
@@ -396,8 +396,8 @@ export default function Modals({
                                                     selectedDetailEtf.holdings.slice(0, 10).map((h: any, i: number) => (
                                                         <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20">
                                                             <td className="p-2.5 text-left text-gray-200 pl-5">{h.ticker}</td>
-                                                            <td className="p-2.5 text-gray-400">{Math.round(h.weight * 50).toLocaleString()}</td>
-                                                            <td className="p-2.5 font-bold text-indigo-300 pr-5">{h.weight.toFixed(2)}</td>
+                                                            <td className="p-2.5 text-gray-400">{h.shares ? h.shares.toLocaleString() : Math.round(h.weight * 50).toLocaleString()}</td>
+                                                            <td className="p-2.5 font-bold text-indigo-300 pr-5">{h.weight > 0 ? h.weight.toFixed(2) : '-'}</td>
                                                         </tr>
                                                     ))
                                                 ) : (
@@ -422,7 +422,7 @@ export default function Modals({
                                     <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col items-center justify-center">
                                         <h4 className="text-xs text-gray-500 font-bold mb-0 w-full text-left">비중 Top 10 차트</h4>
                                         <div className="flex-1 w-full min-h-[300px]">
-                                            {selectedDetailEtf.holdings?.length > 0 ? (
+                                            {selectedDetailEtf.holdings?.length > 0 && selectedDetailEtf.holdings.some((h: any) => h.weight > 0) ? (
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <PieChart>
                                                         <Pie
@@ -454,7 +454,9 @@ export default function Modals({
                                                     </PieChart>
                                                 </ResponsiveContainer>
                                             ) : (
-                                                <div className="flex items-center justify-center h-full text-gray-600">No chart data</div>
+                                                <div className="flex items-center justify-center h-full text-gray-500 text-sm px-6 text-center">
+                                                    해외/합성 ETF는 비중 데이터가 제공되지 않아 차트를 그릴 수 없습니다.
+                                                </div>
                                             )}
                                         </div>
                                     </div>

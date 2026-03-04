@@ -412,10 +412,11 @@ class ETFHarvester:
                 )
                 soup = BeautifulSoup(html_bytes, "html.parser")
 
-                table = soup.find("table", class_="tb_type1_a")
-                if table:
-                    trs = table.find_all("tr")
-                    for tr in trs:
+                table_a = soup.find("table", class_="tb_type1_a")
+                table_b = soup.find("table", class_="tb_type1_b")
+
+                if table_a:
+                    for tr in table_a.find_all("tr"):
                         tds = tr.find_all("td")
                         if len(tds) >= 3:
                             name = tds[0].text.strip()
@@ -428,6 +429,26 @@ class ETFHarvester:
                                     holdings.append({"ticker": name, "weight": weight})
                             except ValueError:
                                 pass
+                elif table_b:
+                    for tr in table_b.find_all("tr"):
+                        tds = tr.find_all("td")
+                        if len(tds) >= 3:
+                            name = tds[0].text.strip()
+                            shares_text = tds[1].text.strip().replace(",", "")
+
+                            if name and shares_text and shares_text != "-":
+                                try:
+                                    shares = int(shares_text)
+                                    # For overseas ETFs, we append weight=0 but include "shares"
+                                    holdings.append(
+                                        {
+                                            "ticker": name,
+                                            "weight": 0.0,
+                                            "shares": shares,
+                                        }
+                                    )
+                                except ValueError:
+                                    pass
                 if holdings:
                     print(
                         f"[{code}] Naver HTML fallback successful. Found {len(holdings)} holdings."
