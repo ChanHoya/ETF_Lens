@@ -353,6 +353,12 @@ async def get_macro_detail(period: str = "10Y"):
         else:
             close_prices = df
 
+        # Normalize dates and group by them to prevent timezone-induced duplicate rows per day
+        close_prices.index = (
+            pd.to_datetime(close_prices.index).tz_localize(None).normalize()
+        )
+        close_prices = close_prices.groupby(close_prices.index).last()
+
         # Always daily data with forward fill for weekends
         series_data = close_prices.ffill(limit=5).dropna(how="all")
 
@@ -515,19 +521,18 @@ async def get_pe_detail(symbol: str = "005930"):
         def fetch_pe_data(ticker_symbol):
             import yfinance as yf
 
-            hist = yf.download(ticker_symbol, period="1y", progress=False)
+            ticker = yf.Ticker(ticker_symbol)
+            hist = ticker.history(period="1y")
             pe = 12.2
             try:
-                ticker = yf.Ticker(ticker_symbol)
                 info = ticker.info
                 pe = info.get("forwardPE") or info.get("trailingPE") or 12.2
             except Exception:
                 pass
 
-            # yf.download returns a MultiIndex DataFrame in recent versions,
-            # Let's ensure "Close" is a simple Series if possible
-            if not hist.empty and isinstance(hist.columns, pd.MultiIndex):
-                hist.columns = hist.columns.droplevel(1)
+            if not hist.empty:
+                hist.index = pd.to_datetime(hist.index).tz_localize(None).normalize()
+                hist = hist.groupby(hist.index).last()
 
             return hist, float(pe)
 
