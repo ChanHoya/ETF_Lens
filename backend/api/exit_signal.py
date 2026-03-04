@@ -16,6 +16,7 @@ router = APIRouter(tags=["exit_signal"])
 _cache = {"data": None, "timestamp": None}
 _macro_cache = {}
 _cli_cache = {}
+_pe_real_cache = {}  # Cache fundamental PE values to prevent YF rate limits
 CACHE_TTL = 3600 * 12  # 12 hours
 
 # Setup a custom session for yfinance to bypass cloud bot-blocking
@@ -520,15 +521,31 @@ async def get_pe_detail(symbol: str = "005930"):
 
         def fetch_pe_data(ticker_symbol):
             import yfinance as yf
+            import time
+
+            global _pe_real_cache
 
             ticker = yf.Ticker(ticker_symbol)
             hist = ticker.history(period="1y")
             pe = 12.2
-            try:
-                info = ticker.info
-                pe = info.get("forwardPE") or info.get("trailingPE") or 12.2
-            except Exception:
-                pass
+
+            now = time.time()
+            if ticker_symbol in _pe_real_cache and (
+                now - _pe_real_cache[ticker_symbol].get("time", 0) < 86400
+            ):
+                pe = _pe_real_cache[ticker_symbol]["pe"]
+            else:
+                try:
+                    info = ticker.info
+                    found_pe = info.get("forwardPE") or info.get("trailingPE")
+                    if found_pe:
+                        pe = float(found_pe)
+                        _pe_real_cache[ticker_symbol] = {"pe": pe, "time": now}
+                except Exception as e:
+                    logger.warning(f"Failed to fetch info for {ticker_symbol}: {e}")
+                    # If failed but we have stale cache, use it instead of 12.2 fallback
+                    if ticker_symbol in _pe_real_cache:
+                        pe = _pe_real_cache[ticker_symbol]["pe"]
 
             if not hist.empty:
                 hist.index = pd.to_datetime(hist.index).tz_localize(None).normalize()
