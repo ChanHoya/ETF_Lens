@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, TrendingDown, DollarSign, Activity, AlertTriangle, ArrowRight, Info, ChevronRight, BarChart2, X } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { ShieldAlert, TrendingDown, DollarSign, Activity, AlertTriangle, ArrowRight, Info, ChevronRight, BarChart2, X, AlertCircle } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea } from 'recharts';
+import { API_BASE } from '../lib/apiConfig';
 import { DollarModalContent, PerModalContent, CliModalContent, SentimentModalContent } from './ExitSignalModals';
 
 // Mock Data for the 1-year Historical Trends (12 Months)
@@ -92,7 +93,6 @@ export default function KospiExitAnalyzer() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : (process.env.NEXT_PUBLIC_API_URL || 'https://etf-lens.onrender.com');
                 const res = await fetch(`${API_BASE}/api/v1/exit-signal`);
                 if (res.ok) {
                     const data = await res.json();

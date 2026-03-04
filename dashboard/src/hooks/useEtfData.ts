@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
+import { API_BASE } from '../lib/apiConfig';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useEtfData(slots: { search: string, code: string }[], period: string) {
+export function useEtfData(slots: { search: string, code: string }[], period: string, popupPeriod: string = '1Y') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
@@ -22,7 +23,7 @@ export function useEtfData(slots: { search: string, code: string }[], period: st
         setIsLoadingChart(true);
         setData(null);
 
-        const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
 
         try {
             // 1. Fetch Fast Basic Info

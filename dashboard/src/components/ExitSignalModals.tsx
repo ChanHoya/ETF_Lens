@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
 import { Search } from 'lucide-react';
+import { API_BASE } from '../lib/apiConfig';
 
 const useVisualSort = (data: any[], keys: string[]) => {
     return React.useMemo(() => {
@@ -29,7 +30,7 @@ export function DollarModalContent() {
         const fetchMacro = async () => {
             setLoading(true);
             try {
-                const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : (process.env.NEXT_PUBLIC_API_URL || 'https://etf-lens.onrender.com');
+
                 const res = await fetch(`${API_BASE}/api/v1/exit-signal/macro?period=${period}`);
                 if (res.ok) {
                     const json = await res.json();
@@ -207,7 +208,7 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
         const fetchPE = async () => {
             setLoading(true);
             try {
-                const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : (process.env.NEXT_PUBLIC_API_URL || 'https://etf-lens.onrender.com');
+
                 // If isKospi, we use the root exit_signal per data, otherwise /pe?symbol=XX
                 if (isKospi) {
                     const res = await fetch(`${API_BASE}/api/v1/exit-signal`);
@@ -342,7 +343,7 @@ export function CliModalContent() {
     useEffect(() => {
         const fetchCli = async () => {
             try {
-                const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : (process.env.NEXT_PUBLIC_API_URL || 'https://etf-lens.onrender.com');
+
                 const res = await fetch(`${API_BASE}/api/v1/exit-signal/cli`);
                 if (res.ok) {
                     const json = await res.json();
@@ -518,7 +519,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
     useEffect(() => {
         const fetchSentiment = async () => {
             try {
-                const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : (process.env.NEXT_PUBLIC_API_URL || 'https://etf-lens.onrender.com');
+
                 const res = await fetch(`${API_BASE}/api/v1/exit-signal`);
                 if (res.ok) {
                     const json = await res.json();

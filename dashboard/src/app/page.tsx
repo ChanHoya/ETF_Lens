@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, BarChart, Bar, Cell, PieChart, Pie, ComposedChart } from "recharts";
-import { Search, Loader2, Plus, X, ChevronDown, Aperture, Star, Trash2, Edit2, Check } from "lucide-react";
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, BarChart, Bar, Cell, PieChart, Pie, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
+import { Search, Loader2, Plus, X, ChevronDown, Aperture, Star, Trash2, Edit2, Check, Share2, RefreshCw, BarChart2, Minus, Zap, Crown, Target, Layers, BookOpen, AlertCircle, ArrowUpRight, ArrowDownRight, Clock, ShieldAlert, Cpu } from "lucide-react";
+import { API_BASE } from '@/lib/apiConfig';
 import CompareChart from "@/components/CompareChart";
 import CompareTable from "@/components/CompareTable";
 import Modals from "@/components/Modals";
@@ -58,7 +59,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
     fetch(`${API_BASE}/api/v1/analyze/db-version`)
       .then(res => res.json())
       .then(data => {
@@ -151,7 +152,7 @@ export default function Home() {
 
   // Fetch ETF Master List on mount
   useEffect(() => {
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
     fetch(`${API_BASE}/api/v1/analyze/etfs`)
       .then(res => res.json())
       .then(data => setEtfDictionary(data))
@@ -274,7 +275,7 @@ export default function Home() {
 
     setLoading(true);
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
       const res = await fetch(`${API_BASE}/api/v1/analyze/compare`, {
         method: "POST",
         headers: {

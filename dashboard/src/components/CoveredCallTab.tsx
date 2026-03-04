@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, TrendingUp, TrendingDown, X, Info, ShieldAlert, BarChart3, Activity, Hourglass, Check, Plus, Star, Bookmark, Save, Download, Trash2 } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, ZAxis, ReferenceLine } from 'recharts';
+import { API_BASE } from '../lib/apiConfig';
 
 // Benchmark Options for Users to Select
 export const BENCHMARK_OPTIONS = [
@@ -160,9 +161,8 @@ export default function CoveredCallTab() {
         }
 
         const fetchEtfs = async () => {
-            const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
             try {
-                const res = await fetch(`${API_BASE}/api/v1/analyze/etfs`);
+                const res = await fetch(`${API_BASE} /api/v1 / analyze / etfs`);
                 if (res.ok) {
                     const data = await res.json();
                     setEtfDictionary(data);
@@ -223,7 +223,7 @@ export default function CoveredCallTab() {
                         benchmark_symbol: item.indexTicker || '^KS200',
                         period: '1y'
                     };
-                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/covered-calls/analyze`, {
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'} /api/v1 / covered - calls / analyze`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
@@ -441,7 +441,7 @@ export default function CoveredCallTab() {
     const formatRate = (rate: number) => {
         const sign = rate > 0 ? '+' : '';
         const color = rate > 0 ? 'text-rose-400' : rate < 0 ? 'text-blue-400' : 'text-gray-400';
-        return <span className={`font-bold ${color}`}>{sign}{rate.toFixed(2)}%</span>;
+        return <span className={`font - bold ${color} `}>{sign}{rate.toFixed(2)}%</span>;
     };
 
     const handleSaveFavoriteGroup = () => {
@@ -585,7 +585,7 @@ export default function CoveredCallTab() {
                             <button
                                 key={brand}
                                 onClick={() => setSelectedBrands(prev => prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand])}
-                                className={`text-xs px-2.5 py-1 rounded-full border transition-all ${selectedBrands.includes(brand) ? 'bg-sky-500/20 border-sky-400/50 text-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.2)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-gray-300'}`}
+                                className={`text - xs px - 2.5 py - 1 rounded - full border transition - all ${selectedBrands.includes(brand) ? 'bg-sky-500/20 border-sky-400/50 text-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.2)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-gray-300'} `}
                             >
                                 {brand}
                             </button>
@@ -626,11 +626,11 @@ export default function CoveredCallTab() {
                                                 <li
                                                     key={etf.code}
                                                     onClick={() => handleToggleDropdownItem(etf)}
-                                                    className={`px-4 py-3 cursor-pointer border-b border-white/5 last:border-0 flex justify-between items-center group transition-colors ${isSelected ? 'bg-indigo-500/10' : 'hover:bg-white/5'}`}
+                                                    className={`px - 4 py - 3 cursor - pointer border - b border - white / 5 last: border - 0 flex justify - between items - center group transition - colors ${isSelected ? 'bg-indigo-500/10' : 'hover:bg-white/5'} `}
                                                 >
-                                                    <span className={`text-sm ${isSelected ? 'text-indigo-300 font-bold' : 'text-gray-200 group-hover:text-white'}`}>{etf.name}</span>
+                                                    <span className={`text - sm ${isSelected ? 'text-indigo-300 font-bold' : 'text-gray-200 group-hover:text-white'} `}>{etf.name}</span>
                                                     <div className="flex items-center gap-3">
-                                                        <span className={`text-xs font-mono transition-colors ${isSelected ? 'text-indigo-400' : 'text-gray-500'}`}>{etf.code}</span>
+                                                        <span className={`text - xs font - mono transition - colors ${isSelected ? 'text-indigo-400' : 'text-gray-500'} `}>{etf.code}</span>
                                                         {isSelected && <Check size={16} className="text-indigo-400" />}
                                                     </div>
                                                 </li>
@@ -653,10 +653,10 @@ export default function CoveredCallTab() {
                         <button
                             key={c}
                             onClick={() => setSelectedCountry(c)}
-                            className={`px-4 py-2 rounded-xl text-sm font-bold border transition-colors ${selectedCountry === c
-                                ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50'
-                                : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
-                                }`}
+                            className={`px - 4 py - 2 rounded - xl text - sm font - bold border transition - colors ${selectedCountry === c
+                                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50'
+                                    : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
+                                } `}
                         >
                             {c === 'All' ? '전체 국가' : c === 'US' ? '미국 지수' : '한국 지수'}
                         </button>
@@ -702,16 +702,16 @@ export default function CoveredCallTab() {
                                     <tr
                                         key={item.id}
                                         onClick={() => handleToggleCompareToggle(item)}
-                                        className={`transition-colors cursor-pointer group ${isSelected ? 'bg-indigo-500/10' : 'hover:bg-white/[0.04]'}`}
+                                        className={`transition - colors cursor - pointer group ${isSelected ? 'bg-indigo-500/10' : 'hover:bg-white/[0.04]'} `}
                                     >
                                         <td className="py-2 px-4 text-center">
-                                            <div className={`w-5 h-5 mx-auto rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-500'} `}>
+                                            <div className={`w - 5 h - 5 mx - auto rounded border flex items - center justify - center transition - colors ${isSelected ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-500'} `}>
                                                 {isSelected && <Check size={14} strokeWidth={3} />}
                                             </div>
                                         </td>
                                         <td className="py-2 px-4">
                                             <div className="flex flex-col">
-                                                <span className={`font-bold transition-colors ${isSelected ? 'text-indigo-300' : 'text-gray-100 group-hover:text-indigo-300'}`}>{item.name}</span>
+                                                <span className={`font - bold transition - colors ${isSelected ? 'text-indigo-300' : 'text-gray-100 group-hover:text-indigo-300'} `}>{item.name}</span>
                                                 <span className="text-xs text-gray-500 font-mono mt-0.5">{item.ticker} | {item.issuer}</span>
                                             </div>
                                         </td>
@@ -734,10 +734,10 @@ export default function CoveredCallTab() {
                                             </div>
                                         </td>
                                         <td className="py-2 px-3 text-right font-mono font-medium text-gray-300">
-                                            {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">로딩중...</span> : `${item.price.toLocaleString()}원`}
+                                            {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">로딩중...</span> : `${item.price.toLocaleString()} 원`}
                                         </td>
                                         <td className="py-2 px-3 text-center font-bold text-emerald-400 bg-emerald-500/[0.02]">
-                                            {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : `${item.yield.toFixed(1)}%`}
+                                            {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : `${item.yield.toFixed(1)}% `}
                                         </td>
                                         <td className="py-2 px-3 text-center bg-indigo-500/[0.02]">
                                             {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : (
@@ -831,7 +831,7 @@ export default function CoveredCallTab() {
                                             <button
                                                 key={pd}
                                                 onClick={() => setChartPeriod(pd)}
-                                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${chartPeriod === pd ? 'bg-indigo-500 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+                                                className={`px - 4 py - 1.5 text - xs font - bold rounded - md transition - colors ${chartPeriod === pd ? 'bg-indigo-500 text-white shadow-md' : 'text-gray-400 hover:text-white'} `}
                                             >
                                                 {pd}
                                             </button>
@@ -856,12 +856,12 @@ export default function CoveredCallTab() {
                                         <LineChart data={realChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                                             <XAxis dataKey="date" stroke="rgba(255,255,255,0.3)" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} tickMargin={10} minTickGap={30} />
-                                            <YAxis stroke="rgba(255,255,255,0.3)" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} tickFormatter={(val) => `${val}%`} />
+                                            <YAxis stroke="rgba(255,255,255,0.3)" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} tickFormatter={(val) => `${val}% `} />
                                             <RechartsTooltip
                                                 contentStyle={{ backgroundColor: 'rgba(12,10,24,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
                                                 itemStyle={{ fontWeight: 600 }}
                                                 labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}
-                                                formatter={(val: number) => [`${val}%`, '']}
+                                                formatter={(val: number) => [`${val}% `, '']}
                                             />
                                             <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" onMouseEnter={(e: any) => setHoveredLine(e?.dataKey || null)} onMouseLeave={() => setHoveredLine(null)} />
                                             {/* Render main benchmark from the first item */}
@@ -873,7 +873,7 @@ export default function CoveredCallTab() {
                                                 const isHovered = hoveredLine === item.ticker;
                                                 const isPr = isPrMap[item.ticker] === true;
                                                 return (
-                                                    <Line key={item.ticker} type="monotone" name={`${item.name}${isPr ? ' (PR)' : ''}`} dataKey={item.ticker} stroke={colors[idx % colors.length]} strokeWidth={isHovered ? 5 : 2.5} opacity={hoveredLine && !isHovered ? 0.2 : 1} dot={false} activeDot={{ r: isHovered ? 6 : 4 }} connectNulls={true} onMouseEnter={() => setHoveredLine(item.ticker)} onMouseLeave={() => setHoveredLine(null)} />
+                                                    <Line key={item.ticker} type="monotone" name={`${item.name}${isPr ? ' (PR)' : ''} `} dataKey={item.ticker} stroke={colors[idx % colors.length]} strokeWidth={isHovered ? 5 : 2.5} opacity={hoveredLine && !isHovered ? 0.2 : 1} dot={false} activeDot={{ r: isHovered ? 6 : 4 }} connectNulls={true} onMouseEnter={() => setHoveredLine(item.ticker)} onMouseLeave={() => setHoveredLine(null)} />
                                                 )
                                             })}
                                         </LineChart>
@@ -913,7 +913,7 @@ export default function CoveredCallTab() {
                                                 return (
                                                     <tr
                                                         key={item.ticker}
-                                                        className={`transition-colors cursor-pointer ${hoveredScatterItem === item.ticker ? 'bg-white/10' : 'hover:bg-white/[0.04]'}`}
+                                                        className={`transition - colors cursor - pointer ${hoveredScatterItem === item.ticker ? 'bg-white/10' : 'hover:bg-white/[0.04]'} `}
                                                         onMouseEnter={() => setHoveredScatterItem(item.ticker)}
                                                         onMouseLeave={() => setHoveredScatterItem(null)}
                                                     >
@@ -999,11 +999,11 @@ export default function CoveredCallTab() {
                                                 <YAxis
                                                     type="number"
                                                     dataKey="trPeriod"
-                                                    name={`수익률 (${chartPeriod})`}
+                                                    name={`수익률(${chartPeriod})`}
                                                     unit="%"
                                                     stroke="rgba(255,255,255,0.3)"
                                                     tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
-                                                    label={{ value: `수익률 (${chartPeriod}) (높을수록 좋음 ⬆️)`, angle: -90, position: "left", style: { fill: 'rgba(255,255,255,0.5)', fontSize: 11 } }}
+                                                    label={{ value: `수익률(${chartPeriod})(높을수록 좋음 ⬆️)`, angle: -90, position: "left", style: { fill: 'rgba(255,255,255,0.5)', fontSize: 11 } }}
                                                 />
                                                 <ZAxis type="category" dataKey="ticker" name="종목" />
                                                 <RechartsTooltip content={<CustomReturnTooltip />} cursor={{ strokeDasharray: '3 3' }} />
