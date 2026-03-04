@@ -92,7 +92,8 @@ export default function KospiExitAnalyzer() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await fetch('http://localhost:8000/api/v1/exit-signal');
+                const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000');
+                const res = await fetch(`${API_BASE}/api/v1/exit-signal`);
                 if (res.ok) {
                     const data = await res.json();
 
@@ -116,7 +117,7 @@ export default function KospiExitAnalyzer() {
 
                     // Fetch real CLI data for 3 lines (Dashboard)
                     try {
-                        const cliRes = await fetch('http://localhost:8000/api/v1/exit-signal/cli');
+                        const cliRes = await fetch(`${API_BASE}/api/v1/exit-signal/cli`);
                         if (cliRes.ok) {
                             const cliDataRaw = await cliRes.json();
                             if (cliDataRaw.length > 0) {
@@ -147,8 +148,8 @@ export default function KospiExitAnalyzer() {
 
                         // Fetch Daily 1Y data for Dollar and PER to match Popup Charts
                         const [macroRes, perRes] = await Promise.all([
-                            fetch('http://localhost:8000/api/v1/exit-signal/macro?period=1Y'),
-                            fetch('http://localhost:8000/api/v1/exit-signal/per?period=1Y')
+                            fetch(`${API_BASE}/api/v1/exit-signal/macro?period=1Y`),
+                            fetch(`${API_BASE}/api/v1/exit-signal/per?period=1Y`)
                         ]);
                         if (macroRes.ok) {
                             const macro1Y = await macroRes.json();
@@ -283,17 +284,17 @@ export default function KospiExitAnalyzer() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* 1. Dollar Index */}
                 <div onClick={() => setActivePopup('dollar')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="flex flex-col">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><DollarSign className="w-4 h-4" /> 달러 인덱스/환율 추이</h4>
-                            <span className="text-3xl font-black text-white mt-2 font-mono">{dollarIndex.toFixed(2)}</span>
+                            <span className="text-2xl font-black text-white font-mono">{dollarIndex.toFixed(2)}</span>
                         </div>
                         <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${dStatus.bg} ${dStatus.color} ${dStatus.border}`}>
                             {dStatus.text}
                         </span>
                     </div>
 
-                    <div className="h-[120px] w-full mt-2 -ml-2 -mb-2">
+                    <div className="flex-1 w-full min-h-[160px] mt-2 -ml-2 -mb-2">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartDollar} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
@@ -305,9 +306,11 @@ export default function KospiExitAnalyzer() {
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
                                             const sortedPayload = [...payload].sort((a: any, b: any) => getNormDollar(b.dataKey, b.value) - getNormDollar(a.dataKey, a.value));
+                                            const isLast = payload[0]?.payload === chartDollar[chartDollar.length - 1];
+                                            const displayLabel = `${label} ${isLast ? '(최근/전일)' : ''}`;
                                             return (
                                                 <div className="bg-black/80 border border-white/10 p-2 rounded-lg text-[11px]">
-                                                    <p className="text-gray-400 mb-1">{label}</p>
+                                                    <p className="text-gray-400 mb-1">{displayLabel}</p>
                                                     {sortedPayload.map((entry: any, index: number) => (
                                                         <div key={`item-${index}`} className="flex items-center gap-2 mb-0.5 font-medium" style={{ color: entry.color }}>
                                                             <span>{entry.name === 'krw' ? 'USD/KRW' : '달러 인덱스'} :</span>
@@ -336,21 +339,21 @@ export default function KospiExitAnalyzer() {
 
                 {/* 2. Forward P/E */}
                 <div onClick={() => setActivePopup('per')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex flex-col">
+                    <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><BarChart2 className="w-4 h-4" /> 포워드 PER</h4>
-                            <span className="text-3xl font-black text-white mt-2 font-mono">{forwardPer.toFixed(1)}x</span>
+                            <span className="text-2xl font-black text-white font-mono">{forwardPer.toFixed(1)}x</span>
                         </div>
                         <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${pStatus.bg} ${pStatus.color} ${pStatus.border}`}>
                             {pStatus.text}
                         </span>
                     </div>
 
-                    <div className="h-[120px] w-full mt-2 -ml-2 -mb-2">
+                    <div className="flex-1 w-full min-h-[160px] mt-2 -ml-2 -mb-2">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartPer} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
+                                <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
                                 <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: forwardPer >= 12.5 || pStatus.level === 'danger' ? '#f43f5e' : '#34d399' }} tickLine={false} axisLine={false} width={45} />
                                 <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 9, fill: '#60a5fa' }} tickLine={false} axisLine={false} width={45} tickFormatter={(val) => Math.round(val).toLocaleString()} />
                                 <RechartsTooltip
@@ -358,9 +361,11 @@ export default function KospiExitAnalyzer() {
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
                                             const sortedPayload = [...payload].sort((a: any, b: any) => getNormPer(b.dataKey, b.value) - getNormPer(a.dataKey, a.value));
+                                            const isLast = payload[0]?.payload === chartPer[chartPer.length - 1];
+                                            const displayLabel = `${label} ${isLast ? '(최근/전일)' : ''}`;
                                             return (
                                                 <div className="bg-black/80 border border-white/10 p-2 rounded-lg text-[11px]">
-                                                    <p className="text-gray-400 mb-1">{label}</p>
+                                                    <p className="text-gray-400 mb-1">{displayLabel}</p>
                                                     {sortedPayload.map((entry: any, index: number) => (
                                                         <div key={`item-${index}`} className="flex items-center gap-2 mb-0.5 font-medium" style={{ color: entry.color }}>
                                                             <span>{entry.name === 'kospi' ? 'KOSPI' : 'P/E'} :</span>
@@ -388,14 +393,12 @@ export default function KospiExitAnalyzer() {
 
                 {/* 3. OECD CLI */}
                 <div onClick={() => setActivePopup('cli')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="flex flex-col">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><TrendingDown className="w-4 h-4" /> 경기 선행 지수 (CLI)</h4>
-                            <div className="flex items-end gap-2 mt-2">
-                                <span className="text-3xl font-black text-white font-mono">
-                                    {(100.2 - (oecdCliDownMonths * 0.4)).toFixed(1)}
-                                </span>
-                                {oecdCliDownMonths > 0 && <span className="text-rose-400 text-sm font-bold mb-1 flex items-center"><TrendingDown className="w-3 h-3 mr-0.5" /> 하락 {oecdCliDownMonths}M</span>}
+                            <div className="flex items-end gap-2 text-2xl font-black text-white font-mono">
+                                {(100.2 - (oecdCliDownMonths * 0.4)).toFixed(1)}
+                                {oecdCliDownMonths > 0 && <span className="text-rose-400 text-xs font-bold mb-1 flex items-center border border-rose-500/20 bg-rose-500/10 px-1.5 py-0.5 rounded-md"><TrendingDown className="w-3 h-3 mr-0.5" /> 하락 {oecdCliDownMonths}M</span>}
                             </div>
                         </div>
                         <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${cStatus.bg} ${cStatus.color} ${cStatus.border}`}>
@@ -403,7 +406,7 @@ export default function KospiExitAnalyzer() {
                         </span>
                     </div>
 
-                    <div className="h-[120px] w-full mt-2 -ml-2 -mb-2">
+                    <div className="flex-1 w-full min-h-[160px] mt-2 -ml-2 -mb-2">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartCli} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
@@ -414,9 +417,11 @@ export default function KospiExitAnalyzer() {
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
                                             const sortedPayload = [...payload].sort((a: any, b: any) => getNormCli(b.dataKey, b.value) - getNormCli(a.dataKey, a.value));
+                                            const isLast = payload[0]?.payload === chartCli[chartCli.length - 1];
+                                            const displayLabel = `${label} ${isLast ? '(최근/전일)' : ''}`;
                                             return (
                                                 <div className="bg-black/80 border border-white/10 p-2 rounded-lg text-[11px]">
-                                                    <p className="text-gray-400 mb-1">{label}</p>
+                                                    <p className="text-gray-400 mb-1">{displayLabel}</p>
                                                     {sortedPayload.map((entry: any, index: number) => {
                                                         const nameMap: any = { kor_cli: '한국 CLI', usa_cli: '미국 CLI', oecd_cli: 'G7(OECD Proxy)' };
                                                         return (
@@ -471,17 +476,17 @@ export default function KospiExitAnalyzer() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* VIX */}
                 <div onClick={() => setActivePopup('vix')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="flex flex-col">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> VIX(CBOE Volatility Index)</h4>
-                            <span className="text-3xl font-black text-white mt-2 font-mono">{vixValue.toFixed(2)}</span>
+                            <span className="text-2xl font-black text-white font-mono">{vixValue.toFixed(2)}</span>
                         </div>
                         <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${vStatus.bg} ${vStatus.color} ${vStatus.border}`}>
                             {vStatus.text}
                         </span>
                     </div>
 
-                    <div className="h-[90px] w-full mt-2 -ml-2 -mb-1">
+                    <div className="flex-1 w-full min-h-[140px] mt-2 -ml-2 -mb-1">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 10 }}>
                                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={4} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
@@ -489,6 +494,10 @@ export default function KospiExitAnalyzer() {
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     formatter={(value: any) => [value, 'VIX']}
+                                    labelFormatter={(label: any, payload: any) => {
+                                        const isLast = payload && payload[0] && payload[0].payload === chartSentiment[chartSentiment.length - 1];
+                                        return `${label} ${isLast ? '(최근/전일)' : ''}`;
+                                    }}
                                     labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                                 />
                                 <Line type="monotone" dataKey="vix" stroke={vStatus.level === 'danger' ? '#f43f5e' : (vStatus.level === 'warning' ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
@@ -504,17 +513,17 @@ export default function KospiExitAnalyzer() {
 
                 {/* Fear & Greed */}
                 <div onClick={() => setActivePopup('fgi')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="flex flex-col">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> Fear & Greed Index (공포탐욕지수)</h4>
-                            <span className="text-3xl font-black text-white mt-2 font-mono">{fgiValue.toFixed(1)}</span>
+                            <span className="text-2xl font-black text-white font-mono">{fgiValue.toFixed(1)}</span>
                         </div>
                         <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${fStatus.bg} ${fStatus.color} ${fStatus.border}`}>
                             {fStatus.text}
                         </span>
                     </div>
 
-                    <div className="h-[90px] w-full mt-2 -ml-2 -mb-1">
+                    <div className="flex-1 w-full min-h-[140px] mt-2 -ml-2 -mb-1">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 10 }}>
                                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={4} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
@@ -522,6 +531,10 @@ export default function KospiExitAnalyzer() {
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     formatter={(value: any) => [value, 'FGI']}
+                                    labelFormatter={(label: any, payload: any) => {
+                                        const isLast = payload && payload[0] && payload[0].payload === chartSentiment[chartSentiment.length - 1];
+                                        return `${label} ${isLast ? '(최근/전일)' : ''}`;
+                                    }}
                                     labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                                 />
                                 <Line type="monotone" dataKey="fgi" stroke={fStatus.level === 'danger' ? '#f43f5e' : (fgiValue < 30 ? '#34d399' : '#f59e0b')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />

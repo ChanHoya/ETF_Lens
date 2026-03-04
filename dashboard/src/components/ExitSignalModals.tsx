@@ -29,7 +29,8 @@ export function DollarModalContent() {
         const fetchMacro = async () => {
             setLoading(true);
             try {
-                const res = await fetch(`http://localhost:8000/api/v1/exit-signal/macro?period=${period}`);
+                const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000');
+                const res = await fetch(`${API_BASE}/api/v1/exit-signal/macro?period=${period}`);
                 if (res.ok) {
                     const json = await res.json();
                     setData(json);
@@ -80,9 +81,9 @@ export function DollarModalContent() {
         })).filter((d: any) => d.dollar !== null && isFinite(d.dollar));
     }, [data, period]);
 
-    if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading data...</div>;
-
     const getNorm = useVisualSort(filteredData, ['dollar', 'krw', 'kospi', 'sp500']);
+
+    if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading data...</div>;
 
     return (
         <div className="relative flex flex-col h-full w-full min-h-[700px]">
@@ -115,9 +116,11 @@ export function DollarModalContent() {
                             content={({ active, payload, label }) => {
                                 if (active && payload && payload.length) {
                                     const sortedPayload = [...payload].sort((a: any, b: any) => getNorm(b.dataKey, b.value) - getNorm(a.dataKey, a.value));
+                                    const isLast = payload[0]?.payload === filteredData[filteredData.length - 1];
+                                    const displayLabel = `${label} ${isLast ? '(최근/전일)' : ''}`;
                                     return (
                                         <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
-                                            <p className="text-gray-400 mb-2">{label}</p>
+                                            <p className="text-gray-400 mb-2">{displayLabel}</p>
                                             {sortedPayload.map((entry: any, index: number) => {
                                                 let displayValue = entry.value;
                                                 let name = entry.name;
@@ -204,15 +207,16 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
         const fetchPE = async () => {
             setLoading(true);
             try {
+                const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000');
                 // If isKospi, we use the root exit_signal per data, otherwise /pe?symbol=XX
                 if (isKospi) {
-                    const res = await fetch('http://localhost:8000/api/v1/exit-signal');
+                    const res = await fetch(`${API_BASE}/api/v1/exit-signal`);
                     const json = await res.json();
                     if (json.indicators && json.indicators.per) {
                         setData(json.indicators.per);
                     }
                 } else if (currentSymbol) {
-                    const res = await fetch(`http://localhost:8000/api/v1/exit-signal/pe?symbol=${currentSymbol}`);
+                    const res = await fetch(`${API_BASE}/api/v1/exit-signal/pe?symbol=${currentSymbol}`);
                     const json = await res.json();
                     setData(json);
                 }
@@ -304,9 +308,11 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
                                 content={({ active, payload, label }) => {
                                     if (active && payload && payload.length) {
                                         const sortedPayload = [...payload].sort((a: any, b: any) => getNormPer(b.dataKey, b.value) - getNormPer(a.dataKey, a.value));
+                                        const isLast = payload[0]?.payload === data[data.length - 1];
+                                        const displayLabel = `${label} ${isLast ? '(최근/전일)' : ''}`;
                                         return (
                                             <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[11px]">
-                                                <p className="text-gray-400 mb-1">{label}</p>
+                                                <p className="text-gray-400 mb-1">{displayLabel}</p>
                                                 {sortedPayload.map((entry: any, index: number) => (
                                                     <div key={`item-${index}`} className="flex items-center gap-2 mb-0.5 font-medium" style={{ color: entry.color }}>
                                                         <span>{entry.name} :</span>
@@ -336,7 +342,8 @@ export function CliModalContent() {
     useEffect(() => {
         const fetchCli = async () => {
             try {
-                const res = await fetch('http://localhost:8000/api/v1/exit-signal/cli');
+                const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000');
+                const res = await fetch(`${API_BASE}/api/v1/exit-signal/cli`);
                 if (res.ok) {
                     const json = await res.json();
                     setData(json);
@@ -349,6 +356,9 @@ export function CliModalContent() {
         };
         fetchCli();
     }, []);
+
+    const getNormLeft = useVisualSort(data, ['kospi', 'kor_cli']);
+    const getNormRight = useVisualSort(data, ['kor_cli', 'usa_cli', 'oecd_cli']);
 
     if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading data...</div>;
 
@@ -364,24 +374,21 @@ export function CliModalContent() {
 
         if (below100Count >= 2) {
             analysisTitle = "🚨 [수축 국면] 글로벌 매크로 하락세 뚜렷";
-            analysisText = `현재 한국 CLI(${kor_cli}), 미국 CLI(${usa_cli}), G7(OECD 대체) 평균(${oecd_cli}) 중 다수가 기준선(100)을 하회하며 수축 국면을 나타내고 있습니다. 과거 2020년, 2022년처럼 매크로 지표가 급격히 하락하는 시기와 유사할 가능성이 높습니다. 글로벌 동조화 하락이 뚜렷히 확인되므로 위험 자산(주식) 비중을 방어적으로 축소할 것을 강력 권고합니다.`;
+            analysisText = `현재 한국 CLI(\${kor_cli}), 미국 CLI(\${usa_cli}), G7(OECD 대체) 평균(\${oecd_cli}) 중 다수가 기준선(100)을 하회하며 수축 국면을 나타내고 있습니다. 과거 2020년, 2022년처럼 매크로 지표가 급격히 하락하는 시기와 유사할 가능성이 높습니다. 글로벌 동조화 하락이 뚜렷히 확인되므로 위험 자산(주식) 비중을 방어적으로 축소할 것을 강력 권고합니다.`;
             bannerBgClass = "bg-rose-900/20 border-rose-500/30";
             textTitleClass = "text-rose-400";
         } else if (below100Count === 1) {
             analysisTitle = "⚠️ [둔화 우려] 일부 특정 지표 악화 진행 중";
-            analysisText = `현재 한국 CLI(${kor_cli}), 미국 CLI(${usa_cli}), G7(OECD 대체) 평균(${oecd_cli}) 지표들의 방향성이 엇갈리며 일부 국가에서 경기 둔화 징후가 나타납니다. 만약 한국 CLI가 미국/G7의 하락 추세와 향후 동반적으로 꺾인다면 단기 약세장이 올 수 있으므로 다음 달 지표 발표까지 포트폴리오 리스크를 관리하세요.`;
+            analysisText = `현재 한국 CLI(\${kor_cli}), 미국 CLI(\${usa_cli}), G7(OECD 대체) 평균(\${oecd_cli}) 지표들의 방향성이 엇갈리며 일부 국가에서 경기 둔화 징후가 나타납니다. 만약 한국 CLI가 미국/G7의 하락 추세와 향후 동반적으로 꺾인다면 단기 약세장이 올 수 있으므로 다음 달 지표 발표까지 포트폴리오 리스크를 관리하세요.`;
             bannerBgClass = "bg-amber-900/20 border-amber-500/30";
             textTitleClass = "text-amber-400";
         } else if (kor_cli && usa_cli && oecd_cli) {
             analysisTitle = "✅ [확장 국면] 글로벌 경기 견조한 회복세 지속";
-            analysisText = `현재 한국 CLI(${kor_cli}), 미국 CLI(${usa_cli}), G7(OECD 대체) 평균(${oecd_cli}) 모두 기준선인 100 위에 위치하며 양호한 흐름을 보이고 있습니다. 경기 침체 리스크는 제한적이며, 코스피를 포함한 주식 시장 투자에 여전히 우호적인 거시경제 환경입니다. 현재의 긍정적인 추세가 꺾이기 전까지는 주식 비중 확대를 유지해도 좋습니다.`;
+            analysisText = `현재 한국 CLI(\${kor_cli}), 미국 CLI(\${usa_cli}), G7(OECD 대체) 평균(\${oecd_cli}) 모두 기준선인 100 위에 위치하며 양호한 흐름을 보이고 있습니다. 경기 침체 리스크는 제한적이며, 코스피를 포함한 주식 시장 투자에 여전히 우호적인 거시경제 환경입니다. 현재의 긍정적인 추세가 꺾이기 전까지는 주식 비중 확대를 유지해도 좋습니다.`;
             bannerBgClass = "bg-emerald-900/20 border-emerald-500/30";
             textTitleClass = "text-emerald-400";
         }
     }
-
-    const getNormLeft = useVisualSort(data, ['kospi', 'kor_cli']);
-    const getNormRight = useVisualSort(data, ['kor_cli', 'usa_cli', 'oecd_cli']);
 
     return (
         <div className="flex flex-col h-full w-full gap-4 flex-1">
@@ -400,9 +407,11 @@ export function CliModalContent() {
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
                                             const sortedPayload = [...payload].sort((a: any, b: any) => getNormLeft(b.dataKey, b.value) - getNormLeft(a.dataKey, a.value));
+                                            const isLast = payload[0]?.payload === data[data.length - 1];
+                                            const displayLabel = `${payload[0]?.payload?.date || label} ${isLast ? '(최근/전일)' : ''}`;
                                             return (
                                                 <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
-                                                    <p className="text-gray-400 mb-2">{label}</p>
+                                                    <p className="text-gray-400 mb-2">{displayLabel}</p>
                                                     {sortedPayload.map((entry: any, index: number) => (
                                                         <div key={`item-${index}`} className="flex items-center gap-2 mb-1 font-medium" style={{ color: entry.color }}>
                                                             <span>{entry.name} :</span>
@@ -441,9 +450,11 @@ export function CliModalContent() {
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
                                             const sortedPayload = [...payload].sort((a: any, b: any) => getNormRight(b.dataKey, b.value) - getNormRight(a.dataKey, a.value));
+                                            const isLast = payload[0]?.payload === data[data.length - 1];
+                                            const displayLabel = `${payload[0]?.payload?.date || label} ${isLast ? '(최근/전일)' : ''}`;
                                             return (
                                                 <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
-                                                    <p className="text-gray-400 mb-2">{label}</p>
+                                                    <p className="text-gray-400 mb-2">{displayLabel}</p>
                                                     {sortedPayload.map((entry: any, index: number) => (
                                                         <div key={`item-${index}`} className="flex items-center gap-2 mb-1 font-medium" style={{ color: entry.color }}>
                                                             <span>{entry.name} :</span>
@@ -507,7 +518,8 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
     useEffect(() => {
         const fetchSentiment = async () => {
             try {
-                const res = await fetch('http://localhost:8000/api/v1/exit-signal');
+                const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000');
+                const res = await fetch(`${API_BASE}/api/v1/exit-signal`);
                 if (res.ok) {
                     const json = await res.json();
                     if (json.indicators && json.indicators.sentiment) {
@@ -523,17 +535,17 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
         fetchSentiment();
     }, []);
 
+    const displayData = data.slice(-period);
+    const getNorm = useVisualSort(displayData, isFgi ? ['fgi', 'kospi', 'sp500'] : ['vix', 'kospi', 'sp500']);
+
     if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading data...</div>;
 
-    const displayData = data.slice(-period);
     const currentVal = displayData.length > 0 ? displayData[displayData.length - 1] : null;
     const maxVix = displayData.length > 0 ? Math.max(100, ...displayData.map(d => (d.vix || 0) + 10)) : 100;
 
     // Fix Recharts bug where `auto` domain only considers the first line (KOSPI) and clips S&P 500.
     const rightMin = displayData.length > 0 ? Math.min(...displayData.map(d => Math.min(d.kospi || Infinity, d.sp500 || Infinity))) * 0.95 : 'auto';
     const rightMax = displayData.length > 0 ? Math.max(...displayData.map(d => Math.max(d.kospi || -Infinity, d.sp500 || -Infinity))) * 1.05 : 'auto';
-
-    const getNorm = useVisualSort(displayData, isFgi ? ['fgi', 'kospi', 'sp500'] : ['vix', 'kospi', 'sp500']);
 
     return (
         <div className="flex flex-col h-full w-full gap-4 flex-1">
@@ -574,9 +586,11 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                                 content={({ active, payload, label }) => {
                                     if (active && payload && payload.length) {
                                         const sortedPayload = [...payload].sort((a: any, b: any) => getNorm(b.dataKey, b.value) - getNorm(a.dataKey, a.value));
+                                        const isLast = payload[0]?.payload === displayData[displayData.length - 1];
+                                        const displayLabel = `${label} ${isLast ? '(최근/전일)' : ''}`;
                                         return (
                                             <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
-                                                <p className="text-gray-400 mb-2">{label}</p>
+                                                <p className="text-gray-400 mb-2">{displayLabel}</p>
                                                 {sortedPayload.map((entry: any, index: number) => (
                                                     <div key={`item-${index}`} className="flex items-center gap-2 mb-1 font-medium" style={{ color: entry.color }}>
                                                         <span>{entry.name} :</span>
