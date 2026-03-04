@@ -513,11 +513,22 @@ async def get_pe_detail(symbol: str = "005930"):
         tkr = "^KS11" if symbol in ["KOSPI", "0001"] else f"{symbol}.KS"
 
         def fetch_pe_data(ticker_symbol):
-            ticker = yf.Ticker(ticker_symbol)
-            hist = ticker.history(period="1y")
-            info = ticker.info
-            # Attempt to get real PE from Yahoo Finance, fallback to 12.2 (typical Kospi average)
-            pe = info.get("forwardPE") or info.get("trailingPE") or 12.2
+            import yfinance as yf
+
+            hist = yf.download(ticker_symbol, period="1y", progress=False)
+            pe = 12.2
+            try:
+                ticker = yf.Ticker(ticker_symbol)
+                info = ticker.info
+                pe = info.get("forwardPE") or info.get("trailingPE") or 12.2
+            except Exception:
+                pass
+
+            # yf.download returns a MultiIndex DataFrame in recent versions,
+            # Let's ensure "Close" is a simple Series if possible
+            if not hist.empty and isinstance(hist.columns, pd.MultiIndex):
+                hist.columns = hist.columns.droplevel(1)
+
             return hist, float(pe)
 
         hist, real_pe = await asyncio.to_thread(fetch_pe_data, tkr)
