@@ -92,6 +92,7 @@ class ETFHoldings(Base):
     code = Column(String, ForeignKey("etf_master.code"), index=True)
     ticker = Column(String)  # e.g. "AAPL"
     weight = Column(Float)
+    shares = Column(Integer, nullable=True)
 
     etf = relationship("ETFMaster", back_populates="holdings")
 

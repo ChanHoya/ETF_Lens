@@ -76,7 +76,12 @@ async def sync_etf_batch():
                     # 3. Upsert Holdings
                     holdings_data = data.get("holdings", [])
                     holding_objs = [
-                        ETFHoldings(code=code, ticker=h["ticker"], weight=h["weight"])
+                        ETFHoldings(
+                            code=code,
+                            ticker=h["ticker"],
+                            weight=h["weight"],
+                            shares=h.get("shares"),
+                        )
                         for h in holdings_data
                     ]
                     db.add_all(holding_objs)

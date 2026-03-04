@@ -750,7 +750,12 @@ async def get_holdings(request: CompareRequest, db: AsyncSession = Depends(get_d
                 select(ETFHoldings).where(ETFHoldings.code == code)
             )
             db_holdings = [
-                {"ticker": h.ticker, "weight": h.weight} for h in h_res.scalars().all()
+                {
+                    "ticker": h.ticker,
+                    "weight": h.weight,
+                    **({"shares": h.shares} if h.shares is not None else {}),
+                }
+                for h in h_res.scalars().all()
             ]
 
             if db_holdings:

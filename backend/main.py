@@ -18,6 +18,19 @@ async def lifespan(app: FastAPI):
     # Startup DB schemas
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # Add shares column safely if it doesn't exist
+        try:
+            from sqlalchemy import text
+
+            await conn.execute(
+                text("ALTER TABLE etf_holdings ADD COLUMN shares INTEGER")
+            )
+            print("Successfully added 'shares' column to etf_holdings")
+        except Exception:
+            # Column likely already exists
+            pass
+
     setup_scheduler()
     yield
     # Shutdown
