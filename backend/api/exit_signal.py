@@ -131,9 +131,8 @@ async def fetch_market_sentiment():
     """Fetch VIX and calculate proxy Fear & Greed Index, and fetch KOSPI."""
     try:
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=3700)  # Support up to 10 years
 
-        def _fetch_hist(tkr, period="1mo"):
+        def _fetch_hist(tkr, period="10y"):
             ticker = yf.Ticker(tkr)
             hist = ticker.history(period=period)
             if not hist.empty and "Close" in hist.columns:
@@ -303,13 +302,9 @@ async def get_macro_detail(period: str = "10Y"):
 
     try:
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=365)
-        if period == "6M":
-            start_date = end_date - timedelta(days=180)
-        elif period == "3Y":
-            start_date = end_date - timedelta(days=365 * 3)
-        elif period == "10Y":
-            start_date = end_date - timedelta(days=365 * 10)
+
+        # Determine yfinance period string based on request
+        yf_period = period.lower()
 
         def _fetch_hist(tkr, period="1y"):
             ticker = yf.Ticker(tkr)
@@ -322,10 +317,10 @@ async def get_macro_detail(period: str = "10Y"):
             return pd.Series(dtype=float)
 
         dx_s, krw_s, k_s, g_s = await asyncio.gather(
-            asyncio.to_thread(_fetch_hist, "DX-Y.NYB", "1y"),
-            asyncio.to_thread(_fetch_hist, "KRW=X", "1y"),
-            asyncio.to_thread(_fetch_hist, "^KS11", "1y"),
-            asyncio.to_thread(_fetch_hist, "^GSPC", "1y"),
+            asyncio.to_thread(_fetch_hist, "DX-Y.NYB", yf_period),
+            asyncio.to_thread(_fetch_hist, "KRW=X", yf_period),
+            asyncio.to_thread(_fetch_hist, "^KS11", yf_period),
+            asyncio.to_thread(_fetch_hist, "^GSPC", yf_period),
         )
         dx_s.name = "DX-Y.NYB"
         krw_s.name = "KRW=X"
