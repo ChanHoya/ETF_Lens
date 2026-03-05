@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, TrendingDown, DollarSign, Activity, AlertTriangle, ArrowRight, Info, ChevronRight, BarChart2, X, AlertCircle } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 import { DollarModalContent, PerModalContent, CliModalContent, SentimentModalContent } from './ExitSignalModals';
 
@@ -325,8 +325,9 @@ export default function KospiExitAnalyzer() {
                                 />
                                 <ReferenceLine yAxisId="left" y={100} stroke="#f59e0b" strokeDasharray="3 3" />
                                 <ReferenceLine yAxisId="left" y={101.5} stroke="#f43f5e" strokeDasharray="3 3" />
-                                <Line yAxisId="left" type="monotone" dataKey="dollar" stroke={dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                                <Line yAxisId="right" type="monotone" dataKey="krw" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={{ r: 4 }} />
+                                <Line name="달러 인덱스" yAxisId="left" type="monotone" dataKey="dollar" stroke={dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                                <Line name="USD/KRW" yAxisId="right" type="monotone" dataKey="krw" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={{ r: 4 }} />
+                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -368,8 +369,8 @@ export default function KospiExitAnalyzer() {
                                                     <p className="text-gray-400 mb-1">{displayLabel}</p>
                                                     {sortedPayload.map((entry: any, index: number) => (
                                                         <div key={`item-${index}`} className="flex items-center gap-2 mb-0.5 font-medium" style={{ color: entry.color }}>
-                                                            <span>{entry.name === 'kospi' ? 'KOSPI' : 'P/E'} :</span>
-                                                            <span>{entry.name === 'kospi' ? `${Math.round(entry.value).toLocaleString()}pt` : `${entry.value.toFixed(1)}x`}</span>
+                                                            <span>{entry.name === 'KOSPI' ? 'KOSPI' : 'P/E'} :</span>
+                                                            <span>{entry.name === 'KOSPI' ? `${Math.round(entry.value).toLocaleString()}pt` : `${entry.value.toFixed(1)}x`}</span>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -379,8 +380,9 @@ export default function KospiExitAnalyzer() {
                                     }}
                                 />
                                 <ReferenceLine yAxisId="left" y={12.5} stroke="#f59e0b" strokeDasharray="3 3" />
-                                <Line yAxisId="left" type="monotone" dataKey="val" stroke={forwardPer >= 12.5 || pStatus.level === 'danger' ? '#f43f5e' : '#34d399'} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                                <Line yAxisId="right" type="monotone" dataKey="kospi" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
+                                <Line name="P/E" yAxisId="left" type="monotone" dataKey="val" stroke={forwardPer >= 12.5 || pStatus.level === 'danger' ? '#f43f5e' : '#34d399'} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                                <Line name="KOSPI" yAxisId="right" type="monotone" dataKey="price" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
+                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -437,9 +439,10 @@ export default function KospiExitAnalyzer() {
                                         return null;
                                     }}
                                 />
-                                <Line type="monotone" dataKey="kor_cli" stroke={cStatus.level === 'danger' ? '#f43f5e' : (cStatus.level === 'warning' ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
-                                <Line type="monotone" dataKey="usa_cli" stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
-                                <Line type="monotone" dataKey="oecd_cli" stroke="#10b981" strokeWidth={1.5} strokeDasharray="3 3" dot={false} activeDot={false} />
+                                <Line name="한국 CLI" type="monotone" dataKey="kor_cli" stroke={cStatus.level === 'danger' ? '#f43f5e' : (cStatus.level === 'warning' ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
+                                <Line name="미국 CLI" type="monotone" dataKey="usa_cli" stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
+                                <Line name="G7 CLI(Proxy)" type="monotone" dataKey="oecd_cli" stroke="#10b981" strokeWidth={1.5} strokeDasharray="3 3" dot={false} activeDot={false} />
+                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -488,19 +491,22 @@ export default function KospiExitAnalyzer() {
 
                     <div className="flex-1 w-full min-h-[140px] mt-2 -ml-2 -mb-1">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 10 }}>
+                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 5 }}>
                                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={4} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
-                                <YAxis domain={['auto', 'auto']} width={35} tick={{ fontSize: 10, fill: vStatus.level === 'danger' ? '#f43f5e' : (vStatus.level === 'warning' ? '#f59e0b' : '#34d399') }} tickLine={false} axisLine={false} />
+                                <YAxis yAxisId="left" domain={['auto', 'auto']} width={35} tick={{ fontSize: 10, fill: vStatus.level === 'danger' ? '#f43f5e' : (vStatus.level === 'warning' ? '#f59e0b' : '#34d399') }} tickLine={false} axisLine={false} />
+                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} width={45} tick={{ fontSize: 9, fill: '#60a5fa' }} tickLine={false} axisLine={false} tickFormatter={(val) => Math.round(val).toLocaleString()} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
-                                    formatter={(value: any) => [value, 'VIX']}
+                                    formatter={(value: any, name: any) => [name === 'KOSPI' ? Math.round(value).toLocaleString() + 'pt' : value.toFixed(2), name]}
                                     labelFormatter={(label: any, payload: any) => {
                                         const isLast = payload && payload[0] && payload[0].payload === chartSentiment[chartSentiment.length - 1];
                                         return `${label} ${isLast ? '(최근/전일)' : ''}`;
                                     }}
                                     labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                                 />
-                                <Line type="monotone" dataKey="vix" stroke={vStatus.level === 'danger' ? '#f43f5e' : (vStatus.level === 'warning' ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                                <Line name="VIX" yAxisId="left" type="monotone" dataKey="vix" stroke={vStatus.level === 'danger' ? '#f43f5e' : (vStatus.level === 'warning' ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                                <Line name="KOSPI" yAxisId="right" type="monotone" dataKey="kospi" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
+                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -525,19 +531,22 @@ export default function KospiExitAnalyzer() {
 
                     <div className="flex-1 w-full min-h-[140px] mt-2 -ml-2 -mb-1">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 10 }}>
+                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 5 }}>
                                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={4} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
-                                <YAxis domain={['auto', 'auto']} width={35} tick={{ fontSize: 10, fill: fStatus.level === 'danger' ? '#f43f5e' : (fgiValue < 30 ? '#34d399' : '#f59e0b') }} tickLine={false} axisLine={false} />
+                                <YAxis yAxisId="left" domain={['auto', 'auto']} width={35} tick={{ fontSize: 10, fill: fStatus.level === 'danger' ? '#f43f5e' : (fgiValue < 30 ? '#34d399' : '#f59e0b') }} tickLine={false} axisLine={false} />
+                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} width={45} tick={{ fontSize: 9, fill: '#60a5fa' }} tickLine={false} axisLine={false} tickFormatter={(val) => Math.round(val).toLocaleString()} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
-                                    formatter={(value: any) => [value, 'FGI']}
+                                    formatter={(value: any, name: any) => [name === 'KOSPI' ? Math.round(value).toLocaleString() + 'pt' : value.toFixed(1), name]}
                                     labelFormatter={(label: any, payload: any) => {
                                         const isLast = payload && payload[0] && payload[0].payload === chartSentiment[chartSentiment.length - 1];
                                         return `${label} ${isLast ? '(최근/전일)' : ''}`;
                                     }}
                                     labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                                 />
-                                <Line type="monotone" dataKey="fgi" stroke={fStatus.level === 'danger' ? '#f43f5e' : (fgiValue < 30 ? '#34d399' : '#f59e0b')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                                <Line name="FGI" yAxisId="left" type="monotone" dataKey="fgi" stroke={fStatus.level === 'danger' ? '#f43f5e' : (fgiValue < 30 ? '#34d399' : '#f59e0b')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                                <Line name="KOSPI" yAxisId="right" type="monotone" dataKey="kospi" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
+                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
