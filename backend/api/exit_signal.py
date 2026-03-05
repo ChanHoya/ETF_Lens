@@ -133,48 +133,27 @@ async def fetch_market_sentiment():
         end_date = datetime.now()
         start_date = end_date - timedelta(days=3700)  # Support up to 10 years
 
-        df = await asyncio.to_thread(
-            yf.download,
-            ["^VIX", "^KS11", "^GSPC"],
-            start=start_date.strftime("%Y-%m-%d"),
-            end=end_date.strftime("%Y-%m-%d"),
-            progress=False,
+        def _fetch_hist(tkr, period="1mo"):
+            ticker = yf.Ticker(tkr)
+            hist = ticker.history(period=period)
+            if not hist.empty and "Close" in hist.columns:
+                s = hist["Close"]
+                s.index = pd.to_datetime(s.index).tz_localize(None).normalize()
+                s = s.groupby(s.index).last()
+                return s
+            return pd.Series(dtype=float)
+
+        v_s, k_s, g_s = await asyncio.gather(
+            asyncio.to_thread(_fetch_hist, "^VIX"),
+            asyncio.to_thread(_fetch_hist, "^KS11"),
+            asyncio.to_thread(_fetch_hist, "^GSPC"),
         )
+        v_s.name = "vix"
+        k_s.name = "kospi"
+        g_s.name = "sp500"
 
-        # Extract Close price series
-        if isinstance(df.columns, pd.MultiIndex):
-            if "Close" in df.columns.levels[0]:
-                vix_close = (
-                    df["Close"]["^VIX"]
-                    if "^VIX" in df["Close"].columns
-                    else df["Close"].iloc[:, 0]
-                )
-                kospi_close = (
-                    df["Close"]["^KS11"]
-                    if "^KS11" in df["Close"].columns
-                    else df["Close"].iloc[:, 1]
-                )
-                sp500_close = (
-                    df["Close"]["^GSPC"]
-                    if "^GSPC" in df["Close"].columns
-                    else df["Close"].iloc[:, 2]
-                )
-            else:
-                vix_close = df.iloc[:, 0]
-                kospi_close = df.iloc[:, 1]
-                sp500_close = df.iloc[:, 2]
-        else:
-            vix_close = df["^VIX"] if "^VIX" in df.columns else df.iloc[:, 0]
-            kospi_close = df["^KS11"] if "^KS11" in df.columns else df.iloc[:, 1]
-            sp500_close = df["^GSPC"] if "^GSPC" in df.columns else df.iloc[:, 2]
-
-        vix_close = vix_close.ffill().dropna()
-        kospi_close = kospi_close.ffill().dropna()
-        sp500_close = sp500_close.ffill().dropna()
-
-        # Align series to keep dates where all exist
-        aligned = pd.concat([vix_close, kospi_close, sp500_close], axis=1).dropna()
-        aligned.columns = ["vix", "kospi", "sp500"]
+        # Align series, forward fill missing latest US data with previous days, drop where missing forever
+        aligned = pd.concat([v_s, k_s, g_s], axis=1).ffill().dropna()
 
         if aligned.empty:
             return [], 20.0, 50.0
@@ -332,28 +311,30 @@ async def get_macro_detail(period: str = "10Y"):
         elif period == "10Y":
             start_date = end_date - timedelta(days=365 * 10)
 
-        tickers = ["DX-Y.NYB", "KRW=X", "^KS11", "^GSPC"]
-        df = await asyncio.to_thread(
-            yf.download,
-            tickers,
-            start=start_date.strftime("%Y-%m-%d"),
-            end=end_date.strftime("%Y-%m-%d"),
-            progress=False,
+        def _fetch_hist(tkr, period="1y"):
+            ticker = yf.Ticker(tkr)
+            hist = ticker.history(period=period)
+            if not hist.empty and "Close" in hist.columns:
+                s = hist["Close"]
+                s.index = pd.to_datetime(s.index).tz_localize(None).normalize()
+                s = s.groupby(s.index).last()
+                return s
+            return pd.Series(dtype=float)
+
+        dx_s, krw_s, k_s, g_s = await asyncio.gather(
+            asyncio.to_thread(_fetch_hist, "DX-Y.NYB", "1y"),
+            asyncio.to_thread(_fetch_hist, "KRW=X", "1y"),
+            asyncio.to_thread(_fetch_hist, "^KS11", "1y"),
+            asyncio.to_thread(_fetch_hist, "^GSPC", "1y"),
         )
+        dx_s.name = "DX-Y.NYB"
+        krw_s.name = "KRW=X"
+        k_s.name = "^KS11"
+        g_s.name = "^GSPC"
 
-        if isinstance(df.columns, pd.MultiIndex):
-            close_prices = df["Close"]
-        else:
-            close_prices = df
-
-        # Normalize dates and group by them to prevent timezone-induced duplicate rows per day
-        close_prices.index = (
-            pd.to_datetime(close_prices.index).tz_localize(None).normalize()
-        )
-        close_prices = close_prices.groupby(close_prices.index).last()
-
-        # Always daily data with forward fill for weekends
-        series_data = close_prices.ffill(limit=5).dropna(how="all")
+        # Combine, ffill missing current-day US data using prior days, drop if entirely NaN
+        close_prices = pd.concat([dx_s, krw_s, k_s, g_s], axis=1)
+        series_data = close_prices.ffill().dropna(how="all")
 
         results = []
         for dt, row in series_data.iterrows():
