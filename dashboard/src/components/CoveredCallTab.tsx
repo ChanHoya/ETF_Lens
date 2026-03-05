@@ -162,7 +162,7 @@ export default function CoveredCallTab() {
 
         const fetchEtfs = async () => {
             try {
-                const res = await fetch(`${API_BASE} /api/v1 / analyze / etfs`);
+                const res = await fetch(`${API_BASE}/api/v1/analyze/etfs`);
                 if (res.ok) {
                     const data = await res.json();
                     setEtfDictionary(data);
@@ -180,7 +180,7 @@ export default function CoveredCallTab() {
                 // Here we fetch the list. To avoid too many calls, only doing it once.
                 // S&P500TR and Nasdaq are common.
                 // We'll map S&P500/Dow to SP500TR, Nasdaq to NDX or QQQ proxy.
-                const response = await fetch('http://localhost:8000/api/v1/covered-calls/analyze', {
+                const response = await fetch(`${API_BASE}/api/v1/covered-calls/analyze`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -223,7 +223,7 @@ export default function CoveredCallTab() {
                         benchmark_symbol: item.indexTicker || '^KS200',
                         period: '1y'
                     };
-                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'} /api/v1 / covered - calls / analyze`, {
+                    const res = await fetch(`${API_BASE}/api/v1/covered-calls/analyze`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
@@ -303,13 +303,13 @@ export default function CoveredCallTab() {
                         };
 
                         const [chartRes, analyzeRes] = await Promise.all([
-                            fetch('http://localhost:8000/api/v1/covered-calls/chart', {
+                            fetch(`${API_BASE}/api/v1/covered-calls/chart`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(payload),
                                 signal: controller.signal
                             }).then(r => r.ok ? r.json() : null).catch(() => null),
-                            fetch('http://localhost:8000/api/v1/covered-calls/analyze', {
+                            fetch(`${API_BASE}/api/v1/covered-calls/analyze`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(payload),
@@ -585,7 +585,7 @@ export default function CoveredCallTab() {
                             <button
                                 key={brand}
                                 onClick={() => setSelectedBrands(prev => prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand])}
-                                className={`text - xs px - 2.5 py - 1 rounded - full border transition - all ${selectedBrands.includes(brand) ? 'bg-sky-500/20 border-sky-400/50 text-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.2)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-gray-300'} `}
+                                className={`text-xs px-2.5 py-1 rounded-full border transition-all ${selectedBrands.includes(brand) ? 'bg-sky-500/20 border-sky-400/50 text-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.2)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-gray-300'}`}
                             >
                                 {brand}
                             </button>
@@ -626,11 +626,11 @@ export default function CoveredCallTab() {
                                                 <li
                                                     key={etf.code}
                                                     onClick={() => handleToggleDropdownItem(etf)}
-                                                    className={`px - 4 py - 3 cursor - pointer border - b border - white / 5 last: border - 0 flex justify - between items - center group transition - colors ${isSelected ? 'bg-indigo-500/10' : 'hover:bg-white/5'} `}
+                                                    className={`px-4 py-3 cursor-pointer border-b border-white/5 last:border-0 flex justify-between items-center group transition-colors ${isSelected ? 'bg-indigo-500/10' : 'hover:bg-white/5'}`}
                                                 >
-                                                    <span className={`text - sm ${isSelected ? 'text-indigo-300 font-bold' : 'text-gray-200 group-hover:text-white'} `}>{etf.name}</span>
+                                                    <span className={`text-sm ${isSelected ? 'text-indigo-300 font-bold' : 'text-gray-200 group-hover:text-white'}`}>{etf.name}</span>
                                                     <div className="flex items-center gap-3">
-                                                        <span className={`text - xs font - mono transition - colors ${isSelected ? 'text-indigo-400' : 'text-gray-500'} `}>{etf.code}</span>
+                                                        <span className={`text-xs font-mono transition-colors ${isSelected ? 'text-indigo-400' : 'text-gray-500'}`}>{etf.code}</span>
                                                         {isSelected && <Check size={16} className="text-indigo-400" />}
                                                     </div>
                                                 </li>
@@ -653,10 +653,10 @@ export default function CoveredCallTab() {
                         <button
                             key={c}
                             onClick={() => setSelectedCountry(c)}
-                            className={`px - 4 py - 2 rounded - xl text - sm font - bold border transition - colors ${selectedCountry === c
-                                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50'
-                                    : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
-                                } `}
+                            className={`px-4 py-2 rounded-xl text-sm font-bold border transition-colors ${selectedCountry === c
+                                ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50'
+                                : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
+                                }`}
                         >
                             {c === 'All' ? '전체 국가' : c === 'US' ? '미국 지수' : '한국 지수'}
                         </button>
