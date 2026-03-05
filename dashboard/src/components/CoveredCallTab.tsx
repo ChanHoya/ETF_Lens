@@ -831,7 +831,7 @@ export default function CoveredCallTab() {
                                             <button
                                                 key={pd}
                                                 onClick={() => setChartPeriod(pd)}
-                                                className={`px - 4 py - 1.5 text - xs font - bold rounded - md transition - colors ${chartPeriod === pd ? 'bg-indigo-500 text-white shadow-md' : 'text-gray-400 hover:text-white'} `}
+                                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${chartPeriod === pd ? 'bg-indigo-500 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
                                             >
                                                 {pd}
                                             </button>
