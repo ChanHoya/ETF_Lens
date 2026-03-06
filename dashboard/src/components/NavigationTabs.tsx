@@ -32,8 +32,8 @@ export default function NavigationTabs({
         { id: 'info', label: '기본정보' },
         { id: 'chart', label: '수익률차트' },
         { id: 'holdings', label: '구성종목' },
-        { id: 'discover', label: 'Discover' },
-        { id: 'covered_call', label: 'Covered Call' }
+        { id: 'discover', label: '모니터링' },
+        { id: 'covered_call', label: '커버드콜' }
     ];
 
     return (

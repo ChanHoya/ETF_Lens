@@ -25,7 +25,7 @@ type ModalsProps = {
     setSelectedDetailEtf: (etf: any) => void;
     popupPeriod: string;
     setPopupPeriod: (p: string) => void;
-    detailMockData: { nav: any[], vol: any[], price: any[], benchmarkName: string, domainLeft?: any, domainRight?: any };
+    detailChartData: { nav: any[], vol: any[], price: any[], benchmarkName: string, domainLeft?: any, domainRight?: any };
 
     isEtfCheckModalOpen: boolean;
     setIsEtfCheckModalOpen: (val: boolean) => void;
@@ -39,7 +39,7 @@ export default function Modals({
     isFavModalOpen, setIsFavModalOpen, favorites, favSearchQuery, setFavSearchQuery, selectedFavItems,
     addFavGroup, renameFavGroup, deleteFavGroup, removeFavItem, addFavItem, toggleFavItemSelection, selectFromFavorites,
     BRAND_KEYWORDS, THEME_KEYWORDS, etfDictionary,
-    selectedDetailEtf, setSelectedDetailEtf, popupPeriod, setPopupPeriod, detailMockData,
+    selectedDetailEtf, setSelectedDetailEtf, popupPeriod, setPopupPeriod, detailChartData,
     isEtfCheckModalOpen, setIsEtfCheckModalOpen, hasOpenedEtfCheck,
     naverEtfCode, setNaverEtfCode
 }: ModalsProps) {
@@ -300,14 +300,14 @@ export default function Modals({
                                         </div>
                                         <div className="flex-1 min-h-[250px] w-full">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <ComposedChart data={detailMockData.price} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+                                                <ComposedChart data={detailChartData.price} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                                                     <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 11 }} tickMargin={10} stroke="#1e293b" minTickGap={30} />
-                                                    <YAxis yAxisId="left" tick={{ fill: '#3b82f6', fontSize: 11 }} tickFormatter={(val) => `${val}%`} stroke="#1e293b" axisLine={false} domain={detailMockData.domainLeft as any} />
-                                                    <YAxis yAxisId="right" orientation="right" tick={{ fill: '#ef4444', fontSize: 11 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="#1e293b" axisLine={false} domain={detailMockData.domainRight as any} />
+                                                    <YAxis yAxisId="left" tick={{ fill: '#3b82f6', fontSize: 11 }} tickFormatter={(val) => `${val}%`} stroke="#1e293b" axisLine={false} domain={detailChartData.domainLeft as any} />
+                                                    <YAxis yAxisId="right" orientation="right" tick={{ fill: '#ef4444', fontSize: 11 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="#1e293b" axisLine={false} domain={detailChartData.domainRight as any} />
                                                     <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
                                                     <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                                                    <Line yAxisId="left" type="monotone" dataKey="rel_yield" name={detailMockData.benchmarkName} stroke="#3b82f6" strokeWidth={2} dot={false} />
+                                                    <Line yAxisId="left" type="monotone" dataKey="rel_yield" name={detailChartData.benchmarkName} stroke="#3b82f6" strokeWidth={2} dot={false} />
                                                     <Line yAxisId="right" type="monotone" dataKey="price" name={selectedDetailEtf.etf_name} stroke="#ef4444" strokeWidth={2} dot={false} />
                                                 </ComposedChart>
                                             </ResponsiveContainer>
@@ -343,7 +343,7 @@ export default function Modals({
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {detailMockData.nav.slice().reverse().slice(0, 7).map((n: any, i: number) => (
+                                                {detailChartData.nav.slice().reverse().slice(0, 7).map((n: any, i: number) => (
                                                     <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20">
                                                         <td className="p-2.5 text-center text-gray-400">{n.date}</td>
                                                         <td className="p-2.5 text-gray-200">{n.nav?.toLocaleString() || '-'}</td>
@@ -359,7 +359,7 @@ export default function Modals({
                                         <span className="absolute right-[20px] top-3 text-[11px] text-gray-500 font-bold">[%]</span>
                                         <div className="flex-1 min-h-[250px] w-full">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <ComposedChart data={detailMockData.nav} margin={{ top: 5, right: 0, left: 15, bottom: 5 }}>
+                                                <ComposedChart data={detailChartData.nav} margin={{ top: 5, right: 0, left: 15, bottom: 5 }}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                                                     <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 11 }} tickMargin={10} stroke="#1e293b" minTickGap={15} />
                                                     <YAxis yAxisId="left" tick={{ fill: '#ef4444', fontSize: 11 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="#1e293b" axisLine={false} domain={['auto', 'auto']} />
@@ -479,7 +479,7 @@ export default function Modals({
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {detailMockData.vol.map((v: any, i: number) => (
+                                                {detailChartData.vol.map((v: any, i: number) => (
                                                     <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20">
                                                         <td className="p-2.5 text-center text-gray-400">{v.month}</td>
                                                         <td className="p-2.5 text-gray-200">{v.volume.toLocaleString()}</td>
@@ -495,7 +495,7 @@ export default function Modals({
                                         </div>
                                         <div className="flex-1 min-h-[250px] w-full">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <ComposedChart data={detailMockData.vol.slice().reverse()} margin={{ top: 5, right: 0, left: -10, bottom: 5 }}>
+                                                <ComposedChart data={detailChartData.vol.slice().reverse()} margin={{ top: 5, right: 0, left: -10, bottom: 5 }}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                                                     <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11 }} tickMargin={10} stroke="#1e293b" />
                                                     <YAxis yAxisId="left" tick={{ fill: '#3b82f6', fontSize: 11 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="#1e293b" axisLine={false} />

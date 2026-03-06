@@ -9,11 +9,12 @@ import CompareTable from "@/components/CompareTable";
 import Modals from "@/components/Modals";
 import DiscoverTab from "@/components/DiscoverTab";
 import CoveredCallTab from "@/components/CoveredCallTab";
+import ChatBot from "@/components/ChatBot";
 
 type FavGroup = { id: string; name: string; items: { code: string; name: string }[] };
 
 const BRAND_KEYWORDS = ['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'];
-const THEME_KEYWORDS = ['커버드콜', '배당', 'AI', '반도체', '로봇', '원자력', '2차전지', '조선', '방산', '금융', '바이오'];
+const THEME_KEYWORDS = ['커버드콜', '배당', '액티브', 'AI', '반도체', '로봇', '원자력', '2차전지', '조선', '방산', '금융', '바이오'];
 
 export default function Home() {
   const [slots, setSlots] = useState<{ search: string, code: string }[]>([
@@ -464,9 +465,11 @@ export default function Home() {
       if (period === '1D') cutoffDate.setDate(cutoffDate.getDate() - 1);
       else if (period === '1W') cutoffDate.setDate(cutoffDate.getDate() - 7);
       else if (period === '1M') cutoffDate.setMonth(cutoffDate.getMonth() - 1);
+      else if (period === '3M') cutoffDate.setMonth(cutoffDate.getMonth() - 3);
       else if (period === '6M') cutoffDate.setMonth(cutoffDate.getMonth() - 6);
       else if (period === '1Y') cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
       else if (period === '3Y') cutoffDate.setFullYear(cutoffDate.getFullYear() - 3);
+      else if (period === '10Y') cutoffDate.setFullYear(cutoffDate.getFullYear() - 10);
 
       const cutoffStr = cutoffDate.toISOString().split('T')[0];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -602,7 +605,7 @@ export default function Home() {
 
   }, [chartData, data]);
 
-  const detailMockData = useMemo(() => {
+  const detailChartData = useMemo(() => {
     if (!selectedDetailEtf) return { nav: [], vol: [], price: [], benchmarkName: 'to KOSPI(좌)' };
     const navData: any[] = [];
     const volData: any[] = [];
@@ -851,8 +854,8 @@ export default function Home() {
           <nav className="flex items-center gap-2 md:gap-6 bg-white/[0.03] px-6 py-2 rounded-full border border-white/10 backdrop-blur-md shadow-sm">
             {[
               { id: 'analysis', label: '종목분석' },
-              { id: 'discover', label: 'Discover' },
-              { id: 'covered_call', label: 'Covered Call' },
+              { id: 'discover', label: '모니터링' },
+              { id: 'covered_call', label: '커버드콜' },
               { id: 'etfcheck', label: 'ETF Check' }
             ].map(tab => {
               const isAnalysisActive = ['select', 'info', 'chart', 'holdings'].includes(activeTab);
@@ -889,6 +892,11 @@ export default function Home() {
           </nav>
         </div>
       </header>
+
+      {/* ChatBot Injection (Placed below menu for full width expansion) */}
+      <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 z-40 relative">
+        <ChatBot />
+      </div>
 
       <div className="relative flex-1 flex flex-col w-full max-w-[95vw] xl:max-w-[1400px]">
 
@@ -1265,12 +1273,14 @@ export default function Home() {
                                         <span className="font-medium text-gray-200 group-hover:text-white transition-colors truncate max-w-[75%]" title={h.ticker}>
                                           <span className="text-gray-500 w-4 inline-block text-[10px] sm:text-[11px]">{hIdx + 1}.</span> {h.ticker}
                                         </span>
-                                        <span className="font-bold text-gray-300 ml-1 flex-shrink-0">{h.weight.toFixed(2)}%</span>
+                                        <span className="font-bold text-gray-300 ml-1 flex-shrink-0">
+                                          {h.weight > 0 ? `${h.weight.toFixed(2)}%` : (h.shares ? `${h.shares.toLocaleString()}주` : '0.00%')}
+                                        </span>
                                       </div>
                                       <div className="w-full bg-black/40 rounded-full h-1.5 overflow-hidden border border-white/5">
                                         <div
                                           className={`h-full ${fillColors[idx % fillColors.length]} rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(255,255,255,0.3)]`}
-                                          style={{ width: `${Math.min(100, (h.weight / (etf.holdings[0]?.weight || 100)) * 100)}%` }}
+                                          style={{ width: `${Math.min(100, ((h.weight || h.shares) / (etf.holdings[0]?.weight || etf.holdings[0]?.shares || 100)) * 100)}%` }}
                                         />
                                       </div>
                                     </div>
@@ -1355,7 +1365,7 @@ export default function Home() {
           setPopupPeriod={setPopupPeriod}
           BRAND_KEYWORDS={BRAND_KEYWORDS}
           THEME_KEYWORDS={THEME_KEYWORDS}
-          detailMockData={detailMockData}
+          detailChartData={detailChartData}
         />
 
       </div >

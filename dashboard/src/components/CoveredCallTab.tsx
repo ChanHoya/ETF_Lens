@@ -241,8 +241,8 @@ export default function CoveredCallTab() {
                             ...item,
                             isLoadingMetrics: false,
                             isFetching: false,
-                            price: Math.floor(Math.random() * 5000) + 8000, // Still mock price for now until real-time proxy
-                            yield: (Math.random() * 5) + 5, // Still mock yield
+                            price: null,   // Real-time price not available from compare endpoint
+                            yield: null,   // Distribution yield not available from compare endpoint
                             tr1y: match.result.tr_period,
                             diffBenchmark: match.result.diff_benchmark_period,
                             benchTr: match.result.benchmark_tr_period,
@@ -734,10 +734,10 @@ export default function CoveredCallTab() {
                                             </div>
                                         </td>
                                         <td className="py-2 px-3 text-right font-mono font-medium text-gray-300">
-                                            {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">로딩중...</span> : `${item.price.toLocaleString()} 원`}
+                                            {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">로딩중...</span> : item.price != null ? `${item.price.toLocaleString()} 원` : <span className="text-gray-600 text-xs">--</span>}
                                         </td>
                                         <td className="py-2 px-3 text-center font-bold text-emerald-400 bg-emerald-500/[0.02]">
-                                            {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : `${item.yield.toFixed(1)}% `}
+                                            {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : item.yield != null ? `${item.yield.toFixed(1)}% ` : <span className="text-gray-600 text-xs">--</span>}
                                         </td>
                                         <td className="py-2 px-3 text-center bg-indigo-500/[0.02]">
                                             {item.isLoadingMetrics ? <span className="animate-pulse text-gray-600">...</span> : (

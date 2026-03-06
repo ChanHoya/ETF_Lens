@@ -217,7 +217,7 @@ export function useEtfData(slots: { search: string, code: string }[], period: st
         });
     }, [chartData, data]);
 
-    const detailMockData = useMemo(() => {
+    const detailChartData = useMemo(() => {
         if (!selectedDetailEtf) return { nav: [], vol: [], price: [], benchmarkName: 'to KOSPI(좌)' };
         const navData: any[] = [];
         const volData: any[] = [];
@@ -293,6 +293,6 @@ export function useEtfData(slots: { search: string, code: string }[], period: st
         fetchComparison,
         chartData,
         simulatedChartData,
-        detailMockData
+        detailChartData
     };
 }
