@@ -304,7 +304,14 @@ async def get_macro_detail(period: str = "10Y"):
         end_date = datetime.now()
 
         # Determine yfinance period string based on request
-        yf_period = period.lower()
+        # Map user-facing period strings to yfinance-compatible format
+        period_map = {
+            "6m": "6mo",
+            "1y": "1y",
+            "3y": "3y",
+            "10y": "10y",
+        }
+        yf_period = period_map.get(period.lower(), "1y")
 
         def _fetch_hist(tkr, period="1y"):
             ticker = yf.Ticker(tkr)
