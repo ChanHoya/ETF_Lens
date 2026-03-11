@@ -56,6 +56,8 @@ export default function Home() {
   const [dbVersion, setDbVersion] = useState<string>("DB ver.Loading...");
   const [healthStatus, setHealthStatus] = useState<'pending' | 'ok' | 'error'>('pending');
   const [failedServices, setFailedServices] = useState<string[]>([]);
+  // 테마 키워드 AND/OR 토글: true = AND(&, 기본값), false = OR
+  const [themeAndMode, setThemeAndMode] = useState(true);
 
   useEffect(() => {
     setIsClient(true);
@@ -938,6 +940,22 @@ export default function Home() {
                   {/* 2층: HOT 테마 */}
                   <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
                     <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-1 flex items-center min-w-[50px]"><span className="mr-1">🔥</span> HOT:</span>
+
+                    {/* AND / OR 토글 버튼 */}
+                    <button
+                      onMouseDown={(e) => { e.preventDefault(); setThemeAndMode(prev => !prev); }}
+                      title={themeAndMode
+                        ? "현재: AND — 선택한 키워드 모두 포함된 종목 검색. 클릭하면 OR로 전환"
+                        : "현재: OR — 선택한 키워드 중 하나라도 포함된 종목 검색. 클릭하면 AND(&)로 전환"}
+                      className={`text-[10px] font-black px-2 py-0.5 rounded-full border transition-all select-none ${
+                        themeAndMode
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_6px_rgba(245,158,11,0.3)]'
+                          : 'bg-sky-500/20 text-sky-300 border-sky-500/50 shadow-[0_0_6px_rgba(14,165,233,0.3)]'
+                      }`}
+                    >
+                      {themeAndMode ? '&' : 'OR'}
+                    </button>
+
                     {THEME_KEYWORDS.map(theme => {
                       const isActive = globalSearch.split(' ').includes(theme);
                       return (
@@ -990,7 +1008,11 @@ export default function Home() {
                           const etfCode = etf.code.toLowerCase();
 
                           const brandMatch = brandTerms.length === 0 ? true : brandTerms.some(term => etfName.includes(term) || etfCode.includes(term));
-                          const themeMatch = themeTerms.length === 0 ? true : themeTerms.some(term => etfName.includes(term) || etfCode.includes(term));
+                          // 테마 키워드: AND/OR 모드 적용
+                          const themeMatch = themeTerms.length === 0 ? true :
+                            themeAndMode
+                              ? themeTerms.every(term => etfName.includes(term) || etfCode.includes(term))
+                              : themeTerms.some(term => etfName.includes(term) || etfCode.includes(term));
 
                           return brandMatch && themeMatch;
                         });
@@ -1042,7 +1064,11 @@ export default function Home() {
                               const etfCode = e.code.toLowerCase();
 
                               const brandMatch = brandTerms.length === 0 ? true : brandTerms.some(term => etfName.includes(term) || etfCode.includes(term));
-                              const themeMatch = themeTerms.length === 0 ? true : themeTerms.some(term => etfName.includes(term) || etfCode.includes(term));
+                              // 테마 키워드: AND/OR 모드 적용
+                              const themeMatch = themeTerms.length === 0 ? true :
+                                themeAndMode
+                                  ? themeTerms.every(term => etfName.includes(term) || etfCode.includes(term))
+                                  : themeTerms.some(term => etfName.includes(term) || etfCode.includes(term));
 
                               return brandMatch && themeMatch;
                             });
