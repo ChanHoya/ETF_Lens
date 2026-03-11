@@ -31,6 +31,10 @@ type ModalsProps = {
     setIsEtfCheckModalOpen: (val: boolean) => void;
     hasOpenedEtfCheck: boolean;
 
+    hasOpenedEtfTracker: boolean;
+    isEtfTrackerOpen: boolean;
+    setIsEtfTrackerOpen: (val: boolean) => void;
+
     naverEtfCode: string | null;
     setNaverEtfCode: (code: string | null) => void;
 };
@@ -41,6 +45,7 @@ export default function Modals({
     BRAND_KEYWORDS, THEME_KEYWORDS, etfDictionary,
     selectedDetailEtf, setSelectedDetailEtf, popupPeriod, setPopupPeriod, detailChartData,
     isEtfCheckModalOpen, setIsEtfCheckModalOpen, hasOpenedEtfCheck,
+    hasOpenedEtfTracker, isEtfTrackerOpen, setIsEtfTrackerOpen,
     naverEtfCode, setNaverEtfCode
 }: ModalsProps) {
 
@@ -680,6 +685,34 @@ export default function Modals({
                                 src="https://www.etfcheck.co.kr/mobile/main"
                                 className="w-full h-full border-none"
                                 style={{ filter: "invert(0.92) hue-rotate(180deg)" }}
+                                allowFullScreen
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== 4. ETF추적기 Modal ===== */}
+            {hasOpenedEtfTracker && (
+                <div className={`absolute top-0 inset-x-0 bottom-2 md:bottom-4 z-[400] flex-col animate-in fade-in duration-300 ${isEtfTrackerOpen ? 'flex' : 'hidden'}`}>
+                    <div className="w-full h-full bg-neutral-900 border border-neutral-700/50 rounded-2xl shadow-2xl shadow-violet-500/10 flex flex-col overflow-hidden ring-1 ring-white/10">
+                        <div className="flex items-center justify-between px-3 md:px-5 py-2 border-b border-white/5 bg-gradient-to-r from-neutral-900 to-neutral-800 shrink-0 relative z-10">
+                            <h2 className="text-sm md:text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-purple-400 flex items-center gap-2">
+                                <span className="w-1.5 h-6 bg-violet-500 rounded-full"></span>
+                                ETF추적기 (YStreet)
+                            </h2>
+                            <button
+                                onClick={() => setIsEtfTrackerOpen(false)}
+                                className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-full bg-white/5 text-gray-400 hover:text-white hover:bg-rose-500/20 hover:scale-105 active:scale-95 transition-all outline-none group border border-transparent hover:border-rose-500/50"
+                            >
+                                <X className="w-3 h-3 md:w-4 md:h-4 group-hover:rotate-90 transition-transform duration-300" />
+                            </button>
+                        </div>
+                        <div className="w-full flex-1 overflow-hidden relative bg-[#0b0f19]">
+                            <iframe
+                                src="https://ystreet.co.kr/etf-tracker/"
+                                className="w-full h-full border-none"
+                                style={{ filter: "invert(0.9) hue-rotate(180deg) brightness(0.95) contrast(1.05)" }}
                                 allowFullScreen
                             />
                         </div>
