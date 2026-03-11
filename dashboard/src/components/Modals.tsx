@@ -695,7 +695,7 @@ export default function Modals({
             {/* ===== 4. ETF추적기 Modal ===== */}
             {hasOpenedEtfTracker && (
                 <div className={`absolute top-0 inset-x-0 bottom-2 md:bottom-4 z-[400] flex-col animate-in fade-in duration-300 ${isEtfTrackerOpen ? 'flex' : 'hidden'}`}>
-                    <div className="w-full h-full bg-neutral-900 border border-neutral-700/50 rounded-2xl shadow-2xl shadow-violet-500/10 flex flex-col overflow-hidden ring-1 ring-white/10">
+                    <div className="w-full h-full bg-[#0b0f19] border border-violet-500/20 rounded-2xl shadow-2xl shadow-violet-500/10 flex flex-col overflow-hidden ring-1 ring-violet-500/10">
                         <div className="flex items-center justify-between px-3 md:px-5 py-2 border-b border-white/5 bg-gradient-to-r from-neutral-900 to-neutral-800 shrink-0 relative z-10">
                             <h2 className="text-sm md:text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-purple-400 flex items-center gap-2">
                                 <span className="w-1.5 h-6 bg-violet-500 rounded-full"></span>
@@ -708,13 +708,32 @@ export default function Modals({
                                 <X className="w-3 h-3 md:w-4 md:h-4 group-hover:rotate-90 transition-transform duration-300" />
                             </button>
                         </div>
-                        <div className="w-full flex-1 overflow-hidden relative bg-[#0b0f19]">
-                            <iframe
-                                src="https://ystreet.co.kr/etf-tracker/"
-                                className="w-full h-full border-none"
-                                style={{ filter: "invert(0.9) hue-rotate(180deg) brightness(0.95) contrast(1.05)" }}
-                                allowFullScreen
-                            />
+                        {/* ystreet.co.kr 은 X-Frame-Options 으로 iframe 임베딩 차단 → 새 탭 안내 */}
+                        <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8">
+                            <div className="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(139,92,246,0.2)]">
+                                <svg className="w-10 h-10 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                                </svg>
+                            </div>
+                            <div className="text-center space-y-2 max-w-md">
+                                <h3 className="text-xl md:text-2xl font-bold text-white">YStreet ETF 추적기</h3>
+                                <p className="text-gray-400 text-sm leading-relaxed">
+                                    국내 ETF의 실시간 가격, 거래량, 자금 흐름을 추적하는 서비스입니다.<br />
+                                    보안 정책으로 인해 직접 내장이 불가합니다. 새 탭에서 확인해주세요.
+                                </p>
+                            </div>
+                            <a
+                                href="https://ystreet.co.kr/etf-tracker/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)] hover:scale-105 active:scale-95 text-sm"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                                </svg>
+                                새 탭에서 열기 → ystreet.co.kr
+                            </a>
+                            <p className="text-gray-600 text-xs">tip: 브라우저 다크모드를 설정하면 더 편리하게 이용할 수 있습니다.</p>
                         </div>
                     </div>
                 </div>
