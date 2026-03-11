@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Loader2, Plus, X, ChevronDown, Check } from "lucide-react";
+import { Search, Loader2, Plus, X, ChevronDown, Check, Trash2 } from "lucide-react";
 
 type EtfSearchDropdownProps = {
     slots: { search: string, code: string }[];
@@ -30,6 +30,9 @@ export default function EtfSearchDropdown({
     updateSearch, selectEtf, BRAND_KEYWORDS, THEME_KEYWORDS, handleDropdownScroll
 }: EtfSearchDropdownProps) {
 
+    // 테마 키워드 AND/OR 토글 (true = AND(&), false = OR)
+    const [themeAndMode, setThemeAndMode] = React.useState(true);
+
     // Global search filtering (AND/OR logic)
     const renderGlobalDropdown = () => {
         if (!globalSearch.trim() && !globalActive) return null;
@@ -43,8 +46,13 @@ export default function EtfSearchDropdown({
             const etfName = etf.name.toLowerCase().replace(/\s/g, '');
             const etfCode = etf.code.toLowerCase();
 
+            // 운용사는 항상 OR (여러 운용사 중 하나라도 매칭)
             const brandMatch = brandTerms.length === 0 ? true : brandTerms.some(term => etfName.includes(term) || etfCode.includes(term));
-            const themeMatch = themeTerms.length === 0 ? true : themeTerms.some(term => etfName.includes(term) || etfCode.includes(term));
+            // 테마 키워드는 AND/OR 모드 적용
+            const themeMatch = themeTerms.length === 0 ? true :
+                themeAndMode
+                    ? themeTerms.every(term => etfName.includes(term) || etfCode.includes(term))
+                    : themeTerms.some(term => etfName.includes(term) || etfCode.includes(term));
 
             return brandMatch && themeMatch;
         }).slice(0, dropdownLimit);
@@ -102,7 +110,11 @@ export default function EtfSearchDropdown({
                         {BRAND_KEYWORDS.map(brand => (
                             <button
                                 key={brand}
-                                onClick={() => setGlobalSearch(prev => prev.includes(brand) ? prev.replace(brand, '').trim() : `${prev} ${brand}`.trim())}
+                                onClick={() => {
+                                    const terms = globalSearch.split(' ').filter(t => t.trim() !== '');
+                                    const newVal = terms.includes(brand) ? terms.filter(t => t !== brand).join(' ') : [...terms, brand].join(' ');
+                                    setGlobalSearch(newVal);
+                                }}
                                 className={`text-xs px-2.5 py-1 rounded-full border transition-all ${globalSearch.includes(brand) ? 'bg-sky-500/20 border-sky-400/50 text-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.2)]' : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-gray-300'}`}
                             >
                                 {brand}
@@ -110,10 +122,29 @@ export default function EtfSearchDropdown({
                         ))}
                         <div className="w-full h-px bg-gray-800/50 my-1 hidden sm:block"></div>
                         <span className="text-xs text-gray-400 font-semibold mr-1">테마🔥</span>
+
+                        {/* AND / OR 토글 버튼 */}
+                        <button
+                            onClick={() => setThemeAndMode(prev => !prev)}
+                            title={themeAndMode
+                                ? "현재: AND — 선택한 키워드 모두 포함된 종목 검색. 클릭하면 OR로 전환"
+                                : "현재: OR — 선택한 키워드 중 하나라도 포함된 종목 검색. 클릭하면 AND(&)로 전환"}
+                            className={`text-[10px] font-black px-2 py-0.5 rounded-full border transition-all select-none mr-0.5 ${themeAndMode
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_6px_rgba(245,158,11,0.3)]'
+                                : 'bg-sky-500/20 text-sky-300 border-sky-500/50 shadow-[0_0_6px_rgba(14,165,233,0.3)]'
+                            }`}
+                        >
+                            {themeAndMode ? '&' : 'OR'}
+                        </button>
+
                         {THEME_KEYWORDS.map(theme => (
                             <button
                                 key={theme}
-                                onClick={() => setGlobalSearch(prev => prev.includes(theme) ? prev.replace(theme, '').trim() : `${prev} ${theme}`.trim())}
+                                onClick={() => {
+                                    const terms = globalSearch.split(' ').filter(t => t.trim() !== '');
+                                    const newVal = terms.includes(theme) ? terms.filter(t => t !== theme).join(' ') : [...terms, theme].join(' ');
+                                    setGlobalSearch(newVal);
+                                }}
                                 className={`text-xs px-2.5 py-1 rounded-full border transition-all ${globalSearch.includes(theme) ? 'bg-rose-500/20 border-rose-400/50 text-rose-400 shadow-[0_0_10px_rgba(251,113,133,0.2)]' : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-gray-300'}`}
                             >
                                 {theme}
