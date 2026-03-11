@@ -44,17 +44,51 @@ export default function Modals({
     naverEtfCode, setNaverEtfCode
 }: ModalsProps) {
 
+    // ── 기능 1: 검색 드롭다운 다중 선택 state ─────────────────────────────
+    // { [groupId]: Set<etfCode> }
+    const [searchSelected, setSearchSelected] = React.useState<{ [groupId: string]: Set<string> }>({});
+
+    const toggleSearchItem = (groupId: string, item: { code: string, name: string }) => {
+        setSearchSelected(prev => {
+            const current = new Set(prev[groupId] || []);
+            if (current.has(item.code)) current.delete(item.code);
+            else current.add(item.code);
+            return { ...prev, [groupId]: new Set(current) };
+        });
+    };
+
+    const isSearchItemSelected = (groupId: string, code: string) =>
+        (searchSelected[groupId] || new Set()).has(code);
+
+    // 선택된 종목들을 그룹에 일괄 추가
+    const bulkAddToGroup = (groupId: string, filtered: { code: string, name: string }[]) => {
+        const sel = searchSelected[groupId] || new Set<string>();
+        if (sel.size === 0) return;
+        sel.forEach(code => {
+            const item = filtered.find(f => f.code === code);
+            if (item) addFavItem(groupId, item.code, item.name);
+        });
+        setSearchSelected(prev => ({ ...prev, [groupId]: new Set() }));
+        setFavSearchQuery(prev => ({ ...prev, [groupId]: '' }));
+    };
+
+    // ── 기능 2: HOT 키워드 AND / OR 토글 state ───────────────────────────
+    // { [groupId]: boolean } — true = AND(&), false = OR, 기본값 true(AND)
+    const [hotAndMode, setHotAndMode] = React.useState<{ [groupId: string]: boolean }>({});
+    const getAndMode = (groupId: string) => hotAndMode[groupId] !== false; // default true = AND
+
     return (
         <>
-            {/* 1. Favorites Modal */}
+            {/* ===== 1. 나의 관심종목 즐겨찾기 Modal ===== */}
             {isFavModalOpen && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-transparent animate-in fade-in duration-200 p-2 md:p-6">
                     <div className="bg-[#0f111a] border border-white/10 rounded-2xl w-full max-w-[1400px] h-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+
+                        {/* 헤더 */}
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border-b border-white/10 relative gap-3 bg-black/20">
                             <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2 text-white">
                                 <Star className="w-6 h-6 text-yellow-500 fill-yellow-500/20" /> 나의 관심종목 즐겨찾기
                             </h2>
-
                             <div className="flex items-center gap-3 w-full md:w-auto">
                                 <button
                                     onClick={() => selectFromFavorites(selectedFavItems)}
@@ -68,6 +102,8 @@ export default function Modals({
                                 </button>
                             </div>
                         </div>
+
+                        {/* 바디 */}
                         <div className="p-3 md:p-5 overflow-y-auto flex-1 custom-scrollbar">
                             <div className="flex justify-between items-center mb-4">
                                 <p className="text-gray-400 text-sm">종목을 여러개 클릭하여 선택한 뒤, 위 버튼을 눌러 비교 입력칸에 한 번에 넣을 수 있습니다.</p>
@@ -83,15 +119,29 @@ export default function Modals({
                             <div className="space-y-6">
                                 {favorites.map(group => (
                                     <div key={group.id} className="bg-white/[0.02] border border-white/10 rounded-xl p-4 shadow-inner">
+
+                                        {/* 그룹 헤더 */}
                                         <div className="flex justify-between items-center mb-4 pb-3 border-b border-white/10">
                                             <div className="flex items-center gap-3">
                                                 <h3 className="text-lg font-bold text-indigo-300 tracking-wide">{group.name}</h3>
                                                 <div className="flex gap-1">
-                                                    <button onClick={() => {
-                                                        const newName = prompt("새 그룹 이름을 입력하세요:", group.name);
-                                                        if (newName && newName.trim()) renameFavGroup(group.id, newName.trim());
-                                                    }} className="p-1.5 text-gray-500 hover:text-indigo-400 bg-white/5 rounded-md transition-colors" title="그룹명 수정"><Edit2 className="w-3.5 h-3.5" /></button>
-                                                    <button onClick={() => deleteFavGroup(group.id)} className="p-1.5 text-gray-500 hover:text-rose-400 bg-white/5 rounded-md transition-colors" title="그룹 삭제"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                    <button
+                                                        onClick={() => {
+                                                            const newName = prompt("새 그룹 이름을 입력하세요:", group.name);
+                                                            if (newName && newName.trim()) renameFavGroup(group.id, newName.trim());
+                                                        }}
+                                                        className="p-1.5 text-gray-500 hover:text-indigo-400 bg-white/5 rounded-md transition-colors"
+                                                        title="그룹명 수정"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => deleteFavGroup(group.id)}
+                                                        className="p-1.5 text-gray-500 hover:text-rose-400 bg-white/5 rounded-md transition-colors"
+                                                        title="그룹 삭제"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
                                                 </div>
                                             </div>
                                             <button
@@ -103,21 +153,25 @@ export default function Modals({
                                             </button>
                                         </div>
 
+                                        {/* 그룹 내 종목 카드 */}
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
                                             {group.items.map(item => {
                                                 const isSelected = selectedFavItems.some(i => i.code === item.code);
                                                 return (
                                                     <div
                                                         key={item.code}
-                                                        className={`flex flex-col justify-between items-start bg-black/40 border-2 rounded-lg p-2.5 group/favitem transition-all cursor-pointer ${isSelected ? 'border-indigo-500 bg-indigo-900/30' : 'border-white/5 hover:border-indigo-400/50 hover:bg-white/5'
-                                                            }`}
+                                                        className={`flex flex-col justify-between items-start bg-black/40 border-2 rounded-lg p-2.5 group/favitem transition-all cursor-pointer ${isSelected ? 'border-indigo-500 bg-indigo-900/30' : 'border-white/5 hover:border-indigo-400/50 hover:bg-white/5'}`}
                                                         onClick={() => toggleFavItemSelection(item)}
                                                     >
                                                         <div className="flex justify-between items-start w-full mb-1">
                                                             <span className="font-mono text-[10px] text-indigo-400/80 bg-black/30 px-1.5 py-0.5 rounded border border-indigo-500/10">
                                                                 {item.code}
                                                             </span>
-                                                            <button onClick={(e) => { e.stopPropagation(); removeFavItem(group.id, item.code); }} className="opacity-0 group-hover/favitem:opacity-100 p-1 text-gray-500 hover:text-rose-400 transition-all ml-1 bg-white/5 rounded hover:bg-rose-500/20" title="종목 삭제">
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); removeFavItem(group.id, item.code); }}
+                                                                className="opacity-0 group-hover/favitem:opacity-100 p-1 text-gray-500 hover:text-rose-400 transition-all ml-1 bg-white/5 rounded hover:bg-rose-500/20"
+                                                                title="종목 삭제"
+                                                            >
                                                                 <Trash2 className="w-3 h-3" />
                                                             </button>
                                                         </div>
@@ -129,12 +183,17 @@ export default function Modals({
                                             })}
                                         </div>
 
-                                        {/* Add Item to Group UI */}
+                                        {/* ── 종목 추가 영역 ── */}
                                         <div className="mt-4 relative z-50">
-                                            {/* 🚀 Fav Search Quick Filters */}
+
+                                            {/* 퀵 필터 (운용사 / HOT 키워드) */}
                                             <div className="flex flex-col gap-1 mb-2">
+
+                                                {/* 🏢 운용사 행 */}
                                                 <div className="flex flex-wrap items-center gap-1">
-                                                    <span className="text-[9px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400 mr-1 flex items-center min-w-[36px]"><span className="mr-0.5">🏢</span> 운용사:</span>
+                                                    <span className="text-[9px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400 mr-1 flex items-center min-w-[36px]">
+                                                        <span className="mr-0.5">🏢</span> 운용사:
+                                                    </span>
                                                     {BRAND_KEYWORDS.map(brand => {
                                                         const currentQuery = favSearchQuery[group.id] || "";
                                                         const isActive = currentQuery.split(' ').includes(brand);
@@ -144,7 +203,9 @@ export default function Modals({
                                                                 onMouseDown={(e) => {
                                                                     e.preventDefault();
                                                                     const terms = currentQuery.split(' ').filter(t => t.trim() !== '');
-                                                                    const newSearch = terms.includes(brand) ? terms.filter(t => t !== brand).join(' ') : [...terms, brand].join(' ');
+                                                                    const newSearch = terms.includes(brand)
+                                                                        ? terms.filter(t => t !== brand).join(' ')
+                                                                        : [...terms, brand].join(' ');
                                                                     setFavSearchQuery(prev => ({ ...prev, [group.id]: newSearch }));
                                                                     setTimeout(() => document.getElementById(`fav-search-${group.id}`)?.focus(), 10);
                                                                 }}
@@ -155,8 +216,30 @@ export default function Modals({
                                                         );
                                                     })}
                                                 </div>
+
+                                                {/* 🔥 HOT 키워드 행 + AND/OR 토글 */}
                                                 <div className="flex flex-wrap items-center gap-1">
-                                                    <span className="text-[9px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-1 flex items-center min-w-[36px]"><span className="mr-0.5">🔥</span> HOT:</span>
+                                                    <span className="text-[9px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-0.5 flex items-center min-w-[36px]">
+                                                        <span className="mr-0.5">🔥</span> HOT:
+                                                    </span>
+
+                                                    {/* AND / OR 토글 버튼 */}
+                                                    <button
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault();
+                                                            setHotAndMode(prev => ({ ...prev, [group.id]: !getAndMode(group.id) }));
+                                                        }}
+                                                        title={getAndMode(group.id)
+                                                            ? "현재: AND — 선택한 키워드 모두 포함된 종목 검색. 클릭하면 OR로 전환"
+                                                            : "현재: OR — 선택한 키워드 중 하나라도 포함된 종목 검색. 클릭하면 AND(&)로 전환"}
+                                                        className={`text-[9px] font-black px-2 py-0.5 rounded-full border transition-all select-none mr-0.5 ${getAndMode(group.id)
+                                                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_6px_rgba(245,158,11,0.3)]'
+                                                            : 'bg-sky-500/20 text-sky-300 border-sky-500/50 shadow-[0_0_6px_rgba(14,165,233,0.3)]'
+                                                        }`}
+                                                    >
+                                                        {getAndMode(group.id) ? '&' : 'OR'}
+                                                    </button>
+
                                                     {THEME_KEYWORDS.map(theme => {
                                                         const currentQuery = favSearchQuery[group.id] || "";
                                                         const isActive = currentQuery.split(' ').includes(theme);
@@ -166,7 +249,9 @@ export default function Modals({
                                                                 onMouseDown={(e) => {
                                                                     e.preventDefault();
                                                                     const terms = currentQuery.split(' ').filter(t => t.trim() !== '');
-                                                                    const newSearch = terms.includes(theme) ? terms.filter(t => t !== theme).join(' ') : [...terms, theme].join(' ');
+                                                                    const newSearch = terms.includes(theme)
+                                                                        ? terms.filter(t => t !== theme).join(' ')
+                                                                        : [...terms, theme].join(' ');
                                                                     setFavSearchQuery(prev => ({ ...prev, [group.id]: newSearch }));
                                                                     setTimeout(() => document.getElementById(`fav-search-${group.id}`)?.focus(), 10);
                                                                 }}
@@ -179,6 +264,7 @@ export default function Modals({
                                                 </div>
                                             </div>
 
+                                            {/* 검색 입력창 */}
                                             <div className="flex items-center px-3 py-2 bg-black/60 border border-white/10 focus-within:border-indigo-500/50 rounded-lg transition-colors">
                                                 <input
                                                     id={`fav-search-${group.id}`}
@@ -189,41 +275,101 @@ export default function Modals({
                                                 />
                                             </div>
 
-                                            {favSearchQuery[group.id] && etfDictionary.length > 0 && (
-                                                <div className="absolute top-[110%] left-0 w-full max-h-[240px] overflow-y-auto bg-[#1a1c23]/95 border border-indigo-500/30 rounded-xl shadow-2xl backdrop-blur-xl z-[100] custom-scrollbar">
-                                                    {(() => {
-                                                        const terms = (favSearchQuery[group.id] || "").toLowerCase().split(' ').filter(t => t.trim() !== '');
-                                                        if (terms.length === 0) return null;
+                                            {/* 검색 드롭다운 (다중 선택 + 추가하기 버튼) */}
+                                            {favSearchQuery[group.id] && etfDictionary.length > 0 && (() => {
+                                                const terms = (favSearchQuery[group.id] || "").toLowerCase().split(' ').filter(t => t.trim() !== '');
+                                                if (terms.length === 0) return null;
 
-                                                        const lowerBrands = BRAND_KEYWORDS.map(b => b.toLowerCase());
-                                                        const brandTerms = terms.filter(t => lowerBrands.includes(t));
-                                                        const themeTerms = terms.filter(t => !lowerBrands.includes(t));
+                                                const lowerBrands = BRAND_KEYWORDS.map(b => b.toLowerCase());
+                                                const brandTerms = terms.filter(t => lowerBrands.includes(t));
+                                                const themeTerms = terms.filter(t => !lowerBrands.includes(t));
+                                                const isAnd = getAndMode(group.id);
 
-                                                        const filtered = etfDictionary.filter(e => {
-                                                            const etfName = e.name.toLowerCase().replace(/\s/g, '');
-                                                            const etfCode = e.code.toLowerCase();
+                                                const filtered = etfDictionary.filter(e => {
+                                                    const etfName = e.name.toLowerCase().replace(/\s/g, '');
+                                                    const etfCode = e.code.toLowerCase();
 
-                                                            const brandMatch = brandTerms.length === 0 ? true : brandTerms.some(term => etfName.includes(term) || etfCode.includes(term));
-                                                            const themeMatch = themeTerms.length === 0 ? true : themeTerms.some(term => etfName.includes(term) || etfCode.includes(term));
+                                                    // 운용사는 항상 OR (여러 운용사 중 하나라도 매칭)
+                                                    const brandMatch = brandTerms.length === 0
+                                                        ? true
+                                                        : brandTerms.some(term => etfName.includes(term) || etfCode.includes(term));
 
-                                                            return brandMatch && themeMatch;
-                                                        }).slice(0, 30);
+                                                    // 테마 키워드는 AND/OR 모드 적용
+                                                    const themeMatch = themeTerms.length === 0
+                                                        ? true
+                                                        : isAnd
+                                                            ? themeTerms.every(term => etfName.includes(term) || etfCode.includes(term))
+                                                            : themeTerms.some(term => etfName.includes(term) || etfCode.includes(term));
 
-                                                        if (filtered.length === 0) return <div className="p-4 text-sm text-rose-400 font-medium text-center">검색 결과가 없습니다.</div>;
+                                                    return brandMatch && themeMatch;
+                                                }).slice(0, 50);
 
-                                                        return filtered.map(e => (
-                                                            <div
-                                                                key={e.code}
-                                                                onClick={() => { addFavItem(group.id, e.code, e.name); setFavSearchQuery(prev => ({ ...prev, [group.id]: "" })); }}
-                                                                className="px-5 py-3 text-sm text-gray-300 hover:bg-indigo-600/40 cursor-pointer border-b border-indigo-500/10 last:border-0 transition-colors flex justify-between group"
+                                                const selectedSet = searchSelected[group.id] || new Set<string>();
+                                                const allSelected = filtered.length > 0 && filtered.every(f => selectedSet.has(f.code));
+
+                                                return (
+                                                    <div className="absolute top-[110%] left-0 w-full bg-[#1a1c23]/97 border border-indigo-500/30 rounded-xl shadow-2xl backdrop-blur-xl z-[100] overflow-hidden">
+
+                                                        {/* 드롭다운 헤더: 전체선택 체크박스 + 추가하기 버튼 */}
+                                                        <div className="flex items-center justify-between px-4 py-2 border-b border-indigo-500/20 bg-indigo-950/50 sticky top-0 z-10">
+                                                            <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-gray-400 hover:text-white transition-colors">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={allSelected}
+                                                                    onChange={() => {
+                                                                        setSearchSelected(prev => ({
+                                                                            ...prev,
+                                                                            [group.id]: allSelected
+                                                                                ? new Set()
+                                                                                : new Set(filtered.map(f => f.code))
+                                                                        }));
+                                                                    }}
+                                                                    className="w-3.5 h-3.5 rounded accent-indigo-500"
+                                                                />
+                                                                전체선택
+                                                                <span className="text-indigo-400 font-semibold ml-1">({filtered.length}개 검색됨)</span>
+                                                            </label>
+                                                            <button
+                                                                onMouseDown={(e) => { e.preventDefault(); bulkAddToGroup(group.id, filtered); }}
+                                                                disabled={selectedSet.size === 0}
+                                                                className="flex items-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:opacity-40 text-white rounded-lg text-xs font-bold transition-all shadow-md disabled:shadow-none"
                                                             >
-                                                                <span className="text-white font-medium group-hover:text-indigo-200 truncate pr-4">{e.name}</span>
-                                                                <span className="font-mono text-xs text-indigo-400 bg-black/30 px-2 py-0.5 rounded border border-white/5">{e.code}</span>
-                                                            </div>
-                                                        ));
-                                                    })()}
-                                                </div>
-                                            )}
+                                                                <Plus className="w-3 h-3" /> 추가하기 ({selectedSet.size}개)
+                                                            </button>
+                                                        </div>
+
+                                                        {/* 검색결과 목록 */}
+                                                        <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
+                                                            {filtered.length === 0
+                                                                ? <div className="p-4 text-sm text-rose-400 font-medium text-center">검색 결과가 없습니다.</div>
+                                                                : filtered.map(e => {
+                                                                    const sel = isSearchItemSelected(group.id, e.code);
+                                                                    return (
+                                                                        <div
+                                                                            key={e.code}
+                                                                            onMouseDown={(ev) => { ev.preventDefault(); toggleSearchItem(group.id, e); }}
+                                                                            className={`px-4 py-2.5 text-sm cursor-pointer border-b border-indigo-500/10 last:border-0 transition-colors flex items-center gap-3 group/row ${sel ? 'bg-emerald-900/25 hover:bg-emerald-900/40' : 'hover:bg-indigo-600/30'}`}
+                                                                        >
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                readOnly
+                                                                                checked={sel}
+                                                                                className="w-3.5 h-3.5 rounded accent-emerald-500 shrink-0 pointer-events-none"
+                                                                            />
+                                                                            <span className={`font-medium truncate pr-2 flex-1 ${sel ? 'text-emerald-300' : 'text-gray-200 group-hover/row:text-indigo-200'}`}>
+                                                                                {e.name}
+                                                                            </span>
+                                                                            <span className="font-mono text-xs text-indigo-400 bg-black/30 px-2 py-0.5 rounded border border-white/5 shrink-0">
+                                                                                {e.code}
+                                                                            </span>
+                                                                        </div>
+                                                                    );
+                                                                })
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 ))}
@@ -233,7 +379,7 @@ export default function Modals({
                 </div>
             )}
 
-            {/* Detail Information Modal (Naver UI style) */}
+            {/* ===== 2. ETF 상세 정보 Modal ===== */}
             {selectedDetailEtf && (
                 <div className="absolute top-0 inset-x-0 bottom-2 md:bottom-4 z-[300] flex animate-in fade-in duration-200">
                     <div className="bg-[#0B0F19] border border-white/10 rounded-2xl w-full h-full overflow-hidden flex flex-col shadow-2xl shadow-indigo-500/10">
@@ -288,10 +434,7 @@ export default function Modals({
                                                     <button
                                                         key={p}
                                                         onClick={() => setPopupPeriod(p)}
-                                                        className={`px-2 py-1 text-[10px] font-bold transition-all ${popupPeriod === p
-                                                            ? 'bg-blue-600/60 text-white rounded'
-                                                            : 'text-gray-500 hover:text-gray-300'
-                                                            }`}
+                                                        className={`px-2 py-1 text-[10px] font-bold transition-all ${popupPeriod === p ? 'bg-blue-600/60 text-white rounded' : 'text-gray-500 hover:text-gray-300'}`}
                                                     >
                                                         {p}
                                                     </button>
@@ -516,11 +659,10 @@ export default function Modals({
                 </div>
             )}
 
-            {/* ETF Check Modal */}
+            {/* ===== 3. ETF Check Modal ===== */}
             {hasOpenedEtfCheck && (
                 <div className={`absolute top-0 inset-x-0 bottom-2 md:bottom-4 z-[400] flex-col animate-in fade-in duration-300 ${isEtfCheckModalOpen ? 'flex' : 'hidden'}`}>
                     <div className="w-full h-full bg-neutral-900 border border-neutral-700/50 rounded-2xl shadow-2xl shadow-teal-500/10 flex flex-col overflow-hidden ring-1 ring-white/10">
-                        {/* Header */}
                         <div className="flex items-center justify-between px-3 md:px-5 py-2 border-b border-white/5 bg-gradient-to-r from-neutral-900 to-neutral-800 shrink-0 relative z-10">
                             <h2 className="text-sm md:text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-400 flex items-center gap-2">
                                 <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
@@ -533,10 +675,7 @@ export default function Modals({
                                 <X className="w-3 h-3 md:w-4 md:h-4 group-hover:rotate-90 transition-transform duration-300" />
                             </button>
                         </div>
-
-                        {/* Iframe content with Dark Mode Filter */}
                         <div className="w-full flex-1 overflow-hidden relative bg-[#0b0f19]">
-                            {/* CSS Trick: Invert colors + hue-rotate to fake a dark mode over white themed external sites */}
                             <iframe
                                 src="https://www.etfcheck.co.kr/mobile/main"
                                 className="w-full h-full border-none"
@@ -548,11 +687,10 @@ export default function Modals({
                 </div>
             )}
 
-            {/* Naver Modal */}
+            {/* ===== 4. Naver Modal ===== */}
             {naverEtfCode && (
                 <div className="absolute top-0 inset-x-0 bottom-2 md:bottom-4 z-[500] flex-col animate-in fade-in duration-300 flex">
                     <div className="w-full h-full bg-neutral-900 border border-neutral-700/50 rounded-2xl shadow-2xl shadow-blue-500/10 flex flex-col overflow-hidden ring-1 ring-white/10">
-                        {/* Header */}
                         <div className="flex items-center justify-between px-3 md:px-5 py-2 border-b border-white/5 bg-gradient-to-r from-neutral-900 to-neutral-800 shrink-0 relative z-10">
                             <h2 className="text-sm md:text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 flex items-center gap-2">
                                 <span className="w-1.5 h-6 bg-blue-500 rounded-full"></span>
@@ -565,10 +703,7 @@ export default function Modals({
                                 <X className="w-3 h-3 md:w-4 md:h-4 group-hover:rotate-90 transition-transform duration-300" />
                             </button>
                         </div>
-
-                        {/* Iframe content with Dark Mode Filter */}
                         <div className="w-full flex-1 overflow-hidden relative bg-[#0b0f19]">
-                            {/* CSS Trick: Invert colors + hue-rotate to fake a dark mode over white themed external sites */}
                             <iframe
                                 src={`https://finance.naver.com/item/main.naver?code=${naverEtfCode}`}
                                 className="w-full h-full border-none"
