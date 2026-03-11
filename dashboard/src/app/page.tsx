@@ -60,6 +60,8 @@ export default function Home() {
   const [failedServices, setFailedServices] = useState<string[]>([]);
   // 테마 키워드 AND/OR 토글: true = AND(&, 기본값), false = OR
   const [themeAndMode, setThemeAndMode] = useState(true);
+  // ChatBot open state (lifted up to allow header button control)
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -827,6 +829,9 @@ export default function Home() {
           </h1>
         </div>
 
+        {/* AI Assistant 버튼 — 로고 우측, 탭 메뉴 사이 */}
+        <ChatBot renderTrigger isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
+
         <div className="flex items-center gap-4 md:gap-6">
           {/* 메인 탭만 헤더에 */}
           <nav className="flex items-center gap-2 md:gap-6 bg-white/[0.03] px-6 py-2 rounded-full border border-white/10 backdrop-blur-md shadow-sm">
@@ -912,10 +917,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* ChatBot Injection (Placed below menu for full width expansion) */}
-      <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 z-40 relative">
-        <ChatBot />
-      </div>
+      {/* ChatBot 채팅창 — 서브탭 아래 */}
+      {isChatOpen && (
+        <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 z-40 relative">
+          <ChatBot renderChat isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
+        </div>
+      )}
 
       <div className="relative flex-1 flex flex-col w-full max-w-[95vw] xl:max-w-[1400px]">
 
