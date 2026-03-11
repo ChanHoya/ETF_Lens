@@ -50,8 +50,6 @@ export default function Home() {
   const [hoveredEtfName, setHoveredEtfName] = useState<string | null>(null);
   const [isEtfCheckModalOpen, setIsEtfCheckModalOpen] = useState(false);
   const [hasOpenedEtfCheck, setHasOpenedEtfCheck] = useState(false);
-  const [isEtfTrackerOpen, setIsEtfTrackerOpen] = useState(false);
-  const [hasOpenedEtfTracker, setHasOpenedEtfTracker] = useState(false);
   const [naverEtfCode, setNaverEtfCode] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isLoadingChart, setIsLoadingChart] = useState(false);
@@ -844,9 +842,8 @@ export default function Home() {
             ].map(tab => {
               const isAnalysisActive = ['select', 'info', 'chart', 'holdings'].includes(activeTab);
               const isActive = (tab.id === 'etfcheck' && isEtfCheckModalOpen) ||
-                (tab.id === 'etftracker' && isEtfTrackerOpen && !isEtfCheckModalOpen) ||
-                (tab.id === 'analysis' && isAnalysisActive && !isEtfCheckModalOpen && !isEtfTrackerOpen) ||
-                (activeTab === tab.id && !isEtfCheckModalOpen && !isEtfTrackerOpen);
+                (tab.id === 'analysis' && isAnalysisActive && !isEtfCheckModalOpen) ||
+                (activeTab === tab.id && !isEtfCheckModalOpen);
               return (
                 <button
                   key={tab.id}
@@ -854,25 +851,21 @@ export default function Home() {
                     if (tab.id === 'etfcheck') {
                       setIsEtfCheckModalOpen(true);
                       setHasOpenedEtfCheck(true);
-                      setIsEtfTrackerOpen(false);
                       return;
                     }
                     if (tab.id === 'etftracker') {
-                      setIsEtfTrackerOpen(true);
-                      setHasOpenedEtfTracker(true);
-                      setIsEtfCheckModalOpen(false);
+                      // 새창으로 바로 열기
+                      window.open('https://ystreet.co.kr/etf-tracker/', '_blank', 'noopener,noreferrer');
                       return;
                     }
                     if (tab.id === 'analysis') {
                       setActiveTab('select');
                       setIsEtfCheckModalOpen(false);
-                      setIsEtfTrackerOpen(false);
                       return;
                     }
 
                     setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call');
                     setIsEtfCheckModalOpen(false);
-                    setIsEtfTrackerOpen(false);
                     setNaverEtfCode(null);
                     setSelectedDetailEtf(null);
                   }}
@@ -888,7 +881,7 @@ export default function Home() {
       </header>
 
       {/* 서브탭: 종목분석 탭 선택시만 헤더 아래에 표시 */}
-      {['select', 'info', 'chart', 'holdings'].includes(activeTab) && !isEtfCheckModalOpen && !isEtfTrackerOpen && (
+      {['select', 'info', 'chart', 'holdings'].includes(activeTab) && !isEtfCheckModalOpen && (
         <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-50">
           <nav className="flex items-center gap-2 md:gap-4 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 shadow-sm backdrop-blur-md">
             {[
@@ -1410,9 +1403,6 @@ export default function Home() {
           hasOpenedEtfCheck={hasOpenedEtfCheck}
           isEtfCheckModalOpen={isEtfCheckModalOpen}
           setIsEtfCheckModalOpen={setIsEtfCheckModalOpen}
-          hasOpenedEtfTracker={hasOpenedEtfTracker}
-          isEtfTrackerOpen={isEtfTrackerOpen}
-          setIsEtfTrackerOpen={setIsEtfTrackerOpen}
           naverEtfCode={naverEtfCode}
           popupPeriod={popupPeriod}
           setPopupPeriod={setPopupPeriod}
