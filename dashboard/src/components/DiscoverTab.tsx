@@ -5,6 +5,8 @@ import { Search, TrendingUp, ShieldCheck, Zap, Activity, AlertCircle, X } from '
 import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip as RechartsTooltip } from 'recharts';
 import KospiExitAnalyzer from '@/components/KospiExitAnalyzer';
 import MacroRotation from '@/components/MacroRotation';
+import SemiChart from '@/components/SemiChart';
+
 
 export default function DiscoverTab() {
     const [evaluations, setEvaluations] = useState<any[]>([]);
@@ -139,6 +141,9 @@ export default function DiscoverTab() {
                         </div>
                     </div>
                 </div>
+
+                {/* SemiChart: Semiconductor Indices */}
+                <SemiChart />
 
                 {/* Middle: Macro Rotation */}
                 <MacroRotation />

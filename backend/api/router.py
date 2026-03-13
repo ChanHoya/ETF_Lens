@@ -774,3 +774,48 @@ async def get_holdings(request: CompareRequest, db: AsyncSession = Depends(get_d
         return {"holdings_dict": holdings_dict, "overlap_pct": overlap_pct}
     except Exception as e:
         return {"error": str(e), "traceback": traceback.format_exc()}
+
+
+@router.get("/semi-chart")
+async def get_semi_chart_data():
+    """
+    Fetches the 10-year line chart data for specific semiconductor assets.
+    """
+    import asyncio
+
+    tickers = {
+        "SOX": "^SOX",
+        "삼성전자": "005930.KS",
+        "SK하이닉스": "000660.KS",
+        "KODEX 반도체": "091160.KS",
+        "TIGER 미필반나": "381180.KS"
+    }
+
+    # Run sequentially as yfinance download is not thread-safe for concurrent calls
+    results = []
+    for t_code in tickers.values():
+        res = await fetch_yahoo_finance(t_code, 10)
+        results.append(res)
+    
+    chart_data_map = {}
+    for (t_name, t_code), df in zip(tickers.items(), results):
+        if not df.empty:
+            for dt_ts, row in df.iterrows():
+                dt_str = str(dt_ts.date())
+                if dt_str not in chart_data_map:
+                    chart_data_map[dt_str] = {"date": dt_str}
+                chart_data_map[dt_str][t_name] = row["Close"]
+                
+    sorted_dates = sorted(list(chart_data_map.keys()))
+    
+    # Downsample points for UI performance (~1000 points)
+    step = max(1, len(sorted_dates) // 1000)
+    sampled_dates = sorted_dates[::step]
+    
+    # Fill backwards or handle missing values simply by retaining what's available
+    line_chart_data = [chart_data_map[dt] for dt in sampled_dates]
+    
+    return {
+        "line_chart_data": line_chart_data,
+        "keys": list(tickers.keys())
+    }
