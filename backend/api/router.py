@@ -780,12 +780,13 @@ async def get_holdings(request: CompareRequest, db: AsyncSession = Depends(get_d
 async def get_semi_chart_data():
     """
     Fetches up-to-date line chart data for key semiconductor assets.
-    Each ticker is fetched independently (via yfinance period='10y') so its
-    own latest available trading day is included, regardless of US/KR market
-    hours. SOX naturally ends yesterday when the US market has not yet closed.
+    Each ticker is fetched independently with its own latest trading day.
+    SOX naturally stops at the last US session; Korean stocks show today's data.
     """
     import yfinance as yf
     import pandas as pd
+    import asyncio
+    from datetime import datetime, timedelta
 
     tickers = {
         "SOX": "^SOX",
@@ -795,52 +796,76 @@ async def get_semi_chart_data():
         "TIGER 미필반나": "381180.KS"
     }
 
-    # Semi-chart-specific short cache (5 min) so we always get today's data
-    semi_cache_key = "semi_chart_data"
-    cached = get_bench_cached(semi_cache_key)
-    if cached is not None:
-        return cached
+    # Dedicated 5-minute cache so we always get fresh data
+    semi_cache_key = "semi_chart_v2"
+    if semi_cache_key in _bench_cache:
+        cached_val, cached_ts = _bench_cache[semi_cache_key]
+        if time.time() - cached_ts < 300:  # 5 minutes
+            return cached_val
 
-    def _fetch_ticker(t_code: str):
-        """Fetch 10 years of daily close prices for a ticker."""
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=10 * 365 + 15)  # 10 years + buffer
+
+    def _fetch_one(t_code: str) -> pd.DataFrame:
+        """
+        Fetch 10y of daily Close for one ticker using start/end dates.
+        Handles MultiIndex columns (yfinance ≥ 0.2 for multiple tickers)
+        and flat columns (single-ticker download).
+        Returns a DataFrame with a single 'Close' column and tz-naive DatetimeIndex.
+        """
         try:
             df = yf.download(
                 t_code,
-                period="10y",   # always fetch to today
+                start=start_date.strftime("%Y-%m-%d"),
+                end=end_date.strftime("%Y-%m-%d"),
                 progress=False,
-                auto_adjust=True,  # split-adjusted prices
             )
             if df.empty:
+                logger.warning(f"semi-chart: empty result for {t_code}")
                 return pd.DataFrame()
 
+            # Resolve the Close column (handles MultiIndex from yfinance ≥ 0.2)
             if isinstance(df.columns, pd.MultiIndex):
-                close = (
-                    df["Close"][t_code]
-                    if "Close" in df.columns.get_level_values(0)
-                    and t_code in df["Close"].columns
-                    else df.iloc[:, 0]
-                )
+                price_level = df.columns.get_level_values(0)
+                if "Close" in price_level:
+                    close_df = df["Close"]
+                    if isinstance(close_df, pd.DataFrame):
+                        close = close_df.iloc[:, 0]  # first (and only) ticker column
+                    else:
+                        close = close_df
+                elif "Adj Close" in price_level:
+                    close_df = df["Adj Close"]
+                    close = close_df.iloc[:, 0] if isinstance(close_df, pd.DataFrame) else close_df
+                else:
+                    close = df.iloc[:, 0]
             else:
-                close = df["Close"] if "Close" in df.columns else df.iloc[:, 0]
+                if "Adj Close" in df.columns:
+                    close = df["Adj Close"]
+                elif "Close" in df.columns:
+                    close = df["Close"]
+                else:
+                    close = df.iloc[:, 0]
 
             out = pd.DataFrame({"Close": close}).dropna()
+
+            # Strip timezone info safely
             if out.index.tz is not None:
-                out.index = out.index.tz_localize(None)
+                out.index = out.index.tz_convert(None)  # tz_localize(None) raises on tz-aware
+
+            logger.info(f"semi-chart: {t_code} → {len(out)} rows, "
+                        f"range {out.index[0].date() if len(out) else 'N/A'} "
+                        f"– {out.index[-1].date() if len(out) else 'N/A'}")
             return out
         except Exception as e:
-            logger.error(f"semi-chart: failed to fetch {t_code}: {e}")
+            logger.error(f"semi-chart: failed to fetch {t_code}: {e}", exc_info=True)
             return pd.DataFrame()
 
-    import asyncio
-    # Fetch each ticker sequentially (yfinance is not thread-safe per concurrent
-    # asyncio.gather calls when sharing the same global session).
-    results = {}
+    # Sequential fetch (yfinance is NOT safe for concurrent asyncio.to_thread calls)
+    results: dict[str, pd.DataFrame] = {}
     for t_name, t_code in tickers.items():
-        df = await asyncio.to_thread(_fetch_ticker, t_code)
-        results[t_name] = df
+        results[t_name] = await asyncio.to_thread(_fetch_one, t_code)
 
-    # Build a unified date-keyed map; each ticker contributes only the dates
-    # for which IT has data, so the latest available day per ticker is kept.
+    # Merge into a date-keyed map; each ticker only contributes its own trading days
     chart_data_map: dict = {}
     for t_name, df in results.items():
         if df.empty:
@@ -853,19 +878,17 @@ async def get_semi_chart_data():
 
     sorted_dates = sorted(chart_data_map.keys())
 
-    # Downsample to ~1000 points for UI performance.
-    # Always guarantee the very last date (most recent data) is included.
+    if not sorted_dates:
+        return {"line_chart_data": [], "keys": list(tickers.keys())}
+
+    # Downsample to ~1000 points for UI perf; always keep the last date
     step = max(1, len(sorted_dates) // 1000)
     sampled_dates = sorted_dates[::step]
-    if sorted_dates and sorted_dates[-1] != sampled_dates[-1]:
+    if sorted_dates[-1] != sampled_dates[-1]:
         sampled_dates = list(sampled_dates) + [sorted_dates[-1]]
 
     line_chart_data = [chart_data_map[dt] for dt in sampled_dates]
 
-    result = {
-        "line_chart_data": line_chart_data,
-        "keys": list(tickers.keys())
-    }
-    # Cache for 5 minutes
-    _bench_cache[semi_cache_key] = (result, time.time() - (CACHE_TTL - 300))
+    result = {"line_chart_data": line_chart_data, "keys": list(tickers.keys())}
+    _bench_cache[semi_cache_key] = (result, time.time())
     return result
