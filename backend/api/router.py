@@ -188,7 +188,7 @@ class CompareRequest(BaseModel):
 import time
 
 _bench_cache = {}
-CACHE_TTL = 3600  # 1 hour for market benchmarks
+CACHE_TTL = 600  # 10 minutes – enough to avoid hammering the API while keeping data fresh
 
 
 def get_bench_cached(key):
@@ -809,10 +809,12 @@ async def get_semi_chart_data():
     sorted_dates = sorted(list(chart_data_map.keys()))
     
     # Downsample points for UI performance (~1000 points)
+    # IMPORTANT: always keep the last date so the chart shows the most recent data.
     step = max(1, len(sorted_dates) // 1000)
     sampled_dates = sorted_dates[::step]
+    if sorted_dates and sorted_dates[-1] != sampled_dates[-1]:
+        sampled_dates = list(sampled_dates) + [sorted_dates[-1]]
     
-    # Fill backwards or handle missing values simply by retaining what's available
     line_chart_data = [chart_data_map[dt] for dt in sampled_dates]
     
     return {
