@@ -796,8 +796,8 @@ async def get_semi_chart_data():
         "TIGER 미필반나": "381180.KS",
     }
 
-    # 5-minute dedicated cache (key v4 so stale v3/v2 caches are ignored)
-    semi_cache_key = "semi_chart_v4"
+    # 5-minute dedicated cache (v5: auto_adjust=False, split-adjusted Close only)
+    semi_cache_key = "semi_chart_v5"
     if semi_cache_key in _bench_cache:
         cached_val, cached_ts = _bench_cache[semi_cache_key]
         if time.time() - cached_ts < 300:
@@ -821,39 +821,43 @@ async def get_semi_chart_data():
                 start=start_str,
                 end=end_str,
                 progress=False,
-                auto_adjust=True,   # Close = split+dividend-adjusted; removes Adj Close col
+                # auto_adjust=False (default): "Close" is split-adjusted only.
+                # Do NOT use auto_adjust=True for Korean stocks – yfinance returns
+                # the Total Return price (dividends reinvested) which inflates prices
+                # far above actual market prices and distorts the chart.
             )
             if df.empty:
                 logger.warning(f"semi-chart: empty download for {t_code}")
                 return pd.Series(dtype=float)
 
-            # With single ticker + auto_adjust=True, columns are typically flat:
-            # [Open, High, Low, Close, Volume]
-            # But some yfinance versions still wrap in MultiIndex – handle both.
+            # Extract the split-adjusted Close price.
+            # Column structure depends on yfinance version:
+            #  - old (< 0.2): flat columns [Open, High, Low, Close, Adj Close, Volume]
+            #  - new (≥ 0.2): MultiIndex [(metric, ticker)] even for single-ticker download
             if isinstance(df.columns, pd.MultiIndex):
                 lvl0 = df.columns.get_level_values(0).unique().tolist()
                 lvl1 = df.columns.get_level_values(1).unique().tolist()
                 if "Close" in lvl0:
-                    # format: (metric, ticker) → group_by='column' default
+                    # (metric, ticker) format — default group_by='column'
                     sub = df["Close"]
                     series = sub.iloc[:, 0] if isinstance(sub, pd.DataFrame) else sub
                 elif t_code in lvl0:
-                    # format: (ticker, metric) → group_by='ticker'
+                    # (ticker, metric) format — group_by='ticker'
                     series = df[t_code]["Close"] if "Close" in df[t_code].columns else df[t_code].iloc[:, 0]
                 elif "Close" in lvl1:
                     series = df.xs("Close", axis=1, level=1)
-                    if isinstance(series, pd.DataFrame):
-                        series = series.iloc[:, 0]
+                    series = series.iloc[:, 0] if isinstance(series, pd.DataFrame) else series
                 else:
                     series = df.iloc[:, 0]
             else:
-                # Flat columns (most common for single-ticker download)
+                # Flat columns
                 if "Close" in df.columns:
                     series = df["Close"]
                 elif "Adj Close" in df.columns:
                     series = df["Adj Close"]
                 else:
                     series = df.iloc[:, 0]
+
 
             series = series.dropna()
             if series.empty:
