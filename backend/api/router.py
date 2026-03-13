@@ -779,10 +779,9 @@ async def get_holdings(request: CompareRequest, db: AsyncSession = Depends(get_d
 @router.get("/semi-chart")
 async def get_semi_chart_data():
     """
-    Fetches split/dividend-adjusted close prices for semiconductor-related assets.
-    Downloads all tickers in a single yf.download call (most reliable approach).
-    Each ticker contributes data up to its own latest available trading day,
-    so Korean stocks show today's data while SOX shows the last US session.
+    Returns split/dividend-adjusted close prices for 5 semiconductor assets.
+    Each ticker is fetched sequentially with auto_adjust=True so stock-split
+    distortions (e.g. Samsung 50:1 split in 2018) are correctly handled.
     """
     import yfinance as yf
     import pandas as pd
@@ -797,8 +796,8 @@ async def get_semi_chart_data():
         "TIGER 미필반나": "381180.KS",
     }
 
-    # 5-minute dedicated cache
-    semi_cache_key = "semi_chart_v3"
+    # 5-minute dedicated cache (key v4 so stale v3/v2 caches are ignored)
+    semi_cache_key = "semi_chart_v4"
     if semi_cache_key in _bench_cache:
         cached_val, cached_ts = _bench_cache[semi_cache_key]
         if time.time() - cached_ts < 300:
@@ -806,72 +805,84 @@ async def get_semi_chart_data():
 
     end_date = datetime.now()
     start_date = end_date - timedelta(days=10 * 365 + 30)
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
 
-    def _fetch_all() -> dict[str, pd.Series]:
+    def _fetch_one(t_code: str) -> pd.Series:
         """
-        Single yf.download call for all tickers.
-        - auto_adjust=True  → 'Close' is already split+dividend adjusted
-                              (fixes Samsung 50:1 split giving wrong raw prices)
-        - group_by='ticker' → MultiIndex (ticker, metric) so df[ticker]['Close'] works cleanly
-        Returns {display_name: pd.Series of Close prices (tz-naive index)}
+        Download a SINGLE ticker with auto_adjust=True.
+        auto_adjust=True keeps only [Open,High,Low,Close,Volume] with Close=split-adjusted.
+        For a SINGLE ticker, yfinance ≥ 0.2 returns a flat DataFrame (no MultiIndex).
+        Returns a clean tz-naive pd.Series of Close prices.
         """
-        ticker_codes = list(tickers.values())
         try:
             df = yf.download(
-                ticker_codes,
-                start=start_date.strftime("%Y-%m-%d"),
-                end=end_date.strftime("%Y-%m-%d"),
+                t_code,
+                start=start_str,
+                end=end_str,
                 progress=False,
-                auto_adjust=True,     # split+dividend-adjusted; 'Close' = adjusted price
-                group_by="ticker",    # MultiIndex: (ticker_code, metric)
+                auto_adjust=True,   # Close = split+dividend-adjusted; removes Adj Close col
             )
-        except Exception as e:
-            logger.error(f"semi-chart bulk download failed: {e}", exc_info=True)
-            return {}
+            if df.empty:
+                logger.warning(f"semi-chart: empty download for {t_code}")
+                return pd.Series(dtype=float)
 
-        result: dict[str, pd.Series] = {}
-        for t_name, t_code in tickers.items():
-            try:
-                if isinstance(df.columns, pd.MultiIndex):
-                    # group_by='ticker' → (t_code, metric)
-                    if t_code in df.columns.get_level_values(0):
-                        sub = df[t_code]
-                        col = "Close" if "Close" in sub.columns else sub.columns[0]
-                        series = sub[col].dropna()
-                    else:
-                        logger.warning(f"semi-chart: {t_code} not found in MultiIndex")
-                        continue
+            # With single ticker + auto_adjust=True, columns are typically flat:
+            # [Open, High, Low, Close, Volume]
+            # But some yfinance versions still wrap in MultiIndex – handle both.
+            if isinstance(df.columns, pd.MultiIndex):
+                lvl0 = df.columns.get_level_values(0).unique().tolist()
+                lvl1 = df.columns.get_level_values(1).unique().tolist()
+                if "Close" in lvl0:
+                    # format: (metric, ticker) → group_by='column' default
+                    sub = df["Close"]
+                    series = sub.iloc[:, 0] if isinstance(sub, pd.DataFrame) else sub
+                elif t_code in lvl0:
+                    # format: (ticker, metric) → group_by='ticker'
+                    series = df[t_code]["Close"] if "Close" in df[t_code].columns else df[t_code].iloc[:, 0]
+                elif "Close" in lvl1:
+                    series = df.xs("Close", axis=1, level=1)
+                    if isinstance(series, pd.DataFrame):
+                        series = series.iloc[:, 0]
                 else:
-                    # fallback: flat columns (single ticker or older yfinance)
-                    col = "Close" if "Close" in df.columns else df.columns[0]
-                    series = df[col].dropna()
+                    series = df.iloc[:, 0]
+            else:
+                # Flat columns (most common for single-ticker download)
+                if "Close" in df.columns:
+                    series = df["Close"]
+                elif "Adj Close" in df.columns:
+                    series = df["Adj Close"]
+                else:
+                    series = df.iloc[:, 0]
 
-                if series.empty:
-                    logger.warning(f"semi-chart: {t_code} series is empty after dropna")
-                    continue
+            series = series.dropna()
+            if series.empty:
+                return pd.Series(dtype=float)
 
-                # Strip timezone safely
-                if series.index.tz is not None:
-                    series.index = series.index.tz_convert(None)
+            if series.index.tz is not None:
+                series.index = series.index.tz_convert(None)
 
-                logger.info(
-                    f"semi-chart: {t_name}({t_code}) → {len(series)} rows, "
-                    f"{series.index[0].date()} – {series.index[-1].date()}"
-                )
-                result[t_name] = series
-            except Exception as e:
-                logger.error(f"semi-chart: error extracting {t_code}: {e}", exc_info=True)
+            logger.info(
+                f"semi-chart {t_code}: {len(series)} pts, "
+                f"{series.index[0].date()} – {series.index[-1].date()}, "
+                f"first={series.iloc[0]:.2f}, last={series.iloc[-1]:.2f}"
+            )
+            return series
+        except Exception as e:
+            logger.error(f"semi-chart: {t_code} failed: {e}", exc_info=True)
+            return pd.Series(dtype=float)
 
-        return result
+    # Sequential: yfinance sessions share state and are NOT concurrency-safe
+    results: dict[str, pd.Series] = {}
+    for t_name, t_code in tickers.items():
+        results[t_name] = await asyncio.to_thread(_fetch_one, t_code)
 
-    series_map = await asyncio.to_thread(_fetch_all)
-
-    if not series_map:
-        return {"line_chart_data": [], "keys": list(tickers.keys())}
-
-    # Build unified date-keyed map; each ticker contributes only its own trading days
+    # Build date-keyed map; each ticker contributes only its own trading days
     chart_data_map: dict = {}
-    for t_name, series in series_map.items():
+    for t_name, series in results.items():
+        if series.empty:
+            logger.warning(f"semi-chart: skipping {t_name} (no data)")
+            continue
         for dt_ts, val in series.items():
             dt_str = str(dt_ts.date())
             if dt_str not in chart_data_map:
@@ -882,7 +893,7 @@ async def get_semi_chart_data():
     if not sorted_dates:
         return {"line_chart_data": [], "keys": list(tickers.keys())}
 
-    # Downsample to ~1000 pts; always keep the very last date
+    # Downsample to ≤1000 pts; always keep the very last date
     step = max(1, len(sorted_dates) // 1000)
     sampled_dates = sorted_dates[::step]
     if sorted_dates[-1] != sampled_dates[-1]:
