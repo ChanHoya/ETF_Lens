@@ -131,16 +131,26 @@ async def fetch_market_sentiment():
     """Fetch VIX and calculate proxy Fear & Greed Index, and fetch KOSPI."""
     try:
         end_date = datetime.now()
+        start_date = end_date - timedelta(days=365 * 3)   # 3\ub144 \ub370\uc774\ud130
+        start_str = start_date.strftime("%Y-%m-%d")
+        end_str = end_date.strftime("%Y-%m-%d")
 
-        def _fetch_hist(tkr, period="10y"):
-            ticker = yf.Ticker(tkr)
-            hist = ticker.history(period=period)
-            if not hist.empty and "Close" in hist.columns:
+        def _fetch_hist(tkr: str) -> pd.Series:
+            try:
+                ticker = yf.Ticker(tkr)
+                hist = ticker.history(start=start_str, end=end_str, auto_adjust=True)
+                if hist.empty or "Close" not in hist.columns:
+                    return pd.Series(dtype=float)
                 s = hist["Close"]
-                s.index = pd.to_datetime(s.index).tz_localize(None).normalize()
+                # timezone \uc81c\uac70
+                if hasattr(s.index, "tz") and s.index.tz is not None:
+                    s.index = s.index.tz_localize(None)
+                s.index = pd.to_datetime(s.index).normalize()
                 s = s.groupby(s.index).last()
                 return s
-            return pd.Series(dtype=float)
+            except Exception as e:
+                logger.warning(f"_fetch_hist failed for {tkr}: {e}")
+                return pd.Series(dtype=float)
 
         v_s, k_s, g_s = await asyncio.gather(
             asyncio.to_thread(_fetch_hist, "^VIX"),
