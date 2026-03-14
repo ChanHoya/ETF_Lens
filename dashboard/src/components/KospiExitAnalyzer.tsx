@@ -3,6 +3,7 @@ import { ShieldAlert, TrendingDown, DollarSign, Activity, AlertTriangle, ArrowRi
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 import { DollarModalContent, PerModalContent, CliModalContent, SentimentModalContent } from './ExitSignalModals';
+import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 
 // Mock Data for the 1-year Historical Trends (12 Months)
 const mockDollarData = [
@@ -295,6 +296,9 @@ export default function KospiExitAnalyzer() {
                     </div>
 
                     <div className="flex-1 w-full min-h-[160px] mt-2 -ml-2 -mb-2">
+                        {loading ? (
+                            <ChartLoadingPlaceholder height={160} />
+                        ) : (
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartDollar} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
@@ -330,6 +334,7 @@ export default function KospiExitAnalyzer() {
                                 <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                             </LineChart>
                         </ResponsiveContainer>
+                        )}
                     </div>
 
                     <div className="mt-4 text-xs text-gray-400 bg-black/40 p-3 rounded-xl flex items-start gap-2">
@@ -351,6 +356,9 @@ export default function KospiExitAnalyzer() {
                     </div>
 
                     <div className="flex-1 w-full min-h-[160px] mt-2 -ml-2 -mb-2">
+                        {loading ? (
+                            <ChartLoadingPlaceholder height={160} />
+                        ) : (
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartPer} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
@@ -385,6 +393,7 @@ export default function KospiExitAnalyzer() {
                                 <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                             </LineChart>
                         </ResponsiveContainer>
+                        )}
                     </div>
 
                     <div className="mt-2 text-xs text-gray-400 bg-black/40 p-3 rounded-xl flex items-start gap-2">
@@ -409,6 +418,9 @@ export default function KospiExitAnalyzer() {
                     </div>
 
                     <div className="flex-1 w-full min-h-[160px] mt-2 -ml-2 -mb-2">
+                        {loading ? (
+                            <ChartLoadingPlaceholder height={160} />
+                        ) : (
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartCli} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
@@ -445,6 +457,7 @@ export default function KospiExitAnalyzer() {
                                 <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                             </LineChart>
                         </ResponsiveContainer>
+                        )}
                     </div>
 
                     <div className="mt-4 text-xs text-gray-400 bg-black/40 p-3 rounded-xl flex items-start gap-2">
@@ -490,6 +503,9 @@ export default function KospiExitAnalyzer() {
                     </div>
 
                     <div className="flex-1 w-full min-h-[140px] mt-2 -ml-2 -mb-1">
+                        {loading || baseSentiment.length === 0 ? (
+                            <ChartLoadingPlaceholder height={140} message="심리지표 로딩중" />
+                        ) : (
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 5 }}>
                                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={4} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
@@ -509,6 +525,7 @@ export default function KospiExitAnalyzer() {
                                 <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                             </LineChart>
                         </ResponsiveContainer>
+                        )}
                     </div>
 
                     <div className="mt-4 text-xs text-gray-400 bg-black/40 p-3 rounded-xl flex items-start gap-2">
@@ -530,6 +547,9 @@ export default function KospiExitAnalyzer() {
                     </div>
 
                     <div className="flex-1 w-full min-h-[140px] mt-2 -ml-2 -mb-1">
+                        {loading || baseSentiment.length === 0 ? (
+                            <ChartLoadingPlaceholder height={140} message="심리지표 로딩중" />
+                        ) : (
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 5 }}>
                                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={4} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />

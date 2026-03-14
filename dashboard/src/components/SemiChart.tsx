@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 
 export default function SemiChart() {
     const [period, setPeriod] = useState('1Y');
@@ -123,10 +124,7 @@ export default function SemiChart() {
 
             <div className="w-full h-[400px]">
                 {isLoading ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
-                        <div className="w-8 h-8 rounded-full border-4 border-indigo-500/30 border-t-indigo-500 animate-spin mb-4"></div>
-                        데이터 로딩 중...
-                    </div>
+                    <ChartLoadingPlaceholder height={400} message="섹터 ETF 데이터 로딩중" />
                 ) : error ? (
                     <div className="w-full h-full flex items-center justify-center text-rose-400 text-sm">
                         {error}

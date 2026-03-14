@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import ChartLoadingPlaceholder from './ChartLoadingPlaceholder'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface Indicator { value: number | null; updated_at: string | null; label?: string }
@@ -388,18 +389,11 @@ export default function MacroCompass() {
       </div>
 
       {loading && (
-        <div style={{
-          textAlign: 'center', padding: '60px 0', color: '#475569', fontSize: 14,
-        }}>
-          <div style={{
-            display: 'inline-block', width: 20, height: 20, borderRadius: '50%',
-            border: '2px solid #38bdf8', borderTopColor: 'transparent',
-            animation: 'spin 0.8s linear infinite', marginRight: 10,
-            verticalAlign: 'middle',
-          }} />
-          지표 데이터 수집 중... (첫 로드 30~60초 소요)
-          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-        </div>
+        <ChartLoadingPlaceholder
+          height={200}
+          message="지표 데이터 수집 중"
+          subMessage="첫 로드 30~60초 소요될 수 있습니다"
+        />
       )}
 
       {error && (
