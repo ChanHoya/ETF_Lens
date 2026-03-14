@@ -63,14 +63,12 @@ async def get_db_version(db: AsyncSession = Depends(get_db)):
 @router.get("/health")
 async def check_health(db: AsyncSession = Depends(get_db)):
     import yfinance as yf
-    import requests
     from sqlalchemy import text
     from agents.harvester.harvester import ETFHarvester
 
     status = {
         "db": "pending",
         "yfinance": "pending",
-        "fred": "pending",
         "naver": "pending",
     }
     failed_services = []
@@ -84,9 +82,15 @@ async def check_health(db: AsyncSession = Depends(get_db)):
         failed_services.append("DB")
         logger.error(f"Health check DB error: {e}")
 
-    # YF Check
+    # yfinance Check (start/end 방식 - 안정적)
     try:
-        res = await asyncio.to_thread(yf.download, "SPY", period="1d", progress=False)
+        from datetime import datetime, timedelta
+        end = datetime.now()
+        start = (end - timedelta(days=3)).strftime("%Y-%m-%d")
+        t = yf.Ticker("SPY")
+        res = await asyncio.to_thread(
+            lambda: t.history(start=start, end=end.strftime("%Y-%m-%d"), auto_adjust=True)
+        )
         if not res.empty:
             status["yfinance"] = "ok"
         else:
@@ -96,24 +100,6 @@ async def check_health(db: AsyncSession = Depends(get_db)):
         status["yfinance"] = "error"
         failed_services.append("Yahoo Finance")
         logger.error(f"Health check YF error: {e}")
-
-    # FRED Check
-    try:
-        r = await asyncio.to_thread(
-            requests.get,
-            "https://fred.stlouisfed.org/",
-            timeout=5,
-            headers={"User-Agent": "Mozilla/5.0"},
-        )
-        if r.status_code == 200:
-            status["fred"] = "ok"
-        else:
-            status["fred"] = "error"
-            failed_services.append("FRED API")
-    except Exception as e:
-        status["fred"] = "error"
-        failed_services.append("FRED API")
-        logger.error(f"Health check FRED error: {e}")
 
     # Naver Scraping Check
     try:
@@ -138,6 +124,7 @@ async def check_health(db: AsyncSession = Depends(get_db)):
     status["failed_services"] = failed_services
     status["overall"] = "ok" if all_ok else "error"
     return status
+
 
 
 @router.get("/evaluate", tags=["evaluate"])
