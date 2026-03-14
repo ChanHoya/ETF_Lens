@@ -156,7 +156,7 @@ export default function SemiChart() {
                             <RechartsTooltip
                                 contentStyle={{ backgroundColor: 'rgba(18, 18, 23, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', fontSize: '12px' }}
                                 itemStyle={{ fontWeight: 'bold' }}
-                                formatter={(value: number) => [`${value.toFixed(2)}`, '']}
+                                formatter={(value: number, name: string) => [`${value.toFixed(2)}`, name]}
                                 labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: '8px', fontSize: '11px' }}
                             />
                             <Legend
