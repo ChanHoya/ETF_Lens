@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ShieldAlert, TrendingDown, DollarSign, Activity, AlertTriangle, ArrowRight, Info, ChevronRight, BarChart2, X, AlertCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
@@ -86,7 +87,11 @@ export default function KospiExitAnalyzer() {
 
     // Popup State
     const [activePopup, setActivePopup] = useState<'dollar' | 'per' | 'cli' | 'vix' | 'fgi' | null>(null);
-    const [popupTop, setPopupTop] = useState(0); // 클릭된 카드의 뷰포트 Y 위치
+    const [popupTop, setPopupTop] = useState(0);
+    const [isMounted, setIsMounted] = useState(false); // Portal SSR 가드
+
+    // 클라이언트 마운트 확인
+    useEffect(() => { setIsMounted(true); }, []);
 
     // 카드 클릭 시 Y 위치 캡처 후 팝업 열기
     const openPopup = (type: 'dollar' | 'per' | 'cli' | 'vix' | 'fgi', e: React.MouseEvent<HTMLDivElement>) => {
@@ -595,23 +600,25 @@ export default function KospiExitAnalyzer() {
                 </p>
             </div>
 
-            {activePopup && (
-                /* 현재 보이는 화면 전체를 팝업으로 덮음 (fixed = 스크롤 위치 무관, 항상 뷰포트 기준) */
+            {/* Portal: document.body에 직접 렌더링 → overflow 컨테이너 영향 없음 */}
+            {activePopup && isMounted && createPortal(
                 <div
-                    className="fixed inset-0 z-[200] flex items-stretch justify-center"
+                    className="fixed left-0 right-0 bottom-0 z-[9999] flex items-start justify-center"
+                    style={{ top: `${popupTop}px` }}
                     onClick={() => setActivePopup(null)}
                 >
                     {/* 반투명 배경 */}
-                    <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
 
-                    {/* 팝업 패널 — 뷰포트 전체 높이 채움 */}
+                    {/* 팝업 패널 — 클릭 카드 위치~화면 끝 */}
                     <div
-                        className="relative w-full max-w-4xl bg-[#1a1a2e] border-x border-white/20 flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.9)] animate-in fade-in duration-150 overflow-hidden"
+                        className="relative w-full max-w-4xl bg-[#1a1a2e] border border-white/20 rounded-t-2xl flex flex-col shadow-[0_-8px_60px_rgba(0,0,0,0.9)] animate-in fade-in slide-in-from-bottom-2 duration-200 overflow-hidden"
+                        style={{ height: `calc(100vh - ${popupTop}px)` }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* 헤더 */}
-                        <div className="flex justify-between items-center px-6 py-4 border-b border-white/10 shrink-0">
-                            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                        <div className="flex justify-between items-center px-5 py-3.5 border-b border-white/10 shrink-0">
+                            <h2 className="text-base font-bold text-white flex items-center gap-2">
                                 {activePopup === 'dollar' && <DollarSign className="w-5 h-5 text-emerald-400" />}
                                 {activePopup === 'per' && <BarChart2 className="w-5 h-5 text-blue-400" />}
                                 {activePopup === 'cli' && <TrendingDown className="w-5 h-5 text-rose-400" />}
@@ -628,7 +635,7 @@ export default function KospiExitAnalyzer() {
                         </div>
 
                         {/* 팝업 콘텐츠 */}
-                        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                        <div className="flex-1 overflow-y-auto p-4 md:p-5">
                             {activePopup === 'dollar' && <DollarModalContent />}
                             {activePopup === 'per' && <PerModalContent />}
                             {activePopup === 'cli' && <CliModalContent />}
@@ -636,8 +643,10 @@ export default function KospiExitAnalyzer() {
                             {activePopup === 'fgi' && <SentimentModalContent isFgi={true} />}
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
+
 
         </div>
     );
