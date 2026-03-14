@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
-interface Indicator { value: number | null; updated_at: string | null }
+interface Indicator { value: number | null; updated_at: string | null; label?: string }
 interface SectorWeight { sector: string; weight: '비중확대' | '중립' | '비중축소'; score: number }
 interface EtfReco { ticker: string; name: string; reason: string }
 
@@ -182,7 +182,7 @@ function IndicatorCard({ indicators }: { indicators: Record<string, Indicator> }
           padding: '6px 10px', borderRadius: 6,
           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
         }}>
-          <span style={{ fontSize: 12, color: '#cbd5e1' }}>{INDICATOR_LABELS[key] ?? key}</span>
+          <span style={{ fontSize: 12, color: '#cbd5e1' }}>{(ind as Indicator).label ?? INDICATOR_LABELS[key] ?? key}</span>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9' }}>
               {ind.value != null
@@ -345,18 +345,27 @@ export default function MacroCompass() {
   const [data, setData] = useState<CompassData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     const apiUrl = getApiUrl()
-    fetch(`${apiUrl}/api/v1/macro-compass`)
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 120_000)  // 120초 타임아웃
+
+    fetch(`${apiUrl}/api/v1/macro-compass`, { signal: ctrl.signal })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
       })
       .then(setData)
-      .catch((e) => setError(String(e)))
-      .finally(() => setLoading(false))
-  }, [])
+      .catch((e) => {
+        const msg = e?.name === 'AbortError' ? '120초 초과 — 서버 응답 없음. 재시도 버튼을 눌러주세요.' : String(e)
+        setError(msg)
+      })
+      .finally(() => { clearTimeout(timer); setLoading(false) })
+
+    return () => { ctrl.abort(); clearTimeout(timer) }
+  }, [retryCount])
 
   return (
     <div style={{ width: '100%', marginTop: 32 }}>
@@ -399,6 +408,16 @@ export default function MacroCompass() {
           border: '1px solid rgba(248,113,113,0.3)', color: '#fca5a5', fontSize: 13,
         }}>
           ⚠️ 데이터 로드 실패: {error}
+          <button
+            onClick={() => { setError(null); setLoading(true); setRetryCount(c => c + 1) }}
+            style={{
+              marginLeft: 12, padding: '4px 12px', borderRadius: 6, fontSize: 12,
+              background: 'rgba(248,113,113,0.2)', border: '1px solid #f87171',
+              color: '#fca5a5', cursor: 'pointer',
+            }}
+          >
+            🔄 재시도
+          </button>
         </div>
       )}
 
