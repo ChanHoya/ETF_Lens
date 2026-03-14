@@ -835,9 +835,9 @@ export default function Home() {
           <nav className="flex items-center gap-2 md:gap-6 bg-white/[0.03] px-6 py-2 rounded-full border border-white/10 backdrop-blur-md shadow-sm">
             {[
               { id: 'analysis', label: '종목분석' },
+              { id: 'covered_call', label: '커버드콜' },
               { id: 'discover', label: '모니터링' },
               { id: 'etftracker', label: 'ETF추적기' },
-              { id: 'covered_call', label: '커버드콜' },
               { id: 'etfcheck', label: 'ETF Check' }
             ].map(tab => {
               const isAnalysisActive = ['select', 'info', 'chart', 'holdings'].includes(activeTab);
