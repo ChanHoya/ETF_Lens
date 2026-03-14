@@ -190,6 +190,14 @@ def set_bench_cached(key, val):
     _bench_cache[key] = (val, time.time())
 
 
+@router.get("/flush-cache")
+async def flush_cache():
+    """캐시 전체 초기화 - Render 서버 데이터 강제 갱신용"""
+    count = len(_bench_cache)
+    _bench_cache.clear()
+    return {"cleared": count, "message": f"{count}개 캐시 항목 삭제 완료. 다음 요청 시 fresh 데이터를 가져옵니다."}
+
+
 async def fetch_yahoo_finance(ticker: str, period_years: int = 10):
     cache_key = f"yahoo_{ticker}_{period_years}"
     cached = get_bench_cached(cache_key)
