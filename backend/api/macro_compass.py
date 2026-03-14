@@ -53,46 +53,41 @@ def _momentum(s: pd.Series) -> tuple[Optional[float], Optional[str]]:
 
 async def _get_us_indicators() -> dict:
     """
-    US 매크로 지표 수집 (yfinance 프록시 사용).
-    - ISM proxy : XLI (산업재 ETF) 3M 모멘텀
-    - Inflation  : ^TNX (10년물 국채금리)
-    - Employment : XLY/XLP 비율 3M 변화 (소비심리 = 고용 대용)
-    - Fed Rate   : ^IRX (13주 T-bill ≈ FFR 대용)
-    - FGI        : VIX 기반 공포탐욕
-    - S&P500 mom : ^GSPC 3M 모멘텀
+    US 매크로 지표 수집 (yfinance 개별 Ticker.history() 병렬 호출).
     """
     end = datetime.now()
-    start = end - timedelta(days=95)
+    start_str = (end - timedelta(days=95)).strftime("%Y-%m-%d")
+    end_str = end.strftime("%Y-%m-%d")
 
-    def fetch_all_us():
+    def fetch(ticker: str) -> pd.Series:
+        """Fetch single ticker closing prices with error handling."""
         try:
-            tickers = ["^GSPC", "^VIX", "^TNX", "^IRX", "XLI", "XLY", "XLP"]
-            df = yf.download(tickers,
-                             start=start.strftime("%Y-%m-%d"),
-                             end=end.strftime("%Y-%m-%d"),
-                             progress=False)
-            close = df["Close"] if isinstance(df.columns, pd.MultiIndex) else df
-            return close
+            t = yf.Ticker(ticker)
+            df = t.history(start=start_str, end=end_str, auto_adjust=True)
+            if df.empty or "Close" not in df.columns:
+                logger.warning(f"No data for {ticker}")
+                return pd.Series(dtype=float)
+            s = df["Close"].dropna()
+            # Strip timezone info for consistent date handling
+            if hasattr(s.index, "tz") and s.index.tz is not None:
+                s.index = s.index.tz_localize(None)
+            return s
         except Exception as e:
-            logger.warning(f"yfinance US batch fetch failed: {e}")
-            return pd.DataFrame()
-
-    close = await asyncio.to_thread(fetch_all_us)
-
-    def col(name: str) -> pd.Series:
-        if close.empty or name not in close.columns:
+            logger.warning(f"yfinance failed for {ticker}: {e}")
             return pd.Series(dtype=float)
-        return close[name].dropna()
 
-    gspc = col("^GSPC")
-    vix_s = col("^VIX")
-    tnx = col("^TNX")
-    irx = col("^IRX")
-    xli = col("XLI")
-    xly = col("XLY")
-    xlp = col("XLP")
+    # Run all 7 tickers in parallel
+    gspc, vix_s, tnx, irx, xli, xly, xlp = await asyncio.gather(
+        asyncio.to_thread(fetch, "^GSPC"),
+        asyncio.to_thread(fetch, "^VIX"),
+        asyncio.to_thread(fetch, "^TNX"),
+        asyncio.to_thread(fetch, "^IRX"),
+        asyncio.to_thread(fetch, "XLI"),
+        asyncio.to_thread(fetch, "XLY"),
+        asyncio.to_thread(fetch, "XLP"),
+    )
 
-    # ISM proxy: XLI 3M 모멘텀 (산업재 ETF)
+    # ISM proxy: XLI 3M 모멘텀
     ism_v, ism_d = _momentum(xli)
 
     # 인플레 proxy: 10년물 국채금리
@@ -130,40 +125,34 @@ async def _get_us_indicators() -> dict:
 
 async def _get_kr_indicators() -> dict:
     """
-    한국 매크로 지표 수집 (yfinance 프록시 사용).
-    - CLI proxy      : EWY (iShares Korea ETF) 3M 모멘텀
-    - Export proxy   : SOXX (반도체 지수) 3M 모멘텀 — 한국 최대 수출품목
-    - BOK Rate proxy : USD/KRW 3M 변화 역수 (원화 강세 = 금리환경 안정)
-    - KOSPI mom      : ^KS11 3M 모멘텀
-    - USD/KRW        : 현재 환율
+    한국 매크로 지표 수집 (yfinance 개별 Ticker.history() 병렬 호출).
     """
     end = datetime.now()
-    start = end - timedelta(days=95)
+    start_str = (end - timedelta(days=95)).strftime("%Y-%m-%d")
+    end_str = end.strftime("%Y-%m-%d")
 
-    def fetch_all_kr():
+    def fetch(ticker: str) -> pd.Series:
         try:
-            tickers = ["^KS11", "KRW=X", "EWY", "SOXX"]
-            df = yf.download(tickers,
-                             start=start.strftime("%Y-%m-%d"),
-                             end=end.strftime("%Y-%m-%d"),
-                             progress=False)
-            close = df["Close"] if isinstance(df.columns, pd.MultiIndex) else df
-            return close
+            t = yf.Ticker(ticker)
+            df = t.history(start=start_str, end=end_str, auto_adjust=True)
+            if df.empty or "Close" not in df.columns:
+                logger.warning(f"No data for {ticker}")
+                return pd.Series(dtype=float)
+            s = df["Close"].dropna()
+            if hasattr(s.index, "tz") and s.index.tz is not None:
+                s.index = s.index.tz_localize(None)
+            return s
         except Exception as e:
-            logger.warning(f"yfinance KR batch fetch failed: {e}")
-            return pd.DataFrame()
-
-    close = await asyncio.to_thread(fetch_all_kr)
-
-    def col(name: str) -> pd.Series:
-        if close.empty or name not in close.columns:
+            logger.warning(f"yfinance failed for {ticker}: {e}")
             return pd.Series(dtype=float)
-        return close[name].dropna()
 
-    ks_s   = col("^KS11")
-    krw_s  = col("KRW=X")
-    ewy_s  = col("EWY")
-    soxx_s = col("SOXX")
+    # Run all 4 tickers in parallel
+    ks_s, krw_s, ewy_s, soxx_s = await asyncio.gather(
+        asyncio.to_thread(fetch, "^KS11"),
+        asyncio.to_thread(fetch, "KRW=X"),
+        asyncio.to_thread(fetch, "EWY"),
+        asyncio.to_thread(fetch, "SOXX"),
+    )
 
     # CLI proxy: EWY 3M 모멘텀
     cli_v, cli_d = _momentum(ewy_s)
@@ -591,7 +580,7 @@ async def get_macro_compass():
     - per-indicator values and their last update dates
     24h cached.
     """
-    cache_key = "macro_compass_v2"
+    cache_key = "macro_compass_v3"
     now_ts = __import__("time").time()
     if cache_key in _compass_cache:
         cached, ts = _compass_cache[cache_key]
