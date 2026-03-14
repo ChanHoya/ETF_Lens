@@ -1,18 +1,20 @@
 """
 AI Macro Rotation Compass
 Determines US and Korea economic cycle phases (Recovery / Expansion / Slowdown / Recession)
-using publicly available data (FRED CSVs + yfinance) and generates human-readable
+using publicly available data (yfinance proxies) and generates human-readable
 explanations via Gemini. Results are cached for 24 hours to minimise API costs.
+
+Note: FRED CSV is blocked on some networks. All indicators now use yfinance proxies:
+  US:  XLI(ISM proxy), ^TNX(인플레), XLY/XLP 비율(고용심리), ^IRX(단기금리), VIX(FGI), ^GSPC
+  KR:  EWY(CLI proxy), SOXX(수출proxy), KRW=X inverse(BOK 금리환경), ^KS11(KOSPI)
 """
 import asyncio
 import logging
 import os
-import time
 from datetime import datetime, timedelta
 from typing import Optional
 
 import pandas as pd
-import requests
 import yfinance as yf
 from fastapi import APIRouter
 
@@ -23,33 +25,26 @@ router = APIRouter(tags=["macro_compass"])
 _compass_cache: dict = {}
 CACHE_TTL = 3600 * 24  # seconds
 
-# ---------------------------------------------------------------------------
-# FRED public CSV helper
-# ---------------------------------------------------------------------------
-
-def _fetch_fred_csv(series_id: str) -> pd.Series:
-    """Download a FRED series as a pandas Series (date index, float values)."""
-    url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
-    try:
-        resp = requests.get(url, timeout=15,
-                            headers={"User-Agent": "ETFLens/1.0 macro-compass"})
-        resp.raise_for_status()
-        from io import StringIO
-        df = pd.read_csv(StringIO(resp.text), parse_dates=["DATE"], index_col="DATE")
-        s = df.iloc[:, 0].replace(".", float("nan")).astype(float).dropna()
-        return s
-    except Exception as e:
-        logger.warning(f"FRED CSV fetch failed for {series_id}: {e}")
-        return pd.Series(dtype=float)
-
 
 def _last_value(s: pd.Series) -> tuple[Optional[float], Optional[str]]:
     """Return (latest non-NaN value, date string). Returns (None, None) if empty."""
-    if s.empty:
+    if s is None or s.empty:
         return None, None
     val = float(s.iloc[-1])
     date_str = str(s.index[-1].date()) if hasattr(s.index[-1], "date") else str(s.index[-1])
     return val, date_str
+
+
+def _momentum(s: pd.Series) -> tuple[Optional[float], Optional[str]]:
+    """3-month % change of series. Returns (pct_change, last_date)."""
+    if s is None or s.empty or len(s) < 2:
+        return None, None
+    base = float(s.iloc[0])
+    if base == 0:
+        return None, None
+    pct = round((float(s.iloc[-1]) - base) / abs(base) * 100, 2)
+    d = str(s.index[-1].date()) if hasattr(s.index[-1], "date") else str(s.index[-1])
+    return pct, d
 
 
 # ---------------------------------------------------------------------------
@@ -57,122 +52,142 @@ def _last_value(s: pd.Series) -> tuple[Optional[float], Optional[str]]:
 # ---------------------------------------------------------------------------
 
 async def _get_us_indicators() -> dict:
-    """Collect 6 US macro indicators with latest value + update date."""
+    """
+    US 매크로 지표 수집 (yfinance 프록시 사용).
+    - ISM proxy : XLI (산업재 ETF) 3M 모멘텀
+    - Inflation  : ^TNX (10년물 국채금리)
+    - Employment : XLY/XLP 비율 3M 변화 (소비심리 = 고용 대용)
+    - Fed Rate   : ^IRX (13주 T-bill ≈ FFR 대용)
+    - FGI        : VIX 기반 공포탐욕
+    - S&P500 mom : ^GSPC 3M 모멘텀
+    """
     end = datetime.now()
-    start = end - timedelta(days=90)
+    start = end - timedelta(days=95)
 
-    def fetch_fred_us():
-        """Fetch all 4 FRED series sequentially in one thread (avoids FRED rate-limit)."""
-        import time as _time
-        results = {}
-        for key, sid in [("ism", "NAPM"), ("pce", "PCEPILFE"),
-                         ("unemployment", "UNRATE"), ("fed_rate", "FEDFUNDS")]:
-            results[key] = _fetch_fred_csv(sid)
-            _time.sleep(0.5)   # small delay to be polite (0.5s * 4 = ~2s extra)
-        return results
-
-    def fetch_yf_us():
+    def fetch_all_us():
         try:
-            df = yf.download(["^VIX", "^GSPC"],
+            tickers = ["^GSPC", "^VIX", "^TNX", "^IRX", "XLI", "XLY", "XLP"]
+            df = yf.download(tickers,
                              start=start.strftime("%Y-%m-%d"),
                              end=end.strftime("%Y-%m-%d"),
                              progress=False)
             close = df["Close"] if isinstance(df.columns, pd.MultiIndex) else df
-            vix_s = close["^VIX"].dropna() if "^VIX" in close.columns else pd.Series(dtype=float)
-            sp_s  = close["^GSPC"].dropna() if "^GSPC" in close.columns else pd.Series(dtype=float)
-            return vix_s, sp_s
+            return close
         except Exception as e:
-            logger.warning(f"yfinance US fetch failed: {e}")
-            return pd.Series(dtype=float), pd.Series(dtype=float)
+            logger.warning(f"yfinance US batch fetch failed: {e}")
+            return pd.DataFrame()
 
-    # FRED (sequential) + yfinance run concurrently
-    fred_data, yf_result = await asyncio.gather(
-        asyncio.to_thread(fetch_fred_us),
-        asyncio.to_thread(fetch_yf_us),
-    )
-    vix_s, sp_s = yf_result
+    close = await asyncio.to_thread(fetch_all_us)
 
-    ism_v,   ism_d   = _last_value(fred_data["ism"])
-    pce_v,   pce_d   = _last_value(fred_data["pce"])
-    unemp_v, unemp_d = _last_value(fred_data["unemployment"])
-    fed_v,   fed_d   = _last_value(fred_data["fed_rate"])
+    def col(name: str) -> pd.Series:
+        if close.empty or name not in close.columns:
+            return pd.Series(dtype=float)
+        return close[name].dropna()
 
+    gspc = col("^GSPC")
+    vix_s = col("^VIX")
+    tnx = col("^TNX")
+    irx = col("^IRX")
+    xli = col("XLI")
+    xly = col("XLY")
+    xlp = col("XLP")
+
+    # ISM proxy: XLI 3M 모멘텀 (산업재 ETF)
+    ism_v, ism_d = _momentum(xli)
+
+    # 인플레 proxy: 10년물 국채금리
+    pce_v, pce_d = _last_value(tnx)
+
+    # 고용 proxy: XLY/XLP 비율 3M 변화
+    if not xly.empty and not xlp.empty:
+        common = xly.index.intersection(xlp.index)
+        ratio = (xly.loc[common] / xlp.loc[common]).dropna()
+        unemp_v, unemp_d = _momentum(ratio)
+    else:
+        unemp_v, unemp_d = None, None
+
+    # Fed Rate proxy: ^IRX (13주 T-bill 연환산 금리)
+    fed_v, fed_d = _last_value(irx)
+
+    # FGI: VIX 기반
     vix_v, vix_d = _last_value(vix_s)
     fgi_v = None
     if vix_v is not None:
         fgi_v = round(max(0.0, min(100.0, 50.0 - (vix_v - 18.0) * 3.0)), 1)
 
-    sp_momentum = None
-    sp_d = None
-    if not sp_s.empty and len(sp_s) >= 2:
-        sp_now = float(sp_s.iloc[-1])
-        sp_90d = float(sp_s.iloc[0])
-        sp_momentum = round((sp_now - sp_90d) / sp_90d * 100, 2)
-        sp_d = str(sp_s.index[-1].date()) if hasattr(sp_s.index[-1], "date") else str(sp_s.index[-1])
+    # S&P500 3M 모멘텀
+    sp_momentum, sp_d = _momentum(gspc)
 
     return {
-        "ism":            {"value": ism_v,       "updated_at": ism_d},
-        "pce":            {"value": pce_v,        "updated_at": pce_d},
-        "unemployment":   {"value": unemp_v,      "updated_at": unemp_d},
-        "fed_rate":       {"value": fed_v,        "updated_at": fed_d},
-        "fgi":            {"value": fgi_v,        "updated_at": vix_d},
-        "sp500_momentum": {"value": sp_momentum,  "updated_at": sp_d},
+        "ism":            {"value": ism_v,       "updated_at": ism_d,   "label": "산업재(XLI) 3M 모멘텀"},
+        "pce":            {"value": pce_v,        "updated_at": pce_d,   "label": "10년물 금리(인플레 대용)"},
+        "unemployment":   {"value": unemp_v,      "updated_at": unemp_d, "label": "소비심리비율(XLY/XLP)"},
+        "fed_rate":       {"value": fed_v,        "updated_at": fed_d,   "label": "단기금리(^IRX, Fed 대용)"},
+        "fgi":            {"value": fgi_v,        "updated_at": vix_d,   "label": "공포탐욕지수(VIX 기반)"},
+        "sp500_momentum": {"value": sp_momentum,  "updated_at": sp_d,    "label": "S&P500 3M 모멘텀"},
     }
 
 
 async def _get_kr_indicators() -> dict:
-    """Collect 5 Korea macro indicators with latest value + update date."""
+    """
+    한국 매크로 지표 수집 (yfinance 프록시 사용).
+    - CLI proxy      : EWY (iShares Korea ETF) 3M 모멘텀
+    - Export proxy   : SOXX (반도체 지수) 3M 모멘텀 — 한국 최대 수출품목
+    - BOK Rate proxy : USD/KRW 3M 변화 역수 (원화 강세 = 금리환경 안정)
+    - KOSPI mom      : ^KS11 3M 모멘텀
+    - USD/KRW        : 현재 환율
+    """
     end = datetime.now()
-    start = end - timedelta(days=90)
+    start = end - timedelta(days=95)
 
-    def fetch_fred_kr():
-        import time as _time
-        results = {}
-        for key, sid in [("cli", "KORLOLITOAASTSAM"),
-                         ("export", "XTEXVA01KRM664S"),
-                         ("bok_rate", "IRSTCI01KRM156N")]:
-            results[key] = _fetch_fred_csv(sid)
-            _time.sleep(0.5)
-        return results
-
-    def fetch_yf_kr():
+    def fetch_all_kr():
         try:
-            df = yf.download(["^KS11", "KRW=X"],
+            tickers = ["^KS11", "KRW=X", "EWY", "SOXX"]
+            df = yf.download(tickers,
                              start=start.strftime("%Y-%m-%d"),
                              end=end.strftime("%Y-%m-%d"),
                              progress=False)
             close = df["Close"] if isinstance(df.columns, pd.MultiIndex) else df
-            ks_s  = close["^KS11"].dropna() if "^KS11" in close.columns else pd.Series(dtype=float)
-            krw_s = close["KRW=X"].dropna() if "KRW=X" in close.columns else pd.Series(dtype=float)
-            return ks_s, krw_s
+            return close
         except Exception as e:
-            logger.warning(f"yfinance KR fetch failed: {e}")
-            return pd.Series(dtype=float), pd.Series(dtype=float)
+            logger.warning(f"yfinance KR batch fetch failed: {e}")
+            return pd.DataFrame()
 
-    fred_data, yf_result = await asyncio.gather(
-        asyncio.to_thread(fetch_fred_kr),
-        asyncio.to_thread(fetch_yf_kr),
-    )
-    ks_s, krw_s = yf_result
+    close = await asyncio.to_thread(fetch_all_kr)
 
-    cli_v, cli_d = _last_value(fred_data["cli"])
-    exp_v, exp_d = _last_value(fred_data["export"])
-    bok_v, bok_d = _last_value(fred_data["bok_rate"])
+    def col(name: str) -> pd.Series:
+        if close.empty or name not in close.columns:
+            return pd.Series(dtype=float)
+        return close[name].dropna()
 
-    kospi_mom = None
-    ks_d = None
-    if not ks_s.empty and len(ks_s) >= 2:
-        kospi_mom = round((float(ks_s.iloc[-1]) - float(ks_s.iloc[0])) / float(ks_s.iloc[0]) * 100, 2)
-        ks_d = str(ks_s.index[-1].date()) if hasattr(ks_s.index[-1], "date") else str(ks_s.index[-1])
+    ks_s   = col("^KS11")
+    krw_s  = col("KRW=X")
+    ewy_s  = col("EWY")
+    soxx_s = col("SOXX")
 
+    # CLI proxy: EWY 3M 모멘텀
+    cli_v, cli_d = _momentum(ewy_s)
+
+    # 수출 proxy: SOXX 3M 모멘텀
+    exp_v, exp_d = _momentum(soxx_s)
+
+    # BOK Rate proxy: USD/KRW 3M 변화의 역수
+    krw_chg, krw_chg_d = _momentum(krw_s)
+    bok_v = round(-krw_chg, 2) if krw_chg is not None else None
+    bok_d = krw_chg_d
+
+    # KOSPI 3M 모멘텀
+    kospi_mom, ks_d = _momentum(ks_s)
+
+    # USD/KRW 현재값
     krw_v, krw_d = _last_value(krw_s)
 
     return {
-        "cli":            {"value": cli_v,     "updated_at": cli_d},
-        "export_growth":  {"value": exp_v,     "updated_at": exp_d},
-        "bok_rate":       {"value": bok_v,     "updated_at": bok_d},
-        "kospi_momentum": {"value": kospi_mom, "updated_at": ks_d},
-        "usd_krw":        {"value": krw_v,     "updated_at": krw_d},
+        "cli":            {"value": cli_v,      "updated_at": cli_d,  "label": "한국ETF(EWY) 선행모멘텀"},
+        "export_growth":  {"value": exp_v,      "updated_at": exp_d,  "label": "반도체(SOXX) 수출 대용"},
+        "bok_rate":       {"value": bok_v,      "updated_at": bok_d,  "label": "원화강도(환율역수 = BOK 대용)"},
+        "kospi_momentum": {"value": kospi_mom,  "updated_at": ks_d,   "label": "KOSPI 3M 모멘텀"},
+        "usd_krw":        {"value": krw_v,      "updated_at": krw_d,  "label": "USD/KRW 현재 환율"},
     }
 
 
@@ -189,73 +204,68 @@ PHASE_NAMES = {
 
 def _score_us_phase(ind: dict) -> tuple[str, int]:
     """
-    Score US indicators → (phase_en, confidence%).
-    Scoring based on Investment Clock logic:
-      - ISM:         >52 expansion signal; <48 contraction
-      - PCE:         >3.0 inflationary pressure
-      - Unemployment: <4.0 tight; >4.5 loosening
-      - Fed rate:    compare level; trend matters more but we use level proxy
-      - FGI:         >60 greedy/expansion; <30 fear/recession
-      - SP500 mom:   >5% expansion; <-5% contraction
+    US 지표 스코어링 → (phase_en, confidence%)
+    yfinance 프록시 기준:
+      XLI 모멘텀(ISM proxy) / ^TNX(인플레) / XLY/XLP 비율변화(고용심리)
+      ^IRX(단기금리) / FGI / S&P500 모멘텀
     """
     scores = {"recovery": 0, "expansion": 0, "slowdown": 0, "recession": 0}
+    available = 0
 
-    ism   = ind["ism"]["value"]
-    pce   = ind["pce"]["value"]
-    unemp = ind["unemployment"]["value"]
-    fed   = ind["fed_rate"]["value"]
-    fgi   = ind["fgi"]["value"]
-    sp_m  = ind["sp500_momentum"]["value"]
+    ism   = ind["ism"]["value"]          # XLI 3M % 모멘텀
+    pce   = ind["pce"]["value"]          # 10년물 금리%
+    unemp = ind["unemployment"]["value"] # XLY/XLP 비율 3M 변화%
+    fed   = ind["fed_rate"]["value"]     # ^IRX %
+    fgi   = ind["fgi"]["value"]          # 0-100
+    sp_m  = ind["sp500_momentum"]["value"] # S&P500 3M %
 
-    available = 0  # count available indicators for confidence normalization
-
-    # ISM
+    # XLI 3M 모멘텀 (>5% = 확장, 0~5% = 회복, <0% = 수축)
     if ism is not None:
         available += 1
-        if ism > 53:
+        if ism > 5:
             scores["expansion"] += 2
-        elif ism > 50:
-            scores["recovery"]  += 1; scores["expansion"] += 1
-        elif ism > 47:
+        elif ism > 0:
+            scores["recovery"]  += 1
+        elif ism > -5:
             scores["slowdown"]  += 2
         else:
             scores["recession"] += 2
 
-    # PCE (core inflation level)
+    # 10년물 금리 (2~3.5% = 정상, >4.5% = 과열, <2% = 침체)
     if pce is not None:
         available += 1
-        if pce > 3.5:
-            scores["slowdown"]  += 2     # stagflation pressure
-        elif pce > 2.5:
-            scores["expansion"] += 1
-        elif pce > 1.5:
-            scores["recovery"]  += 1
+        if 2.0 < pce < 3.5:
+            scores["expansion"] += 2
+        elif pce <= 2.0:
+            scores["recession"] += 1
+        elif pce < 4.5:
+            scores["slowdown"]  += 1
         else:
-            scores["recession"] += 1     # deflation risk
+            scores["recession"] += 2
 
-    # Unemployment
+    # 소비심리(XLY/XLP) 3M 변화
     if unemp is not None:
         available += 1
-        if unemp < 3.8:
+        if unemp > 5:
             scores["expansion"] += 2
-        elif unemp < 4.3:
-            scores["recovery"]  += 1; scores["expansion"] += 1
-        elif unemp < 5.0:
+        elif unemp > 0:
+            scores["recovery"]  += 1
+        elif unemp > -5:
             scores["slowdown"]  += 2
         else:
             scores["recession"] += 2
 
-    # Fed rate level (very high → slowdown/recession pressure)
+    # 단기금리 ^IRX (<1.5% = 긴급완화, 1.5~3.5% = 완화적, 3.5~5.5% = 중립, >5.5% = 긴축)
     if fed is not None:
         available += 1
-        if fed >= 5.0:
-            scores["slowdown"]  += 1; scores["recession"] += 1
-        elif fed >= 3.5:
-            scores["expansion"] += 1; scores["slowdown"]  += 1
-        elif fed >= 2.0:
-            scores["recovery"]  += 1; scores["expansion"] += 1
+        if fed < 1.5:
+            scores["recovery"]  += 2
+        elif fed < 3.5:
+            scores["expansion"] += 1
+        elif fed < 5.5:
+            scores["slowdown"]  += 1
         else:
-            scores["recovery"]  += 2     # low rates → stimulus
+            scores["recession"] += 2
 
     # FGI
     if fgi is not None:
@@ -263,26 +273,26 @@ def _score_us_phase(ind: dict) -> tuple[str, int]:
         if fgi >= 65:
             scores["expansion"] += 2
         elif fgi >= 45:
-            scores["recovery"]  += 1; scores["expansion"] += 1
+            scores["recovery"]  += 1
         elif fgi >= 25:
             scores["slowdown"]  += 2
         else:
             scores["recession"] += 2
 
-    # SP500 3-month momentum
+    # S&P500 3M 모멘텀
     if sp_m is not None:
         available += 1
         if sp_m >= 8:
             scores["expansion"] += 2
         elif sp_m >= 2:
-            scores["recovery"]  += 1; scores["expansion"] += 1
+            scores["recovery"]  += 1
         elif sp_m >= -5:
             scores["slowdown"]  += 1
         else:
             scores["recession"] += 2
 
     if available == 0:
-        return "expansion", 30   # default fallback
+        return "expansion", 30
 
     best_phase = max(scores, key=lambda k: scores[k])
     best_score = scores[best_phase]
@@ -293,64 +303,67 @@ def _score_us_phase(ind: dict) -> tuple[str, int]:
 
 
 def _score_kr_phase(ind: dict) -> tuple[str, int]:
-    """Score Korea indicators → (phase_en, confidence%)."""
+    """
+    한국 지표 스코어링 → (phase_en, confidence%)
+    yfinance 프록시 기준:
+      EWY 모멘텀(CLI proxy) / SOXX 모멘텀(수출) / 원화강도(BOK 대용) / KOSPI / USD/KRW
+    """
     scores = {"recovery": 0, "expansion": 0, "slowdown": 0, "recession": 0}
-
-    cli     = ind["cli"]["value"]
-    export  = ind["export_growth"]["value"]
-    bok     = ind["bok_rate"]["value"]
-    kospi_m = ind["kospi_momentum"]["value"]
-    krw     = ind["usd_krw"]["value"]
-
     available = 0
 
-    # OECD CLI (Korea): >100 and rising → expansion
+    cli     = ind["cli"]["value"]           # EWY 3M %
+    export  = ind["export_growth"]["value"] # SOXX 3M %
+    bok     = ind["bok_rate"]["value"]      # -(USD/KRW 3M 변화%) : 원화강도
+    kospi_m = ind["kospi_momentum"]["value"] # ^KS11 3M %
+    krw     = ind["usd_krw"]["value"]       # USD/KRW 현재값
+
+    # EWY 선행모멘텀
     if cli is not None:
         available += 1
-        if cli >= 101.0:
+        if cli > 5:
             scores["expansion"] += 2
-        elif cli >= 100.0:
-            scores["recovery"]  += 1; scores["expansion"] += 1
-        elif cli >= 99.0:
+        elif cli > 0:
+            scores["recovery"]  += 1
+        elif cli > -5:
             scores["slowdown"]  += 2
         else:
             scores["recession"] += 2
 
-    # Export YoY growth
+    # 반도체(SOXX) 수출 대용
     if export is not None:
         available += 1
-        if export >= 10:
+        if export > 5:
             scores["expansion"] += 2
-        elif export >= 0:
-            scores["recovery"]  += 1; scores["expansion"] += 1
-        elif export >= -5:
+        elif export > 0:
+            scores["recovery"]  += 1
+        elif export > -10:
             scores["slowdown"]  += 2
         else:
             scores["recession"] += 2
 
-    # BOK base rate (high → potentially restrictive)
+    # 원화강도 proxy (양수 = 원화 강세 = 긍정, 음수 = 원화 약세 = 부정)
     if bok is not None:
         available += 1
-        if bok >= 3.5:
-            scores["slowdown"]  += 1; scores["recession"] += 1
-        elif bok >= 2.5:
-            scores["expansion"] += 1; scores["slowdown"]  += 1
+        if bok > 3:
+            scores["expansion"] += 2
+        elif bok > -3:
+            scores["recovery"]  += 1
         else:
-            scores["recovery"]  += 2
+            scores["recession"] += 2
 
-    # KOSPI 3-month momentum
+    # KOSPI 3M 모멘텀
     if kospi_m is not None:
         available += 1
         if kospi_m >= 8:
             scores["expansion"] += 2
         elif kospi_m >= 2:
-            scores["recovery"]  += 1; scores["expansion"] += 1
+            scores["recovery"]  += 1
         elif kospi_m >= -5:
             scores["slowdown"]  += 1
         else:
             scores["recession"] += 2
 
-    # USD/KRW: high KRW (weak) → risk-off / recession pressure
+    # USD/KRW 환율 수준
     if krw is not None:
         available += 1
         if krw >= 1450:
@@ -358,7 +371,7 @@ def _score_kr_phase(ind: dict) -> tuple[str, int]:
         elif krw >= 1350:
             scores["slowdown"]  += 1
         elif krw >= 1250:
-            scores["expansion"] += 1; scores["recovery"] += 1
+            scores["recovery"]  += 1
         else:
             scores["expansion"] += 2
 
@@ -578,8 +591,8 @@ async def get_macro_compass():
     - per-indicator values and their last update dates
     24h cached.
     """
-    cache_key = "macro_compass_v1"
-    now_ts = time.time()
+    cache_key = "macro_compass_v2"
+    now_ts = __import__("time").time()
     if cache_key in _compass_cache:
         cached, ts = _compass_cache[cache_key]
         if now_ts - ts < CACHE_TTL:
