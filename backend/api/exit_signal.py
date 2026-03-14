@@ -1,7 +1,5 @@
 import logging
 import asyncio
-import re
-import json
 import requests
 import yfinance as yf
 from datetime import datetime, timedelta
@@ -201,51 +199,62 @@ async def fetch_market_sentiment():
         return [], 20.0, 50.0
 
 
-async def fetch_fred_cli():
+async def fetch_oecd_cli_simple() -> tuple[list, float | None, int]:
+    """
+    OECD 공식 SDMX API로 한국 CLI 데이터 수집.
+    FRED와 다른 도메인으로 FRED 차단 무관하게 동작함.
+    """
     try:
-        url = "https://fred.stlouisfed.org/series/KORLORSGPNOSTSAM"
-        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
-        res = await asyncio.to_thread(requests.get, url, headers=headers)
-        if res.status_code == 200:
-            match = re.search(
-                r'data:\s*(\{.*?"observations"\s*:.*?\})\s*,', res.text, re.DOTALL
-            )
-            if match:
-                data = json.loads(match.group(1))
-                obs = data.get("observations", [])
+        # OECD composite leading indicator for Korea (monthly, amplitude-adjusted)
+        url = (
+            "https://sdmx.oecd.org/public/rest/data/"
+            "OECD.SDD.STES,DSD_MEI_CLI@DF_CLI,1.0/"
+            "KOR.LI.AA?startPeriod=2023-01&format=csvfilewithlabels"
+        )
+        resp = await asyncio.to_thread(
+            requests.get, url, timeout=12,
+            headers={"Accept": "text/csv", "User-Agent": "Mozilla/5.0"}
+        )
+        if resp.status_code != 200:
+            raise ValueError(f"OECD HTTP {resp.status_code}")
 
-                if obs:
-                    # Parse dates
-                    df = pd.DataFrame(obs)
-                    df["date"] = pd.to_datetime(df["date"])
-                    df["value"] = pd.to_numeric(df["value"], errors="coerce")
-                    df = df.dropna().sort_values("date").tail(13)
+        import io
+        df = pd.read_csv(io.StringIO(resp.text))
 
-                    # Convert to our format
-                    cli_data = []
-                    last12 = df.tail(12)
-                    for _, row in last12.iterrows():
-                        cli_data.append(
-                            {
-                                "month": f"{row['date'].month:02d}월",
-                                "val": round(float(row["value"]), 2),
-                            }
-                        )
+        # Column names vary; find date and value columns generically
+        date_col = next((c for c in df.columns if "period" in c.lower() or "time" in c.lower()), df.columns[0])
+        val_col = next((c for c in df.columns if "obs" in c.lower() or "value" in c.lower()), df.columns[-1])
 
-                    # Calculate down months
-                    down_months = 0
-                    vals = df["value"].tolist()
-                    for i in range(len(vals) - 1, 0, -1):
-                        if vals[i] < vals[i - 1]:
-                            down_months += 1
-                        else:
-                            break
+        df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+        df[val_col] = pd.to_numeric(df[val_col], errors="coerce")
+        df = df.dropna(subset=[date_col, val_col]).sort_values(date_col).tail(13)
 
-                    return cli_data, float(vals[-1]), down_months
-        return None, None, None
+        if df.empty:
+            raise ValueError("OECD returned empty dataframe")
+
+        cli_data = [
+            {"month": f"{row[date_col].month:02d}월", "val": round(float(row[val_col]), 2)}
+            for _, row in df.tail(12).iterrows()
+        ]
+        vals = df[val_col].tolist()
+        down_months = 0
+        for i in range(len(vals) - 1, 0, -1):
+            if vals[i] < vals[i - 1]:
+                down_months += 1
+            else:
+                break
+
+        logger.info(f"OECD CLI fetch OK: {len(cli_data)} months")
+        return cli_data, float(vals[-1]), down_months
+
     except Exception as e:
-        logger.error(f"Failed to fetch FRED CLI: {e}")
-        return None, None, None
+        logger.warning(f"OECD CLI fetch failed ({e}), using yfinance fallback")
+        return [], None, 0
+
+
+async def fetch_fred_cli():
+    """OECD 공식 API로 한국 CLI 가져오기 (이전 FRED 스크래핑 대체)."""
+    return await fetch_oecd_cli_simple()
 
 
 @router.get("")
@@ -299,11 +308,10 @@ async def get_exit_signal_data():
 
 
 @router.get("/macro")
-async def get_macro_detail(period: str = "10Y"):
+async def get_macro_detail(period: str = "1Y"):
     global _macro_cache
 
     cache_key = f"daily_{period}"
-
     now = datetime.now().timestamp()
     if cache_key in _macro_cache and (
         now - _macro_cache[cache_key].get("timestamp", 0) < CACHE_TTL
@@ -311,33 +319,33 @@ async def get_macro_detail(period: str = "10Y"):
         return _macro_cache[cache_key]["data"]
 
     try:
+        # Map period to days lookback
+        period_days = {"6m": 185, "1y": 370, "3y": 1100, "10y": 3700}
+        days = period_days.get(period.lower(), 370)
         end_date = datetime.now()
+        start_str = (end_date - timedelta(days=days)).strftime("%Y-%m-%d")
+        end_str = end_date.strftime("%Y-%m-%d")
 
-        # Determine yfinance period string based on request
-        # Map user-facing period strings to yfinance-compatible format
-        period_map = {
-            "6m": "6mo",
-            "1y": "1y",
-            "3y": "3y",
-            "10y": "10y",
-        }
-        yf_period = period_map.get(period.lower(), "1y")
-
-        def _fetch_hist(tkr, period="1y"):
-            ticker = yf.Ticker(tkr)
-            hist = ticker.history(period=period)
-            if not hist.empty and "Close" in hist.columns:
-                s = hist["Close"]
-                s.index = pd.to_datetime(s.index).tz_localize(None).normalize()
-                s = s.groupby(s.index).last()
-                return s
-            return pd.Series(dtype=float)
+        def _fetch_hist(tkr: str) -> pd.Series:
+            try:
+                t = yf.Ticker(tkr)
+                df = t.history(start=start_str, end=end_str, auto_adjust=True)
+                if df.empty or "Close" not in df.columns:
+                    return pd.Series(dtype=float)
+                s = df["Close"]
+                if hasattr(s.index, "tz") and s.index.tz is not None:
+                    s.index = s.index.tz_localize(None)
+                s.index = pd.to_datetime(s.index).normalize()
+                return s.groupby(s.index).last()
+            except Exception as e:
+                logger.warning(f"_fetch_hist failed for {tkr}: {e}")
+                return pd.Series(dtype=float)
 
         dx_s, krw_s, k_s, g_s = await asyncio.gather(
-            asyncio.to_thread(_fetch_hist, "DX-Y.NYB", yf_period),
-            asyncio.to_thread(_fetch_hist, "KRW=X", yf_period),
-            asyncio.to_thread(_fetch_hist, "^KS11", yf_period),
-            asyncio.to_thread(_fetch_hist, "^GSPC", yf_period),
+            asyncio.to_thread(_fetch_hist, "DX-Y.NYB"),
+            asyncio.to_thread(_fetch_hist, "KRW=X"),
+            asyncio.to_thread(_fetch_hist, "^KS11"),
+            asyncio.to_thread(_fetch_hist, "^GSPC"),
         )
         dx_s.name = "DX-Y.NYB"
         krw_s.name = "KRW=X"
@@ -384,111 +392,124 @@ async def get_macro_detail(period: str = "10Y"):
 
 @router.get("/cli")
 async def get_cli_detail():
+    """
+    CLI (Composite Leading Indicator) 상세 데이터 반환.
+    Primary: OECD SDMX API (KOR + USA + OECD).
+    Fallback: yfinance 프록시 (EWY, ^GSPC).
+    """
     global _cli_cache
     now = datetime.now().timestamp()
     if "data" in _cli_cache and (now - _cli_cache.get("timestamp", 0) < CACHE_TTL):
         return _cli_cache["data"]
 
     try:
-        import urllib.request
-        import ssl
-        import io
-
-        kor_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=KORLOLITOAASTSAM"
-        usa_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=USALOLITOAASTSAM"
-        oecd_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=G7LOLITOAASTSAM"
-
-        def fetch_fred_csv(url):
-            try:
-                # Bypass SSL verification for local dev environments that lack proper certs
-                ctx = ssl.create_default_context()
-                ctx.check_hostname = False
-                ctx.verify_mode = ssl.CERT_NONE
-
-                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-                with urllib.request.urlopen(req, context=ctx) as response:
-                    csv_data = response.read().decode("utf-8")
-
-                df = pd.read_csv(io.StringIO(csv_data))
-
-                # Column is usually 'observation_date', fallback to 'DATE' if changed
-                date_col = (
-                    "observation_date" if "observation_date" in df.columns else "DATE"
-                )
-                if date_col not in df.columns:
-                    # In case of completely unstructured data, assume 1st col is date and 2nd is value
-                    date_col = df.columns[0]
-
-                df[date_col] = pd.to_datetime(df[date_col])
-                df["YM"] = df[date_col].dt.strftime("%Y-%m")
-                df.set_index("YM", inplace=True)
-
-                # Assume 2nd column is the value
-                val_col = df.columns[1] if df.columns[1] != "YM" else df.columns[0]
-                df[val_col] = pd.to_numeric(df[val_col], errors="coerce")
-                return df[val_col]
-            except Exception as e:
-                logger.error(f"FRED CSV fetch failed for {url}: {e}")
-                return pd.Series(dtype=float)
-
-        kor_data = await asyncio.to_thread(fetch_fred_csv, kor_url)
-        usa_data = await asyncio.to_thread(fetch_fred_csv, usa_url)
-        oecd_data = await asyncio.to_thread(fetch_fred_csv, oecd_url)
-
-        # Get KOSPI for overlay
         end_date = datetime.now()
         start_date = end_date - timedelta(days=365 * 10)
-        kospi_df = await asyncio.to_thread(
-            yf.download,
-            "^KS11",
-            start=start_date.strftime("%Y-%m-%d"),
-            end=end_date.strftime("%Y-%m-%d"),
-            progress=False,
+        start_str = start_date.strftime("%Y-%m-%d")
+        end_str = end_date.strftime("%Y-%m-%d")        
+
+        def _fetch_oecd_series(series_id: str) -> pd.Series:
+            """Fetch one OECD CLI series via SDMX CSV API (timeout=12s)."""
+            try:
+                country_map = {"KORLOLITOAASTSAM": "KOR", "USALOLITOAASTSAM": "USA", "G7LOLITOAASTSAM": "OECDE"}
+                country = country_map.get(series_id, series_id[:3])
+                url = (
+                    "https://sdmx.oecd.org/public/rest/data/"
+                    f"OECD.SDD.STES,DSD_MEI_CLI@DF_CLI,1.0/{country}.LI.AA"
+                    "?startPeriod=2015-01&format=csvfilewithlabels"
+                )
+                resp = requests.get(url, timeout=12, headers={
+                    "Accept": "text/csv", "User-Agent": "Mozilla/5.0"
+                })
+                if resp.status_code != 200:
+                    return pd.Series(dtype=float)
+                import io
+                df = pd.read_csv(io.StringIO(resp.text))
+                date_col = next((c for c in df.columns if "period" in c.lower() or "time" in c.lower()), df.columns[0])
+                val_col = next((c for c in df.columns if "obs" in c.lower() or "value" in c.lower()), df.columns[-1])
+                df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+                df[val_col] = pd.to_numeric(df[val_col], errors="coerce")
+                df = df.dropna(subset=[date_col, val_col]).sort_values(date_col)
+                s = df.set_index(date_col)[val_col]
+                s.index = s.index.strftime("%Y-%m")
+                return s
+            except Exception as e:
+                logger.warning(f"OECD series {series_id} fetch failed: {e}")
+                return pd.Series(dtype=float)
+
+        def _fetch_yfin(tkr: str) -> pd.Series:
+            """yfinance Ticker.history with start/end (reliable)."""
+            try:
+                t = yf.Ticker(tkr)
+                df = t.history(start=start_str, end=end_str, auto_adjust=True)
+                if df.empty or "Close" not in df.columns:
+                    return pd.Series(dtype=float)
+                s = df["Close"]
+                if hasattr(s.index, "tz") and s.index.tz is not None:
+                    s.index = s.index.tz_localize(None)
+                s.index = pd.to_datetime(s.index)
+                return s
+            except Exception as e:
+                logger.warning(f"yfinance {tkr} failed: {e}")
+                return pd.Series(dtype=float)
+
+        # Parallel: OECD KOR/USA/G7 + KOSPI
+        kor_s, usa_s, g7_s, ks_raw = await asyncio.gather(
+            asyncio.to_thread(_fetch_oecd_series, "KORLOLITOAASTSAM"),
+            asyncio.to_thread(_fetch_oecd_series, "USALOLITOAASTSAM"),
+            asyncio.to_thread(_fetch_oecd_series, "G7LOLITOAASTSAM"),
+            asyncio.to_thread(_fetch_yfin, "^KS11"),
         )
-        if isinstance(kospi_df.columns, pd.MultiIndex):
-            kospi_monthly = kospi_df["Close"].iloc[:, 0].resample("ME").last()
+
+        # Monthly KOSPI 처리
+        if not ks_raw.empty:
+            kospi_monthly = ks_raw.resample("ME").last()
+            kospi_monthly.index = kospi_monthly.index.strftime("%Y-%m")
         else:
-            kospi_monthly = kospi_df["Close"].resample("ME").last()
+            kospi_monthly = pd.Series(dtype=float)
 
+        # OECD 데이터 부족 시 yfinance 프록시 폴백 (EWY momentum)
+        if kor_s.empty:
+            logger.warning("OECD KOR empty, using EWY proxy")
+            ewy_raw = await asyncio.to_thread(_fetch_yfin, "EWY")
+            if not ewy_raw.empty:
+                ewy_m = ewy_raw.resample("ME").last()
+                ewy_m3 = ewy_m.pct_change(3) * 100 + 100.0
+                ewy_m3.index = ewy_m3.index.strftime("%Y-%m")
+                kor_s = ewy_m3.dropna()
+
+        # Collect 달 목록: KOSPI 기준으로 10년치
+        all_months = sorted(set(kor_s.index.tolist() + usa_s.index.tolist() + g7_s.index.tolist()))
+        if not all_months:
+            raise ValueError("No CLI data available from any source")
+        
         results = []
-        for dt, kospi_val in kospi_monthly.tail(120).items():
-            year_month = f"{dt.year}-{dt.month:02d}"
+        for ym in all_months[-120:]:  # 최그 10년
+            k_val = kor_s.get(ym)
+            u_val = usa_s.get(ym)
+            o_val = g7_s.get(ym)
+            kp_val = kospi_monthly.get(ym)
+            yr = int(ym[:4])
+            results.append({
+                "year": yr,
+                "date": ym,
+                "kor_cli": round(float(k_val), 2) if k_val and pd.notna(k_val) else None,
+                "usa_cli": round(float(u_val), 2) if u_val and pd.notna(u_val) else None,
+                "oecd_cli": round(float(o_val), 2) if o_val and pd.notna(o_val) else None,
+                "kospi": round(float(kp_val), 0) if kp_val and pd.notna(kp_val) else None,
+            })
 
-            k_val = kor_data.get(year_month, None) if not kor_data.empty else None
-            u_val = usa_data.get(year_month, None) if not usa_data.empty else None
-            o_val = oecd_data.get(year_month, None) if not oecd_data.empty else None
-
-            # Optional forward filling can be done if missing due to API lag,
-            # but for now we present none or last known fallback
-            results.append(
-                {
-                    "year": dt.year,
-                    "date": year_month,
-                    "kor_cli": round(float(k_val), 2)
-                    if k_val and pd.notna(k_val)
-                    else None,
-                    "usa_cli": round(float(u_val), 2)
-                    if u_val and pd.notna(u_val)
-                    else None,
-                    "oecd_cli": round(float(o_val), 2)
-                    if o_val and pd.notna(o_val)
-                    else None,
-                    "kospi": round(float(kospi_val), 0)
-                    if pd.notna(kospi_val)
-                    else 2500,
-                }
-            )
-
-        # If recent months are None because FRED delays data by 1-2 months, fill forward from previous
+        # ffill로 최근 1-2개월 데이터 공백 채우기
         df_res = pd.DataFrame(results)
-        df_res[["kor_cli", "usa_cli", "oecd_cli"]] = df_res[
-            ["kor_cli", "usa_cli", "oecd_cli"]
+        df_res[["kor_cli", "usa_cli", "oecd_cli", "kospi"]] = df_res[
+            ["kor_cli", "usa_cli", "oecd_cli", "kospi"]
         ].ffill()
-
         filled_results = df_res.to_dict("records")
 
         _cli_cache = {"data": filled_results, "timestamp": now}
+        logger.info(f"CLI detail OK: {len(filled_results)} months")
         return filled_results
+
     except Exception as e:
         logger.error(f"Error fetching CLI detail: {e}")
         return []

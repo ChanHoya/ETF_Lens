@@ -1,7 +1,130 @@
-import React from 'react';
-import { Aperture, Star } from "lucide-react";
+import React, { useState, useEffect, useRef } from 'react';
+import { Aperture, Star, Activity } from "lucide-react";
 
 import { useRouter, usePathname } from 'next/navigation';
+import { API_BASE } from '../lib/apiConfig';
+
+// ── API 헬스 상태 ──────────────────────────────────────────────────────────────
+interface CheckResult { ok: boolean; latency_ms?: number; error?: string }
+interface HealthData {
+  status: 'ok' | 'degraded' | 'error';
+  checks: Record<string, CheckResult>;
+  checked_at: string;
+  notes?: Record<string, string>;
+}
+
+const STATUS_COLOR: Record<string, string> = {
+  ok: '#34d399',      // 초록
+  degraded: '#fbbf24', // 노란
+  error: '#f87171',   // 빨강
+};
+const CHECK_LABELS: Record<string, string> = {
+  yfinance_history: 'yfinance (start/end)',
+  yfinance_period:  'yfinance (period=)',
+  oecd_cli:         'OECD CLI API',
+  fred:             'FRED API',
+  gemini:           'Gemini AI',
+};
+
+function HealthBadge() {
+  const [health, setHealth] = useState<HealthData | null>(null);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const fetchHealth = () => {
+    fetch(`${API_BASE}/api/v1/health`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setHealth(d))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 5 * 60 * 1000); // 5분마다
+    return () => clearInterval(interval);
+  }, []);
+
+  // 외부 클릭 시 팝업 닫기
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const color = health ? STATUS_COLOR[health.status] : '#6b7280';
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => { setOpen(o => !o); if (!health) fetchHealth(); }}
+        title="외부 API 연동 상태"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '8px 12px', borderRadius: 9999, fontSize: 12, fontWeight: 600,
+          background: 'rgba(255,255,255,0.06)', border: `1px solid ${color}40`,
+          color: '#cbd5e1', cursor: 'pointer', transition: 'all 0.2s',
+        }}
+      >
+        <span style={{
+          width: 8, height: 8, borderRadius: '50%', background: color,
+          boxShadow: `0 0 6px ${color}`,
+          animation: health?.status !== 'ok' ? 'pulse 1.5s infinite' : 'none',
+        }} />
+        <Activity size={12} />
+        API
+      </button>
+
+      {open && health && (
+        <div style={{
+          position: 'absolute', right: 0, top: '110%', zIndex: 9999,
+          background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 12, padding: 16, minWidth: 280,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 10 }}>
+            🔌 외부 API 통합 상태
+            <span style={{ float: 'right', fontWeight: 400, color: '#64748b' }}>
+              {health.checked_at?.substring(11, 19)}
+            </span>
+          </div>
+          {Object.entries(health.checks).map(([key, v]) => (
+            <div key={key} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.05)',
+              fontSize: 12,
+            }}>
+              <span style={{ color: '#cbd5e1' }}>{CHECK_LABELS[key] ?? key}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {v.latency_ms != null && (
+                  <span style={{ color: '#64748b', fontSize: 10 }}>{v.latency_ms}ms</span>
+                )}
+                {v.ok
+                  ? <span style={{ color: '#34d399', fontSize: 11 }}>✓ OK</span>
+                  : <span style={{ color: '#f87171', fontSize: 11 }} title={v.error}>✗ 실패</span>
+                }
+              </span>
+            </div>
+          ))}
+          <div style={{ marginTop: 8, fontSize: 10, color: '#475569' }}>
+            핵심: yfinance(start/end), OECD CLI
+          </div>
+          <button
+            onClick={fetchHealth}
+            style={{
+              marginTop: 8, width: '100%', padding: '4px 0', borderRadius: 6,
+              background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
+              color: '#a5b4fc', fontSize: 11, cursor: 'pointer',
+            }}
+          >
+            🔄 지금 다시 체크
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 type NavigationTabsProps = {
     activeTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call';
@@ -15,6 +138,7 @@ type NavigationTabsProps = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data?: any;
 };
+
 
 export default function NavigationTabs({
     activeTab, setActiveTab,
@@ -120,6 +244,9 @@ export default function NavigationTabs({
                     <span role="img" aria-label="money">💰</span> My
                 </span>
             </button>
+
+            {/* API 헬스 상태 뱃지 */}
+            <HealthBadge />
         </nav>
     );
 }
