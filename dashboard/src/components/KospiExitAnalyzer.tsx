@@ -588,17 +588,17 @@ export default function KospiExitAnalyzer() {
             </div>
 
             {activePopup && (
-                /* 화면 전체 오버레이 — 현재 뷰포트 중앙에 고정 */
+                /* 화면 전체 오버레이 — 현재 뷰포트 최상단부터 시작 */
                 <div
-                    className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+                    className="fixed inset-0 z-[200] flex items-start justify-center"
                     onClick={() => setActivePopup(null)}
                 >
                     {/* 반투명 배경 */}
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
-                    {/* 팝업 패널 */}
+                    {/* 팝업 패널 — 뷰포트 상단부터 85% 높이 */}
                     <div
-                        className="relative w-full max-w-4xl max-h-[85vh] bg-[#1a1a2e] border border-white/20 rounded-2xl flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.9)] animate-in fade-in zoom-in-95 duration-200 overflow-hidden"
+                        className="relative w-full max-w-4xl h-[90vh] bg-[#1a1a2e] border border-white/20 rounded-b-2xl flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.9)] animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* 헤더 */}
