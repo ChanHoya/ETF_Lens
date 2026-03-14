@@ -52,12 +52,12 @@ async def get_db_version(db: AsyncSession = Depends(get_db)):
         if max_time:
             # max_time is naive UTC. Add 9 hours for KST.
             kst_time = max_time + timedelta(hours=9)
-            version_str = kst_time.strftime("DB ver.%Y%m%d%H%M")
+            version_str = kst_time.strftime("VER %y%m%d%H%M")
             return {"version": version_str}
     except Exception as e:
         logger.error(f"Error fetching DB version: {e}")
 
-    return {"version": "DB ver.Updating..."}
+    return {"version": "VER --"}
 
 
 @router.get("/health")

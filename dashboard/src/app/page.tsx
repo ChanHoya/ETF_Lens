@@ -53,7 +53,7 @@ export default function Home() {
   const [naverEtfCode, setNaverEtfCode] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isLoadingChart, setIsLoadingChart] = useState(false);
-  const [dbVersion, setDbVersion] = useState<string>("DB ver.Loading...");
+  const [dbVersion, setDbVersion] = useState<string>("VER --");
   const [healthStatus, setHealthStatus] = useState<'pending' | 'ok' | 'error'>('pending');
   const [failedServices, setFailedServices] = useState<string[]>([]);
   // 테마 키워드 AND/OR 토글: true = AND(&, 기본값), false = OR
@@ -808,7 +808,7 @@ export default function Home() {
             <Aperture className="w-6 h-6 md:w-10 md:h-10 text-indigo-400 group-hover:rotate-180 transition-transform duration-700" />
             ETF Lens
             <div className="hidden sm:flex flex-col gap-1 items-start ml-2">
-              <span className={`text-[10px] md:text-[11px] font-mono font-medium px-2 py-0.5 rounded-md uppercase tracking-widest whitespace-nowrap ${dbVersion.includes("Loading") || dbVersion.includes("Updating")
+              <span className={`text-[10px] md:text-[11px] font-mono font-medium px-2 py-0.5 rounded-md uppercase tracking-widest whitespace-nowrap ${dbVersion === 'VER --'
                 ? "text-rose-400 bg-rose-400/10 border border-rose-400/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse"
                 : "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
                 }`}>
