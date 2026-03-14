@@ -86,6 +86,14 @@ export default function KospiExitAnalyzer() {
 
     // Popup State
     const [activePopup, setActivePopup] = useState<'dollar' | 'per' | 'cli' | 'vix' | 'fgi' | null>(null);
+    const [popupTop, setPopupTop] = useState(0); // 클릭된 카드의 뷰포트 Y 위치
+
+    // 카드 클릭 시 Y 위치 캡처 후 팝업 열기
+    const openPopup = (type: 'dollar' | 'per' | 'cli' | 'vix' | 'fgi', e: React.MouseEvent<HTMLDivElement>) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setPopupTop(Math.round(rect.top));
+        setActivePopup(type);
+    };
 
     // API State
     const [loading, setLoading] = useState(true);
@@ -284,7 +292,7 @@ export default function KospiExitAnalyzer() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* 1. Dollar Index */}
-                <div onClick={() => setActivePopup('dollar')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
+                <div onClick={(e) => openPopup('dollar', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><DollarSign className="w-4 h-4" /> 달러 인덱스/환율 추이</h4>
@@ -344,7 +352,7 @@ export default function KospiExitAnalyzer() {
                 </div>
 
                 {/* 2. Forward P/E */}
-                <div onClick={() => setActivePopup('per')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
+                <div onClick={(e) => openPopup('per', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><BarChart2 className="w-4 h-4" /> 포워드 PER</h4>
@@ -403,7 +411,7 @@ export default function KospiExitAnalyzer() {
                 </div>
 
                 {/* 3. OECD CLI */}
-                <div onClick={() => setActivePopup('cli')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
+                <div onClick={(e) => openPopup('cli', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><TrendingDown className="w-4 h-4" /> 경기 선행 지수 (CLI)</h4>
@@ -491,7 +499,7 @@ export default function KospiExitAnalyzer() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* VIX */}
-                <div onClick={() => setActivePopup('vix')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
+                <div onClick={(e) => openPopup('vix', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> VIX(CBOE Volatility Index)</h4>
@@ -535,7 +543,7 @@ export default function KospiExitAnalyzer() {
                 </div>
 
                 {/* Fear & Greed */}
-                <div onClick={() => setActivePopup('fgi')} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
+                <div onClick={(e) => openPopup('fgi', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> Fear & Greed Index (공포탐욕지수)</h4>
@@ -590,15 +598,17 @@ export default function KospiExitAnalyzer() {
             {activePopup && (
                 /* 화면 전체 오버레이 — 현재 뷰포트 최상단부터 시작 */
                 <div
-                    className="fixed inset-0 z-[200] flex items-start justify-center"
+                    className="fixed left-0 right-0 bottom-0 z-[200] flex items-start justify-center"
+                    style={{ top: `${popupTop}px` }}
                     onClick={() => setActivePopup(null)}
                 >
                     {/* 반투명 배경 */}
-                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+                    <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
 
-                    {/* 팝업 패널 — 뷰포트 상단부터 85% 높이 */}
+                    {/* 팝업 패널 — 카드 위치부터 화면 끝까지 */}
                     <div
-                        className="relative w-full max-w-4xl h-[90vh] bg-[#1a1a2e] border border-white/20 rounded-b-2xl flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.9)] animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden"
+                        className="relative w-full max-w-4xl bg-[#1a1a2e] border border-white/20 rounded-2xl flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.9)] animate-in fade-in slide-in-from-top-1 duration-150 overflow-hidden"
+                        style={{ height: `calc(100vh - ${popupTop}px - 8px)` }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* 헤더 */}
