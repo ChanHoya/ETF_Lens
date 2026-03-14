@@ -596,19 +596,17 @@ export default function KospiExitAnalyzer() {
             </div>
 
             {activePopup && (
-                /* 화면 전체 오버레이 — 현재 뷰포트 최상단부터 시작 */
+                /* 현재 보이는 화면 전체를 팝업으로 덮음 (fixed = 스크롤 위치 무관, 항상 뷰포트 기준) */
                 <div
-                    className="fixed left-0 right-0 bottom-0 z-[200] flex items-start justify-center"
-                    style={{ top: `${popupTop}px` }}
+                    className="fixed inset-0 z-[200] flex items-stretch justify-center"
                     onClick={() => setActivePopup(null)}
                 >
                     {/* 반투명 배경 */}
                     <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
 
-                    {/* 팝업 패널 — 카드 위치부터 화면 끝까지 */}
+                    {/* 팝업 패널 — 뷰포트 전체 높이 채움 */}
                     <div
-                        className="relative w-full max-w-4xl bg-[#1a1a2e] border border-white/20 rounded-2xl flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.9)] animate-in fade-in slide-in-from-top-1 duration-150 overflow-hidden"
-                        style={{ height: `calc(100vh - ${popupTop}px - 8px)` }}
+                        className="relative w-full max-w-4xl bg-[#1a1a2e] border-x border-white/20 flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.9)] animate-in fade-in duration-150 overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* 헤더 */}
