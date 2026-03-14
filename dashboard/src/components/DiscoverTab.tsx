@@ -6,6 +6,7 @@ import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, Pola
 import KospiExitAnalyzer from '@/components/KospiExitAnalyzer';
 import MacroRotation from '@/components/MacroRotation';
 import SemiChart from '@/components/SemiChart';
+import MacroCompass from '@/components/MacroCompass';
 
 
 export default function DiscoverTab() {
@@ -144,6 +145,9 @@ export default function DiscoverTab() {
 
                 {/* SemiChart: Semiconductor Indices */}
                 <SemiChart />
+
+                {/* AI Macro Rotation Compass */}
+                <MacroCompass />
 
                 {/* Middle: Macro Rotation */}
                 <MacroRotation />
