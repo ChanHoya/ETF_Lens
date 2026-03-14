@@ -5,6 +5,7 @@ import { Search, TrendingUp, ShieldCheck, Zap, Activity, AlertCircle, X } from '
 import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip as RechartsTooltip } from 'recharts';
 import KospiExitAnalyzer from '@/components/KospiExitAnalyzer';
 import SemiChart from '@/components/SemiChart';
+import MacroCompass from '@/components/MacroCompass';
 
 
 export default function DiscoverTab() {
@@ -144,6 +145,8 @@ export default function DiscoverTab() {
                 {/* SemiChart: Semiconductor Indices */}
                 <SemiChart />
 
+                {/* AI 매크로 로테이션 나침반 (미국/한국 분석) */}
+                <MacroCompass />
 
 
                 {/* Bottom: Selection List (Left) and Radar Details (Right) */}
