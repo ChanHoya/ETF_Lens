@@ -9,3 +9,22 @@ body {
   background-color: #030712;
   /* gray-950 */
 }
+
+/* 모바일 하단 네비게이션 높이 만큼 콘텐츠 여백 확보 */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mobile-content-area {
+    padding-bottom: 72px; /* 하단 네비 60px + 여유 12px */
+  }
+}
+
+/* 수평 스크롤바 숨기기 (서브탭 등) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

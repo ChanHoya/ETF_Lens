@@ -801,10 +801,11 @@ export default function Home() {
         <div className="absolute bottom-[-10%] left-[10%] w-[60vw] h-[60vw] rounded-full bg-pink-600/10 blur-[150px] mix-blend-screen transition-all duration-1000"></div>
       </div>
 
-      <header className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 flex flex-col md:flex-row justify-between items-center gap-3 relative z-50">
-        <div className="flex flex-col items-start w-full md:w-auto cursor-pointer group" onClick={handleReset}>
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 drop-shadow-sm flex items-center gap-3 group-hover:opacity-80 transition-opacity">
-            <Aperture className="w-8 h-8 md:w-10 md:h-10 text-indigo-400 group-hover:rotate-180 transition-transform duration-700" />
+      <header className="w-full max-w-[95vw] xl:max-w-[1400px] mb-2 md:mb-4 flex flex-row md:flex-row justify-between items-center gap-2 md:gap-3 relative z-50">
+        {/* 로고 */}
+        <div className="flex flex-col items-start cursor-pointer group shrink-0" onClick={handleReset}>
+          <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 drop-shadow-sm flex items-center gap-2 group-hover:opacity-80 transition-opacity">
+            <Aperture className="w-6 h-6 md:w-10 md:h-10 text-indigo-400 group-hover:rotate-180 transition-transform duration-700" />
             ETF Lens
             <div className="hidden sm:flex flex-col gap-1 items-start ml-2">
               <span className={`text-[10px] md:text-[11px] font-mono font-medium px-2 py-0.5 rounded-md uppercase tracking-widest whitespace-nowrap ${dbVersion.includes("Loading") || dbVersion.includes("Updating")
@@ -827,12 +828,13 @@ export default function Home() {
           </h1>
         </div>
 
-        {/* AI Assistant 버튼 — 로고 우측, 탭 메뉴 사이 */}
-        <ChatBot renderTrigger isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
+        {/* 우측: AI 버튼 + 탭 (PC에서만 탭 표시) */}
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* AI Assistant 버튼 */}
+          <ChatBot renderTrigger isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
 
-        <div className="flex items-center gap-4 md:gap-6">
-          {/* 메인 탭만 헤더에 */}
-          <nav className="flex items-center gap-2 md:gap-6 bg-white/[0.03] px-6 py-2 rounded-full border border-white/10 backdrop-blur-md shadow-sm">
+          {/* 메인 탭 — PC 전용 (모바일은 하단 네비로 대체) */}
+          <nav className="hidden md:flex items-center gap-2 md:gap-4 bg-white/[0.03] px-4 md:px-6 py-2 rounded-full border border-white/10 backdrop-blur-md shadow-sm">
             {[
               { id: 'analysis', label: '종목분석' },
               { id: 'covered_call', label: '커버드콜' },
@@ -854,7 +856,6 @@ export default function Home() {
                       return;
                     }
                     if (tab.id === 'etftracker') {
-                      // 새창으로 바로 열기
                       window.open('https://ystreet.co.kr/etf-tracker/', '_blank', 'noopener,noreferrer');
                       return;
                     }
@@ -863,14 +864,12 @@ export default function Home() {
                       setIsEtfCheckModalOpen(false);
                       return;
                     }
-
                     setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call');
                     setIsEtfCheckModalOpen(false);
                     setNaverEtfCode(null);
                     setSelectedDetailEtf(null);
                   }}
-                  className={`text-sm md:text-base tracking-wide font-bold transition-all px-4 py-1.5 rounded-full whitespace-nowrap ${isActive ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'
-                    }`}
+                  className={`text-sm tracking-wide font-bold transition-all px-3 md:px-4 py-1.5 rounded-full whitespace-nowrap ${isActive ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'}`}
                 >
                   {tab.label}
                 </button>
@@ -883,7 +882,8 @@ export default function Home() {
       {/* 서브탭: 종목분석 탭 선택시만 헤더 아래에 표시 */}
       {['select', 'info', 'chart', 'holdings'].includes(activeTab) && !isEtfCheckModalOpen && (
         <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-50">
-          <nav className="flex items-center gap-2 md:gap-4 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 shadow-sm backdrop-blur-md">
+          {/* 모바일: 수평 스크롤 가능한 서브탭 */}
+          <nav className="flex items-center gap-2 md:gap-4 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 shadow-sm backdrop-blur-md overflow-x-auto scrollbar-hide">
             {[
               { id: 'select', label: '종목선택' },
               { id: 'info', label: '기본정보' },
@@ -901,7 +901,7 @@ export default function Home() {
                   setNaverEtfCode(null);
                   setSelectedDetailEtf(null);
                 }}
-                className={`text-xs md:text-sm font-bold transition-all px-3 py-1 rounded-full ${activeTab === subTab.id ? 'bg-white/20 text-white shadow-inner border border-white/20' : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'}`}
+                className={`text-xs md:text-sm font-bold transition-all px-3 py-1 rounded-full whitespace-nowrap ${activeTab === subTab.id ? 'bg-white/20 text-white shadow-inner border border-white/20' : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'}`}
               >
                 {subTab.label}
               </button>
@@ -917,7 +917,7 @@ export default function Home() {
         </div>
       )}
 
-      <div className="relative flex-1 flex flex-col w-full max-w-[95vw] xl:max-w-[1400px]">
+      <div className="relative flex-1 flex flex-col w-full max-w-[95vw] xl:max-w-[1400px] mobile-content-area">
 
         {/* ETF Input Section */}
         {activeTab === 'select' && (
@@ -1414,11 +1414,68 @@ export default function Home() {
       </div >
 
 
-      {/* Copyright */}
-      < div className="mt-auto w-full text-center text-sm text-gray-500/80 font-medium flex items-center justify-center gap-3 pb-1" >
+      {/* Copyright — PC only */}
+      <div className="hidden md:flex mt-auto w-full text-center text-sm text-gray-500/80 font-medium items-center justify-center gap-3 pb-1">
         <span>Copyright &copy; Hoya 2026</span>
         <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260225_0719</span>
-      </div >
-    </main >
+      </div>
+
+      {/* 모바일 전용 하단 네비게이션 바 (md 이상에서는 숨김) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[90] flex items-center justify-around bg-[#0d0d14]/95 backdrop-blur-xl border-t border-white/10 shadow-[0_-4px_24px_rgba(0,0,0,0.6)]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', height: 'calc(60px + env(safe-area-inset-bottom, 0px))' }}
+      >
+        {[
+          { id: 'analysis',     label: '종목분석',  icon: <BarChart2 className="w-5 h-5" /> },
+          { id: 'covered_call', label: '커버드콜',  icon: <Layers    className="w-5 h-5" /> },
+          { id: 'discover',     label: '모니터링',  icon: <Cpu       className="w-5 h-5" /> },
+          { id: 'etftracker',   label: 'ETF추적기', icon: <Target    className="w-5 h-5" /> },
+          { id: 'etfcheck',     label: 'ETF Check', icon: <BookOpen  className="w-5 h-5" /> },
+        ].map(tab => {
+          const isAnalysisActive = ['select', 'info', 'chart', 'holdings'].includes(activeTab);
+          const isActive =
+            (tab.id === 'etfcheck'  && isEtfCheckModalOpen) ||
+            (tab.id === 'analysis'  && isAnalysisActive && !isEtfCheckModalOpen) ||
+            (activeTab === tab.id   && !isEtfCheckModalOpen);
+          return (
+            <button
+              key={tab.id}
+              onClick={() => {
+                if (tab.id === 'etfcheck') {
+                  setIsEtfCheckModalOpen(true);
+                  setHasOpenedEtfCheck(true);
+                  return;
+                }
+                if (tab.id === 'etftracker') {
+                  window.open('https://ystreet.co.kr/etf-tracker/', '_blank', 'noopener,noreferrer');
+                  return;
+                }
+                if (tab.id === 'analysis') {
+                  setActiveTab('select');
+                  setIsEtfCheckModalOpen(false);
+                  return;
+                }
+                setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call');
+                setIsEtfCheckModalOpen(false);
+                setNaverEtfCode(null);
+                setSelectedDetailEtf(null);
+              }}
+              className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full pt-1 transition-all ${
+                isActive ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <span className={`transition-transform ${isActive ? 'scale-110' : ''}`}>
+                {tab.icon}
+              </span>
+              <span className={`text-[9px] font-bold tracking-tight ${isActive ? 'text-indigo-400' : 'text-gray-500'}`}>
+                {tab.label}
+              </span>
+              {isActive && (
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500" />
+              )}
+            </button>
+          );
+        })}
+      </nav>
+    </main>
   );
 }
