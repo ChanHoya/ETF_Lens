@@ -4,9 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, TrendingUp, ShieldCheck, Zap, Activity, AlertCircle, X } from 'lucide-react';
 import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip as RechartsTooltip } from 'recharts';
 import KospiExitAnalyzer from '@/components/KospiExitAnalyzer';
-import MacroRotation from '@/components/MacroRotation';
 import SemiChart from '@/components/SemiChart';
-import MacroCompass from '@/components/MacroCompass';
 
 
 export default function DiscoverTab() {
@@ -146,11 +144,7 @@ export default function DiscoverTab() {
                 {/* SemiChart: Semiconductor Indices */}
                 <SemiChart />
 
-                {/* AI Macro Rotation Compass */}
-                <MacroCompass />
 
-                {/* Middle: Macro Rotation */}
-                <MacroRotation />
 
                 {/* Bottom: Selection List (Left) and Radar Details (Right) */}
                 <div className="flex flex-col lg:flex-row gap-3 w-full">

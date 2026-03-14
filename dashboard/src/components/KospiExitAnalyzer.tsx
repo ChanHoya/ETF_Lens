@@ -569,6 +569,7 @@ export default function KospiExitAnalyzer() {
                                 <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                             </LineChart>
                         </ResponsiveContainer>
+                        )}
                     </div>
 
                     <div className="mt-4 text-xs text-gray-400 bg-black/40 p-3 rounded-xl flex items-start gap-2">
