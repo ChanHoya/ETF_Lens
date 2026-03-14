@@ -65,18 +65,25 @@ export default function SemiChart() {
             return;
         }
 
-        // Normalize to base 100 on the first valid day
+        // ─── 공통 기준일 계산 ───────────────────────────────────────────
+        // 모든 티커에 유효한 데이터가 있는 첫 번째 날짜를 공통 base=100 기준일로 사용.
+        // (티커별로 다른 날을 기준으로 삼으면 미국/한국 시장 개장일 차이로 그래프가 어긋남)
+        const commonBaseRow = filtered.find(d => keys.every(k => d[k] != null && d[k] > 0));
+        if (!commonBaseRow) {
+            setChartData([]);
+            return;
+        }
+
         const baseValues: any = {};
         keys.forEach(k => {
-            // Find first available value for this key
-            const firstValid = filtered.find(d => d[k] != null);
-            if (firstValid) {
-                baseValues[k] = firstValid[k];
-            }
+            baseValues[k] = commonBaseRow[k];
         });
 
-        const normalizedData = filtered.map(d => {
-            const row: any = { date: d.date.replace(/-/g, '/').substring(2) }; // short date format
+        // 공통 기준일 이후 데이터만 사용
+        const alignedData = filtered.filter(d => d.date >= commonBaseRow.date);
+
+        const normalizedData = alignedData.map(d => {
+            const row: any = { date: d.date.replace(/-/g, '/').substring(2) };
             keys.forEach(k => {
                 if (d[k] != null && baseValues[k]) {
                     row[k] = Number(((d[k] / baseValues[k]) * 100).toFixed(2));

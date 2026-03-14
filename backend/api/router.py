@@ -783,8 +783,8 @@ async def get_semi_chart_data():
         "TIGER 미필반나": "381180.KS",
     }
 
-    # 5-minute dedicated cache (v5: auto_adjust=False, split-adjusted Close only)
-    semi_cache_key = "semi_chart_v5"
+    # 5-minute dedicated cache (v6: common base-date normalization fixed on frontend)
+    semi_cache_key = "semi_chart_v6"
     if semi_cache_key in _bench_cache:
         cached_val, cached_ts = _bench_cache[semi_cache_key]
         if time.time() - cached_ts < 300:
