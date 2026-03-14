@@ -84,11 +84,12 @@ export function DollarModalContent() {
 
     const getNorm = useVisualSort(filteredData, ['dollar', 'krw', 'kospi', 'sp500']);
 
-    if (loading) return <div className="flex h-full items-center justify-center text-gray-500">Loading data...</div>;
+    if (loading) return <div className="flex items-center justify-center py-20 text-gray-500">Loading data...</div>;
 
     return (
-        <div className="relative flex flex-col h-full w-full min-h-[700px]">
-            <div className="absolute -top-16 right-12 flex gap-2 shrink-0">
+        <div className="flex flex-col w-full gap-3">
+            {/* 기간 선택 버튼 */}
+            <div className="flex gap-2 justify-end shrink-0">
                 {['6M', '1Y', '3Y', '10Y'].map(p => (
                     <button
                         key={p}
@@ -100,7 +101,8 @@ export function DollarModalContent() {
                 ))}
             </div>
 
-            <div className="w-full bg-black/20 rounded-xl p-4 border border-white/5" style={{ minHeight: '600px', flex: '1 1 auto' }}>
+            {/* 와이드 차트 — 고정 높이 */}
+            <div className="w-full bg-black/20 rounded-xl p-4 border border-white/5" style={{ height: '280px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={filteredData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
                         onMouseMove={(e) => setHoverIndex(e?.activeTooltipIndex ?? null)}
@@ -184,8 +186,8 @@ export function PerModalContent() {
     ];
 
     return (
-        <div className="w-full flex-1 flex flex-col space-y-4 min-h-[700px]">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+        <div className="w-full flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <PerMiniChart title="KOSPI (기준 지수)" isKospi={true} />
                 <PerMiniChart title={defaultStocks[0].name} symbol={defaultStocks[0].id} />
                 <PerMiniChart title={defaultStocks[1].name} symbol={defaultStocks[1].id} />
@@ -260,7 +262,7 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
     const getNormPer = useVisualSort(data, ['val', 'kospi']);
 
     return (
-        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 flex flex-col min-h-[300px] flex-1">
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 flex flex-col">
             <div className="flex justify-between items-start mb-3 shrink-0">
                 <div className="flex items-baseline gap-3">
                     {isKospi ? (
@@ -294,7 +296,7 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
                     )}
                 </div>
             </div>
-            <div className="flex-1 w-full min-h-[0px] mt-2">
+            <div className="w-full mt-2" style={{ height: '180px' }}>
                 {!loading && data.length > 0 && (
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
@@ -392,12 +394,12 @@ export function CliModalContent() {
     }
 
     return (
-        <div className="flex flex-col h-full w-full gap-4 flex-1">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-[450px]">
+        <div className="flex flex-col w-full gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* 1. Long term KOSPI overlay */}
                 <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col">
-                    <h3 className="text-white font-bold mb-4 text-center">한국 CLI vs KOSPI 10년 장기 궤적</h3>
-                    <div className="flex-1 w-full relative">
+                    <h3 className="text-white font-bold mb-3 text-center text-sm">한국 CLI vs KOSPI 10년 장기 궤적</h3>
+                    <div className="w-full" style={{ height: '220px' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                                 <XAxis dataKey="year" stroke="#71717a" fontSize={10} minTickGap={20} tickMargin={8} />
@@ -440,8 +442,8 @@ export function CliModalContent() {
 
                 {/* 2. Global Comparison */}
                 <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col">
-                    <h3 className="text-white font-bold mb-4 text-center">글로벌 매크로 사이클 동조화 점검</h3>
-                    <div className="flex-1 w-full relative">
+                    <h3 className="text-white font-bold mb-3 text-center text-sm">글로벌 매크로 사이클 동조화 점검</h3>
+                    <div className="w-full" style={{ height: '220px' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                                 <XAxis dataKey="year" stroke="#71717a" fontSize={10} minTickGap={20} tickMargin={8} />
@@ -549,8 +551,8 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
     const rightMax = displayData.length > 0 ? Math.max(...displayData.map(d => Math.max(d.kospi || -Infinity, d.sp500 || -Infinity))) * 1.05 : 'auto';
 
     return (
-        <div className="flex flex-col h-full w-full gap-4 flex-1">
-            <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col flex-1 min-h-[450px]">
+        <div className="flex flex-col w-full gap-4">
+            <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex flex-col">
                 <div className="flex justify-between items-center mb-2 shrink-0">
                     <div className="flex flex-col">
                         <h3 className="text-white font-bold ml-2 text-lg">
@@ -575,7 +577,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                         ))}
                     </div>
                 </div>
-                <div className="flex-1 w-full relative">
+                <div className="w-full" style={{ height: '280px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={displayData} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />

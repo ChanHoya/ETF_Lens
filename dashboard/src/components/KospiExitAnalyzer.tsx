@@ -587,36 +587,50 @@ export default function KospiExitAnalyzer() {
                 </p>
             </div>
 
-            {/* Popup Modals */}
             {activePopup && (
-                <div className="absolute left-0 right-0 top-0 h-[85vh] z-[100] bg-[#232332] border border-white/20 rounded-3xl p-6 flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.8)] animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex justify-between items-center mb-6 shrink-0">
-                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                            {activePopup === 'dollar' && <DollarSign className="w-6 h-6 text-emerald-400" />}
-                            {activePopup === 'per' && <BarChart2 className="w-6 h-6 text-blue-400" />}
-                            {activePopup === 'cli' && <TrendingDown className="w-6 h-6 text-rose-400" />}
-                            {activePopup === 'vix' && <Activity className="w-6 h-6 text-amber-400" />}
-                            {activePopup === 'fgi' && <Activity className="w-6 h-6 text-amber-400" />}
-                            {activePopup === 'dollar' ? '달러 인덱스 & 환율 장기 추이 상세분석' :
-                                (activePopup === 'per' ? '주요 종목 포워드 PER 추이 비교' :
-                                    (activePopup === 'cli' ? '경기 선행 지수 (CLI) 기반 매크로 사이클 집중분석' :
-                                        (activePopup === 'vix' ? 'VIX 지수 (변동성) 사이클 분석' : '공포/탐욕 지수 투자자 심리도')))}
-                        </h2>
-                        <button onClick={() => setActivePopup(null)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
+                /* 화면 전체 오버레이 — 현재 뷰포트 중앙에 고정 */
+                <div
+                    className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+                    onClick={() => setActivePopup(null)}
+                >
+                    {/* 반투명 배경 */}
+                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
-                    {/* Modal Content Placeholder */}
-                    <div className="flex-1 w-full pr-2 pb-6 min-h-[600px]">
-                        {activePopup === 'dollar' && <DollarModalContent />}
-                        {activePopup === 'per' && <PerModalContent />}
-                        {activePopup === 'cli' && <CliModalContent />}
-                        {activePopup === 'vix' && <SentimentModalContent isFgi={false} />}
-                        {activePopup === 'fgi' && <SentimentModalContent isFgi={true} />}
+                    {/* 팝업 패널 */}
+                    <div
+                        className="relative w-full max-w-4xl max-h-[85vh] bg-[#1a1a2e] border border-white/20 rounded-2xl flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.9)] animate-in fade-in zoom-in-95 duration-200 overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* 헤더 */}
+                        <div className="flex justify-between items-center px-6 py-4 border-b border-white/10 shrink-0">
+                            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                                {activePopup === 'dollar' && <DollarSign className="w-5 h-5 text-emerald-400" />}
+                                {activePopup === 'per' && <BarChart2 className="w-5 h-5 text-blue-400" />}
+                                {activePopup === 'cli' && <TrendingDown className="w-5 h-5 text-rose-400" />}
+                                {activePopup === 'vix' && <Activity className="w-5 h-5 text-amber-400" />}
+                                {activePopup === 'fgi' && <Activity className="w-5 h-5 text-amber-400" />}
+                                {activePopup === 'dollar' ? '달러 인덱스 & 환율 장기 추이' :
+                                    (activePopup === 'per' ? '주요 종목 포워드 PER 추이 비교' :
+                                        (activePopup === 'cli' ? '경기 선행 지수 (CLI) 매크로 사이클' :
+                                            (activePopup === 'vix' ? 'VIX 지수 (변동성) 사이클' : '공포/탐욕 지수 투자자 심리')))}
+                            </h2>
+                            <button onClick={() => setActivePopup(null)} className="p-1.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* 팝업 콘텐츠 */}
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                            {activePopup === 'dollar' && <DollarModalContent />}
+                            {activePopup === 'per' && <PerModalContent />}
+                            {activePopup === 'cli' && <CliModalContent />}
+                            {activePopup === 'vix' && <SentimentModalContent isFgi={false} />}
+                            {activePopup === 'fgi' && <SentimentModalContent isFgi={true} />}
+                        </div>
                     </div>
                 </div>
             )}
+
         </div>
     );
 }
