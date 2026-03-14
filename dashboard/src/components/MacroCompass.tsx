@@ -347,6 +347,8 @@ export default function MacroCompass() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
+  const [autoRetryIn, setAutoRetryIn] = useState<number | null>(null)  // 자동 재시도 카운트다운
+  const MAX_AUTO_RETRY = 3
 
   useEffect(() => {
     const apiUrl = getApiUrl()
@@ -358,10 +360,30 @@ export default function MacroCompass() {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
       })
-      .then(setData)
+      .then((d) => { setData(d); setAutoRetryIn(null) })
       .catch((e) => {
-        const msg = e?.name === 'AbortError' ? '120초 초과 — 서버 응답 없음. 재시도 버튼을 눌러주세요.' : String(e)
+        const msg = e?.name === 'AbortError' ? '120초 초과 — 서버 응답 없음.' : String(e)
         setError(msg)
+
+        // 자동 재시도: MAX_AUTO_RETRY 이하이면 5초 카운트다운 후 재시도
+        if (retryCount < MAX_AUTO_RETRY) {
+          let countdown = 5
+          setAutoRetryIn(countdown)
+          const tick = setInterval(() => {
+            countdown -= 1
+            if (countdown <= 0) {
+              clearInterval(tick)
+              setAutoRetryIn(null)
+              setError(null)
+              setLoading(true)
+              setRetryCount(c => c + 1)
+            } else {
+              setAutoRetryIn(countdown)
+            }
+          }, 1000)
+        } else {
+          setAutoRetryIn(null)  // 최대 횟수 초과 → 수동 재시도만
+        }
       })
       .finally(() => { clearTimeout(timer); setLoading(false) })
 
@@ -400,18 +422,29 @@ export default function MacroCompass() {
         <div style={{
           padding: 16, borderRadius: 10, background: 'rgba(248,113,113,0.1)',
           border: '1px solid rgba(248,113,113,0.3)', color: '#fca5a5', fontSize: 13,
+          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
         }}>
-          ⚠️ 데이터 로드 실패: {error}
-          <button
-            onClick={() => { setError(null); setLoading(true); setRetryCount(c => c + 1) }}
-            style={{
-              marginLeft: 12, padding: '4px 12px', borderRadius: 6, fontSize: 12,
-              background: 'rgba(248,113,113,0.2)', border: '1px solid #f87171',
-              color: '#fca5a5', cursor: 'pointer',
-            }}
-          >
-            🔄 재시도
-          </button>
+          <span>⚠️ 데이터 로드 실패: {error}</span>
+          {autoRetryIn !== null ? (
+            <span style={{
+              padding: '4px 12px', borderRadius: 6, fontSize: 12,
+              background: 'rgba(248,113,113,0.15)', border: '1px solid #f87171',
+              color: '#fca5a5',
+            }}>
+              🔄 {autoRetryIn}초 후 자동 재시도... ({retryCount}/{MAX_AUTO_RETRY})
+            </span>
+          ) : (
+            <button
+              onClick={() => { setError(null); setLoading(true); setRetryCount(c => c + 1) }}
+              style={{
+                padding: '4px 12px', borderRadius: 6, fontSize: 12,
+                background: 'rgba(248,113,113,0.2)', border: '1px solid #f87171',
+                color: '#fca5a5', cursor: 'pointer',
+              }}
+            >
+              🔄 수동 재시도
+            </button>
+          )}
         </div>
       )}
 
