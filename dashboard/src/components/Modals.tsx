@@ -502,7 +502,7 @@ export default function Modals({
                                         <span className="absolute right-[20px] top-3 text-[11px] text-gray-500 font-bold">[%]</span>
                                         <div className="flex-1 min-h-[250px] w-full">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <ComposedChart data={detailChartData.nav} margin={{ top: 5, right: 0, left: 15, bottom: 5 }}>
+                                                <ComposedChart data={detailChartData.nav} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                                                     <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 11 }} tickMargin={10} stroke="#1e293b" minTickGap={15} />
                                                     <YAxis yAxisId="left" tick={{ fill: '#ef4444', fontSize: 11 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="#1e293b" axisLine={false} domain={['auto', 'auto']} />

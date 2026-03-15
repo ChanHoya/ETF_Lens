@@ -297,7 +297,7 @@ export default function KospiExitAnalyzer() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* 1. Dollar Index */}
-                <div onClick={(e) => openPopup('dollar', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
+                <div onClick={(e) => openPopup('dollar', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-3 md:p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><DollarSign className="w-4 h-4" /> 달러 인덱스/환율 추이</h4>
@@ -357,7 +357,7 @@ export default function KospiExitAnalyzer() {
                 </div>
 
                 {/* 2. Forward P/E */}
-                <div onClick={(e) => openPopup('per', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
+                <div onClick={(e) => openPopup('per', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-3 md:p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><BarChart2 className="w-4 h-4" /> 포워드 PER</h4>
@@ -416,7 +416,7 @@ export default function KospiExitAnalyzer() {
                 </div>
 
                 {/* 3. OECD CLI */}
-                <div onClick={(e) => openPopup('cli', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
+                <div onClick={(e) => openPopup('cli', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-3 md:p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><TrendingDown className="w-4 h-4" /> 경기 선행 지수 (CLI)</h4>
@@ -504,7 +504,7 @@ export default function KospiExitAnalyzer() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* VIX */}
-                <div onClick={(e) => openPopup('vix', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
+                <div onClick={(e) => openPopup('vix', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-3 md:p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> VIX(CBOE Volatility Index)</h4>
@@ -548,7 +548,7 @@ export default function KospiExitAnalyzer() {
                 </div>
 
                 {/* Fear & Greed */}
-                <div onClick={(e) => openPopup('fgi', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
+                <div onClick={(e) => openPopup('fgi', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-3 md:p-5 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
                             <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> Fear & Greed Index (공포탐욕지수)</h4>
@@ -635,7 +635,7 @@ export default function KospiExitAnalyzer() {
                         </div>
 
                         {/* 팝업 콘텐츠 */}
-                        <div className="flex-1 overflow-y-auto p-4 md:p-5">
+                        <div className="flex-1 overflow-y-auto p-2 md:p-4">
                             {activePopup === 'dollar' && <DollarModalContent />}
                             {activePopup === 'per' && <PerModalContent />}
                             {activePopup === 'cli' && <CliModalContent />}

@@ -143,7 +143,7 @@ export default function MyDashboard({ data }: MyDashboardProps) {
                         <div className="w-full h-full flex items-center justify-center text-gray-500 bg-black/20 rounded-xl relative border border-white/5">
                             <span className="absolute text-sm">현재 평가 수익률 (시계열 데이터 수집 필요)</span>
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={dummyChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                <LineChart data={dummyChartData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                                     <XAxis dataKey="name" stroke="none" tick={{ fill: '#71717a' }} />
                                     <YAxis stroke="none" tick={{ fill: '#71717a' }} />

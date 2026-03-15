@@ -397,7 +397,7 @@ export default function CompareTable({
                         </h3>
                         <div className="flex-1 w-full h-[180px] relative z-10">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={additionalStatsData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                                <BarChart data={additionalStatsData} layout="vertical" margin={{ top: 0, right: 5, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.03)" />
                                     <XAxis type="number" tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(val) => Math.floor(val / 10000) > 0 ? `${Math.floor(val / 10000)}조` : val} stroke="rgba(255,255,255,0.05)" axisLine={false} />
                                     <YAxis dataKey="name" type="category" hide={true} axisLine={false} />
@@ -422,7 +422,7 @@ export default function CompareTable({
                         </h3>
                         <div className="flex-1 w-full h-[180px] relative z-10">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={additionalStatsData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                                <BarChart data={additionalStatsData} layout="vertical" margin={{ top: 0, right: 5, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.03)" />
                                     <XAxis type="number" tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" axisLine={false} />
                                     <YAxis dataKey="name" type="category" hide={true} axisLine={false} />
@@ -447,7 +447,7 @@ export default function CompareTable({
                         </h3>
                         <div className="flex-1 w-full h-[180px] relative z-10">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={additionalStatsData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                                <BarChart data={additionalStatsData} layout="vertical" margin={{ top: 0, right: 5, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.03)" />
                                     <XAxis type="number" tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" axisLine={false} />
                                     <YAxis dataKey="name" type="category" hide={true} axisLine={false} />

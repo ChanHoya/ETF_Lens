@@ -985,7 +985,7 @@ export default function CoveredCallTab() {
                                     </h4>
                                     <div className="h-[300px] w-full relative">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 10 }}>
+                                            <ScatterChart margin={{ top: 10, right: 5, bottom: 10, left: -15 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                                                 <XAxis
                                                     type="number"
@@ -1065,7 +1065,7 @@ export default function CoveredCallTab() {
                                     </h4>
                                     <div className="h-[300px] w-full relative">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 10 }}>
+                                            <ScatterChart margin={{ top: 10, right: 5, bottom: 10, left: -15 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                                                 <XAxis
                                                     type="number"
