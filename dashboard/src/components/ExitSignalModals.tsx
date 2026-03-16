@@ -412,7 +412,7 @@ export function CliModalContent() {
                     <h3 className="text-white font-bold mb-3 text-center text-sm">한국 CLI vs KOSPI 10년 장기 궤적</h3>
                     <div className="w-full" style={{ height: '220px' }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={data} margin={{ top: 5, right: 3, left: -28, bottom: 0 }}>
+                            <LineChart data={data} margin={{ top: 5, right: 3, left: 2, bottom: 0 }}>
                                 <XAxis dataKey="year" stroke="#71717a" fontSize={10} minTickGap={20} tickMargin={8} />
                                 <YAxis yAxisId="cli" domain={['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
                                 <YAxis yAxisId="kospi" orientation="right" domain={['auto', 'auto']} width={45} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
@@ -456,7 +456,7 @@ export function CliModalContent() {
                     <h3 className="text-white font-bold mb-3 text-center text-sm">글로벌 매크로 사이클 동조화 점검</h3>
                     <div className="w-full" style={{ height: '220px' }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={data} margin={{ top: 5, right: 3, left: -28, bottom: 0 }}>
+                            <LineChart data={data} margin={{ top: 5, right: 3, left: 2, bottom: 0 }}>
                                 <XAxis dataKey="year" stroke="#71717a" fontSize={10} minTickGap={20} tickMargin={8} />
                                 <YAxis domain={['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
                                 <RechartsTooltip
@@ -590,7 +590,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                 </div>
                 <div className="w-full" style={{ height: '280px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={displayData} margin={{ top: 5, right: 3, left: -28, bottom: 0 }}>
+                        <LineChart data={displayData} margin={{ top: 5, right: 3, left: 2, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                             <XAxis dataKey="date" stroke="#71717a" fontSize={10} tickMargin={8} minTickGap={30} />
                             <YAxis yAxisId="left" domain={isFgi ? [0, 100] : ['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />

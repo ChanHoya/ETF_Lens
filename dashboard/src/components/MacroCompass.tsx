@@ -449,7 +449,8 @@ export default function MacroCompass() {
       )}
 
       {data && (
-        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 18, flexDirection: 'column' }}
+          className="sm:flex-row">
           <MarketPanel data={data.us} flag="🇺🇸" market="미국 시장" />
           <MarketPanel data={data.kr} flag="🇰🇷" market="한국 시장" />
         </div>
