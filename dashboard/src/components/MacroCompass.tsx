@@ -56,11 +56,12 @@ const WEIGHT_COLOR = {
 }
 
 const getApiUrl = () => {
+  // SSR 환경에서는 기본값, 클라이언트에서는 apiConfig의 API_BASE 사용
   if (typeof window === 'undefined') return 'http://localhost:8000'
-  const h = window.location.hostname
-  if (h.includes('onrender.com') || h.includes('vercel.app'))
-    return 'https://etf-lens.onrender.com'
-  return `http://${h}:8000`
+  return (process.env.NEXT_PUBLIC_API_URL ||
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:8000'
+      : 'https://etf-lens.onrender.com'))
 }
 
 // ─── SVG Compass Dial ────────────────────────────────────────────────────────

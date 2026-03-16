@@ -12,10 +12,10 @@ interface InsightData {
 
 const getApiUrl = () => {
   if (typeof window === 'undefined') return 'http://localhost:8000'
-  const h = window.location.hostname
-  if (h.includes('onrender.com') || h.includes('vercel.app'))
-    return 'https://etf-lens.onrender.com'
-  return `http://${h}:8000`
+  return (process.env.NEXT_PUBLIC_API_URL ||
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:8000'
+      : 'https://etf-lens.onrender.com'))
 }
 
 const PHASE_COLOR: Record<string, string> = {
