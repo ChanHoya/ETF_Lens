@@ -676,7 +676,12 @@ def _classify_etf(name: str) -> str:
 
 
 async def _load_etf_catalogue_from_fdr() -> dict[str, list[str]]:
-    """네이버 증권 API(1순위) → 번들 CSV(2순위) 순으로 KRX ETF 목록을 조회합니다."""
+    """
+    ETF 목록 조회 우선순위:
+    0) router._etf_master_list (종목검색/커버드콜 탭이 이미 쓰는 fdr 캐시)
+    1) 네이버 증권 API (실시간, ~1075개)
+    2) 번들 CSV fallback (data/etf_kr_list.csv)
+    """
     import time as _time
     global _etf_catalogue_cache, _etf_catalogue_ts
 
@@ -685,6 +690,23 @@ async def _load_etf_catalogue_from_fdr() -> dict[str, list[str]]:
         return _etf_catalogue_cache
 
     catalogue: dict[str, list[str]] = {"equity": [], "bond": [], "alt": []}
+
+    # --- 0순위: router.py의 _etf_master_list 재사용 (fdr 캐시, 이미 Render에서 동작 중) ---
+    try:
+        from api.router import _etf_master_list as _router_etf_list
+        if _router_etf_list:
+            for item in _router_etf_list:
+                code = str(item.get("code", "")).strip().zfill(6)
+                name = str(item.get("name", "")).strip()
+                if code and name:
+                    catalogue[_classify_etf(name)].append(f"{code} {name}")
+            if any(catalogue.values()):
+                logger.info(f"router ETF cache reused: {sum(len(v) for v in catalogue.values())} ETFs")
+                _etf_catalogue_cache = catalogue
+                _etf_catalogue_ts = _time.time()
+                return catalogue
+    except Exception as e:
+        logger.warning(f"router ETF cache unavailable: {e}")
 
     # --- 1순위: 네이버 증권 ETF 목록 API (실시간, 1000+ ETFs) ---
     try:
@@ -748,7 +770,7 @@ async def get_ai_insight(
     시장 인사이트를 생성합니다. 4시간 캐시.
     """
     import time
-    cache_key = "ai_insight_v5"
+    cache_key = "ai_insight_v6"
     now_ts = time.time()
     if cache_key in _insight_cache:
         cached, ts = _insight_cache[cache_key]
