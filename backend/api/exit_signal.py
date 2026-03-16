@@ -728,30 +728,35 @@ async def get_pe_detail(symbol: str = "005930"):
 
 @router.get("/debug/vix-dates")
 async def debug_vix_dates():
-    """Render 서버에서 yfinance가 반환하는 ^VIX 최신 날짜 진단용."""
-    from datetime import timedelta
-    end = datetime.now()
-    start = end - timedelta(days=10)
-    start_str = start.strftime("%Y-%m-%d")
-    end_str = end.strftime("%Y-%m-%d")
+    """Render 서버에서 Yahoo v8 chart API가 반환하는 ^VIX 최신 날짜 진단용."""
 
-    def _fetch():
+    def _fetch_v8():
         try:
-            import yfinance as yf
-            hist = yf.Ticker("^VIX").history(start=start_str, end=end_str, auto_adjust=True)
-            s = hist["Close"]
-            if hasattr(s.index, "tz") and s.index.tz is not None:
-                s.index = s.index.tz_localize(None)
-            s.index = pd.to_datetime(s.index).normalize()
+            url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=2wk"
+            r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+            rb = r.json().get("chart", {}).get("result", [])
+            if not rb:
+                return {"error": "No chart data"}
+            ts = rb[0].get("timestamp", [])
+            cls = rb[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+            from datetime import timezone, timedelta as _td
+            est = timezone(_td(hours=-5))
+            rows = {}
+            for t, c in zip(ts, cls):
+                if c is None:
+                    continue
+                dt_est = datetime.fromtimestamp(t, tz=timezone.utc).astimezone(est)
+                rows[str(dt_est.date())] = round(float(c), 2)
+            sorted_dates = sorted(rows.keys())
             return {
-                "source": "yfinance",
-                "dates": [str(d.date()) for d in s.index[-7:]],
-                "values": [round(float(v), 2) for v in s.values[-7:]],
-                "last_date": str(s.index[-1].date()) if not s.empty else None,
+                "source": "yahoo_v8_api",
+                "dates": sorted_dates[-7:],
+                "values": [rows[d] for d in sorted_dates[-7:]],
+                "last_date": sorted_dates[-1] if sorted_dates else None,
             }
         except Exception as e:
             return {"error": str(e)}
 
-    result = await asyncio.to_thread(_fetch)
+    result = await asyncio.to_thread(_fetch_v8)
     result["server_utc"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     return result
