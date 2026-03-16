@@ -387,26 +387,17 @@ async def get_exit_signal_data():
 
 @router.get("/macro/debug-dx")
 async def debug_dx():
-    """Render에서 DX-Y.NYB 직접 테스트 (디버그 전용)"""
+    """Render에서 FRED DTWEXBGS 직접 테스트 (디버그 전용). v2=FRED."""
     import traceback
     try:
-        end_date = datetime.now()
-        start_str = (end_date - timedelta(days=30)).strftime("%Y-%m-%d")
-        end_str = end_date.strftime("%Y-%m-%d")
-
-        def _fetch():
-            t = yf.Ticker("DX-Y.NYB")
-            df = t.history(start=start_str, end=end_str, auto_adjust=True)
-            return df
-
-        df = await asyncio.to_thread(_fetch)
+        fred_dict = await _fetch_fred_series("DTWEXBGS", days=30)
+        krw_dict  = await _fetch_yahoo_v8("KRW=X", days=30)
         return {
-            "empty": df.empty,
-            "shape": list(df.shape),
-            "columns": df.columns.tolist() if not df.empty else [],
-            "index_type": str(type(df.index).__name__),
-            "index_tz": str(df.index.tz) if not df.empty and hasattr(df.index, "tz") else None,
-            "tail": df["Close"].tail(5).reset_index().to_dict("records") if not df.empty and "Close" in df.columns else [],
+            "version": "FRED+YahooV8",
+            "fred_count": len(fred_dict),
+            "fred_last": list(fred_dict.items())[-3:] if fred_dict else [],
+            "krw_count": len(krw_dict),
+            "krw_last": list(krw_dict.items())[-3:] if krw_dict else [],
         }
     except Exception as e:
         return {"error": str(e), "traceback": traceback.format_exc()}
