@@ -209,34 +209,44 @@ async def fetch_yf_data():
 
 
 async def fetch_market_sentiment():
-    """Fetch VIX and calculate proxy Fear & Greed Index, and fetch KOSPI."""
+    """Fetch VIX and calculate proxy Fear & Greed Index, and fetch KOSPI/S&P500.
+    yfinance 대신 Yahoo Finance v8 chart API 사용 (Render에서 yfinance rate limit 회피).
+    """
     try:
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=365 * 3)   # 3\ub144 \ub370\uc774\ud130
-        start_str = start_date.strftime("%Y-%m-%d")
-        end_str = end_date.strftime("%Y-%m-%d")
-
-        def _fetch_hist(tkr: str) -> pd.Series:
+        def _yv8(symbol: str) -> pd.Series:
+            """Yahoo Finance v8 chart API → pd.Series (EST 날짜 인덱스, Close 값)."""
             try:
-                ticker = yf.Ticker(tkr)
-                hist = ticker.history(start=start_str, end=end_str, auto_adjust=True)
-                if hist.empty or "Close" not in hist.columns:
+                sym_enc = symbol.replace("^", "%5E")
+                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym_enc}?interval=1d&range=3y"
+                r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+                if r.status_code != 200:
+                    logger.warning(f"Yahoo v8 {symbol} status={r.status_code}")
                     return pd.Series(dtype=float)
-                s = hist["Close"]
-                # timezone \uc81c\uac70
-                if hasattr(s.index, "tz") and s.index.tz is not None:
-                    s.index = s.index.tz_localize(None)
-                s.index = pd.to_datetime(s.index).normalize()
-                s = s.groupby(s.index).last()
-                return s
+                rb = r.json().get("chart", {}).get("result", [])
+                if not rb:
+                    return pd.Series(dtype=float)
+                ts = rb[0].get("timestamp", [])
+                cls = rb[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+                # EST(UTC-5) 기준으로 날짜 변환 (미국 장 날짜 정확히 반영)
+                from datetime import timezone, timedelta as _td
+                est = timezone(_td(hours=-5))
+                rows = {}
+                for t, c in zip(ts, cls):
+                    if c is None:
+                        continue
+                    dt_est = datetime.fromtimestamp(t, tz=timezone.utc).astimezone(est)
+                    rows[pd.Timestamp(dt_est.date())] = float(c)
+                s = pd.Series(rows)
+                s.index = pd.DatetimeIndex(s.index)
+                return s.sort_index()
             except Exception as e:
-                logger.warning(f"_fetch_hist failed for {tkr}: {e}")
+                logger.warning(f"Yahoo v8 {symbol} failed: {e}")
                 return pd.Series(dtype=float)
 
         v_s, k_s, g_s = await asyncio.gather(
-            asyncio.to_thread(_fetch_hist, "^VIX"),
-            asyncio.to_thread(_fetch_hist, "^KS11"),
-            asyncio.to_thread(_fetch_hist, "^GSPC"),
+            asyncio.to_thread(_yv8, "^VIX"),
+            asyncio.to_thread(_yv8, "^KS11"),
+            asyncio.to_thread(_yv8, "^GSPC"),
         )
         v_s.name = "vix"
         k_s.name = "kospi"
@@ -266,7 +276,6 @@ async def fetch_market_sentiment():
             sp500_val = float(row["sp500"]) if pd.notna(row.get("sp500")) else 0.0
 
             # Proxy formula: FGI = 50 - (VIX - 18) * 3
-            # Bound between 0 and 100
             fgi_val = max(0.0, min(100.0, 50.0 - (vix_val - 18.0) * 3.0))
 
             sentiment_data.append(
