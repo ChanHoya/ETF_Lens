@@ -15,7 +15,22 @@ _cache = {"data": None, "timestamp": None}
 _macro_cache = {}
 _cli_cache = {}
 _pe_real_cache = {}  # Cache fundamental PE values to prevent YF rate limits
-CACHE_TTL = 3600 * 12  # 12 hours
+
+
+def _get_cache_ttl() -> int:
+    """미국 장 상태에 따른 스마트 캐시 TTL 반환.
+    - KST 06:00~22:30: 미장 마감 후 오전 시간대 → 4시간 캐시
+    - KST 22:30~06:00: 미장 진행 중 또는 프리마켓 → 1시간 캐시
+    미국 EST 기준 시장: 09:30~16:00 = KST 23:30~06:00(다음날)
+    """
+    from datetime import timezone, timedelta
+    kst_hour = datetime.now(timezone(timedelta(hours=9))).hour
+    if 6 <= kst_hour < 22:
+        return 3600 * 4  # 미장 마감 후 → 4시간
+    return 3600  # 미장 진행 중 → 1시간
+
+
+CACHE_TTL = None  # 하위 호환성 유지 (사용 안 함, _get_cache_ttl() 사용)
 
 
 def get_mock_data():
@@ -343,7 +358,7 @@ async def get_exit_signal_data():
     if (
         _cache["data"]
         and _cache["timestamp"]
-        and (now - _cache["timestamp"] < CACHE_TTL)
+        and (now - _cache["timestamp"] < _get_cache_ttl())
     ):
         return _cache["data"]
 
@@ -411,7 +426,7 @@ async def get_macro_detail(period: str = "1Y"):
     cache_key = f"daily_{period}"
     now = datetime.now().timestamp()
     if cache_key in _macro_cache and (
-        now - _macro_cache[cache_key].get("timestamp", 0) < CACHE_TTL
+        now - _macro_cache[cache_key].get("timestamp", 0) < _get_cache_ttl()
     ):
         return _macro_cache[cache_key]["data"]
 
@@ -498,7 +513,7 @@ async def get_cli_detail():
     """
     global _cli_cache
     now = datetime.now().timestamp()
-    if "data" in _cli_cache and (now - _cli_cache.get("timestamp", 0) < CACHE_TTL):
+    if "data" in _cli_cache and (now - _cli_cache.get("timestamp", 0) < _get_cache_ttl()):
         return _cli_cache["data"]
 
     try:

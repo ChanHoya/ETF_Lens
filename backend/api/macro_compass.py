@@ -11,7 +11,7 @@ Indicators:
 import asyncio
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 import pandas as pd
@@ -23,9 +23,20 @@ from db.database import get_db
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["macro_compass"])
 
-# 24-hour cache
+# 스마트 캐시: 미국 장 마감(KST 06:00) 이후에는 당일 데이터 보존, 장 중에는 1시간
 _compass_cache: dict = {}
-CACHE_TTL = 3600 * 24  # seconds
+
+
+def _get_cache_ttl() -> int:
+    """미국 장 상태에 따른 캐시 TTL 반환.
+    - KST 06:00~22:30: 미장 마감 후 (오전) → 4시간 캐시
+    - KST 22:30~06:00: 미장 진행 중 또는 프리마켓 → 1시간 캐시
+    """
+    kst_hour = datetime.now(timezone(timedelta(hours=9))).hour
+    # KST 06:00~22:30 = 미장 마감 이후 오전 시간대 → 4시간 캐시
+    if 6 <= kst_hour < 22:
+        return 3600 * 4
+    return 3600  # 미장 진행 중 → 1시간 캐시
 
 
 def _last_value(s: pd.Series) -> tuple[Optional[float], Optional[str]]:
@@ -75,11 +86,14 @@ async def _get_us_indicators() -> dict:
                 return pd.Series(dtype=float)
             ts  = rb[0].get("timestamp", [])
             cls = rb[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+            # UTC 타임스탬프를 EST(UTC-5)로 변환하여 미국 날짜 기준으로 처리
+            est_offset = timedelta(hours=-5)
             rows = {}
             for t, c in zip(ts, cls):
                 if c is None:
                     continue
-                rows[pd.Timestamp.fromtimestamp(t).normalize()] = float(c)
+                dt_est = datetime.fromtimestamp(t, tz=timezone.utc).astimezone(timezone(est_offset))
+                rows[pd.Timestamp(dt_est.date())] = float(c)
             s = pd.Series(rows)
             s.index = pd.DatetimeIndex(s.index)
             return s.sort_index()
@@ -603,10 +617,11 @@ async def get_macro_compass():
     24h cached.
     """
     cache_key = "macro_compass_v3"
-    now_ts = __import__("time").time()
+    import time as _time
+    now_ts = _time.time()
     if cache_key in _compass_cache:
         cached, ts = _compass_cache[cache_key]
-        if now_ts - ts < CACHE_TTL:
+        if now_ts - ts < _get_cache_ttl():
             return cached
 
     # Fetch indicators concurrently
