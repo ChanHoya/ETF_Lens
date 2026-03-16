@@ -722,7 +722,7 @@ async def get_ai_insight(
     시장 인사이트를 생성합니다. 4시간 캐시.
     """
     import time
-    cache_key = "ai_insight_v4"
+    cache_key = "ai_insight_v5"
     now_ts = time.time()
     if cache_key in _insight_cache:
         cached, ts = _insight_cache[cache_key]
@@ -758,18 +758,23 @@ async def get_ai_insight(
         _insight_cache[cache_key] = (result, now_ts)
         return result
 
-    # 2. 실제 ETF 목록 조회 (fdr → DB → 코드없이 이름만)
+    # 2. 실제 ETF 목록 조회 (fdr → DB(충분할 때만))
     etf_catalogue = await _load_etf_catalogue_from_fdr()
 
-    # fdr 실패 시 DB에서 보완
+    # fdr 실패 시 DB에서 보완 — DB에 50개 이상 있을 때만 사용 (배치 미실행 상태 차단)
     if not any(etf_catalogue.values()):
         try:
             from sqlalchemy import select as sa_select
             from db.models import ETFMaster
             rows = (await db.execute(sa_select(ETFMaster.code, ETFMaster.name))).all()
-            for code, name in rows:
-                if code and name:
-                    etf_catalogue[_classify_etf(name)].append(f"{code} {name}")
+            total = len(rows)
+            if total >= 50:  # 배치가 정상 실행된 상태에서만 사용
+                for code, name in rows:
+                    if code and name:
+                        etf_catalogue[_classify_etf(name)].append(f"{code} {name}")
+                logger.info(f"DB ETF fallback used: {total} ETFs")
+            else:
+                logger.warning(f"DB ETF fallback skipped: only {total} ETFs (batch not yet run)")
         except Exception as e:
             logger.warning(f"DB ETF fallback failed: {e}")
 
