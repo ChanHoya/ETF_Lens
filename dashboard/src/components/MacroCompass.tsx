@@ -292,18 +292,28 @@ function MarketPanel({ data, flag, market }: {
       </div>
 
       {/* Compass + explanation */}
-      <div style={{ display: 'flex', gap: 12, padding: '14px 18px 0', alignItems: 'flex-start' }}>
-        <div style={{ flexShrink: 0 }}>
-          <CompassDial phase_en={data.phase_en} confidence={data.confidence} phase={data.phase} />
-        </div>
-        <div style={{
-          flex: 1, fontSize: 12.5, lineHeight: 1.65, color: '#94a3b8',
-          borderLeft: `2px solid ${cfg.color}44`, paddingLeft: 12, paddingTop: 4,
-        }}>
+      <div className="flex flex-col-reverse md:flex-row gap-3 px-[18px] pt-[14px] items-start">
+        {/* 설명글 - 모바일에서 먼저 표시(col-reverse), PC에서 다이얼 우측 */}
+        <div
+          style={{
+            flex: 1,
+            fontSize: 12.5,
+            lineHeight: 1.65,
+            color: '#94a3b8',
+            borderLeft: `2px solid ${cfg.color}44`,
+            paddingLeft: 12,
+            paddingTop: 4,
+          }}
+          className="order-1 md:order-2"
+        >
           {data.explanation}
           <div style={{ marginTop: 8, fontSize: 11, color: '#475569' }}>
             분석 시각: {data.analyzed_at}
           </div>
+        </div>
+        {/* 다이얼 - 모바일에서 아래(col-reverse에서 나중에), PC에서 좌측 */}
+        <div style={{ flexShrink: 0 }} className="order-2 md:order-1">
+          <CompassDial phase_en={data.phase_en} confidence={data.confidence} phase={data.phase} />
         </div>
       </div>
 
@@ -449,8 +459,7 @@ export default function MacroCompass() {
       )}
 
       {data && (
-        <div style={{ display: 'flex', gap: 18, flexDirection: 'column' }}
-          className="sm:flex-row">
+        <div className="flex flex-col lg:flex-row gap-[18px]">
           <MarketPanel data={data.us} flag="🇺🇸" market="미국 시장" />
           <MarketPanel data={data.kr} flag="🇰🇷" market="한국 시장" />
         </div>
