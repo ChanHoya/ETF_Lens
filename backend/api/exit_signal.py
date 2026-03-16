@@ -273,7 +273,17 @@ async def fetch_fred_cli():
     return await fetch_oecd_cli_simple()
 
 
+@router.get("/reset-cache")
+async def reset_main_cache():
+    """메인 exit-signal 캐시 강제 초기화"""
+    global _cache
+    _cache = {"data": None, "timestamp": None}
+    logger.info("Main exit-signal cache reset by request")
+    return {"status": "ok", "message": "Cache cleared. Next / call will re-fetch data."}
+
+
 @router.get("")
+
 async def get_exit_signal_data():
     global _cache
     now = datetime.now().timestamp()
