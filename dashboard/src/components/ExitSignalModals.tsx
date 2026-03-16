@@ -111,9 +111,9 @@ export function DollarModalContent() {
             </div>
 
             {/* 와이드 차트 — 고정 높이 */}
-            <div className="w-full bg-black/20 rounded-xl p-4 border border-white/5" style={{ height: '280px' }}>
+            <div className="w-full bg-black/20 rounded-xl p-1 md:p-3 border border-white/5" style={{ height: '280px' }}>
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={filteredData} margin={{ top: 5, right: 0, left: 5, bottom: 5 }}
+                    <LineChart data={filteredData} margin={{ top: 5, right: 0, left: 2, bottom: 5 }}
                         onMouseMove={(e) => setHoverIndex(e?.activeTooltipIndex ?? null)}
                         onMouseLeave={() => setHoverIndex(null)}
                     >
@@ -310,7 +310,7 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
             <div className="w-full mt-2" style={{ height: '180px' }}>
                 {!loading && data.length > 0 && (
                     <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+                        <LineChart data={data} margin={{ top: 5, right: 0, left: -25, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                             <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
 
@@ -408,11 +408,11 @@ export function CliModalContent() {
         <div className="flex flex-col w-full gap-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* 1. Long term KOSPI overlay */}
-                <div className="bg-black/20 rounded-xl p-2 md:p-4 border border-white/5 flex flex-col">
+                <div className="bg-black/20 rounded-xl p-1 md:p-3 border border-white/5 flex flex-col">
                     <h3 className="text-white font-bold mb-3 text-center text-sm">한국 CLI vs KOSPI 10년 장기 궤적</h3>
                     <div className="w-full" style={{ height: '220px' }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={data} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                            <LineChart data={data} margin={{ top: 5, right: 3, left: -28, bottom: 0 }}>
                                 <XAxis dataKey="year" stroke="#71717a" fontSize={10} minTickGap={20} tickMargin={8} />
                                 <YAxis yAxisId="cli" domain={['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
                                 <YAxis yAxisId="kospi" orientation="right" domain={['auto', 'auto']} width={45} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
@@ -452,11 +452,11 @@ export function CliModalContent() {
                 </div>
 
                 {/* 2. Global Comparison */}
-                <div className="bg-black/20 rounded-xl p-2 md:p-4 border border-white/5 flex flex-col">
+                <div className="bg-black/20 rounded-xl p-1 md:p-3 border border-white/5 flex flex-col">
                     <h3 className="text-white font-bold mb-3 text-center text-sm">글로벌 매크로 사이클 동조화 점검</h3>
                     <div className="w-full" style={{ height: '220px' }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={data} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                            <LineChart data={data} margin={{ top: 5, right: 3, left: -28, bottom: 0 }}>
                                 <XAxis dataKey="year" stroke="#71717a" fontSize={10} minTickGap={20} tickMargin={8} />
                                 <YAxis domain={['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
                                 <RechartsTooltip
@@ -563,7 +563,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
 
     return (
         <div className="flex flex-col w-full gap-4">
-            <div className="bg-black/20 rounded-xl p-2 md:p-4 border border-white/5 flex flex-col">
+            <div className="bg-black/20 rounded-xl p-1 md:p-3 border border-white/5 flex flex-col">
                 <div className="flex justify-between items-center mb-2 shrink-0">
                     <div className="flex flex-col">
                         <h3 className="text-white font-bold ml-2 text-lg">
@@ -590,7 +590,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                 </div>
                 <div className="w-full" style={{ height: '280px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={displayData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                        <LineChart data={displayData} margin={{ top: 5, right: 3, left: -28, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                             <XAxis dataKey="date" stroke="#71717a" fontSize={10} tickMargin={8} minTickGap={30} />
                             <YAxis yAxisId="left" domain={isFgi ? [0, 100] : ['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
