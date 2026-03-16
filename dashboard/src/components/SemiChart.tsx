@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 
 export default function SemiChart() {
@@ -18,12 +19,7 @@ export default function SemiChart() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const isCloudDeployment = window.location.hostname.includes('onrender.com') || window.location.hostname.includes('vercel.app');
-                const apiUrl = isCloudDeployment
-                    ? 'https://etf-lens.onrender.com/api/v1/analyze/semi-chart'
-                    : `http://${window.location.hostname}:8000/api/v1/analyze/semi-chart`;
-                
-                const res = await fetch(apiUrl);
+                const res = await fetch(`${API_BASE}/api/v1/analyze/semi-chart`);
                 if (!res.ok) throw new Error('API fetch error');
                 const data = await res.json();
                 
