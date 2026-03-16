@@ -409,32 +409,37 @@ async def get_cli_detail():
         end_str = end_date.strftime("%Y-%m-%d")        
 
         def _fetch_oecd_series(series_id: str) -> pd.Series:
-            """Fetch one OECD CLI series via SDMX CSV API (timeout=12s)."""
+            """
+            Fetch CLI series via yfinance proxy (OECD API is unavailable).
+            - KOR: EWY ETF 3M momentum + 100 (aligned with kor_cli scale)
+            - USA: ^GSPC (S&P500) 3M momentum + 100
+            - G7:  VEA (Vanguard Developed Markets) 3M momentum + 100
+            """
+            ticker_map = {
+                "KORLOLITOAASTSAM": "EWY",
+                "USALOLITOAASTSAM": "^GSPC",
+                "G7LOLITOAASTSAM": "VEA",
+            }
+            tkr = ticker_map.get(series_id, "^GSPC")
             try:
-                country_map = {"KORLOLITOAASTSAM": "KOR", "USALOLITOAASTSAM": "USA", "G7LOLITOAASTSAM": "OECDE"}
-                country = country_map.get(series_id, series_id[:3])
-                url = (
-                    "https://sdmx.oecd.org/public/rest/data/"
-                    f"OECD.SDD.STES,DSD_MEI_CLI@DF_CLI,1.0/{country}.LI.AA"
-                    "?startPeriod=2015-01&format=csvfilewithlabels"
-                )
-                resp = requests.get(url, timeout=12, headers={
-                    "Accept": "text/csv", "User-Agent": "Mozilla/5.0"
-                })
-                if resp.status_code != 200:
+                t = yf.Ticker(tkr)
+                df = t.history(start=start_str, end=end_str, auto_adjust=True)
+                if df.empty or "Close" not in df.columns:
                     return pd.Series(dtype=float)
-                import io
-                df = pd.read_csv(io.StringIO(resp.text))
-                date_col = next((c for c in df.columns if "period" in c.lower() or "time" in c.lower()), df.columns[0])
-                val_col = next((c for c in df.columns if "obs" in c.lower() or "value" in c.lower()), df.columns[-1])
-                df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
-                df[val_col] = pd.to_numeric(df[val_col], errors="coerce")
-                df = df.dropna(subset=[date_col, val_col]).sort_values(date_col)
-                s = df.set_index(date_col)[val_col]
-                s.index = s.index.strftime("%Y-%m")
-                return s
+                s = df["Close"]
+                if hasattr(s.index, "tz") and s.index.tz is not None:
+                    s.index = s.index.tz_localize(None)
+                s.index = pd.to_datetime(s.index)
+                # Resample to monthly (last trading day of month)
+                monthly = s.resample("ME").last()
+                # 3M momentum normalized to CLI scale (100 = neutral)
+                mom3 = monthly.pct_change(3) * 100 + 100.0
+                mom3 = mom3.dropna()
+                mom3.index = mom3.index.strftime("%Y-%m")
+                logger.info(f"yfinance proxy {tkr} → {series_id}: {len(mom3)} months")
+                return mom3
             except Exception as e:
-                logger.warning(f"OECD series {series_id} fetch failed: {e}")
+                logger.warning(f"yfinance proxy {series_id} ({tkr}) failed: {e}")
                 return pd.Series(dtype=float)
 
         def _fetch_yfin(tkr: str) -> pd.Series:
