@@ -14,7 +14,6 @@ import os
 from datetime import datetime
 from typing import Optional
 
-import httpx
 import pandas as pd
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -653,54 +652,59 @@ async def get_macro_compass():
     _compass_cache[cache_key] = (result, now_ts)
     return result
 
-
-# ---------------------------------------------------------------------------
-# AI Market Insight endpoint
 # ---------------------------------------------------------------------------
 # AI Market Insight endpoint
 # ---------------------------------------------------------------------------
 
 _insight_cache: dict = {}
 INSIGHT_CACHE_TTL = 3600 * 4  # 4시간 캐시
+_etf_catalogue_cache: dict | None = None  # 24시간 ETF 목록 캐시
+_etf_catalogue_ts: float = 0.0
 
-# ETF 카테고리 분류 키워드 (ETF 이름 기반)
-_ETF_CATEGORY_KEYWORDS = {
-    "equity": ["200", "코스피", "코스닥", "나스닥", "S&P", "반도체", "2차전지", "배당", "성장", "테크", "IT", "ESG",
-               "미국주식", "미국s&p", "글로벌", "헬스케어", "에너지", "소비재", "금융주", "리츠", "부동산",
-               "미국대형", "차이나", "인도", "일본"],
-    "bond": ["국고채", "회사채", "채권", "단기채", "장기채", "미국채", "국채", "크레딧", "하이일드", "금리"],
-    "alt": ["금선물", "금융", "달러", "원자재", "인버스", "레버리지", "혼합", "멀티에셋", "현금", "머니마켓", "MMF"],
-}
+_ETF_BOND_KW = ["국고채", "회사채", "채권", "단기채", "장기채", "미국채", "국채", "크레딧", "하이일드", "금리"]
+_ETF_ALT_KW = ["금선물", "금현물", "달러", "원자재", "인버스", "레버리지", "혼합", "멀티에셋", "머니마켓", "CD금리", "SOFR"]
 
 
 def _classify_etf(name: str) -> str:
-    name_l = name.lower()
-    for kw in _ETF_CATEGORY_KEYWORDS["bond"]:
-        if kw.lower() in name_l:
+    for kw in _ETF_BOND_KW:
+        if kw in name:
             return "bond"
-    for kw in _ETF_CATEGORY_KEYWORDS["alt"]:
-        if kw.lower() in name_l:
+    for kw in _ETF_ALT_KW:
+        if kw in name:
             return "alt"
     return "equity"
 
 
-async def _get_etf_catalogue(db) -> dict[str, list[str]]:
-    """ETFMaster DB에서 실제 ETF 목록을 가져와 카테고리별로 분류."""
+async def _load_etf_catalogue_from_fdr() -> dict[str, list[str]]:
+    """finance-datareader를 사용해 KRX 실제 ETF 전체 목록을 조회합니다."""
+    import time as _time
+    global _etf_catalogue_cache, _etf_catalogue_ts
+
+    # 24시간 캐시
+    if _etf_catalogue_cache and _time.time() - _etf_catalogue_ts < 86400:
+        return _etf_catalogue_cache
+
     try:
-        from sqlalchemy import select
-        from db.models import ETFMaster
-        result = await db.execute(select(ETFMaster.code, ETFMaster.name).limit(500))
-        rows = result.all()
+        import finance_datareader as fdr  # type: ignore
+        df = await asyncio.to_thread(fdr.StockListing, "ETF/KR")
         catalogue: dict[str, list[str]] = {"equity": [], "bond": [], "alt": []}
-        for code, name in rows:
-            if not code or not name:
+        for _, row in df.iterrows():
+            code = str(row.get("Symbol", row.get("Code", ""))).strip().zfill(6)
+            name = str(row.get("Name", row.get("ISU_ABBRV", ""))).strip()
+            if not code or not name or len(code) != 6:
                 continue
             cat = _classify_etf(name)
             catalogue[cat].append(f"{code} {name}")
-        return catalogue
+        if any(catalogue.values()):
+            _etf_catalogue_cache = catalogue
+            _etf_catalogue_ts = _time.time()
+            logger.info(f"ETF catalogue loaded: equity={len(catalogue['equity'])}, bond={len(catalogue['bond'])}, alt={len(catalogue['alt'])}")
+            return catalogue
     except Exception as e:
-        logger.warning(f"ETF catalogue fetch failed: {e}")
-        return {"equity": [], "bond": [], "alt": []}
+        logger.warning(f"fdr ETF catalogue failed: {e}")
+
+    # --- fdr 실패 시 DB fallback ---
+    return {"equity": [], "bond": [], "alt": []}
 
 
 @router.get("/ai-insight")
@@ -718,7 +722,7 @@ async def get_ai_insight(
     시장 인사이트를 생성합니다. 4시간 캐시.
     """
     import time
-    cache_key = "ai_insight_v3"
+    cache_key = "ai_insight_v4"
     now_ts = time.time()
     if cache_key in _insight_cache:
         cached, ts = _insight_cache[cache_key]
@@ -754,74 +758,30 @@ async def get_ai_insight(
         _insight_cache[cache_key] = (result, now_ts)
         return result
 
-    # 2. 실제 ETF 목록 조회 (DB)
-    etf_catalogue: dict[str, list[str]] = {"equity": [], "bond": [], "alt": []}
-    if db is not None:
-        etf_catalogue = await _get_etf_catalogue(db)
+    # 2. 실제 ETF 목록 조회 (fdr → DB → 코드없이 이름만)
+    etf_catalogue = await _load_etf_catalogue_from_fdr()
 
-    # ETF 목록이 비어 있으면 잘 알려진 검증된 목록 사용 (fallback)
-    # KRX 실제 상장 ETF 검증 목록 (코드-이름 쌍이 정확히 일치해야 함)
-    VERIFIED_ETFS = {
-        "equity": [
-            # 국내 주식 - 코스피/코스닥
-            "069500 KODEX 200",
-            "102110 TIGER 200",
-            "229200 KODEX 코스닥150",
-            "091160 KODEX 반도체",
-            "266360 KODEX 코스닥150레버리지",
-            "252710 TIGER 코스닥150",
-            # 해외 주식 - 미국
-            "379800 KODEX 미국S&P500TR",
-            "133690 TIGER 미국나스닥100",
-            "360750 TIGER 미국S&P500",
-            "367380 KODEX 미국나스닥100TR",
-            "381180 TIGER 미국필라델피아반도체나스닥",
-            "261120 KODEX 미국FANG플러스",
-            "411060 TIGER 미국배당+7%프리미엄다우존스",
-            "459580 TIMEFOLIO 미국S&P500액티브",
-            "447770 KODEX 미국AI테크TOP10+15%프리미엄",
-            # 배당/고배당
-            "211900 KODEX 고배당",
-            "270800 KODEX 배당성장채권혼합",
-            "161510 TIGER 배당성장",
-        ],
-        "bond": [
-            # 국내 채권
-            "153130 KODEX 단기채권",
-            "195820 KODEX 단기채권PLUS",
-            "273130 KODEX 국채30년액티브",
-            "148070 KODEX 국고채3년",
-            "114260 KODEX 국고채10년",
-            "136340 KBSTAR 단기국공채액티브",
-            # 해외 채권
-            "305080 TIGER 미국채10년선물",
-            "453850 TIGER 미국30년국채커버드콜액티브",
-            "463050 ACE 미국30년국채액티브",
-        ],
-        "alt": [
-            # 금/원자재
-            "132030 KODEX 골드선물(H)",
-            "319640 TIGER 금은선물(H)",
-            "411270 TIGER CD금리투자KIS(합성)",
-            # 달러/현금
-            "138230 TIGER 미국달러선물",
-            "452350 TIGER 미국달러SOFR금리액티브(합성)",
-            "238720 KODEX 달러선물",
-            # 인버스/방어
-            "252670 KODEX 200선물인버스2X",
-            "114800 KODEX 인버스",
-        ],
-    }
-    for cat in ["equity", "bond", "alt"]:
-        if not etf_catalogue[cat]:
-            etf_catalogue[cat] = VERIFIED_ETFS[cat]
+    # fdr 실패 시 DB에서 보완
+    if not any(etf_catalogue.values()):
+        try:
+            from sqlalchemy import select as sa_select
+            from db.models import ETFMaster
+            rows = (await db.execute(sa_select(ETFMaster.code, ETFMaster.name))).all()
+            for code, name in rows:
+                if code and name:
+                    etf_catalogue[_classify_etf(name)].append(f"{code} {name}")
+        except Exception as e:
+            logger.warning(f"DB ETF fallback failed: {e}")
 
-    def _fmt_cat(etfs: list[str], n: int = 20) -> str:
+    def _fmt_cat(etfs: list[str], n: int = 25) -> str:
         import random
         sample = random.sample(etfs, min(n, len(etfs))) if len(etfs) > n else etfs
         return "\n".join(f"  - {e}" for e in sample)
 
-    etf_list_block = f"""아래는 실제 한국거래소에 상장된 ETF 목록입니다. 반드시 이 목록에서만 선택하세요:
+    # ETF 목록 섹션 (비어 있으면 생략)
+    has_etf_list = any(etf_catalogue.values())
+    if has_etf_list:
+        etf_list_block = f"""아래는 KRX 실제 상장 ETF 목록입니다. 반드시 이 목록에서만 선택하고, 목록에 없는 ETF는 절대 추천하지 마세요:
 
 [주식형 ETF 후보]
 {_fmt_cat(etf_catalogue['equity'])}
@@ -831,6 +791,8 @@ async def get_ai_insight(
 
 [현금·금·대안 ETF 후보]
 {_fmt_cat(etf_catalogue['alt'])}"""
+    else:
+        etf_list_block = "※ ETF 목록 로드 실패 — 실제 KRX 상장 ETF 이름과 정확한 종목코드만 사용하세요."
 
     # 3. 프롬프트 작성
     us = compass_data.get("us", {})
