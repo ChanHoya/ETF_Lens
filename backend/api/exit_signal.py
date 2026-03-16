@@ -380,7 +380,19 @@ async def get_macro_detail(period: str = "1Y"):
 
         # Combine, ffill missing current-day US data using prior days, drop if entirely NaN
         close_prices = pd.concat([dx_s, krw_s, k_s, g_s], axis=1)
+        # 컬럼명 보장 (빈 시리즈 concat 시 누락 방지)
+        for col in ["DX-Y.NYB", "KRW=X", "^KS11", "^GSPC"]:
+            if col not in close_prices.columns:
+                close_prices[col] = float("nan")
         series_data = close_prices.ffill().dropna(how="all")
+
+        def _safe_val(row: pd.Series, col: str) -> float | None:
+            """pandas row에서 특정 컬럼값을 안전하게 추출."""
+            try:
+                v = row[col]
+                return float(v) if pd.notna(v) else None
+            except (KeyError, TypeError):
+                return None
 
         results = []
         for dt, row in series_data.iterrows():
@@ -390,25 +402,20 @@ async def get_macro_detail(period: str = "1Y"):
                 dt = pd.to_datetime(dt)
 
             date_str = f"{dt.year}-{dt.month:02d}-{dt.day:02d}"
+            dx_val = _safe_val(row, "DX-Y.NYB")
+            krw_val = _safe_val(row, "KRW=X")
+            k_val  = _safe_val(row, "^KS11")
+            g_val  = _safe_val(row, "^GSPC")
 
-            results.append(
-                {
-                    "date": date_str,
-                    "dollar": round(float(row.get("DX-Y.NYB", 100)), 2)
-                    if pd.notna(row.get("DX-Y.NYB"))
-                    else None,
-                    "krw": round(float(row.get("KRW=X", 1300)), 0)
-                    if pd.notna(row.get("KRW=X"))
-                    else None,
-                    "kospi": round(float(row.get("^KS11", 2500)), 0)
-                    if pd.notna(row.get("^KS11"))
-                    else None,
-                    "sp500": round(float(row.get("^GSPC", 4000)), 0)
-                    if pd.notna(row.get("^GSPC"))
-                    else None,
-                }
-            )
+            results.append({
+                "date": date_str,
+                "dollar": round(dx_val, 2) if dx_val is not None else None,
+                "krw": round(krw_val, 0) if krw_val is not None else None,
+                "kospi": round(k_val, 0) if k_val is not None else None,
+                "sp500": round(g_val, 0) if g_val is not None else None,
+            })
 
+        logger.info(f"macro_detail OK: {len(results)} rows, period={period}")
         _macro_cache[cache_key] = {"data": results, "timestamp": now}
         return results
     except Exception as e:
