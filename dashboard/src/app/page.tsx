@@ -1421,15 +1421,15 @@ export default function Home() {
       </div>
 
       {/* 모바일 전용 하단 네비게이션 바 (md 이상에서는 숨김) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[90] flex items-center justify-around bg-[#0d0d14]/95 backdrop-blur-xl border-t border-white/10 shadow-[0_-4px_24px_rgba(0,0,0,0.6)]"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', height: 'calc(60px + env(safe-area-inset-bottom, 0px))' }}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[90] flex items-center justify-around bg-[#1e2035]/98 backdrop-blur-xl border-t border-white/20 shadow-[0_-4px_24px_rgba(0,0,0,0.5)]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', height: 'calc(68px + env(safe-area-inset-bottom, 0px))' }}
       >
         {[
-          { id: 'analysis',     label: '종목분석',  icon: <BarChart2 className="w-5 h-5" /> },
-          { id: 'covered_call', label: '커버드콜',  icon: <Layers    className="w-5 h-5" /> },
-          { id: 'discover',     label: '모니터링',  icon: <Cpu       className="w-5 h-5" /> },
-          { id: 'etftracker',   label: 'ETF추적기', icon: <Target    className="w-5 h-5" /> },
-          { id: 'etfcheck',     label: 'ETF Check', icon: <BookOpen  className="w-5 h-5" /> },
+          { id: 'analysis',     label: '종목분석',  icon: <BarChart2 className="w-6 h-6" /> },
+          { id: 'covered_call', label: '커버드콜',  icon: <Layers    className="w-6 h-6" /> },
+          { id: 'discover',     label: '모니터링',  icon: <Cpu       className="w-6 h-6" /> },
+          { id: 'etftracker',   label: 'ETF추적기', icon: <Target    className="w-6 h-6" /> },
+          { id: 'etfcheck',     label: 'ETF Check', icon: <BookOpen  className="w-6 h-6" /> },
         ].map(tab => {
           const isAnalysisActive = ['select', 'info', 'chart', 'holdings'].includes(activeTab);
           const isActive =
@@ -1466,7 +1466,7 @@ export default function Home() {
               <span className={`transition-transform ${isActive ? 'scale-110' : ''}`}>
                 {tab.icon}
               </span>
-              <span className={`text-[9px] font-bold tracking-tight ${isActive ? 'text-indigo-400' : 'text-gray-500'}`}>
+              <span className={`text-[11px] font-bold tracking-tight ${isActive ? 'text-indigo-400' : 'text-gray-400'}`}>
                 {tab.label}
               </span>
               {isActive && (
