@@ -676,7 +676,7 @@ def _classify_etf(name: str) -> str:
 
 
 async def _load_etf_catalogue_from_fdr() -> dict[str, list[str]]:
-    """finance-datareader를 사용해 KRX 실제 ETF 전체 목록을 조회합니다."""
+    """pykrx(1순위) → fdr(2순위) 순으로 KRX 실제 ETF 전체 목록을 조회합니다."""
     import time as _time
     global _etf_catalogue_cache, _etf_catalogue_ts
 
@@ -684,10 +684,42 @@ async def _load_etf_catalogue_from_fdr() -> dict[str, list[str]]:
     if _etf_catalogue_cache and _time.time() - _etf_catalogue_ts < 86400:
         return _etf_catalogue_cache
 
+    catalogue: dict[str, list[str]] = {"equity": [], "bond": [], "alt": []}
+
+    # --- 1순위: pykrx (KRX 공식) ---
+    try:
+        from pykrx import stock as krx_stock  # type: ignore
+        from datetime import timedelta
+        date_str = datetime.now().strftime("%Y%m%d")
+        tickers = await asyncio.to_thread(krx_stock.get_etf_ticker_list, date_str)
+        # 주말/공휴일 → 최근 영업일 재시도
+        if not tickers:
+            for delta in range(1, 5):
+                prev = (datetime.now() - timedelta(days=delta)).strftime("%Y%m%d")
+                tickers = await asyncio.to_thread(krx_stock.get_etf_ticker_list, prev)
+                if tickers:
+                    date_str = prev
+                    break
+        for ticker in (tickers or []):
+            try:
+                name = await asyncio.to_thread(krx_stock.get_etf_ticker_name, ticker)
+                if name:
+                    cat = _classify_etf(name)
+                    catalogue[cat].append(f"{ticker.zfill(6)} {name}")
+            except Exception:
+                pass
+        if any(catalogue.values()):
+            logger.info(f"pykrx ETF catalogue: equity={len(catalogue['equity'])}, bond={len(catalogue['bond'])}, alt={len(catalogue['alt'])}")
+            _etf_catalogue_cache = catalogue
+            _etf_catalogue_ts = _time.time()
+            return catalogue
+    except Exception as e:
+        logger.warning(f"pykrx ETF catalogue failed: {e}")
+
+    # --- 2순위: finance_datareader ---
     try:
         import finance_datareader as fdr  # type: ignore
         df = await asyncio.to_thread(fdr.StockListing, "ETF/KR")
-        catalogue: dict[str, list[str]] = {"equity": [], "bond": [], "alt": []}
         for _, row in df.iterrows():
             code = str(row.get("Symbol", row.get("Code", ""))).strip().zfill(6)
             name = str(row.get("Name", row.get("ISU_ABBRV", ""))).strip()
@@ -696,14 +728,13 @@ async def _load_etf_catalogue_from_fdr() -> dict[str, list[str]]:
             cat = _classify_etf(name)
             catalogue[cat].append(f"{code} {name}")
         if any(catalogue.values()):
+            logger.info(f"fdr ETF catalogue: equity={len(catalogue['equity'])}, bond={len(catalogue['bond'])}, alt={len(catalogue['alt'])}")
             _etf_catalogue_cache = catalogue
             _etf_catalogue_ts = _time.time()
-            logger.info(f"ETF catalogue loaded: equity={len(catalogue['equity'])}, bond={len(catalogue['bond'])}, alt={len(catalogue['alt'])}")
             return catalogue
     except Exception as e:
         logger.warning(f"fdr ETF catalogue failed: {e}")
 
-    # --- fdr 실패 시 DB fallback ---
     return {"equity": [], "bond": [], "alt": []}
 
 
@@ -898,3 +929,33 @@ async def reset_insight_cache():
     _insight_cache.clear()
     return {"status": "ok", "message": "AI Insight cache cleared."}
 
+
+
+@router.post("/etf-master/sync")
+async def trigger_etf_master_sync(db: AsyncSession = Depends(get_db)):
+    """ETF 마스터 목록을 즉시 KRX에서 동기화합니다 (pykrx→fdr 순 시도 후 DB upsert)."""
+    global _etf_catalogue_cache, _etf_catalogue_ts
+    _etf_catalogue_cache = None
+    _etf_catalogue_ts = 0.0
+    _insight_cache.clear()
+
+    from core.scheduler import sync_etf_master_list
+    asyncio.create_task(sync_etf_master_list())
+    return {"status": "started", "message": "ETF master sync started in background. Check logs."}
+
+
+@router.get("/etf-master/count")
+async def get_etf_master_count(db: AsyncSession = Depends(get_db)):
+    """DB의 ETF 마스터 수를 반환합니다."""
+    try:
+        from sqlalchemy import func, select as sa_select
+        from db.models import ETFMaster
+        result = await db.execute(sa_select(func.count()).select_from(ETFMaster))
+        count = result.scalar()
+        return {
+            "etf_count": count,
+            "catalogue_cached": _etf_catalogue_cache is not None,
+            "ready_for_ai": (count or 0) >= 50,
+        }
+    except Exception as e:
+        return {"error": str(e)}
