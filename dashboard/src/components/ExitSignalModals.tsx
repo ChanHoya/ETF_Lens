@@ -113,7 +113,7 @@ export function DollarModalContent() {
             {/* 와이드 차트 — 고정 높이 */}
             <div className="w-full bg-black/20 rounded-xl p-4 border border-white/5" style={{ height: '280px' }}>
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={filteredData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}
+                    <LineChart data={filteredData} margin={{ top: 5, right: 0, left: 5, bottom: 5 }}
                         onMouseMove={(e) => setHoverIndex(e?.activeTooltipIndex ?? null)}
                         onMouseLeave={() => setHoverIndex(null)}
                     >
