@@ -526,7 +526,6 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
         { label: '6M', days: 120 },
         { label: '1Y', days: 250 },
         { label: '3Y', days: 750 },
-        { label: '10Y', days: 2500 }
     ];
 
     useEffect(() => {
