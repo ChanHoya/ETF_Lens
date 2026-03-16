@@ -532,8 +532,8 @@ async def _get_gemini_explanation(phase_en: str, indicators: dict,
     if not api_key:
         return f"현재 {PHASE_NAMES[phase_en]} 단계로 판단됩니다. (Gemini API 키 미설정)"
 
-    import google.generativeai as genai  # type: ignore
-    genai.configure(api_key=api_key)
+    from google import genai  # type: ignore
+    client = genai.Client(api_key=api_key)
 
     market_name = "미국" if market == "us" else "한국"
     phase_ko = PHASE_NAMES[phase_en]
@@ -557,8 +557,11 @@ async def _get_gemini_explanation(phase_en: str, indicators: dict,
 전문 용어를 사용하되 이해하기 쉽게 작성하세요."""
 
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = await asyncio.to_thread(model.generate_content, prompt)
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
         return response.text.strip()
     except Exception as e:
         logger.warning(f"Gemini explanation failed: {e}")
