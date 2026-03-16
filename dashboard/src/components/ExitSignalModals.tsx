@@ -45,44 +45,53 @@ export function DollarModalContent() {
         fetchMacro();
     }, [period]);
 
-    // Filter by period (data is monthly 10Y max)
+    // Filter by period with REAL values (no normalization)
     const filteredData = React.useMemo(() => {
         if (!data || data.length === 0) return [];
-        const endDt = new Date();
         const startDt = new Date();
         if (period === '6M') startDt.setMonth(startDt.getMonth() - 6);
         else if (period === '1Y') startDt.setFullYear(startDt.getFullYear() - 1);
         else if (period === '3Y') startDt.setFullYear(startDt.getFullYear() - 3);
         else if (period === '10Y') startDt.setFullYear(startDt.getFullYear() - 10);
 
-        const sliced = data.filter((d: any) => new Date(d.date) >= startDt);
-        if (sliced.length === 0) return [];
-
-        // Base everything off 100 at the start of the period to see relative flows, finding the first valid value
-        const getBase = (key: string) => {
-            const validItem = sliced.find((item: any) => typeof item[key] === 'number' && item[key] > 0);
-            return validItem ? validItem[key] : 0;
-        };
-
-        const baseKrw = getBase('krw');
-        const baseDollar = getBase('dollar');
-        const baseKospi = getBase('kospi');
-        const baseSp = getBase('sp500');
-
-        return sliced.map((d: any) => ({
-            ...d,
-            rawDollar: d.dollar,
-            rawKrw: d.krw,
-            rawKospi: d.kospi,
-            rawSp500: d.sp500,
-            dollar: (typeof d.dollar === 'number' && baseDollar > 0) ? parseFloat(((d.dollar / baseDollar) * 100).toFixed(2)) : null,
-            krw: (typeof d.krw === 'number' && baseKrw > 0) ? parseFloat(((d.krw / baseKrw) * 100).toFixed(2)) : null,
-            kospi: (typeof d.kospi === 'number' && baseKospi > 0) ? parseFloat(((d.kospi / baseKospi) * 100).toFixed(2)) : null,
-            sp500: (typeof d.sp500 === 'number' && baseSp > 0) ? parseFloat(((d.sp500 / baseSp) * 100).toFixed(2)) : null,
-        })).filter((d: any) => d.dollar !== null && isFinite(d.dollar));
+        return data
+            .filter((d: any) => new Date(d.date) >= startDt)
+            .map((d: any) => ({
+                date: d.date,
+                dollar: typeof d.dollar === 'number' ? d.dollar : null,           // 달러인덱스 실제값 (93~108)
+                krw10: typeof d.krw === 'number' ? d.krw / 10 : null,             // 환율 /10 → 좌축 스케일 맞춤 (130~150)
+                rawKrw: d.krw,
+                kospi: typeof d.kospi === 'number' ? d.kospi : null,              // KOSPI 실제 (2300~2700)
+                sp500: typeof d.sp500 === 'number' ? d.sp500 : null,              // S&P 500 실제 (4000~5800)
+            }))
+            .filter((d: any) => d.dollar !== null && isFinite(d.dollar));
     }, [data, period]);
 
-    const getNorm = useVisualSort(filteredData, ['dollar', 'krw', 'kospi', 'sp500']);
+    // 좌축 도메인: dollar(93~108) + krw/10(130~150) 공통 범위
+    const leftMin = React.useMemo(() => {
+        if (!filteredData.length) return 'auto';
+        const vals = filteredData.flatMap((d: any) => [d.dollar, d.krw10].filter(v => v != null));
+        return Math.floor(Math.min(...vals) * 0.98);
+    }, [filteredData]);
+    const leftMax = React.useMemo(() => {
+        if (!filteredData.length) return 'auto';
+        const vals = filteredData.flatMap((d: any) => [d.dollar, d.krw10].filter(v => v != null));
+        return Math.ceil(Math.max(...vals) * 1.02);
+    }, [filteredData]);
+
+    // 우축 도메인: KOSPI + S&P 500 공통 범위
+    const rightMin = React.useMemo(() => {
+        if (!filteredData.length) return 'auto';
+        const vals = filteredData.flatMap((d: any) => [d.kospi, d.sp500].filter(v => v != null));
+        return Math.floor(Math.min(...vals) * 0.97);
+    }, [filteredData]);
+    const rightMax = React.useMemo(() => {
+        if (!filteredData.length) return 'auto';
+        const vals = filteredData.flatMap((d: any) => [d.kospi, d.sp500].filter(v => v != null));
+        return Math.ceil(Math.max(...vals) * 1.03);
+    }, [filteredData]);
+
+    const getNorm = useVisualSort(filteredData, ['dollar', 'krw10', 'kospi', 'sp500']);
 
     if (loading) return <div className="flex items-center justify-center py-20 text-gray-500">Loading data...</div>;
 
@@ -111,8 +120,10 @@ export function DollarModalContent() {
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                         <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickMargin={12} />
 
-                        <YAxis yAxisId="left" domain={['auto', 'auto']} stroke="#a1a1aa" fontSize={11} width={45} tickFormatter={(val) => Math.round(val).toString()} />
-                        <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} stroke="#a1a1aa" fontSize={11} width={45} tickFormatter={(val) => Math.round(val).toString()} />
+                        <YAxis yAxisId="left" domain={[leftMin, leftMax]} stroke="#a1a1aa" fontSize={10} width={42}
+                            tickFormatter={(val) => Math.round(val).toString()} />
+                        <YAxis yAxisId="right" orientation="right" domain={[rightMin, rightMax]} stroke="#a1a1aa" fontSize={10} width={55}
+                            tickFormatter={(val) => typeof val === 'number' ? val.toLocaleString() : val} />
 
                         <RechartsTooltip
                             contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
@@ -127,10 +138,10 @@ export function DollarModalContent() {
                                             {sortedPayload.map((entry: any, index: number) => {
                                                 let displayValue = entry.value;
                                                 let name = entry.name;
-                                                if (name === '달러 인덱스') displayValue = entry.payload.rawDollar?.toFixed(2);
-                                                else if (name === 'USD/KRW') displayValue = `${Math.round(entry.payload.rawKrw || 0).toLocaleString()}원`;
-                                                else if (name === 'KOSPI') displayValue = `${Math.round(entry.payload.rawKospi || 0).toLocaleString()}pt`;
-                                                else if (name === 'S&P 500') displayValue = `${Math.round(entry.payload.rawSp500 || 0).toLocaleString()}pt`;
+                                                if (name === '달러 인덱스') displayValue = entry.value?.toFixed(2);
+                                                else if (name === 'USD/KRW') displayValue = `${Math.round(entry.payload.rawKrw || 0).toLocaleString()}원 (÷10: ${Math.round(entry.value)})`;
+                                                else if (name === 'KOSPI') displayValue = `${Math.round(entry.value || 0).toLocaleString()}pt`;
+                                                else if (name === 'S&P 500') displayValue = `${Math.round(entry.value || 0).toLocaleString()}pt`;
 
                                                 return (
                                                     <div key={`item-${index}`} className="flex items-center gap-2 mb-1 font-medium" style={{ color: entry.color }}>
@@ -147,7 +158,7 @@ export function DollarModalContent() {
                         />
 
                         <Line yAxisId="left" connectNulls type="monotone" name="달러 인덱스" dataKey="dollar" stroke="#34d399" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                        <Line yAxisId="left" connectNulls type="stepAfter" name="USD/KRW" dataKey="krw" stroke="#60a5fa" strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={{ r: 6 }} />
+                        <Line yAxisId="left" connectNulls type="stepAfter" name="USD/KRW" dataKey="krw10" stroke="#60a5fa" strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={{ r: 6 }} />
                         <Line yAxisId="right" connectNulls type="monotone" name="KOSPI" dataKey="kospi" stroke="#f43f5e" strokeWidth={1.5} dot={false} />
                         <Line yAxisId="right" connectNulls type="monotone" name="S&P 500" dataKey="sp500" stroke="#a78bfa" strokeWidth={1.5} dot={false} />
                     </LineChart>
@@ -158,13 +169,13 @@ export function DollarModalContent() {
                 {(() => {
                     const currentD = hoverIndex !== null && filteredData[hoverIndex] ? filteredData[hoverIndex] : (filteredData.length > 0 ? filteredData[filteredData.length - 1] : null);
                     const items = [
-                        { name: '원/달러 환율', dataKey: 'krw', node: <><div className="w-3 h-3 border-2 border-blue-400 border-dashed rounded-sm"></div> 원/달러 환율</> },
+                        { name: '원/달러 환율', dataKey: 'krw10', node: <><div className="w-3 h-3 border-2 border-blue-400 border-dashed rounded-sm"></div> 원/달러 환율 (÷10)</> },
                         { name: '달러 인덱스', dataKey: 'dollar', node: <><div className="w-3 h-3 bg-emerald-400 rounded-sm"></div> 달러 인덱스</> },
                         { name: 'S&P 500', dataKey: 'sp500', node: <><div className="w-3 h-3 bg-purple-400 rounded-sm"></div> S&P 500</> },
                         { name: 'KOSPI', dataKey: 'kospi', node: <><div className="w-3 h-3 bg-rose-400 rounded-sm"></div> KOSPI</> }
                     ];
                     if (currentD) {
-                        items.sort((a, b) => getNorm(b.dataKey, currentD[b.dataKey]) - getNorm(a.dataKey, currentD[a.dataKey]));
+                        items.sort((a, b) => getNorm(b.dataKey, (currentD as any)[b.dataKey]) - getNorm(a.dataKey, (currentD as any)[a.dataKey]));
                     }
                     return items.map(item => (
                         <div key={item.name} className="flex items-center gap-2">{item.node}</div>
