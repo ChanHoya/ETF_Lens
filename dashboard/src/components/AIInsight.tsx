@@ -80,11 +80,11 @@ export default function AIInsight() {
     try {
       if (forceRefresh) {
         setRefreshing(true)
-        await fetch(`${getApiUrl()}/api/v1/macro-compass/ai-insight/reset-cache`, { method: 'POST' })
+        await fetch(`${getApiUrl()}/api/v1/ai-insight/reset-cache`, { method: 'POST' })
       }
       setLoading(true)
       setError(null)
-      const res = await fetch(`${getApiUrl()}/api/v1/macro-compass/ai-insight`)
+      const res = await fetch(`${getApiUrl()}/api/v1/ai-insight`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json()
       setData(json)
