@@ -242,8 +242,14 @@ async def fetch_market_sentiment():
         k_s.name = "kospi"
         g_s.name = "sp500"
 
-        # Align series, forward fill missing latest US data with previous days, drop where missing forever
-        aligned = pd.concat([v_s, k_s, g_s], axis=1).ffill().dropna()
+        # VIX 기준으로 인덱스 설정 (미국 영업일 기준)
+        # KOSPI는 미국 장에 없는 날(한국 공휴일 등)은 전일 값으로 채움
+        aligned = pd.concat([v_s, k_s, g_s], axis=1)
+        aligned["vix"] = aligned["vix"].ffill()
+        aligned["sp500"] = aligned["sp500"].ffill()
+        aligned["kospi"] = aligned["kospi"].ffill()
+        # VIX가 있는 날(미국 영업일)만 유지
+        aligned = aligned[aligned["vix"].notna()].copy()
 
         if aligned.empty:
             return [], 20.0, 50.0
@@ -256,8 +262,8 @@ async def fetch_market_sentiment():
             if isinstance(dt, str):
                 dt = pd.to_datetime(dt)
             vix_val = float(row["vix"])
-            kospi_val = float(row["kospi"])
-            sp500_val = float(row["sp500"])
+            kospi_val = float(row["kospi"]) if pd.notna(row.get("kospi")) else 0.0
+            sp500_val = float(row["sp500"]) if pd.notna(row.get("sp500")) else 0.0
 
             # Proxy formula: FGI = 50 - (VIX - 18) * 3
             # Bound between 0 and 100
