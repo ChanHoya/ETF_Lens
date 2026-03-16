@@ -1,21 +1,20 @@
 """
 AI Macro Rotation Compass
 Determines US and Korea economic cycle phases (Recovery / Expansion / Slowdown / Recession)
-using publicly available data (yfinance proxies) and generates human-readable
-explanations via Gemini. Results are cached for 24 hours to minimise API costs.
+using Yahoo Finance v8 chart API (yfinance 대체) and Gemini AI explanations.
+Results are cached for 24 hours to minimise API costs.
 
-Note: FRED CSV is blocked on some networks. All indicators now use yfinance proxies:
+Indicators:
   US:  XLI(ISM proxy), ^TNX(인플레), XLY/XLP 비율(고용심리), ^IRX(단기금리), VIX(FGI), ^GSPC
   KR:  EWY(CLI proxy), SOXX(수출proxy), KRW=X inverse(BOK 금리환경), ^KS11(KOSPI)
 """
 import asyncio
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 import pandas as pd
-import yfinance as yf
 from fastapi import APIRouter
 
 logger = logging.getLogger(__name__)
@@ -53,38 +52,47 @@ def _momentum(s: pd.Series) -> tuple[Optional[float], Optional[str]]:
 
 async def _get_us_indicators() -> dict:
     """
-    US 매크로 지표 수집 (yfinance 개별 Ticker.history() 병렬 호출).
+    US 매크로 지표 수집 (Yahoo v8 chart API 병렬 호출 - yfinance 대체).
     """
-    end = datetime.now()
-    start_str = (end - timedelta(days=95)).strftime("%Y-%m-%d")
-    end_str = end.strftime("%Y-%m-%d")
+    import requests
 
-    def fetch(ticker: str) -> pd.Series:
-        """Fetch single ticker closing prices with error handling."""
+    def _yv8(symbol: str, days: int = 95) -> pd.Series:
+        """Yahoo Finance v8 chart API → pd.Series (날짜 인덱스, Close 값)."""
         try:
-            t = yf.Ticker(ticker)
-            df = t.history(start=start_str, end=end_str, auto_adjust=True)
-            if df.empty or "Close" not in df.columns:
-                logger.warning(f"No data for {ticker}")
+            rng = "3mo" if days <= 100 else ("1y" if days <= 400 else "3y")
+            # ^VIX, ^TNX 등 특수문자 URL 인코딩
+            sym_enc = symbol.replace("^", "%5E")
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym_enc}?interval=1d&range={rng}"
+            r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+            if r.status_code != 200:
+                logger.warning(f"Yahoo v8 {symbol} status={r.status_code}")
                 return pd.Series(dtype=float)
-            s = df["Close"].dropna()
-            # Strip timezone info for consistent date handling
-            if hasattr(s.index, "tz") and s.index.tz is not None:
-                s.index = s.index.tz_localize(None)
-            return s
+            rb = r.json().get("chart", {}).get("result", [])
+            if not rb:
+                return pd.Series(dtype=float)
+            ts  = rb[0].get("timestamp", [])
+            cls = rb[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+            rows = {}
+            for t, c in zip(ts, cls):
+                if c is None:
+                    continue
+                rows[pd.Timestamp.fromtimestamp(t).normalize()] = float(c)
+            s = pd.Series(rows)
+            s.index = pd.DatetimeIndex(s.index)
+            return s.sort_index()
         except Exception as e:
-            logger.warning(f"yfinance failed for {ticker}: {e}")
+            logger.warning(f"Yahoo v8 {symbol} failed: {e}")
             return pd.Series(dtype=float)
 
     # Run all 7 tickers in parallel
     gspc, vix_s, tnx, irx, xli, xly, xlp = await asyncio.gather(
-        asyncio.to_thread(fetch, "^GSPC"),
-        asyncio.to_thread(fetch, "^VIX"),
-        asyncio.to_thread(fetch, "^TNX"),
-        asyncio.to_thread(fetch, "^IRX"),
-        asyncio.to_thread(fetch, "XLI"),
-        asyncio.to_thread(fetch, "XLY"),
-        asyncio.to_thread(fetch, "XLP"),
+        asyncio.to_thread(_yv8, "^GSPC"),
+        asyncio.to_thread(_yv8, "^VIX"),
+        asyncio.to_thread(_yv8, "^TNX"),
+        asyncio.to_thread(_yv8, "^IRX"),
+        asyncio.to_thread(_yv8, "XLI"),
+        asyncio.to_thread(_yv8, "XLY"),
+        asyncio.to_thread(_yv8, "XLP"),
     )
 
     # ISM proxy: XLI 3M 모멘텀
@@ -125,33 +133,41 @@ async def _get_us_indicators() -> dict:
 
 async def _get_kr_indicators() -> dict:
     """
-    한국 매크로 지표 수집 (yfinance 개별 Ticker.history() 병렬 호출).
+    한국 매크로 지표 수집 (Yahoo v8 chart API 병렬 호출 - yfinance 대체).
     """
-    end = datetime.now()
-    start_str = (end - timedelta(days=95)).strftime("%Y-%m-%d")
-    end_str = end.strftime("%Y-%m-%d")
+    import requests
 
-    def fetch(ticker: str) -> pd.Series:
+    def _yv8(symbol: str, days: int = 95) -> pd.Series:
         try:
-            t = yf.Ticker(ticker)
-            df = t.history(start=start_str, end=end_str, auto_adjust=True)
-            if df.empty or "Close" not in df.columns:
-                logger.warning(f"No data for {ticker}")
+            rng = "3mo" if days <= 100 else "1y"
+            sym_enc = symbol.replace("^", "%5E")
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym_enc}?interval=1d&range={rng}"
+            r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+            if r.status_code != 200:
                 return pd.Series(dtype=float)
-            s = df["Close"].dropna()
-            if hasattr(s.index, "tz") and s.index.tz is not None:
-                s.index = s.index.tz_localize(None)
-            return s
+            rb = r.json().get("chart", {}).get("result", [])
+            if not rb:
+                return pd.Series(dtype=float)
+            ts  = rb[0].get("timestamp", [])
+            cls = rb[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+            rows = {}
+            for t, c in zip(ts, cls):
+                if c is None:
+                    continue
+                rows[pd.Timestamp.fromtimestamp(t).normalize()] = float(c)
+            s = pd.Series(rows)
+            s.index = pd.DatetimeIndex(s.index)
+            return s.sort_index()
         except Exception as e:
-            logger.warning(f"yfinance failed for {ticker}: {e}")
+            logger.warning(f"Yahoo v8 {symbol} failed: {e}")
             return pd.Series(dtype=float)
 
     # Run all 4 tickers in parallel
     ks_s, krw_s, ewy_s, soxx_s = await asyncio.gather(
-        asyncio.to_thread(fetch, "^KS11"),
-        asyncio.to_thread(fetch, "KRW=X"),
-        asyncio.to_thread(fetch, "EWY"),
-        asyncio.to_thread(fetch, "SOXX"),
+        asyncio.to_thread(_yv8, "^KS11"),
+        asyncio.to_thread(_yv8, "KRW=X"),
+        asyncio.to_thread(_yv8, "EWY"),
+        asyncio.to_thread(_yv8, "SOXX"),
     )
 
     # CLI proxy: EWY 3M 모멘텀
@@ -632,3 +648,145 @@ async def get_macro_compass():
 
     _compass_cache[cache_key] = (result, now_ts)
     return result
+
+
+# ---------------------------------------------------------------------------
+# AI Market Insight endpoint
+# ---------------------------------------------------------------------------
+
+_insight_cache: dict = {}
+INSIGHT_CACHE_TTL = 3600 * 4  # 4시간 캐시
+
+
+@router.get("/ai-insight")
+async def get_ai_insight(
+    dollar: float | None = None,
+    krw: float | None = None,
+    vix: float | None = None,
+    fgi: float | None = None,
+    sp500_mom: float | None = None,
+    kospi_mom: float | None = None,
+):
+    """
+    모니터링 탭의 모든 데이터를 종합하여 Gemini가 최고 주식 전문가 관점의
+    시장 인사이트를 생성합니다. 4시간 캐시.
+    """
+    import time
+    cache_key = "ai_insight_v1"
+    now_ts = time.time()
+    if cache_key in _insight_cache:
+        cached, ts = _insight_cache[cache_key]
+        if now_ts - ts < INSIGHT_CACHE_TTL:
+            return cached
+
+    # 1. 나침반 데이터 수집 (캐시 활용)
+    compass_key = "macro_compass_v3"
+    compass_data = None
+    if compass_key in _compass_cache:
+        compass_data, _ = _compass_cache[compass_key]
+
+    if compass_data is None:
+        us_ind, kr_ind = await asyncio.gather(
+            _get_us_indicators(),
+            _get_kr_indicators(),
+        )
+        us_phase_en, us_conf = _score_us_phase(us_ind)
+        kr_phase_en, kr_conf = _score_kr_phase(kr_ind)
+        compass_data = {
+            "us": {"phase": PHASE_NAMES[us_phase_en], "confidence": us_conf, "indicators": us_ind},
+            "kr": {"phase": PHASE_NAMES[kr_phase_en], "confidence": kr_conf, "indicators": kr_ind},
+        }
+
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    analyzed_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    if not api_key:
+        result = {
+            "insight": "Gemini API 키가 설정되지 않아 AI 인사이트를 생성할 수 없습니다.",
+            "analyzed_at": analyzed_at,
+        }
+        _insight_cache[cache_key] = (result, now_ts)
+        return result
+
+    # 2. 프롬프트 작성
+    us = compass_data.get("us", {})
+    kr = compass_data.get("kr", {})
+    us_ind = us.get("indicators", {})
+    kr_ind = kr.get("indicators", {})
+
+    lines = [
+        f"[미국 매크로]",
+        f"  경기 사이클: {us.get('phase','N/A')} (확신도: {us.get('confidence','N/A')}%)",
+        f"  ISM 모멘텀: {us_ind.get('ism',{}).get('value','N/A')}",
+        f"  10년물 금리: {us_ind.get('pce',{}).get('value','N/A')}%",
+        f"  단기금리(IRX): {us_ind.get('fed_rate',{}).get('value','N/A')}%",
+        f"  S&P500 3M: {us_ind.get('sp500_momentum',{}).get('value','N/A')}%",
+        f"  FGI(VIX기반): {us_ind.get('fgi',{}).get('value','N/A')}",
+        f"",
+        f"[한국 매크로]",
+        f"  경기 사이클: {kr.get('phase','N/A')} (확신도: {kr.get('confidence','N/A')}%)",
+        f"  KOSPI 3M: {kr_ind.get('kospi_momentum',{}).get('value','N/A')}%",
+        f"  수출(SOXX): {kr_ind.get('export_growth',{}).get('value','N/A')}%",
+        f"  USD/KRW: {kr_ind.get('usd_krw',{}).get('value','N/A')}",
+    ]
+
+    if dollar is not None:
+        lines.append(f"\n[달러인덱스/환율]")
+        lines.append(f"  달러인덱스(DXY): {dollar:.2f}")
+    if krw is not None:
+        lines.append(f"  USD/KRW: {krw:.0f}원")
+    if vix is not None:
+        lines.append(f"  VIX(공포지수): {vix:.1f}")
+    if fgi is not None:
+        lines.append(f"  FGI(탐욕지수): {fgi:.0f}")
+
+    data_summary = "\n".join(lines)
+
+    prompt = f"""당신은 월스트리트 탑티어 헤지펀드 매니저이자 거시경제 전문가입니다.
+아래는 현재 실시간 글로벌 매크로 데이터입니다:
+
+{data_summary}
+
+위 데이터를 바탕으로 다음 형식으로 투자자에게 명확하고 인사이트 있는 시장 분석을 작성하세요:
+
+**📊 현재 시장 상황 진단**
+(미국/한국 경기 현황, 핵심 지표 해석 2-3문장)
+
+**⚠️ 주요 리스크 요인**
+(현재 가장 주목해야 할 위험 요소 2가지)
+
+**💡 투자 전략 제언**  
+(현재 경기 사이클에 맞는 구체적인 섹터/자산 배분 전략 3-4문장)
+
+**🔍 핵심 모니터링 포인트**
+(앞으로 주시해야 할 지표 2가지와 그 이유)
+
+한국 투자자 관점에서, 전문 용어와 구체적 수치를 활용해 작성하세요."""
+
+    try:
+        from google import genai  # type: ignore
+        client = genai.Client(api_key=api_key)
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+        insight_text = response.text.strip()
+    except Exception as e:
+        logger.warning(f"Gemini insight failed: {e}")
+        insight_text = f"현재 글로벌 경기는 미국 {us.get('phase','N/A')}, 한국 {kr.get('phase','N/A')} 국면입니다. AI 분석 생성 중 오류가 발생했습니다."
+
+    result = {
+        "insight": insight_text,
+        "us_phase": us.get("phase"),
+        "kr_phase": kr.get("phase"),
+        "analyzed_at": analyzed_at,
+    }
+    _insight_cache[cache_key] = (result, now_ts)
+    return result
+
+
+@router.post("/ai-insight/reset-cache")
+async def reset_insight_cache():
+    _insight_cache.clear()
+    return {"status": "ok", "message": "AI Insight cache cleared."}

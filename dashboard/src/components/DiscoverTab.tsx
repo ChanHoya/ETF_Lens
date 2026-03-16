@@ -5,6 +5,7 @@ import { Activity, X } from 'lucide-react';
 import KospiExitAnalyzer from '@/components/KospiExitAnalyzer';
 import SemiChart from '@/components/SemiChart';
 import MacroCompass from '@/components/MacroCompass';
+import AIInsight from '@/components/AIInsight';
 
 export default function DiscoverTab() {
     const [selectedPopup, setSelectedPopup] = useState<'inflation' | 'cpi' | null>(null);
@@ -77,6 +78,9 @@ export default function DiscoverTab() {
 
                 {/* AI 매크로 로테이션 나침반 (미국/한국 분석) */}
                 <MacroCompass />
+
+                {/* AI Insight - 전문가 시장 분석 */}
+                <AIInsight />
 
             </div>
 
