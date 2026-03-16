@@ -333,7 +333,35 @@ async def get_exit_signal_data():
     return mock
 
 
+@router.get("/macro/debug-dx")
+async def debug_dx():
+    """Render에서 DX-Y.NYB 직접 테스트 (디버그 전용)"""
+    import traceback
+    try:
+        end_date = datetime.now()
+        start_str = (end_date - timedelta(days=30)).strftime("%Y-%m-%d")
+        end_str = end_date.strftime("%Y-%m-%d")
+
+        def _fetch():
+            t = yf.Ticker("DX-Y.NYB")
+            df = t.history(start=start_str, end=end_str, auto_adjust=True)
+            return df
+
+        df = await asyncio.to_thread(_fetch)
+        return {
+            "empty": df.empty,
+            "shape": list(df.shape),
+            "columns": df.columns.tolist() if not df.empty else [],
+            "index_type": str(type(df.index).__name__),
+            "index_tz": str(df.index.tz) if not df.empty and hasattr(df.index, "tz") else None,
+            "tail": df["Close"].tail(5).reset_index().to_dict("records") if not df.empty and "Close" in df.columns else [],
+        }
+    except Exception as e:
+        return {"error": str(e), "traceback": traceback.format_exc()}
+
+
 @router.get("/macro")
+
 async def get_macro_detail(period: str = "1Y"):
     global _macro_cache
 
