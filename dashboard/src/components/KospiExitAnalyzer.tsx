@@ -603,17 +603,17 @@ export default function KospiExitAnalyzer() {
             {/* Portal: document.body에 직접 렌더링 → overflow 컨테이너 영향 없음 */}
             {activePopup && isMounted && createPortal(
                 <div
-                    className="fixed left-0 right-0 bottom-0 z-[9999] flex items-start justify-center"
+                    className="fixed left-0 right-0 bottom-0 z-[9999] flex items-end justify-center"
                     style={{ top: `${popupTop}px` }}
                     onClick={() => setActivePopup(null)}
                 >
                     {/* 반투명 배경 */}
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
 
-                    {/* 팝업 패널 — 클릭 카드 위치~화면 끝 */}
+                    {/* 팝업 패널 — 컨텐츠 높이에 맞춤, 최대 90vh */}
                     <div
                         className="relative w-full max-w-4xl bg-[#1a1a2e] border border-white/20 rounded-t-2xl flex flex-col shadow-[0_-8px_60px_rgba(0,0,0,0.9)] animate-in fade-in slide-in-from-bottom-2 duration-200 overflow-hidden"
-                        style={{ height: `calc(100vh - ${popupTop}px)` }}
+                        style={{ maxHeight: `calc(100vh - ${popupTop}px)` }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* 헤더 */}
@@ -635,7 +635,7 @@ export default function KospiExitAnalyzer() {
                         </div>
 
                         {/* 팝업 콘텐츠 */}
-                        <div className="flex-1 overflow-y-auto px-1 py-2 md:px-2 md:py-3">
+                        <div className="overflow-y-auto px-1 py-2 md:px-2 md:py-3">
                             {activePopup === 'dollar' && <DollarModalContent />}
                             {activePopup === 'per' && <PerModalContent />}
                             {activePopup === 'cli' && <CliModalContent />}
