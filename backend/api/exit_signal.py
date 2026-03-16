@@ -78,48 +78,64 @@ async def fetch_yf_data():
     try:
         end_date = datetime.now()
         start_date = end_date - timedelta(days=400)
+        start_str = start_date.strftime("%Y-%m-%d")
+        end_str = end_date.strftime("%Y-%m-%d")
 
-        df = await asyncio.to_thread(
-            yf.download,
-            ["DX-Y.NYB", "KRW=X"],
-            start=start_date.strftime("%Y-%m-%d"),
-            end=end_date.strftime("%Y-%m-%d"),
-            progress=False,
+        def _fetch_single(ticker: str) -> pd.Series:
+            """Ticker별 개별 다운로드 - MultiIndex 문제 방지."""
+            try:
+                t = yf.Ticker(ticker)
+                df = t.history(start=start_str, end=end_str, auto_adjust=True)
+                if df.empty or "Close" not in df.columns:
+                    return pd.Series(dtype=float)
+                s = df["Close"]
+                if hasattr(s.index, "tz") and s.index.tz is not None:
+                    s.index = s.index.tz_localize(None)
+                s.index = pd.to_datetime(s.index)
+                return s
+            except Exception as e:
+                logger.warning(f"yfinance {ticker} failed: {e}")
+                return pd.Series(dtype=float)
+
+        dx_s, krw_s = await asyncio.gather(
+            asyncio.to_thread(_fetch_single, "DX-Y.NYB"),
+            asyncio.to_thread(_fetch_single, "KRW=X"),
         )
 
-        if isinstance(df.columns, pd.MultiIndex):
-            close_prices = df["Close"]
-        else:
-            close_prices = df
+        if dx_s.empty:
+            logger.warning("DX-Y.NYB returned empty series")
+            return [], 100.0, 1300
 
-        monthly = close_prices.resample("ME").last().dropna(how="all").tail(12)
+        # 월별 마지막 거래일 값
+        dx_monthly = dx_s.resample("ME").last().dropna().tail(12)
+        krw_monthly = krw_s.resample("ME").last().dropna() if not krw_s.empty else pd.Series(dtype=float)
 
         dollar_data = []
-        for dt, row in monthly.iterrows():
-            if isinstance(dt, tuple):
-                dt = dt[0]
-            if isinstance(dt, str):
-                dt = pd.to_datetime(dt)
-
+        for dt in dx_monthly.index:
             month_str = f"{dt.month:02d}월"
-            dollar_val = float(row.get("DX-Y.NYB", 100.0))
-            krw_val = int(row.get("KRW=X", 1300.0))
+            dx_val = float(dx_monthly[dt])
+            # KRW=X는 USD/KRW; 가장 가까운 월 매핑
+            krw_val = 1300
+            if not krw_monthly.empty:
+                ym_key = dt.strftime("%Y-%m")
+                matches = krw_monthly[krw_monthly.index.strftime("%Y-%m") == ym_key]
+                if not matches.empty:
+                    krw_val = int(round(float(matches.iloc[-1])))
 
-            dollar_data.append(
-                {
-                    "month": month_str,
-                    "val": round(dollar_val, 2) if pd.notna(dollar_val) else 100.0,
-                    "krw": krw_val if pd.notna(krw_val) else 1300,
-                }
-            )
+            dollar_data.append({
+                "month": month_str,
+                "val": round(dx_val, 2),
+                "krw": krw_val,
+            })
 
         if not dollar_data:
             return [], 100.0, 1300
 
         final_dx = dollar_data[-1]["val"]
         final_krw = dollar_data[-1]["krw"]
-
+        logger.info(f"fetch_yf_data OK: DX={final_dx}, KRW={final_krw}, count={len(dollar_data)}")
         return dollar_data, final_dx, final_krw
+
     except Exception as e:
         logger.error(f"Failed to fetch YF data: {e}")
         return [], 100.0, 1300
