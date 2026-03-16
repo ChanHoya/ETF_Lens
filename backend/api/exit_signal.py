@@ -373,54 +373,76 @@ async def get_macro_detail(period: str = "1Y"):
             asyncio.to_thread(_fetch_hist, "^KS11"),
             asyncio.to_thread(_fetch_hist, "^GSPC"),
         )
-        dx_s.name = "DX-Y.NYB"
-        krw_s.name = "KRW=X"
-        k_s.name = "^KS11"
-        g_s.name = "^GSPC"
 
-        # Combine, ffill missing current-day US data using prior days, drop if entirely NaN
-        close_prices = pd.concat([dx_s, krw_s, k_s, g_s], axis=1)
-        # 컬럼명 보장 (빈 시리즈 concat 시 누락 방지)
-        for col in ["DX-Y.NYB", "KRW=X", "^KS11", "^GSPC"]:
-            if col not in close_prices.columns:
-                close_prices[col] = float("nan")
-        series_data = close_prices.ffill().dropna(how="all")
+        # pd.concat/row.get 접근 방식 포기 → 날짜 dict로 개별 변환 후 merge
+        def _series_to_dict(s: pd.Series) -> dict[str, float]:
+            """Series를 {YYYY-MM-DD: float} dict로 변환."""
+            if s.empty:
+                return {}
+            # timezone 제거
+            if hasattr(s.index, "tz") and s.index.tz is not None:
+                s = s.copy()
+                s.index = s.index.tz_localize(None)
+            result = {}
+            for dt, val in s.items():
+                if pd.notna(val) and isinstance(dt, pd.Timestamp):
+                    result[dt.strftime("%Y-%m-%d")] = float(val)
+            return result
 
-        def _safe_val(row: pd.Series, col: str) -> float | None:
-            """pandas row에서 특정 컬럼값을 안전하게 추출."""
-            try:
-                v = row[col]
-                return float(v) if pd.notna(v) else None
-            except (KeyError, TypeError):
-                return None
+        dx_dict  = _series_to_dict(dx_s)
+        krw_dict = _series_to_dict(krw_s)
+        k_dict   = _series_to_dict(k_s)
+        g_dict   = _series_to_dict(g_s)
+
+        # 모든 날짜 합집합
+        all_dates = sorted(set(dx_dict) | set(krw_dict) | set(k_dict) | set(g_dict))
+        if not all_dates:
+            logger.warning("macro_detail: no data from any source")
+            return []
+
+        # ffill 구현 (이전 유효값 유지)
+        def _ffill_dict(d: dict, dates: list[str]) -> dict[str, float]:
+            last = None
+            result: dict[str, float] = {}
+            for dt in dates:
+                if dt in d:
+                    last = d[dt]
+                if last is not None:
+                    result[dt] = last
+            return result
+
+        dx_ff  = _ffill_dict(dx_dict,  all_dates)
+        krw_ff = _ffill_dict(krw_dict, all_dates)
+        k_ff   = _ffill_dict(k_dict,   all_dates)
+        g_ff   = _ffill_dict(g_dict,   all_dates)
 
         results = []
-        for dt, row in series_data.iterrows():
-            if isinstance(dt, tuple):
-                dt = dt[0]
-            if isinstance(dt, str):
-                dt = pd.to_datetime(dt)
-
-            date_str = f"{dt.year}-{dt.month:02d}-{dt.day:02d}"
-            dx_val = _safe_val(row, "DX-Y.NYB")
-            krw_val = _safe_val(row, "KRW=X")
-            k_val  = _safe_val(row, "^KS11")
-            g_val  = _safe_val(row, "^GSPC")
-
+        for date_str in all_dates:
             results.append({
-                "date": date_str,
-                "dollar": round(dx_val, 2) if dx_val is not None else None,
-                "krw": round(krw_val, 0) if krw_val is not None else None,
-                "kospi": round(k_val, 0) if k_val is not None else None,
-                "sp500": round(g_val, 0) if g_val is not None else None,
+                "date":   date_str,
+                "dollar": round(dx_ff[date_str],  2) if date_str in dx_ff  else None,
+                "krw":    round(krw_ff[date_str], 0) if date_str in krw_ff else None,
+                "kospi":  round(k_ff[date_str],   0) if date_str in k_ff   else None,
+                "sp500":  round(g_ff[date_str],   0) if date_str in g_ff   else None,
             })
 
-        logger.info(f"macro_detail OK: {len(results)} rows, period={period}")
+        # dollar 있는 항목만 카운트 (로그)
+        n_dollar = sum(1 for r in results if r["dollar"] is not None)
+        logger.info(f"macro_detail OK: {len(results)} rows, dollar={n_dollar}, period={period}")
         _macro_cache[cache_key] = {"data": results, "timestamp": now}
         return results
     except Exception as e:
-        logger.error(f"Error fetching macro detail: {e}")
+        logger.error(f"Error fetching macro detail: {e}", exc_info=True)
         return []
+
+
+@router.get("/macro/reset-cache")
+async def reset_macro_cache():
+    """macro 캐시 강제 초기화"""
+    global _macro_cache
+    _macro_cache = {}
+    logger.info("Macro cache reset by request")
+    return {"status": "ok", "message": "Macro cache cleared."}
 
 
 @router.get("/cli/reset-cache")
