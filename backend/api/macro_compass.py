@@ -676,7 +676,7 @@ def _classify_etf(name: str) -> str:
 
 
 async def _load_etf_catalogue_from_fdr() -> dict[str, list[str]]:
-    """pykrx(1순위) → fdr(2순위) 순으로 KRX 실제 ETF 전체 목록을 조회합니다."""
+    """네이버 증권 API(1순위) → 번들 CSV(2순위) 순으로 KRX ETF 목록을 조회합니다."""
     import time as _time
     global _etf_catalogue_cache, _etf_catalogue_ts
 
@@ -686,54 +686,49 @@ async def _load_etf_catalogue_from_fdr() -> dict[str, list[str]]:
 
     catalogue: dict[str, list[str]] = {"equity": [], "bond": [], "alt": []}
 
-    # --- 1순위: pykrx (KRX 공식) ---
+    # --- 1순위: 네이버 증권 ETF 목록 API (실시간, 1000+ ETFs) ---
     try:
-        from pykrx import stock as krx_stock  # type: ignore
-        from datetime import timedelta
-        date_str = datetime.now().strftime("%Y%m%d")
-        tickers = await asyncio.to_thread(krx_stock.get_etf_ticker_list, date_str)
-        # 주말/공휴일 → 최근 영업일 재시도
-        if not tickers:
-            for delta in range(1, 5):
-                prev = (datetime.now() - timedelta(days=delta)).strftime("%Y%m%d")
-                tickers = await asyncio.to_thread(krx_stock.get_etf_ticker_list, prev)
-                if tickers:
-                    date_str = prev
-                    break
-        for ticker in (tickers or []):
-            try:
-                name = await asyncio.to_thread(krx_stock.get_etf_ticker_name, ticker)
-                if name:
-                    cat = _classify_etf(name)
-                    catalogue[cat].append(f"{ticker.zfill(6)} {name}")
-            except Exception:
-                pass
+        import requests as _req  # type: ignore
+        resp = await asyncio.to_thread(
+            lambda: _req.get(
+                "https://finance.naver.com/api/sise/etfItemList.nhn",
+                headers={"User-Agent": "Mozilla/5.0 (compatible; ETFLens/1.0)"},
+                timeout=10,
+            )
+        )
+        items = resp.json().get("result", {}).get("etfItemList", [])
+        for item in items:
+            code = str(item.get("itemcode", "")).strip().zfill(6)
+            name = str(item.get("itemname", "")).strip()
+            if code and name and len(code) == 6:
+                catalogue[_classify_etf(name)].append(f"{code} {name}")
         if any(catalogue.values()):
-            logger.info(f"pykrx ETF catalogue: equity={len(catalogue['equity'])}, bond={len(catalogue['bond'])}, alt={len(catalogue['alt'])}")
+            logger.info(f"Naver ETF catalogue: {sum(len(v) for v in catalogue.values())} ETFs")
             _etf_catalogue_cache = catalogue
             _etf_catalogue_ts = _time.time()
             return catalogue
     except Exception as e:
-        logger.warning(f"pykrx ETF catalogue failed: {e}")
+        logger.warning(f"Naver ETF API failed: {e}")
 
-    # --- 2순위: finance_datareader ---
+    # --- 2순위: 번들 CSV (배포 패키지에 포함, pykrx/fdr 불필요) ---
     try:
-        import finance_datareader as fdr  # type: ignore
-        df = await asyncio.to_thread(fdr.StockListing, "ETF/KR")
-        for _, row in df.iterrows():
-            code = str(row.get("Symbol", row.get("Code", ""))).strip().zfill(6)
-            name = str(row.get("Name", row.get("ISU_ABBRV", ""))).strip()
-            if not code or not name or len(code) != 6:
-                continue
-            cat = _classify_etf(name)
-            catalogue[cat].append(f"{code} {name}")
-        if any(catalogue.values()):
-            logger.info(f"fdr ETF catalogue: equity={len(catalogue['equity'])}, bond={len(catalogue['bond'])}, alt={len(catalogue['alt'])}")
-            _etf_catalogue_cache = catalogue
-            _etf_catalogue_ts = _time.time()
-            return catalogue
+        import csv as _csv, os as _os
+        csv_path = _os.path.join(_os.path.dirname(__file__), "..", "data", "etf_kr_list.csv")
+        csv_path = _os.path.abspath(csv_path)
+        if _os.path.exists(csv_path):
+            with open(csv_path, encoding="utf-8") as f:
+                for row in _csv.DictReader(f):
+                    code = str(row.get("code", "")).strip().zfill(6)
+                    name = str(row.get("name", "")).strip()
+                    if code and name:
+                        catalogue[_classify_etf(name)].append(f"{code} {name}")
+            if any(catalogue.values()):
+                logger.info(f"CSV ETF catalogue fallback: {sum(len(v) for v in catalogue.values())} ETFs")
+                _etf_catalogue_cache = catalogue
+                _etf_catalogue_ts = _time.time()
+                return catalogue
     except Exception as e:
-        logger.warning(f"fdr ETF catalogue failed: {e}")
+        logger.warning(f"CSV ETF catalogue failed: {e}")
 
     return {"equity": [], "bond": [], "alt": []}
 
