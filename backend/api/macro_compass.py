@@ -14,8 +14,12 @@ import os
 from datetime import datetime
 from typing import Optional
 
+import httpx
 import pandas as pd
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.database import get_db
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["macro_compass"])
@@ -653,9 +657,50 @@ async def get_macro_compass():
 # ---------------------------------------------------------------------------
 # AI Market Insight endpoint
 # ---------------------------------------------------------------------------
+# AI Market Insight endpoint
+# ---------------------------------------------------------------------------
 
 _insight_cache: dict = {}
 INSIGHT_CACHE_TTL = 3600 * 4  # 4시간 캐시
+
+# ETF 카테고리 분류 키워드 (ETF 이름 기반)
+_ETF_CATEGORY_KEYWORDS = {
+    "equity": ["200", "코스피", "코스닥", "나스닥", "S&P", "반도체", "2차전지", "배당", "성장", "테크", "IT", "ESG",
+               "미국주식", "미국s&p", "글로벌", "헬스케어", "에너지", "소비재", "금융주", "리츠", "부동산",
+               "미국대형", "차이나", "인도", "일본"],
+    "bond": ["국고채", "회사채", "채권", "단기채", "장기채", "미국채", "국채", "크레딧", "하이일드", "금리"],
+    "alt": ["금선물", "금융", "달러", "원자재", "인버스", "레버리지", "혼합", "멀티에셋", "현금", "머니마켓", "MMF"],
+}
+
+
+def _classify_etf(name: str) -> str:
+    name_l = name.lower()
+    for kw in _ETF_CATEGORY_KEYWORDS["bond"]:
+        if kw.lower() in name_l:
+            return "bond"
+    for kw in _ETF_CATEGORY_KEYWORDS["alt"]:
+        if kw.lower() in name_l:
+            return "alt"
+    return "equity"
+
+
+async def _get_etf_catalogue(db) -> dict[str, list[str]]:
+    """ETFMaster DB에서 실제 ETF 목록을 가져와 카테고리별로 분류."""
+    try:
+        from sqlalchemy import select
+        from db.models import ETFMaster
+        result = await db.execute(select(ETFMaster.code, ETFMaster.name).limit(500))
+        rows = result.all()
+        catalogue: dict[str, list[str]] = {"equity": [], "bond": [], "alt": []}
+        for code, name in rows:
+            if not code or not name:
+                continue
+            cat = _classify_etf(name)
+            catalogue[cat].append(f"{code} {name}")
+        return catalogue
+    except Exception as e:
+        logger.warning(f"ETF catalogue fetch failed: {e}")
+        return {"equity": [], "bond": [], "alt": []}
 
 
 @router.get("/ai-insight")
@@ -666,13 +711,14 @@ async def get_ai_insight(
     fgi: float | None = None,
     sp500_mom: float | None = None,
     kospi_mom: float | None = None,
+    db: AsyncSession = Depends(get_db),
 ):
     """
     모니터링 탭의 모든 데이터를 종합하여 Gemini가 최고 주식 전문가 관점의
     시장 인사이트를 생성합니다. 4시간 캐시.
     """
     import time
-    cache_key = "ai_insight_v2"
+    cache_key = "ai_insight_v3"
     now_ts = time.time()
     if cache_key in _insight_cache:
         cached, ts = _insight_cache[cache_key]
@@ -708,7 +754,54 @@ async def get_ai_insight(
         _insight_cache[cache_key] = (result, now_ts)
         return result
 
-    # 2. 프롬프트 작성
+    # 2. 실제 ETF 목록 조회 (DB)
+    etf_catalogue: dict[str, list[str]] = {"equity": [], "bond": [], "alt": []}
+    if db is not None:
+        etf_catalogue = await _get_etf_catalogue(db)
+
+    # ETF 목록이 비어 있으면 잘 알려진 검증된 목록 사용 (fallback)
+    VERIFIED_ETFS = {
+        "equity": [
+            "069500 KODEX 200", "102110 TIGER 200", "229200 KODEX 코스닥150",
+            "379800 KODEX 미국S&P500TR", "360750 TIGER 미국S&P500",
+            "133690 TIGER 미국나스닥100", "091160 KODEX 반도체",
+            "381180 TIGER 미국필라델피아반도체나스닥", "278540 KODEX BBIG K-뉴딜",
+            "261120 KODEX 미국FANG플러스", "367380 KODEX 미국나스닥100TR",
+            "411060 ACE 미국S&P500", "441800 ACE 미국나스닥100",
+        ],
+        "bond": [
+            "153130 KODEX 단기채권", "195820 KODEX 단기채권PLUS",
+            "273130 KODEX 국채30년액티브", "305080 TIGER 미국채10년선물",
+            "136340 KBSTAR 단기국공채액티브", "148070 KODEX 국고채10년",
+            "453850 TIGER 미국30년국채커버드콜액티브",
+        ],
+        "alt": [
+            "132030 KODEX 골드선물(H)", "319640 TIGER 금은선물(H)",
+            "138230 TIGER 미국달러선물", "261260 TIGER 코스피고배당",
+            "411270 TIGER CD금리투자KIS(합성)", "452350 TIGER 미국달러SOFR금리액티브(합성)",
+        ],
+    }
+    for cat in ["equity", "bond", "alt"]:
+        if not etf_catalogue[cat]:
+            etf_catalogue[cat] = VERIFIED_ETFS[cat]
+
+    def _fmt_cat(etfs: list[str], n: int = 20) -> str:
+        import random
+        sample = random.sample(etfs, min(n, len(etfs))) if len(etfs) > n else etfs
+        return "\n".join(f"  - {e}" for e in sample)
+
+    etf_list_block = f"""아래는 실제 한국거래소에 상장된 ETF 목록입니다. 반드시 이 목록에서만 선택하세요:
+
+[주식형 ETF 후보]
+{_fmt_cat(etf_catalogue['equity'])}
+
+[채권형 ETF 후보]
+{_fmt_cat(etf_catalogue['bond'])}
+
+[현금·금·대안 ETF 후보]
+{_fmt_cat(etf_catalogue['alt'])}"""
+
+    # 3. 프롬프트 작성
     us = compass_data.get("us", {})
     kr = compass_data.get("kr", {})
     us_ind = us.get("indicators", {})
@@ -747,6 +840,8 @@ async def get_ai_insight(
 
 {data_summary}
 
+{etf_list_block}
+
 위 데이터를 바탕으로 다음 형식으로 정확히 작성하세요. 각 섹션 헤더를 반드시 그대로 사용하세요:
 
 **📊 현재 시장 상황 진단**
@@ -761,24 +856,21 @@ async def get_ai_insight(
 📌 자산 배분 비중: 주식 X% : 채권 Y% : 현금/금 Z%
 (현재 사이클 근거 1문장)
 
-🇰🇷 국내 ETF 추천 (최근 1~3M 및 1Y 수익률 좋은 순):
+🇰🇷 국내 ETF 추천 (위의 ETF 목록에서만 선택):
 
 ▶ 주식형 ETF (3~5개)
-- [ticker/코드] ETF명: 추천 이유 한 줄
-(예: KODEX 200, TIGER 미국나스닥100, KODEX 반도체 등 현재 사이클에 적합한 것)
+- [종목코드] ETF명: 추천 이유 한 줄
 
 ▶ 채권형 ETF (2~3개)
-- [ticker/코드] ETF명: 추천 이유 한 줄
-(예: KODEX 국고채10년, TIGER 미국채10년선물 등)
+- [종목코드] ETF명: 추천 이유 한 줄
 
 ▶ 현금·금·대안 ETF (2~3개)
-- [ticker/코드] ETF명: 추천 이유 한 줄
-(예: KODEX 단기채권, KODEX 금선물 등)
+- [종목코드] ETF명: 추천 이유 한 줄
 
 **🔍 핵심 모니터링 포인트**
 (앞으로 주시해야 할 지표 2가지와 그 이유)
 
-한국 투자자 관점에서, 국내 상장 ETF 위주로 구체적 종목코드와 함께 작성하세요."""
+중요: ETF 추천은 반드시 위에 제공된 실제 상장 ETF 목록에서만 선택하고, 목록에 없는 ETF는 절대 추천하지 마세요."""
 
     try:
         from google import genai  # type: ignore
@@ -807,3 +899,4 @@ async def get_ai_insight(
 async def reset_insight_cache():
     _insight_cache.clear()
     return {"status": "ok", "message": "AI Insight cache cleared."}
+
