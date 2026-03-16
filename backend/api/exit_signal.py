@@ -390,7 +390,17 @@ async def get_macro_detail(period: str = "1Y"):
         return []
 
 
+@router.get("/cli/reset-cache")
+async def reset_cli_cache():
+    """CLI 캐시 강제 초기화 (Render 서버 캐시 만료 강제)"""
+    global _cli_cache
+    _cli_cache = {}
+    logger.info("CLI cache reset by request")
+    return {"status": "ok", "message": "CLI cache cleared. Next /cli call will re-fetch data."}
+
+
 @router.get("/cli")
+
 async def get_cli_detail():
     """
     CLI (Composite Leading Indicator) 상세 데이터 반환.
