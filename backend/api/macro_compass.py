@@ -672,7 +672,7 @@ async def get_ai_insight(
     시장 인사이트를 생성합니다. 4시간 캐시.
     """
     import time
-    cache_key = "ai_insight_v1"
+    cache_key = "ai_insight_v2"
     now_ts = time.time()
     if cache_key in _insight_cache:
         cached, ts = _insight_cache[cache_key]
@@ -715,15 +715,15 @@ async def get_ai_insight(
     kr_ind = kr.get("indicators", {})
 
     lines = [
-        f"[미국 매크로]",
+        "[미국 매크로]",
         f"  경기 사이클: {us.get('phase','N/A')} (확신도: {us.get('confidence','N/A')}%)",
         f"  ISM 모멘텀: {us_ind.get('ism',{}).get('value','N/A')}",
         f"  10년물 금리: {us_ind.get('pce',{}).get('value','N/A')}%",
         f"  단기금리(IRX): {us_ind.get('fed_rate',{}).get('value','N/A')}%",
         f"  S&P500 3M: {us_ind.get('sp500_momentum',{}).get('value','N/A')}%",
         f"  FGI(VIX기반): {us_ind.get('fgi',{}).get('value','N/A')}",
-        f"",
-        f"[한국 매크로]",
+        "",
+        "[한국 매크로]",
         f"  경기 사이클: {kr.get('phase','N/A')} (확신도: {kr.get('confidence','N/A')}%)",
         f"  KOSPI 3M: {kr_ind.get('kospi_momentum',{}).get('value','N/A')}%",
         f"  수출(SOXX): {kr_ind.get('export_growth',{}).get('value','N/A')}%",
@@ -731,7 +731,7 @@ async def get_ai_insight(
     ]
 
     if dollar is not None:
-        lines.append(f"\n[달러인덱스/환율]")
+        lines.append("\n[달러인덱스/환율]")
         lines.append(f"  달러인덱스(DXY): {dollar:.2f}")
     if krw is not None:
         lines.append(f"  USD/KRW: {krw:.0f}원")
@@ -747,21 +747,38 @@ async def get_ai_insight(
 
 {data_summary}
 
-위 데이터를 바탕으로 다음 형식으로 투자자에게 명확하고 인사이트 있는 시장 분석을 작성하세요:
+위 데이터를 바탕으로 다음 형식으로 정확히 작성하세요. 각 섹션 헤더를 반드시 그대로 사용하세요:
 
 **📊 현재 시장 상황 진단**
 (미국/한국 경기 현황, 핵심 지표 해석 2-3문장)
 
 **⚠️ 주요 리스크 요인**
-(현재 가장 주목해야 할 위험 요소 2가지)
+(현재 가장 주목해야 할 위험 요소 2가지, 번호 매김)
 
-**💡 투자 전략 제언**  
-(현재 경기 사이클에 맞는 구체적인 섹터/자산 배분 전략 3-4문장)
+**💡 투자 전략 제언**
+현재 경기 사이클에 맞는 추천 포트폴리오:
+
+📌 자산 배분 비중: 주식 X% : 채권 Y% : 현금/금 Z%
+(현재 사이클 근거 1문장)
+
+🇰🇷 국내 ETF 추천 (최근 1~3M 및 1Y 수익률 좋은 순):
+
+▶ 주식형 ETF (3~5개)
+- [ticker/코드] ETF명: 추천 이유 한 줄
+(예: KODEX 200, TIGER 미국나스닥100, KODEX 반도체 등 현재 사이클에 적합한 것)
+
+▶ 채권형 ETF (2~3개)
+- [ticker/코드] ETF명: 추천 이유 한 줄
+(예: KODEX 국고채10년, TIGER 미국채10년선물 등)
+
+▶ 현금·금·대안 ETF (2~3개)
+- [ticker/코드] ETF명: 추천 이유 한 줄
+(예: KODEX 단기채권, KODEX 금선물 등)
 
 **🔍 핵심 모니터링 포인트**
 (앞으로 주시해야 할 지표 2가지와 그 이유)
 
-한국 투자자 관점에서, 전문 용어와 구체적 수치를 활용해 작성하세요."""
+한국 투자자 관점에서, 국내 상장 ETF 위주로 구체적 종목코드와 함께 작성하세요."""
 
     try:
         from google import genai  # type: ignore
