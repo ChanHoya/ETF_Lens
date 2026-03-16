@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI
 
 from core.scheduler import setup_scheduler
@@ -35,6 +36,11 @@ async def lifespan(app: FastAPI):
             pass
 
     setup_scheduler()
+
+    # 앱 시작 시 ETF 마스터 목록 즉시 백그라운드 동기화
+    from core.scheduler import sync_etf_master_list
+    asyncio.create_task(sync_etf_master_list())
+
     yield
     # Shutdown
 
