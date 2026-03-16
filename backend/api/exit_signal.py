@@ -74,58 +74,110 @@ def get_mock_data():
     }
 
 
-async def fetch_yf_data():
+async def _fetch_fred_series(fred_id: str, days: int = 400) -> dict[str, float]:
+    """FRED CSV API로 데이터 가져오기 → {YYYY-MM-DD: float}"""
     try:
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=400)
-        start_str = start_date.strftime("%Y-%m-%d")
-        end_str = end_date.strftime("%Y-%m-%d")
-
-        def _fetch_single(ticker: str) -> pd.Series:
-            """Ticker별 개별 다운로드 - MultiIndex 문제 방지."""
+        end_str = datetime.now().strftime("%Y-%m-%d")
+        url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={fred_id}&vintage_date={end_str}"
+        resp = await asyncio.to_thread(
+            lambda: __import__("requests").get(url, timeout=15)
+        )
+        if resp.status_code != 200:
+            logger.warning(f"FRED {fred_id} status={resp.status_code}")
+            return {}
+        cutoff = datetime.now() - timedelta(days=days)
+        result = {}
+        for line in resp.text.strip().split("\n")[1:]:  # skip header
+            parts = line.split(",")
+            if len(parts) < 2:
+                continue
+            date_str, val_str = parts[0].strip(), parts[1].strip()
+            if val_str == "." or not val_str:
+                continue
             try:
-                t = yf.Ticker(ticker)
-                df = t.history(start=start_str, end=end_str, auto_adjust=True)
-                if df.empty or "Close" not in df.columns:
-                    return pd.Series(dtype=float)
-                s = df["Close"]
-                if hasattr(s.index, "tz") and s.index.tz is not None:
-                    s.index = s.index.tz_localize(None)
-                s.index = pd.to_datetime(s.index)
-                return s
-            except Exception as e:
-                logger.warning(f"yfinance {ticker} failed: {e}")
-                return pd.Series(dtype=float)
+                dt = pd.to_datetime(date_str)
+                if dt < cutoff:
+                    continue
+                result[date_str] = float(val_str)
+            except (ValueError, Exception):
+                continue
+        return result
+    except Exception as e:
+        logger.warning(f"FRED {fred_id} failed: {e}")
+        return {}
 
-        dx_s, krw_s = await asyncio.gather(
-            asyncio.to_thread(_fetch_single, "DX-Y.NYB"),
-            asyncio.to_thread(_fetch_single, "KRW=X"),
+
+async def _fetch_yahoo_v8(symbol: str, days: int = 400) -> dict[str, float]:
+    """Yahoo Finance v8 chart API → {YYYY-MM-DD: float}"""
+    try:
+        rng = "1y" if days <= 400 else ("3y" if days <= 1200 else "10y")
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range={rng}"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        resp = await asyncio.to_thread(
+            lambda: __import__("requests").get(url, headers=headers, timeout=15)
+        )
+        if resp.status_code != 200:
+            logger.warning(f"Yahoo v8 {symbol} status={resp.status_code}")
+            return {}
+        data = resp.json()
+        result_block = data.get("chart", {}).get("result", [])
+        if not result_block:
+            return {}
+        rb = result_block[0]
+        timestamps = rb.get("timestamp", [])
+        closes = rb.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+        cutoff = datetime.now() - timedelta(days=days)
+        result = {}
+        for ts, close in zip(timestamps, closes):
+            if close is None or not isinstance(close, (int, float)):
+                continue
+            dt = datetime.fromtimestamp(ts)
+            if dt < cutoff:
+                continue
+            result[dt.strftime("%Y-%m-%d")] = float(close)
+        return result
+    except Exception as e:
+        logger.warning(f"Yahoo v8 {symbol} failed: {e}")
+        return {}
+
+
+async def fetch_yf_data():
+    """달러 인덱스(FRED) + 환율(Yahoo v8)를 월별 집계해 반환."""
+    try:
+        # FRED DTWEXBGS = Trade Weighted US Dollar Index: Broad
+        dx_dict, krw_dict = await asyncio.gather(
+            _fetch_fred_series("DTWEXBGS", days=400),
+            _fetch_yahoo_v8("KRW=X", days=400),
         )
 
-        if dx_s.empty:
-            logger.warning("DX-Y.NYB returned empty series")
+        if not dx_dict:
+            logger.warning("FRED DTWEXBGS empty, using fallback 100.0")
             return [], 100.0, 1300
 
-        # 월별 마지막 거래일 값
-        dx_monthly = dx_s.resample("ME").last().dropna().tail(12)
-        krw_monthly = krw_s.resample("ME").last().dropna() if not krw_s.empty else pd.Series(dtype=float)
+        # 월별 마지막값 집계
+        def _monthly_last(d: dict[str, float]) -> dict[str, float]:
+            monthly: dict[str, float] = {}
+            for date_str, val in sorted(d.items()):
+                ym = date_str[:7]  # YYYY-MM
+                monthly[ym] = val  # 마지막 값으로 덮어씌움
+            return monthly
 
+        dx_mo  = _monthly_last(dx_dict)
+        krw_mo = _monthly_last(krw_dict)
+
+        # 최근 12개월
+        all_yms = sorted(set(dx_mo) | set(krw_mo))[-12:]
         dollar_data = []
-        for dt in dx_monthly.index:
-            month_str = f"{dt.month:02d}월"
-            dx_val = float(dx_monthly[dt])
-            # KRW=X는 USD/KRW; 가장 가까운 월 매핑
-            krw_val = 1300
-            if not krw_monthly.empty:
-                ym_key = dt.strftime("%Y-%m")
-                matches = krw_monthly[krw_monthly.index.strftime("%Y-%m") == ym_key]
-                if not matches.empty:
-                    krw_val = int(round(float(matches.iloc[-1])))
-
+        for ym in all_yms:
+            month_str = f"{int(ym[5:7]):02d}월"
+            dx_val = dx_mo.get(ym)
+            krw_val = krw_mo.get(ym)
+            if dx_val is None:
+                continue
             dollar_data.append({
                 "month": month_str,
                 "val": round(dx_val, 2),
-                "krw": krw_val,
+                "krw": int(round(krw_val)) if krw_val else 1300,
             })
 
         if not dollar_data:
@@ -137,7 +189,7 @@ async def fetch_yf_data():
         return dollar_data, final_dx, final_krw
 
     except Exception as e:
-        logger.error(f"Failed to fetch YF data: {e}")
+        logger.error(f"fetch_yf_data failed: {e}")
         return [], 100.0, 1300
 
 
@@ -376,51 +428,14 @@ async def get_macro_detail(period: str = "1Y"):
         # Map period to days lookback
         period_days = {"6m": 185, "1y": 370, "3y": 1100, "10y": 3700}
         days = period_days.get(period.lower(), 370)
-        end_date = datetime.now()
-        start_str = (end_date - timedelta(days=days)).strftime("%Y-%m-%d")
-        end_str = end_date.strftime("%Y-%m-%d")
 
-        def _fetch_hist(tkr: str) -> pd.Series:
-            try:
-                t = yf.Ticker(tkr)
-                df = t.history(start=start_str, end=end_str, auto_adjust=True)
-                if df.empty or "Close" not in df.columns:
-                    return pd.Series(dtype=float)
-                s = df["Close"]
-                if hasattr(s.index, "tz") and s.index.tz is not None:
-                    s.index = s.index.tz_localize(None)
-                s.index = pd.to_datetime(s.index).normalize()
-                return s.groupby(s.index).last()
-            except Exception as e:
-                logger.warning(f"_fetch_hist failed for {tkr}: {e}")
-                return pd.Series(dtype=float)
-
-        dx_s, krw_s, k_s, g_s = await asyncio.gather(
-            asyncio.to_thread(_fetch_hist, "DX-Y.NYB"),
-            asyncio.to_thread(_fetch_hist, "KRW=X"),
-            asyncio.to_thread(_fetch_hist, "^KS11"),
-            asyncio.to_thread(_fetch_hist, "^GSPC"),
+        # FRED(달러인덱스) + Yahoo v8(KRW, KOSPI, S&P500) 병렬 수집
+        dx_dict, krw_dict, k_dict, g_dict = await asyncio.gather(
+            _fetch_fred_series("DTWEXBGS", days=days),
+            _fetch_yahoo_v8("KRW=X", days=days),
+            _fetch_yahoo_v8("%5EKS11", days=days),   # ^KS11 URL 인코딩
+            _fetch_yahoo_v8("%5EGSPC", days=days),   # ^GSPC URL 인코딩
         )
-
-        # pd.concat/row.get 접근 방식 포기 → 날짜 dict로 개별 변환 후 merge
-        def _series_to_dict(s: pd.Series) -> dict[str, float]:
-            """Series를 {YYYY-MM-DD: float} dict로 변환."""
-            if s.empty:
-                return {}
-            # timezone 제거
-            if hasattr(s.index, "tz") and s.index.tz is not None:
-                s = s.copy()
-                s.index = s.index.tz_localize(None)
-            result = {}
-            for dt, val in s.items():
-                if pd.notna(val) and isinstance(dt, pd.Timestamp):
-                    result[dt.strftime("%Y-%m-%d")] = float(val)
-            return result
-
-        dx_dict  = _series_to_dict(dx_s)
-        krw_dict = _series_to_dict(krw_s)
-        k_dict   = _series_to_dict(k_s)
-        g_dict   = _series_to_dict(g_s)
 
         # 모든 날짜 합집합
         all_dates = sorted(set(dx_dict) | set(krw_dict) | set(k_dict) | set(g_dict))
