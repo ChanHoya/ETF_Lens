@@ -841,26 +841,88 @@ async def get_ai_insight(
         except Exception as e:
             logger.warning(f"DB ETF fallback failed: {e}")
 
-    def _fmt_cat(etfs: list[str], n: int = 25) -> str:
-        import random
-        sample = random.sample(etfs, min(n, len(etfs))) if len(etfs) > n else etfs
-        return "\n".join(f"  - {e}" for e in sample)
+    async def _build_etf_block_with_perf(catalogue: dict, db: AsyncSession) -> tuple[str, bool]:
+        """
+        ETF 카테고리별 목록 + 실제 수익률/변동성 데이터를 결합한 프롬프트 블록 생성.
+        반환: (블록 문자열, 실데이터 포함 여부)
+        """
+        from sqlalchemy import select as sa_select
+        from db.models import ETFMaster as _ETFMaster
 
-    # ETF 목록 섹션 (비어 있으면 생략)
+        has_real_data = False
+        cat_blocks = []
+
+        cat_label = {"equity": "주식형 ETF", "bond": "채권형 ETF", "alt": "현금·금·대안 ETF"}
+
+        for cat_key, label in cat_label.items():
+            etf_entries = catalogue.get(cat_key, [])
+            codes_in_cat = [e.split()[0] for e in etf_entries[:80]]
+            if not codes_in_cat:
+                continue
+
+            # DB에서 수익률 데이터 조회 (3M 수익률 내림차순 상위 20개)
+            rows = (await db.execute(
+                sa_select(
+                    _ETFMaster.code, _ETFMaster.name,
+                    _ETFMaster.return_3m, _ETFMaster.return_1y,
+                    _ETFMaster.volatility, _ETFMaster.aum, _ETFMaster.perf_updated_at
+                )
+                .where(_ETFMaster.code.in_(codes_in_cat))
+                .where(_ETFMaster.return_3m.isnot(None))
+                .order_by(_ETFMaster.return_3m.desc())
+                .limit(20)
+            )).all()
+
+            if rows:
+                has_real_data = True
+                lines = [f"\n[{label} 후보 — 실제 성과 데이터 기준]"]
+                for r in rows:
+                    r1y = f" 1Y:{r.return_1y:+.1f}%" if r.return_1y is not None else ""
+                    vol = f" 변동성:{r.volatility:.1f}%" if r.volatility is not None else ""
+                    aum = f" AUM:{r.aum}" if r.aum else ""
+                    lines.append(
+                        f"  - {r.code} {r.name} (3M:{r.return_3m:+.1f}%{r1y}{vol}{aum})"
+                    )
+                cat_blocks.append("\n".join(lines))
+            else:
+                # 실데이터 없으면 이름+코드 목록만
+                import random
+                sample = random.sample(etf_entries, min(20, len(etf_entries)))
+                cat_blocks.append(
+                    f"\n[{label} 후보]\n" + "\n".join(f"  - {e}" for e in sample)
+                )
+
+        block = "\n".join(cat_blocks) if cat_blocks else ""
+        return block, has_real_data
+
+    # ETF 목록 섹션 생성 (실데이터 우선)
     has_etf_list = any(etf_catalogue.values())
     if has_etf_list:
-        etf_list_block = f"""아래는 KRX 실제 상장 ETF 목록입니다. 반드시 이 목록에서만 선택하고, 목록에 없는 ETF는 절대 추천하지 마세요:
-
-[주식형 ETF 후보]
-{_fmt_cat(etf_catalogue['equity'])}
-
-[채권형 ETF 후보]
-{_fmt_cat(etf_catalogue['bond'])}
-
-[현금·금·대안 ETF 후보]
-{_fmt_cat(etf_catalogue['alt'])}"""
+        etf_perf_block, has_real_perf = await _build_etf_block_with_perf(etf_catalogue, db)
+        if has_real_perf:
+            etf_list_block = (
+                "아래는 KRX 실제 상장 ETF 목록과 실제 성과 데이터입니다.\n"
+                "반드시 이 목록에서만 선택하고, 괄호 안의 수치는 그대로 인용하세요.\n"
+                "목록에 없는 수치는 절대 임의로 생성하지 마세요:\n"
+                + etf_perf_block
+            )
+        else:
+            # 수익률 데이터 미수집 상태 — 기존 이름 목록만
+            def _fmt_cat(etfs: list[str], n: int = 25) -> str:
+                import random
+                sample = random.sample(etfs, min(n, len(etfs))) if len(etfs) > n else etfs
+                return "\n".join(f"  - {e}" for e in sample)
+            etf_list_block = (
+                "아래는 KRX 실제 상장 ETF 목록입니다. 반드시 이 목록에서만 선택하세요.\n"
+                "※ 수익률 데이터 수집 전: 수치를 임의로 생성하지 말고 정성적 이유만 서술하세요:\n"
+                f"\n[주식형 ETF 후보]\n{_fmt_cat(etf_catalogue['equity'])}\n"
+                f"\n[채권형 ETF 후보]\n{_fmt_cat(etf_catalogue['bond'])}\n"
+                f"\n[현금·금·대안 ETF 후보]\n{_fmt_cat(etf_catalogue['alt'])}"
+            )
+            has_real_perf = False
     else:
         etf_list_block = "※ ETF 목록 로드 실패 — 실제 KRX 상장 ETF 이름과 정확한 종목코드만 사용하세요."
+        has_real_perf = False
 
     # 3. 프롬프트 작성
     us = compass_data.get("us", {})
@@ -920,20 +982,22 @@ async def get_ai_insight(
 🇰🇷 국내 ETF 추천 (위의 ETF 목록에서만 선택):
 
 ▶ 주식형 ETF (3~5개)
-- [종목코드] ETF명: 추천 이유 한 줄 (다른 후보 대비 선택 근거: 3M 수익률 +X% 1위 / 순자산 X조 최대 / 52주 상승률 X% 등 핵심 정량 지표 1~2개)
+- [종목코드] ETF명: 추천 이유 한 줄 (위에 제공된 실제 수치를 그대로 인용: 예 "3M +15.2%, 변동성 18.3%")
 
 ▶ 채권형 ETF (2~3개)
-- [종목코드] ETF명: 추천 이유 한 줄 (다른 후보 대비 선택 근거: 배당률 X% 최고 / 최저 보수 X% / 금리 민감도 낮음 등 핵심 정량 지표 1~2개)
+- [종목코드] ETF명: 추천 이유 한 줄 (위에 제공된 실제 수치를 그대로 인용: 예 "3M -0.4%, 변동성 2.1%")
 
 ▶ 현금·금·대안 ETF (2~3개)
-- [종목코드] ETF명: 추천 이유 한 줄 (다른 후보 대비 선택 근거: 변동성 X% 최소 / 환헤지 효과 / 규모 X억 등 핵심 정량 지표 1~2개)
+- [종목코드] ETF명: 추천 이유 한 줄 (위에 제공된 실제 수치를 그대로 인용: 예 "3M +0.7%, 변동성 0.3%")
 
-※ 반드시 각 종목 뒤에 괄호 안에 이 종목을 선택한 정량적 이유를 명시하세요 (예: 3M 수익률 +8.3% 1위, 순자산 2.1조 최대 규모 등).
+※ 제공된 ETF 데이터에 수치가 있으면 반드시 그 수치를 그대로 인용하세요.
+※ 제공되지 않은 수치(X%)를 절대 임의로 생성하지 마세요.
 
 **🔍 핵심 모니터링 포인트**
 (앞으로 주시해야 할 지표 2가지와 그 이유)
 
-중요: ETF 추천은 반드시 위에 제공된 실제 상장 ETF 목록에서만 선택하고, 목록에 없는 ETF는 절대 추천하지 마세요."""
+중요: ETF 추천은 반드시 위에 제공된 실제 상장 ETF 목록에서만 선택하고, 목록에 없는 ETF는 절대 추천하지 마세요.
+제공된 성과 데이터의 수치를 그대로 인용하고, 데이터에 없는 수치는 절대 생성하지 마세요."""
 
     try:
         from google import genai  # type: ignore

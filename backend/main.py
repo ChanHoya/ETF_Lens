@@ -35,6 +35,13 @@ async def lifespan(app: FastAPI):
             # Column likely already exists
             pass
 
+    # ETF 성과 컬럼 마이그레이션 (return_1m/3m/6m/1y, volatility, sharpe, perf_updated_at)
+    try:
+        from migrate_add_perf_columns import migrate as _migrate_perf
+        _migrate_perf()
+    except Exception as _e:
+        print(f"[Startup] ETF perf column migration skipped: {_e}")
+
     setup_scheduler()
 
     # 앱 시작 시 ETF 마스터 목록 즉시 백그라운드 동기화
@@ -43,6 +50,7 @@ async def lifespan(app: FastAPI):
 
     yield
     # Shutdown
+
 
 
 app = FastAPI(

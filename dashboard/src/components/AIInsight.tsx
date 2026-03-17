@@ -156,6 +156,11 @@ function InsightSection({ icon, title, content, isStrategy, onSaveToFavorites }:
       <div className="flex items-center gap-2 pb-2 border-b border-white/10">
         {icon}
         <span className="text-[16px] font-bold text-white/90">{title}</span>
+        {isStrategy && (
+          <span className="ml-auto flex items-center gap-1 text-[11px] font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-full shrink-0">
+            ⚠ 수익률 수치는 데모 데이터
+          </span>
+        )}
       </div>
       {isStrategy
         ? <StrategyContent content={content} onSaveToFavorites={onSaveToFavorites} />
@@ -164,6 +169,7 @@ function InsightSection({ icon, title, content, isStrategy, onSaveToFavorites }:
     </div>
   )
 }
+
 
 function parseInsight(text: string) {
   const sections: { key: string; icon: React.ReactNode; title: string; content: string; isStrategy?: boolean }[] = []

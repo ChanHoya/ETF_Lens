@@ -218,6 +218,18 @@ def setup_scheduler():
     # 18:00 - 무거운 ETF 전체 sync (가격/보유종목 포함)
     scheduler.add_job(sync_etf_batch, "cron", hour=18, minute=0, id="daily_db_sync")
 
+    # 18:30 - yfinance 경량 시세 배치 수집 (1년치 종가 → ETFDailyPrice)
+    from scheduler.etf_price_sync import sync_etf_prices_yfinance
+    scheduler.add_job(
+        sync_etf_prices_yfinance, "cron", hour=18, minute=30, id="daily_etf_price_yfinance"
+    )
+
+    # 19:00 - ETF 수익률/변동성/샤프 계산 → ETFMaster 업데이트
+    from core.etf_performance import update_all_etf_performance_job
+    scheduler.add_job(
+        update_all_etf_performance_job, "cron", hour=19, minute=0, id="daily_perf_calc"
+    )
+
     # 08:00 - Morning briefing email + macro data update
     from scheduler.daily_fetch import run_morning_briefing
 

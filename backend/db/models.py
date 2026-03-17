@@ -6,7 +6,6 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
-    Boolean,
 )
 from sqlalchemy.orm import relationship
 from db.database import Base
@@ -37,6 +36,15 @@ class ETFMaster(Base):
     # Pre-calculated Basic Info caching as JSON String
     basic_info_json = Column(Text)
     last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # 수익률/변동성 성과 지표 (배치 업데이트)
+    return_1m  = Column(Float, nullable=True)   # 1개월 수익률 (%)
+    return_3m  = Column(Float, nullable=True)   # 3개월 수익률 (%)
+    return_6m  = Column(Float, nullable=True)   # 6개월 수익률 (%)
+    return_1y  = Column(Float, nullable=True)   # 1년 수익률 (%)
+    volatility = Column(Float, nullable=True)   # 연환산 변동성 (%)
+    sharpe     = Column(Float, nullable=True)   # 샤프지수 (3M 수익률 / 연변동성)
+    perf_updated_at = Column(DateTime, nullable=True)  # 성과 마지막 업데이트 시각
 
     # Relationship to historical prices
     prices = relationship(
