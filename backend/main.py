@@ -42,6 +42,13 @@ async def lifespan(app: FastAPI):
     except Exception as _e:
         print(f"[Startup] ETF perf column migration skipped: {_e}")
 
+    # 서버 시작 시 버전 자동 기록 (배포/재시작 즉시 반영)
+    try:
+        from core.scheduler import update_app_version
+        await update_app_version("[startup]")
+    except Exception as _e:
+        print(f"[Startup] version update skipped: {_e}")
+
     setup_scheduler()
 
     # 앱 시작 시 ETF 마스터 목록 즉시 백그라운드 동기화
