@@ -313,7 +313,7 @@ export default function CompareTable({
                                                             isNegative ? 'text-rose-400' :
                                                                 isPositive ? 'text-emerald-400' : isRowHovered ? 'text-white' : 'text-gray-200'
                                                             } ${isRowHovered && j > 0 ? 'font-semibold' : ''}`}
-                                                        style={j === 0 ? { color: rowColor, ...(isRowHovered ? { textShadow: `0 0 10px ${rowColor}` } : {}) } : undefined}
+                                                        style={j === 0 ? { color: rowColor, ...(isRowHovered ? { textShadow: `0 0 18px ${rowColor}, 0 0 8px ${rowColor}` } : {}) } : (isRowHovered && j > 0 ? { textShadow: `0 0 8px rgba(255,255,255,0.5)` } : undefined)}
                                                         title={j === 0 ? cell : undefined}
                                                         onClick={() => {
                                                             if (matchedEtf) setSelectedDetailEtf(matchedEtf);
