@@ -56,42 +56,79 @@ export default function CompareChart({
                 ) : (
                     <>
                         {/* 1. Raw Price Chart (가격 추이) */}
-                        {data.visual_data.line_chart && data.visual_data.etf_keys && data.visual_data.line_chart.length > 0 && (
+                        {data.visual_data.line_chart && data.visual_data.etf_keys && data.visual_data.line_chart.length > 0 && (() => {
+                            const PRICE_THRESHOLD = 30000;
+                            // 각 ETF의 최고 raw 가격을 계산해 3만원 초과 종목 분류
+                            const excludedKeys: string[] = [];
+                            const includedKeys: string[] = [];
+                            data.visual_data.etf_keys.forEach((key: string) => {
+                                const maxPrice = Math.max(...simulatedChartData.map((d: any) => Number(d[`${key}_raw`]) || 0));
+                                if (maxPrice > PRICE_THRESHOLD) excludedKeys.push(key);
+                                else includedKeys.push(key);
+                            });
+                            return (
                             <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
                                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                                 <div className="flex justify-between items-center mb-4 relative z-10">
                                     <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
                                         <span className="w-1.5 h-6 bg-gradient-to-b from-blue-400 to-indigo-500 rounded-full"></span>
                                         가격 추이
-                                        <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(원)</span>
+                                        <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(원, 3만원 이하 종목)</span>
                                     </h3>
                                 </div>
 
-                                <div className="h-[400px] w-full relative z-10">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={simulatedChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
-                                            <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
-                                            <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
-                                            <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }} contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '12px' }} labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold', fontSize: '13px' }} itemStyle={{ padding: '2px 0', fontSize: '12px' }} />
-                                            <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
-                                                if (e && e.value) {
-                                                    const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
-                                                    if (matchedEtf) setSelectedDetailEtf(matchedEtf);
-                                                }
-                                            }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
-                                                onMouseLeave={() => setHoveredEtfName(null)}
-                                                formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
-                                            {data.visual_data.etf_keys.map((key: string, idx: number) => {
-                                                const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
-                                                const isOthersHovered = hoveredEtfName && !isHovered;
-                                                return <Line key={`${key}_raw`} type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
-                                            })}
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                </div>
+                                {includedKeys.length > 0 ? (
+                                    <div className="h-[400px] w-full relative z-10">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <LineChart data={simulatedChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                                <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
+                                                <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
+                                                <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }} contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '12px' }} labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold', fontSize: '13px' }} itemStyle={{ padding: '2px 0', fontSize: '12px' }} />
+                                                <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
+                                                    if (e && e.value) {
+                                                        const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
+                                                        if (matchedEtf) setSelectedDetailEtf(matchedEtf);
+                                                    }
+                                                }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
+                                                    onMouseLeave={() => setHoveredEtfName(null)}
+                                                    formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
+                                                {includedKeys.map((key: string) => {
+                                                    const idx = data.visual_data.etf_keys.indexOf(key);
+                                                    const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+                                                    const isOthersHovered = hoveredEtfName && !isHovered;
+                                                    return <Line key={`${key}_raw`} type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                                })}
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                ) : (
+                                    <div className="h-24 flex items-center justify-center text-sm text-gray-500">
+                                        표시 가능한 종목이 없습니다 (모든 종목이 3만원 초과).
+                                    </div>
+                                )}
+
+                                {/* 제외 종목 표시 */}
+                                {excludedKeys.length > 0 && (
+                                    <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap items-center gap-2">
+                                        <span className="text-[11px] text-gray-500 font-semibold shrink-0">⚠ 가격추이 제외 (3만원 초과):</span>
+                                        {excludedKeys.map((key: string) => {
+                                            const idx = data.visual_data.etf_keys.indexOf(key);
+                                            const maxPrice = Math.max(...simulatedChartData.map((d: any) => Number(d[`${key}_raw`]) || 0));
+                                            return (
+                                                <span key={key} className="inline-flex items-center gap-1.5 text-[11px] text-gray-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+                                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: glowColors[idx % glowColors.length] }} />
+                                                    {key}
+                                                    <span className="text-gray-600">({maxPrice.toLocaleString()}원)</span>
+                                                </span>
+                                            );
+                                        })}
+                                        <span className="text-[11px] text-gray-600 ml-1">→ 하단 수익률 차트 참조</span>
+                                    </div>
+                                )}
                             </section>
-                        )}
+                            );
+                        })()}
 
                         {/* 2. Historical Performance Line Chart (수익률) */}
                         {data.visual_data.line_chart && data.visual_data.etf_keys && (
