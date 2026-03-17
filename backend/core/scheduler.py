@@ -5,9 +5,35 @@ from agents.harvester.harvester import ETFHarvester
 from datetime import datetime
 from sqlalchemy import select
 from db.database import AsyncSessionLocal
-from db.models import ETFMaster, ETFDailyPrice, ETFHoldings, BenchmarkPrice
+from db.models import ETFMaster, ETFDailyPrice, ETFHoldings, BenchmarkPrice, AppVersion
 
 scheduler = AsyncIOScheduler()
+
+
+async def update_app_version(job_label: str = "") -> None:
+    """
+    스케줄러 job 완료 시 AppVersion 테이블에 KST yymmddhhmm 버전을 저장.
+    job_label: 어떤 job이 마지막으로 실행됐는지 표시 (예: '[master]', '[perf]')
+    """
+    from datetime import timezone, timedelta as _td
+    _kst = timezone(_td(hours=9))
+    kst_now = datetime.now(_kst)
+    version_str = kst_now.strftime("VER %y%m%d%H%M")
+    if job_label:
+        version_str += f" {job_label}"
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(AppVersion).where(AppVersion.key == "app_version"))
+            rec = result.scalars().first()
+            if rec:
+                rec.value = version_str
+                rec.updated_at = kst_now.replace(tzinfo=None)
+            else:
+                db.add(AppVersion(key="app_version", value=version_str))
+            await db.commit()
+        print(f"[AppVersion] 업데이트: {version_str}")
+    except Exception as e:
+        print(f"[AppVersion] 업데이트 실패: {e}")
 
 
 async def sync_etf_master_list():
@@ -210,32 +236,45 @@ async def sync_etf_batch():
 
 
 def setup_scheduler():
-    # 07:00 - 경량 ETF 마스터 목록 upsert (코드+이름, pykrx → fdr fallback)
-    scheduler.add_job(
-        sync_etf_master_list, "cron", hour=7, minute=0, id="daily_etf_master_sync"
-    )
-
-    # 18:00 - 무거운 ETF 전체 sync (가격/보유종목 포함)
-    scheduler.add_job(sync_etf_batch, "cron", hour=18, minute=0, id="daily_db_sync")
-
-    # 18:30 - yfinance 경량 시세 배치 수집 (1년치 종가 → ETFDailyPrice)
     from scheduler.etf_price_sync import sync_etf_prices_yfinance
-    scheduler.add_job(
-        sync_etf_prices_yfinance, "cron", hour=18, minute=30, id="daily_etf_price_yfinance"
-    )
-
-    # 19:00 - ETF 수익률/변동성/샤프 계산 → ETFMaster 업데이트
     from core.etf_performance import update_all_etf_performance_job
-    scheduler.add_job(
-        update_all_etf_performance_job, "cron", hour=19, minute=0, id="daily_perf_calc"
-    )
-
-    # 08:00 - Morning briefing email + macro data update
     from scheduler.daily_fetch import run_morning_briefing
 
-    scheduler.add_job(
-        run_morning_briefing, "cron", hour=8, minute=0, id="morning_briefing_email"
-    )
+    # wrapper: 각 job 완료 후 버전 자동 업데이트
+    async def _job_master():
+        await sync_etf_master_list()
+        await update_app_version("[master]")
+
+    async def _job_batch():
+        await sync_etf_batch()
+        await update_app_version("[batch]")
+
+    async def _job_price():
+        await sync_etf_prices_yfinance()
+        await update_app_version("[price]")
+
+    async def _job_perf():
+        await update_all_etf_performance_job()
+        await update_app_version("[perf]")
+
+    async def _job_briefing():
+        await run_morning_briefing()
+        await update_app_version("[briefing]")
+
+    # 07:00 - 경량 ETF 마스터 목록 upsert
+    scheduler.add_job(_job_master, "cron", hour=7, minute=0, id="daily_etf_master_sync")
+
+    # 18:00 - 무거운 ETF 전체 sync (가격/보유종목 포함)
+    scheduler.add_job(_job_batch, "cron", hour=18, minute=0, id="daily_db_sync")
+
+    # 18:30 - yfinance 경량 시세 배치 수집 (1년치 종가 → ETFDailyPrice)
+    scheduler.add_job(_job_price, "cron", hour=18, minute=30, id="daily_etf_price_yfinance")
+
+    # 19:00 - ETF 수익률/변동성/샤프 계산 → ETFMaster 업데이트
+    scheduler.add_job(_job_perf, "cron", hour=19, minute=0, id="daily_perf_calc")
+
+    # 08:00 - Morning briefing email + macro data update
+    scheduler.add_job(_job_briefing, "cron", hour=8, minute=0, id="morning_briefing_email")
 
     scheduler.start()
     print("DB and Email Scheduler started.")

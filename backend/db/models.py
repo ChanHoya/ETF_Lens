@@ -133,3 +133,12 @@ class IndicatorHistory(Base):
     date = Column(String, index=True)  # e.g., '2023-10-25'
     value = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AppVersion(Base):
+    """앱 버전 / 스케줄러 최종 실행 시각 관리"""
+    __tablename__ = "app_version"
+
+    key = Column(String, primary_key=True)   # e.g., 'app_version'
+    value = Column(String, nullable=False)   # e.g., 'VER 2603171830'
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

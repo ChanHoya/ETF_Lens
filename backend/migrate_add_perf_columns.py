@@ -6,9 +6,11 @@ SQLite DB 마이그레이션 스크립트
 import sqlite3
 import os
 
-DB_PATH = os.environ.get("DATABASE_URL", "sqlite:///./etf_lens.db")
+DB_PATH = os.environ.get("DATABASE_URL", "sqlite:///./etf_data_v2.db")
 # SQLite 경로 추출 (sqlite:///./... → ./...)
-if DB_PATH.startswith("sqlite:///"):
+if DB_PATH.startswith("sqlite+aiosqlite:///"):
+    DB_PATH = DB_PATH[len("sqlite+aiosqlite:///"):]
+elif DB_PATH.startswith("sqlite:///"):
     DB_PATH = DB_PATH[len("sqlite:///"):]
 
 NEW_COLUMNS = [

@@ -41,16 +41,26 @@ async def get_etf_list():
 
 @router.get("/db-version")
 async def get_db_version(db: AsyncSession = Depends(get_db)):
-    from db.models import ETFMaster
+    from db.models import AppVersion, ETFMaster
     from sqlalchemy import func
     from datetime import timedelta
 
+    # 1순위: 스케줄러 job 완료 시 기록된 AppVersion 테이블
+    try:
+        result = await db.execute(
+            select(AppVersion).where(AppVersion.key == "app_version")
+        )
+        rec = result.scalars().first()
+        if rec and rec.value:
+            return {"version": rec.value}
+    except Exception as e:
+        logger.warning(f"AppVersion table read failed: {e}")
+
+    # 2순위(fallback): ETFMaster.last_updated 기준 (기존 방식)
     try:
         result = await db.execute(select(func.max(ETFMaster.last_updated)))
         max_time = result.scalar()
-
         if max_time:
-            # max_time is naive UTC. Add 9 hours for KST.
             kst_time = max_time + timedelta(hours=9)
             version_str = kst_time.strftime("VER %y%m%d%H%M")
             return {"version": version_str}
