@@ -69,7 +69,7 @@ export default function CompareChart({
 
                                 <div className="h-[400px] w-full relative z-10">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={simulatedChartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                        <LineChart data={simulatedChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                             <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
                                             <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
@@ -109,7 +109,7 @@ export default function CompareChart({
 
                                 <div className="h-[400px] w-full relative z-10">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={simulatedChartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                        <LineChart data={simulatedChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                             <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
                                             <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
@@ -151,7 +151,7 @@ export default function CompareChart({
                                         </div>
                                     </div>
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={simulatedChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                                        <LineChart data={simulatedChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                             <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={10} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
                                             <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
@@ -193,7 +193,7 @@ export default function CompareChart({
                                         </div>
                                     </div>
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={simulatedChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                                        <LineChart data={simulatedChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                             <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={10} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
                                             <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
