@@ -282,12 +282,18 @@ export default function CompareTable({
                                     );
                                     return (
                                         <tr key={i}
-                                            className="transition-all duration-200 group/row cursor-default"
+                                            className="transition-all duration-150 group/row cursor-default"
                                             style={isRowHovered ? {
-                                                backgroundColor: `${rowColor}18`,
-                                                borderLeft: `3px solid ${rowColor}`,
-                                                boxShadow: `inset 0 0 20px ${rowColor}10`,
-                                            } : { borderLeft: '3px solid transparent' }}
+                                                backgroundColor: `${rowColor}40`,
+                                                borderLeft: `4px solid ${rowColor}`,
+                                                boxShadow: `inset 0 0 30px ${rowColor}25, 0 2px 12px ${rowColor}20`,
+                                                transform: 'scaleY(1.04)',
+                                                zIndex: 10,
+                                                position: 'relative',
+                                            } : {
+                                                borderLeft: '4px solid transparent',
+                                                opacity: hoveredEtfName ? 0.45 : 1,
+                                            }}
                                             onMouseEnter={() => {
                                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                                 const matchedEtf = data.raw_data ? data.raw_data.find((e: any) => row[0].includes(e.etf_name) || row[0].includes(e.etf_code)) : null;
