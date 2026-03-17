@@ -50,22 +50,28 @@ function StrategyContent({ content, onSaveToFavorites }: { content: string; onSa
     }
   }
 
-  // ETF 코드+이름 파싱 (앞 6자리 숫자를 코드로 추출)
+  // ETF 코드+이름 파싱 - 영숫자 4~7자 코드 허용 (0091C0, 495550 등)
   const parsedEtfs: { code: string; name: string }[] = []
   for (const sec of etfSections) {
     for (const item of sec.items) {
-      const codeMatch = item.match(/^(\d{5,6})\s+(.+?)(?:\s*[:;\(]|$)/)
+      // 앞부분 영숫자(코드) + 공백 + 이름 형식 매칭
+      const codeMatch = item.match(/^([A-Z0-9]{4,7})\s+/i)
       if (codeMatch) {
-        const code = codeMatch[1]
-        // 이름: 코드 제거 후 괄호/설명 앞까지
-        const rawName = item.replace(codeMatch[1], '').replace(/^\s+/, '')
-        const name = rawName.split(/\s*[:\(]/)[0].trim()
+        const code = codeMatch[1].toUpperCase()
+        // 코드 제거 후 콜론/괄호 앞까지를 이름으로 추출
+        const afterCode = item.slice(codeMatch[0].length)
+        const name = afterCode.split(/\s*[:;\(]/)[0].trim()
         if (code && name && !parsedEtfs.some(e => e.code === code)) {
           parsedEtfs.push({ code, name })
         }
       }
     }
   }
+  // fallback: 파싱된 코드가 없어도 etfSections 항목 수로 대체
+  const favItems = parsedEtfs.length > 0
+    ? parsedEtfs
+    : etfSections.flatMap(sec => sec.items.map(item => ({ code: item.slice(0, 20), name: item.slice(0, 30) })))
+
 
   if (!allocationLine && !etfSections.length) {
     return <p className="text-sm text-gray-300 leading-relaxed pl-6 whitespace-pre-wrap">{content.replace(/\*\*/g, '')}</p>
@@ -125,13 +131,13 @@ function StrategyContent({ content, onSaveToFavorites }: { content: string; onSa
         </div>
       )}
       {/* 즐겨찾기 저장 버튼 */}
-      {onSaveToFavorites && parsedEtfs.length > 0 && (
+      {onSaveToFavorites && favItems.length > 0 && (
         <button
-          onClick={() => onSaveToFavorites(parsedEtfs)}
+          onClick={() => onSaveToFavorites(favItems)}
           className="mt-1 ml-auto flex items-center gap-2 text-[13px] font-semibold text-yellow-300 hover:text-yellow-100 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 hover:border-yellow-400/60 px-4 py-2 rounded-xl transition-all duration-200 shadow-sm"
         >
           <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-          즐겨찾기에 저장 ({parsedEtfs.length}개)
+          즐겨찾기에 저장 ({favItems.length}개)
         </button>
       )}
     </div>
