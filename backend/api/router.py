@@ -791,15 +791,28 @@ async def get_semi_chart_data():
         "TIGER 미필반나": "381180.KS",
     }
 
-    # 5-minute dedicated cache (v6: common base-date normalization fixed on frontend)
-    semi_cache_key = "semi_chart_v6"
+    # 스마트 캐시 TTL (v7: KST 날짜 기반)
+    semi_cache_key = "semi_chart_v7"
+    from datetime import timezone, timedelta as _td
+    _kst = timezone(_td(hours=9))
+    _kst_now = datetime.now(_kst)
+    # 장중(KST 09:00~15:30) 1분, 장외 10분
+    _kst_h, _kst_m = _kst_now.hour, _kst_now.minute
+    _in_kr_market = (9, 0) <= (_kst_h, _kst_m) <= (15, 30)
+    _in_us_market = (23, 30) <= (_kst_h, _kst_m) or (_kst_h, _kst_m) <= (6, 0)
+    _semi_ttl = 60 if (_in_kr_market or _in_us_market) else 600
     if semi_cache_key in _bench_cache:
         cached_val, cached_ts = _bench_cache[semi_cache_key]
-        if time.time() - cached_ts < 300:
+        if time.time() - cached_ts < _semi_ttl:
             return cached_val
 
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=10 * 365 + 30)
+    # KST 기준 오늘+1을 end로 설정 (yfinance end는 exclusive - 해당 날짜 미포함)
+    # Render 서버가 UTC 기준이므로 KST 당일 데이터가 누락되지 않도록 내일 날짜 사용
+    from datetime import timezone, timedelta as _td
+    kst = timezone(_td(hours=9))
+    now_kst = datetime.now(kst)
+    end_date = (now_kst + _td(days=1)).date()
+    start_date = now_kst.date() - _td(days=10 * 365 + 30)
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
 
