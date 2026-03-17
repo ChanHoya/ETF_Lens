@@ -275,8 +275,19 @@ export default function CompareTable({
                             </thead>
                             <tbody className="divide-y divide-white/[0.05]">
                                 {data.data_payload.rows.map((row: string[], i: number) => {
+                                    const rowColor = glowColorList[i % glowColorList.length];
+                                    const isRowHovered = hoveredEtfName && (
+                                        row[0].includes(hoveredEtfName) || hoveredEtfName.includes(row[0]) ||
+                                        (data.raw_data && data.raw_data.find((e: any) => (e.etf_name === hoveredEtfName || e.etf_code === hoveredEtfName) && (row[0].includes(e.etf_name) || row[0].includes(e.etf_code))))
+                                    );
                                     return (
-                                        <tr key={i} className="hover:bg-white/[0.03] transition-colors group/row"
+                                        <tr key={i}
+                                            className="transition-all duration-200 group/row cursor-default"
+                                            style={isRowHovered ? {
+                                                backgroundColor: `${rowColor}18`,
+                                                borderLeft: `3px solid ${rowColor}`,
+                                                boxShadow: `inset 0 0 20px ${rowColor}10`,
+                                            } : { borderLeft: '3px solid transparent' }}
                                             onMouseEnter={() => {
                                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                                 const matchedEtf = data.raw_data ? data.raw_data.find((e: any) => row[0].includes(e.etf_name) || row[0].includes(e.etf_code)) : null;
@@ -294,9 +305,9 @@ export default function CompareTable({
                                                     <td key={j}
                                                         className={`py-3 px-3 text-xs xl:text-sm font-medium transition-colors ${j === 0 ? `font-bold max-w-[200px] truncate ${matchedEtf ? 'cursor-pointer hover:underline underline-offset-4' : ''}` :
                                                             isNegative ? 'text-rose-400' :
-                                                                isPositive ? 'text-emerald-400' : 'text-gray-200'
-                                                            }`}
-                                                        style={j === 0 ? { color: glowColorList[i % glowColorList.length] } : undefined}
+                                                                isPositive ? 'text-emerald-400' : isRowHovered ? 'text-white' : 'text-gray-200'
+                                                            } ${isRowHovered && j > 0 ? 'font-semibold' : ''}`}
+                                                        style={j === 0 ? { color: rowColor, ...(isRowHovered ? { textShadow: `0 0 10px ${rowColor}` } : {}) } : undefined}
                                                         title={j === 0 ? cell : undefined}
                                                         onClick={() => {
                                                             if (matchedEtf) setSelectedDetailEtf(matchedEtf);
@@ -348,13 +359,19 @@ export default function CompareTable({
                                     {data.visual_data.etf_keys.map((key: string, idx: number) => {
                                         const c = glowColorList[idx % glowColorList.length];
                                         const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+                                        const isOthersHovered = hoveredEtfName && !isHovered;
                                         return (
-                                            <tr key={key} className="hover:bg-white/5 transition-colors"
+                                            <tr key={key}
+                                                className="transition-all duration-200"
+                                                style={isHovered ? { backgroundColor: `${c}22`, boxShadow: `inset 0 0 12px ${c}15` } : {}}
                                                 onMouseEnter={() => setHoveredEtfName(key)}
                                                 onMouseLeave={() => setHoveredEtfName(null)}>
                                                 <td className="px-2 py-0.5 border-b border-white/5">
                                                     <div className="flex justify-center items-center w-full h-full">
-                                                        <div className={`w-2 h-2 rounded-full ${isHovered ? 'animate-pulse scale-125' : ''}`} style={{ backgroundColor: c, boxShadow: `0 0 8px ${c}` }}></div>
+                                                        <div
+                                                            className={`rounded-full transition-all duration-300 ${isHovered ? 'w-3 h-3 animate-pulse' : 'w-2 h-2'}`}
+                                                            style={{ backgroundColor: c, boxShadow: isHovered ? `0 0 14px 4px ${c}` : `0 0 6px ${c}` }}
+                                                        />
                                                     </div>
                                                 </td>
                                                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -368,9 +385,21 @@ export default function CompareTable({
                                                     const lightness = 90 - (norm * 50);
                                                     const textColor = norm > 0.6 ? 'text-white' : 'text-gray-900';
                                                     return (
-                                                        <td key={row.subject} className="px-1 py-0.5 border-b border-white/5 relative">
-                                                            <div className={`w-full h-full min-h-[20px] flex items-center justify-center rounded text-[10px] md:text-[11px] font-mono transition-all duration-300 ${isHovered ? 'scale-110 shadow-[0_0_10px_rgba(255,255,255,0.3)] z-10 font-extrabold ring-1 ring-white/50' : 'font-bold'} ${textColor}`}
-                                                                style={{ backgroundColor: `hsl(${hue}, 85%, ${lightness}%)` }}>
+                                                        <td key={row.subject} className={`px-1 py-0.5 border-b border-white/5 relative transition-all duration-200 ${isOthersHovered ? 'opacity-30' : 'opacity-100'}`}>
+                                                            <div
+                                                                className={`w-full h-full min-h-[22px] flex items-center justify-center rounded text-[10px] md:text-[12px] font-mono transition-all duration-200 ${textColor} ${isHovered ? 'font-extrabold' : 'font-bold'}`}
+                                                                style={{
+                                                                    backgroundColor: `hsl(${hue}, 85%, ${lightness}%)`,
+                                                                    ...(isHovered ? {
+                                                                        transform: 'scale(1.18)',
+                                                                        boxShadow: `0 0 16px 4px hsl(${hue}, 85%, ${lightness}%), 0 0 6px 2px ${c}`,
+                                                                        outline: `2px solid hsl(${hue}, 100%, 80%)`,
+                                                                        outlineOffset: '1px',
+                                                                        zIndex: 20,
+                                                                        position: 'relative',
+                                                                    } : {})
+                                                                }}
+                                                            >
                                                                 {val}
                                                             </div>
                                                         </td>
