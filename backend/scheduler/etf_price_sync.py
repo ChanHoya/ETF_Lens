@@ -26,25 +26,48 @@ async def sync_etf_prices_yfinance() -> int:
     from db.models import ETFMaster, ETFDailyPrice
     from sqlalchemy import select, delete
 
-    # 1. KRX ETF 목록 수집
+    # 1. KRX ETF 목록 수집 (pykrx → 네이버API → DB fallback)
     tickers_krx: list[str] = []
+
+    # 1순위: pykrx
     try:
         from pykrx import stock as krx_stock
         today = datetime.now().strftime("%Y%m%d")
         tickers_krx = await asyncio.to_thread(krx_stock.get_etf_ticker_list, today)
         if not tickers_krx:
-            # 주말/공휴일 → 직전 영업일
             for delta in range(1, 5):
                 prev = (datetime.now() - timedelta(days=delta)).strftime("%Y%m%d")
                 tickers_krx = await asyncio.to_thread(krx_stock.get_etf_ticker_list, prev)
                 if tickers_krx:
                     break
-        logger.info(f"[ETF Price Sync] pykrx ETF 목록: {len(tickers_krx)}개")
+        if tickers_krx:
+            logger.info(f"[ETF Price Sync] pykrx ETF 목록: {len(tickers_krx)}개")
     except Exception as e:
         logger.warning(f"[ETF Price Sync] pykrx 목록 조회 실패: {e}")
 
+    # 2순위: 네이버 증권 ETF 목록 API (~1075개, pykrx보다 안정적)
     if not tickers_krx:
-        # fallback: DB에서 코드 목록 사용
+        try:
+            import requests as _req
+            resp = await asyncio.to_thread(
+                lambda: _req.get(
+                    "https://finance.naver.com/api/sise/etfItemList.nhn",
+                    headers={"User-Agent": "Mozilla/5.0 (compatible; ETFLens/1.0)"},
+                    timeout=15,
+                )
+            )
+            items = resp.json().get("result", {}).get("etfItemList", [])
+            tickers_krx = [
+                str(item.get("itemcode", "")).zfill(6)
+                for item in items if item.get("itemcode")
+            ]
+            if tickers_krx:
+                logger.info(f"[ETF Price Sync] 네이버 API fallback: {len(tickers_krx)}개")
+        except Exception as e:
+            logger.warning(f"[ETF Price Sync] 네이버 API 조회 실패: {e}")
+
+    # 3순위: DB에서 코드 목록 사용
+    if not tickers_krx:
         async with AsyncSessionLocal() as db:
             rows = (await db.execute(select(ETFMaster.code))).scalars().all()
             tickers_krx = list(rows)
@@ -53,6 +76,7 @@ async def sync_etf_prices_yfinance() -> int:
     if not tickers_krx:
         logger.error("[ETF Price Sync] ETF 목록을 가져올 수 없습니다. 중단.")
         return 0
+
 
     # 2. yfinance 배치 다운로드
     import yfinance as yf
@@ -73,42 +97,64 @@ async def sync_etf_prices_yfinance() -> int:
                 try:
                     raw = await asyncio.to_thread(
                         yf.download,
-                        " ".join(batch),
+                        batch,
                         start=start_date,
                         end=end_date,
                         progress=False,
                         auto_adjust=True,
-                        group_by="ticker",
                     )
-                    if raw.empty:
+                    if raw is None or raw.empty:
                         return
 
-                    # MultiIndex 처리
                     import pandas as pd
+
                     if isinstance(raw.columns, pd.MultiIndex):
-                        for ticker in batch:
-                            if ticker not in raw.columns.get_level_values(0):
-                                continue
-                            series = raw[ticker]["Close"].dropna()
-                            code = ticker.replace(".KS", "").zfill(6)
-                            for dt, price in series.items():
-                                if price > 0:
-                                    all_price_rows.append({
-                                        "code": code,
-                                        "date": str(dt.date()),
-                                        "close": float(price),
-                                    })
-                    else:
+                        # 최신 yfinance: (Price, Ticker) 형태
+                        # 구버전 yfinance + group_by: (Ticker, Price) 형태
+                        lvl0 = raw.columns.get_level_values(0).unique().tolist()
+
+                        price_fields = {"Close", "Open", "High", "Low", "Volume"}
+                        # 레벨0이 가격 필드면 (Price, Ticker) → Close 행 추출
+                        if any(v in price_fields for v in lvl0):
+                            if "Close" in lvl0:
+                                close_df = raw["Close"]
+                                for col in close_df.columns:
+                                    code = str(col).replace(".KS", "").zfill(6)
+                                    series = close_df[col].dropna()
+                                    for dt, price in series.items():
+                                        if float(price) > 0:
+                                            all_price_rows.append({
+                                                "code": code,
+                                                "date": str(dt.date()),
+                                                "close": float(price),
+                                            })
+                        else:
+                            # (Ticker, Price) 형태
+                            for ticker in batch:
+                                if ticker not in lvl0:
+                                    continue
+                                try:
+                                    series = raw[ticker]["Close"].dropna()
+                                except Exception:
+                                    continue
+                                code = ticker.replace(".KS", "").zfill(6)
+                                for dt, price in series.items():
+                                    if float(price) > 0:
+                                        all_price_rows.append({
+                                            "code": code,
+                                            "date": str(dt.date()),
+                                            "close": float(price),
+                                        })
+                    elif "Close" in raw.columns:
                         # 단일 티커
-                        if "Close" in raw.columns:
-                            code = batch[0].replace(".KS", "").zfill(6)
-                            for dt, price in raw["Close"].dropna().items():
-                                if price > 0:
-                                    all_price_rows.append({
-                                        "code": code,
-                                        "date": str(dt.date()),
-                                        "close": float(price),
-                                    })
+                        code = batch[0].replace(".KS", "").zfill(6)
+                        for dt, price in raw["Close"].dropna().items():
+                            if float(price) > 0:
+                                all_price_rows.append({
+                                    "code": code,
+                                    "date": str(dt.date()),
+                                    "close": float(price),
+                                })
                     return
                 except Exception as e:
                     if attempt < RETRY_LIMIT:
