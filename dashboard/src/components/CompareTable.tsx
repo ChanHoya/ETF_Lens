@@ -95,7 +95,7 @@ export default function CompareTable({
         const allRows = ['운용사', '최초데이터(상장추정)', '현재가 및 NAV (괴리율)', ...numericRows];
 
         return (
-            <div className={`w-full overflow-x-auto border border-white/5 rounded-xl custom-scrollbar ${compact ? 'max-h-[60vh]' : 'max-h-[80vh]'} overflow-y-auto`}>
+            <div className={`w-full overflow-x-auto border border-white/5 rounded-xl custom-scrollbar ${compact ? 'max-h-[82vh]' : 'max-h-[88vh]'} overflow-y-auto`}>
                 <table className="text-left border-collapse table-auto" style={{ minWidth: 'max-content', width: '100%' }}>
                     <thead className="sticky top-0 z-30 backdrop-blur-xl bg-[#0B0F19]/95 shadow-md border-b border-white/10">
                         <tr>
@@ -442,7 +442,7 @@ export default function CompareTable({
                 </section>
 
                 {/* Detailed Basic Info — 인라인 미리보기 + 팝업 버튼 */}
-                <section className="bg-white/[0.02] backdrop-blur-3xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-5 border border-white/5 lg:col-span-4 mt-2 overflow-x-auto">
+                <section className="bg-white/[0.02] backdrop-blur-3xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-5 border border-white/5 lg:col-span-4 mt-2 overflow-x-auto min-h-[85vh]">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
                             <span className="w-1.5 h-6 bg-gradient-to-b from-teal-400 to-emerald-500 rounded-full"></span>
