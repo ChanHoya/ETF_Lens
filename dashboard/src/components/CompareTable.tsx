@@ -95,19 +95,28 @@ export default function CompareTable({
         const allRows = ['운용사', '최초데이터(상장추정)', '현재가 및 NAV (괴리율)', ...numericRows];
 
         return (
-            <div className={`w-full overflow-x-auto border border-white/5 rounded-xl relative custom-scrollbar ${compact ? 'max-h-[60vh]' : 'max-h-[80vh]'} overflow-y-auto`}>
-                <table className="w-full text-left border-collapse min-w-full table-fixed">
+            <div className={`w-full overflow-x-auto border border-white/5 rounded-xl custom-scrollbar ${compact ? 'max-h-[60vh]' : 'max-h-[80vh]'} overflow-y-auto`}>
+                <table className="text-left border-collapse table-auto" style={{ minWidth: 'max-content', width: '100%' }}>
                     <thead className="sticky top-0 z-30 backdrop-blur-xl bg-[#0B0F19]/95 shadow-md border-b border-white/10">
                         <tr>
-                            <th className="py-2 px-1 lg:px-2 text-[10px] md:text-sm font-bold text-gray-500 bg-white/5 w-16 md:w-24 break-keep">항목</th>
+                            {/* 항목 열 - sticky left */}
+                            <th className="sticky left-0 z-40 bg-[#0B0F19]/98 py-2 px-3 text-[10px] md:text-xs font-bold text-gray-500 border-r border-white/10 whitespace-nowrap min-w-[80px] w-[80px]">항목</th>
                             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {data.raw_data && data.raw_data.map((etf: any, idx: number) => {
                                 const isDanger = etf.etf_name.includes('인버스') || etf.etf_name.includes('레버리지') || etf.etf_name.includes('선물') || etf.etf_name.includes('블룸버그');
                                 return (
-                                    <th key={`${etf.etf_code}-${idx}`} className="py-2 px-1 xl:px-2 text-[10px] xl:text-xs font-bold text-center group cursor-pointer hover:bg-white/[0.05] transition-colors leading-tight whitespace-normal break-keep" onClick={() => setSelectedDetailEtf(etf)} style={{ color: glowColorList[idx % glowColorList.length] }}>
-                                        <div className="flex flex-col items-center justify-end gap-1.5 h-full">
-                                            {isDanger ? <span className="text-[8px] md:text-[9px] bg-rose-500/10 text-rose-400 px-1 py-0.5 rounded border border-rose-500/30 whitespace-nowrap">퇴직연금 불가</span> : <span className="text-[8px] md:text-[9px] bg-emerald-500/10 text-emerald-400 px-1 py-0.5 rounded border border-emerald-500/30 whitespace-nowrap">연금 가능</span>}
-                                            <span className="group-hover:underline underline-offset-4">{etf.etf_name}</span>
+                                    <th key={`${etf.etf_code}-${idx}`}
+                                        className="py-2 px-2 text-[10px] xl:text-xs font-bold text-center group cursor-pointer hover:bg-white/[0.05] transition-colors leading-tight min-w-[110px] w-[110px]"
+                                        onClick={() => setSelectedDetailEtf(etf)}
+                                        style={{ color: glowColorList[idx % glowColorList.length] }}
+                                    >
+                                        <div className="flex flex-col items-center justify-end gap-1 h-full pb-1">
+                                            {isDanger
+                                                ? <span className="text-[8px] bg-rose-500/10 text-rose-400 px-1 py-0.5 rounded border border-rose-500/30 whitespace-nowrap">퇴직연금 불가</span>
+                                                : <span className="text-[8px] bg-emerald-500/10 text-emerald-400 px-1 py-0.5 rounded border border-emerald-500/30 whitespace-nowrap">연금 가능</span>
+                                            }
+                                            <span className="group-hover:underline underline-offset-4 whitespace-nowrap text-[10px] xl:text-[11px] max-w-[100px] truncate block" title={etf.etf_name}>{etf.etf_name}</span>
+                                            <span className="text-[9px] text-gray-500 whitespace-nowrap">{etf.etf_code}</span>
                                         </div>
                                     </th>
                                 );
@@ -136,7 +145,8 @@ export default function CompareTable({
 
                             return (
                                 <tr key={key} className="hover:bg-white/[0.03] transition-colors">
-                                    <td className="py-3 px-4 text-xs font-semibold text-gray-400 bg-white/5 align-middle">{key}</td>
+                                    {/* 항목 이름 - sticky left */}
+                                    <td className="sticky left-0 z-10 bg-[#0B0F19]/95 py-3 px-3 text-[10px] md:text-xs font-semibold text-gray-400 border-r border-white/10 align-middle whitespace-nowrap min-w-[80px] w-[80px]">{key}</td>
                                     {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                     {data.raw_data && data.raw_data.map((etf: any, idx: number) => {
                                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -179,7 +189,7 @@ export default function CompareTable({
                                         const rank = isNumericRow && ranks.length > 0 ? ranks[idx] : 0;
 
                                         return (
-                                            <td key={`${etf.etf_code}-${idx}`} className={`py-2 px-1 lg:px-2 text-[10px] xl:text-xs font-medium ${textColor} h-full leading-tight break-keep text-center align-middle`}>
+                                            <td key={`${etf.etf_code}-${idx}`} className={`py-2 px-2 text-[10px] xl:text-xs font-medium ${textColor} h-full leading-tight text-center align-middle min-w-[110px] w-[110px]`}>
                                                 {!isNumericRow ? (
                                                     <div className="flex items-center justify-center h-full w-full">{val}</div>
                                                 ) : (
