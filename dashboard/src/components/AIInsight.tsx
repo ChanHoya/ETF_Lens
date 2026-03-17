@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Brain, RefreshCw, Sparkles, TrendingUp, AlertTriangle, Lightbulb, Search } from 'lucide-react'
+import { Brain, RefreshCw, Sparkles, TrendingUp, AlertTriangle, Lightbulb, Search, Star } from 'lucide-react'
+import { useFavorites } from '@/hooks/useFavorites'
 
 interface InsightData {
   insight: string
@@ -25,12 +26,10 @@ const PHASE_COLOR: Record<string, string> = {
   '침체기': 'text-rose-400 bg-rose-500/10 border-rose-500/30',
 }
 
-function StrategyContent({ content }: { content: string }) {
-  // Extract portfolio allocation line (📌 자산 배분 비중: ...)
+function StrategyContent({ content, onSaveToFavorites }: { content: string; onSaveToFavorites?: (items: { code: string; name: string }[]) => void }) {
   const allocationMatch = content.match(/📌[^\n]*비중[^\n]*주식[^\n]*/i)
   const allocationLine = allocationMatch ? allocationMatch[0].replace(/^📌\s*/, '') : null
 
-  // Extract ETF sections by ▶ headers
   const etfSections: { title: string; color: string; items: string[] }[] = []
   const sectionDefs = [
     { key: '주식형', color: 'emerald' },
@@ -51,7 +50,23 @@ function StrategyContent({ content }: { content: string }) {
     }
   }
 
-  // Fallback: raw text if no structured content found
+  // ETF 코드+이름 파싱 (앞 6자리 숫자를 코드로 추출)
+  const parsedEtfs: { code: string; name: string }[] = []
+  for (const sec of etfSections) {
+    for (const item of sec.items) {
+      const codeMatch = item.match(/^(\d{5,6})\s+(.+?)(?:\s*[:;\(]|$)/)
+      if (codeMatch) {
+        const code = codeMatch[1]
+        // 이름: 코드 제거 후 괄호/설명 앞까지
+        const rawName = item.replace(codeMatch[1], '').replace(/^\s+/, '')
+        const name = rawName.split(/\s*[:\(]/)[0].trim()
+        if (code && name && !parsedEtfs.some(e => e.code === code)) {
+          parsedEtfs.push({ code, name })
+        }
+      }
+    }
+  }
+
   if (!allocationLine && !etfSections.length) {
     return <p className="text-sm text-gray-300 leading-relaxed pl-6 whitespace-pre-wrap">{content.replace(/\*\*/g, '')}</p>
   }
@@ -79,12 +94,10 @@ function StrategyContent({ content }: { content: string }) {
         <div className="flex flex-col gap-3">
           {etfSections.map(sec => (
             <div key={sec.title}>
-              {/* 카드 바깥 카테고리 제목 */}
               <p className={`text-[13px] font-bold mb-1.5 opacity-80 ${
                 sec.color === 'emerald' ? 'text-emerald-400' :
                 sec.color === 'sky' ? 'text-sky-400' : 'text-amber-400'
               }`}>▶ {sec.title}</p>
-              {/* 카드 */}
               <div className={`border rounded-xl p-3 ${colorMap[sec.color] ?? 'border-white/10 bg-white/5 text-gray-300'}`}>
                 <ul className="flex flex-col gap-1">
                   {sec.items.map((item, i) => {
@@ -111,21 +124,35 @@ function StrategyContent({ content }: { content: string }) {
           ))}
         </div>
       )}
+      {/* 즐겨찾기 저장 버튼 */}
+      {onSaveToFavorites && parsedEtfs.length > 0 && (
+        <button
+          onClick={() => onSaveToFavorites(parsedEtfs)}
+          className="mt-1 ml-auto flex items-center gap-2 text-[13px] font-semibold text-yellow-300 hover:text-yellow-100 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 hover:border-yellow-400/60 px-4 py-2 rounded-xl transition-all duration-200 shadow-sm"
+        >
+          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+          즐겨찾기에 저장 ({parsedEtfs.length}개)
+        </button>
+      )}
     </div>
   )
 }
 
-function InsightSection({ icon, title, content, isStrategy }: { icon: React.ReactNode; title: string; content: string; isStrategy?: boolean }) {
+function InsightSection({ icon, title, content, isStrategy, onSaveToFavorites }: {
+  icon: React.ReactNode
+  title: string
+  content: string
+  isStrategy?: boolean
+  onSaveToFavorites?: (items: { code: string; name: string }[]) => void
+}) {
   return (
     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
-      {/* 소제목 */}
       <div className="flex items-center gap-2 pb-2 border-b border-white/10">
         {icon}
         <span className="text-[16px] font-bold text-white/90">{title}</span>
       </div>
-      {/* 본문 */}
       {isStrategy
-        ? <StrategyContent content={content} />
+        ? <StrategyContent content={content} onSaveToFavorites={onSaveToFavorites} />
         : <p className="text-[14px] text-gray-300 leading-relaxed whitespace-pre-wrap">{content.replace(/\*\*/g, '')}</p>
       }
     </div>
@@ -170,6 +197,29 @@ export default function AIInsight() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+
+  const { addGroupWithItems } = useFavorites()
+
+  // YYMMDD추천 형식 그룹명 생성
+  const getTodayGroupName = () => {
+    const d = new Date()
+    const yy = String(d.getFullYear()).slice(2)
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${yy}${mm}${dd}추천`
+  }
+
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const handleSaveToFavorites = (items: { code: string; name: string }[]) => {
+    const groupName = getTodayGroupName()
+    addGroupWithItems(groupName, items)
+    showToast(`⭐ '${groupName}' 그룹에 ${items.length}개 ETF 저장됨`)
+  }
 
   const load = async (forceRefresh = false) => {
     try {
@@ -257,7 +307,14 @@ export default function AIInsight() {
         ) : sections.length > 0 ? (
           <div className="flex flex-col gap-3">
             {sections.map((s) => (
-              <InsightSection key={s.key} icon={s.icon} title={s.title} content={s.content} isStrategy={s.isStrategy} />
+              <InsightSection
+                key={s.key}
+                icon={s.icon}
+                title={s.title}
+                content={s.content}
+                isStrategy={s.isStrategy}
+                onSaveToFavorites={s.isStrategy ? handleSaveToFavorites : undefined}
+              />
             ))}
           </div>
         ) : (
@@ -274,6 +331,18 @@ export default function AIInsight() {
           </p>
         </div>
       </div>
+
+      {/* 토스트 알림 */}
+      {toast && (
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 bg-[#1a2a1a] border border-emerald-500/40 text-emerald-200 text-[14px] font-semibold px-5 py-3 rounded-2xl shadow-2xl animate-fade-in-up"
+          style={{ boxShadow: '0 4px 32px rgba(52,211,153,0.25)' }}
+        >
+          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+          {toast}
+          <span className="text-[12px] text-emerald-400/60 font-normal">→ 종목분석 즐겨찾기에서 확인</span>
+        </div>
+      )}
     </div>
   )
 }

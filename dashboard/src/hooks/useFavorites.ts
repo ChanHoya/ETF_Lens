@@ -71,6 +71,18 @@ export function useFavorites() {
         });
     };
 
+    const addGroupWithItems = (groupName: string, items: { code: string; name: string }[]) => {
+        const existing = favorites.find(g => g.name === groupName);
+        if (existing) {
+            // 동일 이름 그룹 → items 전체 덮어쓰기
+            saveFavorites(favorites.map(g => g.name === groupName ? { ...g, items } : g));
+        } else {
+            // 새 그룹 생성
+            const newGroup = { id: Date.now().toString(), name: groupName, items };
+            saveFavorites([...favorites, newGroup]);
+        }
+    };
+
     return {
         favorites,
         isFavModalOpen,
@@ -81,6 +93,7 @@ export function useFavorites() {
         setSelectedFavItems,
         saveFavorites,
         addFavGroup,
+        addGroupWithItems,
         renameFavGroup,
         deleteFavGroup,
         removeFavItem,
