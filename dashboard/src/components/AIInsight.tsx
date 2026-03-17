@@ -82,12 +82,25 @@ function StrategyContent({ content }: { content: string }) {
             <div key={sec.title} className={`border rounded-xl p-3 ${colorMap[sec.color] ?? 'border-white/10 bg-white/5 text-gray-300'}`}>
               <p className="text-xs font-bold mb-2 opacity-80">▶ {sec.title}</p>
               <ul className="flex flex-col gap-1">
-                {sec.items.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs leading-relaxed">
-                    <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${dotMap[sec.color] ?? 'bg-gray-400'}`} />
-                    <span>{item}</span>
-                  </li>
-                ))}
+                {sec.items.map((item, i) => {
+                    // (정량 사유) 괄호 부분 분리: 마지막 (...) 추출
+                    const parenMatch = item.match(/^(.*?)\s*(\([^)]{4,120}\))\s*$/)
+                    const mainText = parenMatch ? parenMatch[1].trim() : item
+                    const quantReason = parenMatch ? parenMatch[2] : null
+                    return (
+                      <li key={i} className="flex items-start gap-2 text-xs leading-relaxed">
+                        <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${dotMap[sec.color] ?? 'bg-gray-400'}`} />
+                        <span className="flex-1">
+                          {mainText}
+                          {quantReason && (
+                            <span className="ml-1.5 inline-block text-[10px] font-semibold text-yellow-300/80 bg-yellow-400/10 border border-yellow-400/20 rounded px-1.5 py-0.5 leading-tight">
+                              {quantReason}
+                            </span>
+                          )}
+                        </span>
+                      </li>
+                    )
+                  })}
               </ul>
             </div>
           ))}
