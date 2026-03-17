@@ -869,7 +869,7 @@ export default function Home() {
                     setNaverEtfCode(null);
                     setSelectedDetailEtf(null);
                   }}
-                  className={`text-sm tracking-wide font-bold transition-all px-3 md:px-4 py-1.5 rounded-full whitespace-nowrap ${isActive ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'}`}
+                  className={`text-[17px] tracking-wide font-bold transition-all px-3 md:px-4 py-1.5 rounded-full whitespace-nowrap ${isActive ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'}`}
                 >
                   {tab.label}
                 </button>
@@ -901,7 +901,7 @@ export default function Home() {
                   setNaverEtfCode(null);
                   setSelectedDetailEtf(null);
                 }}
-                className={`text-xs md:text-sm font-bold transition-all px-3 py-1 rounded-full whitespace-nowrap ${activeTab === subTab.id ? 'bg-white/20 text-white shadow-inner border border-white/20' : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'}`}
+                className={`text-sm md:text-[15px] font-bold transition-all px-3 py-1 rounded-full whitespace-nowrap ${activeTab === subTab.id ? 'bg-white/20 text-white shadow-inner border border-white/20' : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'}`}
               >
                 {subTab.label}
               </button>

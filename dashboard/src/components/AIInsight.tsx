@@ -71,37 +71,42 @@ function StrategyContent({ content }: { content: string }) {
     <div className="pl-6 flex flex-col gap-3">
       {allocationLine && (
         <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5">
-          <span className="text-base">📌</span>
-          <span className="text-sm font-semibold text-white">{allocationLine}</span>
+          <span className="text-lg">📌</span>
+          <span className="text-[15px] font-semibold text-white">{allocationLine}</span>
         </div>
       )}
       {etfSections.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs text-gray-500 font-semibold tracking-wide uppercase">🇰🇷 국내 ETF 추천</p>
+        <div className="flex flex-col gap-3">
           {etfSections.map(sec => (
-            <div key={sec.title} className={`border rounded-xl p-3 ${colorMap[sec.color] ?? 'border-white/10 bg-white/5 text-gray-300'}`}>
-              <p className="text-xs font-bold mb-2 opacity-80">▶ {sec.title}</p>
-              <ul className="flex flex-col gap-1">
-                {sec.items.map((item, i) => {
-                    // (정량 사유) 괄호 부분 분리: 마지막 (...) 추출
-                    const parenMatch = item.match(/^(.*?)\s*(\([^)]{4,120}\))\s*$/)
-                    const mainText = parenMatch ? parenMatch[1].trim() : item
-                    const quantReason = parenMatch ? parenMatch[2] : null
-                    return (
-                      <li key={i} className="flex items-start gap-2 text-xs leading-relaxed">
-                        <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${dotMap[sec.color] ?? 'bg-gray-400'}`} />
-                        <span className="flex-1">
-                          {mainText}
-                          {quantReason && (
-                            <span className="ml-1.5 inline-block text-[10px] font-semibold text-yellow-300/80 bg-yellow-400/10 border border-yellow-400/20 rounded px-1.5 py-0.5 leading-tight">
-                              {quantReason}
-                            </span>
-                          )}
-                        </span>
-                      </li>
-                    )
-                  })}
-              </ul>
+            <div key={sec.title}>
+              {/* 카드 바깥 카테고리 제목 */}
+              <p className={`text-[13px] font-bold mb-1.5 opacity-80 ${
+                sec.color === 'emerald' ? 'text-emerald-400' :
+                sec.color === 'sky' ? 'text-sky-400' : 'text-amber-400'
+              }`}>▶ {sec.title}</p>
+              {/* 카드 */}
+              <div className={`border rounded-xl p-3 ${colorMap[sec.color] ?? 'border-white/10 bg-white/5 text-gray-300'}`}>
+                <ul className="flex flex-col gap-1">
+                  {sec.items.map((item, i) => {
+                      const parenMatch = item.match(/^(.*?)\s*(\([^)]{4,120}\))\s*$/)
+                      const mainText = parenMatch ? parenMatch[1].trim() : item
+                      const quantReason = parenMatch ? parenMatch[2] : null
+                      return (
+                        <li key={i} className="flex items-start gap-2 text-[14px] leading-relaxed">
+                          <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${dotMap[sec.color] ?? 'bg-gray-400'}`} />
+                          <span className="flex-1">
+                            {mainText}
+                            {quantReason && (
+                              <span className="ml-1.5 inline-block text-[10px] font-semibold text-yellow-300/80 bg-yellow-400/10 border border-yellow-400/20 rounded px-1.5 py-0.5 leading-tight">
+                                {quantReason}
+                              </span>
+                            )}
+                          </span>
+                        </li>
+                      )
+                    })}
+                </ul>
+              </div>
             </div>
           ))}
         </div>
@@ -112,14 +117,16 @@ function StrategyContent({ content }: { content: string }) {
 
 function InsightSection({ icon, title, content, isStrategy }: { icon: React.ReactNode; title: string; content: string; isStrategy?: boolean }) {
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
+    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
+      {/* 소제목 */}
+      <div className="flex items-center gap-2 pb-2 border-b border-white/10">
         {icon}
-        <span className="text-sm font-bold text-white/90">{title}</span>
+        <span className="text-[16px] font-bold text-white/90">{title}</span>
       </div>
+      {/* 본문 */}
       {isStrategy
         ? <StrategyContent content={content} />
-        : <p className="text-sm text-gray-300 leading-relaxed pl-6 whitespace-pre-wrap">{content.replace(/\*\*/g, '')}</p>
+        : <p className="text-[14px] text-gray-300 leading-relaxed whitespace-pre-wrap">{content.replace(/\*\*/g, '')}</p>
       }
     </div>
   )
@@ -128,10 +135,10 @@ function InsightSection({ icon, title, content, isStrategy }: { icon: React.Reac
 function parseInsight(text: string) {
   const sections: { key: string; icon: React.ReactNode; title: string; content: string; isStrategy?: boolean }[] = []
   const patterns = [
-    { key: 'diagnosis', icon: <TrendingUp className="w-4 h-4 text-indigo-400" />, header: '📊 현재 시장 상황 진단' },
-    { key: 'risk', icon: <AlertTriangle className="w-4 h-4 text-amber-400" />, header: '⚠️ 주요 리스크 요인' },
-    { key: 'strategy', icon: <Lightbulb className="w-4 h-4 text-emerald-400" />, header: '💡 투자 전략 제언', isStrategy: true },
-    { key: 'monitor', icon: <Search className="w-4 h-4 text-cyan-400" />, header: '🔍 핵심 모니터링 포인트' },
+    { key: 'diagnosis', icon: <TrendingUp className="w-4 h-4 text-indigo-400" />, header: '📊 현재 시장 상황 진단', displayTitle: '현재 시장 상황 진단' },
+    { key: 'risk', icon: <AlertTriangle className="w-4 h-4 text-amber-400" />, header: '⚠️ 주요 리스크 요인', displayTitle: '주요 리스크 요인' },
+    { key: 'strategy', icon: <Lightbulb className="w-4 h-4 text-emerald-400" />, header: '💡 투자 전략 제언', displayTitle: '투자전략 및 국내 ETF 추천', isStrategy: true },
+    { key: 'monitor', icon: <Search className="w-4 h-4 text-cyan-400" />, header: '🔍 핵심 모니터링 포인트', displayTitle: '핵심 모니터링 포인트' },
   ]
 
   let remaining = text
@@ -150,8 +157,9 @@ function parseInsight(text: string) {
       if (endIdx !== -1) content = afterHeader.slice(0, endIdx)
     }
     content = content.trim()
-    sections.push({ ...p, title: p.header.replace(/^[📊⚠️💡🔍]\s*/, ''), content })
+    sections.push({ ...p, title: p.displayTitle, content })
     remaining = remaining.slice(startIdx + p.header.length)
+
   }
 
   return sections
@@ -188,33 +196,32 @@ export default function AIInsight() {
   const sections = data ? parseInsight(data.insight) : []
 
   return (
-    <div className="w-full bg-gradient-to-br from-[#0f0f1a] to-[#161628] border border-indigo-500/20 rounded-3xl p-5 shadow-xl">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <Brain className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-white">AI Insight</h2>
-              <Sparkles className="w-4 h-4 text-purple-400" />
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {data?.analyzed_at ? `분석 시각: ${data.analyzed_at}` : '전문가 AI 시장 인사이트'}
-            </p>
-          </div>
+    <div className="w-full">
+      {/* ── 섹션 타이틀 (카드 바깥, MacroCompass 제목과 동일 레벨) ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
+          <Brain className="w-5 h-5 text-white" />
         </div>
-
-        <div className="flex items-center gap-2">
-          {/* Phase badges */}
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.3px' }}>
+              AI Insight
+            </h2>
+            <Sparkles className="w-4 h-4 text-purple-400" />
+          </div>
+          <p style={{ margin: 0, fontSize: 14, color: '#64748b', marginTop: 2 }}>
+            {data?.analyzed_at ? `분석 시각: ${data.analyzed_at}` : '매크로 지표 기반 전문가 AI 인사이트'}
+          </p>
+        </div>
+        {/* 위상 뱃지 + 새로고침 */}
+        <div className="ml-auto flex items-center gap-2">
           {data?.us_phase && (
-            <span className={`text-xs px-2 py-0.5 rounded-full border font-semibold ${PHASE_COLOR[data.us_phase] ?? 'text-gray-400 bg-gray-500/10 border-gray-500/20'}`}>
+            <span className={`text-[13px] px-2 py-0.5 rounded-full border font-semibold ${PHASE_COLOR[data.us_phase] ?? 'text-gray-400 bg-gray-500/10 border-gray-500/20'}`}>
               🇺🇸 {data.us_phase}
             </span>
           )}
           {data?.kr_phase && (
-            <span className={`text-xs px-2 py-0.5 rounded-full border font-semibold ${PHASE_COLOR[data.kr_phase] ?? 'text-gray-400 bg-gray-500/10 border-gray-500/20'}`}>
+            <span className={`text-[13px] px-2 py-0.5 rounded-full border font-semibold ${PHASE_COLOR[data.kr_phase] ?? 'text-gray-400 bg-gray-500/10 border-gray-500/20'}`}>
               🇰🇷 {data.kr_phase}
             </span>
           )}
@@ -229,44 +236,43 @@ export default function AIInsight() {
         </div>
       </div>
 
-      {/* Content */}
-      {loading ? (
-        <div className="flex flex-col gap-3 animate-pulse">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="flex flex-col gap-1.5">
-              <div className="h-4 w-32 bg-white/10 rounded-lg" />
-              <div className="h-3 w-full bg-white/5 rounded" />
-              <div className="h-3 w-4/5 bg-white/5 rounded" />
-            </div>
-          ))}
-          <p className="text-xs text-gray-500 text-center mt-2">AI가 시장 데이터를 분석 중입니다...</p>
-        </div>
-      ) : error ? (
-        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 text-sm text-rose-300">
-          ⚠️ 데이터 로드 실패: {error}
-          <button onClick={() => load()} className="ml-3 underline hover:text-white">재시도</button>
-        </div>
-      ) : sections.length > 0 ? (
-        <div className="flex flex-col gap-4 divide-y divide-white/5">
-          {sections.map((s, i) => (
-            <div key={s.key} className={i > 0 ? 'pt-4' : ''}>
-              <InsightSection icon={s.icon} title={s.title} content={s.content} isStrategy={s.isStrategy} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        // 파싱 실패 시 raw 텍스트로 표시
-        <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
-          {data?.insight}
-        </div>
-      )}
+      {/* ── 섹션 카드 컨테이너 ── */}
+      <div className="w-full bg-gradient-to-br from-[#0f0f1a] to-[#161628] border border-indigo-500/20 rounded-3xl p-5 shadow-xl">
+        {loading ? (
+          <div className="flex flex-col gap-3 animate-pulse">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="flex flex-col gap-1.5">
+                <div className="h-4 w-32 bg-white/10 rounded-lg" />
+                <div className="h-3 w-full bg-white/5 rounded" />
+                <div className="h-3 w-4/5 bg-white/5 rounded" />
+              </div>
+            ))}
+            <p className="text-[13px] text-gray-500 text-center mt-2">AI가 시장 데이터를 분석 중입니다...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 text-[14px] text-rose-300">
+            ⚠️ 데이터 로드 실패: {error}
+            <button onClick={() => load()} className="ml-3 underline hover:text-white">재시도</button>
+          </div>
+        ) : sections.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {sections.map((s) => (
+              <InsightSection key={s.key} icon={s.icon} title={s.title} content={s.content} isStrategy={s.isStrategy} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-[14px] text-gray-300 leading-relaxed whitespace-pre-wrap">
+            {data?.insight}
+          </div>
+        )}
 
-      {/* Footer */}
-      <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-1.5">
-        <Sparkles className="w-3 h-3 text-purple-400" />
-        <p className="text-xs text-gray-600">
-          Gemini 2.5 Flash · 매크로 지표 기반 분석 · 투자 조언 아님
-        </p>
+        {/* Footer */}
+        <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-1.5">
+          <Sparkles className="w-3 h-3 text-purple-400" />
+          <p className="text-[12px] text-gray-600">
+            Gemini 2.5 Flash · 매크로 지표 기반 분석 · 투자 조언 아님
+          </p>
+        </div>
       </div>
     </div>
   )

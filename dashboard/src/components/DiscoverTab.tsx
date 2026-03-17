@@ -36,7 +36,7 @@ export default function DiscoverTab() {
                 <div className="flex flex-col lg:flex-row gap-3 w-full">
                     {/* US Inflation Rate */}
                     <div className="w-full lg:w-1/2 bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col h-[400px]">
-                        <h3 className="text-sm font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                        <h3 className="text-base font-bold text-white/90 mb-3 flex items-center gap-2">
                             <Activity className="w-4 h-4 text-rose-400" />
                             미국 인플레이션율 (TradingEconomics)
                         </h3>
@@ -55,7 +55,7 @@ export default function DiscoverTab() {
 
                     {/* US CPI YoY */}
                     <div className="w-full lg:w-1/2 bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col h-[400px]">
-                        <h3 className="text-sm font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                        <h3 className="text-base font-bold text-white/90 mb-3 flex items-center gap-2">
                             <Activity className="w-4 h-4 text-emerald-400" />
                             미국 소비자물가지수(CPI) 전년 대비 (Investing.com)
                         </h3>
@@ -73,8 +73,22 @@ export default function DiscoverTab() {
                     </div>
                 </div>
 
-                {/* SemiChart: Semiconductor Indices */}
+                {/* SemiChart: Semiconductor Indices — "도메인별 지표" 섹션 타이틀 */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2 mb-0 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md w-full">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 shrink-0">
+                            <Activity className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <h2 className="text-xl font-extrabold text-white">도메인별 지표</h2>
+                            </div>
+                            <p className="text-sm text-gray-400 font-medium mt-0.5">반도체 지수 및 글로벌 섹터 동향</p>
+                        </div>
+                    </div>
+                </div>
                 <SemiChart />
+
 
                 {/* AI 매크로 로테이션 나침반 (미국/한국 분석) */}
                 <MacroCompass />

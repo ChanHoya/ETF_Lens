@@ -300,7 +300,7 @@ export default function KospiExitAnalyzer() {
                 <div onClick={(e) => openPopup('dollar', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-2 md:p-4 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
-                            <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><DollarSign className="w-4 h-4" /> 달러 인덱스/환율 추이</h4>
+                            <h4 className="text-white/80 text-base font-bold flex items-center gap-1.5"><DollarSign className="w-4 h-4" /> 달러 인덱스/환율 추이</h4>
                             <span className="text-2xl font-black text-white font-mono">{dollarIndex.toFixed(2)}</span>
                         </div>
                         <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${dStatus.bg} ${dStatus.color} ${dStatus.border}`}>
@@ -360,7 +360,7 @@ export default function KospiExitAnalyzer() {
                 <div onClick={(e) => openPopup('per', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-2 md:p-4 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-3">
-                            <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><BarChart2 className="w-4 h-4" /> 포워드 PER</h4>
+                            <h4 className="text-white/80 text-base font-bold flex items-center gap-1.5"><BarChart2 className="w-4 h-4" /> 포워드 PER</h4>
                             <span className="text-2xl font-black text-white font-mono">{forwardPer.toFixed(1)}x</span>
                         </div>
                         <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${pStatus.bg} ${pStatus.color} ${pStatus.border}`}>
@@ -419,7 +419,7 @@ export default function KospiExitAnalyzer() {
                 <div onClick={(e) => openPopup('cli', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-2 md:p-4 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
-                            <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><TrendingDown className="w-4 h-4" /> 경기 선행 지수 (CLI)</h4>
+                            <h4 className="text-white/80 text-base font-bold flex items-center gap-1.5"><TrendingDown className="w-4 h-4" /> 경기 선행 지수 (CLI)</h4>
                             <div className="flex items-end gap-2 text-2xl font-black text-white font-mono">
                                 {(100.2 - (oecdCliDownMonths * 0.4)).toFixed(1)}
                                 {oecdCliDownMonths > 0 && <span className="text-rose-400 text-xs font-bold mb-1 flex items-center border border-rose-500/20 bg-rose-500/10 px-1.5 py-0.5 rounded-md"><TrendingDown className="w-3 h-3 mr-0.5" /> 하락 {oecdCliDownMonths}M</span>}
@@ -507,7 +507,7 @@ export default function KospiExitAnalyzer() {
                 <div onClick={(e) => openPopup('vix', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-2 md:p-4 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
-                            <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> VIX(CBOE Volatility Index)</h4>
+                            <h4 className="text-white/80 text-base font-bold flex items-center gap-1.5"><Activity className="w-4 h-4" /> VIX(CBOE Volatility Index)</h4>
                             <span className="text-2xl font-black text-white font-mono">{vixValue.toFixed(2)}</span>
                         </div>
                         <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${vStatus.bg} ${vStatus.color} ${vStatus.border}`}>
@@ -551,7 +551,7 @@ export default function KospiExitAnalyzer() {
                 <div onClick={(e) => openPopup('fgi', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-2 md:p-4 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-3">
-                            <h4 className="text-gray-400 text-sm font-medium flex items-center gap-1.5"><Activity className="w-4 h-4" /> Fear & Greed Index (공포탐욕지수)</h4>
+                            <h4 className="text-white/80 text-base font-bold flex items-center gap-1.5"><Activity className="w-4 h-4" /> Fear & Greed Index (공포탐욕지수)</h4>
                             <span className="text-2xl font-black text-white font-mono">{fgiValue.toFixed(1)}</span>
                         </div>
                         <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${fStatus.bg} ${fStatus.color} ${fStatus.border}`}>

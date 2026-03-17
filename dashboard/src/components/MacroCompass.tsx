@@ -137,7 +137,7 @@ function CompassDial({ phase_en, confidence, phase }: {
             y={ly}
             textAnchor="middle"
             dominantBaseline="middle"
-            fontSize={q.phase === phase_en ? '8' : '7'}
+            fontSize={q.phase === phase_en ? '10' : '9'}
             fontWeight={q.phase === phase_en ? 'bold' : 'normal'}
             fill={q.phase === phase_en ? q.color : '#94a3b8'}
           >
@@ -164,10 +164,10 @@ function CompassDial({ phase_en, confidence, phase }: {
       <circle cx={CX} cy={CY} r={10} fill="#1e293b" stroke={cfg.color} strokeWidth={2} />
 
       {/* Phase text in center */}
-      <text x={CX} y={CY + 24} textAnchor="middle" fontSize="10" fontWeight="bold" fill={cfg.color}>
+      <text x={CX} y={CY + 24} textAnchor="middle" fontSize="12" fontWeight="bold" fill={cfg.color}>
         {phase}
       </text>
-      <text x={CX} y={CY + 37} textAnchor="middle" fontSize="8.5" fill="#94a3b8">
+      <text x={CX} y={CY + 37} textAnchor="middle" fontSize="10" fill="#94a3b8">
         확신도 {confidence}%
       </text>
     </svg>
@@ -184,15 +184,15 @@ function IndicatorCard({ indicators }: { indicators: Record<string, Indicator> }
           padding: '6px 10px', borderRadius: 6,
           background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
         }}>
-          <span style={{ fontSize: 12, color: '#cbd5e1' }}>{(ind as Indicator).label ?? INDICATOR_LABELS[key] ?? key}</span>
+          <span style={{ fontSize: 15, color: '#cbd5e1' }}>{(ind as Indicator).label ?? INDICATOR_LABELS[key] ?? key}</span>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9' }}>
+            <span style={{ fontSize: 16, fontWeight: 600, color: '#f1f5f9' }}>
               {ind.value != null
                 ? `${key === 'usd_krw' ? ind.value.toLocaleString() : ind.value.toFixed(key.includes('momentum') || key === 'pce' || key === 'fed_rate' || key === 'bok_rate' || key === 'export_growth' || key === 'unemployment' ? 1 : 1)}${INDICATOR_UNITS[key] ?? ''}`
                 : 'N/A'}
             </span>
             {ind.updated_at && (
-              <span style={{ fontSize: 10, color: '#64748b' }}>최신: {ind.updated_at}</span>
+              <span style={{ fontSize: 11, color: '#64748b' }}>최신: {ind.updated_at}</span>
             )}
           </div>
         </div>
@@ -211,9 +211,9 @@ function SectorHeatmap({ sectors }: { sectors: SectorWeight[] }) {
           padding: '5px 10px', borderRadius: 6,
           background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
         }}>
-          <span style={{ fontSize: 12, color: '#cbd5e1' }}>{s.sector}</span>
+          <span style={{ fontSize: 14, color: '#cbd5e1' }}>{s.sector}</span>
           <span style={{
-            fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12,
+            fontSize: 13, fontWeight: 600, padding: '2px 8px', borderRadius: 12,
             background: WEIGHT_COLOR[s.weight] + '25',
             color: WEIGHT_COLOR[s.weight],
             border: `1px solid ${WEIGHT_COLOR[s.weight]}55`,
@@ -238,15 +238,15 @@ function EtfList({ etfs, phase_en }: { etfs: EtfReco[]; phase_en: string }) {
           background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
         }}>
           <span style={{
-            fontSize: 11, fontWeight: 700, color: color,
+            fontSize: 13, fontWeight: 700, color: color,
             minWidth: 20, paddingTop: 1,
           }}>{i + 1}</span>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>{e.ticker}</span>
-              <span style={{ fontSize: 11, color: '#94a3b8' }}>{e.name}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{e.ticker}</span>
+              <span style={{ fontSize: 13, color: '#94a3b8' }}>{e.name}</span>
             </div>
-            <span style={{ fontSize: 11, color: '#64748b', marginTop: 2, display: 'block' }}>
+            <span style={{ fontSize: 12, color: '#64748b', marginTop: 2, display: 'block' }}>
               {e.reason}
             </span>
           </div>
@@ -280,11 +280,11 @@ function MarketPanel({ data, flag, market }: {
         borderBottom: '1px solid rgba(255,255,255,0.07)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <span style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>
+        <span style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>
           {flag} {market}
         </span>
         <span style={{
-          fontSize: 11, padding: '3px 10px', borderRadius: 99,
+          fontSize: 14, padding: '3px 10px', borderRadius: 99,
           background: cfg.bg, color: cfg.color,
           border: `1px solid ${cfg.color}55`, fontWeight: 600,
         }}>
@@ -298,7 +298,7 @@ function MarketPanel({ data, flag, market }: {
         <div
           style={{
             flex: 1,
-            fontSize: 12.5,
+            fontSize: 16,
             lineHeight: 1.65,
             color: '#94a3b8',
             borderLeft: `2px solid ${cfg.color}44`,
@@ -308,7 +308,7 @@ function MarketPanel({ data, flag, market }: {
           className="order-1 md:order-2"
         >
           {data.explanation}
-          <div style={{ marginTop: 8, fontSize: 11, color: '#475569' }}>
+          <div style={{ marginTop: 8, fontSize: 13, color: '#475569' }}>
             분석 시각: {data.analyzed_at}
           </div>
         </div>
@@ -330,7 +330,7 @@ function MarketPanel({ data, flag, market }: {
               key={t}
               onClick={() => setTab(t)}
               style={{
-                flex: 1, padding: '5px 0', fontSize: 11.5, fontWeight: tab === t ? 700 : 400,
+                flex: 1, padding: '6px 0', fontSize: 15, fontWeight: tab === t ? 700 : 400,
                 borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'all .15s',
                 background: tab === t ? cfg.color + '33' : 'transparent',
                 color: tab === t ? cfg.color : '#64748b',
@@ -410,12 +410,12 @@ export default function MacroCompass() {
         <span style={{ fontSize: 22 }}>🧭</span>
         <div>
           <h2 style={{
-            margin: 0, fontSize: 17, fontWeight: 700, color: '#f1f5f9',
+            margin: 0, fontSize: 21, fontWeight: 700, color: '#f1f5f9',
             letterSpacing: '-0.3px',
           }}>
             AI 매크로 로테이션 나침반
           </h2>
-          <p style={{ margin: 0, fontSize: 11.5, color: '#64748b', marginTop: 2 }}>
+          <p style={{ margin: 0, fontSize: 14, color: '#64748b', marginTop: 2 }}>
             경기 사이클 단계별 섹터 로테이션 전략 · 각 지표 최신 반영일 표시
           </p>
         </div>
@@ -469,7 +469,7 @@ export default function MacroCompass() {
       {/* Disclaimer */}
       {data && (
         <p style={{
-          marginTop: 12, fontSize: 10.5, color: '#334155', textAlign: 'right',
+          marginTop: 12, fontSize: 12, color: '#334155', textAlign: 'right',
         }}>
           * AI 분석 결과는 참고용이며 투자 결정의 근거로 사용 금지 · 24시간 캐시
         </p>
