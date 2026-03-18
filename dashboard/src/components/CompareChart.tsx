@@ -149,10 +149,13 @@ export default function CompareChart({
                                 {includedKeys.length > 0 ? (
                                     <div className="h-[400px] w-full relative z-10">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart data={simulatedChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                                            <LineChart data={simulatedChartData} margin={{ top: 5, right: 55, left: 10, bottom: 5 }}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                                 <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
-                                                <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
+                                                {/* 좌 Y축: ETF 주가 */}
+                                                <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
+                                                {/* 우 Y축: KOSPI / SP500 참고선 */}
+                                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : `${val}`} stroke="rgba(255,255,255,0.05)" tickMargin={8} axisLine={false} width={52} />
                                                 <Tooltip
                                                     cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }}
                                                     content={(props: any) => <PriceTooltip {...props} chartData={simulatedChartData} />}
@@ -165,14 +168,38 @@ export default function CompareChart({
                                                 }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
                                                     onMouseLeave={() => setHoveredEtfName(null)}
                                                     formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
+                                                {/* ETF 가격 라인들 (좌 Y축) */}
                                                 {includedKeys.map((key: string) => {
                                                     const idx = data.visual_data.etf_keys.indexOf(key);
                                                     const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
                                                     const isOthersHovered = hoveredEtfName && !isHovered;
-                                                    return <Line key={`${key}_raw`} type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                                    return <Line key={`${key}_raw`} yAxisId="left" type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                                                 })}
+                                                {/* KOSPI 참고선 (우 Y축, 점선) */}
+                                                {simulatedChartData.some((d: any) => d['KOSPI']) && (
+                                                    <Line yAxisId="right" type="monotone" dataKey="KOSPI" name="KOSPI" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="5 3" dot={false} connectNulls={true} activeDot={false} strokeOpacity={0.6} legendType="none" />
+                                                )}
+                                                {/* SP500 참고선 (우 Y축, 점선) */}
+                                                {simulatedChartData.some((d: any) => d['SP500']) && (
+                                                    <Line yAxisId="right" type="monotone" dataKey="SP500" name="S&P500" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="5 3" dot={false} connectNulls={true} activeDot={false} strokeOpacity={0.6} legendType="none" />
+                                                )}
                                             </LineChart>
                                         </ResponsiveContainer>
+                                        {/* 우측 상단 참고선 범례 */}
+                                        <div className="absolute top-2 right-14 flex flex-col gap-1 pointer-events-none">
+                                            {simulatedChartData.some((d: any) => d['KOSPI']) && (
+                                                <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
+                                                    <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="5 3" /></svg>
+                                                    KOSPI
+                                                </div>
+                                            )}
+                                            {simulatedChartData.some((d: any) => d['SP500']) && (
+                                                <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
+                                                    <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="5 3" /></svg>
+                                                    S&P500
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="h-24 flex items-center justify-center text-sm text-gray-500">
