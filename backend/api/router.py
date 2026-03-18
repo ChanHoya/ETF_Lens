@@ -418,7 +418,16 @@ async def fetch_etf_hybrid(
         }
     else:
         # Fallback to pure live fetching (e.g. for un-cached or non-KRX ETFs)
-        return await harvester.fetch_naver_etf_data(code, skip_holdings, skip_chart)
+        result = await harvester.fetch_naver_etf_data(code, skip_holdings, skip_chart)
+        # DB에 해당 코드가 있으면 DB의 이름을 우선 사용 (FDR 잘못된 매핑 방지)
+        try:
+            db_res = await db.execute(select(ETFMaster).where(ETFMaster.code == code))
+            db_master = db_res.scalars().first()
+            if db_master and db_master.name:
+                result["etf_name"] = db_master.name
+        except Exception:
+            pass
+        return result
 
 
 async def fetch_benchmark_hybrid(symbol: str, db: AsyncSession, fallback_coro):
