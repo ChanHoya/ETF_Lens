@@ -1,13 +1,15 @@
 import asyncio
 import json
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import pytz
 from agents.harvester.harvester import ETFHarvester
 from datetime import datetime
 from sqlalchemy import select
 from db.database import AsyncSessionLocal
 from db.models import ETFMaster, ETFDailyPrice, ETFHoldings, BenchmarkPrice, AppVersion
 
-scheduler = AsyncIOScheduler()
+# KST 기준으로 cron job 실행 (UTC 사용 시 hour=7이 KST 16시가 됨)
+scheduler = AsyncIOScheduler(timezone=pytz.timezone('Asia/Seoul'))
 
 
 async def update_app_version(job_label: str = "") -> None:
