@@ -171,29 +171,30 @@ export default function CompareChart({
                                                 {/* ETF 가격 라인들 (좌 Y축) */}
                                                 {includedKeys.map((key: string) => {
                                                     const idx = data.visual_data.etf_keys.indexOf(key);
-                                                    const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+                                                    // 엄격한 exact match: includes() 금지 ("S&P500" 포함 ETF명 오작동 방지)
+                                                    const isHovered = hoveredEtfName === key;
                                                     const isOthersHovered = hoveredEtfName && !isHovered;
                                                     return <Line key={`${key}_raw`} yAxisId="left" type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                                                 })}
-                                                {/* KOSPI 참고선 (우 Y축, 점선) */}
-                                                {simulatedChartData.some((d: any) => d['KOSPI']) && (
-                                                    <Line yAxisId="right" type="monotone" dataKey="KOSPI" name="KOSPI" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="5 3" dot={false} connectNulls={true} activeDot={false} strokeOpacity={0.6} legendType="none" />
+                                                {/* KOSPI 참고선 (우 Y축, 점선) - _raw 사용으로 실제 지수값 표시 */}
+                                                {simulatedChartData.some((d: any) => d['KOSPI_raw']) && (
+                                                    <Line yAxisId="right" type="monotone" dataKey="KOSPI_raw" name="KOSPI" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="5 3" dot={false} connectNulls={true} activeDot={{ r: 4, fill: '#94a3b8', strokeWidth: 0 }} strokeOpacity={0.7} legendType="none" />
                                                 )}
-                                                {/* SP500 참고선 (우 Y축, 점선) */}
-                                                {simulatedChartData.some((d: any) => d['SP500']) && (
-                                                    <Line yAxisId="right" type="monotone" dataKey="SP500" name="S&P500" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="5 3" dot={false} connectNulls={true} activeDot={false} strokeOpacity={0.6} legendType="none" />
+                                                {/* SP500 참고선 (우 Y축, 점선) - _raw 사용으로 실제 지수값 표시 */}
+                                                {simulatedChartData.some((d: any) => d['SP500_raw']) && (
+                                                    <Line yAxisId="right" type="monotone" dataKey="SP500_raw" name="S&P500" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="5 3" dot={false} connectNulls={true} activeDot={{ r: 4, fill: '#f59e0b', strokeWidth: 0 }} strokeOpacity={0.7} legendType="none" />
                                                 )}
                                             </LineChart>
                                         </ResponsiveContainer>
                                         {/* 우측 상단 참고선 범례 */}
                                         <div className="absolute top-2 right-14 flex flex-col gap-1 pointer-events-none">
-                                            {simulatedChartData.some((d: any) => d['KOSPI']) && (
+                                            {simulatedChartData.some((d: any) => d['KOSPI_raw']) && (
                                                 <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
                                                     <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="5 3" /></svg>
                                                     KOSPI
                                                 </div>
                                             )}
-                                            {simulatedChartData.some((d: any) => d['SP500']) && (
+                                            {simulatedChartData.some((d: any) => d['SP500_raw']) && (
                                                 <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
                                                     <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="5 3" /></svg>
                                                     S&P500
@@ -262,7 +263,7 @@ export default function CompareChart({
                                                 onMouseLeave={() => setHoveredEtfName(null)}
                                                 formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
                                             {data.visual_data.etf_keys.map((key: string, idx: number) => {
-                                                const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+                                                const isHovered = hoveredEtfName === key;
                                                 const isOthersHovered = hoveredEtfName && !isHovered;
                                                 return <Line key={key} type="monotone" dataKey={key} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                                             })}
@@ -304,7 +305,7 @@ export default function CompareChart({
                                                 onMouseLeave={() => setHoveredEtfName(null)}
                                                 formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
                                             {data.visual_data.etf_keys.map((key: string, idx: number) => {
-                                                const isHovered = hoveredEtfName && (hoveredEtfName === key || key.includes(hoveredEtfName) || hoveredEtfName.includes(key));
+                                                const isHovered = hoveredEtfName === key;
                                                 const isOthersHovered = hoveredEtfName && !isHovered;
                                                 return <Line key={`${key}_inflow`} type="monotone" dataKey={`${key}_inflow`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 4 }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                                             })}
