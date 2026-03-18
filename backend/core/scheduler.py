@@ -91,6 +91,12 @@ async def sync_etf_master_list():
         print("[ETF Master Sync] No ETF data retrieved. Skipping DB update.")
         return
 
+    # --- 알려진 잘못된 매핑 보정 딕셔너리 ---
+    # pykrx / FDR 이 잘못 매핑하는 코드 → 올바른 이름
+    KNOWN_ETF_CORRECTIONS: dict[str, str] = {
+        "411060": "ACE KRX금현물",   # FDR/pykrx가 TIGER 미국배당+7%프리미엄다우존스로 잘못 매핑
+    }
+
     # --- DB Upsert ---
     async with AsyncSessionLocal() as db:
         upserted = 0
@@ -103,7 +109,9 @@ async def sync_etf_master_list():
                 if not master:
                     master = ETFMaster(code=item["code"])
                     db.add(master)
-                master.name = item["name"]
+                # 알려진 보정 목록에 있으면 pykrx/FDR 값 대신 올바른 이름 사용
+                correct_name = KNOWN_ETF_CORRECTIONS.get(item["code"])
+                master.name = correct_name if correct_name else item["name"]
                 if item.get("issuer"):
                     master.issuer = item["issuer"]
                 upserted += 1
