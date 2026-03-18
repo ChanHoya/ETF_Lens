@@ -9,20 +9,42 @@ export function useFavorites() {
     const [selectedFavItems, setSelectedFavItems] = useState<{ code: string, name: string }[]>([]);
 
     useEffect(() => {
-        if (typeof window !== "undefined") {
+        if (typeof window === "undefined") return;
+
+        // 초기 로드
+        const load = () => {
             const savedFavs = localStorage.getItem('etf_favorites');
             if (savedFavs) {
                 try { setFavorites(JSON.parse(savedFavs)); } catch (e) { }
             } else {
                 setFavorites([{ id: 'default', name: '내 관심종목', items: [] }]);
             }
-        }
+        };
+        load();
+
+        // 다른 컴포넌트(AIInsight 등)가 localStorage를 업데이트하면 즉시 동기화
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === 'etf_favorites' && e.newValue) {
+                try { setFavorites(JSON.parse(e.newValue)); } catch (e) { }
+            }
+        };
+        // same-tab 동기화를 위한 커스텀 이벤트
+        const handleFavUpdate = () => load();
+
+        window.addEventListener('storage', handleStorage);
+        window.addEventListener('etf_favorites_updated', handleFavUpdate);
+        return () => {
+            window.removeEventListener('storage', handleStorage);
+            window.removeEventListener('etf_favorites_updated', handleFavUpdate);
+        };
     }, []);
 
     const saveFavorites = (favs: FavGroup[]) => {
         setFavorites(favs);
         if (typeof window !== "undefined") {
             localStorage.setItem('etf_favorites', JSON.stringify(favs));
+            // 같은 탭 내 다른 useFavorites 인스턴스(page.tsx, AIInsight 등)에 즉시 알림
+            window.dispatchEvent(new Event('etf_favorites_updated'));
         }
     };
 

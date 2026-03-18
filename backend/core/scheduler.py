@@ -203,7 +203,7 @@ async def sync_etf_batch():
     try:
         from api.router import cached_fdr_reader, fetch_yahoo_finance
         from datetime import timedelta
-        import pandas as pd
+
 
         start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
 
@@ -240,7 +240,6 @@ async def sync_etf_batch():
 def setup_scheduler():
     from scheduler.etf_price_sync import sync_etf_prices_yfinance
     from core.etf_performance import update_all_etf_performance_job
-    from scheduler.daily_fetch import run_morning_briefing
 
     # wrapper: 각 job 완료 후 버전 자동 업데이트
     async def _job_master():
@@ -259,10 +258,6 @@ def setup_scheduler():
         await update_all_etf_performance_job()
         await update_app_version("[perf]")
 
-    async def _job_briefing():
-        await run_morning_briefing()
-        await update_app_version("[briefing]")
-
     # 07:00 - 경량 ETF 마스터 목록 upsert
     scheduler.add_job(_job_master, "cron", hour=7, minute=0, id="daily_etf_master_sync")
 
@@ -274,9 +269,6 @@ def setup_scheduler():
 
     # 19:00 - ETF 수익률/변동성/샤프 계산 → ETFMaster 업데이트
     scheduler.add_job(_job_perf, "cron", hour=19, minute=0, id="daily_perf_calc")
-
-    # 08:00 - Morning briefing email + macro data update
-    scheduler.add_job(_job_briefing, "cron", hour=8, minute=0, id="morning_briefing_email")
 
     scheduler.start()
     print("DB and Email Scheduler started.")
