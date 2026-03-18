@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell } from "recharts";
 import { Loader2 } from "lucide-react";
 
@@ -93,6 +93,14 @@ export default function CompareChart({
 }: CompareChartProps) {
 
     const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
+    const [hoveredBench, setHoveredBench] = useState<string | null>(null);
+
+    // 참조선 정의: dataKey, 표시 이름, 색상
+    const benchLines = [
+        { dataKey: 'KOSPI_raw',   label: 'KOSPI',   color: '#94a3b8' },
+        { dataKey: 'SP500_raw',   label: 'S&P500',  color: '#f59e0b' },
+        { dataKey: 'NASDAQ_raw',  label: 'Nasdaq',  color: '#f472b6' },
+    ];
 
     return (
         <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white/[0.03] p-4 lg:p-5 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
@@ -176,31 +184,54 @@ export default function CompareChart({
                                                     const isOthersHovered = hoveredEtfName && !isHovered;
                                                     return <Line key={`${key}_raw`} yAxisId="left" type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                                                 })}
-                                                {/* KOSPI 참고선 (우 Y축, 점선) - _raw 사용으로 실제 지수값 표시 */}
-                                                {simulatedChartData.some((d: any) => d['KOSPI_raw']) && (
-                                                    <Line yAxisId="right" type="monotone" dataKey="KOSPI_raw" name="KOSPI" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="5 3" dot={false} connectNulls={true} activeDot={{ r: 4, fill: '#94a3b8', strokeWidth: 0 }} strokeOpacity={0.7} legendType="none" />
-                                                )}
-                                                {/* SP500 참고선 (우 Y축, 점선) - _raw 사용으로 실제 지수값 표시 */}
-                                                {simulatedChartData.some((d: any) => d['SP500_raw']) && (
-                                                    <Line yAxisId="right" type="monotone" dataKey="SP500_raw" name="S&P500" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="5 3" dot={false} connectNulls={true} activeDot={{ r: 4, fill: '#f59e0b', strokeWidth: 0 }} strokeOpacity={0.7} legendType="none" />
-                                                )}
+                                                {/* 참조선 (우 Y축, 점선) - 데이터 있는 것만 표시 */}
+                                                {benchLines.map(({ dataKey, label, color }) => {
+                                                    const hasData = simulatedChartData.some((d: any) => d[dataKey]);
+                                                    if (!hasData) return null;
+                                                    const isBenchHovered = hoveredBench === label;
+                                                    const isBenchOtherHovered = hoveredBench && !isBenchHovered;
+                                                    return (
+                                                        <Line
+                                                            key={dataKey}
+                                                            yAxisId="right"
+                                                            type="monotone"
+                                                            dataKey={dataKey}
+                                                            name={label}
+                                                            stroke={color}
+                                                            strokeWidth={isBenchHovered ? 3 : 1.5}
+                                                            strokeDasharray="5 3"
+                                                            dot={false}
+                                                            connectNulls={true}
+                                                            activeDot={{ r: 4, fill: color, strokeWidth: 0 }}
+                                                            strokeOpacity={isBenchOtherHovered ? 0.2 : 0.7}
+                                                            legendType="none"
+                                                        />
+                                                    );
+                                                })}
                                             </LineChart>
                                         </ResponsiveContainer>
-                                        {/* 우측 상단 참고선 범례 */}
-                                        <div className="absolute top-2 right-14 flex flex-col gap-1 pointer-events-none">
-                                            {simulatedChartData.some((d: any) => d['KOSPI_raw']) && (
-                                                <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
-                                                    <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="5 3" /></svg>
-                                                    KOSPI
-                                                </div>
-                                            )}
-                                            {simulatedChartData.some((d: any) => d['SP500_raw']) && (
-                                                <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
-                                                    <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="5 3" /></svg>
-                                                    S&P500
-                                                </div>
-                                            )}
-                                        </div>
+                                        {/* 하단 참조선 범례 (hover 하이라이트 지원) */}
+                                        {benchLines.some(({ dataKey }) => simulatedChartData.some((d: any) => d[dataKey])) && (
+                                            <div className="flex justify-center gap-4 mt-3 pt-2 border-t border-white/5">
+                                                {benchLines.map(({ dataKey, label, color }) => {
+                                                    const hasData = simulatedChartData.some((d: any) => d[dataKey]);
+                                                    if (!hasData) return null;
+                                                    const isActive = hoveredBench === label;
+                                                    return (
+                                                        <button
+                                                            key={label}
+                                                            onMouseEnter={() => setHoveredBench(label)}
+                                                            onMouseLeave={() => setHoveredBench(null)}
+                                                            className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-white transition-colors cursor-default"
+                                                            style={{ opacity: hoveredBench && !isActive ? 0.4 : 1 }}
+                                                        >
+                                                            <svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke={color} strokeWidth={isActive ? 2.5 : 1.5} strokeDasharray="5 3" /></svg>
+                                                            <span style={{ color: isActive ? color : undefined, fontWeight: isActive ? 'bold' : 'normal' }}>{label}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="h-24 flex items-center justify-center text-sm text-gray-500">
