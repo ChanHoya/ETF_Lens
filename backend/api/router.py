@@ -70,70 +70,147 @@ async def get_db_version(db: AsyncSession = Depends(get_db)):
     return {"version": "VER --"}
 
 
+
+# ── Health Check 캐시 ──────────────────────────────────────────────────────────
+_health_cache: dict = {}
+_HEALTH_CACHE_TTL = 60  # 60초 캐시 (동시 다수 접속 시 중복 호출 방지)
+
+
+async def _check_one(name: str, fn, timeout_sec: float = 5.0) -> dict:
+    """단일 외부 API 체크. 응답시간(ms) + ok/error 반환. timeout 초과 시 error 처리."""
+    import time as _t
+    t0 = _t.monotonic()
+    try:
+        await asyncio.wait_for(asyncio.to_thread(fn), timeout=timeout_sec)
+        return {"ok": True, "latency_ms": int((_t.monotonic() - t0) * 1000)}
+    except asyncio.TimeoutError:
+        return {"ok": False, "error": f"timeout ({timeout_sec}s)", "latency_ms": int((_t.monotonic() - t0) * 1000)}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:120], "latency_ms": int((_t.monotonic() - t0) * 1000)}
+
+
 @router.get("/health")
 async def check_health(db: AsyncSession = Depends(get_db)):
-    import yfinance as yf
-    from sqlalchemy import text
-    from agents.harvester.harvester import ETFHarvester
+    """
+    모든 연동기능 상태를 병렬로 체크하여 반환합니다.
+    - 체크 항목: DB, Yahoo Finance(yfinance), Naver, Gemini, OECD CLI, FRED
+    - 결과는 60초 캐시 (브라우저 로드 시 호출되므로 서버 부하 최소화)
+    - 각 체크는 5초 timeout (느린 API가 전체를 블록하지 않도록)
+    """
+    global _health_cache
+    import time as _t
+    now = _t.time()
+    if _health_cache.get("ts") and now - _health_cache["ts"] < _HEALTH_CACHE_TTL:
+        return _health_cache["data"]
 
-    status = {
-        "db": "pending",
-        "yfinance": "pending",
-        "naver": "pending",
-    }
+    from sqlalchemy import text
+    from datetime import datetime, timedelta
+    import requests
+    import os
+
     failed_services = []
 
-    # DB Check
-    try:
-        await db.execute(text("SELECT 1"))
-        status["db"] = "ok"
-    except Exception as e:
-        status["db"] = "error"
-        failed_services.append("DB")
-        logger.error(f"Health check DB error: {e}")
+    # ── 개별 체크 함수들 ───────────────────────────────────────────────────────
 
-    # yfinance Check (start/end 방식 - 안정적)
-    try:
-        from datetime import datetime, timedelta
+    def _db_check():
+        pass  # DB는 async로 따로 처리
+
+    def _yfinance_check():
+        import yfinance as yf
         end = datetime.now()
         start = (end - timedelta(days=3)).strftime("%Y-%m-%d")
         t = yf.Ticker("SPY")
-        res = await asyncio.to_thread(
-            lambda: t.history(start=start, end=end.strftime("%Y-%m-%d"), auto_adjust=True)
+        df = t.history(start=start, end=end.strftime("%Y-%m-%d"), auto_adjust=True)
+        if df.empty:
+            raise ValueError("Empty response from yfinance")
+
+    def _naver_check():
+        import requests
+        url = "https://finance.naver.com/item/main.naver?code=069500"
+        resp = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+        if resp.status_code != 200:
+            raise ValueError(f"Naver HTTP {resp.status_code}")
+        if "069500" not in resp.text:
+            raise ValueError("Naver: unexpected response content")
+
+    def _gemini_check():
+        import google.generativeai as genai
+        api_key = os.getenv("GEMINI_API_KEY", "")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY not set")
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        resp = model.generate_content("1+1=?", generation_config={"max_output_tokens": 5})
+        if not resp.text:
+            raise ValueError("Empty Gemini response")
+
+    def _oecd_check():
+        url = (
+            "https://stats.oecd.org/SDMX-JSON/data/MEI_CLI/"
+            "LOLITOAASTSAM.KOR.M/all?startTime=2024-01&endTime=2024-06"
         )
-        if not res.empty:
-            status["yfinance"] = "ok"
-        else:
-            status["yfinance"] = "error"
-            failed_services.append("Yahoo Finance")
-    except Exception as e:
-        status["yfinance"] = "error"
-        failed_services.append("Yahoo Finance")
-        logger.error(f"Health check YF error: {e}")
+        resp = requests.get(url, timeout=8, headers={"Accept": "application/json"})
+        if resp.status_code != 200 or len(resp.text) < 100:
+            raise ValueError(f"OECD HTTP {resp.status_code}")
 
-    # Naver Scraping Check
+    def _fred_check():
+        url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=FEDFUNDS"
+        resp = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+        if resp.status_code != 200:
+            raise ValueError(f"FRED HTTP {resp.status_code}")
+
+    def _pykrx_check():
+        from pykrx import stock
+        df = stock.get_market_ohlcv_by_date("20250101", "20250110", "069500")
+        if df is None or df.empty:
+            raise ValueError("pykrx returned empty data")
+
+    # ── DB 체크 (async 직접) ───────────────────────────────────────────────────
+    db_result = {"ok": True, "latency_ms": 0}
     try:
-        harvester = ETFHarvester()
-        # "069500" KODEX 200 is a reliable domestic ETF to test table scraping
-        holdings = await harvester.fetch_etf_holdings("069500")
-        if len(holdings) > 0:
-            status["naver"] = "ok"
-        else:
-            status["naver"] = "error"
-            failed_services.append("Naver Scraping")
+        import time as _t2
+        t0 = _t2.monotonic()
+        await db.execute(text("SELECT 1"))
+        db_result = {"ok": True, "latency_ms": int((_t2.monotonic() - t0) * 1000)}
     except Exception as e:
-        status["naver"] = "error"
-        failed_services.append("Naver Scraping")
-        logger.error(f"Health check Naver error: {e}")
+        db_result = {"ok": False, "error": str(e)[:120], "latency_ms": 0}
+        failed_services.append("DB")
 
-    all_ok = all(
-        v == "ok"
-        for k, v in status.items()
-        if k != "overall" and k != "failed_services"
+    # ── 외부 API 병렬 체크 (각 5초 timeout) ────────────────────────────────────
+    yf_res, naver_res, gemini_res, oecd_res, fred_res, pykrx_res = await asyncio.gather(
+        _check_one("Yahoo Finance", _yfinance_check, timeout_sec=5),
+        _check_one("Naver",         _naver_check,    timeout_sec=5),
+        _check_one("Gemini",        _gemini_check,   timeout_sec=8),
+        _check_one("OECD",          _oecd_check,     timeout_sec=10),
+        _check_one("FRED",          _fred_check,     timeout_sec=5),
+        _check_one("pykrx",         _pykrx_check,    timeout_sec=10),
     )
-    status["failed_services"] = failed_services
-    status["overall"] = "ok" if all_ok else "error"
-    return status
+
+    checks = {
+        "DB":            db_result,
+        "Yahoo Finance": yf_res,
+        "Naver":         naver_res,
+        "Gemini":        gemini_res,
+        "OECD CLI":      oecd_res,
+        "FRED":          fred_res,
+        "pykrx (KRX)":  pykrx_res,
+    }
+
+    for svc, result in checks.items():
+        if not result["ok"]:
+            failed_services.append(svc)
+
+    overall = "ok" if not failed_services else "error"
+
+    response = {
+        "overall": overall,
+        "checks": checks,
+        "failed_services": failed_services,
+        "checked_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "cache_ttl_sec": _HEALTH_CACHE_TTL,
+    }
+    _health_cache = {"ts": now, "data": response}
+    return response
 
 
 
