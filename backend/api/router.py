@@ -409,14 +409,22 @@ async def fetch_etf_hybrid(
             for h in h_res.scalars().all():
                 holdings.append({"ticker": h.ticker, "weight": h.weight})
 
-        # Fetch prices
+        # Fetch prices (날짜 중복 제거: 날짜별 MAX id 기준)
         dates = []
         prices = []
         if not skip_chart:
+            from sqlalchemy import func
+            # 날짜별 최신 row만 선택 (중복 데이터 방지)
+            subq = (
+                select(func.max(ETFDailyPrice.id).label("max_id"))
+                .where(ETFDailyPrice.code == code)
+                .group_by(ETFDailyPrice.date)
+                .subquery()
+            )
             p_res = await db.execute(
                 select(ETFDailyPrice)
-                .where(ETFDailyPrice.code == code)
-                .order_by(ETFDailyPrice.id)
+                .where(ETFDailyPrice.id.in_(select(subq.c.max_id)))
+                .order_by(ETFDailyPrice.date)
             )
             for p in p_res.scalars().all():
                 dates.append(p.date)

@@ -106,9 +106,15 @@ export default function CompareChart({
     // ETF 이름 → 자동 벤치마크 매핑 (hover 시 연관 지수 동시 하이라이트)
     const etfToBench = (name: string): string | null => {
         const n = name.toUpperCase();
-        if (n.includes('나스닥') || n.includes('NASDAQ') || n.includes('QQQ')) return 'Nasdaq';
+        // 한국형 특수 패턴: 다우존스를 추종하지만 한국 배당 ETF
+        if (n.includes('코리아배당') || n.includes('KOREA배당')) return 'KOSPI';
+        // 나스닥/성장형 커버드콜
+        if (n.includes('나스닥') || n.includes('NASDAQ') || n.includes('QQQ') ||
+            n.includes('성장커버드콜') || n.includes('성장 커버드콜')) return 'Nasdaq';
+        // 미국 지수 (S&P500 계열)
         if (n.includes('S&P') || n.includes('SP500') || n.includes('다우존스') || n.includes('DOWJONES')) return 'S&P500';
         if (n.includes('미국') || n.includes('US ') || n.includes('TIGER 미') || n.includes('ACE 미') || n.includes('KODEX 미')) return 'S&P500';
+        // 한국 지수 (기본값)
         if (n.includes('코스피') || n.includes('KOSPI') || n.includes('코리아') || n.includes('밸류업') || n.includes('200ITR') || n.includes('코스닥')) return 'KOSPI';
         return 'KOSPI'; // 기본값: 한국 지수
     };
