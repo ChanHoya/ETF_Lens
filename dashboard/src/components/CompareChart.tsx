@@ -103,6 +103,36 @@ export default function CompareChart({
         { dataKey: 'NASDAQ_raw',  label: 'Nasdaq',  color: '#f472b6', yAxisId: 'left' },
     ];
 
+    // ETF 이름 → 자동 벤치마크 매핑 (hover 시 연관 지수 동시 하이라이트)
+    const etfToBench = (name: string): string | null => {
+        const n = name.toUpperCase();
+        if (n.includes('나스닥') || n.includes('NASDAQ') || n.includes('QQQ')) return 'Nasdaq';
+        if (n.includes('S&P') || n.includes('SP500') || n.includes('다우존스') || n.includes('DOWJONES')) return 'S&P500';
+        if (n.includes('미국') || n.includes('US ') || n.includes('TIGER 미') || n.includes('ACE 미') || n.includes('KODEX 미')) return 'S&P500';
+        if (n.includes('코스피') || n.includes('KOSPI') || n.includes('코리아') || n.includes('밸류업') || n.includes('200ITR') || n.includes('코스닥')) return 'KOSPI';
+        return 'KOSPI'; // 기본값: 한국 지수
+    };
+
+    // 실제 하이라이트 대상: 직접 hover한 bench 또는 ETF hover에서 자동 매핑된 bench
+    const effectiveHoveredBench = hoveredBench || (hoveredEtfName ? etfToBench(hoveredEtfName) : null);
+
+    // 수익률 그래프용 벤치마크 수익률 계산 (첫 유효값 대비 %)
+    const benchReturnKeys = [
+        { dataKey: 'KOSPI_raw',  returnKey: 'KOSPI_return',  label: 'KOSPI',  color: '#94a3b8' },
+        { dataKey: 'SP500_raw',  returnKey: 'SP500_return',  label: 'S&P500', color: '#f59e0b' },
+        { dataKey: 'NASDAQ_raw', returnKey: 'NASDAQ_return', label: 'Nasdaq', color: '#f472b6' },
+    ];
+    const returnChartData = simulatedChartData.map((d: any) => {
+        const newD = { ...d };
+        benchReturnKeys.forEach(({ dataKey, returnKey }) => {
+            const firstPoint = simulatedChartData.find((p: any) => p[dataKey] && p[dataKey] > 0);
+            if (firstPoint && d[dataKey] && firstPoint[dataKey]) {
+                newD[returnKey] = ((d[dataKey] - firstPoint[dataKey]) / firstPoint[dataKey]) * 100;
+            }
+        });
+        return newD;
+    });
+
     return (
         <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white/[0.03] p-4 lg:p-5 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
             <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
@@ -185,48 +215,48 @@ export default function CompareChart({
                                                     const isOthersHovered = hoveredEtfName && !isHovered;
                                                     return <Line key={`${key}_raw`} yAxisId="left" type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                                                 })}
-                                                {/* 참조선 (점선) - 데이터 있는 것만 표시, yAxisId 개별 지정 */}
+                                                {/* 참조선 (점선) - effectiveHoveredBench로 hover 하이라이트 */}
                                                 {benchLines.map(({ dataKey, label, color, yAxisId }) => {
                                                     const hasData = simulatedChartData.some((d: any) => d[dataKey]);
                                                     if (!hasData) return null;
-                                                    const isBenchHovered = hoveredBench === label;
-                                                    const isBenchOtherHovered = hoveredBench && !isBenchHovered;
+                                                    const isBenchHovered = effectiveHoveredBench === label;
+                                                    const isBenchOtherHovered = effectiveHoveredBench && !isBenchHovered;
                                                     return (
                                                         <Line
-                                                            key={dataKey}
+                                                            key={`${dataKey}_${isBenchHovered}`}  // hover 상태 포함 → 강제 리렌더
                                                             yAxisId={yAxisId}
                                                             type="monotone"
                                                             dataKey={dataKey}
                                                             name={label}
                                                             stroke={color}
-                                                            strokeWidth={isBenchHovered ? 3 : 1.5}
+                                                            strokeWidth={isBenchHovered ? 3.5 : 1.5}
                                                             strokeDasharray="5 3"
                                                             dot={false}
                                                             connectNulls={true}
                                                             activeDot={{ r: 4, fill: color, strokeWidth: 0 }}
-                                                            strokeOpacity={isBenchOtherHovered ? 0.2 : 0.7}
+                                                            strokeOpacity={isBenchOtherHovered ? 0.15 : (isBenchHovered ? 1.0 : 0.7)}
                                                             legendType="none"
                                                         />
                                                     );
                                                 })}
                                             </LineChart>
                                         </ResponsiveContainer>
-                                        {/* 하단 참조선 범례 (hover 하이라이트 지원) */}
+                                        {/* 하단 참조선 범례 (hover → effectiveHoveredBench 기반 하이라이트) */}
                                         {benchLines.some(({ dataKey }) => simulatedChartData.some((d: any) => d[dataKey])) && (
                                             <div className="flex justify-center gap-4 mt-3 pt-2 border-t border-white/5">
                                                 {benchLines.map(({ dataKey, label, color }) => {
                                                     const hasData = simulatedChartData.some((d: any) => d[dataKey]);
                                                     if (!hasData) return null;
-                                                    const isActive = hoveredBench === label;
+                                                    const isActive = effectiveHoveredBench === label;
                                                     return (
                                                         <button
                                                             key={label}
                                                             onMouseEnter={() => setHoveredBench(label)}
                                                             onMouseLeave={() => setHoveredBench(null)}
-                                                            className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-white transition-colors cursor-default"
-                                                            style={{ opacity: hoveredBench && !isActive ? 0.4 : 1 }}
+                                                            className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-white transition-colors cursor-pointer"
+                                                            style={{ opacity: effectiveHoveredBench && !isActive ? 0.35 : 1 }}
                                                         >
-                                                            <svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke={color} strokeWidth={isActive ? 2.5 : 1.5} strokeDasharray="5 3" /></svg>
+                                                            <svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke={color} strokeWidth={isActive ? 3 : 1.5} strokeDasharray="5 3" /></svg>
                                                             <span style={{ color: isActive ? color : undefined, fontWeight: isActive ? 'bold' : 'normal' }}>{label}</span>
                                                         </button>
                                                     );
@@ -278,13 +308,13 @@ export default function CompareChart({
 
                                 <div className="h-[400px] w-full relative z-10">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={simulatedChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                                        <LineChart data={returnChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                             <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
                                             <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
                                             <Tooltip
                                                 cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }}
-                                                content={(props: any) => <ReturnTooltip {...props} chartData={simulatedChartData} />}
+                                                content={(props: any) => <ReturnTooltip {...props} chartData={returnChartData} />}
                                             />
                                             <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
                                                 if (e && e.value) {
@@ -296,11 +326,56 @@ export default function CompareChart({
                                                 formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
                                             {data.visual_data.etf_keys.map((key: string, idx: number) => {
                                                 const isHovered = hoveredEtfName === key;
-                                                const isOthersHovered = hoveredEtfName && !isHovered;
-                                                return <Line key={key} type="monotone" dataKey={key} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                                const isOthersHovered = (hoveredEtfName || hoveredBench) && !isHovered;
+                                                return <Line key={`${key}_${isHovered}`} type="monotone" dataKey={key} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                            })}
+                                            {/* 수익률 그래프 벤치마크 점선 */}
+                                            {benchReturnKeys.map(({ returnKey, label, color }) => {
+                                                const hasData = returnChartData.some((d: any) => d[returnKey] != null);
+                                                if (!hasData) return null;
+                                                const isBenchHovered = effectiveHoveredBench === label;
+                                                const isBenchOtherHovered = effectiveHoveredBench && !isBenchHovered;
+                                                return (
+                                                    <Line
+                                                        key={`${returnKey}_${isBenchHovered}`}
+                                                        type="monotone"
+                                                        dataKey={returnKey}
+                                                        name={label}
+                                                        stroke={color}
+                                                        strokeWidth={isBenchHovered ? 3.5 : 1.5}
+                                                        strokeDasharray="5 3"
+                                                        dot={false}
+                                                        connectNulls={true}
+                                                        activeDot={{ r: 4, fill: color, strokeWidth: 0 }}
+                                                        strokeOpacity={isBenchOtherHovered ? 0.15 : (isBenchHovered ? 1.0 : 0.7)}
+                                                        legendType="none"
+                                                    />
+                                                );
                                             })}
                                         </LineChart>
                                     </ResponsiveContainer>
+                                    {/* 수익률 그래프 하단 벤치마크 범례 */}
+                                    {benchReturnKeys.some(({ returnKey }) => returnChartData.some((d: any) => d[returnKey] != null)) && (
+                                        <div className="flex justify-center gap-4 mt-3 pt-2 border-t border-white/5">
+                                            {benchReturnKeys.map(({ returnKey, label, color }) => {
+                                                const hasData = returnChartData.some((d: any) => d[returnKey] != null);
+                                                if (!hasData) return null;
+                                                const isActive = effectiveHoveredBench === label;
+                                                return (
+                                                    <button
+                                                        key={label}
+                                                        onMouseEnter={() => setHoveredBench(label)}
+                                                        onMouseLeave={() => setHoveredBench(null)}
+                                                        className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-white transition-colors cursor-pointer"
+                                                        style={{ opacity: effectiveHoveredBench && !isActive ? 0.35 : 1 }}
+                                                    >
+                                                        <svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke={color} strokeWidth={isActive ? 3 : 1.5} strokeDasharray="5 3" /></svg>
+                                                        <span style={{ color: isActive ? color : undefined, fontWeight: isActive ? 'bold' : 'normal' }}>{label}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             </section>
                         )}
