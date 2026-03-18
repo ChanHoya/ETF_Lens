@@ -88,6 +88,20 @@ def _check_gemini():
         raise ValueError("Empty Gemini response")
 
 
+def _check_naver_finance():
+    """Naver Finance 모바일 API 연결 테스트 (ETF 이름 소스)."""
+    import ssl
+    import urllib.request
+    ctx = ssl._create_unverified_context()
+    url = "https://m.stock.naver.com/api/stock/069500/integration"  # KODEX 200
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    resp = urllib.request.urlopen(req, timeout=8, context=ctx).read()
+    import json
+    data = json.loads(resp)
+    if not data.get("stockName"):
+        raise ValueError("Naver stockName missing in response")
+
+
 # ── 라우터 ─────────────────────────────────────────────────────────────────────
 
 @router.get("")
@@ -107,9 +121,10 @@ async def get_integration_health():
     # 병렬 체크 (각각 독립 실행)
     results = await asyncio.gather(
         _check("yfinance_history", _check_yfinance_history),
-        _check("yfinance_period", _check_yfinance_period),
-        _check("oecd_cli",        _check_oecd_cli),
-        _check("fred",            _check_fred),
+        _check("yfinance_period",  _check_yfinance_period),
+        _check("oecd_cli",         _check_oecd_cli),
+        _check("fred",             _check_fred),
+        _check("naver_finance",    _check_naver_finance),
         return_exceptions=False,
     )
 
@@ -121,11 +136,13 @@ async def get_integration_health():
         "yfinance_period":  results[1],
         "oecd_cli":         results[2],
         "fred":             results[3],
+        "naver_finance":    results[4],
         "gemini":           gemini_result,
     }
 
     # 전체 상태 계산
-    critical_ok = checks["yfinance_history"]["ok"] and checks["oecd_cli"]["ok"]
+    # naver_finance: ETF 이름 소스 → 실패 시 degraded (DB name fallback 있어서 서비스 중단 아님)
+    critical_ok = checks["yfinance_history"]["ok"] and checks["oecd_cli"]["ok"] and checks["naver_finance"]["ok"]
     any_failed = any(not v["ok"] for v in checks.values())
 
     if critical_ok and not any_failed:
@@ -142,6 +159,7 @@ async def get_integration_health():
         "notes": {
             "fred": "FRED는 일부 네트워크에서 차단됨. OECD API로 대체 사용 중.",
             "yfinance_period": "period= 방식은 Yahoo Finance API 변경으로 불안정. start/end 방식 사용 권장.",
+            "naver_finance": "비공개 API. 차단/변경 시 ETF 이름이 DB 값(pykrx 기반)으로 fallback됨. 서비스 중단 없음.",
         }
     }
 
