@@ -15,7 +15,17 @@ export function useFavorites() {
         const load = () => {
             const savedFavs = localStorage.getItem('etf_favorites');
             if (savedFavs) {
-                try { setFavorites(JSON.parse(savedFavs)); } catch (e) { }
+                try {
+                    const parsed: FavGroup[] = JSON.parse(savedFavs);
+                    // 그룹당 최대 10개 초과 항목 자동 제거 (기존 데이터 정리)
+                    const trimmed = parsed.map(g => ({ ...g, items: g.items.slice(0, 10) }));
+                    const hasOverflow = parsed.some(g => g.items.length > 10);
+                    if (hasOverflow) {
+                        localStorage.setItem('etf_favorites', JSON.stringify(trimmed));
+                        window.dispatchEvent(new Event('etf_favorites_updated'));
+                    }
+                    setFavorites(trimmed);
+                } catch (e) { }
             } else {
                 setFavorites([{ id: 'default', name: '내 관심종목', items: [] }]);
             }
@@ -71,6 +81,7 @@ export function useFavorites() {
     const addFavItem = (groupId: string, code: string, name: string) => {
         saveFavorites(favorites.map(g => {
             if (g.id === groupId) {
+                if (g.items.length >= 10) return g; // 10개 초과 방지
                 if (!g.items.some(i => i.code === code)) {
                     return { ...g, items: [...g.items, { code, name }] };
                 }
@@ -94,6 +105,8 @@ export function useFavorites() {
     };
 
     const addGroupWithItems = (groupName: string, items: { code: string; name: string }[]) => {
+        // 최대 10개 제한
+        const limitedItems = items.slice(0, 10);
         // stale closure 방지: localStorage에서 최신 상태를 직접 읽음
         let currentFavs: FavGroup[] = favorites;
         if (typeof window !== 'undefined') {
@@ -105,10 +118,10 @@ export function useFavorites() {
         const existing = currentFavs.find(g => g.name === groupName);
         if (existing) {
             // 동일 이름 그룹 → 기존 items 리셋 후 현재 추천 종목만 저장
-            saveFavorites(currentFavs.map(g => g.name === groupName ? { ...g, items } : g));
+            saveFavorites(currentFavs.map(g => g.name === groupName ? { ...g, items: limitedItems } : g));
         } else {
             // 새 그룹 생성
-            const newGroup = { id: Date.now().toString(), name: groupName, items };
+            const newGroup = { id: Date.now().toString(), name: groupName, items: limitedItems };
             saveFavorites([...currentFavs, newGroup]);
         }
     };
