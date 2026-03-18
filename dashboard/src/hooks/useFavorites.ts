@@ -94,14 +94,22 @@ export function useFavorites() {
     };
 
     const addGroupWithItems = (groupName: string, items: { code: string; name: string }[]) => {
-        const existing = favorites.find(g => g.name === groupName);
+        // stale closure 방지: localStorage에서 최신 상태를 직접 읽음
+        let currentFavs: FavGroup[] = favorites;
+        if (typeof window !== 'undefined') {
+            try {
+                const raw = localStorage.getItem('etf_favorites');
+                if (raw) currentFavs = JSON.parse(raw);
+            } catch (_) {}
+        }
+        const existing = currentFavs.find(g => g.name === groupName);
         if (existing) {
-            // 동일 이름 그룹 → items 전체 덮어쓰기
-            saveFavorites(favorites.map(g => g.name === groupName ? { ...g, items } : g));
+            // 동일 이름 그룹 → 기존 items 리셋 후 현재 추천 종목만 저장
+            saveFavorites(currentFavs.map(g => g.name === groupName ? { ...g, items } : g));
         } else {
             // 새 그룹 생성
             const newGroup = { id: Date.now().toString(), name: groupName, items };
-            saveFavorites([...favorites, newGroup]);
+            saveFavorites([...currentFavs, newGroup]);
         }
     };
 

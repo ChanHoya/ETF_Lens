@@ -150,10 +150,19 @@ function StrategyContent({ content, onSaveToFavorites, toastMsg }: {
         <div className="mt-1 flex items-center justify-end gap-3">
           {/* 버튼 왼쪽 인라인 알림 */}
           {toastMsg && (
-            <span className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl animate-fade-in">
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new Event('navigate_to_favorites'));
+                }
+              }}
+              className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-400/40 px-3 py-1.5 rounded-xl animate-fade-in transition-all cursor-pointer"
+              title="클릭하면 즐겨찾기로 이동"
+            >
               <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
               {toastMsg}
-            </span>
+              <span className="text-emerald-400/60 text-[10px]">→ 확인</span>
+            </button>
           )}
           <button
             onClick={() => onSaveToFavorites(favItems)}

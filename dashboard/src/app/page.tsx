@@ -128,6 +128,14 @@ export default function Home() {
           }
         } catch (e) { }
       }
+
+      // AIInsight toast 클릭 시 종목분석>즐겨찾기로 이동
+      const handleNavToFav = () => {
+        setActiveTab('select');
+        setIsFavModalOpen(true);
+      };
+      window.addEventListener('navigate_to_favorites', handleNavToFav);
+      return () => window.removeEventListener('navigate_to_favorites', handleNavToFav);
     }
   }, []);
 
