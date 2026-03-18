@@ -535,26 +535,30 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
     if not kospi_df.empty:
         for dt_ts, row in kospi_df.iterrows():
             dt_str = str(dt_ts.date())
-            if dt_str in chart_data_map:
-                chart_data_map[dt_str]["KOSPI"] = row["Close"]
+            if dt_str not in chart_data_map:
+                chart_data_map[dt_str] = {"date": dt_str}
+            chart_data_map[dt_str]["KOSPI"] = row["Close"]
 
     if not kosdaq_df.empty:
         for dt_ts, row in kosdaq_df.iterrows():
             dt_str = str(dt_ts.date())
-            if dt_str in chart_data_map:
-                chart_data_map[dt_str]["KOSDAQ"] = row["Close"]
+            if dt_str not in chart_data_map:
+                chart_data_map[dt_str] = {"date": dt_str}
+            chart_data_map[dt_str]["KOSDAQ"] = row["Close"]
 
     if not sp500_df.empty:
         for dt_ts, row in sp500_df.iterrows():
             dt_str = str(dt_ts.date())
-            if dt_str in chart_data_map:
-                chart_data_map[dt_str]["SP500"] = row["Close"]
+            if dt_str not in chart_data_map:
+                chart_data_map[dt_str] = {"date": dt_str}
+            chart_data_map[dt_str]["SP500"] = row["Close"]
 
     if not nasdaq_df.empty:
         for dt_ts, row in nasdaq_df.iterrows():
             dt_str = str(dt_ts.date())
-            if dt_str in chart_data_map:
-                chart_data_map[dt_str]["NASDAQ"] = row["Close"]
+            if dt_str not in chart_data_map:
+                chart_data_map[dt_str] = {"date": dt_str}
+            chart_data_map[dt_str]["NASDAQ"] = row["Close"]
 
     sorted_dates = sorted(list(chart_data_map.keys()))
     # Downsample points for UI performance (~1000 points to retain high detail for zoom)
@@ -791,26 +795,30 @@ async def get_chart_data(request: CompareRequest, db: AsyncSession = Depends(get
     if not kospi_df.empty:
         for dt_ts, row in kospi_df.iterrows():
             dt_str = str(dt_ts.date())
-            if dt_str in chart_data_map:
-                chart_data_map[dt_str]["KOSPI"] = row["Close"]
+            if dt_str not in chart_data_map:
+                chart_data_map[dt_str] = {"date": dt_str}
+            chart_data_map[dt_str]["KOSPI"] = row["Close"]
 
     if not kosdaq_df.empty:
         for dt_ts, row in kosdaq_df.iterrows():
             dt_str = str(dt_ts.date())
-            if dt_str in chart_data_map:
-                chart_data_map[dt_str]["KOSDAQ"] = row["Close"]
+            if dt_str not in chart_data_map:
+                chart_data_map[dt_str] = {"date": dt_str}
+            chart_data_map[dt_str]["KOSDAQ"] = row["Close"]
 
     if not sp500_df.empty:
         for dt_ts, row in sp500_df.iterrows():
             dt_str = str(dt_ts.date())
-            if dt_str in chart_data_map:
-                chart_data_map[dt_str]["SP500"] = row["Close"]
+            if dt_str not in chart_data_map:
+                chart_data_map[dt_str] = {"date": dt_str}
+            chart_data_map[dt_str]["SP500"] = row["Close"]
 
     if not nasdaq_df.empty:
         for dt_ts, row in nasdaq_df.iterrows():
             dt_str = str(dt_ts.date())
-            if dt_str in chart_data_map:
-                chart_data_map[dt_str]["NASDAQ"] = row["Close"]
+            if dt_str not in chart_data_map:
+                chart_data_map[dt_str] = {"date": dt_str}
+            chart_data_map[dt_str]["NASDAQ"] = row["Close"]
 
     sorted_dates = sorted(list(chart_data_map.keys()))
     step = max(1, len(sorted_dates) // 1000)

@@ -95,11 +95,12 @@ export default function CompareChart({
     const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
     const [hoveredBench, setHoveredBench] = useState<string | null>(null);
 
-    // 참조선 정의: dataKey, 표시 이름, 색상
+    // 참조선 정의: dataKey, 표시 이름, 색상, Y축
+    // KOSPI/SP500: 우측축 (max 10000), NASDAQ: 좌측축 (ETF와 유사한 스케일)
     const benchLines = [
-        { dataKey: 'KOSPI_raw',   label: 'KOSPI',   color: '#94a3b8' },
-        { dataKey: 'SP500_raw',   label: 'S&P500',  color: '#f59e0b' },
-        { dataKey: 'NASDAQ_raw',  label: 'Nasdaq',  color: '#f472b6' },
+        { dataKey: 'KOSPI_raw',   label: 'KOSPI',   color: '#94a3b8', yAxisId: 'right' },
+        { dataKey: 'SP500_raw',   label: 'S&P500',  color: '#f59e0b', yAxisId: 'right' },
+        { dataKey: 'NASDAQ_raw',  label: 'Nasdaq',  color: '#f472b6', yAxisId: 'left' },
     ];
 
     return (
@@ -160,10 +161,10 @@ export default function CompareChart({
                                             <LineChart data={simulatedChartData} margin={{ top: 5, right: 55, left: 10, bottom: 5 }}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                                 <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
-                                                {/* 좌 Y축: ETF 주가 */}
+                                                {/* 좌 Y축: ETF 주가 + NASDAQ */}
                                                 <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
-                                                {/* 우 Y축: KOSPI / SP500 참고선 */}
-                                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : `${val}`} stroke="rgba(255,255,255,0.05)" tickMargin={8} axisLine={false} width={52} />
+                                                {/* 우 Y축: KOSPI / SP500 (max 10,000) */}
+                                                <YAxis yAxisId="right" orientation="right" domain={['auto', 10000]} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : `${val}`} stroke="rgba(255,255,255,0.05)" tickMargin={8} axisLine={false} width={52} />
                                                 <Tooltip
                                                     cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }}
                                                     content={(props: any) => <PriceTooltip {...props} chartData={simulatedChartData} />}
@@ -184,8 +185,8 @@ export default function CompareChart({
                                                     const isOthersHovered = hoveredEtfName && !isHovered;
                                                     return <Line key={`${key}_raw`} yAxisId="left" type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
                                                 })}
-                                                {/* 참조선 (우 Y축, 점선) - 데이터 있는 것만 표시 */}
-                                                {benchLines.map(({ dataKey, label, color }) => {
+                                                {/* 참조선 (점선) - 데이터 있는 것만 표시, yAxisId 개별 지정 */}
+                                                {benchLines.map(({ dataKey, label, color, yAxisId }) => {
                                                     const hasData = simulatedChartData.some((d: any) => d[dataKey]);
                                                     if (!hasData) return null;
                                                     const isBenchHovered = hoveredBench === label;
@@ -193,7 +194,7 @@ export default function CompareChart({
                                                     return (
                                                         <Line
                                                             key={dataKey}
-                                                            yAxisId="right"
+                                                            yAxisId={yAxisId}
                                                             type="monotone"
                                                             dataKey={dataKey}
                                                             name={label}
