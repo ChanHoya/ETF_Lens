@@ -360,6 +360,27 @@ async def fetch_yahoo_finance(ticker: str, period_years: int = 10):
     return await asyncio.to_thread(_fetch)
 
 
+async def fetch_naver_stock_name(code: str) -> str | None:
+    """
+    Naver 모바일 API에서 ETF 정식 종목명(stockName)을 가져옵니다.
+    pykrx/FDR 오매핑 없이 항상 정확한 이름을 반환합니다.
+    실패 시 None 반환 → 호출측에서 DB name으로 fallback.
+    """
+    import urllib.request, json, ssl
+    try:
+        ctx = ssl._create_unverified_context()
+        url = f"https://m.stock.naver.com/api/stock/{code}/integration"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        res = await asyncio.to_thread(
+            lambda: urllib.request.urlopen(req, timeout=5, context=ctx).read()
+        )
+        data = json.loads(res)
+        name = data.get("stockName", "").strip()
+        return name if name else None
+    except Exception:
+        return None
+
+
 async def fetch_etf_hybrid(
     code: str,
     skip_holdings: bool,
@@ -401,20 +422,15 @@ async def fetch_etf_hybrid(
                 dates.append(p.date)
                 prices.append(p.close)
 
-        # We can implement a fast real-time NAV/Price fetch here later.
-        # For now, rely on yesterday's price from DB or trigger an asynchronous KIS update.
         live_price = master.price
 
-        # 알려진 잘못된 FDR/pykrx 매핑 보정 (DB 이름이 잘못 동기화 된 경우도 처리)
-        KNOWN_ETF_CORRECTIONS: dict[str, str] = {
-            "411060": "ACE KRX금현물",    # pykrx → TIGER 미국배당+7%프리미엄다우존스 잘못 매핑
-            "379800": "KODEX 미국S&P500", # pykrx 구버전명 KODEX 미국S&P500TR 잘못 매핑
-        }
-        correct_name = KNOWN_ETF_CORRECTIONS.get(code) or master.name
+        # Naver API에서 정식 종목명 조회 (pykrx/FDR 오매핑 방지, 실패 시 DB name 사용)
+        naver_name = await fetch_naver_stock_name(code)
+        etf_name = naver_name or master.name
 
         return {
             "etf_code": code,
-            "etf_name": correct_name,
+            "etf_name": etf_name,
             "market_data": {
                 "price": live_price,
                 "nav": master.nav,

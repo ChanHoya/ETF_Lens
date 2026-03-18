@@ -293,11 +293,9 @@ class ETFHarvester:
         fallback_nav = 15020 if code == "453850" else 10480
         nav = float(current_price * 1.001) if current_price else fallback_nav
 
-        # FDR/pykrx 잘못된 매핑 보정 (DB sync 완료 여부와 무관하게 항상 적용)
-        KNOWN_ETF_CORRECTIONS: dict[str, str] = {
-            "411060": "ACE KRX금현물",    # FDR/pykrx → TIGER 미국배당+7%프리미엄다우존스 잘못 매핑
-            "379800": "KODEX 미국S&P500", # pykrx 구버전명 KODEX 미국S&P500TR 잘못 매핑
-        }
+        # ETF 이름 결정: Naver(정확) > FDR etf_list(부정확 가능성 있음)
+        # mobile_data["stockName"]이 Naver에서 반환하는 정식 이름
+        naver_stock_name = mobile_data.get("stockName", "").strip()
 
         etf_name = f"ETF_{code}"
         if getattr(self, "etf_list", None) is not None:
@@ -312,9 +310,9 @@ class ETFHarvester:
                     shares = int((marcap * 1000000) / price_krx)
                     basic_info["상장주식수"] = f"{shares:,}주"
 
-        # 보정 딕셔너리에 있으면 FDR/pykrx 이름 무시하고 올바른 이름 사용
-        if code in KNOWN_ETF_CORRECTIONS:
-            etf_name = KNOWN_ETF_CORRECTIONS[code]
+        # Naver 이름이 있으면 FDR/pykrx 이름 대신 사용 (더 정확함)
+        if naver_stock_name:
+            etf_name = naver_stock_name
 
         data = {
             "etf_code": code,
