@@ -94,7 +94,8 @@ async def sync_etf_master_list():
     # --- 알려진 잘못된 매핑 보정 딕셔너리 ---
     # pykrx / FDR 이 잘못 매핑하는 코드 → 올바른 이름
     KNOWN_ETF_CORRECTIONS: dict[str, str] = {
-        "411060": "ACE KRX금현물",   # FDR/pykrx가 TIGER 미국배당+7%프리미엄다우존스로 잘못 매핑
+        "411060": "ACE KRX금현물",      # FDR/pykrx가 TIGER 미국배당+7%프리미엄다우존스로 잘못 매핑
+        "379800": "KODEX 미국S&P500",   # pykrx가 구버전 이름 KODEX 미국S&P500TR로 매핑
     }
 
     # --- DB Upsert ---
