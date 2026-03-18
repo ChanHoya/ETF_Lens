@@ -134,15 +134,27 @@ async def check_health(db: AsyncSession = Depends(get_db)):
             raise ValueError("Naver: unexpected response content")
 
     def _gemini_check():
-        import google.generativeai as genai
+        """신 SDK(google.genai) 사용 - chat.py와 동일 방식"""
+        from google import genai as _genai
         api_key = os.getenv("GEMINI_API_KEY", "")
         if not api_key:
             raise ValueError("GEMINI_API_KEY not set")
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        resp = model.generate_content("1+1=?", generation_config={"max_output_tokens": 5})
-        if not resp.text:
-            raise ValueError("Empty Gemini response")
+        client = _genai.Client(api_key=api_key)
+        # chat.py와 동일한 fallback 순서 시도
+        _models = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash-lite", "gemini-2.0-flash"]
+        last_err = None
+        for m in _models:
+            try:
+                resp = client.models.generate_content(model=m, contents="1+1=?")
+                if not resp.text:
+                    raise ValueError("Empty response")
+                return  # 성공
+            except Exception as e:
+                if "429" in str(e) or "quota" in str(e).lower() or "404" in str(e):
+                    last_err = e
+                    continue
+                raise e
+        raise last_err or ValueError("All Gemini models failed")
 
     def _oecd_check():
         url = (

@@ -814,6 +814,12 @@ export default function Home() {
                 }`}>
                 {dbVersion}
               </span>
+              {healthStatus === 'pending' && (
+                <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-gray-400 bg-gray-400/10 border border-gray-400/20 animate-pulse flex items-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-ping" />
+                  외부연동 체크중...
+                </span>
+              )}
               {healthStatus === 'ok' && (
                 <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-sky-400 bg-sky-400/10 border border-sky-400/20 animate-pulse shadow-[0_0_10px_rgba(56,189,248,0.2)]">
                   모든 연동기능이 정상작동중 입니다.
