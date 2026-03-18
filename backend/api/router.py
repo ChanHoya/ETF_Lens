@@ -405,9 +405,16 @@ async def fetch_etf_hybrid(
         # For now, rely on yesterday's price from DB or trigger an asynchronous KIS update.
         live_price = master.price
 
+        # 알려진 잘못된 FDR/pykrx 매핑 보정 (DB 이름이 잘못 동기화 된 경우도 처리)
+        KNOWN_ETF_CORRECTIONS: dict[str, str] = {
+            "411060": "ACE KRX금현물",    # pykrx → TIGER 미국배당+7%프리미엄다우존스 잘못 매핑
+            "379800": "KODEX 미국S&P500", # pykrx 구버전명 KODEX 미국S&P500TR 잘못 매핑
+        }
+        correct_name = KNOWN_ETF_CORRECTIONS.get(code) or master.name
+
         return {
             "etf_code": code,
-            "etf_name": master.name,
+            "etf_name": correct_name,
             "market_data": {
                 "price": live_price,
                 "nav": master.nav,
