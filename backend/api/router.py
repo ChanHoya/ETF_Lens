@@ -139,7 +139,7 @@ async def check_health(db: AsyncSession = Depends(get_db)):
         if not api_key:
             raise ValueError("GEMINI_API_KEY not set")
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        model = genai.GenerativeModel("gemini-1.5-flash")
         resp = model.generate_content("1+1=?", generation_config={"max_output_tokens": 5})
         if not resp.text:
             raise ValueError("Empty Gemini response")
@@ -196,16 +196,21 @@ async def check_health(db: AsyncSession = Depends(get_db)):
         "pykrx (KRX)":  pykrx_res,
     }
 
+    # FRED는 한국 네트워크에서 자주 차단됨 → warning(비핵심)으로 분류
+    WARNING_ONLY = {"FRED"}
+
     for svc, result in checks.items():
-        if not result["ok"]:
+        if not result["ok"] and svc not in WARNING_ONLY:
             failed_services.append(svc)
 
+    warning_services = [svc for svc in WARNING_ONLY if not checks[svc]["ok"]]
     overall = "ok" if not failed_services else "error"
 
     response = {
         "overall": overall,
         "checks": checks,
         "failed_services": failed_services,
+        "warning_services": warning_services,  # 비핵심 오류 (FRED 등 - 헤더 표시 제외)
         "checked_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "cache_ttl_sec": _HEALTH_CACHE_TTL,
     }
