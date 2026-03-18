@@ -2,6 +2,75 @@ import React from 'react';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell } from "recharts";
 import { Loader2 } from "lucide-react";
 
+// 제 돌 1법: 데이터 배열에서 activeLabel로 적절한 index 입수
+const findIdx = (chartData: any[], label: string) =>
+    chartData.findIndex((d: any) => d.date === label);
+
+// 가격입력 커스텀 툴팅
+const PriceTooltip = ({ active, payload, label, chartData, etfColors }: any) => {
+    if (!active || !payload || payload.length === 0) return null;
+    const idx = findIdx(chartData, label);
+    return (
+        <div style={{ backgroundColor: 'rgba(3,7,18,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '12px 14px', minWidth: 200 }}>
+            <p style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>{label}</p>
+            {payload.map((item: any) => {
+                const price = item.value;
+                let chg: number | null = null;
+                if (idx > 0) {
+                    const prevPrice = Number(chartData[idx - 1]?.[item.dataKey]);
+                    if (prevPrice && prevPrice !== 0) chg = ((price - prevPrice) / prevPrice) * 100;
+                }
+                const color = item.color || etfColors?.[item.dataKey];
+                const isUp = chg !== null && chg >= 0;
+                return (
+                    <div key={item.dataKey} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0', fontSize: 12 }}>
+                        <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
+                        <span style={{ color: '#e2e8f0' }}>{item.name}&thinsp;:&thinsp;<b>{Number(price).toLocaleString()}</b></span>
+                        {chg !== null && (
+                            <span style={{ color: isUp ? '#34d399' : '#f87171', fontWeight: 'bold', marginLeft: 2 }}>
+                                ({isUp ? '+' : ''}{chg.toFixed(2)}%)
+                            </span>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+// 수익률 커스텀 툴팀
+const ReturnTooltip = ({ active, payload, label, chartData }: any) => {
+    if (!active || !payload || payload.length === 0) return null;
+    const idx = findIdx(chartData, label);
+    return (
+        <div style={{ backgroundColor: 'rgba(3,7,18,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '12px 14px', minWidth: 210 }}>
+            <p style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>{label}</p>
+            {payload.map((item: any) => {
+                const val = Number(item.value);
+                let chg: number | null = null;
+                if (idx > 0) {
+                    const prevVal = Number(chartData[idx - 1]?.[item.dataKey]);
+                    if (!isNaN(prevVal)) chg = val - prevVal;
+                }
+                const color = item.color;
+                const isUp = val >= 0;
+                const isChgUp = chg !== null && chg >= 0;
+                return (
+                    <div key={item.dataKey} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0', fontSize: 12 }}>
+                        <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
+                        <span style={{ color: '#e2e8f0' }}>{item.name}&thinsp;:&thinsp;<b style={{ color: isUp ? '#34d399' : '#f87171' }}>{val >= 0 ? '+' : ''}{val.toFixed(2)}%</b></span>
+                        {chg !== null && (
+                            <span style={{ color: isChgUp ? '#34d399' : '#f87171', fontWeight: 'bold', marginLeft: 2 }}>
+                                ({isChgUp ? '+' : ''}{chg.toFixed(2)}%p)
+                            </span>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 type CompareChartProps = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: any;
@@ -84,7 +153,10 @@ export default function CompareChart({
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                                 <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
                                                 <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
-                                                <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }} contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '12px' }} labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold', fontSize: '13px' }} itemStyle={{ padding: '2px 0', fontSize: '12px' }} />
+                                                <Tooltip
+                                                    cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                                    content={(props: any) => <PriceTooltip {...props} chartData={simulatedChartData} />}
+                                                />
                                                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
                                                     if (e && e.value) {
                                                         const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
@@ -150,7 +222,10 @@ export default function CompareChart({
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                             <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
                                             <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
-                                            <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }} contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '12px' }} labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontWeight: 'bold', fontSize: '13px' }} itemStyle={{ padding: '2px 0', fontSize: '12px' }} />
+                                            <Tooltip
+                                                cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                                content={(props: any) => <ReturnTooltip {...props} chartData={simulatedChartData} />}
+                                            />
                                             <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
                                                 if (e && e.value) {
                                                     const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
