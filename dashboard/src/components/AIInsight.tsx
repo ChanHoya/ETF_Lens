@@ -26,7 +26,11 @@ const PHASE_COLOR: Record<string, string> = {
   '침체기': 'text-rose-400 bg-rose-500/10 border-rose-500/30',
 }
 
-function StrategyContent({ content, onSaveToFavorites }: { content: string; onSaveToFavorites?: (items: { code: string; name: string }[]) => void }) {
+function StrategyContent({ content, onSaveToFavorites, toastMsg }: {
+  content: string
+  onSaveToFavorites?: (items: { code: string; name: string }[]) => void
+  toastMsg?: string | null
+}) {
   const allocationMatch = content.match(/📌[^\n]*비중[^\n]*주식[^\n]*/i)
   const allocationLine = allocationMatch ? allocationMatch[0].replace(/^📌\s*/, '') : null
 
@@ -141,26 +145,36 @@ function StrategyContent({ content, onSaveToFavorites }: { content: string; onSa
           ))}
         </div>
       )}
-      {/* 즐겨찾기 저장 버튼 */}
+      {/* 즐겨찾기 저장 버튼 + 인라인 알림 */}
       {onSaveToFavorites && favItems.length > 0 && (
-        <button
-          onClick={() => onSaveToFavorites(favItems)}
-          className="mt-1 ml-auto flex items-center gap-2 text-[13px] font-semibold text-yellow-300 hover:text-yellow-100 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 hover:border-yellow-400/60 px-4 py-2 rounded-xl transition-all duration-200 shadow-sm"
-        >
-          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-          즐겨찾기에 저장 ({favItems.length}개)
-        </button>
+        <div className="mt-1 flex items-center justify-end gap-3">
+          {/* 버튼 왼쪽 인라인 알림 */}
+          {toastMsg && (
+            <span className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl animate-fade-in">
+              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+              {toastMsg}
+            </span>
+          )}
+          <button
+            onClick={() => onSaveToFavorites(favItems)}
+            className="flex items-center gap-2 text-[13px] font-semibold text-yellow-300 hover:text-yellow-100 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 hover:border-yellow-400/60 px-4 py-2 rounded-xl transition-all duration-200 shadow-sm"
+          >
+            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+            즐겨찾기에 저장 ({favItems.length}개)
+          </button>
+        </div>
       )}
     </div>
   )
 }
 
-function InsightSection({ icon, title, content, isStrategy, onSaveToFavorites }: {
+function InsightSection({ icon, title, content, isStrategy, onSaveToFavorites, toastMsg }: {
   icon: React.ReactNode
   title: string
   content: string
   isStrategy?: boolean
   onSaveToFavorites?: (items: { code: string; name: string }[]) => void
+  toastMsg?: string | null
 }) {
   return (
     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
@@ -174,7 +188,7 @@ function InsightSection({ icon, title, content, isStrategy, onSaveToFavorites }:
         )}
       </div>
       {isStrategy
-        ? <StrategyContent content={content} onSaveToFavorites={onSaveToFavorites} />
+        ? <StrategyContent content={content} onSaveToFavorites={onSaveToFavorites} toastMsg={toastMsg} />
         : <p className="text-[14px] text-gray-300 leading-relaxed whitespace-pre-wrap">{content.replace(/\*\*/g, '')}</p>
       }
     </div>
@@ -241,7 +255,7 @@ export default function AIInsight() {
   const handleSaveToFavorites = (items: { code: string; name: string }[]) => {
     const groupName = getTodayGroupName()
     addGroupWithItems(groupName, items)
-    showToast(`⭐ '${groupName}' 그룹에 ${items.length}개 ETF 저장됨`)
+    showToast(`${items.length}개 저장 완료 → 종목분석 즐겨찾기 확인`)
   }
 
   const load = async (forceRefresh = false) => {
@@ -337,6 +351,7 @@ export default function AIInsight() {
                 content={s.content}
                 isStrategy={s.isStrategy}
                 onSaveToFavorites={s.isStrategy ? handleSaveToFavorites : undefined}
+                toastMsg={s.isStrategy ? toast : undefined}
               />
             ))}
           </div>
@@ -355,17 +370,6 @@ export default function AIInsight() {
         </div>
       </div>
 
-      {/* 토스트 알림 */}
-      {toast && (
-        <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 bg-[#1a2a1a] border border-emerald-500/40 text-emerald-200 text-[14px] font-semibold px-5 py-3 rounded-2xl shadow-2xl animate-fade-in-up"
-          style={{ boxShadow: '0 4px 32px rgba(52,211,153,0.25)' }}
-        >
-          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-          {toast}
-          <span className="text-[12px] text-emerald-400/60 font-normal">→ 종목분석 즐겨찾기에서 확인</span>
-        </div>
-      )}
     </div>
   )
 }

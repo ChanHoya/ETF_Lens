@@ -57,8 +57,8 @@ export default function CompareChart({
                     <>
                         {/* 1. Raw Price Chart (가격 추이) */}
                         {data.visual_data.line_chart && data.visual_data.etf_keys && data.visual_data.line_chart.length > 0 && (() => {
-                            const PRICE_THRESHOLD = 30000;
-                            // 각 ETF의 최고 raw 가격을 계산해 3만원 초과 종목 분류
+                            const PRICE_THRESHOLD = 50000;
+                            // 각 ETF의 최고 raw 가격을 계산해 5만원 초과 종목 분류
                             const excludedKeys: string[] = [];
                             const includedKeys: string[] = [];
                             data.visual_data.etf_keys.forEach((key: string) => {
@@ -73,7 +73,7 @@ export default function CompareChart({
                                     <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
                                         <span className="w-1.5 h-6 bg-gradient-to-b from-blue-400 to-indigo-500 rounded-full"></span>
                                         가격 추이
-                                        <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(원, 3만원 이하 종목)</span>
+                                        <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(원, 5만원 이하 종목)</span>
                                     </h3>
                                 </div>
 
@@ -104,14 +104,14 @@ export default function CompareChart({
                                     </div>
                                 ) : (
                                     <div className="h-24 flex items-center justify-center text-sm text-gray-500">
-                                        표시 가능한 종목이 없습니다 (모든 종목이 3만원 초과).
+                                        표시 가능한 종목이 없습니다 (모든 종목이 5만원 초과).
                                     </div>
                                 )}
 
                                 {/* 제외 종목 표시 */}
                                 {excludedKeys.length > 0 && (
                                     <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap items-center gap-2">
-                                        <span className="text-[11px] text-gray-500 font-semibold shrink-0">⚠ 가격추이 제외 (3만원 초과):</span>
+                                        <span className="text-[11px] text-gray-500 font-semibold shrink-0">⚠ 가격추이 제외 (5만원 초과):</span>
                                         {excludedKeys.map((key: string) => {
                                             const idx = data.visual_data.etf_keys.indexOf(key);
                                             const maxPrice = Math.max(...simulatedChartData.map((d: any) => Number(d[`${key}_raw`]) || 0));
