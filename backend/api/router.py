@@ -139,7 +139,7 @@ async def check_health(db: AsyncSession = Depends(get_db)):
         if not api_key:
             raise ValueError("GEMINI_API_KEY not set")
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         resp = model.generate_content("1+1=?", generation_config={"max_output_tokens": 5})
         if not resp.text:
             raise ValueError("Empty Gemini response")
