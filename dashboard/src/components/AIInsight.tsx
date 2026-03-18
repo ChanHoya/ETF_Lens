@@ -50,27 +50,38 @@ function StrategyContent({ content, onSaveToFavorites }: { content: string; onSa
     }
   }
 
-  // ETF 코드+이름 파싱 - 영숫자 4~7자 코드 허용 (0091C0, 495550 등)
+  // ETF 코드+이름 파싱 - [305050] ACE 코스피: 설명... 형식
   const parsedEtfs: { code: string; name: string }[] = []
   for (const sec of etfSections) {
     for (const item of sec.items) {
-      // 앞부분 영숫자(코드) + 공백 + 이름 형식 매칭
-      const codeMatch = item.match(/^([A-Z0-9]{4,7})\s+/i)
-      if (codeMatch) {
-        const code = codeMatch[1].toUpperCase()
-        // 코드 제거 후 콜론/괄호 앞까지를 이름으로 추출
-        const afterCode = item.slice(codeMatch[0].length)
-        const name = afterCode.split(/\s*[:;\(]/)[0].trim()
+      // 형식 1: [305050] ETF명: 설명
+      const bracketMatch = item.match(/^\[([A-Z0-9]{4,7})\]\s*([^:：]+?)(?:\s*[:：]|$)/i)
+      if (bracketMatch) {
+        const code = bracketMatch[1].toUpperCase()
+        const name = bracketMatch[2].trim()
+        if (code && name && !parsedEtfs.some(e => e.code === code)) {
+          parsedEtfs.push({ code, name })
+        }
+        continue
+      }
+      // 형식 2: 305050 ETF명: 설명 (괄호 없는 경우)
+      const plainMatch = item.match(/^([A-Z0-9]{4,7})\s+([^:：]+?)(?:\s*[:：]|$)/i)
+      if (plainMatch) {
+        const code = plainMatch[1].toUpperCase()
+        const name = plainMatch[2].trim()
         if (code && name && !parsedEtfs.some(e => e.code === code)) {
           parsedEtfs.push({ code, name })
         }
       }
     }
   }
-  // fallback: 파싱된 코드가 없어도 etfSections 항목 수로 대체
+  // fallback: 파싱 실패 시 코드만이라도 추출
   const favItems = parsedEtfs.length > 0
     ? parsedEtfs
-    : etfSections.flatMap(sec => sec.items.map(item => ({ code: item.slice(0, 20), name: item.slice(0, 30) })))
+    : etfSections.flatMap(sec => sec.items.flatMap(item => {
+        const m = item.match(/\[?([A-Z0-9]{5,7})\]?/i)
+        return m ? [{ code: m[1].toUpperCase(), name: m[1].toUpperCase() }] : []
+      }))
 
 
   if (!allocationLine && !etfSections.length) {
