@@ -276,6 +276,40 @@ class CompareRequest(BaseModel):
     skip_chart: bool = False
 
 
+def smart_sample_dates(sorted_dates: list[str]) -> list[str]:
+    """
+    6M 이사: 일별 데이터 (step=1, 일간 최대 해상도 보여줌)
+    6M~1Y: 2일 간격
+    1Y~3Y: 4일 간격
+    3Y+  : 8일 간격
+    마지막 날짜는 항상 포함.
+    """
+    if not sorted_dates:
+        return []
+    from datetime import datetime as _dt, timedelta as _td
+    now = _dt.now()
+    threshold_6m  = (now - _td(days=183)).strftime("%Y-%m-%d")
+    threshold_1y  = (now - _td(days=365)).strftime("%Y-%m-%d")
+    threshold_3y  = (now - _td(days=1095)).strftime("%Y-%m-%d")
+
+    sampled: list[str] = []
+    for i, d in enumerate(sorted_dates):
+        if d >= threshold_6m:
+            sampled.append(d)          # 매일
+        elif d >= threshold_1y:
+            if i % 2 == 0: sampled.append(d)   # 2일
+        elif d >= threshold_3y:
+            if i % 4 == 0: sampled.append(d)   # 4일
+        else:
+            if i % 8 == 0: sampled.append(d)   # 8일
+
+    # 마지막 날짜 보장
+    if sorted_dates[-1] not in sampled:
+        sampled.append(sorted_dates[-1])
+    return sampled
+
+
+
 import time
 
 _bench_cache = {}
@@ -601,9 +635,7 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
             chart_data_map[dt_str]["NASDAQ"] = row["Close"]
 
     sorted_dates = sorted(list(chart_data_map.keys()))
-    # Downsample points for UI performance (~1000 points to retain high detail for zoom)
-    step = max(1, len(sorted_dates) // 1000)
-    sampled_dates = sorted_dates[::step]
+    sampled_dates = smart_sample_dates(sorted_dates)
     line_chart_data = [chart_data_map[dt] for dt in sampled_dates]
 
     # Calculate Radar Chart Scores dynamically
@@ -861,8 +893,7 @@ async def get_chart_data(request: CompareRequest, db: AsyncSession = Depends(get
             chart_data_map[dt_str]["NASDAQ"] = row["Close"]
 
     sorted_dates = sorted(list(chart_data_map.keys()))
-    step = max(1, len(sorted_dates) // 1000)
-    sampled_dates = sorted_dates[::step]
+    sampled_dates = smart_sample_dates(sorted_dates)
     line_chart_data = [chart_data_map[dt] for dt in sampled_dates]
 
     return {
@@ -1057,11 +1088,7 @@ async def get_semi_chart_data():
     if not sorted_dates:
         return {"line_chart_data": [], "keys": list(tickers.keys())}
 
-    # Downsample to ≤1000 pts; always keep the very last date
-    step = max(1, len(sorted_dates) // 1000)
-    sampled_dates = sorted_dates[::step]
-    if sorted_dates[-1] != sampled_dates[-1]:
-        sampled_dates = list(sampled_dates) + [sorted_dates[-1]]
+    sampled_dates = smart_sample_dates(sorted_dates)
 
     line_chart_data = [chart_data_map[dt] for dt in sampled_dates]
     result = {"line_chart_data": line_chart_data, "keys": list(tickers.keys())}
