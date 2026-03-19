@@ -99,14 +99,23 @@ export default function CompareChart({
     // KOSPI/SP500: 우측축 (max 10000), NASDAQ: 좌측축 (ETF와 유사한 스케일)
     const benchLines = [
         { dataKey: 'KOSPI_raw',   label: 'KOSPI',   color: '#94a3b8', yAxisId: 'right' },
+        { dataKey: 'KOSDAQ_raw',  label: 'KOSDAQ',  color: '#22d3ee', yAxisId: 'right' },
         { dataKey: 'SP500_raw',   label: 'S&P500',  color: '#f59e0b', yAxisId: 'right' },
-        { dataKey: 'NASDAQ_raw',  label: 'Nasdaq',  color: '#f472b6', yAxisId: 'left' },
+        { dataKey: 'NASDAQ_raw',  label: 'Nasdaq',  color: '#f472b6', yAxisId: 'left'  },
+    ];
+    const benchReturnKeys = [
+        { dataKey: 'KOSPI_raw',  returnKey: 'KOSPI_return',   label: 'KOSPI',   color: '#94a3b8' },
+        { dataKey: 'KOSDAQ_raw', returnKey: 'KOSDAQ_return',  label: 'KOSDAQ',  color: '#22d3ee' },
+        { dataKey: 'SP500_raw',  returnKey: 'SP500_return',   label: 'S&P500',  color: '#f59e0b' },
+        { dataKey: 'NASDAQ_raw', returnKey: 'NASDAQ_return',  label: 'Nasdaq',  color: '#f472b6' },
     ];
 
-    // ETF 이름 → 자동 벤치마크 매핑 (hover 시 연관 지수 동시 하이라이트)
+    // ETF 이름 → 자동 벤치마크 매핑
     const etfToBench = (name: string): string | null => {
         const n = name.toUpperCase();
-        // 한국형 특수 패턴: 다우존스를 추종하지만 한국 배당 ETF
+        // 코스닥 ETF (최우선)
+        if (n.includes('코스닥') || n.includes('KOSDAQ') || n.includes('코스닥150')) return 'KOSDAQ';
+        // 한국형 특수: 다우존스 추종이지만 한국 배당
         if (n.includes('코리아배당') || n.includes('KOREA배당')) return 'KOSPI';
         // 나스닥/성장형 커버드콜
         if (n.includes('나스닥') || n.includes('NASDAQ') || n.includes('QQQ') ||
@@ -114,20 +123,19 @@ export default function CompareChart({
         // 미국 지수 (S&P500 계열)
         if (n.includes('S&P') || n.includes('SP500') || n.includes('다우존스') || n.includes('DOWJONES')) return 'S&P500';
         if (n.includes('미국') || n.includes('US ') || n.includes('TIGER 미') || n.includes('ACE 미') || n.includes('KODEX 미')) return 'S&P500';
-        // 한국 지수 (기본값)
-        if (n.includes('코스피') || n.includes('KOSPI') || n.includes('코리아') || n.includes('밸류업') || n.includes('200ITR') || n.includes('코스닥')) return 'KOSPI';
-        return 'KOSPI'; // 기본값: 한국 지수
+        // 한국 지수 (기본)
+        if (n.includes('코스피') || n.includes('KOSPI') || n.includes('코리아') || n.includes('밸류업') || n.includes('200ITR')) return 'KOSPI';
+        return 'KOSPI';
     };
 
-    // 실제 하이라이트 대상: 직접 hover한 bench 또는 ETF hover에서 자동 매핑된 bench
+    // 실제 하이라이트 대상
     const effectiveHoveredBench = hoveredBench || (hoveredEtfName ? etfToBench(hoveredEtfName) : null);
 
-    // 수익률 그래프용 벤치마크 수익률 계산 (첫 유효값 대비 %)
-    const benchReturnKeys = [
-        { dataKey: 'KOSPI_raw',  returnKey: 'KOSPI_return',  label: 'KOSPI',  color: '#94a3b8' },
-        { dataKey: 'SP500_raw',  returnKey: 'SP500_return',  label: 'S&P500', color: '#f59e0b' },
-        { dataKey: 'NASDAQ_raw', returnKey: 'NASDAQ_return', label: 'Nasdaq', color: '#f472b6' },
-    ];
+    // KOSDAQ ETF 포함 여부 → KOSDAQ 지수 표시 결정
+    const hasKosdaqEtf = (data?.visual_data?.etf_keys ?? []).some((key: string) => etfToBench(key) === 'KOSDAQ');
+    const activeBenchLines    = benchLines.filter(({ label }) => label !== 'KOSDAQ' || hasKosdaqEtf);
+    const activeBenchReturnKeys = benchReturnKeys.filter(({ label }) => label !== 'KOSDAQ' || hasKosdaqEtf);
+
     const returnChartData = simulatedChartData.map((d: any) => {
         const newD = { ...d };
         benchReturnKeys.forEach(({ dataKey, returnKey }) => {
@@ -138,6 +146,53 @@ export default function CompareChart({
         });
         return newD;
     });
+
+    // 공용 커스텀 범례 렌더러 (ETF 종목 + 지수 분리)
+    const ChartLegend = ({ etfKeys, showDataKey = (k: string) => k }: { etfKeys: string[], showDataKey?: (k: string) => string }) => (
+        <div className="flex flex-col gap-2 mt-3 pt-2 border-t border-white/5">
+            {/* ETF 종목 행 */}
+            <div className="flex flex-wrap justify-center gap-x-5 gap-y-1">
+                {etfKeys.map((key: string) => {
+                    const idx = data.visual_data.etf_keys.indexOf(key);
+                    const color = glowColors[idx % glowColors.length];
+                    const isH = hoveredEtfName === key;
+                    const faded = (hoveredEtfName || hoveredBench) && !isH;
+                    return (
+                        <button key={key}
+                            onMouseEnter={() => setHoveredEtfName(key)}
+                            onMouseLeave={() => setHoveredEtfName(null)}
+                            onClick={() => { const m = data.raw_data?.find((d: any) => d.etf_name === key); if (m) setSelectedDetailEtf(m); }}
+                            style={{ opacity: faded ? 0.3 : 1 }}
+                            className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-white transition-colors cursor-pointer"
+                        >
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                            <span style={{ color: isH ? color : undefined, fontWeight: isH ? 'bold' : 'normal' }}>{showDataKey(key)}</span>
+                        </button>
+                    );
+                })}
+            </div>
+            {/* 지수 행 */}
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
+                <span className="text-[10px] text-gray-600 self-center font-semibold mr-1">📊 지수</span>
+                {activeBenchLines.map(({ dataKey, label, color }) => {
+                    const hasD = simulatedChartData.some((d: any) => d[dataKey]);
+                    if (!hasD) return null;
+                    const isA = effectiveHoveredBench === label;
+                    return (
+                        <button key={label}
+                            onMouseEnter={() => setHoveredBench(label)}
+                            onMouseLeave={() => setHoveredBench(null)}
+                            style={{ opacity: effectiveHoveredBench && !isA ? 0.35 : 1 }}
+                            className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-white transition-colors cursor-pointer"
+                        >
+                            <svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke={color} strokeWidth={isA ? 3 : 1.5} strokeDasharray="5 3" /></svg>
+                            <span style={{ color: isA ? color : undefined, fontWeight: isA ? 'bold' : 'normal' }}>{label}</span>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
 
     return (
         <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white/[0.03] p-4 lg:p-5 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
@@ -197,39 +252,28 @@ export default function CompareChart({
                                             <LineChart data={simulatedChartData} margin={{ top: 5, right: 55, left: 10, bottom: 5 }}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                                 <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
-                                                {/* 좌 Y축: ETF 주가 + NASDAQ */}
                                                 <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
-                                                {/* 우 Y축: KOSPI / SP500 (max 10,000) */}
-                                                <YAxis yAxisId="right" orientation="right" domain={['auto', 10000]} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : `${val}`} stroke="rgba(255,255,255,0.05)" tickMargin={8} axisLine={false} width={52} />
+                                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : `${val}`} stroke="rgba(255,255,255,0.05)" tickMargin={8} axisLine={false} width={52} />
                                                 <Tooltip
                                                     cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }}
                                                     content={(props: any) => <PriceTooltip {...props} chartData={simulatedChartData} />}
                                                 />
-                                                <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
-                                                    if (e && e.value) {
-                                                        const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
-                                                        if (matchedEtf) setSelectedDetailEtf(matchedEtf);
-                                                    }
-                                                }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
-                                                    onMouseLeave={() => setHoveredEtfName(null)}
-                                                    formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
-                                                {/* ETF 가격 라인들 (좌 Y축) */}
+                                                {/* ETF 가격 라인들 */}
                                                 {includedKeys.map((key: string) => {
                                                     const idx = data.visual_data.etf_keys.indexOf(key);
-                                                    // 엄격한 exact match: includes() 금지 ("S&P500" 포함 ETF명 오작동 방지)
                                                     const isHovered = hoveredEtfName === key;
-                                                    const isOthersHovered = hoveredEtfName && !isHovered;
-                                                    return <Line key={`${key}_raw`} yAxisId="left" type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                                    const isOthersHovered = (hoveredEtfName || hoveredBench) && !isHovered;
+                                                    return <Line key={`${key}_raw`} yAxisId="left" type="monotone" dataKey={`${key}_raw`} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} legendType="none" />;
                                                 })}
-                                                {/* 참조선 (점선) - effectiveHoveredBench로 hover 하이라이트 */}
-                                                {benchLines.map(({ dataKey, label, color, yAxisId }) => {
+                                                {/* 지수 참조선 (점선) */}
+                                                {activeBenchLines.map(({ dataKey, label, color, yAxisId }) => {
                                                     const hasData = simulatedChartData.some((d: any) => d[dataKey]);
                                                     if (!hasData) return null;
                                                     const isBenchHovered = effectiveHoveredBench === label;
                                                     const isBenchOtherHovered = effectiveHoveredBench && !isBenchHovered;
                                                     return (
                                                         <Line
-                                                            key={`${dataKey}_${isBenchHovered}`}  // hover 상태 포함 → 강제 리렌더
+                                                            key={`${dataKey}_${isBenchHovered}`}
                                                             yAxisId={yAxisId}
                                                             type="monotone"
                                                             dataKey={dataKey}
@@ -247,28 +291,8 @@ export default function CompareChart({
                                                 })}
                                             </LineChart>
                                         </ResponsiveContainer>
-                                        {/* 하단 참조선 범례 (hover → effectiveHoveredBench 기반 하이라이트) */}
-                                        {benchLines.some(({ dataKey }) => simulatedChartData.some((d: any) => d[dataKey])) && (
-                                            <div className="flex justify-center gap-4 mt-3 pt-2 border-t border-white/5">
-                                                {benchLines.map(({ dataKey, label, color }) => {
-                                                    const hasData = simulatedChartData.some((d: any) => d[dataKey]);
-                                                    if (!hasData) return null;
-                                                    const isActive = effectiveHoveredBench === label;
-                                                    return (
-                                                        <button
-                                                            key={label}
-                                                            onMouseEnter={() => setHoveredBench(label)}
-                                                            onMouseLeave={() => setHoveredBench(null)}
-                                                            className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-white transition-colors cursor-pointer"
-                                                            style={{ opacity: effectiveHoveredBench && !isActive ? 0.35 : 1 }}
-                                                        >
-                                                            <svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke={color} strokeWidth={isActive ? 3 : 1.5} strokeDasharray="5 3" /></svg>
-                                                            <span style={{ color: isActive ? color : undefined, fontWeight: isActive ? 'bold' : 'normal' }}>{label}</span>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
+                                        {/* 커스텀 분리 범례: ETF 종목 | 지수 */}
+                                        <ChartLegend etfKeys={includedKeys} />
                                     </div>
                                 ) : (
                                     <div className="h-24 flex items-center justify-center text-sm text-gray-500">
@@ -322,21 +346,14 @@ export default function CompareChart({
                                                 cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }}
                                                 content={(props: any) => <ReturnTooltip {...props} chartData={returnChartData} />}
                                             />
-                                            <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px' }} onClick={(e: any) => {
-                                                if (e && e.value) {
-                                                    const matchedEtf = data.raw_data?.find((d: any) => d.etf_name === e.value || d.etf_code === e.value);
-                                                    if (matchedEtf) setSelectedDetailEtf(matchedEtf);
-                                                }
-                                            }} onMouseEnter={(e: any) => { if (e && e.value) setHoveredEtfName(e.value); }}
-                                                onMouseLeave={() => setHoveredEtfName(null)}
-                                                formatter={(value) => <span className="cursor-pointer hover:text-white hover:underline transition-colors">{value}</span>} />
+                                            {/* ETF 수익률 라인들 */}
                                             {data.visual_data.etf_keys.map((key: string, idx: number) => {
                                                 const isHovered = hoveredEtfName === key;
                                                 const isOthersHovered = (hoveredEtfName || hoveredBench) && !isHovered;
-                                                return <Line key={`${key}_${isHovered}`} type="monotone" dataKey={key} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} />;
+                                                return <Line key={`${key}_${isHovered}`} type="monotone" dataKey={key} name={key} stroke={glowColors[idx % glowColors.length]} strokeWidth={isHovered ? 5 : 2} strokeOpacity={isOthersHovered ? 0.2 : 1} dot={false} connectNulls={true} activeDot={{ r: 5, strokeWidth: 0, fill: glowColors[idx % glowColors.length], stroke: 'white' }} className={isHovered ? 'animate-pulse' : 'transition-all duration-300'} onMouseEnter={() => setHoveredEtfName(key)} onMouseLeave={() => setHoveredEtfName(null)} legendType="none" />;
                                             })}
-                                            {/* 수익률 그래프 벤치마크 점선 */}
-                                            {benchReturnKeys.map(({ returnKey, label, color }) => {
+                                            {/* 수익률 벤치마크 점선 */}
+                                            {activeBenchReturnKeys.map(({ returnKey, label, color }) => {
                                                 const hasData = returnChartData.some((d: any) => d[returnKey] != null);
                                                 if (!hasData) return null;
                                                 const isBenchHovered = effectiveHoveredBench === label;
@@ -360,28 +377,8 @@ export default function CompareChart({
                                             })}
                                         </LineChart>
                                     </ResponsiveContainer>
-                                    {/* 수익률 그래프 하단 벤치마크 범례 */}
-                                    {benchReturnKeys.some(({ returnKey }) => returnChartData.some((d: any) => d[returnKey] != null)) && (
-                                        <div className="flex justify-center gap-4 mt-3 pt-2 border-t border-white/5">
-                                            {benchReturnKeys.map(({ returnKey, label, color }) => {
-                                                const hasData = returnChartData.some((d: any) => d[returnKey] != null);
-                                                if (!hasData) return null;
-                                                const isActive = effectiveHoveredBench === label;
-                                                return (
-                                                    <button
-                                                        key={label}
-                                                        onMouseEnter={() => setHoveredBench(label)}
-                                                        onMouseLeave={() => setHoveredBench(null)}
-                                                        className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-white transition-colors cursor-pointer"
-                                                        style={{ opacity: effectiveHoveredBench && !isActive ? 0.35 : 1 }}
-                                                    >
-                                                        <svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke={color} strokeWidth={isActive ? 3 : 1.5} strokeDasharray="5 3" /></svg>
-                                                        <span style={{ color: isActive ? color : undefined, fontWeight: isActive ? 'bold' : 'normal' }}>{label}</span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
+                                    {/* 커스텀 분리 범례: ETF 종목 | 지수 */}
+                                    <ChartLegend etfKeys={data.visual_data.etf_keys} />
                                 </div>
                             </section>
                         )}
