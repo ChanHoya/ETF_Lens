@@ -15,6 +15,7 @@ type ModalsProps = {
     deleteFavGroup: (id: string) => void;
     removeFavItem: (groupId: string, code: string) => void;
     addFavItem: (groupId: string, code: string, name: string) => void;
+    addFavItems: (groupId: string, items: { code: string, name: string }[]) => void;
     toggleFavItemSelection: (item: { code: string, name: string }) => void;
     selectFromFavorites: (items: { code: string, name: string }[]) => void;
     BRAND_KEYWORDS: string[];
@@ -37,7 +38,7 @@ type ModalsProps = {
 
 export default function Modals({
     isFavModalOpen, setIsFavModalOpen, favorites, favSearchQuery, setFavSearchQuery, selectedFavItems,
-    addFavGroup, renameFavGroup, deleteFavGroup, removeFavItem, addFavItem, toggleFavItemSelection, selectFromFavorites,
+    addFavGroup, renameFavGroup, deleteFavGroup, removeFavItem, addFavItem, addFavItems, toggleFavItemSelection, selectFromFavorites,
     BRAND_KEYWORDS, THEME_KEYWORDS, etfDictionary,
     selectedDetailEtf, setSelectedDetailEtf, popupPeriod, setPopupPeriod, detailChartData,
     isEtfCheckModalOpen, setIsEtfCheckModalOpen, hasOpenedEtfCheck,
@@ -60,14 +61,12 @@ export default function Modals({
     const isSearchItemSelected = (groupId: string, code: string) =>
         (searchSelected[groupId] || new Set()).has(code);
 
-    // 선택된 종목들을 그룹에 일괄 추가
+    // 선택된 종목들을 그룹에 일괄 추가 (단일 addFavItems 호출 → stale closure 없음)
     const bulkAddToGroup = (groupId: string, filtered: { code: string, name: string }[]) => {
         const sel = searchSelected[groupId] || new Set<string>();
         if (sel.size === 0) return;
-        sel.forEach(code => {
-            const item = filtered.find(f => f.code === code);
-            if (item) addFavItem(groupId, item.code, item.name);
-        });
+        const toAdd = filtered.filter(f => sel.has(f.code));
+        if (toAdd.length > 0) addFavItems(groupId, toAdd);
         setSearchSelected(prev => ({ ...prev, [groupId]: new Set() }));
         setFavSearchQuery(prev => ({ ...prev, [groupId]: '' }));
     };

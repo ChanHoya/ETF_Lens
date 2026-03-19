@@ -465,6 +465,23 @@ export default function Home() {
     }));
   };
 
+  // 여러 종목 일괄 추가 (한 번의 saveFavorites → stale closure 없음)
+  const addFavItems = (groupId: string, items: { code: string, name: string }[]) => {
+    saveFavorites(favorites.map(g => {
+      if (g.id === groupId) {
+        let newItems = [...g.items];
+        for (const { code, name } of items) {
+          if (newItems.length >= 10) break;
+          if (!newItems.some(i => i.code === code)) {
+            newItems.push({ code, name });
+          }
+        }
+        return { ...g, items: newItems };
+      }
+      return g;
+    }));
+  };
+
   const chartData = useMemo(() => {
     if (!data?.visual_data?.line_chart || !data?.visual_data?.etf_keys) return [];
     let rawData = data.visual_data.line_chart;
@@ -1408,6 +1425,7 @@ export default function Home() {
           toggleFavItemSelection={toggleFavItemSelection}
           removeFavItem={removeFavItem}
           addFavItem={addFavItem}
+          addFavItems={addFavItems}
           favSearchQuery={favSearchQuery}
           setFavSearchQuery={setFavSearchQuery}
           etfDictionary={etfDictionary}
