@@ -370,7 +370,9 @@ export default function CoveredCallTab({
                         }
                     });
 
-                    const finalChartData = Object.values(combinedChartMap).sort((a: any, b: any) => a.originalIndex - b.originalIndex);
+                    // Sort by actual date string (YYYY-MM-DD is lexicographically == chronologically correct)
+                    // Using insertion-order (originalIndex) causes date scrambling when ETFs have different listing periods
+                    const finalChartData = Object.values(combinedChartMap).sort((a: any, b: any) => a.date.localeCompare(b.date));
 
                     if (success) {
                         setRealChartData(finalChartData);
