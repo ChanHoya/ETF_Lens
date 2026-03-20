@@ -884,12 +884,11 @@ export default function Home() {
           <nav className="hidden md:flex items-center gap-2 md:gap-4 bg-white/[0.03] px-4 md:px-6 py-2 rounded-full border border-white/10 backdrop-blur-md shadow-sm">
             {[
               { id: 'analysis', label: '종목분석' },
-              { id: 'covered_call', label: '커버드콜' },
               { id: 'discover', label: '모니터링' },
               { id: 'etftracker', label: 'ETF추적기' },
               { id: 'etfcheck', label: 'ETF Check' }
             ].map(tab => {
-              const isAnalysisActive = ['select', 'info', 'chart', 'holdings'].includes(activeTab);
+              const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call'].includes(activeTab);
               const isActive = (tab.id === 'etfcheck' && isEtfCheckModalOpen) ||
                 (tab.id === 'analysis' && isAnalysisActive && !isEtfCheckModalOpen) ||
                 (activeTab === tab.id && !isEtfCheckModalOpen);
@@ -927,7 +926,7 @@ export default function Home() {
       </header>
 
       {/* 서브탭: 종목분석 탭 선택시만 헤더 아래에 표시 */}
-      {['select', 'info', 'chart', 'holdings'].includes(activeTab) && !isEtfCheckModalOpen && (
+      {['select', 'info', 'chart', 'holdings', 'covered_call'].includes(activeTab) && !isEtfCheckModalOpen && (
         <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-50">
           {/* 모바일: 수평 스크롤 가능한 서브탭 */}
           <nav className="flex items-center gap-2 md:gap-4 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 shadow-sm backdrop-blur-md overflow-x-auto scrollbar-hide">
@@ -936,6 +935,7 @@ export default function Home() {
               { id: 'info', label: '기본정보' },
               { id: 'chart', label: '차트' },
               { id: 'holdings', label: '구성종목' },
+              { id: 'covered_call', label: '커버드콜' },
             ].map(subTab => (
               <button
                 key={subTab.id}
@@ -1307,7 +1307,19 @@ export default function Home() {
 
         {/* Results Section */}
         {
-          data && data.data_payload && activeTab !== 'select' && (
+          activeTab === 'covered_call' && (
+            <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col relative z-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
+              <CoveredCallTab
+                initialEtfs={data?.raw_data?.filter((etf: any) =>
+                  etf.etf_name?.includes('커버드콜')
+                ) || []}
+              />
+            </div>
+          )
+        }
+
+        {
+          data && data.data_payload && activeTab !== 'select' && activeTab !== 'covered_call' && (
             <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col relative z-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
 
               {activeTab === 'info' && (
@@ -1424,10 +1436,7 @@ export default function Home() {
           <DiscoverTab />
         )}
 
-        {/* Covered Call Section */}
-        {activeTab === 'covered_call' && (
-          <CoveredCallTab />
-        )}
+
 
         <Modals
           isFavModalOpen={isFavModalOpen}
@@ -1474,12 +1483,11 @@ export default function Home() {
       >
         {[
           { id: 'analysis',     label: '종목분석',  icon: <BarChart2 className="w-6 h-6" /> },
-          { id: 'covered_call', label: '커버드콜',  icon: <Layers    className="w-6 h-6" /> },
           { id: 'discover',     label: '모니터링',  icon: <Cpu       className="w-6 h-6" /> },
           { id: 'etftracker',   label: 'ETF추적기', icon: <Target    className="w-6 h-6" /> },
           { id: 'etfcheck',     label: 'ETF Check', icon: <BookOpen  className="w-6 h-6" /> },
         ].map(tab => {
-          const isAnalysisActive = ['select', 'info', 'chart', 'holdings'].includes(activeTab);
+          const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call'].includes(activeTab);
           const isActive =
             (tab.id === 'etfcheck'  && isEtfCheckModalOpen) ||
             (tab.id === 'analysis'  && isAnalysisActive && !isEtfCheckModalOpen) ||

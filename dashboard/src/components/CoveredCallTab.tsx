@@ -84,7 +84,7 @@ const generateMockChartData = (period: string) => {
     return data;
 };
 
-export default function CoveredCallTab() {
+export default function CoveredCallTab({ initialEtfs = [] }: { initialEtfs?: any[] }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [etfDictionary, setEtfDictionary] = useState<any[]>([]);
@@ -151,6 +151,21 @@ export default function CoveredCallTab() {
 
     // For storing real stats mapped by ticker
     const [realStats, setRealStats] = useState<any>({});
+
+    // Auto-seed from parent search results (ETFs with '커버드콜' in name)
+    useEffect(() => {
+        if (!initialEtfs || initialEtfs.length === 0) return;
+        const newEntries = initialEtfs
+            .filter((etf: any) => !ccDataList.some(existing => existing.ticker === etf.etf_code))
+            .map((etf: any, idx: number) => createETFEntry(
+                { name: etf.etf_name, code: etf.etf_code },
+                ccDataList.length + idx + 1
+            ));
+        if (newEntries.length > 0) {
+            setCcDataList(prev => [...prev, ...newEntries]);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialEtfs]);
 
     useEffect(() => {
         const stored = localStorage.getItem('ccFavorites');
@@ -472,106 +487,19 @@ export default function CoveredCallTab() {
         <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white/[0.03] p-3 lg:p-4 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0 min-h-[700px]">
 
             {/* Header & Description */}
-            <div className="mb-4 border-b border-white/10 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h2 className="text-2xl font-extrabold text-white mb-2 flex items-center gap-3">
-                        <Activity className="w-6 h-6 text-indigo-400" />
-                        커버드콜 (Covered Call) 상품 비교 분석
-                    </h2>
-                    <p className="text-sm text-gray-400">
-                        기초 지수와의 수익률 차이(괴리)와 TR(분배금 재투자) 기준 실질 성과를 비교하여 최적의 인컴형 ETF를 발굴하세요.
-                    </p>
-                </div>
-
-                {/* Favorites Menu Button */}
-                <div className="relative">
-                    <button
-                        onClick={() => setIsFavoritesMenuOpen(!isFavoritesMenuOpen)}
-                        className="bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-4 py-2 rounded-xl flex items-center gap-2 font-bold text-sm transition-colors"
-                    >
-                        <Bookmark size={16} className={savedFavorites.length > 0 ? 'fill-indigo-400 text-indigo-400' : ''} />
-                        나의 비교 그룹 즐겨찾기
-                    </button>
-
-                    {isFavoritesMenuOpen && (
-                        <div className="absolute right-0 top-full mt-2 w-72 bg-[#121217] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
-                            <div className="p-3 border-b border-white/5 bg-white/[0.02]">
-                                {showSaveInput ? (
-                                    <div className="flex flex-col gap-2">
-                                        <input
-                                            type="text"
-                                            placeholder="그룹 이름 입력"
-                                            value={newGroupName}
-                                            onChange={e => setNewGroupName(e.target.value)}
-                                            className="w-full bg-black/50 border border-white/10 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                        />
-                                        <div className="flex gap-2">
-                                            <button onClick={handleSaveFavoriteGroup} className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-1.5 rounded text-xs font-bold transition-colors">저장</button>
-                                            <button onClick={() => setShowSaveInput(false)} className="flex-1 bg-white/10 hover:bg-white/20 text-white py-1.5 rounded text-xs font-bold transition-colors">취소</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <button
-                                        onClick={() => setShowSaveInput(true)}
-                                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-colors"
-                                    >
-                                        <Save size={16} /> 현재 목록을 즐겨찾기로 저장
-                                    </button>
-                                )}
-                            </div>
-                            <div className="max-h-64 overflow-y-auto">
-                                {savedFavorites.length === 0 ? (
-                                    <div className="p-6 text-center text-sm text-gray-500">
-                                        저장된 모델 포트폴리오(비교 그룹)가 없습니다.
-                                    </div>
-                                ) : (
-                                    <ul className="divide-y divide-white/5">
-                                        {savedFavorites.map((group, idx) => (
-                                            <li key={idx} className="flex justify-between items-center px-4 py-3 hover:bg-white/5 cursor-pointer group" onClick={() => handleLoadFavoriteGroup(group)}>
-                                                <div>
-                                                    <div className="text-gray-200 font-bold text-sm mb-0.5 group-hover:text-indigo-300 flex items-center gap-1.5">
-                                                        <Star size={12} className="text-yellow-500 fill-yellow-500/30" />
-                                                        {group.name}
-                                                    </div>
-                                                    <div className="text-xs text-gray-500">포함 종목: {group.list.length}개</div>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    {deletingGroupIdx === idx ? (
-                                                        <div className="flex items-center gap-1.5 mr-2">
-                                                            <span className="text-[10px] text-rose-400 font-bold">삭제할까요?</span>
-                                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteFavoriteGroup(idx); }} className="px-2 py-1 bg-rose-500 hover:bg-rose-400 text-white text-[10px] font-bold rounded">예</button>
-                                                            <button onClick={(e) => { e.stopPropagation(); setDeletingGroupIdx(null); }} className="px-2 py-1 bg-white/10 hover:bg-white/20 text-gray-300 text-[10px] font-bold rounded">아니오</button>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); handleLoadFavoriteGroup(group); }}
-                                                                className="p-1.5 text-indigo-400 hover:bg-indigo-500/20 rounded-md"
-                                                                title="이 그룹 불러오기"
-                                                            >
-                                                                <Download size={14} />
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); setDeletingGroupIdx(idx); }}
-                                                                className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-md"
-                                                                title="삭제"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </div>
-                        </div>
+            <div className="mb-4 border-b border-white/10 pb-4">
+                <h2 className="text-2xl font-extrabold text-white mb-2 flex items-center gap-3">
+                    <Activity className="w-6 h-6 text-indigo-400" />
+                    커버드콜 (Covered Call) 상품 비교 분석
+                </h2>
+                <p className="text-sm text-gray-400">
+                    기초 지수와의 수익률 차이(괴리)와 TR(분배금 재투자) 기준 실질 성과를 비교하여 최적의 인컴형 ETF를 발굴하세요.
+                    {initialEtfs.length > 0 && (
+                        <span className="ml-2 text-indigo-400 font-semibold">
+                            · 종목선택 결과에서 커버드콜 종목 {initialEtfs.length}개가 자동으로 추가되었습니다.
+                        </span>
                     )}
-                    {isFavoritesMenuOpen && (
-                        <div className="fixed inset-0 z-40" onClick={() => setIsFavoritesMenuOpen(false)} />
-                    )}
-                </div>
+                </p>
             </div>
 
             {/* Search & Filters */}
