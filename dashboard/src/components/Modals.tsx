@@ -84,6 +84,7 @@ export default function Modals({
     const [deletingMarketId, setDeletingMarketId] = React.useState<number | null>(null);
     const [deletePin, setDeletePin] = React.useState('');
     const [deleteError, setDeleteError] = React.useState('');
+    const [expandedMarketIds, setExpandedMarketIds] = React.useState<Set<number>>(new Set());
     // 그룹별 업로드 폼 상태 { [groupId]: {open, author, pin, uploading, done, error} }
     const [uploadForms, setUploadForms] = React.useState<{ [k: string]: { open: boolean; author: string; pin: string; uploading: boolean; done: boolean; error: string } }>({});
 
@@ -845,87 +846,107 @@ export default function Modals({
             )}
             {/* ===== 포트폴리오 마켓 팝업 ===== */}
             {isMarketOpen && (
-                <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200 p-3 md:p-6">
-                    <div className="bg-[#0f111a] border border-purple-500/20 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl shadow-purple-900/20">
-                        <div className="flex justify-between items-center p-4 border-b border-white/10 bg-purple-500/5">
-                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                <Store className="w-5 h-5 text-purple-400" /> 포트폴리오 마켓
-                                <span className="text-xs text-gray-500 font-normal ml-1">공유된 포트폴리오를 즐겨찾기에 추가하세요</span>
-                            </h2>
+                <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200 p-2 md:p-6">
+                    <div className="bg-[#0f111a] border border-purple-500/20 rounded-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col shadow-2xl shadow-purple-900/30">
+                        {/* 헤더 */}
+                        <div className="flex justify-between items-center px-5 py-4 border-b border-white/10 bg-purple-500/5 flex-shrink-0">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <Store className="w-5 h-5 text-purple-400" /> 포트폴리오 마켓
+                                </h2>
+                                <p className="text-xs text-gray-500 mt-0.5">포트폴리오명을 클릭하면 구성 종목을 확인할 수 있습니다</p>
+                            </div>
                             <div className="flex items-center gap-2">
                                 <button onClick={fetchMarket} title="새로고침" className="p-2 text-gray-400 hover:text-purple-300 transition-colors">
                                     <RefreshCw className={`w-4 h-4 ${marketLoading ? 'animate-spin' : ''}`} />
                                 </button>
-                                <button onClick={() => { setIsMarketOpen(false); setDeletingMarketId(null); setDeletePin(''); setDeleteError(''); }}
+                                <button onClick={() => { setIsMarketOpen(false); setDeletingMarketId(null); setDeletePin(''); setDeleteError(''); setExpandedMarketIds(new Set()); }}
                                     className="p-2 text-gray-400 hover:text-white bg-white/5 rounded-xl transition-colors">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>
-                        <div className="px-4 pt-3">
-                            <button onClick={() => { setIsMarketOpen(false); setIsFavModalOpen(true); }}
+                        {/* 뒤로가기 */}
+                        <div className="px-5 pt-3 flex-shrink-0">
+                            <button onClick={() => { setIsMarketOpen(false); setIsFavModalOpen(true); setExpandedMarketIds(new Set()); }}
                                 className="text-xs text-gray-500 hover:text-purple-300 transition-colors">
                                 ← 즐겨찾기로 돌아가기
                             </button>
                         </div>
-                        <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
+                        {/* 목록 */}
+                        <div className="px-5 pb-5 pt-3 overflow-y-auto flex-1 custom-scrollbar">
                             {marketLoading ? (
-                                <div className="flex items-center justify-center py-16 text-gray-500">
+                                <div className="flex items-center justify-center py-20 text-gray-500">
                                     <RefreshCw className="w-6 h-6 animate-spin mr-2" /> 불러오는 중...
                                 </div>
                             ) : marketList.length === 0 ? (
-                                <div className="text-center py-16 text-gray-500 text-sm">아직 공유된 포트폴리오가 없습니다.</div>
+                                <div className="text-center py-20 text-gray-500 text-sm">아직 공유된 포트폴리오가 없습니다.</div>
                             ) : (
-                                <div className="space-y-3">
-                                    {marketList.map(portfolio => (
-                                        <div key={portfolio.id} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:border-purple-500/30 transition-colors">
-                                            <div className="flex justify-between items-start gap-3">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="font-bold text-white">{portfolio.name}</span>
-                                                        <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">{portfolio.items.length}종목</span>
-                                                        <span className="text-xs text-purple-400 flex items-center gap-0.5"><Download className="w-3 h-3" />{portfolio.download_count}</span>
+                                <div className="space-y-2">
+                                    {marketList.map(portfolio => {
+                                        const isExpanded = expandedMarketIds.has(portfolio.id);
+                                        const toggleExpand = () => setExpandedMarketIds(prev => {
+                                            const next = new Set(prev);
+                                            next.has(portfolio.id) ? next.delete(portfolio.id) : next.add(portfolio.id);
+                                            return next;
+                                        });
+                                        return (
+                                            <div key={portfolio.id} className={`border rounded-xl transition-colors overflow-hidden ${isExpanded ? 'border-purple-500/40 bg-purple-500/5' : 'border-white/10 bg-white/[0.02] hover:border-white/20'}`}>
+                                                {/* 포트폴리오 행 — 클릭하면 드릴다운 */}
+                                                <div className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none" onClick={toggleExpand}>
+                                                    <span className={`text-gray-400 text-sm flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>▾</span>
+                                                    <span className="font-bold text-white text-base flex-1 leading-tight">{portfolio.name}</span>
+                                                    <div className="flex items-center gap-3 flex-shrink-0 text-xs text-gray-500">
+                                                        <span className="bg-white/5 px-2 py-0.5 rounded-full">{portfolio.items.length}종목</span>
+                                                        <span>by <span className="text-gray-400 font-semibold">{portfolio.author}</span></span>
+                                                        <span className="text-purple-400 flex items-center gap-0.5"><Download className="w-3 h-3" />{portfolio.download_count}</span>
+                                                        <span className="hidden sm:block text-gray-600">{portfolio.created_at}</span>
                                                     </div>
-                                                    <div className="text-xs text-gray-500 mb-2">
-                                                        by <span className="text-gray-400 font-semibold">{portfolio.author}</span>
-                                                        <span className="ml-2">{portfolio.created_at}</span>
-                                                    </div>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {portfolio.items.slice(0, 6).map((item: any) => (
-                                                            <span key={item.code} className="text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-gray-400">{item.name}</span>
-                                                        ))}
-                                                        {portfolio.items.length > 6 && <span className="text-[10px] text-gray-600">+{portfolio.items.length - 6}개 더</span>}
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col gap-2 flex-shrink-0 min-w-[110px]">
-                                                    <button onClick={() => handleDownload(portfolio)}
-                                                        className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-colors">
-                                                        <Download className="w-4 h-4" /> 추가
-                                                    </button>
-                                                    {deletingMarketId === portfolio.id ? (
-                                                        <div className="flex flex-col gap-1">
-                                                            <input placeholder="PIN" type="password" maxLength={8}
-                                                                value={deletePin}
-                                                                onChange={e => { setDeletePin(e.target.value); setDeleteError(''); }}
-                                                                className="bg-black/60 border border-rose-500/30 rounded px-2 py-1 text-xs text-white w-full focus:outline-none focus:ring-1 focus:ring-rose-500" />
-                                                            {deleteError && <span className="text-[10px] text-rose-400">{deleteError}</span>}
-                                                            <div className="flex gap-1">
-                                                                <button onClick={() => handleMarketDelete(portfolio.id)}
-                                                                    className="flex-1 px-2 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs font-bold">삭제</button>
-                                                                <button onClick={() => { setDeletingMarketId(null); setDeletePin(''); setDeleteError(''); }}
-                                                                    className="flex-1 px-2 py-1 bg-white/10 text-gray-300 rounded text-xs">취소</button>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <button onClick={() => { setDeletingMarketId(portfolio.id); setDeleteError(''); }}
-                                                            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-rose-500/10 text-gray-500 hover:text-rose-400 border border-white/5 hover:border-rose-500/30 rounded-lg text-xs transition-colors">
-                                                            <Lock className="w-3 h-3" /> PIN 삭제
+                                                    {/* 버튼 — 버블 방지 */}
+                                                    <div className="flex gap-2 flex-shrink-0 ml-2" onClick={e => e.stopPropagation()}>
+                                                        <button onClick={() => handleDownload(portfolio)}
+                                                            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-colors">
+                                                            <Download className="w-3.5 h-3.5" /> 즐겨찾기 추가
                                                         </button>
-                                                    )}
+                                                        {deletingMarketId === portfolio.id ? (
+                                                            <div className="flex gap-1 items-center">
+                                                                <input placeholder="PIN" type="password" maxLength={8}
+                                                                    value={deletePin}
+                                                                    onChange={e => { setDeletePin(e.target.value); setDeleteError(''); }}
+                                                                    className="bg-black/60 border border-rose-500/30 rounded px-2 py-1 text-xs text-white w-20 focus:outline-none focus:ring-1 focus:ring-rose-500" />
+                                                                {deleteError && <span className="text-[10px] text-rose-400 whitespace-nowrap">{deleteError}</span>}
+                                                                <button onClick={() => handleMarketDelete(portfolio.id)}
+                                                                    className="px-2 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs font-bold">삭제</button>
+                                                                <button onClick={() => { setDeletingMarketId(null); setDeletePin(''); setDeleteError(''); }}
+                                                                    className="px-2 py-1 bg-white/10 text-gray-300 rounded text-xs">취소</button>
+                                                            </div>
+                                                        ) : (
+                                                            <button onClick={() => { setDeletingMarketId(portfolio.id); setDeleteError(''); }}
+                                                                className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-rose-500/10 text-gray-500 hover:text-rose-400 border border-white/5 hover:border-rose-500/30 rounded-lg text-xs transition-colors">
+                                                                <Lock className="w-3 h-3" /> 삭제
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
+                                                {/* 드릴다운: 전체 종목 리스트 */}
+                                                {isExpanded && (
+                                                    <div className="px-4 pb-4 border-t border-white/10 pt-3">
+                                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                                            {portfolio.items.map((item: any, idx: number) => (
+                                                                <div key={item.code} className="flex items-center gap-2 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2">
+                                                                    <span className="text-[10px] text-gray-600 font-mono w-4 flex-shrink-0">{idx + 1}</span>
+                                                                    <div className="min-w-0">
+                                                                        <p className="text-xs text-white font-medium leading-snug break-keep">{item.name}</p>
+                                                                        <p className="text-[10px] text-gray-500 font-mono">{item.code}</p>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
