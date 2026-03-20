@@ -20,30 +20,43 @@ from db.models import Base
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup DB schemas
+    from sqlalchemy import text
+    from db.database import DATABASE_URL
+
+    _is_sqlite = DATABASE_URL.startswith("sqlite")
+
+    # ── 1. 테이블 생성 (별도 트랜잭션) ─────────────────────────────────────
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-        # Add shares column safely if it doesn't exist
-        try:
-            from sqlalchemy import text
-
-            await conn.execute(
-                text("ALTER TABLE etf_holdings ADD COLUMN shares INTEGER")
-            )
-            print("Successfully added 'shares' column to etf_holdings")
-        except Exception:
-            # Column likely already exists
-            pass
-
-    # ETF 성과 컬럼 마이그레이션 (return_1m/3m/6m/1y, volatility, sharpe, perf_updated_at)
+    # ── 2. shares 컬럼 추가 (별도 트랜잭션 — PostgreSQL 호환) ───────────────
     try:
-        from migrate_add_perf_columns import migrate as _migrate_perf
-        _migrate_perf()
+        async with engine.begin() as conn:
+            if _is_sqlite:
+                # SQLite: IF NOT EXISTS 미지원 → 예외 무시
+                try:
+                    await conn.execute(text("ALTER TABLE etf_holdings ADD COLUMN shares INTEGER"))
+                    print("Successfully added 'shares' column to etf_holdings (SQLite)")
+                except Exception:
+                    pass  # 이미 존재
+            else:
+                # PostgreSQL: ADD COLUMN IF NOT EXISTS (9.6+)
+                await conn.execute(text("ALTER TABLE etf_holdings ADD COLUMN IF NOT EXISTS shares INTEGER"))
     except Exception as _e:
-        print(f"[Startup] ETF perf column migration skipped: {_e}")
+        print(f"[Startup] shares column migration skipped: {_e}")
 
-    # 서버 시작 시 버전 자동 기록 (배포/재시작 즉시 반영)
+    # ── 3. ETF 성과 컬럼 마이그레이션 (SQLite 전용 스크립트) ─────────────────
+    if _is_sqlite:
+        try:
+            from migrate_add_perf_columns import migrate as _migrate_perf
+            _migrate_perf()
+        except Exception as _e:
+            print(f"[Startup] ETF perf column migration skipped: {_e}")
+    else:
+        # PostgreSQL: 성과 컬럼은 models.py / create_all 로 이미 생성됨
+        print("[Startup] PostgreSQL: perf columns managed by create_all, skipping SQLite migration script.")
+
+    # ── 4. 버전 기록 ────────────────────────────────────────────────────────
     try:
         from core.scheduler import update_app_version
         await update_app_version("[startup]")
