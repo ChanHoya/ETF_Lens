@@ -117,14 +117,14 @@ export default function CompareChart({
         if (n.includes('코스닥') || n.includes('KOSDAQ') || n.includes('코스닥150')) return 'KOSDAQ';
         // 한국형 특수: 다우존스 추종이지만 한국 배당
         if (n.includes('코리아배당') || n.includes('KOREA배당')) return 'KOSPI';
-        // 나스닥/성장형 커버드콜
+        // 나스닥/성장형 (빅테크 포함)
         if (n.includes('나스닥') || n.includes('NASDAQ') || n.includes('QQQ') ||
-            n.includes('성장커버드콜') || n.includes('성장 커버드콜')) return 'Nasdaq';
-        // 미국 지수 (S&P500 계열)
-        if (n.includes('S&P') || n.includes('SP500') || n.includes('다우존스') || n.includes('DOWJONES')) return 'S&P500';
+            n.includes('빅테크') || n.includes('성장커버드콜') || n.includes('성장 커버드콜')) return 'Nasdaq';
+        // 미국 지수 (S&P500 계열): "S&P", "SP500", "500" 포함
+        if (n.includes('S&P') || n.includes('SP500') || n.includes('500') || n.includes('다우존스') || n.includes('DOWJONES')) return 'S&P500';
         if (n.includes('미국') || n.includes('US ') || n.includes('TIGER 미') || n.includes('ACE 미') || n.includes('KODEX 미')) return 'S&P500';
-        // 한국 지수 (기본)
-        if (n.includes('코스피') || n.includes('KOSPI') || n.includes('코리아') || n.includes('밸류업') || n.includes('200ITR')) return 'KOSPI';
+        // 한국 지수 (기본): "200" 포함 → KOSPI 200 계열
+        if (n.includes('코스피') || n.includes('KOSPI') || n.includes('코리아') || n.includes('밸류업') || n.includes('200')) return 'KOSPI';
         return 'KOSPI';
     };
 

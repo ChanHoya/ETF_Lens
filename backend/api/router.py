@@ -555,7 +555,8 @@ async def fetch_benchmark_hybrid(symbol: str, db: AsyncSession, fallback_coro):
     """
     벤치마크 데이터 fetch 전략:
     1순위: Yahoo Finance (10분 캐시) → 항상 최신 데이터
-    2순위: DB → Yahoo Finance 실패 시 안전망 (Render 재시작 후 DB stale 방지)
+    2순위: DB → Yahoo Finance 실패 시 안전망
+    3순위: FinanceDataReader → DB도 없을 때 최후 수단
     """
     import pandas as pd
 
@@ -580,6 +581,26 @@ async def fetch_benchmark_hybrid(symbol: str, db: AsyncSession, fallback_coro):
         dates = [r.date for r in rows]
         closes = [r.close for r in rows]
         return pd.DataFrame({"Close": closes}, index=pd.to_datetime(dates))
+
+    # 3. FinanceDataReader fallback (US 지수에만 적용)
+    _fdr_symbol_map = {
+        "^GSPC": "S&P500",
+        "^IXIC": "NASDAQ",
+        "^DJI": "DJI",
+    }
+    if symbol in _fdr_symbol_map:
+        try:
+            from datetime import timedelta
+            start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
+            fdr_df = await asyncio.to_thread(fdr.DataReader, _fdr_symbol_map[symbol], start_str)
+            if fdr_df is not None and not fdr_df.empty:
+                close_col = "Close" if "Close" in fdr_df.columns else fdr_df.columns[0]
+                df_out = pd.DataFrame({"Close": fdr_df[close_col]}).dropna()
+                if not df_out.empty:
+                    logger.info(f"[bench] {symbol} FinanceDataReader fallback 성공: {len(df_out)}행")
+                    return df_out
+        except Exception as e:
+            logger.warning(f"[bench] {symbol} fdr fallback failed: {e}")
 
     return pd.DataFrame()
 

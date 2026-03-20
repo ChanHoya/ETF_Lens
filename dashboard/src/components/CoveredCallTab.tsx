@@ -26,7 +26,7 @@ const createETFEntry = (etf: any, id: number) => {
     // Specific match Priority
     if (n.includes('국채') || n.includes('장기채') || n.includes('tlt') || n.includes('만기')) { indexName = '미국채 20년+ (TLT)'; indexTicker = 'TLT'; country = 'US'; }
     else if (n.includes('200')) { indexName = '코스피 200 (TR)'; indexTicker = '^KS200'; country = 'KR'; }
-    else if (n.includes('s&p') || n.includes('sp500')) { indexName = 'S&P 500 (TR)'; indexTicker = '^SP500TR'; country = 'US'; }
+    else if (n.includes('s&p') || n.includes('sp500') || (n.includes('500') && n.includes('미국'))) { indexName = 'S&P 500 (TR)'; indexTicker = '^SP500TR'; country = 'US'; }
     else if (n.includes('나스닥') || n.includes('테크') || n.includes('빅테크') || n.includes('qyld') || n.includes('ndx')) { indexName = '나스닥 100 (NDX)'; indexTicker = '^NDX'; country = 'US'; }
     else if (n.includes('다우존스') || n.includes('schd') || (n.includes('배당') && n.includes('미국'))) { indexName = '다우존스 미국 배당 100'; indexTicker = 'SCHD'; country = 'US'; }
     else if (n.includes('미국')) { indexName = 'S&P 500 (TR)'; indexTicker = '^SP500TR'; country = 'US'; }
