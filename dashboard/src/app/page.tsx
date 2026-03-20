@@ -1313,6 +1313,8 @@ export default function Home() {
                 initialEtfs={data?.raw_data?.filter((etf: any) =>
                   etf.etf_name?.includes('커버드콜')
                 ) || []}
+                setSelectedDetailEtf={setSelectedDetailEtf}
+                rawData={data?.raw_data || []}
               />
             </div>
           )

@@ -84,7 +84,15 @@ const generateMockChartData = (period: string) => {
     return data;
 };
 
-export default function CoveredCallTab({ initialEtfs = [] }: { initialEtfs?: any[] }) {
+export default function CoveredCallTab({
+    initialEtfs = [],
+    setSelectedDetailEtf,
+    rawData = [],
+}: {
+    initialEtfs?: any[];
+    setSelectedDetailEtf?: (etf: any) => void;
+    rawData?: any[];
+}) {
     const [searchTerm, setSearchTerm] = useState('');
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [etfDictionary, setEtfDictionary] = useState<any[]>([]);
@@ -639,7 +647,20 @@ export default function CoveredCallTab({ initialEtfs = [] }: { initialEtfs?: any
                                         </td>
                                         <td className="py-2 px-4">
                                             <div className="flex flex-col">
-                                                <span className={`font - bold transition - colors ${isSelected ? 'text-indigo-300' : 'text-gray-100 group-hover:text-indigo-300'} `}>{item.name}</span>
+                                                <span
+                                                    className={`font-bold transition-colors cursor-pointer hover:text-indigo-300 hover:underline ${isSelected ? 'text-indigo-300' : 'text-gray-100'}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!setSelectedDetailEtf) return;
+                                                        const found = rawData.find((etf: any) => etf.etf_code === item.ticker);
+                                                        setSelectedDetailEtf(found ?? {
+                                                            etf_name: item.name,
+                                                            etf_code: item.ticker,
+                                                            basic_info: {},
+                                                            holdings: [],
+                                                        });
+                                                    }}
+                                                >{item.name}</span>
                                                 <span className="text-xs text-gray-500 font-mono mt-0.5">{item.ticker} | {item.issuer}</span>
                                             </div>
                                         </td>
