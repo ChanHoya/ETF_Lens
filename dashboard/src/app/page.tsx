@@ -661,7 +661,7 @@ export default function Home() {
     const etfKey = selectedDetailEtf.etf_name;
     const isKosdaq = etfKey.toUpperCase().includes('코스닥') || etfKey.toUpperCase().includes('KOSDAQ');
     const isNasdaq = etfKey.toUpperCase().includes('나스닥') || etfKey.toUpperCase().includes('NASDAQ');
-    const isSP500 = etfKey.toUpperCase().includes('S&P') || etfKey.toUpperCase().includes('S&P500') || etfKey.includes('미국배당');
+    const isSP500 = etfKey.toUpperCase().includes('S&P') || etfKey.toUpperCase().includes('S&P500') || (etfKey.includes('배당') && etfKey.includes('미국'));
     const isUS = etfKey.includes('미국') || isNasdaq || isSP500;
 
     let benchmarkName = 'to KOSPI(좌)';

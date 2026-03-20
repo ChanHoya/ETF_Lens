@@ -28,7 +28,7 @@ const createETFEntry = (etf: any, id: number) => {
     else if (n.includes('200')) { indexName = '코스피 200 (TR)'; indexTicker = '^KS200'; country = 'KR'; }
     else if (n.includes('s&p') || n.includes('sp500')) { indexName = 'S&P 500 (TR)'; indexTicker = '^SP500TR'; country = 'US'; }
     else if (n.includes('나스닥') || n.includes('테크') || n.includes('빅테크') || n.includes('qyld') || n.includes('ndx')) { indexName = '나스닥 100 (NDX)'; indexTicker = '^NDX'; country = 'US'; }
-    else if (n.includes('다우존스') || n.includes('배당') || n.includes('schd')) { indexName = '다우존스 미국 배당 100'; indexTicker = 'SCHD'; country = 'US'; }
+    else if (n.includes('다우존스') || n.includes('schd') || (n.includes('배당') && n.includes('미국'))) { indexName = '다우존스 미국 배당 100'; indexTicker = 'SCHD'; country = 'US'; }
     else if (n.includes('미국')) { indexName = 'S&P 500 (TR)'; indexTicker = '^SP500TR'; country = 'US'; }
     else if (n.includes('금') || n.includes('골드') || n.includes('gold')) { indexName = '골드 (GLD)'; indexTicker = 'GLD'; country = 'US'; }
     else if (n.includes('은') || n.includes('실버') || n.includes('silver')) { indexName = '은 (SLV)'; indexTicker = 'SLV'; country = 'US'; }
