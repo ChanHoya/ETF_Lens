@@ -24,7 +24,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["macro_compass"])
 
 # 스마트 캐시: 미국 장 마감(KST 06:00) 이후에는 당일 데이터 보존, 장 중에는 1시간
+_MAX_CACHE_SIZE = 50  # 캐시 크기 제한: 최대 50개 항목 (메모리 절감)
 _compass_cache: dict = {}
+
+
+def _cache_set(cache: dict, key: str, value: object) -> None:
+    """캐시 저장 (최대 50개 제한): 초과 시 가장 오래된 항목 제거 후 저장"""
+    if key not in cache and len(cache) >= _MAX_CACHE_SIZE:
+        oldest = next(iter(cache))
+        del cache[oldest]
+    cache[key] = value
 
 
 def _get_cache_ttl() -> int:
@@ -664,7 +673,7 @@ async def get_macro_compass():
         },
     }
 
-    _compass_cache[cache_key] = (result, now_ts)
+    _cache_set(_compass_cache, cache_key, (result, now_ts))
     return result
 
 # ---------------------------------------------------------------------------
@@ -818,7 +827,7 @@ async def get_ai_insight(
             "insight": "Gemini API 키가 설정되지 않아 AI 인사이트를 생성할 수 없습니다.",
             "analyzed_at": analyzed_at,
         }
-        _insight_cache[cache_key] = (result, now_ts)
+        _cache_set(_insight_cache, cache_key, (result, now_ts))
         return result
 
     # 2. 실제 ETF 목록 조회 (fdr → DB(충분할 때만))
@@ -1018,7 +1027,7 @@ async def get_ai_insight(
         "kr_phase": kr.get("phase"),
         "analyzed_at": analyzed_at,
     }
-    _insight_cache[cache_key] = (result, now_ts)
+    _cache_set(_insight_cache, cache_key, (result, now_ts))
     return result
 
 

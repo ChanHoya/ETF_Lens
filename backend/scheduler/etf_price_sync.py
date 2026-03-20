@@ -12,14 +12,15 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 50          # yfinance 동시 티커 수
-SEMAPHORE_LIMIT = 3      # 동시 배치 실행 수
+BATCH_SIZE = 30          # yfinance 동시 티커 수 (50→30: 메모리 절감)
+SEMAPHORE_LIMIT = 2      # 동시 배치 실행 수 (3→2: 동시 pandas DataFrame 감소)
 RETRY_LIMIT = 2          # 실패 시 재시도
 
 
 async def sync_etf_prices_yfinance() -> int:
     """
     pykrx로 ETF 목록 수집 → yfinance로 최근 1년 종가 배치 다운로드 → DB 저장.
+    메모리 절감: 배치마다 즉시 DB 저장 후 데이터 해제 (전체 누적 방식 제거).
     반환값: 성공적으로 저장된 ETF 종목 수
     """
     from db.database import AsyncSessionLocal
@@ -78,7 +79,7 @@ async def sync_etf_prices_yfinance() -> int:
         return 0
 
 
-    # 2. yfinance 배치 다운로드
+    # 2. yfinance 배치 다운로드 + 즉시 DB 저장 (메모리 스트리밍 방식)
     import yfinance as yf
 
     yf_tickers = [f"{t.zfill(6)}.KS" for t in tickers_krx]
@@ -89,9 +90,11 @@ async def sync_etf_prices_yfinance() -> int:
     end_date = datetime.now().strftime("%Y-%m-%d")
     start_date = (datetime.now() - timedelta(days=380)).strftime("%Y-%m-%d")
 
-    all_price_rows: list[dict] = []  # {"code": str, "date": str, "close": float}
+    saved_codes = 0
 
-    async def fetch_batch(batch: list[str]) -> None:
+    async def fetch_and_save_batch(batch: list[str]) -> None:
+        """배치 다운로드 → 즉시 DB 저장 → 메모리 해제 (누적 없음)"""
+        nonlocal saved_codes
         async with sem:
             for attempt in range(RETRY_LIMIT + 1):
                 try:
@@ -108,28 +111,23 @@ async def sync_etf_prices_yfinance() -> int:
 
                     import pandas as pd
 
-                    if isinstance(raw.columns, pd.MultiIndex):
-                        # 최신 yfinance: (Price, Ticker) 형태
-                        # 구버전 yfinance + group_by: (Ticker, Price) 형태
-                        lvl0 = raw.columns.get_level_values(0).unique().tolist()
+                    # 배치 내 코드별 price 딕셔너리 수집
+                    batch_by_code: dict[str, list[dict]] = {}
 
+                    if isinstance(raw.columns, pd.MultiIndex):
+                        lvl0 = raw.columns.get_level_values(0).unique().tolist()
                         price_fields = {"Close", "Open", "High", "Low", "Volume"}
-                        # 레벨0이 가격 필드면 (Price, Ticker) → Close 행 추출
                         if any(v in price_fields for v in lvl0):
                             if "Close" in lvl0:
                                 close_df = raw["Close"]
                                 for col in close_df.columns:
                                     code = str(col).replace(".KS", "").zfill(6)
                                     series = close_df[col].dropna()
-                                    for dt, price in series.items():
-                                        if float(price) > 0:
-                                            all_price_rows.append({
-                                                "code": code,
-                                                "date": str(dt.date()),
-                                                "close": float(price),
-                                            })
+                                    batch_by_code[code] = [
+                                        {"date": str(dt.date()), "close": float(price)}
+                                        for dt, price in series.items() if float(price) > 0
+                                    ]
                         else:
-                            # (Ticker, Price) 형태
                             for ticker in batch:
                                 if ticker not in lvl0:
                                     continue
@@ -138,23 +136,41 @@ async def sync_etf_prices_yfinance() -> int:
                                 except Exception:
                                     continue
                                 code = ticker.replace(".KS", "").zfill(6)
-                                for dt, price in series.items():
-                                    if float(price) > 0:
-                                        all_price_rows.append({
-                                            "code": code,
-                                            "date": str(dt.date()),
-                                            "close": float(price),
-                                        })
+                                batch_by_code[code] = [
+                                    {"date": str(dt.date()), "close": float(price)}
+                                    for dt, price in series.items() if float(price) > 0
+                                ]
                     elif "Close" in raw.columns:
-                        # 단일 티커
                         code = batch[0].replace(".KS", "").zfill(6)
-                        for dt, price in raw["Close"].dropna().items():
-                            if float(price) > 0:
-                                all_price_rows.append({
-                                    "code": code,
-                                    "date": str(dt.date()),
-                                    "close": float(price),
-                                })
+                        batch_by_code[code] = [
+                            {"date": str(dt.date()), "close": float(price)}
+                            for dt, price in raw["Close"].dropna().items() if float(price) > 0
+                        ]
+
+                    # pandas 메모리 즉시 해제
+                    del raw
+
+                    # DB 저장 (배치 단위로 바로 flush)
+                    if batch_by_code:
+                        async with AsyncSessionLocal() as db:
+                            for code, price_rows in batch_by_code.items():
+                                if not price_rows:
+                                    continue
+                                try:
+                                    await db.execute(
+                                        delete(ETFDailyPrice)
+                                        .where(ETFDailyPrice.code == code)
+                                        .where(ETFDailyPrice.date >= start_date)
+                                    )
+                                    db.add_all([
+                                        ETFDailyPrice(code=code, date=r["date"], close=r["close"])
+                                        for r in price_rows
+                                    ])
+                                    saved_codes += 1
+                                except Exception as e:
+                                    logger.warning(f"[ETF Price Sync] {code} DB 저장 오류: {e}")
+                            await db.commit()
+
                     return
                 except Exception as e:
                     if attempt < RETRY_LIMIT:
@@ -162,38 +178,9 @@ async def sync_etf_prices_yfinance() -> int:
                     else:
                         logger.warning(f"[ETF Price Sync] 배치 실패 (재시도 {attempt}): {e}")
 
-    logger.info(f"[ETF Price Sync] {len(batches)}개 배치 다운로드 시작...")
-    await asyncio.gather(*[fetch_batch(b) for b in batches])
-    logger.info(f"[ETF Price Sync] 수집 완료: {len(all_price_rows):,}개 가격 레코드")
+    logger.info(f"[ETF Price Sync] {len(batches)}개 배치 다운로드+저장 시작 (스트리밍 방식)...")
+    await asyncio.gather(*[fetch_and_save_batch(b) for b in batches])
 
-    if not all_price_rows:
-        logger.error("[ETF Price Sync] 수집된 데이터 없음. DB 저장 생략.")
-        return 0
-
-    # 3. DB 저장 (코드별 upsert: 기존 삭제 후 재삽입)
-    from collections import defaultdict
-    by_code: dict[str, list[dict]] = defaultdict(list)
-    for row in all_price_rows:
-        by_code[row["code"]].append(row)
-
-    saved_codes = 0
-    async with AsyncSessionLocal() as db:
-        for code, rows in by_code.items():
-            try:
-                # 기존 1년치 가격 삭제 후 재삽입 (중복 방지)
-                await db.execute(
-                    delete(ETFDailyPrice)
-                    .where(ETFDailyPrice.code == code)
-                    .where(ETFDailyPrice.date >= start_date)
-                )
-                db.add_all([
-                    ETFDailyPrice(code=r["code"], date=r["date"], close=r["close"])
-                    for r in rows
-                ])
-                saved_codes += 1
-            except Exception as e:
-                logger.warning(f"[ETF Price Sync] {code} DB 저장 오류: {e}")
-        await db.commit()
-
-    logger.info(f"[ETF Price Sync] DB 저장 완료: {saved_codes}개 종목")
+    logger.info(f"[ETF Price Sync] 완료: {saved_codes}개 종목 저장")
     return saved_codes
+
