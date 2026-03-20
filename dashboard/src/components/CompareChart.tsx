@@ -247,8 +247,9 @@ export default function CompareChart({
                                 </div>
 
                                 {includedKeys.length > 0 ? (
-                                    <div className="h-[400px] w-full relative z-10">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                    <>
+                                        <div className="h-[400px] w-full relative z-10">
+                                            <ResponsiveContainer width="100%" height="100%">
                                             <LineChart data={simulatedChartData} margin={{ top: 5, right: 55, left: 10, bottom: 5 }}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                                 <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 13 }} tickMargin={15} minTickGap={50} stroke="rgba(255,255,255,0.05)" axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} />
@@ -291,9 +292,10 @@ export default function CompareChart({
                                                 })}
                                             </LineChart>
                                         </ResponsiveContainer>
-                                        {/* 커스텀 분리 범례: ETF 종목 | 지수 */}
-                                        <ChartLegend etfKeys={includedKeys} />
                                     </div>
+                                    {/* 커스텀 분리 범례: ETF 종목 | 지수 (고정높이 div 외부) */}
+                                    <ChartLegend etfKeys={includedKeys} />
+                                    </>
                                 ) : (
                                     <div className="h-24 flex items-center justify-center text-sm text-gray-500">
                                         표시 가능한 종목이 없습니다 (모든 종목이 5만원 초과).
@@ -377,9 +379,9 @@ export default function CompareChart({
                                             })}
                                         </LineChart>
                                     </ResponsiveContainer>
-                                    {/* 커스텀 분리 범례: ETF 종목 | 지수 */}
-                                    <ChartLegend etfKeys={data.visual_data.etf_keys} />
                                 </div>
+                                {/* 커스텀 분리 범례: ETF 종목 | 지수 (고정높이 div 외부) */}
+                                <ChartLegend etfKeys={data.visual_data.etf_keys} />
                             </section>
                         )}
 

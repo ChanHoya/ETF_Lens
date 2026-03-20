@@ -336,6 +336,43 @@ async def flush_cache():
     return {"cleared": count, "message": f"{count}개 캐시 항목 삭제 완료. 다음 요청 시 fresh 데이터를 가져옵니다."}
 
 
+async def fetch_korean_index_pykrx(ticker_id: str, symbol: str, years: int = 10):
+    """pykrx로 KOSPI(1001)/KOSDAQ(2001) 지수 fetch – ETF 데이터와 동일 소스, 당일 포함."""
+    cache_key = f"pykrx_idx_{symbol}_{years}"
+    cached = get_bench_cached(cache_key)
+    if cached is not None:
+        return cached
+
+    import pandas as pd
+    from datetime import datetime, timedelta
+
+    def _fetch():
+        try:
+            from pykrx import stock as krx  # type: ignore
+            end = datetime.now()
+            start = end - timedelta(days=years * 365 + 10)
+            df = krx.get_index_ohlcv_by_date(
+                start.strftime("%Y%m%d"),
+                end.strftime("%Y%m%d"),
+                ticker_id,
+            )
+            if df is None or df.empty:
+                return pd.DataFrame()
+            df.index = pd.to_datetime(df.index)
+            if df.index.tz is not None:
+                df.index = df.index.tz_localize(None)
+            # 종가 컬럼 이름을 Close로 통일
+            close_col = "종가" if "종가" in df.columns else df.columns[3]
+            result = pd.DataFrame({"Close": df[close_col]})
+            set_bench_cached(cache_key, result)
+            return result
+        except Exception as e:
+            logger.error(f"pykrx index {ticker_id} fetch failed: {e}")
+            return pd.DataFrame()
+
+    return await asyncio.to_thread(_fetch)
+
+
 async def fetch_yahoo_finance(ticker: str, period_years: int = 10):
     cache_key = f"yahoo_{ticker}_{period_years}"
     cached = get_bench_cached(cache_key)
@@ -552,10 +589,10 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
 
     if not request.skip_chart:
         results.append(
-            await fetch_benchmark_hybrid("^KS11", db, fetch_yahoo_finance("^KS11", 10))
+            await fetch_benchmark_hybrid("^KS11", db, fetch_korean_index_pykrx("1001", "^KS11", 10))
         )
         results.append(
-            await fetch_benchmark_hybrid("^KQ11", db, fetch_yahoo_finance("^KQ11", 10))
+            await fetch_benchmark_hybrid("^KQ11", db, fetch_korean_index_pykrx("2001", "^KQ11", 10))
         )
         results.append(
             await fetch_benchmark_hybrid("^GSPC", db, fetch_yahoo_finance("^GSPC", 10))
@@ -843,10 +880,10 @@ async def get_chart_data(request: CompareRequest, db: AsyncSession = Depends(get
         )
 
     results.append(
-        await fetch_benchmark_hybrid("^KS11", db, fetch_yahoo_finance("^KS11", 10))
+        await fetch_benchmark_hybrid("^KS11", db, fetch_korean_index_pykrx("1001", "^KS11", 10))
     )
     results.append(
-        await fetch_benchmark_hybrid("^KQ11", db, fetch_yahoo_finance("^KQ11", 10))
+        await fetch_benchmark_hybrid("^KQ11", db, fetch_korean_index_pykrx("2001", "^KQ11", 10))
     )
     results.append(
         await fetch_benchmark_hybrid("^GSPC", db, fetch_yahoo_finance("^GSPC", 10))
