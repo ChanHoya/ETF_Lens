@@ -157,12 +157,14 @@ async def check_health(db: AsyncSession = Depends(get_db)):
         raise last_err or ValueError("All Gemini models failed")
 
     def _oecd_check():
+        # 2024년 이후 OECD 신 API 엔드포인트 (sdmx.oecd.org)
         url = (
-            "https://stats.oecd.org/SDMX-JSON/data/MEI_CLI/"
-            "LOLITOAASTSAM.KOR.M/all?startTime=2024-01&endTime=2024-06"
+            "https://sdmx.oecd.org/public/rest/data/"
+            "OECD.SDD.STES,DSD_STES@DF_CLI,4.0/"
+            "KOR.M.LI.AA.A?startPeriod=2024-01&endPeriod=2024-06"
         )
-        resp = requests.get(url, timeout=8, headers={"Accept": "application/json"})
-        if resp.status_code != 200 or len(resp.text) < 100:
+        resp = requests.get(url, timeout=12, headers={"Accept": "application/json"})
+        if resp.status_code != 200 or len(resp.text) < 50:
             raise ValueError(f"OECD HTTP {resp.status_code}")
 
     def _fred_check():
@@ -209,7 +211,9 @@ async def check_health(db: AsyncSession = Depends(get_db)):
     }
 
     # FRED는 한국 네트워크에서 자주 차단됨 → warning(비핵심)으로 분류
-    WARNING_ONLY = {"FRED"}
+    # Gemini: API 키 미설정 또는 쿼터 초과 → 채팅 전용, 핵심 분석 기능에 영향 없음
+    # OECD CLI: 실제 앱 데이터에 미사용 (헬스 체크 전용) → warning 분류
+    WARNING_ONLY = {"FRED", "Gemini", "OECD CLI"}
 
     for svc, result in checks.items():
         if not result["ok"] and svc not in WARNING_ONLY:
