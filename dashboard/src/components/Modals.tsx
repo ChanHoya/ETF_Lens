@@ -442,12 +442,15 @@ export default function Modals({
                                         </div>
                                         <div className="flex-1 min-h-[250px] w-full">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <ComposedChart data={detailChartData.price} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+                                                <ComposedChart key={`price-${popupPeriod}`} data={detailChartData.price} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                                                     <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 11 }} tickMargin={10} stroke="#1e293b" minTickGap={30} />
-                                                    <YAxis yAxisId="left" tick={{ fill: '#3b82f6', fontSize: 11 }} tickFormatter={(val) => `${val}%`} stroke="#1e293b" axisLine={false} domain={detailChartData.domainLeft as any} />
-                                                    <YAxis yAxisId="right" orientation="right" tick={{ fill: '#ef4444', fontSize: 11 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="#1e293b" axisLine={false} domain={detailChartData.domainRight as any} />
-                                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
+                                                    <YAxis yAxisId="left" tick={{ fill: '#3b82f6', fontSize: 11 }} tickFormatter={(val) => `${val}%`} stroke="#1e293b" axisLine={false} domain={detailChartData.domainLeft as any} width={40} />
+                                                    <YAxis yAxisId="right" orientation="right" width={52} tick={{ fill: '#ef4444', fontSize: 11 }} tickFormatter={(val) => val >= 10000 ? `${(val/1000).toFixed(1)}K` : val.toLocaleString()} stroke="#1e293b" axisLine={false} domain={detailChartData.domainRight as any} />
+                                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} formatter={(val: any, name: string) => {
+                                                        if (name === detailChartData.benchmarkName) return [`${Number(val).toFixed(2)}%`, name];
+                                                        return [Number(val).toLocaleString() + '원', name];
+                                                    }} />
                                                     <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                                                     <Line yAxisId="left" type="monotone" dataKey="rel_yield" name={detailChartData.benchmarkName} stroke="#3b82f6" strokeWidth={2} dot={false} />
                                                     <Line yAxisId="right" type="monotone" dataKey="price" name={selectedDetailEtf.etf_name} stroke="#ef4444" strokeWidth={2} dot={false} />
