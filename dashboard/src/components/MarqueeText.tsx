@@ -1,19 +1,17 @@
 /**
- * MarqueeText — 텍스트가 컨테이너보다 길 경우 마우스오버 시 좌→우 스크롤(마키) 효과.
- * 끝에 도달하면 처음부터 무한 반복. hover 시 행 하이라이트는 부모에서 처리.
+ * MarqueeText — hover 시 텍스트가 왼쪽으로 무한 스크롤되는 마키 컴포넌트.
+ * overflow:hidden 컨테이너의 scrollWidth 제한을 우회하기 위해
+ * 절대위치 hidden span으로 실제 텍스트 폭을 별도 측정합니다.
  */
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 
 interface MarqueeTextProps {
-  /** 표시할 텍스트 */
   text: string;
-  /** 추가 className (컨테이너에 적용) */
   className?: string;
-  /** 인라인 스타일 (컨테이너에 적용) */
   style?: React.CSSProperties;
-  /** 스크롤 속도 px/s (기본 60) */
+  /** 스크롤 속도 px/s (기본 55) */
   speed?: number;
 }
 
@@ -21,49 +19,72 @@ export default function MarqueeText({
   text,
   className = '',
   style,
-  speed = 60,
+  speed = 55,
 }: MarqueeTextProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const measureRef  = useRef<HTMLSpanElement>(null);
+
   const [isHovered, setIsHovered] = useState(false);
   const [isOverflow, setIsOverflow] = useState(false);
   const [duration, setDuration] = useState(4);
 
-  // 텍스트가 컨테이너보다 긴지 체크
+  const check = useCallback(() => {
+    const container = containerRef.current;
+    const measure   = measureRef.current;
+    if (!container || !measure) return;
+
+    // measureRef 는 overflow 제약 없이 실제 텍스트 폭 반환
+    const textW      = measure.getBoundingClientRect().width;
+    const containerW = container.getBoundingClientRect().width;
+
+    const overflows = textW > containerW + 1;
+    setIsOverflow(overflows);
+    if (overflows) {
+      // 전체 스크롤 거리: 텍스트1 + gap(48px) + 텍스트2 = 2*(textW+48)
+      // → animation 은 0 → -50% (= -(textW+48)) 이므로 duration = (textW+48)/speed
+      setDuration(Math.max(2, (textW + 48) / speed));
+    }
+  }, [speed]);
+
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    // overflow:hidden 상태로는 scrollWidth 비교로 판단
-    const check = () => {
-      const overflows = el.scrollWidth > el.clientWidth + 2; // +2 px tolerance
-      setIsOverflow(overflows);
-      if (overflows) {
-        // 스크롤 거리 = 텍스트 폭 + 구분 간격(48px)
-        const scrollDist = el.scrollWidth + 48;
-        setDuration(Math.max(2, scrollDist / speed));
-      }
-    };
-
     check();
-    // ResizeObserver로 컨테이너 크기 변경 시 재체크
     const ro = new ResizeObserver(check);
-    ro.observe(el);
+    if (containerRef.current) ro.observe(containerRef.current);
     return () => ro.disconnect();
-  }, [text, speed]);
+  }, [text, check]);
 
   const shouldAnimate = isHovered && isOverflow;
 
   return (
     <div
       ref={containerRef}
-      className={`overflow-hidden whitespace-nowrap ${className}`}
+      className={`overflow-hidden relative ${className}`}
       style={style}
       title={text}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {/* 숨겨진 측정 전용 span — overflow 제약 없음 */}
+      <span
+        ref={measureRef}
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          whiteSpace: 'nowrap',
+          visibility: 'hidden',
+          pointerEvents: 'none',
+          fontSize: 'inherit',
+          fontWeight: 'inherit',
+          letterSpacing: 'inherit',
+        }}
+      >
+        {text}
+      </span>
+
       {shouldAnimate ? (
-        // 마키 모드: 텍스트 두 벌을 이어붙여 seamless 루프
+        /* 마키 모드: 텍스트 두 벌 + gap → seamless 루프 */
         <span
           style={{
             display: 'inline-block',
@@ -72,14 +93,15 @@ export default function MarqueeText({
           }}
         >
           {text}
-          {/* 구분 간격 */}
           <span style={{ display: 'inline-block', width: '3rem' }} />
           {text}
           <span style={{ display: 'inline-block', width: '3rem' }} />
         </span>
       ) : (
-        // 기본 모드: truncate
-        <span className="block truncate">{text}</span>
+        /* 기본 모드: truncate */
+        <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {text}
+        </span>
       )}
     </div>
   );

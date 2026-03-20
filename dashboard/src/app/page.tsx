@@ -614,9 +614,15 @@ export default function Home() {
     const currentSimState: any = {};
 
     keys.forEach((k: string, idx: number) => {
+      // 실제 TTM 배당률을 시드값으로 사용 (없으면 랜덤)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const matchedEtf = data?.raw_data?.find((e: any) => e.etf_name === k);
+      const divRaw = matchedEtf?.basic_info?.['최근 분배율(TTM)'] || '0.0%';
+      const realDiv = parseFloat(divRaw.replace(/[^0-9.]/g, '')) || Math.max(0.5, 2.5 + (Math.random() - 0.5) * 2);
+
       currentSimState[k] = {
         inflow: (idx + 1) * 200, // Starting simulated inflow
-        dividend: Math.max(0.5, 2.5 + (Math.random() - 0.5) * 2) // Starting simulated dividend
+        dividend: realDiv        // 실제 TTM 배당률 기반 시드
       };
     });
 
