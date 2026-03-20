@@ -499,6 +499,7 @@ async def fetch_benchmark_hybrid(symbol: str, db: AsyncSession, fallback_coro):
     from db.models import BenchmarkPrice
     from sqlalchemy import select
     import pandas as pd
+    from datetime import date
 
     res = await db.execute(
         select(BenchmarkPrice)
@@ -506,12 +507,38 @@ async def fetch_benchmark_hybrid(symbol: str, db: AsyncSession, fallback_coro):
         .order_by(BenchmarkPrice.id)
     )
     rows = res.scalars().all()
+
+    df_db = pd.DataFrame()
     if rows:
         dates = [r.date for r in rows]
         closes = [r.close for r in rows]
-        df = pd.DataFrame({"Close": closes}, index=pd.to_datetime(dates))
-        return df
-    # Fallback
+        df_db = pd.DataFrame({"Close": closes}, index=pd.to_datetime(dates))
+
+        # DB 최신 날짜 확인 → 2일 이상 지연 시 Yahoo Finance로 보완
+        last_db_date = pd.to_datetime(max(dates)).date()
+        today = date.today()
+        days_behind = (today - last_db_date).days
+
+        if days_behind <= 2:
+            # 충분히 최신 데이터 (주말 고려 2일 허용)
+            return df_db
+
+        # DB가 오래됨 → Yahoo Finance 최근 데이터로 보완 (fallback_coro 재활용)
+        logger.info(f"[bench] {symbol} DB last={last_db_date}, {days_behind}d behind → supplements from Yahoo")
+        try:
+            fresh_df = await fallback_coro
+            if fresh_df is not None and not fresh_df.empty:
+                # 최근 날짜는 Yahoo Finance 값 우선, 과거는 DB 값 사용
+                combined = pd.concat([df_db, fresh_df])
+                combined = combined[~combined.index.duplicated(keep='last')]
+                combined = combined.sort_index()
+                return combined
+        except Exception as e:
+            logger.warning(f"[bench] {symbol} Yahoo supplement failed: {e}")
+
+        return df_db
+
+    # DB에 데이터 없음 → Yahoo Finance fallback
     return await fallback_coro
 
 
