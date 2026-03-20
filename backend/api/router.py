@@ -496,50 +496,36 @@ async def fetch_etf_hybrid(
 
 
 async def fetch_benchmark_hybrid(symbol: str, db: AsyncSession, fallback_coro):
+    """
+    벤치마크 데이터 fetch 전략:
+    1순위: Yahoo Finance (10분 캐시) → 항상 최신 데이터
+    2순위: DB → Yahoo Finance 실패 시 안전망 (Render 재시작 후 DB stale 방지)
+    """
+    import pandas as pd
+
+    # 1. Yahoo Finance 우선 (10분 캐시로 빠름, 항상 최신)
+    try:
+        yf_df = await fallback_coro
+        if yf_df is not None and not yf_df.empty:
+            return yf_df
+    except Exception as e:
+        logger.warning(f"[bench] {symbol} Yahoo Finance failed: {e}, falling back to DB")
+
+    # 2. Yahoo Finance 실패 시 DB fallback
     from db.models import BenchmarkPrice
     from sqlalchemy import select
-    import pandas as pd
-    from datetime import date
-
     res = await db.execute(
         select(BenchmarkPrice)
         .where(BenchmarkPrice.symbol == symbol)
         .order_by(BenchmarkPrice.id)
     )
     rows = res.scalars().all()
-
-    df_db = pd.DataFrame()
     if rows:
         dates = [r.date for r in rows]
         closes = [r.close for r in rows]
-        df_db = pd.DataFrame({"Close": closes}, index=pd.to_datetime(dates))
+        return pd.DataFrame({"Close": closes}, index=pd.to_datetime(dates))
 
-        # DB 최신 날짜 확인 → 1일 이상 지연 시 Yahoo Finance로 보완
-        last_db_date = pd.to_datetime(max(dates)).date()
-        today = date.today()
-        days_behind = (today - last_db_date).days
-
-        if days_behind <= 1:
-            # 오늘 또는 어제 데이터 → 충분히 최신
-            return df_db
-
-        # DB가 오래됨 → Yahoo Finance 최근 데이터로 보완
-        logger.info(f"[bench] {symbol} DB last={last_db_date}, {days_behind}d behind → supplements from Yahoo")
-        try:
-            fresh_df = await fallback_coro
-            if fresh_df is not None and not fresh_df.empty:
-                # 최근 날짜는 Yahoo Finance 값 우선, 과거는 DB 값 사용
-                combined = pd.concat([df_db, fresh_df])
-                combined = combined[~combined.index.duplicated(keep='last')]
-                combined = combined.sort_index()
-                return combined
-        except Exception as e:
-            logger.warning(f"[bench] {symbol} Yahoo supplement failed: {e}")
-
-        return df_db
-
-    # DB에 데이터 없음 → Yahoo Finance fallback
-    return await fallback_coro
+    return pd.DataFrame()
 
 
 @router.post("/compare")
