@@ -7,6 +7,7 @@ import { API_BASE } from '@/lib/apiConfig';
 import { prefetchMonitorData } from '@/lib/monitorPrefetch';
 import CompareChart from "@/components/CompareChart";
 import CompareTable from "@/components/CompareTable";
+import MarqueeText from "@/components/MarqueeText";
 import Modals from "@/components/Modals";
 import DiscoverTab from "@/components/DiscoverTab";
 import CoveredCallTab from "@/components/CoveredCallTab";
@@ -1339,7 +1340,10 @@ export default function Home() {
                             <section key={etf.etf_code} className={`backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border ${borderColors[idx % borderColors.length]} ${bgColors[idx % bgColors.length]} flex flex-col relative overflow-hidden min-w-[200px]`}>
                               <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${glowColors[idx % glowColors.length]} to-transparent`} />
                               <h3 className="text-sm md:text-base lg:text-lg font-bold mb-4 flex items-center justify-between gap-2 cursor-pointer group" onClick={() => setSelectedDetailEtf(etf)}>
-                                <span className="truncate group-hover:underline group-hover:text-indigo-300 transition-colors" title={etf.etf_name}>{etf.etf_name}</span>
+                                <MarqueeText
+                                  text={etf.etf_name}
+                                  className="group-hover:underline group-hover:text-indigo-300 transition-colors flex-1 min-w-0"
+                                />
                                 <span className="text-[10px] sm:text-xs font-medium text-gray-400 bg-black/40 px-2 flex-shrink-0 py-0.5 rounded-full border border-white/5">TOP 50</span>
                               </h3>
 
@@ -1349,8 +1353,9 @@ export default function Home() {
                                   {etf.holdings.map((h: any, hIdx: number) => (
                                     <div key={h.ticker} className="flex flex-col gap-1 group">
                                       <div className="flex justify-between items-end text-[11px] sm:text-xs xl:text-[13px] mb-0.5">
-                                        <span className="font-medium text-gray-200 group-hover:text-white transition-colors truncate max-w-[75%]" title={h.ticker}>
-                                          <span className="text-gray-500 w-4 inline-block text-[10px] sm:text-[11px]">{hIdx + 1}.</span> {h.ticker}
+                                        <span className="font-medium text-gray-200 group-hover:text-white transition-colors max-w-[75%] flex items-center min-w-0">
+                                          <span className="text-gray-500 w-4 inline-block text-[10px] sm:text-[11px] flex-shrink-0">{hIdx + 1}.</span>
+                                          <MarqueeText text={h.ticker} className="ml-1 flex-1 min-w-0" />
                                         </span>
                                         <span className="font-bold text-gray-300 ml-1 flex-shrink-0">
                                           {h.weight > 0 ? `${h.weight.toFixed(2)}%` : (h.shares ? `${h.shares.toLocaleString()}주` : '0.00%')}

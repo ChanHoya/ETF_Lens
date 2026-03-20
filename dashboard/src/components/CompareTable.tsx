@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import MarqueeText from './MarqueeText';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from "recharts";
 
 type CompareTableProps = {
@@ -115,7 +116,10 @@ export default function CompareTable({
                                                 ? <span className="text-[8px] bg-rose-500/10 text-rose-400 px-1 py-0.5 rounded border border-rose-500/30 whitespace-nowrap">퇴직연금 불가</span>
                                                 : <span className="text-[8px] bg-emerald-500/10 text-emerald-400 px-1 py-0.5 rounded border border-emerald-500/30 whitespace-nowrap">연금 가능</span>
                                             }
-                                            <span className="group-hover:underline underline-offset-4 whitespace-nowrap text-[10px] xl:text-[11px] max-w-[100px] truncate block" title={etf.etf_name}>{etf.etf_name}</span>
+                                             <MarqueeText
+                                               text={etf.etf_name}
+                                               className="group-hover:underline underline-offset-4 text-[10px] xl:text-[11px] max-w-[100px]"
+                                             />
                                             <span className="text-[9px] text-gray-500 whitespace-nowrap">{etf.etf_code}</span>
                                         </div>
                                     </th>
@@ -319,7 +323,13 @@ export default function CompareTable({
                                                             if (matchedEtf) setSelectedDetailEtf(matchedEtf);
                                                         }}
                                                     >
-                                                        {cell}
+                                                        {j === 0 ? (
+                                                            <MarqueeText
+                                                              text={cell}
+                                                              className="font-bold w-full"
+                                                              style={{ color: rowColor, ...(isRowHovered ? { textShadow: `0 0 18px ${rowColor}, 0 0 8px ${rowColor}` } : {}) }}
+                                                            />
+                                                        ) : cell}
                                                     </td>
                                                 );
                                             })}
@@ -474,7 +484,7 @@ export default function CompareTable({
                                     const isHovered = hoveredEtfName && (hoveredEtfName === d.name || d.name.includes(hoveredEtfName) || hoveredEtfName.includes(d.name));
                                     return (
                                         <div key={idx}
-                                            className={`text-right pr-2 font-bold text-[10px] md:text-[11px] lg:text-[12px] truncate w-full cursor-pointer transition-all duration-300 ${isHovered ? 'scale-110 shadow-[0_0_10px_rgba(255,255,255,0.3)]' : 'hover:underline'}`}
+                                            className={`text-right pr-2 font-bold text-[10px] md:text-[11px] lg:text-[12px] w-full cursor-pointer transition-all duration-300 ${isHovered ? 'scale-110 shadow-[0_0_10px_rgba(255,255,255,0.3)]' : 'hover:underline'}`}
                                             style={{ color: glowColorList[idx % 10] }}
                                             onMouseEnter={() => setHoveredEtfName(d.name)}
                                             onMouseLeave={() => setHoveredEtfName(null)}
@@ -483,7 +493,11 @@ export default function CompareTable({
                                                 const matchedEtf = data.raw_data?.find((cd: any) => cd.etf_name === d.name || cd.etf_code === d.name);
                                                 if (matchedEtf) setSelectedDetailEtf(matchedEtf);
                                             }}>
-                                            {d.name.replace(/ /g, '\u00A0')}
+                                            <MarqueeText
+                                              text={d.name}
+                                              className="w-full"
+                                              style={{ color: glowColorList[idx % 10] }}
+                                            />
                                         </div>
                                     );
                                 })}
