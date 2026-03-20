@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, BarChart, Bar, Cell, PieChart, Pie, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
 import { Search, Loader2, Plus, X, ChevronDown, Aperture, Star, Trash2, Edit2, Check, Share2, RefreshCw, BarChart2, Minus, Zap, Crown, Target, Layers, BookOpen, AlertCircle, ArrowUpRight, ArrowDownRight, Clock, ShieldAlert, Cpu } from "lucide-react";
 import { API_BASE } from '@/lib/apiConfig';
+import { prefetchMonitorData } from '@/lib/monitorPrefetch';
 import CompareChart from "@/components/CompareChart";
 import CompareTable from "@/components/CompareTable";
 import Modals from "@/components/Modals";
@@ -63,6 +64,14 @@ export default function Home() {
 
   useEffect(() => {
     setIsClient(true);
+  }, []);
+
+  // 백그라운드 프리페치: 앱 로드 2.5초 후 모니터링 탭 데이터 미리 fetch
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      prefetchMonitorData(API_BASE);
+    }, 2500);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {

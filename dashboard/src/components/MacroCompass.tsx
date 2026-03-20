@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder'
+import { getPrefetchedData } from '../lib/monitorPrefetch'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface Indicator { value: number | null; updated_at: string | null; label?: string }
@@ -366,7 +367,17 @@ export default function MacroCompass() {
     const ctrl = new AbortController()
     const timer = setTimeout(() => ctrl.abort(), 120_000)  // 120초 타임아웃
 
-    fetch(`${apiUrl}/api/v1/macro-compass`, { signal: ctrl.signal })
+    // 프리페치 캐시 체크: hit 시 즉시 렌더, miss 시 일반 fetch
+    const macroUrl = `${apiUrl}/api/v1/macro-compass`
+    const cached = getPrefetchedData<CompassData>(macroUrl)
+    if (cached) {
+      setData(cached)
+      setLoading(false)
+      clearTimeout(timer)
+      return
+    }
+
+    fetch(macroUrl, { signal: ctrl.signal })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()

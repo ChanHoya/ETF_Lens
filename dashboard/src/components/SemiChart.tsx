@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Activity } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
+import { getPrefetchedData } from '../lib/monitorPrefetch';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 
 export default function SemiChart() {
@@ -19,10 +20,11 @@ export default function SemiChart() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const res = await fetch(`${API_BASE}/api/v1/analyze/semi-chart`);
-                if (!res.ok) throw new Error('API fetch error');
-                const data = await res.json();
-                
+                const semiUrl = `${API_BASE}/api/v1/analyze/semi-chart`;
+                // 프리페치 캐시 체크: hit 시 네트워크 요청 없이 즉시 사용
+                const cached = getPrefetchedData<any>(semiUrl);
+                const data = cached ?? await (await fetch(semiUrl)).json();
+
                 if (data.line_chart_data && data.line_chart_data.length > 0) {
                     setOriginalData(data.line_chart_data);
                     setKeys(data.keys);

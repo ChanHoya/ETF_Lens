@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ShieldAlert, TrendingDown, DollarSign, Activity, AlertTriangle, ArrowRight, Info, ChevronRight, BarChart2, X, AlertCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
+import { getPrefetchedData } from '../lib/monitorPrefetch';
 import { DollarModalContent, PerModalContent, CliModalContent, SentimentModalContent } from './ExitSignalModals';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 
@@ -107,78 +108,66 @@ export default function KospiExitAnalyzer() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/v1/exit-signal`);
-                if (res.ok) {
-                    const data = await res.json();
+                const exitSignalUrl = `${API_BASE}/api/v1/exit-signal`;
+                const cliUrl        = `${API_BASE}/api/v1/exit-signal/cli`;
+                const macroUrl      = `${API_BASE}/api/v1/exit-signal/macro?period=1Y`;
+                const perUrl        = `${API_BASE}/api/v1/exit-signal/per?period=1Y`;
 
-                    // Update base chart data
+                // 프리페치 캐시 체크 (hit 시 네트워크 요청 없이 즉시 사용)
+                const cachedMain = getPrefetchedData<any>(exitSignalUrl);
+                const data = cachedMain ?? await (await fetch(exitSignalUrl)).json();
+
+                if (data) {
                     setBaseDollar(data.indicators.dollar);
                     setBasePer(data.indicators.per);
                     setBaseCli(data.indicators.cli);
-
-                    // Update current values
                     setDollarIndex(data.current_status.dollar);
                     setDollarKrw(data.current_status.krw);
                     setForwardPer(data.current_status.per);
                     setOecdCliValue(data.current_status.cli);
                     setOecdCliDownMonths(data.current_status.cli_down_months);
-
                     if (data.indicators.sentiment) {
                         setBaseSentiment(data.indicators.sentiment);
                         setVixValue(data.current_status.vix);
                         setFgiValue(data.current_status.fgi);
                     }
 
-                    // Fetch real CLI data for 3 lines (Dashboard)
                     try {
-                        const cliRes = await fetch(`${API_BASE}/api/v1/exit-signal/cli`);
-                        if (cliRes.ok) {
-                            const cliDataRaw = await cliRes.json();
-                            if (cliDataRaw.length > 0) {
-                                // Take last 12 items for dashboard mini chart
-                                const recent12 = cliDataRaw.slice(-12).map((item: any) => ({
-                                    month: item.date.substring(5, 7) + '월', // format "YYYY-MM" -> "MM월"
-                                    kor_cli: item.kor_cli,
-                                    usa_cli: item.usa_cli,
-                                    oecd_cli: item.oecd_cli
-                                }));
-                                setBaseCli(recent12);
-
-                                const lastItem = cliDataRaw[cliDataRaw.length - 1];
-                                setOecdCliValue(lastItem.kor_cli);
-
-                                // Recalculate down months for Korea CLI
-                                let downMonths = 0;
-                                for (let i = cliDataRaw.length - 1; i > 0; i--) {
-                                    if (cliDataRaw[i].kor_cli < cliDataRaw[i - 1].kor_cli) {
-                                        downMonths++;
-                                    } else {
-                                        break;
-                                    }
-                                }
-                                setOecdCliDownMonths(downMonths);
+                        // CLI: 캐시 hit 시 재요청 안함
+                        const cachedCli = getPrefetchedData<any[]>(cliUrl);
+                        const cliDataRaw = cachedCli ?? await (await fetch(cliUrl)).json();
+                        if (cliDataRaw && cliDataRaw.length > 0) {
+                            const recent12 = cliDataRaw.slice(-12).map((item: any) => ({
+                                month: item.date.substring(5, 7) + '월',
+                                kor_cli: item.kor_cli,
+                                usa_cli: item.usa_cli,
+                                oecd_cli: item.oecd_cli
+                            }));
+                            setBaseCli(recent12);
+                            const lastItem = cliDataRaw[cliDataRaw.length - 1];
+                            setOecdCliValue(lastItem.kor_cli);
+                            let downMonths = 0;
+                            for (let i = cliDataRaw.length - 1; i > 0; i--) {
+                                if (cliDataRaw[i].kor_cli < cliDataRaw[i - 1].kor_cli) downMonths++;
+                                else break;
                             }
+                            setOecdCliDownMonths(downMonths);
                         }
 
-                        // Fetch Daily 1Y data for Dollar and PER to match Popup Charts
-                        const [macroRes, perRes] = await Promise.all([
-                            fetch(`${API_BASE}/api/v1/exit-signal/macro?period=1Y`),
-                            fetch(`${API_BASE}/api/v1/exit-signal/per?period=1Y`)
-                        ]);
-                        if (macroRes.ok) {
-                            const macro1Y = await macroRes.json();
-                            setBaseDollar(macro1Y);
-                        }
-                        if (perRes.ok) {
-                            const per1Y = await perRes.json();
-                            setBasePer(per1Y);
-                        }
+                        // macro/per: 캐시 hit 시 재요청 안함
+                        const cachedMacro = getPrefetchedData<any[]>(macroUrl);
+                        const macro1Y = cachedMacro ?? await (await fetch(macroUrl)).json();
+                        if (macro1Y) setBaseDollar(macro1Y);
+
+                        const cachedPer = getPrefetchedData<any[]>(perUrl);
+                        const per1Y = cachedPer ?? await (await fetch(perUrl)).json();
+                        if (per1Y) setBasePer(per1Y);
                     } catch (cliErr) {
-                        console.error("Failed to fetch CLI 3-line data:", cliErr);
+                        console.error('Failed to fetch CLI 3-line data:', cliErr);
                     }
                 }
             } catch (err) {
-                console.error("Failed to fetch Exit Signal data:", err);
+                console.error('Failed to fetch Exit Signal data:', err);
             } finally {
                 setLoading(false);
             }
