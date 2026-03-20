@@ -950,12 +950,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* ChatBot 채팅창 — 서브탭 아래 */}
-      {isChatOpen && (
-        <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 z-40 relative">
-          <ChatBot renderChat isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
-        </div>
-      )}
+      {/* ChatBot 채팅창 — fixed overlay (스크롤 없이 현재 뷰 위에 표시) */}
+      <ChatBot renderChat isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
 
       <div className="relative flex-1 flex flex-col w-full max-w-[95vw] xl:max-w-[1400px] mobile-content-area">
 

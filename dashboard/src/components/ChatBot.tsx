@@ -102,78 +102,91 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
         );
     }
 
-    // ── 채팅창 패널 (헤더 아래 배치용) ──────────────────────────────
+    // ── 채팅창 패널 (fixed overlay) ──────────────────────────────
     if (renderChat) {
         if (!isOpen) return null;
         return (
-            <div className="w-full min-h-[300px] max-h-[80vh] bg-[#12121A] border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col z-[100] animate-in fade-in slide-in-from-top-2 duration-300">
-                {/* Header */}
-                <div className="px-4 py-3 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-b border-white/10 flex justify-between items-center shrink-0">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
-                            <Sparkles className="w-4 h-4 text-indigo-400" />
+            <>
+                {/* 반투명 배경 — 클릭 시 닫기 */}
+                <div
+                    className="fixed inset-0 z-[199] bg-black/50 backdrop-blur-[2px]"
+                    onClick={() => setIsOpen(false)}
+                />
+                {/* 채팅 패널 — 뷰포트 상단 70px 기준으로 고정 */}
+                <div className="fixed top-[70px] inset-x-0 z-[200] flex justify-center px-4 md:px-8 pointer-events-none">
+                    <div
+                        className="w-full max-w-[720px] min-h-[300px] max-h-[80vh] bg-[#12121A] border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="px-4 py-3 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-b border-white/10 flex justify-between items-center shrink-0">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                                    <Sparkles className="w-4 h-4 text-indigo-400" />
+                                </div>
+                                <h3 className="font-bold text-white text-sm">ETF Assistant</h3>
+                            </div>
+                            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
-                        <h3 className="font-bold text-white text-sm">ETF Assistant</h3>
-                    </div>
-                    <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white transition-colors">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
 
-                {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar bg-black/40">
-                    {messages.map(msg => (
-                        <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            {msg.role === 'assistant' && (
-                                <div className="w-8 h-8 rounded-full bg-indigo-500/20 shrink-0 flex items-center justify-center mt-1">
-                                    <Bot className="w-4 h-4 text-indigo-400" />
+                        {/* Messages Area */}
+                        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar bg-black/40">
+                            {messages.map(msg => (
+                                <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    {msg.role === 'assistant' && (
+                                        <div className="w-8 h-8 rounded-full bg-indigo-500/20 shrink-0 flex items-center justify-center mt-1">
+                                            <Bot className="w-4 h-4 text-indigo-400" />
+                                        </div>
+                                    )}
+                                    <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${msg.role === 'user'
+                                        ? 'bg-indigo-500 text-white rounded-tr-sm'
+                                        : 'bg-[#1C1C24] text-gray-200 border border-white/5 rounded-tl-sm whitespace-pre-wrap leading-relaxed'
+                                        }`}>
+                                        {msg.content}
+                                    </div>
+                                </div>
+                            ))}
+
+                            {isLoading && (
+                                <div className="flex gap-3 justify-start">
+                                    <div className="w-8 h-8 rounded-full bg-indigo-500/20 shrink-0 flex items-center justify-center mt-1">
+                                        <Bot className="w-4 h-4 text-indigo-400" />
+                                    </div>
+                                    <div className="bg-[#1C1C24] border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                                    </div>
                                 </div>
                             )}
-                            <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${msg.role === 'user'
-                                ? 'bg-indigo-500 text-white rounded-tr-sm'
-                                : 'bg-[#1C1C24] text-gray-200 border border-white/5 rounded-tl-sm whitespace-pre-wrap leading-relaxed'
-                                }`}>
-                                {msg.content}
-                            </div>
+                            <div ref={messagesEndRef} />
                         </div>
-                    ))}
 
-                    {isLoading && (
-                        <div className="flex gap-3 justify-start">
-                            <div className="w-8 h-8 rounded-full bg-indigo-500/20 shrink-0 flex items-center justify-center mt-1">
-                                <Bot className="w-4 h-4 text-indigo-400" />
-                            </div>
-                            <div className="bg-[#1C1C24] border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                            </div>
+                        {/* Input Area */}
+                        <div className="p-3 bg-[#12121A] border-t border-white/10 shrink-0">
+                            <form onSubmit={handleSubmit} className="relative flex items-center">
+                                <input
+                                    type="text"
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    placeholder="질문을 입력하세요... (예: 수익률 높은 종목 알려줘)"
+                                    disabled={isLoading}
+                                    className="w-full bg-[#1C1C24] border border-white/10 rounded-full pl-5 pr-14 py-3.5 text-base text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 disabled:opacity-50 transition-shadow shadow-inner"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={!input.trim() || isLoading}
+                                    className="absolute right-2 p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-400 disabled:opacity-50 disabled:hover:bg-indigo-500 transition-colors"
+                                >
+                                    <Send className="w-5 h-5" />
+                                </button>
+                            </form>
                         </div>
-                    )}
-                    <div ref={messagesEndRef} />
+                    </div>
                 </div>
-
-                {/* Input Area */}
-                <div className="p-3 bg-[#12121A] border-t border-white/10 shrink-0">
-                    <form onSubmit={handleSubmit} className="relative flex items-center">
-                        <input
-                            type="text"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            placeholder="질문을 입력하세요... (예: 수익률 높은 종목 알려줘)"
-                            disabled={isLoading}
-                            className="w-full bg-[#1C1C24] border border-white/10 rounded-full pl-5 pr-14 py-3.5 text-base text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 disabled:opacity-50 transition-shadow shadow-inner"
-                        />
-                        <button
-                            type="submit"
-                            disabled={!input.trim() || isLoading}
-                            className="absolute right-2 p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-400 disabled:opacity-50 disabled:hover:bg-indigo-500 transition-colors"
-                        >
-                            <Send className="w-5 h-5" />
-                        </button>
-                    </form>
-                </div>
-            </div>
+            </>
         );
     }
 
