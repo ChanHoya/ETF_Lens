@@ -122,8 +122,8 @@ async def sync_etf_batch():
         print("Failed to load ETF list.")
         return
 
-    # To avoid rate limits, we process concurrently with a semaphore
-    sem = asyncio.Semaphore(10)
+    # 메모리 절감: 동시 처리 수 10→3 (Starter 512MB 기준)
+    sem = asyncio.Semaphore(3)
 
     async def process_code(code: str, name: str, issuer: str):
         async with sem:
@@ -264,11 +264,11 @@ def setup_scheduler():
     # 18:00 - 무거운 ETF 전체 sync (가격/보유종목 포함)
     scheduler.add_job(_job_batch, "cron", hour=18, minute=0, id="daily_db_sync")
 
-    # 18:30 - yfinance 경량 시세 배치 수집 (1년치 종가 → ETFDailyPrice)
-    scheduler.add_job(_job_price, "cron", hour=18, minute=30, id="daily_etf_price_yfinance")
+    # 20:00 - yfinance 경량 시세 배치 (batch 완료 후 충분히 여유를 두고 실행)
+    scheduler.add_job(_job_price, "cron", hour=20, minute=0, id="daily_etf_price_yfinance")
 
-    # 19:00 - ETF 수익률/변동성/샤프 계산 → ETFMaster 업데이트
-    scheduler.add_job(_job_perf, "cron", hour=19, minute=0, id="daily_perf_calc")
+    # 21:00 - ETF 수익률/변동성/샤프 계산 (price sync 완료 후 실행)
+    scheduler.add_job(_job_perf, "cron", hour=21, minute=0, id="daily_perf_calc")
 
     scheduler.start()
     print("DB and Email Scheduler started.")
