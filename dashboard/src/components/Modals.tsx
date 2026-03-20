@@ -17,6 +17,7 @@ type ModalsProps = {
     removeFavItem: (groupId: string, code: string) => void;
     addFavItem: (groupId: string, code: string, name: string) => void;
     addFavItems: (groupId: string, items: { code: string, name: string }[]) => void;
+    addGroupWithItems: (groupName: string, items: { code: string; name: string }[]) => void;
     toggleFavItemSelection: (item: { code: string, name: string }) => void;
     selectFromFavorites: (items: { code: string, name: string }[]) => void;
     BRAND_KEYWORDS: string[];
@@ -39,7 +40,7 @@ type ModalsProps = {
 
 export default function Modals({
     isFavModalOpen, setIsFavModalOpen, favorites, favSearchQuery, setFavSearchQuery, selectedFavItems,
-    addFavGroup, renameFavGroup, deleteFavGroup, removeFavItem, addFavItem, addFavItems, toggleFavItemSelection, selectFromFavorites,
+    addFavGroup, renameFavGroup, deleteFavGroup, removeFavItem, addFavItem, addFavItems, addGroupWithItems, toggleFavItemSelection, selectFromFavorites,
     BRAND_KEYWORDS, THEME_KEYWORDS, etfDictionary,
     selectedDetailEtf, setSelectedDetailEtf, popupPeriod, setPopupPeriod, detailChartData,
     isEtfCheckModalOpen, setIsEtfCheckModalOpen, hasOpenedEtfCheck,
@@ -87,6 +88,9 @@ export default function Modals({
     const [expandedMarketIds, setExpandedMarketIds] = React.useState<Set<number>>(new Set());
     // 그룹별 업로드 폼 상태 { [groupId]: {open, author, pin, uploading, done, error} }
     const [uploadForms, setUploadForms] = React.useState<{ [k: string]: { open: boolean; author: string; pin: string; uploading: boolean; done: boolean; error: string } }>({});
+    // 다운로드 확인 UI 상태: { [portfolioId]: 주문자가 입력할 그룹명 }
+    const [downloadNames, setDownloadNames] = React.useState<{ [id: number]: string }>({});
+    const [downloadDone, setDownloadDone] = React.useState<Set<number>>(new Set());
 
     const getUploadForm = (groupId: string) => uploadForms[groupId] ?? { open: false, author: '', pin: '', uploading: false, done: false, error: '' };
     const setUploadForm = (groupId: string, patch: Partial<typeof uploadForms[string]>) =>
@@ -120,21 +124,15 @@ export default function Modals({
         } catch (e: any) { setUploadForm(group.id, { uploading: false, error: e.message }); }
     };
 
-    const handleDownload = async (portfolio: any) => {
-        // 다운로드 카운트 증가
-        await fetch(`${API_BASE}/api/v1/portfolio-market/${portfolio.id}/download`, { method: 'POST' }).catch(() => {});
-        // 즐겨찾기 그룹에 추가
-        addFavGroup();
-        // 잠시 후 마지막 그룹에 items 추가 (addFavGroup이 비동기적으로 상태 업데이트하므로 setTimeout)
-        setTimeout(() => {
-            // favorites 배열에서 마지막 그룹 사용
-            const lastGroup = favorites[favorites.length - 1];
-            if (lastGroup) {
-                renameFavGroup(lastGroup.id, portfolio.name);
-                addFavItems(lastGroup.id, portfolio.items);
-            }
-        }, 100);
-        // 다운로드 수 갱신
+    const handleDownload = async (portfolio: any, customName: string) => {
+        // 다운로드 카운트 증가 (fire-and-forget)
+        fetch(`${API_BASE}/api/v1/portfolio-market/${portfolio.id}/download`, { method: 'POST' }).catch(() => {});
+        // addGroupWithItems: localStorage에서 최신 상태를 읽어 stale closure 없이 저장
+        addGroupWithItems(customName.trim() || portfolio.name, portfolio.items);
+        // 위 버튼 숨기고 완료 표시
+        setDownloadDone(prev => new Set(prev).add(portfolio.id));
+        setDownloadNames(prev => { const next = { ...prev }; delete next[portfolio.id]; return next; });
+        // 다운로드 수 화면 갱신
         setMarketList(prev => prev.map(p => p.id === portfolio.id ? { ...p, download_count: p.download_count + 1 } : p));
     };
 
@@ -902,12 +900,39 @@ export default function Modals({
                                                         <span className="text-purple-400 flex items-center gap-0.5"><Download className="w-3 h-3" />{portfolio.download_count}</span>
                                                         <span className="hidden sm:block text-gray-600">{portfolio.created_at}</span>
                                                     </div>
-                                                    {/* 버튼 — 버블 방지 */}
+                                                    {/* 즐겨찾기 추가 버튼 / 확인 UI */}
                                                     <div className="flex gap-2 flex-shrink-0 ml-2" onClick={e => e.stopPropagation()}>
-                                                        <button onClick={() => handleDownload(portfolio)}
-                                                            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-colors">
-                                                            <Download className="w-3.5 h-3.5" /> 즐겨찾기 추가
-                                                        </button>
+                                                        {downloadDone.has(portfolio.id) ? (
+                                                            <span className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-bold">
+                                                                <Check className="w-3.5 h-3.5" /> 저장완료
+                                                            </span>
+                                                        ) : downloadNames[portfolio.id] !== undefined ? (
+                                                            // 포트폴리오 이름 편집 컨펌 인라인 UI
+                                                            <div className="flex items-center gap-1">
+                                                                <input
+                                                                    autoFocus
+                                                                    value={downloadNames[portfolio.id]}
+                                                                    onChange={e => setDownloadNames(prev => ({ ...prev, [portfolio.id]: e.target.value }))}
+                                                                    onKeyDown={e => { if (e.key === 'Enter') handleDownload(portfolio, downloadNames[portfolio.id]); if (e.key === 'Escape') setDownloadNames(prev => { const next = { ...prev }; delete next[portfolio.id]; return next; }); }}
+                                                                    className="bg-black/60 border border-indigo-500/40 rounded px-2 py-1 text-xs text-white w-36 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                                                />
+                                                                <button
+                                                                    onClick={() => handleDownload(portfolio, downloadNames[portfolio.id])}
+                                                                    className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-bold"
+                                                                >저장</button>
+                                                                <button
+                                                                    onClick={() => setDownloadNames(prev => { const next = { ...prev }; delete next[portfolio.id]; return next; })}
+                                                                    className="px-2 py-1 bg-white/10 text-gray-400 rounded text-xs"
+                                                                >취소</button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => setDownloadNames(prev => ({ ...prev, [portfolio.id]: portfolio.name }))}
+                                                                className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-colors"
+                                                            >
+                                                                <Download className="w-3.5 h-3.5" /> 즐겨찾기 추가
+                                                            </button>
+                                                        )}
                                                         {deletingMarketId === portfolio.id ? (
                                                             <div className="flex gap-1 items-center">
                                                                 <input placeholder="PIN" type="password" maxLength={8}

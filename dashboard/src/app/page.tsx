@@ -492,6 +492,28 @@ export default function Home() {
     }));
   };
 
+  // 이름+종목을 한번에 새 그룹으로 저장 (마켓 다운로드용, stale closure 방지)
+  const addGroupWithItems = (groupName: string, items: { code: string; name: string }[]) => {
+    const limitedItems = items.slice(0, 10);
+    // localStorage에서 최신 상태를 직접 읽어 stale closure 방지
+    let currentFavs: FavGroup[] = favorites;
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('etf_favorites');
+        if (raw) currentFavs = JSON.parse(raw);
+      } catch (_) {}
+    }
+    const existing = currentFavs.find(g => g.name === groupName);
+    if (existing) {
+      // 동일 이름 그룹 존재 → 덮어쓰기
+      saveFavorites(currentFavs.map(g => g.name === groupName ? { ...g, items: limitedItems } : g));
+    } else {
+      // 새 그룹 생성
+      const newGroup = { id: Date.now().toString(), name: groupName, items: limitedItems };
+      saveFavorites([...currentFavs, newGroup]);
+    }
+  };
+
   const chartData = useMemo(() => {
     if (!data?.visual_data?.line_chart || !data?.visual_data?.etf_keys) return [];
     let rawData = data.visual_data.line_chart;
@@ -1453,6 +1475,7 @@ export default function Home() {
           removeFavItem={removeFavItem}
           addFavItem={addFavItem}
           addFavItems={addFavItems}
+          addGroupWithItems={addGroupWithItems}
           favSearchQuery={favSearchQuery}
           setFavSearchQuery={setFavSearchQuery}
           etfDictionary={etfDictionary}
