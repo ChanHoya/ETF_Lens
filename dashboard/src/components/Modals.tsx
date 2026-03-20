@@ -1,7 +1,8 @@
 import React from 'react';
-import { Star, Plus, Edit2, Trash2, Check, X } from "lucide-react";
+import { Star, Plus, Edit2, Trash2, Check, X, Share2, Store, Download, Lock, RefreshCw } from "lucide-react";
 import { ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, PieChart, Pie, Cell } from "recharts";
 import { FavGroup } from '../hooks/useFavorites';
+import { API_BASE } from '../lib/apiConfig';
 
 type ModalsProps = {
     isFavModalOpen: boolean;
@@ -76,6 +77,81 @@ export default function Modals({
     const [hotAndMode, setHotAndMode] = React.useState<{ [groupId: string]: boolean }>({});
     const getAndMode = (groupId: string) => hotAndMode[groupId] !== false; // default true = AND
 
+    // ── 포트폴리오 마켓 상태 ─────────────────────────────────────────────
+    const [isMarketOpen, setIsMarketOpen] = React.useState(false);
+    const [marketList, setMarketList] = React.useState<any[]>([]);
+    const [marketLoading, setMarketLoading] = React.useState(false);
+    const [deletingMarketId, setDeletingMarketId] = React.useState<number | null>(null);
+    const [deletePin, setDeletePin] = React.useState('');
+    const [deleteError, setDeleteError] = React.useState('');
+    // 그룹별 업로드 폼 상태 { [groupId]: {open, author, pin, uploading, done, error} }
+    const [uploadForms, setUploadForms] = React.useState<{ [k: string]: { open: boolean; author: string; pin: string; uploading: boolean; done: boolean; error: string } }>({});
+
+    const getUploadForm = (groupId: string) => uploadForms[groupId] ?? { open: false, author: '', pin: '', uploading: false, done: false, error: '' };
+    const setUploadForm = (groupId: string, patch: Partial<typeof uploadForms[string]>) =>
+        setUploadForms(prev => ({ ...prev, [groupId]: { ...getUploadForm(groupId), ...patch } }));
+
+    const fetchMarket = React.useCallback(async () => {
+        setMarketLoading(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/portfolio-market`);
+            const data = await res.json();
+            setMarketList(Array.isArray(data) ? data : []);
+        } catch { setMarketList([]); }
+        setMarketLoading(false);
+    }, []);
+
+    React.useEffect(() => { if (isMarketOpen) fetchMarket(); }, [isMarketOpen, fetchMarket]);
+
+    const handleUpload = async (group: FavGroup) => {
+        const form = getUploadForm(group.id);
+        if (!form.author.trim() || !form.pin.trim()) { setUploadForm(group.id, { error: '닉네임과 PIN을 입력하세요.' }); return; }
+        if (group.items.length === 0) { setUploadForm(group.id, { error: '종목이 없는 그룹은 업로드할 수 없습니다.' }); return; }
+        setUploadForm(group.id, { uploading: true, error: '' });
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/portfolio-market`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: group.name, author: form.author.trim(), pin: form.pin.trim(), items: group.items }),
+            });
+            if (!res.ok) { const e = await res.json(); throw new Error(e.detail || '업로드 실패'); }
+            setUploadForm(group.id, { uploading: false, done: true, error: '' });
+        } catch (e: any) { setUploadForm(group.id, { uploading: false, error: e.message }); }
+    };
+
+    const handleDownload = async (portfolio: any) => {
+        // 다운로드 카운트 증가
+        await fetch(`${API_BASE}/api/v1/portfolio-market/${portfolio.id}/download`, { method: 'POST' }).catch(() => {});
+        // 즐겨찾기 그룹에 추가
+        addFavGroup();
+        // 잠시 후 마지막 그룹에 items 추가 (addFavGroup이 비동기적으로 상태 업데이트하므로 setTimeout)
+        setTimeout(() => {
+            // favorites 배열에서 마지막 그룹 사용
+            const lastGroup = favorites[favorites.length - 1];
+            if (lastGroup) {
+                renameFavGroup(lastGroup.id, portfolio.name);
+                addFavItems(lastGroup.id, portfolio.items);
+            }
+        }, 100);
+        // 다운로드 수 갱신
+        setMarketList(prev => prev.map(p => p.id === portfolio.id ? { ...p, download_count: p.download_count + 1 } : p));
+    };
+
+    const handleMarketDelete = async (id: number) => {
+        setDeleteError('');
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/portfolio-market/${id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin: deletePin }),
+            });
+            if (!res.ok) { const e = await res.json(); throw new Error(e.detail || '삭제 실패'); }
+            setMarketList(prev => prev.filter(p => p.id !== id));
+            setDeletingMarketId(null);
+            setDeletePin('');
+        } catch (e: any) { setDeleteError(e.message); }
+    };
+
     return (
         <>
             {/* ===== 1. 나의 관심종목 즐겨찾기 Modal ===== */}
@@ -88,7 +164,13 @@ export default function Modals({
                             <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2 text-white">
                                 <Star className="w-6 h-6 text-yellow-500 fill-yellow-500/20" /> 나의 관심종목 즐겨찾기
                             </h2>
-                            <div className="flex items-center gap-3 w-full md:w-auto">
+                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                <button
+                                    onClick={() => { setIsMarketOpen(true); setIsFavModalOpen(false); }}
+                                    className="flex items-center gap-1.5 px-3 py-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30 rounded-lg text-sm font-semibold transition-all"
+                                >
+                                    <Store className="w-4 h-4" /> 포트폴리오 마켓
+                                </button>
                                 <button
                                     onClick={() => selectFromFavorites(selectedFavItems)}
                                     disabled={selectedFavItems.length === 0}
@@ -120,33 +202,78 @@ export default function Modals({
                                     <div key={group.id} className="bg-white/[0.02] border border-white/10 rounded-xl p-4 shadow-inner">
 
                                         {/* 그룹 헤더 */}
-                                        <div className="flex justify-between items-center mb-4 pb-3 border-b border-white/10">
-                                            <div className="flex items-center gap-3">
-                                                <h3 className="text-lg font-bold text-indigo-300 tracking-wide">{group.name}</h3>
-                                                <div className="flex gap-1">
-                                                    <button
-                                                        onClick={() => {
-                                                            const newName = prompt("새 그룹 이름을 입력하세요:", group.name);
-                                                            if (newName && newName.trim()) renameFavGroup(group.id, newName.trim());
-                                                        }}
-                                                        className="p-1.5 text-gray-500 hover:text-indigo-400 bg-white/5 rounded-md transition-colors"
-                                                        title="그룹명 수정"
-                                                    >
-                                                        <Edit2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => deleteFavGroup(group.id)}
-                                                        className="p-1.5 text-gray-500 hover:text-rose-400 bg-white/5 rounded-md transition-colors"
-                                                        title="그룹 삭제"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
+                                        <div className="flex justify-between items-start mb-3 pb-3 border-b border-white/10">
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex items-center gap-3">
+                                                    <h3 className="text-lg font-bold text-indigo-300 tracking-wide">{group.name}</h3>
+                                                    <div className="flex gap-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                const newName = prompt("새 그룹 이름을 입력하세요:", group.name);
+                                                                if (newName && newName.trim()) renameFavGroup(group.id, newName.trim());
+                                                            }}
+                                                            className="p-1.5 text-gray-500 hover:text-indigo-400 bg-white/5 rounded-md transition-colors"
+                                                            title="그룹명 수정"
+                                                        >
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => deleteFavGroup(group.id)}
+                                                            className="p-1.5 text-gray-500 hover:text-rose-400 bg-white/5 rounded-md transition-colors"
+                                                            title="그룹 삭제"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setUploadForm(group.id, { open: !getUploadForm(group.id).open, done: false, error: '' })}
+                                                            className="p-1.5 text-gray-500 hover:text-purple-400 bg-white/5 rounded-md transition-colors"
+                                                            title="마켓에 공유하기"
+                                                        >
+                                                            <Share2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
                                                 </div>
+                                                {/* 인라인 업로드 폼 */}
+                                                {getUploadForm(group.id).open && (
+                                                    <div className="flex flex-wrap gap-2 items-center p-2.5 bg-purple-500/5 border border-purple-500/20 rounded-xl">
+                                                        {getUploadForm(group.id).done ? (
+                                                            <span className="text-sm text-emerald-400 font-semibold">✅ 마켓에 업로드 완료!</span>
+                                                        ) : (
+                                                            <>
+                                                                <input
+                                                                    placeholder="닉네임"
+                                                                    value={getUploadForm(group.id).author}
+                                                                    onChange={e => setUploadForm(group.id, { author: e.target.value })}
+                                                                    className="bg-black/40 border border-white/10 rounded px-2 py-1.5 text-sm text-white w-28 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                                                />
+                                                                <input
+                                                                    placeholder="PIN"
+                                                                    type="password"
+                                                                    maxLength={8}
+                                                                    value={getUploadForm(group.id).pin}
+                                                                    onChange={e => setUploadForm(group.id, { pin: e.target.value })}
+                                                                    className="bg-black/40 border border-white/10 rounded px-2 py-1.5 text-sm text-white w-24 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                                                />
+                                                                <button
+                                                                    onClick={() => handleUpload(group)}
+                                                                    disabled={getUploadForm(group.id).uploading}
+                                                                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded text-sm font-bold transition-colors flex items-center gap-1"
+                                                                >
+                                                                    <Share2 className="w-3.5 h-3.5" />
+                                                                    {getUploadForm(group.id).uploading ? '업로드 중...' : '마켓 공유'}
+                                                                </button>
+                                                                {getUploadForm(group.id).error && (
+                                                                    <span className="text-xs text-rose-400">{getUploadForm(group.id).error}</span>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                             <button
                                                 onClick={() => selectFromFavorites(group.items)}
                                                 disabled={group.items.length === 0}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-indigo-500 text-white rounded-md text-xs font-semibold disabled:opacity-30 transition-all shadow-sm"
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-indigo-500 text-white rounded-md text-xs font-semibold disabled:opacity-30 transition-all shadow-sm flex-shrink-0"
                                             >
                                                 <Check className="w-3 h-3" /> 그룹전체 바로넣기 ({group.items.length})
                                             </button>
@@ -712,6 +839,95 @@ export default function Modals({
                                 style={{ filter: "invert(0.92) hue-rotate(180deg)" }}
                                 allowFullScreen
                             />
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* ===== 포트폴리오 마켓 팝업 ===== */}
+            {isMarketOpen && (
+                <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200 p-3 md:p-6">
+                    <div className="bg-[#0f111a] border border-purple-500/20 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl shadow-purple-900/20">
+                        <div className="flex justify-between items-center p-4 border-b border-white/10 bg-purple-500/5">
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Store className="w-5 h-5 text-purple-400" /> 포트폴리오 마켓
+                                <span className="text-xs text-gray-500 font-normal ml-1">공유된 포트폴리오를 즐겨찾기에 추가하세요</span>
+                            </h2>
+                            <div className="flex items-center gap-2">
+                                <button onClick={fetchMarket} title="새로고침" className="p-2 text-gray-400 hover:text-purple-300 transition-colors">
+                                    <RefreshCw className={`w-4 h-4 ${marketLoading ? 'animate-spin' : ''}`} />
+                                </button>
+                                <button onClick={() => { setIsMarketOpen(false); setDeletingMarketId(null); setDeletePin(''); setDeleteError(''); }}
+                                    className="p-2 text-gray-400 hover:text-white bg-white/5 rounded-xl transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="px-4 pt-3">
+                            <button onClick={() => { setIsMarketOpen(false); setIsFavModalOpen(true); }}
+                                className="text-xs text-gray-500 hover:text-purple-300 transition-colors">
+                                ← 즐겨찾기로 돌아가기
+                            </button>
+                        </div>
+                        <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
+                            {marketLoading ? (
+                                <div className="flex items-center justify-center py-16 text-gray-500">
+                                    <RefreshCw className="w-6 h-6 animate-spin mr-2" /> 불러오는 중...
+                                </div>
+                            ) : marketList.length === 0 ? (
+                                <div className="text-center py-16 text-gray-500 text-sm">아직 공유된 포트폴리오가 없습니다.</div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {marketList.map(portfolio => (
+                                        <div key={portfolio.id} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:border-purple-500/30 transition-colors">
+                                            <div className="flex justify-between items-start gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="font-bold text-white">{portfolio.name}</span>
+                                                        <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">{portfolio.items.length}종목</span>
+                                                        <span className="text-xs text-purple-400 flex items-center gap-0.5"><Download className="w-3 h-3" />{portfolio.download_count}</span>
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 mb-2">
+                                                        by <span className="text-gray-400 font-semibold">{portfolio.author}</span>
+                                                        <span className="ml-2">{portfolio.created_at}</span>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {portfolio.items.slice(0, 6).map((item: any) => (
+                                                            <span key={item.code} className="text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-gray-400">{item.name}</span>
+                                                        ))}
+                                                        {portfolio.items.length > 6 && <span className="text-[10px] text-gray-600">+{portfolio.items.length - 6}개 더</span>}
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-2 flex-shrink-0 min-w-[110px]">
+                                                    <button onClick={() => handleDownload(portfolio)}
+                                                        className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-colors">
+                                                        <Download className="w-4 h-4" /> 추가
+                                                    </button>
+                                                    {deletingMarketId === portfolio.id ? (
+                                                        <div className="flex flex-col gap-1">
+                                                            <input placeholder="PIN" type="password" maxLength={8}
+                                                                value={deletePin}
+                                                                onChange={e => { setDeletePin(e.target.value); setDeleteError(''); }}
+                                                                className="bg-black/60 border border-rose-500/30 rounded px-2 py-1 text-xs text-white w-full focus:outline-none focus:ring-1 focus:ring-rose-500" />
+                                                            {deleteError && <span className="text-[10px] text-rose-400">{deleteError}</span>}
+                                                            <div className="flex gap-1">
+                                                                <button onClick={() => handleMarketDelete(portfolio.id)}
+                                                                    className="flex-1 px-2 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs font-bold">삭제</button>
+                                                                <button onClick={() => { setDeletingMarketId(null); setDeletePin(''); setDeleteError(''); }}
+                                                                    className="flex-1 px-2 py-1 bg-white/10 text-gray-300 rounded text-xs">취소</button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <button onClick={() => { setDeletingMarketId(portfolio.id); setDeleteError(''); }}
+                                                            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-rose-500/10 text-gray-500 hover:text-rose-400 border border-white/5 hover:border-rose-500/30 rounded-lg text-xs transition-colors">
+                                                            <Lock className="w-3 h-3" /> PIN 삭제
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

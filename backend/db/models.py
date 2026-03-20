@@ -142,3 +142,16 @@ class AppVersion(Base):
     key = Column(String, primary_key=True)   # e.g., 'app_version'
     value = Column(String, nullable=False)   # e.g., 'VER 2603171830'
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SharedPortfolio(Base):
+    """포트폴리오 마켓 — 사용자 간 즐겨찾기 그룹 공유"""
+    __tablename__ = "shared_portfolios"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String, nullable=False)       # 포트폴리오 그룹명
+    author = Column(String, nullable=False)     # 업로더 닉네임 (자유 입력)
+    items_json = Column(Text, nullable=False)   # JSON: [{"code":"069500","name":"KODEX 200"},...]
+    pin_hash = Column(String, nullable=False)   # sha256(user_pin) — 삭제 인증용
+    download_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
