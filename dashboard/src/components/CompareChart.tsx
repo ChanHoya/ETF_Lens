@@ -149,7 +149,7 @@ export default function CompareChart({
 
     // 공용 커스텀 범례 렌더러 (ETF 종목 + 지수 분리)
     const ChartLegend = ({ etfKeys, showDataKey = (k: string) => k }: { etfKeys: string[], showDataKey?: (k: string) => string }) => (
-        <div className="flex flex-col gap-2 mt-3 pt-2 border-t border-white/5">
+        <div className="flex flex-col gap-2 mt-4 pt-2 pb-2 border-t border-white/5">
             {/* ETF 종목 행 */}
             <div className="flex flex-wrap justify-center gap-x-5 gap-y-1">
                 {etfKeys.map((key: string) => {
