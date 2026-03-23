@@ -724,8 +724,41 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
                 chart_data_map[dt_str] = {"date": dt_str}
             chart_data_map[dt_str]["NASDAQ"] = row["Close"]
 
+    # ── 당일 실시간 가격 반영 (장중/장마감 모두) ──
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    # ETF 현재가 추가
+    for data in etf_data_list:
+        live_price = data.get("market_data", {}).get("price")
+        etf_name = data.get("etf_name", "")
+        if live_price and etf_name:
+            if today_str not in chart_data_map:
+                chart_data_map[today_str] = {"date": today_str}
+            chart_data_map[today_str][etf_name] = live_price
+
+    # 벤치마크 지수 현재가 추가 (DataFrame 마지막 행이 오늘이 아닌 경우에도 최신값 사용)
+    bench_pairs = [
+        (kospi_df, "KOSPI"), (kosdaq_df, "KOSDAQ"),
+        (sp500_df, "SP500"), (nasdaq_df, "NASDAQ"),
+    ]
+    for bench_df, bench_key in bench_pairs:
+        if not bench_df.empty:
+            last_close = bench_df["Close"].iloc[-1]
+            if last_close and not pd.isna(last_close):
+                if today_str not in chart_data_map:
+                    chart_data_map[today_str] = {"date": today_str}
+                # 오늘 데이터가 없거나 이미 있어도 최신값으로 갱신
+                if bench_key not in chart_data_map[today_str]:
+                    chart_data_map[today_str][bench_key] = float(last_close)
+
+    logger.info(f"[compare] 당일({today_str}) 실시간 가격 포함 여부: {today_str in chart_data_map}")
+
     sorted_dates = sorted(list(chart_data_map.keys()))
     sampled_dates = smart_sample_dates(sorted_dates)
+    # 당일 데이터는 항상 포함 (smart_sample에서 제외되지 않도록)
+    if today_str in chart_data_map and today_str not in sampled_dates:
+        sampled_dates.append(today_str)
+        sampled_dates.sort()
     line_chart_data = [chart_data_map[dt] for dt in sampled_dates]
 
     # Calculate Radar Chart Scores dynamically
