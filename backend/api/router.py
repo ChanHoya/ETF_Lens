@@ -471,6 +471,29 @@ async def fetch_naver_stock_name(code: str) -> str | None:
         return None
 
 
+async def fetch_naver_live_price(code: str) -> float | None:
+    """
+    Naver 모바일 basic API에서 ETF 실시간 현재가를 가져옵니다.
+    장중: 실시간 체결가 / 장마감: 당일 종가
+    실패 시 None 반환.
+    """
+    import urllib.request, json, ssl
+    try:
+        ctx = ssl._create_unverified_context()
+        url = f"https://m.stock.naver.com/api/stock/{code}/basic"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        res = await asyncio.to_thread(
+            lambda: urllib.request.urlopen(req, timeout=5, context=ctx).read()
+        )
+        data = json.loads(res)
+        price_str = data.get("closePrice", "")
+        if price_str:
+            return float(price_str.replace(",", ""))
+        return None
+    except Exception:
+        return None
+
+
 async def fetch_etf_hybrid(
     code: str,
     skip_holdings: bool,
@@ -727,14 +750,26 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
     # ── 당일 실시간 가격 반영 (장중/장마감 모두) ──
     today_str = datetime.now().strftime("%Y-%m-%d")
 
-    # ETF 현재가 추가
+    # ETF 실시간 현재가 조회 (Naver basic API에서 fresh price)
+    live_price_tasks = []
     for data in etf_data_list:
-        live_price = data.get("market_data", {}).get("price")
+        code = data.get("etf_code", "")
+        live_price_tasks.append(fetch_naver_live_price(code))
+
+    live_prices = await asyncio.gather(*live_price_tasks, return_exceptions=True)
+
+    for data, live_price in zip(etf_data_list, live_prices):
         etf_name = data.get("etf_name", "")
-        if live_price and etf_name:
+        # Naver 실시간가 → DB 캐시가 → fallback
+        if isinstance(live_price, (int, float)) and live_price and live_price > 0:
+            price = live_price
+        else:
+            price = data.get("market_data", {}).get("price")
+        if price and etf_name:
             if today_str not in chart_data_map:
                 chart_data_map[today_str] = {"date": today_str}
-            chart_data_map[today_str][etf_name] = live_price
+            chart_data_map[today_str][etf_name] = price
+            logger.info(f"[compare] {etf_name} 당일 가격: {price}")
 
     # 벤치마크 지수 현재가 추가 (DataFrame 마지막 행이 오늘이 아닌 경우에도 최신값 사용)
     bench_pairs = [
