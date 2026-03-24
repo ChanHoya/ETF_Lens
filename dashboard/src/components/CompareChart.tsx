@@ -17,7 +17,12 @@ const PriceTooltip = ({ active, payload, label, chartData, etfColors }: any) => 
                 const price = item.value;
                 let chg: number | null = null;
                 if (idx > 0) {
-                    const prevPrice = Number(chartData[idx - 1]?.[item.dataKey]);
+                    // 바로 직전 데이터가 null이면 최대 5개 이전까지 탐색
+                    let prevPrice: number | null = null;
+                    for (let pi = idx - 1; pi >= Math.max(0, idx - 5); pi--) {
+                        const pp = Number(chartData[pi]?.[item.dataKey]);
+                        if (pp && !isNaN(pp) && pp > 0) { prevPrice = pp; break; }
+                    }
                     if (prevPrice && prevPrice !== 0) chg = ((price - prevPrice) / prevPrice) * 100;
                 }
                 const color = item.color || etfColors?.[item.dataKey];
@@ -49,8 +54,12 @@ const ReturnTooltip = ({ active, payload, label, chartData }: any) => {
                 const val = Number(item.value);
                 let chg: number | null = null;
                 if (idx > 0) {
-                    const prevVal = Number(chartData[idx - 1]?.[item.dataKey]);
-                    if (!isNaN(prevVal)) chg = val - prevVal;
+                    let prevVal: number | null = null;
+                    for (let pi = idx - 1; pi >= Math.max(0, idx - 5); pi--) {
+                        const pv = Number(chartData[pi]?.[item.dataKey]);
+                        if (!isNaN(pv) && pv !== undefined && pv !== null) { prevVal = pv; break; }
+                    }
+                    if (prevVal !== null) chg = val - prevVal;
                 }
                 const color = item.color;
                 const isUp = val >= 0;
