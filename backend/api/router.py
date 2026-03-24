@@ -1199,73 +1199,84 @@ async def get_semi_chart_data():
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
 
+    # yfinance 티커 → fdr 코드 매핑
+    yf_to_fdr = {
+        "^SOX": "SOX",
+        "005930.KS": "005930",
+        "000660.KS": "000660",
+        "091160.KS": "091160",
+        "381180.KS": "381180",
+    }
+
     def _fetch_one(t_code: str) -> pd.Series:
         """
-        Download a SINGLE ticker with auto_adjust=True.
-        auto_adjust=True keeps only [Open,High,Low,Close,Volume] with Close=split-adjusted.
-        For a SINGLE ticker, yfinance ≥ 0.2 returns a flat DataFrame (no MultiIndex).
+        Download a SINGLE ticker. Try yfinance first, fallback to fdr.
         Returns a clean tz-naive pd.Series of Close prices.
         """
+        series = pd.Series(dtype=float)
+
+        # ── 1차: yfinance ──
         try:
             df = yf.download(
                 t_code,
                 start=start_str,
                 end=end_str,
                 progress=False,
-                # auto_adjust=False (default): "Close" is split-adjusted only.
-                # Do NOT use auto_adjust=True for Korean stocks – yfinance returns
-                # the Total Return price (dividends reinvested) which inflates prices
-                # far above actual market prices and distorts the chart.
             )
-            if df.empty:
-                logger.warning(f"semi-chart: empty download for {t_code}")
-                return pd.Series(dtype=float)
-
-            # Extract the split-adjusted Close price.
-            # Column structure depends on yfinance version:
-            #  - old (< 0.2): flat columns [Open, High, Low, Close, Adj Close, Volume]
-            #  - new (≥ 0.2): MultiIndex [(metric, ticker)] even for single-ticker download
-            if isinstance(df.columns, pd.MultiIndex):
-                lvl0 = df.columns.get_level_values(0).unique().tolist()
-                lvl1 = df.columns.get_level_values(1).unique().tolist()
-                if "Close" in lvl0:
-                    # (metric, ticker) format — default group_by='column'
-                    sub = df["Close"]
-                    series = sub.iloc[:, 0] if isinstance(sub, pd.DataFrame) else sub
-                elif t_code in lvl0:
-                    # (ticker, metric) format — group_by='ticker'
-                    series = df[t_code]["Close"] if "Close" in df[t_code].columns else df[t_code].iloc[:, 0]
-                elif "Close" in lvl1:
-                    series = df.xs("Close", axis=1, level=1)
-                    series = series.iloc[:, 0] if isinstance(series, pd.DataFrame) else series
+            if not df.empty:
+                if isinstance(df.columns, pd.MultiIndex):
+                    lvl0 = df.columns.get_level_values(0).unique().tolist()
+                    lvl1 = df.columns.get_level_values(1).unique().tolist()
+                    if "Close" in lvl0:
+                        sub = df["Close"]
+                        series = sub.iloc[:, 0] if isinstance(sub, pd.DataFrame) else sub
+                    elif t_code in lvl0:
+                        series = df[t_code]["Close"] if "Close" in df[t_code].columns else df[t_code].iloc[:, 0]
+                    elif "Close" in lvl1:
+                        series = df.xs("Close", axis=1, level=1)
+                        series = series.iloc[:, 0] if isinstance(series, pd.DataFrame) else series
+                    else:
+                        series = df.iloc[:, 0]
                 else:
-                    series = df.iloc[:, 0]
+                    if "Close" in df.columns:
+                        series = df["Close"]
+                    elif "Adj Close" in df.columns:
+                        series = df["Adj Close"]
+                    else:
+                        series = df.iloc[:, 0]
+
+                series = series.dropna()
             else:
-                # Flat columns
-                if "Close" in df.columns:
-                    series = df["Close"]
-                elif "Adj Close" in df.columns:
-                    series = df["Adj Close"]
-                else:
-                    series = df.iloc[:, 0]
-
-
-            series = series.dropna()
-            if series.empty:
-                return pd.Series(dtype=float)
-
-            if series.index.tz is not None:
-                series.index = series.index.tz_convert(None)
-
-            logger.info(
-                f"semi-chart {t_code}: {len(series)} pts, "
-                f"{series.index[0].date()} – {series.index[-1].date()}, "
-                f"first={series.iloc[0]:.2f}, last={series.iloc[-1]:.2f}"
-            )
-            return series
+                logger.warning(f"semi-chart: yfinance empty for {t_code}")
         except Exception as e:
-            logger.error(f"semi-chart: {t_code} failed: {e}", exc_info=True)
+            logger.warning(f"semi-chart: yfinance failed for {t_code}: {e}")
+
+        # ── 2차: fdr fallback ──
+        if series.empty:
+            fdr_code = yf_to_fdr.get(t_code, t_code.replace(".KS", ""))
+            try:
+                import FinanceDataReader as fdr
+                fdr_df = fdr.DataReader(fdr_code, start_str, end_str)
+                if not fdr_df.empty and "Close" in fdr_df.columns:
+                    series = fdr_df["Close"].dropna()
+                    logger.info(f"semi-chart: fdr fallback OK for {t_code} → {fdr_code} ({len(series)} pts)")
+                else:
+                    logger.warning(f"semi-chart: fdr also empty for {fdr_code}")
+            except Exception as e2:
+                logger.warning(f"semi-chart: fdr fallback failed for {fdr_code}: {e2}")
+
+        if series.empty:
             return pd.Series(dtype=float)
+
+        if series.index.tz is not None:
+            series.index = series.index.tz_convert(None)
+
+        logger.info(
+            f"semi-chart {t_code}: {len(series)} pts, "
+            f"{series.index[0].date()} – {series.index[-1].date()}, "
+            f"first={series.iloc[0]:.2f}, last={series.iloc[-1]:.2f}"
+        )
+        return series
 
     # Sequential: yfinance sessions share state and are NOT concurrency-safe
     results: dict[str, pd.Series] = {}
