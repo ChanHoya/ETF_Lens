@@ -817,6 +817,25 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
     if today_str in chart_data_map and today_str not in sampled_dates:
         sampled_dates.append(today_str)
         sampled_dates.sort()
+
+    # ── Forward-fill: 특정 날짜에 ETF 가격이 없으면 직전 유효 가격으로 채움 ──
+    # (예: 3/23에 일부 ETF 데이터가 DB에 없을 때 3/20 가격으로 보간)
+    all_etf_keys = set()
+    for dt in sampled_dates:
+        entry = chart_data_map.get(dt, {})
+        for k in entry:
+            if k != "date":
+                all_etf_keys.add(k)
+
+    prev_values: dict[str, float] = {}
+    for dt in sampled_dates:
+        entry = chart_data_map[dt]
+        for key in all_etf_keys:
+            if key in entry and entry[key] is not None:
+                prev_values[key] = entry[key]
+            elif key in prev_values:
+                entry[key] = prev_values[key]
+
     line_chart_data = [chart_data_map[dt] for dt in sampled_dates]
 
     # Calculate Radar Chart Scores dynamically
