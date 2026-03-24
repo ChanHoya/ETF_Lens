@@ -488,9 +488,13 @@ async def fetch_naver_live_price(code: str) -> float | None:
         data = json.loads(res)
         price_str = data.get("closePrice", "")
         if price_str:
-            return float(price_str.replace(",", ""))
+            price = float(price_str.replace(",", ""))
+            logger.info(f"[live_price] {code} = {price} (status={data.get('marketStatus')})")
+            return price
+        logger.warning(f"[live_price] {code} closePrice 없음: {list(data.keys())[:5]}")
         return None
-    except Exception:
+    except Exception as e:
+        logger.warning(f"[live_price] {code} 실패: {e}")
         return None
 
 
@@ -548,6 +552,23 @@ async def fetch_etf_hybrid(
         # Naver API에서 정식 종목명 조회 (pykrx/FDR 오매핑 방지, 실패 시 DB name 사용)
         naver_name = await fetch_naver_stock_name(code)
         etf_name = naver_name or master.name
+
+        # 당일 실시간 현재가를 Naver에서 가져와 historical_data에도 추가
+        naver_live = await fetch_naver_live_price(code)
+        if naver_live and naver_live > 0:
+            live_price = naver_live  # DB 캐시 대신 Naver fresh price 사용
+            from datetime import timezone, timedelta
+            kst = timezone(timedelta(hours=9))
+            today_kst = datetime.now(kst).strftime("%Y-%m-%d")
+            # 오늘 날짜가 historical_data에 없으면 추가
+            if today_kst not in dates:
+                dates.append(today_kst)
+                prices.append(naver_live)
+                logger.info(f"[hybrid] {code} 당일({today_kst}) 실시간가 {naver_live} → historical_data 추가")
+            else:
+                # 이미 있으면 최신 가격으로 갱신
+                idx = dates.index(today_kst)
+                prices[idx] = naver_live
 
         return {
             "etf_code": code,
@@ -748,7 +769,9 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
             chart_data_map[dt_str]["NASDAQ"] = row["Close"]
 
     # ── 당일 실시간 가격 반영 (장중/장마감 모두) ──
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    from datetime import timezone, timedelta as td
+    kst_tz = timezone(td(hours=9))
+    today_str = datetime.now(kst_tz).strftime("%Y-%m-%d")
 
     # ETF 실시간 현재가 조회 (Naver basic API에서 fresh price)
     live_price_tasks = []
