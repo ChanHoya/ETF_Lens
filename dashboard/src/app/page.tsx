@@ -591,6 +591,32 @@ export default function Home() {
       return newPoint;
     });
 
+    // ── 프론트엔드 Forward-fill ──────────────────────────────────────────
+    // 백엔드 forward-fill의 이중 보장: _raw가 null인 날짜를 직전 유효값으로 채움
+    // (예: 3/23에 일부 ETF 데이터 누락 시 3/20 종가로 보간하여 범례에 항상 표시)
+    if (period !== '1D') {
+      const allKeys2 = [...keys, ...benchKeys];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const prevRawMap: Record<string, number> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      baseMappedData = baseMappedData.map((pt: any) => {
+        const filled = { ...pt };
+        allKeys2.forEach((key: string) => {
+          const rawKey = `${key}_raw`;
+          if (filled[rawKey] != null && filled[rawKey] > 0) {
+            prevRawMap[key] = filled[rawKey];
+          } else if (prevRawMap[key] != null) {
+            // 직전 유효값으로 채우기
+            filled[rawKey] = prevRawMap[key];
+            if (basePrices[key] && prevRawMap[key]) {
+              filled[key] = Number(((prevRawMap[key] / basePrices[key] - 1) * 100).toFixed(2));
+            }
+          }
+        });
+        return filled;
+      });
+    }
+
     // 1D (5분 단위 정보 시뮬레이션)
     if (period === '1D' && baseMappedData.length > 0) {
       const lastValidObj = [...baseMappedData].reverse().find(d => keys.some((k: string) => d[`${k}_raw`] != null)) || baseMappedData[0];
