@@ -73,7 +73,7 @@ async def get_db_version(db: AsyncSession = Depends(get_db)):
 
 # ── Health Check 캐시 ──────────────────────────────────────────────────────────
 _health_cache: dict = {}
-_HEALTH_CACHE_TTL = 60  # 60초 캐시 (동시 다수 접속 시 중복 호출 방지)
+_HEALTH_CACHE_TTL = 300  # 5분 캐시 (동시 다수 접속 시 중복 호출 방지)
 
 
 async def _check_one(name: str, fn, timeout_sec: float = 5.0) -> dict:
@@ -157,14 +157,13 @@ async def check_health(db: AsyncSession = Depends(get_db)):
         raise last_err or ValueError("All Gemini models failed")
 
     def _oecd_check():
-        # 2024년 이후 OECD 신 API 엔드포인트 (sdmx.oecd.org)
+        # OECD SDMX-JSON API (stats.oecd.org - 구 엔드포인트, 안정적)
         url = (
-            "https://sdmx.oecd.org/public/rest/data/"
-            "OECD.SDD.STES,DSD_STES@DF_CLI,4.0/"
-            "KOR.M.LI.AA.A?startPeriod=2024-01&endPeriod=2024-06"
+            "https://stats.oecd.org/SDMX-JSON/data/MEI_CLI/"
+            "LOLITOAASTSAM.KOR.M/all?startTime=2024-01&endTime=2024-06"
         )
         resp = requests.get(url, timeout=12, headers={"Accept": "application/json"})
-        if resp.status_code != 200 or len(resp.text) < 50:
+        if resp.status_code != 200 or len(resp.text) < 100:
             raise ValueError(f"OECD HTTP {resp.status_code}")
 
     def _fred_check():
@@ -213,7 +212,8 @@ async def check_health(db: AsyncSession = Depends(get_db)):
     # FRED는 한국 네트워크에서 자주 차단됨 → warning(비핵심)으로 분류
     # Gemini: API 키 미설정 또는 쿼터 초과 → 채팅 전용, 핵심 분석 기능에 영향 없음
     # OECD CLI: 실제 앱 데이터에 미사용 (헬스 체크 전용) → warning 분류
-    WARNING_ONLY = {"FRED", "Gemini", "OECD CLI"}
+    # pykrx: KRX 서버 점검/세션 만료 시 간헐적 실패 → warning 분류 (ETF 이름은 DB fallback)
+    WARNING_ONLY = {"FRED", "Gemini", "OECD CLI", "pykrx (KRX)"}
 
     for svc, result in checks.items():
         if not result["ok"] and svc not in WARNING_ONLY:
@@ -233,6 +233,13 @@ async def check_health(db: AsyncSession = Depends(get_db)):
     _health_cache = {"ts": now, "data": response}
     return response
 
+
+@router.post("/health/reset-cache")
+async def reset_health_cache():
+    """헬스 체크 캐시를 즉시 클리어합니다. 다음 /health 호출 시 새로 체크."""
+    global _health_cache
+    _health_cache = {}
+    return {"status": "ok", "message": "Health cache cleared."}
 
 
 @router.get("/evaluate", tags=["evaluate"])
