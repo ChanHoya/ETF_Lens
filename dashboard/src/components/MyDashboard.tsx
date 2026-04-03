@@ -38,13 +38,31 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
     const totalReturnRate = stockPrincipal > 0 ? (totalProfitLoss / stockPrincipal) * 100 : 0;
 
     // 사용자 맞춤 카테고리 로직 (한국, S&P500, Nasdaq, 현물, 기타)
-    const categorizeItem = (name: string, isCash: boolean = false) => {
+    const categorizeItem = (name: string, code: string = "", isCash: boolean = false) => {
         if (isCash) return '현물/현금 (금, 예수금 등)';
         if (!name) return '한국';
+        
+        // 종목명/코드에 영문약자 형태의 미국 증시코드인 경우 (숫자 미포함)
+        if (code && /^[A-Za-z]+(\.[A-Za-z]+)?$/.test(code)) {
+            // 별도 조건 없으면 나스닥 혹은 S&P500 등 지수 (기본값 나스닥)
+            return 'NASDAQ';
+        }
+
         const n = name.toUpperCase();
         if (n.includes('금현물') || n.includes('국제금') || n.includes('은현물') || n.includes('금선물') || n.includes('GOLD')) return '현물/현금 (금, 예수금 등)';
-        if (n.includes('S&P500') || n.includes('S&P 500')) return 'S&P 500';
-        if (n.includes('나스닥') || n.includes('NASDAQ')) return 'NASDAQ';
+        
+        // 특정 키워드에 따른 나스닥/S&P 매핑
+        if (n.includes('미국성장') || n.includes('미국우주항공') || n.includes('미국양자컴퓨팅') || n.includes('나스닥') || n.includes('NASDAQ')) {
+            return 'NASDAQ';
+        }
+        if (n.includes('미국배당') || n.includes('S&P500') || n.includes('S&P 500')) {
+            return 'S&P 500';
+        }
+        // 나머지 미국으로 시작/포함되는 것은 S&P500
+        if (n.includes('미국')) {
+            return 'S&P 500';
+        }
+
         // 미국, S&P500, Nasdaq 이 없는 경우에는 모두 한국으로 매핑
         return '한국';
     };
@@ -53,12 +71,12 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
         const groups: Record<string, number> = {};
         
         if (cashBalance > 0) {
-            const cat = categorizeItem('예수금', true);
+            const cat = categorizeItem('예수금', "", true);
             groups[cat] = cashBalance;
         }
 
         holdings.forEach((h: any) => {
-            const cat = categorizeItem(h.name);
+            const cat = categorizeItem(h.name, h.code);
             groups[cat] = (groups[cat] || 0) + (h.eval_amount || 0);
         });
 

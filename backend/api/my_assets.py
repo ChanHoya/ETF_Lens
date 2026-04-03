@@ -320,7 +320,7 @@ async def get_my_portfolio(
                             "total_eval_amount": total_eval_amount,
                             "total_profit_loss": total_profit_loss,
                             "cash_balance": cash_balance,
-                            "total_asset": total_asset,
+                            "total_asset": total_eval_amount + cash_balance,
                         },
                         "holdings": local_holdings,
                     }

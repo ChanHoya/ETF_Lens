@@ -38,13 +38,31 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
     const stockWeight = totalAsset > 0 ? (stockEvalAmount / totalAsset) * 100 : 0;
 
     // 사용자 맞춤 카테고리 로직 (한국, S&P500, Nasdaq, 현물, 기타)
-    const categorizeItem = (name: string, isCash: boolean = false) => {
+    const categorizeItem = (name: string, code: string = "", isCash: boolean = false) => {
         if (isCash) return '현물/현금 (금, 예수금 등)';
         if (!name) return '한국';
+        
+        // 종목명/코드에 영문약자 형태의 미국 증시코드인 경우 (숫자 미포함)
+        if (code && /^[A-Za-z]+(\.[A-Za-z]+)?$/.test(code)) {
+            // 별도 조건 없으면 나스닥 혹은 S&P500 등 지수 (기본값 나스닥)
+            return 'NASDAQ';
+        }
+
         const n = name.toUpperCase();
         if (n.includes('금현물') || n.includes('국제금') || n.includes('은현물') || n.includes('금선물') || n.includes('GOLD')) return '현물/현금 (금, 예수금 등)';
-        if (n.includes('S&P500') || n.includes('S&P 500')) return 'S&P 500';
-        if (n.includes('나스닥') || n.includes('NASDAQ')) return 'NASDAQ';
+        
+        // 특정 키워드에 따른 나스닥/S&P 매핑
+        if (n.includes('미국성장') || n.includes('미국우주항공') || n.includes('미국양자컴퓨팅') || n.includes('나스닥') || n.includes('NASDAQ')) {
+            return 'NASDAQ';
+        }
+        if (n.includes('미국배당') || n.includes('S&P500') || n.includes('S&P 500')) {
+            return 'S&P 500';
+        }
+        // 나머지 미국으로 시작/포함되는 것은 S&P500
+        if (n.includes('미국')) {
+            return 'S&P 500';
+        }
+
         // 미국, S&P500, Nasdaq 이 없는 경우에는 모두 한국으로 매핑
         return '한국';
     };
@@ -54,13 +72,13 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
         
         // 예수금 추가
         if (cashBalance > 0) {
-            const cat = categorizeItem('예수금', true);
+            const cat = categorizeItem('예수금', "", true);
             groups[cat] = cashBalance;
         }
 
         // 주식/ETF 추가
         accountHoldings.forEach((h: any) => {
-            const cat = categorizeItem(h.name);
+            const cat = categorizeItem(h.name, h.code);
             groups[cat] = (groups[cat] || 0) + (h.eval_amount || 0);
         });
 
@@ -228,7 +246,7 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
                                 </thead>
                                 <tbody className="divide-y divide-white/5 text-sm">
                                     {/* 보유종목을 카테고리별 정렬 후 렌더링 */}
-                                    {[...accountHoldings].sort((a: any, b: any) => categorizeItem(a.name).localeCompare(categorizeItem(b.name)) || b.eval_amount - a.eval_amount).map((h: any, idx: number) => {
+                                    {[...accountHoldings].sort((a: any, b: any) => categorizeItem(a.name, a.code).localeCompare(categorizeItem(b.name, b.code)) || b.eval_amount - a.eval_amount).map((h: any, idx: number) => {
                                         const hPurchase = h.qty * h.avg_price;
                                         const hWeight = totalAsset > 0 ? (h.eval_amount / totalAsset) * 100 : 0;
                                         const isLoss = h.profit_loss < 0;
@@ -244,8 +262,8 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
                                                 </td>
                                                 {/* Category */}
                                                 <td className="py-3 px-4 text-center">
-                                                    <span className="px-2 py-1 text-[10px] rounded-full" style={{ backgroundColor: `${getCustomColor(categorizeItem(h.name))}20`, color: getCustomColor(categorizeItem(h.name)) }}>
-                                                        {categorizeItem(h.name)}
+                                                    <span className="px-2 py-1 text-[10px] rounded-full" style={{ backgroundColor: `${getCustomColor(categorizeItem(h.name, h.code))}20`, color: getCustomColor(categorizeItem(h.name, h.code)) }}>
+                                                        {categorizeItem(h.name, h.code)}
                                                     </span>
                                                 </td>
                                                 {/* Qty & Weight */}
