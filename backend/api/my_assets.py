@@ -313,14 +313,19 @@ async def get_my_portfolio(
                     except Exception as ex:
                         logger.error(f"[{acc_str}] Overseas Test Error: {ex}")
 
+                    # 계산의 정확도를 위해, 프론트엔드의 상세보기(AccountDetailModal)와 동일하게 
+                    # 응답으로 내려가는 개별 보유항목들의 합계로 평가금액과 손익을 재계산합니다.
+                    final_total_eval = sum(h["eval_amount"] for h in local_holdings)
+                    final_total_profit_loss = sum(h["profit_loss"] for h in local_holdings)
+                    
                     return {
                         "account_no": formatted_account,
                         "account_name": "연동계좌",
                         "summary": {
-                            "total_eval_amount": total_eval_amount,
-                            "total_profit_loss": total_profit_loss,
+                            "total_eval_amount": final_total_eval,
+                            "total_profit_loss": final_total_profit_loss,
                             "cash_balance": cash_balance,
-                            "total_asset": total_eval_amount + cash_balance,
+                            "total_asset": final_total_eval + cash_balance,
                         },
                         "holdings": local_holdings,
                     }
