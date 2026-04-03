@@ -277,10 +277,12 @@ async def get_my_portfolio(
                                         ovrs_output3.get("tot_frcr_cblc_smtl", 0)
                                     )
 
-                                    total_asset += ovrs_tot_asst_amt
+                                    # 해외 예수금은 통합증거금 설정 시 국내 예수금(prvs_rcdl_excc_amt)에 이미 KRW 환산으로 
+                                    # 포함되어 있으므로 이중 합산을 방지합니다. 해외 주식 평가금액만 총액에 더합니다.
+                                    total_asset += ovrs_tot_evlu_amt
                                     total_eval_amount += ovrs_tot_evlu_amt
                                     total_profit_loss += ovrs_evlu_pfls_amt
-                                    cash_balance += ovrs_cash_balance
+                                    # cash_balance += ovrs_cash_balance # 이중 합산 방지
 
                                     for item in ovrs_output1:
                                         local_holdings.append(

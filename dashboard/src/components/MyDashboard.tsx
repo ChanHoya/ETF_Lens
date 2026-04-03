@@ -183,9 +183,9 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
                                 items.sort((a: any, b: any) => b.value - a.value);
                                 
                                 let finalPieData = items;
-                                if (items.length > 7) {
-                                    const top = items.slice(0, 6);
-                                    const others = items.slice(6).reduce((acc: number, curr: any) => acc + curr.value, 0);
+                                if (items.length > 16) {
+                                    const top = items.slice(0, 15);
+                                    const others = items.slice(15).reduce((acc: number, curr: any) => acc + curr.value, 0);
                                     finalPieData = [...top, { name: '기타 종목 합계', value: others }];
                                 }
 
