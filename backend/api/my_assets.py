@@ -393,3 +393,150 @@ async def get_my_portfolio(
     except Exception as e:
         logger.exception("Portfolio fetch error")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/trades/today")
+async def get_today_trades():
+    """
+    KIS TTTC8001R — 당일 국내 체결 내역 조회.
+    TOKEN_CACHE를 재사용하여 EGW00133 rate limit 방지.
+    """
+    from dotenv import load_dotenv
+    import time
+    from datetime import datetime, timezone, timedelta
+
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+    load_dotenv(dotenv_path=env_path, override=True)
+
+    kis_url_base = os.environ.get("KIS_URL_BASE", "https://openapi.koreainvestment.com:9443")
+    is_mock = "vts" in kis_url_base
+
+    # ── KST 기준 오늘 날짜 ──────────────────────────────────────────────────
+    KST = timezone(timedelta(hours=9))
+    today_str = datetime.now(KST).strftime("%Y%m%d")
+
+    # ── 계좌 목록 수집 ────────────────────────────────────────────────────────
+    accounts_raw = [v.strip() for k, v in os.environ.items()
+                    if k.startswith("KIS_ACC") and v.strip()]
+    if not accounts_raw:
+        raise HTTPException(status_code=400, detail="No KIS accounts configured")
+
+    # ── 앱키 수집 ─────────────────────────────────────────────────────────────
+    keypairs = []
+    for k, v in os.environ.items():
+        if k.startswith("KIS_APP_KEY") and v:
+            suffix = k.replace("KIS_APP_KEY", "")
+            secret = os.environ.get(f"KIS_APP_SECRET{suffix}", "")
+            if secret:
+                keypairs.append({"app_key": v.strip(), "app_secret": secret.strip()})
+
+    if not keypairs:
+        raise HTTPException(status_code=400, detail="No KIS API keys configured")
+
+    # ── 토큰 확보 (캐시 우선, 없으면 신규 발급) ───────────────────────────────
+    active_token = None
+    active_key = None
+    async with httpx.AsyncClient(timeout=15) as client:
+        for kp in keypairs:
+            app_key = kp["app_key"]
+            cached = TOKEN_CACHE.get(app_key)
+            if cached and cached["expires_at"] > time.time():
+                active_token = cached["access_token"]
+                active_key = kp
+                break
+            # 신규 발급
+            try:
+                res = await client.post(
+                    f"{kis_url_base}/oauth2/tokenP",
+                    json={"grant_type": "client_credentials",
+                          "appkey": app_key, "appsecret": kp["app_secret"]}
+                )
+                token = res.json().get("access_token")
+                if token:
+                    TOKEN_CACHE[app_key] = {
+                        "access_token": token,
+                        "expires_at": time.time() + 82800 - 3600
+                    }
+                    active_token = token
+                    active_key = kp
+                    break
+            except Exception as e:
+                logger.warning(f"Token fetch failed for {app_key}: {e}")
+
+    if not active_token:
+        raise HTTPException(status_code=500, detail="Failed to obtain KIS access token")
+
+    # ── 모든 계좌의 체결내역 수집 ────────────────────────────────────────────
+    all_trades: list = []
+    tr_id = "VTTC8001R" if is_mock else "TTTC8001R"
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        for acc_raw in accounts_raw:
+            digits = "".join(filter(str.isdigit, acc_raw))
+            if len(digits) < 8:
+                continue
+            cano = digits[:8]
+            acnt = digits[8:] or "01"
+
+            headers = {
+                "content-type": "application/json; charset=utf-8",
+                "authorization": f"Bearer {active_token}",
+                "appkey": active_key["app_key"],
+                "appsecret": active_key["app_secret"],
+                "tr_id": tr_id,
+                "custtype": "P",
+            }
+            params = {
+                "CANO": cano, "ACNT_PRDT_CD": acnt,
+                "INQR_STRT_DT": today_str, "INQR_END_DT": today_str,
+                "SLL_BUY_DVSN_CD": "00",   # 00=전체, 01=매도, 02=매수
+                "INQR_DVSN": "00",
+                "PDNO": "", "CCLD_DVSN": "01",
+                "ORD_GNO_BRNO": "", "ODNO": "",
+                "INQR_DVSN_3": "00", "INQR_DVSN_1": "",
+                "CTX_AREA_FK100": "", "CTX_AREA_NK100": "",
+            }
+            try:
+                res = await client.get(
+                    f"{kis_url_base}/uapi/domestic-stock/v1/trading/inquire-daily-ccld",
+                    headers=headers, params=params
+                )
+                data = res.json()
+                if data.get("rt_cd") != "0":
+                    logger.warning(f"[trades] {cano} rt={data.get('rt_cd')} {data.get('msg1','')}")
+                    continue
+
+                for item in data.get("output1", []):
+                    qty = int(item.get("tot_ccld_qty", "0") or 0)
+                    price = float(item.get("avg_prvs", "0") or 0)
+                    amount = float(item.get("tot_ccld_amt", "0") or 0)
+                    if qty == 0 and price == 0:   # 빈 행 제외
+                        continue
+                    tmd = item.get("ord_tmd", "")  # "HHMMSS"
+                    time_display = f"{tmd[:2]}:{tmd[2:4]}:{tmd[4:]}" if len(tmd) == 6 else tmd
+                    div_code = item.get("sll_buy_dvsn_cd", "")  # "01"=매도, "02"=매수
+                    all_trades.append({
+                        "account_no": f"{cano}-{acnt}",
+                        "name": item.get("prdt_name", ""),
+                        "code": item.get("pdno", ""),
+                        "side": "매도" if div_code == "01" else "매수",
+                        "side_code": div_code,
+                        "qty": qty,
+                        "price": price,
+                        "amount": amount,
+                        "profit_loss": float(item.get("evlu_pfls_amt", "0") or 0),
+                        "time": time_display,
+                        "order_no": item.get("odno", ""),
+                    })
+            except Exception as e:
+                logger.error(f"[trades] {cano} error: {e}")
+
+    # 시간 역순 정렬 (최신 체결이 위)
+    all_trades.sort(key=lambda x: x["time"], reverse=True)
+
+    return {
+        "status": "success",
+        "date": today_str,
+        "count": len(all_trades),
+        "trades": all_trades,
+    }
