@@ -95,47 +95,63 @@ export default function HoldingsSignals({ isAuthorized }: HoldingsSignalsProps) 
 
             {/* 결과 카드 그리드 */}
             {!loading && data?.signals?.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {data.signals.map((s: any) => {
-                        const style = SIGNAL_STYLE[s.signal] ?? SIGNAL_STYLE.unknown;
-                        const emoji = SIGNAL_EMOJI[s.signal] ?? "❓";
-                        return (
-                            <div
-                                key={s.code}
-                                className="bg-white/[0.02] border border-white/10 rounded-2xl p-4 flex flex-col gap-2 hover:bg-white/[0.04] transition-all backdrop-blur-md"
-                            >
-                                {/* 종목명 + 시그널 배지 */}
-                                <div className="flex justify-between items-start gap-2">
-                                    <div>
-                                        <p className="font-semibold text-white text-sm leading-tight">{s.name}</p>
-                                        <p className="text-xs text-gray-500 mt-0.5">{s.code}</p>
-                                    </div>
-                                    <span className={`flex-shrink-0 flex items-center gap-1 px-2 py-0.5 border rounded-full text-xs font-bold ${style.badge}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-                                        {emoji} {s.label}
-                                    </span>
-                                </div>
+                <div className="flex flex-col gap-6">
+                    {Object.entries(
+                        data.signals.reduce((acc: any, s: any) => {
+                            const account = s.account_no || '미분류 계좌';
+                            if (!acc[account]) acc[account] = [];
+                            acc[account].push(s);
+                            return acc;
+                        }, {})
+                    ).map(([accountNo, accountSignals]: [string, any]) => (
+                        <div key={accountNo} className="flex flex-col gap-3">
+                            <h3 className="text-sm font-semibold text-gray-400 pl-2 border-l-2 border-violet-500/50">
+                                계좌: <span className="text-gray-300 font-mono tracking-wider">{accountNo}</span>
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {accountSignals.map((s: any, idx: number) => {
+                                    const style = SIGNAL_STYLE[s.signal] ?? SIGNAL_STYLE.unknown;
+                                    const emoji = SIGNAL_EMOJI[s.signal] ?? "❓";
+                                    return (
+                                        <div
+                                            key={`${accountNo}-${s.code}-${idx}`}
+                                            className="bg-white/[0.02] border border-white/10 rounded-2xl p-4 flex flex-col gap-2 hover:bg-white/[0.04] transition-all backdrop-blur-md"
+                                        >
+                                            {/* 종목명 + 시그널 배지 */}
+                                            <div className="flex justify-between items-start gap-2">
+                                                <div>
+                                                    <p className="font-semibold text-white text-sm leading-tight">{s.name}</p>
+                                                    <p className="text-xs text-gray-500 mt-0.5">{s.code}</p>
+                                                </div>
+                                                <span className={`flex-shrink-0 flex items-center gap-1 px-2 py-0.5 border rounded-full text-xs font-bold ${style.badge}`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+                                                    {emoji} {s.label}
+                                                </span>
+                                            </div>
 
-                                {/* 지표 수치 */}
-                                {s.detail && (
-                                    <p className="text-xs text-gray-500 font-mono">{s.detail}</p>
-                                )}
+                                            {/* 지표 수치 */}
+                                            {s.detail && (
+                                                <p className="text-xs text-gray-500 font-mono">{s.detail}</p>
+                                            )}
 
-                                {/* 평가금액 */}
-                                <div className="flex justify-between items-center pt-1 border-t border-white/5">
-                                    <span className="text-xs text-gray-600">평가금액</span>
-                                    <span className="text-xs font-semibold text-gray-300">
-                                        {formatNumber(s.eval_amount)}원
-                                    </span>
-                                </div>
+                                            {/* 평가금액 */}
+                                            <div className="flex justify-between items-center pt-1 border-t border-white/5">
+                                                <span className="text-xs text-gray-600">평가금액</span>
+                                                <span className="text-xs font-semibold text-gray-300">
+                                                    {formatNumber(s.eval_amount)}원
+                                                </span>
+                                            </div>
 
-                                {/* 캐시 표시 */}
-                                {s.cached && (
-                                    <p className="text-[10px] text-gray-700 text-right -mt-1">캐시됨</p>
-                                )}
+                                            {/* 캐시 표시 */}
+                                            {s.cached && (
+                                                <p className="text-[10px] text-gray-700 text-right -mt-1">캐시됨</p>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        );
-                    })}
+                        </div>
+                    ))}
                 </div>
             )}
 

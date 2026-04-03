@@ -133,8 +133,6 @@ async def get_my_portfolio(
 
         # 2. Define a helper function to fetch a single account using a brute-force key strategy
         async def fetch_single_account(acc_str: str):
-            import json
-
             account_no_clean = "".join(filter(str.isdigit, acc_str))
             if not account_no_clean:
                 return None
@@ -331,11 +329,13 @@ async def get_my_portfolio(
             )
             return None
 
-        # 3. Fetch all accounts concurrently
-        tasks = [fetch_single_account(acc) for acc in account_configs]
+        # 3. Fetch all accounts sequentially to prevent KIS API TPS rate limits
+        results = []
         import asyncio
-
-        results = await asyncio.gather(*tasks)
+        for acc in account_configs:
+            await asyncio.sleep(0.3)  # Rate limit padding
+            res = await fetch_single_account(acc)
+            results.append(res)
 
         # 4. Aggregate
         valid_results = [r for r in results if r is not None]
@@ -747,6 +747,7 @@ async def get_holdings_signals(request: Request, db: AsyncSession = Depends(get_
         if c and (now_ts - c["ts"]) < _SIGNAL_CACHE_TTL:
             results.append({
                 "code": code, "name": name,
+                "account_no": h.get("account_no", ""),
                 "eval_amount": h.get("eval_amount", 0),
                 **c["signal"], "cached": True})
             continue
@@ -764,6 +765,7 @@ async def get_holdings_signals(request: Request, db: AsyncSession = Depends(get_
         _SIGNAL_CACHE[code] = {"signal": sig, "ts": now_ts}
         results.append({
             "code": code, "name": name,
+            "account_no": h.get("account_no", ""),
             "eval_amount": h.get("eval_amount", 0),
             **sig, "cached": False})
 
