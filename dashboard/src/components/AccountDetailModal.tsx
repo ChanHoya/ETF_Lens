@@ -192,6 +192,7 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
                                         <RechartsTooltip
                                             formatter={(value: any) => `${formatNumber(value as number)}원`}
                                             contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }}
+                                            itemStyle={{ color: '#e4e4e7' }}
                                         />
                                     </PieChart>
                                 </ResponsiveContainer>
