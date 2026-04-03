@@ -229,7 +229,9 @@ async def get_my_portfolio(
 
                     total_eval_amount = float(output2.get("tot_evlu_amt", 0))
                     total_profit_loss = float(output2.get("evlu_pfls_smtl_amt", 0))
-                    cash_balance = float(output2.get("dnca_tot_amt", 0))
+
+                    # 예수금을 D+2 정산금액으로 변경 (실제 출금가능 금액 및 평가 기준에 부합)
+                    cash_balance = float(output2.get("prvs_rcdl_excc_amt", output2.get("dnca_tot_amt", 0)))
 
                     # 4. Fetch Overseas Stocks (CTRP6504R)
                     try:
@@ -530,6 +532,10 @@ async def get_today_trades():
                     })
             except Exception as e:
                 logger.error(f"[trades] {cano} error: {e}")
+            
+            # API Rate Limit(EGW00133) 방지를 위한 지연
+            import asyncio
+            await asyncio.sleep(0.3)
 
     # 시간 역순 정렬 (최신 체결이 위)
     all_trades.sort(key=lambda x: x["time"], reverse=True)

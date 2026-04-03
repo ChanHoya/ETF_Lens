@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import AccountDetailModal from './AccountDetailModal';
 import HoldingsSignals from './HoldingsSignals';
+import RecentTrades from './RecentTrades';
+import PortfolioBacktester from './PortfolioBacktester';
+import RiskAlertBanner from './RiskAlertBanner';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type MyDashboardProps = {
@@ -22,45 +25,55 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
     const formatPercent = (val: number) => `${(val * 100).toFixed(2)}%`;
 
     // Derived Metrics
-    const totalAsset = summary.total_asset || 0;
     const cashBalance = summary.cash_balance || 0;
+    
+    // 사용자의 피드백을 반영하여 총자산금액을 KIS 응답(안 보일 수 있는 자산 포함)이 아닌,
+    // [보유 주식/ETF 평가금액 + 예수금]으로 명확히 합산합니다.
+    const stockEvalAmount = summary.total_eval_amount || 0;
+    const totalAsset = stockEvalAmount + cashBalance;
     const totalProfitLoss = summary.total_profit_loss || 0;
 
     // Calculate total invest principal (매수금액)
-    const totalPrincipal = totalAsset - totalProfitLoss - cashBalance;
-
-    // Overall return rate (excluding cash)
-    const stockEvalAmount = summary.total_eval_amount || 0;
     const stockPrincipal = stockEvalAmount - totalProfitLoss;
     const totalReturnRate = stockPrincipal > 0 ? (totalProfitLoss / stockPrincipal) * 100 : 0;
 
-    // Region & Asset Category Aggregation
-    const groupByCategory = (key: string) => {
+    // 사용자 맞춤 카테고리 로직 (한국, S&P500, Nasdaq, 현물, 기타)
+    const categorizeItem = (name: string, isCash: boolean = false) => {
+        if (isCash) return '현물/현금 (금, 예수금 등)';
+        if (!name) return '기타 (해외자산 등)';
+        const n = name.toUpperCase();
+        if (n.includes('금현물') || n.includes('국제금') || n.includes('은현물') || n.includes('금선물') || n.includes('GOLD')) return '현물/현금 (금, 예수금 등)';
+        if (n.includes('S&P500') || n.includes('S&P 500')) return 'S&P 500';
+        if (n.includes('나스닥') || n.includes('NASDAQ')) return 'NASDAQ';
+        if (n.includes('코리아') || n.includes('KRX') || n.includes('200') || n.includes('코스피') || n.includes('코스닥') || n.includes('반도체TOP10')) return '한국';
+        return '기타 (해외자산 등)';
+    };
+
+    const aggregatedData = useMemo(() => {
         const groups: Record<string, number> = {};
+        
+        if (cashBalance > 0) {
+            const cat = categorizeItem('예수금', true);
+            groups[cat] = cashBalance;
+        }
+
         holdings.forEach((h: any) => {
-            const cat = h[key] || '기타';
+            const cat = categorizeItem(h.name);
             groups[cat] = (groups[cat] || 0) + (h.eval_amount || 0);
         });
 
-        // Add raw cash if aggregating by asset type, to accurately represent global balance
-        if (key === 'category_asset' && cashBalance > 0) {
-            groups['현금'] = (groups['현금'] || 0) + cashBalance;
-        } else if (key === 'category_region' && cashBalance > 0) {
-            // Treat raw cash as domestic KRW value
-            groups['한국'] = (groups['한국'] || 0) + cashBalance;
-        }
-
         return Object.keys(groups).map(k => ({ name: k, value: groups[k] })).sort((a, b) => b.value - a.value);
+    }, [holdings, cashBalance]);
+
+    const customColors: Record<string, string> = {
+        '한국': '#3b82f6',
+        'S&P 500': '#f43f5e',
+        'NASDAQ': '#8b5cf6',
+        '현물/현금 (금, 예수금 등)': '#eab308',
+        '기타 (해외자산 등)': '#71717a'
     };
 
-    const regionData = groupByCategory('category_region');
-    const assetTypeData = groupByCategory('category_asset');
-
-    const regionColors = { '한국': '#3b82f6', '미국': '#f43f5e', '기타': '#8b5cf6' };
-    const assetColors = { '주식': '#14b8a6', '채권': '#f59e0b', '현금': '#64748b', '금': '#eab308', '기타': '#71717a' };
-
-    const getRegionColor = (name: string) => regionColors[name as keyof typeof regionColors] || '#71717a';
-    const getAssetColor = (name: string) => assetColors[name as keyof typeof assetColors] || '#71717a';
+    const getCustomColor = (name: string) => customColors[name] || '#71717a';
 
     // Section 2 Dummy Chart Data (Since KIS TTTC8434R only gives current snapshot)
     const dummyChartData = [
@@ -69,6 +82,8 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
 
     return (
         <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-5 duration-700 font-sans pb-10">
+
+            <RiskAlertBanner />
 
             {/* Section 1: 나의 자산 (Overview) */}
             <section className="flex flex-col gap-4">
@@ -255,6 +270,9 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
                 </div>
             </section>
 
+            {/* 당일 체결 내역 */}
+            <RecentTrades tradesData={tradesData} />
+
             {/* Section 4: 상품 유형별 현황 (Assets by Product Type) */}
             <section className="flex flex-col gap-4 mt-4">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -262,94 +280,50 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
                     상품 유형별 현황
                 </h2>
 
-                <div className="bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-md p-6 flex flex-col gap-10">
+                <div className="bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-md p-6 flex flex-col items-center">
 
-                    {/* Charts Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 divide-y md:divide-y-0 md:divide-x divide-white/10">
-                        {/* Region Pie */}
-                        <div className="flex flex-col items-center w-full pt-4 md:pt-0">
-                            <h3 className="text-gray-300 font-medium mb-4">투자 지역별 비중</h3>
-                            <div className="w-full h-[250px] relative flex justify-center items-center">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={regionData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={90}
-                                            paddingAngle={2}
-                                            dataKey="value"
-                                            stroke="none"
-                                        >
-                                            {regionData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={getRegionColor(entry.name)} />
-                                            ))}
-                                        </Pie>
-                                        <RechartsTooltip
-                                            formatter={(value: any) => `${formatNumber(value as number)}원`}
-                                            contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <span className="text-sm text-gray-400">총 자산</span>
-                                    <span className="font-bold text-md">{formatNumber(totalAsset)}</span>
-                                </div>
-                            </div>
-                            <div className="flex gap-4 mt-2">
-                                {regionData.map((d) => (
-                                    <div key={d.name} className="flex items-center gap-1.5 text-xs text-gray-400">
-                                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getRegionColor(d.name) }}></div>
-                                        {d.name} {formatPercent(totalAsset > 0 ? d.value / totalAsset : 0)}
-                                    </div>
-                                ))}
-                            </div>
+                    {/* Unified Custom Pie Chart */}
+                    <div className="w-full max-w-2xl h-[300px] relative flex justify-center items-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={aggregatedData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={70}
+                                    outerRadius={110}
+                                    paddingAngle={2}
+                                    dataKey="value"
+                                    stroke="none"
+                                >
+                                    {aggregatedData.map((entry: any, index: number) => (
+                                        <Cell key={`cell-${index}`} fill={getCustomColor(entry.name)} />
+                                    ))}
+                                </Pie>
+                                <RechartsTooltip
+                                    formatter={(value: any) => `${formatNumber(value as number)}원`}
+                                    contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-sm text-gray-400">총 자산</span>
+                            <span className="font-bold text-lg">{formatNumber(totalAsset)}</span>
                         </div>
-
-                        {/* Asset Type Pie */}
-                        <div className="flex flex-col items-center w-full pt-6 md:pt-0 pb-2">
-                            <h3 className="text-gray-300 font-medium mb-4">투자 자산군별 비중</h3>
-                            <div className="w-full h-[250px] relative flex justify-center items-center">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={assetTypeData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={90}
-                                            paddingAngle={2}
-                                            dataKey="value"
-                                            stroke="none"
-                                        >
-                                            {assetTypeData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={getAssetColor(entry.name)} />
-                                            ))}
-                                        </Pie>
-                                        <RechartsTooltip
-                                            formatter={(value: any) => `${formatNumber(value as number)}원`}
-                                            contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <span className="text-sm text-gray-400">총 자산</span>
-                                    <span className="font-bold text-md">{formatNumber(totalAsset)}</span>
-                                </div>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-6 mt-4">
+                        {aggregatedData.map((d: any) => (
+                            <div key={d.name} className="flex items-center gap-2 text-sm text-gray-400">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getCustomColor(d.name) }}></div>
+                                {d.name} <span className="text-gray-200 font-medium ml-1">{formatPercent(totalAsset > 0 ? d.value / totalAsset : 0)}</span>
                             </div>
-                            <div className="flex gap-4 mt-2">
-                                {assetTypeData.map((d) => (
-                                    <div key={d.name} className="flex items-center gap-1.5 text-xs text-gray-400">
-                                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getAssetColor(d.name) }}></div>
-                                        {d.name} {formatPercent(totalAsset > 0 ? d.value / totalAsset : 0)}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 </div>
             </section>
+
+            {/* 포트폴리오 백테스터 */}
+            <PortfolioBacktester holdings={holdings} />
 
             {/* Section 5: 당일 체결내역 */}
             <section className="flex flex-col gap-4 mt-4">

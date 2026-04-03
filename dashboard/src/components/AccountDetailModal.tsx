@@ -18,51 +18,64 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
     const formatPercent = (val: number) => `${val.toFixed(2)}%`;
 
     const cashBalance = account.cash_balance || 0;
-    const totalAsset = account.total_asset || 0;
 
-    // Derived from holdings instead of aggregate to get pure account insight
     const stockEvalAmount = useMemo(() => {
         return accountHoldings.reduce((sum, holding) => sum + (holding.eval_amount || 0), 0);
     }, [accountHoldings]);
+
+    // 사용자의 피드백을 반영하여 총자산금액을 KIS 응답(안 보일 수 있는 자산 포함)이 아닌,
+    // [보유 주식/ETF 평가금액 + 예수금]으로 명확히 합산합니다.
+    const totalAsset = stockEvalAmount + cashBalance;
 
     const totalProfitLoss = useMemo(() => {
         return accountHoldings.reduce((sum, holding) => sum + (holding.profit_loss || 0), 0);
     }, [accountHoldings]);
 
-    // 매입금액 = 평가금액 - 평가손익
     const totalPurchaseAmount = stockEvalAmount - totalProfitLoss;
     const returnRate = totalPurchaseAmount > 0 ? (totalProfitLoss / totalPurchaseAmount) * 100 : 0;
 
-    // Weight percentages relative to this specific account
     const cashWeight = totalAsset > 0 ? (cashBalance / totalAsset) * 100 : 0;
     const stockWeight = totalAsset > 0 ? (stockEvalAmount / totalAsset) * 100 : 0;
 
-    // Account-level Region & Asset Category Aggregation
-    const groupByCategory = (key: string) => {
+    // 사용자 맞춤 카테고리 로직 (한국, S&P500, Nasdaq, 현물, 기타)
+    const categorizeItem = (name: string, isCash: boolean = false) => {
+        if (isCash) return '현물/현금 (금, 예수금 등)';
+        if (!name) return '기타 (해외자산 등)';
+        const n = name.toUpperCase();
+        if (n.includes('금현물') || n.includes('국제금') || n.includes('은현물') || n.includes('금선물') || n.includes('GOLD')) return '현물/현금 (금, 예수금 등)';
+        if (n.includes('S&P500') || n.includes('S&P 500')) return 'S&P 500';
+        if (n.includes('나스닥') || n.includes('NASDAQ')) return 'NASDAQ';
+        if (n.includes('코리아') || n.includes('KRX') || n.includes('200') || n.includes('코스피') || n.includes('코스닥') || n.includes('반도체TOP10')) return '한국';
+        return '기타 (해외자산 등)';
+    };
+
+    const aggregatedData = useMemo(() => {
         const groups: Record<string, number> = {};
+        
+        // 예수금 추가
+        if (cashBalance > 0) {
+            const cat = categorizeItem('예수금', true);
+            groups[cat] = cashBalance;
+        }
+
+        // 주식/ETF 추가
         accountHoldings.forEach((h: any) => {
-            const cat = h[key] || '기타';
+            const cat = categorizeItem(h.name);
             groups[cat] = (groups[cat] || 0) + (h.eval_amount || 0);
         });
 
-        // Attach cash to precise categories
-        if (key === 'category_asset' && cashBalance > 0) {
-            groups['현금'] = (groups['현금'] || 0) + cashBalance;
-        } else if (key === 'category_region' && cashBalance > 0) {
-            groups['한국'] = (groups['한국'] || 0) + cashBalance;
-        }
-
         return Object.keys(groups).map(k => ({ name: k, value: groups[k] })).sort((a, b) => b.value - a.value);
+    }, [accountHoldings, cashBalance]);
+
+    const customColors: Record<string, string> = {
+        '한국': '#3b82f6',
+        'S&P 500': '#f43f5e',
+        'NASDAQ': '#8b5cf6',
+        '현물/현금 (금, 예수금 등)': '#eab308',
+        '기타 (해외자산 등)': '#71717a'
     };
 
-    const regionData = useMemo(() => groupByCategory('category_region'), [accountHoldings, cashBalance]);
-    const assetTypeData = useMemo(() => groupByCategory('category_asset'), [accountHoldings, cashBalance]);
-
-    const regionColors = { '한국': '#3b82f6', '미국': '#f43f5e', '기타': '#8b5cf6' };
-    const assetColors = { '주식': '#14b8a6', '채권': '#f59e0b', '현금': '#64748b', '금': '#eab308', '기타': '#71717a' };
-
-    const getRegionColor = (name: string) => regionColors[name as keyof typeof regionColors] || '#71717a';
-    const getAssetColor = (name: string) => assetColors[name as keyof typeof assetColors] || '#71717a';
+    const getCustomColor = (name: string) => customColors[name] || '#71717a';
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -151,86 +164,45 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
 
                     </div>
 
-                    {/* Middle Section: Categorical Allocation Charts */}
+                    {/* Middle Section: Categorical Allocation Chart */}
                     <div className="bg-white/[0.02] border border-white/10 rounded-xl p-5 flex flex-col pt-6">
                         <h3 className="text-lg font-semibold text-gray-200 mb-6 flex items-center gap-2">
                             <PieChartIcon className="w-5 h-5 text-fuchsia-400" />
                             계좌 포트폴리오 비중
                         </h3>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 divide-y md:divide-y-0 md:divide-x divide-white/10">
-                            {/* Region Pie */}
-                            <div className="flex flex-col items-center w-full pt-4 md:pt-0">
-                                <h4 className="text-sm text-gray-400 mb-2">투자 지역별 비중</h4>
-                                <div className="w-full h-[180px] relative flex justify-center items-center">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={regionData}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={45}
-                                                outerRadius={70}
-                                                paddingAngle={2}
-                                                dataKey="value"
-                                                stroke="none"
-                                            >
-                                                {regionData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={getRegionColor(entry.name)} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip
-                                                formatter={(value: any) => `${formatNumber(value as number)}원`}
-                                                contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-                                <div className="flex flex-wrap justify-center gap-3 mt-4">
-                                    {regionData.map((d) => (
-                                        <div key={d.name} className="flex items-center gap-1.5 text-xs text-gray-400">
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getRegionColor(d.name) }}></div>
-                                            {d.name} <span className="text-gray-200 font-medium ml-0.5">{formatPercent(totalAsset > 0 ? (d.value / totalAsset) * 100 : 0)}</span>
-                                        </div>
-                                    ))}
-                                </div>
+                        <div className="flex flex-col items-center w-full">
+                            <div className="w-full h-[250px] relative flex justify-center items-center">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={aggregatedData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={100}
+                                            paddingAngle={2}
+                                            dataKey="value"
+                                            stroke="none"
+                                        >
+                                            {aggregatedData.map((entry: any, index: number) => (
+                                                <Cell key={`cell-${index}`} fill={getCustomColor(entry.name)} />
+                                            ))}
+                                        </Pie>
+                                        <RechartsTooltip
+                                            formatter={(value: any) => `${formatNumber(value as number)}원`}
+                                            contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
                             </div>
-
-                            {/* Asset Type Pie */}
-                            <div className="flex flex-col items-center w-full pt-6 md:pt-0">
-                                <h4 className="text-sm text-gray-400 mb-2">투자 자산군별 비중</h4>
-                                <div className="w-full h-[180px] relative flex justify-center items-center">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={assetTypeData}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={45}
-                                                outerRadius={70}
-                                                paddingAngle={2}
-                                                dataKey="value"
-                                                stroke="none"
-                                            >
-                                                {assetTypeData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={getAssetColor(entry.name)} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip
-                                                formatter={(value: any) => `${formatNumber(value as number)}원`}
-                                                contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-                                <div className="flex flex-wrap justify-center gap-3 mt-4">
-                                    {assetTypeData.map((d) => (
-                                        <div key={d.name} className="flex items-center gap-1.5 text-xs text-gray-400">
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getAssetColor(d.name) }}></div>
-                                            {d.name} <span className="text-gray-200 font-medium ml-0.5">{formatPercent(totalAsset > 0 ? (d.value / totalAsset) * 100 : 0)}</span>
-                                        </div>
-                                    ))}
-                                </div>
+                            <div className="flex flex-wrap justify-center gap-4 mt-6">
+                                {aggregatedData.map((d: any) => (
+                                    <div key={d.name} className="flex items-center gap-1.5 text-sm text-gray-400">
+                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getCustomColor(d.name) }}></div>
+                                        {d.name} <span className="text-gray-200 font-medium ml-1">{formatPercent(totalAsset > 0 ? (d.value / totalAsset) * 100 : 0)}</span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -246,6 +218,7 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
                                 <thead>
                                     <tr className="bg-black/30 border-b border-white/10 text-sm font-medium text-gray-400">
                                         <th className="py-4 px-6">종목 <span className="text-xs text-gray-500 font-normal ml-1">(코드/이름)</span></th>
+                                        <th className="py-4 px-4 text-center">구분</th>
                                         <th className="py-4 px-4 text-right">수량 <span className="text-xs text-gray-500 font-normal ml-1">(비중)</span></th>
                                         <th className="py-4 px-4 text-right">매입평균 <span className="text-xs text-gray-500 font-normal ml-1">(현재가)</span></th>
                                         <th className="py-4 px-4 text-right">매입금액 <span className="text-xs text-gray-500 font-normal ml-1">(평가금액)</span></th>
@@ -253,7 +226,8 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5 text-sm">
-                                    {accountHoldings.map((h: any, idx: number) => {
+                                    {/* 보유종목을 카테고리별 정렬 후 렌더링 */}
+                                    {[...accountHoldings].sort((a: any, b: any) => categorizeItem(a.name).localeCompare(categorizeItem(b.name)) || b.eval_amount - a.eval_amount).map((h: any, idx: number) => {
                                         const hPurchase = h.qty * h.avg_price;
                                         const hWeight = totalAsset > 0 ? (h.eval_amount / totalAsset) * 100 : 0;
                                         const isLoss = h.profit_loss < 0;
@@ -266,6 +240,12 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
                                                         <span className="text-xs text-gray-500 font-mono tracking-wider">{h.code}</span>
                                                         <span className="text-gray-200 font-medium truncate max-w-[200px]">{h.name}</span>
                                                     </div>
+                                                </td>
+                                                {/* Category */}
+                                                <td className="py-3 px-4 text-center">
+                                                    <span className="px-2 py-1 text-[10px] rounded-full" style={{ backgroundColor: `${getCustomColor(categorizeItem(h.name))}20`, color: getCustomColor(categorizeItem(h.name)) }}>
+                                                        {categorizeItem(h.name)}
+                                                    </span>
                                                 </td>
                                                 {/* Qty & Weight */}
                                                 <td className="py-3 px-4 text-right">
