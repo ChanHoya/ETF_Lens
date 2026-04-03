@@ -126,7 +126,6 @@ export default function SemiChart() {
                 {payload.map((entry: any) => {
                     const val: number = entry.value;
                     const prevVal: number | null = prevRow?.[entry.dataKey] ?? null;
-                    const totalPct = (val - 100).toFixed(2);           // 기준일 대비 누적 증가율
                     const dailyPct = prevVal != null && prevVal > 0
                         ? (((val - prevVal) / prevVal) * 100).toFixed(2)
                         : null;
@@ -146,13 +145,9 @@ export default function SemiChart() {
                             </span>
                             <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                                 {val.toFixed(1)}%
-                                {/* 누적 증가율 */}
-                                <span style={{ color: parseFloat(totalPct) >= 0 ? '#34d399' : '#f87171', marginLeft: '4px', fontSize: '11px' }}>
-                                    ({parseFloat(totalPct) >= 0 ? '+' : ''}{totalPct}%)
-                                </span>
                                 {/* 전일 대비 증감율 */}
                                 {dailyPct !== null && (
-                                    <span style={{ color: dailyColor, marginLeft: '4px', fontSize: '10px' }}>
+                                    <span style={{ color: dailyColor, marginLeft: '6px', fontSize: '11px' }}>
                                         {dailyText}
                                     </span>
                                 )}
@@ -161,7 +156,7 @@ export default function SemiChart() {
                     );
                 })}
                 <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '9px', marginTop: '6px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '5px' }}>
-                    누적% = 기준일 대비 &nbsp;·&nbsp; 전일대비% = 하루 변동
+                    기준점 100 대비 &nbsp;·&nbsp; 괄호 = 전일대비 증감율
                 </p>
             </div>
         );
