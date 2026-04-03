@@ -102,6 +102,72 @@ export default function SemiChart() {
     const periodOptions = ['1M', '3M', '6M', '1Y', '3Y', '10Y'];
     const colors = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
 
+    // ── 커스텀 툴팁: 전일 대비 증감율 표시 ──────────────────────────────
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (!active || !payload || payload.length === 0) return null;
+
+        // chartData에서 현재 날짜 인덱스를 찾아 전일 데이터 참조
+        const currentIdx = chartData.findIndex((d) => d.date === label);
+        const prevRow = currentIdx > 0 ? chartData[currentIdx - 1] : null;
+
+        return (
+            <div style={{
+                backgroundColor: 'rgba(18, 18, 23, 0.97)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                padding: '10px 14px',
+                fontSize: '12px',
+                minWidth: '210px',
+            }}>
+                <p style={{ color: 'rgba(255,255,255,0.45)', marginBottom: '8px', fontSize: '11px' }}>
+                    {label}
+                </p>
+                {payload.map((entry: any) => {
+                    const val: number = entry.value;
+                    const prevVal: number | null = prevRow?.[entry.dataKey] ?? null;
+                    const totalPct = (val - 100).toFixed(2);           // 기준일 대비 누적 증가율
+                    const dailyPct = prevVal != null && prevVal > 0
+                        ? (((val - prevVal) / prevVal) * 100).toFixed(2)
+                        : null;
+                    const isUp = dailyPct !== null && parseFloat(dailyPct) >= 0;
+                    const dailyColor = dailyPct === null ? 'rgba(255,255,255,0.3)'
+                        : isUp ? '#34d399' : '#f87171';
+                    const dailyText = dailyPct === null ? ''
+                        : isUp ? `(+${dailyPct}%)` : `(${dailyPct}%)`;
+
+                    return (
+                        <div key={entry.dataKey} style={{
+                            display: 'flex', justifyContent: 'space-between',
+                            alignItems: 'center', gap: '12px', marginBottom: '4px',
+                        }}>
+                            <span style={{ color: entry.color, fontWeight: 'bold' }}>
+                                {entry.dataKey}
+                            </span>
+                            <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                                {val.toFixed(2)}
+                                {/* 누적 증가율 */}
+                                <span style={{ color: parseFloat(totalPct) >= 0 ? '#34d399' : '#f87171', marginLeft: '4px', fontSize: '11px' }}>
+                                    ({parseFloat(totalPct) >= 0 ? '+' : ''}{totalPct}%)
+                                </span>
+                                {/* 전일 대비 증감율 */}
+                                {dailyPct !== null && (
+                                    <span style={{ color: dailyColor, marginLeft: '4px', fontSize: '10px' }}>
+                                        {dailyText}
+                                    </span>
+                                )}
+                            </span>
+                        </div>
+                    );
+                })}
+                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '9px', marginTop: '6px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '5px' }}>
+                    누적% = 기준일 대비 &nbsp;·&nbsp; 전일대비% = 하루 변동
+                </p>
+            </div>
+        );
+    };
+    // ─────────────────────────────────────────────────────────────────────
+
     return (
         <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
@@ -149,12 +215,7 @@ export default function SemiChart() {
                                 tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
                                 tickFormatter={(val) => `${val}`}
                             />
-                            <RechartsTooltip
-                                contentStyle={{ backgroundColor: 'rgba(18, 18, 23, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', fontSize: '12px' }}
-                                itemStyle={{ fontWeight: 'bold' }}
-                                formatter={(value: number, name: string) => [`${value.toFixed(2)}`, name]}
-                                labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: '8px', fontSize: '11px' }}
-                            />
+                            <RechartsTooltip content={<CustomTooltip />} />
                             <Legend
                                 onMouseEnter={handleLegendMouseEnter}
                                 onMouseLeave={handleLegendMouseLeave}
