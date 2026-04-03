@@ -40,13 +40,13 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
     // 사용자 맞춤 카테고리 로직 (한국, S&P500, Nasdaq, 현물, 기타)
     const categorizeItem = (name: string, isCash: boolean = false) => {
         if (isCash) return '현물/현금 (금, 예수금 등)';
-        if (!name) return '기타 (해외자산 등)';
+        if (!name) return '한국';
         const n = name.toUpperCase();
         if (n.includes('금현물') || n.includes('국제금') || n.includes('은현물') || n.includes('금선물') || n.includes('GOLD')) return '현물/현금 (금, 예수금 등)';
         if (n.includes('S&P500') || n.includes('S&P 500')) return 'S&P 500';
         if (n.includes('나스닥') || n.includes('NASDAQ')) return 'NASDAQ';
-        if (n.includes('코리아') || n.includes('KRX') || n.includes('200') || n.includes('코스피') || n.includes('코스닥') || n.includes('반도체TOP10')) return '한국';
-        return '기타 (해외자산 등)';
+        // 미국, S&P500, Nasdaq 이 없는 경우에는 모두 한국으로 매핑
+        return '한국';
     };
 
     const aggregatedData = useMemo(() => {

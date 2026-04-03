@@ -195,6 +195,7 @@ async def get_my_portfolio(
                             logger.debug(
                                 f"KIS Logic Error for {acc_str} with {app_key}: {balance_data.get('msg_cd')} {balance_data.get('msg1')}"
                             )
+                            await asyncio.sleep(0.5)  # Add rate limit backoff padding here!
                             continue
 
                     output1 = balance_data.get("output1", [])
@@ -335,7 +336,7 @@ async def get_my_portfolio(
         results = []
         import asyncio
         for acc in account_configs:
-            await asyncio.sleep(0.3)  # Rate limit padding
+            await asyncio.sleep(0.6)  # Rate limit padding
             res = await fetch_single_account(acc)
             results.append(res)
 
@@ -535,7 +536,7 @@ async def get_today_trades():
             
             # API Rate Limit(EGW00133) 방지를 위한 지연
             import asyncio
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(0.6)
 
     # 시간 역순 정렬 (최신 체결이 위)
     all_trades.sort(key=lambda x: x["time"], reverse=True)
