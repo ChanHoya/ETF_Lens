@@ -145,7 +145,7 @@ export default function SemiChart() {
                                 {entry.dataKey}
                             </span>
                             <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                                {val.toFixed(2)}
+                                {val.toFixed(1)}%
                                 {/* 누적 증가율 */}
                                 <span style={{ color: parseFloat(totalPct) >= 0 ? '#34d399' : '#f87171', marginLeft: '4px', fontSize: '11px' }}>
                                     ({parseFloat(totalPct) >= 0 ? '+' : ''}{totalPct}%)
