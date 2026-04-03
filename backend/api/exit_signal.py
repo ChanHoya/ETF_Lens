@@ -2,7 +2,7 @@ import logging
 import asyncio
 import requests
 import yfinance as yf
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as _tz
 from fastapi import APIRouter
 import pandas as pd
 
@@ -15,6 +15,32 @@ _cache = {"data": None, "timestamp": None}
 _macro_cache = {}
 _cli_cache = {}
 _pe_real_cache = {}  # Cache fundamental PE values to prevent YF rate limits
+
+# ── KST 날짜 헬퍼 ──────────────────────────────────────────────────────────
+# Render 서버가 UTC 기준 구동되므로 한국 시각(KST=UTC+9)을
+# 명시해야 KOSPI/KODEX 등 한국 오늘 데이터가 누락되지 않음.
+_KST = _tz(timedelta(hours=9))
+
+
+def _kst_now() -> datetime:
+    """KST 기준 현재 시각 (tz-aware)"""
+    return datetime.now(_KST)
+
+
+def _kst_cutoff(days: int) -> datetime:
+    """KST 기준 N일 전 (tz-naive, cutoff 비교용)"""
+    return (_kst_now() - timedelta(days=days)).replace(tzinfo=None)
+
+
+def _kst_end_str() -> str:
+    """yfinance end 파라미터용 KST+2일 (exclusive + 시차 보정)"""
+    return (_kst_now() + timedelta(days=2)).strftime("%Y-%m-%d")
+
+
+def _kst_start_str(days: int) -> str:
+    """KST 기준 N일 전 날짜"""
+    return (_kst_now() - timedelta(days=days)).strftime("%Y-%m-%d")
+# ──────────────────────────────────────────────────────────
 
 
 def _get_cache_ttl() -> int:
@@ -92,7 +118,7 @@ def get_mock_data():
 async def _fetch_fred_series(fred_id: str, days: int = 400) -> dict[str, float]:
     """FRED CSV API로 데이터 가져오기 → {YYYY-MM-DD: float}"""
     try:
-        end_str = datetime.now().strftime("%Y-%m-%d")
+        end_str = _kst_now().strftime("%Y-%m-%d")  # KST 기준 오늘
         url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={fred_id}&vintage_date={end_str}"
         resp = await asyncio.to_thread(
             lambda: __import__("requests").get(url, timeout=15)
@@ -100,7 +126,7 @@ async def _fetch_fred_series(fred_id: str, days: int = 400) -> dict[str, float]:
         if resp.status_code != 200:
             logger.warning(f"FRED {fred_id} status={resp.status_code}")
             return {}
-        cutoff = datetime.now() - timedelta(days=days)
+        cutoff = _kst_cutoff(days)  # KST 기준 cutoff
         result = {}
         for line in resp.text.strip().split("\n")[1:]:  # skip header
             parts = line.split(",")
@@ -111,7 +137,7 @@ async def _fetch_fred_series(fred_id: str, days: int = 400) -> dict[str, float]:
                 continue
             try:
                 dt = pd.to_datetime(date_str)
-                if dt < cutoff:
+                if dt < pd.Timestamp(cutoff):
                     continue
                 result[date_str] = float(val_str)
             except (ValueError, Exception):
@@ -141,15 +167,18 @@ async def _fetch_yahoo_v8(symbol: str, days: int = 400) -> dict[str, float]:
         rb = result_block[0]
         timestamps = rb.get("timestamp", [])
         closes = rb.get("indicators", {}).get("quote", [{}])[0].get("close", [])
-        cutoff = datetime.now() - timedelta(days=days)
+        # KST 기준 cutoff 계산 (tz-aware)
+        cutoff_kst = _kst_now() - timedelta(days=days)
         result = {}
         for ts, close in zip(timestamps, closes):
             if close is None or not isinstance(close, (int, float)):
                 continue
-            dt = datetime.fromtimestamp(ts)
-            if dt < cutoff:
+            # UTC timestamp → KST 날짜 변환 (한국 자산 당일 나타날 수 있도록)
+            dt_utc = datetime.fromtimestamp(ts, tz=_tz.utc)
+            dt_kst = dt_utc.astimezone(_KST)
+            if dt_kst < cutoff_kst:
                 continue
-            result[dt.strftime("%Y-%m-%d")] = float(close)
+            result[dt_kst.strftime("%Y-%m-%d")] = float(close)
         return result
     except Exception as e:
         logger.warning(f"Yahoo v8 {symbol} failed: {e}")

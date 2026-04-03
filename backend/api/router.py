@@ -11,7 +11,28 @@ from sqlalchemy import select
 from db.database import get_db
 from db.models import SimulationHistory, ETFEvaluation, ETFMaster
 import FinanceDataReader as fdr
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as _tz
+
+# ── KST 날짜 헬퍼 ──────────────────────────────────────────────────────────
+# Render 서버가 UTC 기준이므로 한국 시각(KST=UTC+9) 기준으로
+# 날짜를 계산해야 KOSPI/KODEX 등 한국 자산의 당일 데이터가 빠지지 않음.
+_KST = _tz(timedelta(hours=9))
+
+
+def _kst_today() -> str:
+    """KST 기준 오늘 날짜 → 'YYYY-MM-DD'"""
+    return datetime.now(_KST).strftime("%Y-%m-%d")
+
+
+def _kst_end() -> str:
+    """yfinance end 파라미터용 KST+2일 (exclusive + 시차 보정)"""
+    return (datetime.now(_KST) + timedelta(days=2)).strftime("%Y-%m-%d")
+
+
+def _kst_start(days: int) -> str:
+    """KST 기준 N일 전 → 'YYYY-MM-DD'"""
+    return (datetime.now(_KST) - timedelta(days=days)).strftime("%Y-%m-%d")
+# ───────────────────────────────────────────────────────────────────────────
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -104,7 +125,6 @@ async def check_health(db: AsyncSession = Depends(get_db)):
         return _health_cache["data"]
 
     from sqlalchemy import text
-    from datetime import datetime, timedelta
     import requests
     import os
 
@@ -117,10 +137,9 @@ async def check_health(db: AsyncSession = Depends(get_db)):
 
     def _yfinance_check():
         import yfinance as yf
-        end = datetime.now()
-        start = (end - timedelta(days=3)).strftime("%Y-%m-%d")
+        # KST 기준 end+2일: exclusive 특성 + UTC/KST 시차 보정
         t = yf.Ticker("SPY")
-        df = t.history(start=start, end=end.strftime("%Y-%m-%d"), auto_adjust=True)
+        df = t.history(start=_kst_start(5), end=_kst_end(), auto_adjust=True)
         if df.empty:
             raise ValueError("Empty response from yfinance")
 
@@ -408,7 +427,6 @@ async def fetch_yahoo_finance(ticker: str, period_years: int = 10):
     import yfinance as yf
     import requests
     import pandas as pd
-    from datetime import datetime, timedelta
 
     _yf_session = requests.Session()
     _yf_session.headers.update(
@@ -419,12 +437,13 @@ async def fetch_yahoo_finance(ticker: str, period_years: int = 10):
 
     def _fetch():
         try:
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=period_years * 365 + 10)
+            # KST 기준 날짜: end+2일(exclusive+시차 보정), start는 충분히 여유있게
+            start_str = _kst_start(period_years * 365 + 30)
+            end_str = _kst_end()
             df = yf.download(
                 ticker,
-                start=start_date.strftime("%Y-%m-%d"),
-                end=end_date.strftime("%Y-%m-%d"),
+                start=start_str,
+                end=end_str,
                 progress=False,
             )
             if df.empty:
@@ -667,8 +686,6 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
     # 1. Fetch data for each ETF on-demand (Agent 1)
     harvester = ETFHarvester()
     await harvester.initialize()
-
-    start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
 
     # Run the fetch for all ETFs and benchmarks sequentially to prevent SQLAlchemy concurrent session errors
     results = []
@@ -1019,13 +1036,8 @@ async def get_chart_data(request: CompareRequest, db: AsyncSession = Depends(get
     if len(request.etf_codes) < 2:
         return {"error": "Provide at least two ETF codes for comparison."}
 
-    from datetime import datetime, timedelta
-    import asyncio
-
     harvester = ETFHarvester()
     await harvester.initialize()
-
-    start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
 
     # Fetch sequentially to prevent SQLAlchemy concurrent session errors
     results = []
