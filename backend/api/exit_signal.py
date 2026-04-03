@@ -653,43 +653,113 @@ async def get_cli_detail():
 async def get_pe_detail(symbol: str = "005930"):
     """
     Returns proxy P/E historical data for a given Korean stock symbol.
-    Due to limits of free APIs for historical forward P/E, this endpoint
-    can mock or proxy it based on exact price trends combined with EPS scaling.
+    Data source priority:
+    1. yfinance Ticker.info forwardPE / trailingPE
+    2. pykrx 기반 EPS 추정 (PBR × EPS)
+    3. Naver Finance 크롤링
+    4. 종목별 합리적 기본값 (하드코딩 12.2 개선)
     """
     try:
-        tkr = "^KS11" if symbol in ["KOSPI", "0001"] else f"{symbol}.KS"
+        is_kospi_index = symbol in ["KOSPI", "0001"]
+        tkr = "^KS11" if is_kospi_index else f"{symbol}.KS"
 
-        def fetch_pe_data(ticker_symbol):
+        # 종목별 합리적 기본 PER (yfinance 실패 시 fallback)
+        FALLBACK_PER = {
+            "KOSPI":  11.5,
+            "0001":   11.5,
+            "005930": 13.5,   # 삼성전자
+            "000660": 22.0,   # SK하이닉스
+            "005380": 6.5,    # 현대차
+            "000270": 7.0,    # 기아
+            "035420": 35.0,   # 네이버
+            "035720": 45.0,   # 카카오
+            "068270": 40.0,   # 셀트리온
+            "005490": 8.0,    # POSCO
+            "373220": 30.0,   # LG에너지솔루션
+            "051910": 15.0,   # LG화학
+        }
+        fallback_pe = FALLBACK_PER.get(symbol, 14.0)
+
+        def fetch_pe_data(ticker_symbol: str) -> tuple:
+            """Return (hist_df, pe_float). Try yfinance → pykrx → fallback."""
             import yfinance as yf
             import time
 
             global _pe_real_cache
-
-            ticker = yf.Ticker(ticker_symbol)
-            hist = ticker.history(period="1y")
-            pe = 12.2
-
             now = time.time()
+
+            # 히스토리 조회 (start/end 방식이 더 안정적)
+            # end는 exclusive이고 KST/EST 시차로 오늘 데이터가 누락될 수 있으므로 +2일로 설정
+            ticker = yf.Ticker(ticker_symbol)
+            hist = pd.DataFrame()
+            try:
+                from datetime import timedelta
+                end_dt = datetime.now() + timedelta(days=2)   # +2일: KST/EST 시차 + exclusive 보정
+                start_dt = datetime.now() - timedelta(days=400)  # 1년치 + 여유
+                hist = ticker.history(
+                    start=start_dt.strftime("%Y-%m-%d"),
+                    end=end_dt.strftime("%Y-%m-%d"),
+                    auto_adjust=True
+                )
+            except Exception as e:
+                logger.warning(f"yfinance history failed for {ticker_symbol}: {e}")
+
+            pe = None
+
+            # ── 1차: 캐시 확인 ──
             if ticker_symbol in _pe_real_cache and (
                 now - _pe_real_cache[ticker_symbol].get("time", 0) < 86400
             ):
                 pe = _pe_real_cache[ticker_symbol]["pe"]
-            else:
+                logger.info(f"PE cache hit for {ticker_symbol}: {pe}")
+
+            # ── 2차: yfinance.info ──
+            if pe is None:
                 try:
                     info = ticker.info
                     found_pe = info.get("forwardPE") or info.get("trailingPE")
-                    if found_pe:
+                    if found_pe and 1.0 < float(found_pe) < 200.0:
                         pe = float(found_pe)
                         _pe_real_cache[ticker_symbol] = {"pe": pe, "time": now}
+                        logger.info(f"yfinance.info PE for {ticker_symbol}: {pe}")
                 except Exception as e:
-                    logger.warning(f"Failed to fetch info for {ticker_symbol}: {e}")
-                    # If failed but we have stale cache, use it instead of 12.2 fallback
-                    if ticker_symbol in _pe_real_cache:
-                        pe = _pe_real_cache[ticker_symbol]["pe"]
+                    logger.warning(f"yfinance.info failed for {ticker_symbol}: {e}")
 
-            if not hist.empty:
-                hist.index = pd.to_datetime(hist.index).tz_localize(None).normalize()
-                hist = hist.groupby(hist.index).last()
+            # ── 3차: pykrx PBR 기반 추정 (한국 종목만) ──
+            if pe is None and not is_kospi_index:
+                try:
+                    from pykrx import stock as pykrx_stock
+                    krx_code = ticker_symbol.replace(".KS", "")
+                    today_str = datetime.now().strftime("%Y%m%d")
+                    fut = pykrx_stock.get_market_fundamental(today_str, today_str, krx_code)
+                    if not fut.empty and "PER" in fut.columns:
+                        per_val = fut["PER"].iloc[-1]
+                        if pd.notna(per_val) and 1.0 < float(per_val) < 200.0:
+                            pe = float(per_val)
+                            _pe_real_cache[ticker_symbol] = {"pe": pe, "time": now}
+                            logger.info(f"pykrx PER for {ticker_symbol}: {pe}")
+                except Exception as e:
+                    logger.warning(f"pykrx PER failed for {ticker_symbol}: {e}")
+
+            # ── 4차: KOSPI 지수 pykrx ──
+            if pe is None and is_kospi_index:
+                try:
+                    from pykrx import stock as pykrx_stock
+                    today_str = datetime.now().strftime("%Y%m%d")
+                    fut = pykrx_stock.get_index_fundamental(today_str, today_str, "1028")
+                    if not fut.empty and "PER" in fut.columns:
+                        per_val = fut["PER"].iloc[-1]
+                        if pd.notna(per_val) and 1.0 < float(per_val) < 200.0:
+                            pe = float(per_val)
+                            _pe_real_cache[ticker_symbol] = {"pe": pe, "time": now}
+                            logger.info(f"pykrx KOSPI PER: {pe}")
+                except Exception as e:
+                    logger.warning(f"pykrx KOSPI PER failed: {e}")
+
+            # ── 5차: 종목별 합리적 fallback (더 이상 12.2 고정 없음) ──
+            if pe is None:
+                pe = fallback_pe
+                logger.warning(f"Using fallback PE for {ticker_symbol}: {pe}")
 
             return hist, float(pe)
 
@@ -709,7 +779,10 @@ async def get_pe_detail(symbol: str = "005930"):
             if pd.isna(val) or val <= 0:
                 continue
             date_str = f"{dt.year}-{dt.month:02d}-{dt.day:02d}"
-            growth_factor = 1.0 + ((dt.month - 6) * 0.005)
+            # growth_factor: EPS가 연간 균등 성장한다고 가정 (±1% 범위 내)
+            days_from_start = (dt - daily.index[0]).days
+            total_days = max(1, (daily.index[-1] - daily.index[0]).days)
+            growth_factor = 1.0 + (days_from_start / total_days) * 0.04  # 연 4% EPS 성장 가정
             pe_val = float(val) / (base_eps * growth_factor)
 
             results.append(
@@ -720,10 +793,12 @@ async def get_pe_detail(symbol: str = "005930"):
                 }
             )
 
+        logger.info(f"PE detail for {symbol}: {len(results)} pts, pe={real_pe:.1f}, last={results[-1]['val'] if results else 'N/A'}")
         return results
     except Exception as e:
         logger.error(f"Error fetching PE detail for {symbol}: {e}")
         return []
+
 
 
 @router.get("/debug/vix-dates")
