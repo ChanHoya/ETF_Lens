@@ -710,64 +710,34 @@ def _compute_signal(closes: list) -> dict:
 async def get_holdings_signals(request: Request, db: AsyncSession = Depends(get_db)):
     """
     보유 ETF/주식 전략 시그널 조회.
-    KIS FHKST03010100 일봉 100일치 → MA5/MA20 크로스 + RSI(14).
-    2시간 인메모리 캐시, 종목 간 0.4초 딜레이로 rate limit 방지.
+    yfinance를 통해 한국 ETF 일봉 100일치를 조회 (토큰 발급 불필요).
+    MA5/MA20 크로스 + RSI(14) 계산. 2시간 인메모리 캐시.
     """
     import asyncio as _aio
     import time
+    import yfinance as yf
 
-    from dotenv import load_dotenv
-    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
-    load_dotenv(dotenv_path=env_path, override=True)
-
-    kis_url = os.environ.get("KIS_URL_BASE", "").strip()
-
-    # ── 토큰 확보 ────────────────────────────────────────────────────────────
-    keypairs = []
-    for k, v in os.environ.items():
-        if k.startswith("KIS_APP_KEY") and v:
-            suf = k.replace("KIS_APP_KEY", "")
-            sec = os.environ.get(f"KIS_APP_SECRET{suf}", "")
-            if sec:
-                keypairs.append({"app_key": v.strip(), "app_secret": sec.strip()})
-
-    active_token = active_key = None
-    async with httpx.AsyncClient(timeout=15) as cli:
-        for kp in keypairs:
-            cached = TOKEN_CACHE.get(kp["app_key"])
-            if cached and cached["expires_at"] > time.time():
-                active_token, active_key = cached["access_token"], kp
-                break
-            try:
-                res = await cli.post(f"{kis_url}/oauth2/tokenP", json={
-                    "grant_type": "client_credentials",
-                    "appkey": kp["app_key"], "appsecret": kp["app_secret"]})
-                tok = res.json().get("access_token")
-                if tok:
-                    TOKEN_CACHE[kp["app_key"]] = {
-                        "access_token": tok,
-                        "expires_at": time.time() + 82800 - 3600}
-                    active_token, active_key = tok, kp
-                    break
-            except Exception as e:
-                logger.warning(f"Token error: {e}")
-
-    if not active_token:
-        raise HTTPException(status_code=500, detail="KIS 토큰 발급 실패")
-
-    # ── 보유 종목 ────────────────────────────────────────────────────────────
+    # 보유 종목 조회
     portfolio = await get_my_portfolio(request=request, db=db)
     all_h = portfolio.get("kis_raw", {}).get("holdings", [])
     domestic = [h for h in all_h
                 if h.get("code", "").isdigit() and len(h.get("code", "")) == 6]
 
-    from datetime import datetime, timezone, timedelta
-    KST = timezone(timedelta(hours=9))
-    today_s = datetime.now(KST).strftime("%Y%m%d")
-    start_s = (datetime.now(KST) - timedelta(days=100)).strftime("%Y%m%d")
-
     now_ts = time.time()
     results = []
+
+    def _fetch_yf_closes(code: str) -> list:
+        """yfinance로 종가 리스트 반환 (과거→최신 순, 최대 100일)."""
+        # 대부분의 KRX ETF/주식은 .KS (유가증권시장)
+        for suffix in [".KS", ".KQ"]:
+            try:
+                ticker = yf.Ticker(f"{code}{suffix}")
+                hist = ticker.history(period="6mo")   # 약 120 거래일
+                if hist is not None and len(hist) >= 21:
+                    return hist["Close"].dropna().tolist()
+            except Exception:
+                continue
+        return []
 
     for h in domestic:
         code, name = h.get("code", ""), h.get("name", "")
@@ -781,39 +751,13 @@ async def get_holdings_signals(request: Request, db: AsyncSession = Depends(get_
                 **c["signal"], "cached": True})
             continue
 
-        # API 호출
-        await _aio.sleep(0.4)
-        headers = {
-            "content-type": "application/json; charset=utf-8",
-            "authorization": f"Bearer {active_token}",
-            "appkey": active_key["app_key"],
-            "appsecret": active_key["app_secret"],
-            "tr_id": "FHKST03010100", "custtype": "P",
-        }
-        params = {
-            "FID_COND_MRKT_DIV_CODE": "J",
-            "FID_INPUT_ISCD": code,
-            "FID_INPUT_DATE_1": start_s,
-            "FID_INPUT_DATE_2": today_s,
-            "FID_PERIOD_DIV_CODE": "D",
-            "FID_ORG_ADJ_PRC": "0",
-        }
+        # yfinance 조회 (blocking → run_in_executor)
         try:
-            async with httpx.AsyncClient(timeout=15) as cli:
-                res = await cli.get(
-                    f"{kis_url}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
-                    headers=headers, params=params)
-                d = res.json()
-            if d.get("rt_cd") != "0":
-                sig = {"signal": "error", "label": "조회실패", "color": "gray",
-                       "ma5": None, "ma20": None, "rsi": None, "detail": ""}
-            else:
-                rows = d.get("output2", [])
-                closes = [float(r["stck_clpr"]) for r in reversed(rows)
-                          if r.get("stck_clpr") and r["stck_clpr"] != "0"]
-                sig = _compute_signal(closes)
+            loop = _aio.get_event_loop()
+            closes = await loop.run_in_executor(None, _fetch_yf_closes, code)
+            sig = _compute_signal(closes)
         except Exception as e:
-            logger.error(f"[signal] {code}: {e}")
+            logger.error(f"[signal-yf] {code}: {e}")
             sig = {"signal": "error", "label": "조회실패", "color": "gray",
                    "ma5": None, "ma20": None, "rsi": None, "detail": ""}
 
