@@ -540,3 +540,105 @@ async def get_today_trades():
         "count": len(all_trades),
         "trades": all_trades,
     }
+
+
+@router.get("/risk-summary")
+async def get_risk_summary(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    현재 시장 위험도(exit_signal) + 보유 ETF 목록을 교차 분석하여
+    My탭 위험도 배너용 요약 정보를 반환합니다.
+    """
+    import asyncio
+
+    # ── 1. Exit Signal 위험도 + 포트폴리오 병렬 조회 ─────────────────────────
+    from api.exit_signal import get_exit_signal_data
+    try:
+        exit_data, portfolio_data = await asyncio.gather(
+            get_exit_signal_data(),
+            get_my_portfolio(request=request, db=db),
+            return_exceptions=True,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    # exit_signal 오류 시 기본값
+    if isinstance(exit_data, Exception):
+        risk_info = {"level": "unknown", "label": "조회실패", "color": "gray",
+                     "score": 0, "max_score": 12, "breakdown": {}}
+    else:
+        risk_info = exit_data.get("risk", {
+            "level": "unknown", "label": "조회실패", "color": "gray", "score": 0, "max_score": 12
+        })
+
+    # ── 2. 보유 종목 목록 추출 ──────────────────────────────────────────────
+    holdings = []
+    if not isinstance(portfolio_data, Exception) and isinstance(portfolio_data, dict):
+        kis_raw = portfolio_data.get("kis_raw", {})
+        raw_holdings = kis_raw.get("holdings", [])
+        for h in raw_holdings:
+            eval_amt = h.get("eval_amount", 0) or 0
+            pfls_amt = h.get("profit_loss", 0) or 0
+            holdings.append({
+                "code": h.get("code", ""),
+                "name": h.get("name", ""),
+                "eval_amount": eval_amt,
+                "profit_loss": pfls_amt,
+                "category_asset": h.get("category_asset", "기타"),
+                "category_region": h.get("category_region", "기타"),
+            })
+
+    # ── 3. 위험도별 행동 가이드라인 ─────────────────────────────────────────
+    level = risk_info.get("level", "unknown")
+    action_guides = {
+        "safe": {
+            "title": "시장 상황 양호",
+            "message": "주요 지표가 안정적입니다. 현재 포트폴리오를 유지하되 정기적으로 모니터링하세요.",
+            "emoji": "🟢",
+            "action": "유지",
+        },
+        "caution": {
+            "title": "주의 구간 진입",
+            "message": "일부 지표에서 경고 신호가 감지되었습니다. 신규 매수는 신중히, 비중 조절을 검토하세요.",
+            "emoji": "🟡",
+            "action": "주의",
+        },
+        "warning": {
+            "title": "경계 신호 감지",
+            "message": "복수 지표에서 위험 신호가 나타나고 있습니다. 방어적 자산 비중 확대 및 손절선을 재점검하세요.",
+            "emoji": "🟠",
+            "action": "비중축소",
+        },
+        "danger": {
+            "title": "위험 — 출구 전략 실행",
+            "message": "복합 위험 지표가 최고 단계입니다. ETF 비중 축소 또는 인버스 헤지를 적극 검토하세요.",
+            "emoji": "🔴",
+            "action": "출구전략",
+        },
+    }
+    guide = action_guides.get(level, {
+        "title": "지표 조회 중",
+        "message": "시장 위험도 데이터를 불러오는 중입니다.",
+        "emoji": "⚪",
+        "action": "-",
+    })
+
+    # ── 4. 보유 ETF 중 주식 비중 계산 ──────────────────────────────────────
+    total_eval = sum(h["eval_amount"] for h in holdings)
+    stock_holdings = [h for h in holdings if h.get("category_asset") in ("주식", "기타") and h.get("category_region") != "현금"]
+    stock_eval = sum(h["eval_amount"] for h in stock_holdings)
+    stock_ratio = round(stock_eval / total_eval * 100, 1) if total_eval > 0 else 0
+
+    return {
+        "risk": risk_info,
+        "guide": guide,
+        "holdings_summary": {
+            "total_count": len(holdings),
+            "total_eval": total_eval,
+            "stock_eval": stock_eval,
+            "stock_ratio": stock_ratio,
+        },
+        "top_holdings": sorted(holdings, key=lambda x: x["eval_amount"], reverse=True)[:5],
+    }

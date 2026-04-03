@@ -441,6 +441,76 @@ async def get_exit_signal_data():
     except Exception as e:
         logger.error(f"Error compiling exit signal data: {e}")
 
+    # ── 종합 위험도 산출 ──────────────────────────────────────────────────────
+    # 각 지표별 점수 부여 → 합산 → 4단계 분류
+    # VIX: < 20 안전(0), 20~25 주의(1), 25~30 경계(2), >= 30 위험(3)
+    # FGI: >= 50 안전(0), 30~50 주의(1), 25~30 경계(2), < 25 위험(3)
+    # CLI: >= 100.5 안전(0), 100~100.5 주의(1), 99.5~100 경계(2), < 99.5 위험(3)
+    # PER: < 11 저평가(0), 11~13 적정(1), 13~15 경계(2), >= 15 위험(3)
+    cs = mock.get("current_status", {})
+    vix = cs.get("vix") or 0
+    fgi = cs.get("fgi") or 50
+    cli = cs.get("cli") or 100
+    per = cs.get("per") or 12
+
+    def _vix_score(v):
+        if v < 20: return 0
+        if v < 25: return 1
+        if v < 30: return 2
+        return 3
+
+    def _fgi_score(f):
+        if f >= 50: return 0
+        if f >= 30: return 1
+        if f >= 25: return 2
+        return 3
+
+    def _cli_score(c):
+        if c >= 100.5: return 0
+        if c >= 100.0: return 1
+        if c >= 99.5: return 2
+        return 3
+
+    def _per_score(p):
+        if p < 11: return 0
+        if p < 13: return 1
+        if p < 15: return 2
+        return 3
+
+    total_score = _vix_score(vix) + _fgi_score(fgi) + _cli_score(cli) + _per_score(per)
+    # 0~2: 안전, 3~4: 주의, 5~7: 경계, 8~12: 위험
+    if total_score <= 2:
+        risk_level = "safe"
+        risk_label = "안전"
+        risk_color = "green"
+    elif total_score <= 4:
+        risk_level = "caution"
+        risk_label = "주의"
+        risk_color = "yellow"
+    elif total_score <= 7:
+        risk_level = "warning"
+        risk_label = "경계"
+        risk_color = "orange"
+    else:
+        risk_level = "danger"
+        risk_label = "위험"
+        risk_color = "red"
+
+    mock["risk"] = {
+        "level": risk_level,
+        "label": risk_label,
+        "color": risk_color,
+        "score": total_score,
+        "max_score": 12,
+        "breakdown": {
+            "vix": {"value": round(vix, 1), "score": _vix_score(vix), "label": "VIX 공포지수"},
+            "fgi": {"value": round(fgi, 1), "score": _fgi_score(fgi), "label": "공포-탐욕 지수"},
+            "cli": {"value": round(cli, 2), "score": _cli_score(cli), "label": "경기선행지수(CLI)"},
+            "per": {"value": round(per, 1), "score": _per_score(per), "label": "KOSPI PER"},
+        },
+    }
+    # ─────────────────────────────────────────────────────────────────────────
+
     return mock
 
 

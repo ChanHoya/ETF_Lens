@@ -5,6 +5,7 @@ import MyAuthModal from "@/components/MyAuthModal";
 import MyDashboard from "@/components/MyDashboard";
 import { Loader2, RefreshCw } from "lucide-react";
 import { API_BASE } from "@/lib/apiConfig";
+import RiskBanner from "@/components/RiskBanner";
 
 export default function MyPage() {
     const [isAuthorized, setIsAuthorized] = useState(false);
@@ -139,7 +140,10 @@ export default function MyPage() {
                         <button onClick={() => fetchPortfolioData(false)} className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-xl transition-colors">다시 시도</button>
                     </div>
                 ) : (
-                    <MyDashboard data={kisData} tradesData={tradesData} isRefreshing={isRefreshing} />
+                    <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col gap-6">
+                        <RiskBanner isAuthorized={isAuthorized} />
+                        <MyDashboard data={kisData} tradesData={tradesData} isRefreshing={isRefreshing} />
+                    </div>
                 )}
             </div>
         </main>
