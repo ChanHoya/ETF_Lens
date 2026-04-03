@@ -642,3 +642,187 @@ async def get_risk_summary(
         },
         "top_holdings": sorted(holdings, key=lambda x: x["eval_amount"], reverse=True)[:5],
     }
+
+
+# ── 전략 시그널 캐시 (2시간 유효) ──────────────────────────────────────────────
+_SIGNAL_CACHE: dict = {}
+_SIGNAL_CACHE_TTL = 3600 * 2
+
+
+def _compute_rsi(closes: list, period: int = 14):
+    """RSI 계산. closes는 과거→최신 순."""
+    if len(closes) < period + 1:
+        return None
+    gains, losses = [], []
+    for i in range(1, period + 1):
+        diff = closes[-i] - closes[-(i + 1)]
+        if diff > 0:
+            gains.append(diff)
+        else:
+            losses.append(abs(diff))
+    avg_gain = sum(gains) / period if gains else 0
+    avg_loss = sum(losses) / period if losses else 0
+    if avg_loss == 0:
+        return 100.0
+    return round(100 - 100 / (1 + avg_gain / avg_loss), 1)
+
+
+def _compute_signal(closes: list) -> dict:
+    """MA5/MA20 크로스 + RSI 복합 신호 산출."""
+    if len(closes) < 21:
+        return {"signal": "unknown", "label": "데이터부족", "color": "gray",
+                "ma5": None, "ma20": None, "rsi": None, "detail": ""}
+
+    ma5  = round(sum(closes[-5:]) / 5, 0)
+    ma20 = round(sum(closes[-20:]) / 20, 0)
+    prev_ma5  = round(sum(closes[-6:-1]) / 5, 0)
+    prev_ma20 = round(sum(closes[-21:-1]) / 20, 0)
+    rsi = _compute_rsi(closes)
+
+    golden = (prev_ma5 <= prev_ma20) and (ma5 > ma20)
+    dead   = (prev_ma5 >= prev_ma20) and (ma5 < ma20)
+    ma_bull = ma5 > ma20
+
+    if golden:
+        signal, label, color = "golden", "골든크로스", "green"
+    elif dead:
+        signal, label, color = "dead", "데드크로스", "red"
+    elif rsi and rsi >= 70:
+        signal, label, color = "overbought", "과매수", "yellow"
+    elif rsi and rsi <= 30:
+        signal, label, color = "oversold", "과매도", "purple"
+    elif ma_bull:
+        signal, label, color = "bull", "상승추세", "blue"
+    elif not ma_bull:
+        signal, label, color = "bear", "하락추세", "orange"
+    else:
+        signal, label, color = "neutral", "중립", "gray"
+
+    parts = [f"MA5 {int(ma5):,} / MA20 {int(ma20):,}"]
+    if rsi is not None:
+        parts.append(f"RSI {rsi}")
+    return {"signal": signal, "label": label, "color": color,
+            "ma5": int(ma5), "ma20": int(ma20), "rsi": rsi,
+            "detail": "  |  ".join(parts)}
+
+
+@router.get("/holdings-signals")
+async def get_holdings_signals(request: Request, db: AsyncSession = Depends(get_db)):
+    """
+    보유 ETF/주식 전략 시그널 조회.
+    KIS FHKST03010100 일봉 100일치 → MA5/MA20 크로스 + RSI(14).
+    2시간 인메모리 캐시, 종목 간 0.4초 딜레이로 rate limit 방지.
+    """
+    import asyncio as _aio
+    import time
+
+    from dotenv import load_dotenv
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+    load_dotenv(dotenv_path=env_path, override=True)
+
+    kis_url = os.environ.get("KIS_URL_BASE", "").strip()
+
+    # ── 토큰 확보 ────────────────────────────────────────────────────────────
+    keypairs = []
+    for k, v in os.environ.items():
+        if k.startswith("KIS_APP_KEY") and v:
+            suf = k.replace("KIS_APP_KEY", "")
+            sec = os.environ.get(f"KIS_APP_SECRET{suf}", "")
+            if sec:
+                keypairs.append({"app_key": v.strip(), "app_secret": sec.strip()})
+
+    active_token = active_key = None
+    async with httpx.AsyncClient(timeout=15) as cli:
+        for kp in keypairs:
+            cached = TOKEN_CACHE.get(kp["app_key"])
+            if cached and cached["expires_at"] > time.time():
+                active_token, active_key = cached["access_token"], kp
+                break
+            try:
+                res = await cli.post(f"{kis_url}/oauth2/tokenP", json={
+                    "grant_type": "client_credentials",
+                    "appkey": kp["app_key"], "appsecret": kp["app_secret"]})
+                tok = res.json().get("access_token")
+                if tok:
+                    TOKEN_CACHE[kp["app_key"]] = {
+                        "access_token": tok,
+                        "expires_at": time.time() + 82800 - 3600}
+                    active_token, active_key = tok, kp
+                    break
+            except Exception as e:
+                logger.warning(f"Token error: {e}")
+
+    if not active_token:
+        raise HTTPException(status_code=500, detail="KIS 토큰 발급 실패")
+
+    # ── 보유 종목 ────────────────────────────────────────────────────────────
+    portfolio = await get_my_portfolio(request=request, db=db)
+    all_h = portfolio.get("kis_raw", {}).get("holdings", [])
+    domestic = [h for h in all_h
+                if h.get("code", "").isdigit() and len(h.get("code", "")) == 6]
+
+    from datetime import datetime, timezone, timedelta
+    KST = timezone(timedelta(hours=9))
+    today_s = datetime.now(KST).strftime("%Y%m%d")
+    start_s = (datetime.now(KST) - timedelta(days=100)).strftime("%Y%m%d")
+
+    now_ts = time.time()
+    results = []
+
+    for h in domestic:
+        code, name = h.get("code", ""), h.get("name", "")
+
+        # 캐시 히트
+        c = _SIGNAL_CACHE.get(code)
+        if c and (now_ts - c["ts"]) < _SIGNAL_CACHE_TTL:
+            results.append({
+                "code": code, "name": name,
+                "eval_amount": h.get("eval_amount", 0),
+                **c["signal"], "cached": True})
+            continue
+
+        # API 호출
+        await _aio.sleep(0.4)
+        headers = {
+            "content-type": "application/json; charset=utf-8",
+            "authorization": f"Bearer {active_token}",
+            "appkey": active_key["app_key"],
+            "appsecret": active_key["app_secret"],
+            "tr_id": "FHKST03010100", "custtype": "P",
+        }
+        params = {
+            "FID_COND_MRKT_DIV_CODE": "J",
+            "FID_INPUT_ISCD": code,
+            "FID_INPUT_DATE_1": start_s,
+            "FID_INPUT_DATE_2": today_s,
+            "FID_PERIOD_DIV_CODE": "D",
+            "FID_ORG_ADJ_PRC": "0",
+        }
+        try:
+            async with httpx.AsyncClient(timeout=15) as cli:
+                res = await cli.get(
+                    f"{kis_url}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
+                    headers=headers, params=params)
+                d = res.json()
+            if d.get("rt_cd") != "0":
+                sig = {"signal": "error", "label": "조회실패", "color": "gray",
+                       "ma5": None, "ma20": None, "rsi": None, "detail": ""}
+            else:
+                rows = d.get("output2", [])
+                closes = [float(r["stck_clpr"]) for r in reversed(rows)
+                          if r.get("stck_clpr") and r["stck_clpr"] != "0"]
+                sig = _compute_signal(closes)
+        except Exception as e:
+            logger.error(f"[signal] {code}: {e}")
+            sig = {"signal": "error", "label": "조회실패", "color": "gray",
+                   "ma5": None, "ma20": None, "rsi": None, "detail": ""}
+
+        _SIGNAL_CACHE[code] = {"signal": sig, "ts": now_ts}
+        results.append({
+            "code": code, "name": name,
+            "eval_amount": h.get("eval_amount", 0),
+            **sig, "cached": False})
+
+    results.sort(key=lambda x: x.get("eval_amount", 0), reverse=True)
+    return {"status": "success", "count": len(results), "signals": results}
+

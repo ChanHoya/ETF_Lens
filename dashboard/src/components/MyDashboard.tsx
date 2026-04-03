@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import AccountDetailModal from './AccountDetailModal';
+import HoldingsSignals from './HoldingsSignals';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type MyDashboardProps = {
@@ -385,6 +386,9 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
                     )}
                 </div>
             </section>
+
+            {/* Section 6: 보유 ETF 전략 시그널 */}
+            <HoldingsSignals isAuthorized={true} />
 
             {/* Modals */}
             <AccountDetailModal
