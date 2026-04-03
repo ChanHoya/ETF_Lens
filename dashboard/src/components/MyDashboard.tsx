@@ -117,7 +117,7 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
             <section className="flex flex-col gap-4 mt-4">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
                     <span className="w-1.5 h-6 bg-rose-500 rounded-full"></span>
-                    수 수익률
+                    포트폴리오 수익률 및 비중
                 </h2>
                 <div className="bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-md overflow-hidden flex flex-col">
                     {/* Header metrics */}
@@ -156,18 +156,53 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
                         </div>
                     </div>
                     {/* Chart area */}
-                    <div className="p-6 h-[250px] w-full flex flex-col">
-                        <div className="w-full h-full flex items-center justify-center text-gray-500 bg-black/20 rounded-xl relative border border-white/5">
-                            <span className="absolute text-sm">현재 평가 수익률 (시계열 데이터 수집 필요)</span>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={dummyChartData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                    <XAxis dataKey="name" stroke="none" tick={{ fill: '#71717a' }} />
-                                    <YAxis stroke="none" tick={{ fill: '#71717a' }} />
-                                    <RechartsTooltip contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', borderColor: 'rgba(255,255,255,0.1)' }} />
-                                    <Line type="monotone" dataKey="returnRate" stroke="#f43f5e" strokeWidth={3} dot={{ r: 6, fill: '#f43f5e', strokeWidth: 2, stroke: '#18181b' }} />
-                                </LineChart>
-                            </ResponsiveContainer>
+                    <div className="p-6 h-[250px] w-full flex flex-col items-center justify-center">
+                        <div className="w-full max-w-2xl h-full flex items-center justify-center text-gray-500 bg-transparent rounded-xl relative">
+                            {(() => {
+                                const items = holdings
+                                    .filter((h: any) => (h.eval_amount || 0) > 0)
+                                    .map((h: any) => ({ name: h.name, value: h.eval_amount }));
+                                if (cashBalance > 0) {
+                                    items.push({ name: '예수금(현금)', value: cashBalance });
+                                }
+                                items.sort((a: any, b: any) => b.value - a.value);
+                                
+                                let finalPieData = items;
+                                if (items.length > 7) {
+                                    const top = items.slice(0, 6);
+                                    const others = items.slice(6).reduce((acc: number, curr: any) => acc + curr.value, 0);
+                                    finalPieData = [...top, { name: '기타 종목 합계', value: others }];
+                                }
+
+                                const PIE_COLORS = ['#F43F5E', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#14B8A6', '#64748B', '#a1a1aa'];
+
+                                return (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={finalPieData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={60}
+                                                outerRadius={100}
+                                                paddingAngle={2}
+                                                dataKey="value"
+                                                stroke="none"
+                                            >
+                                                {finalPieData.map((entry: any, index: number) => (
+                                                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                                ))}
+                                            </Pie>
+                                            <RechartsTooltip 
+                                                formatter={(val: number) => `${formatNumber(val)}원`}
+                                                contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#e4e4e7' }}
+                                            />
+                                            <Legend verticalAlign="middle" align="right" layout="vertical" wrapperStyle={{ fontSize: '12px' }} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>
