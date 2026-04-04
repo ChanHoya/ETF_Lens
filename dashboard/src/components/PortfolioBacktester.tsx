@@ -23,22 +23,30 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
     const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
 
     const categorizeItem = (name: string, code: string = "") => {
-        if (!name) return '한국';
+        if (!name) return 'KOSPI';
         if (code && /^[A-Za-z]+(\.[A-Za-z]+)?$/.test(code)) return 'NASDAQ';
         const n = name.toUpperCase();
         if (n.includes('금현물') || n.includes('국제금') || n.includes('은현물') || n.includes('금선물') || n.includes('GOLD')) return '현물/현금 (금, 예수금 등)';
+        if (n.includes('머니마켓') || n.includes('CD금리') || n.includes('KOFR') || n.includes('단기채') || n.includes('파킹')) return '현물/현금 (금, 예수금 등)';
         if (n.includes('미국성장') || n.includes('미국우주항공') || n.includes('미국양자컴퓨팅') || n.includes('나스닥') || n.includes('NASDAQ')) return 'NASDAQ';
         if (n.includes('미국배당') || n.includes('S&P500') || n.includes('S&P 500')) return 'S&P 500';
+        if (n.includes('위탁') && code === "") return '현물/현금 (금, 예수금 등)';
+        
+        if (n.includes('코스닥') || n.includes('KOSDAQ')) {
+            return 'KOSDAQ';
+        }
         if (n.includes('미국')) return '미국';
-        return '한국';
+        return 'KOSPI';
     };
 
     const LINE_CONFIG = [
         { key: "Portfolio", name: "내 포트폴리오 (전체)", color: "#a855f7", isBench: false, width: 3, pair: null },
-        { key: "Portfolio_한국", name: "내 포트폴리오 (KOSPI)", color: "#3b82f6", isBench: false, width: 2, pair: "^KS11" },
+        { key: "Portfolio_KOSPI", name: "내 포트폴리오 (KOSPI)", color: "#3b82f6", isBench: false, width: 2, pair: "^KS11" },
+        { key: "Portfolio_KOSDAQ", name: "내 포트폴리오 (KOSDAQ)", color: "#eab308", isBench: false, width: 2, pair: "^KQ11" },
         { key: "Portfolio_S&P 500", name: "내 포트폴리오 (S&P 500)", color: "#f43f5e", isBench: false, width: 2, pair: "^GSPC" },
         { key: "Portfolio_NASDAQ", name: "내 포트폴리오 (NASDAQ)", color: "#10b981", isBench: false, width: 2, pair: "^IXIC" },
-        { key: "^KS11", name: "KOSPI 지수", color: "#3b82f6", isBench: true, width: 1, pair: "Portfolio_한국" },
+        { key: "^KS11", name: "KOSPI 지수", color: "#3b82f6", isBench: true, width: 1, pair: "Portfolio_KOSPI" },
+        { key: "^KQ11", name: "KOSDAQ 지수", color: "#eab308", isBench: true, width: 1, pair: "Portfolio_KOSDAQ" },
         { key: "^GSPC", name: "S&P 500 지수", color: "#f43f5e", isBench: true, width: 1, pair: "Portfolio_S&P 500" },
         { key: "^IXIC", name: "NASDAQ 지수", color: "#10b981", isBench: true, width: 1, pair: "Portfolio_NASDAQ" },
     ];
@@ -193,7 +201,7 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
 
                         {/* Metrics Grid */}
                         {data.results && data.results[period] && (
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-4">
                                 {LINE_CONFIG.map(cfg => {
                                     const resData = data.results[period][cfg.key];
                                     if (!resData) return null;

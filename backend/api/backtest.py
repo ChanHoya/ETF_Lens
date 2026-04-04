@@ -60,7 +60,7 @@ async def run_backtest(req: BacktestRequest):
                 cat_weights[h.category][ticker] = cat_weights[h.category].get(ticker, 0) + h.amount
     
     tickers = list(overall_tickers)
-    benchmarks = ["^KS11", "^GSPC", "^IXIC"]  # 코스피, S&P500, 나스닥
+    benchmarks = ["^KS11", "^KQ11", "^GSPC", "^IXIC"]  # 코스피, 코스닥, S&P500, 나스닥
     
     all_tickers = tickers + benchmarks
     
