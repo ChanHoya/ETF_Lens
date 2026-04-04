@@ -122,10 +122,15 @@ export default function CompareChart({
     // ETF 이름 → 자동 벤치마크 매핑
     const etfToBench = (name: string): string | null => {
         const n = name.toUpperCase();
-        // 코스닥 ETF (최우선)
-        if (n.includes('코스닥') || n.includes('KOSDAQ') || n.includes('코스닥150')) return 'KOSDAQ';
+        
+        // 코스닥 식별 (최우선)
+        if (n.includes('코스닥') || n.includes('KOSDAQ') || n.includes('코스닥150') || n.includes('바이오') || n.includes('헬스케어') || n.includes('2차전지')) {
+            return 'KOSDAQ';
+        }
+
         // 한국형 특수: 다우존스 추종이지만 한국 배당
         if (n.includes('코리아배당') || n.includes('KOREA배당')) return 'KOSPI';
+        
         // 나스닥/성장형 (빅테크 포함)
         if (n.includes('나스닥') || n.includes('NASDAQ') || n.includes('QQQ') ||
             n.includes('빅테크') || n.includes('성장커버드콜') || n.includes('성장 커버드콜')) return 'Nasdaq';
