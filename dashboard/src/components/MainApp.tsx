@@ -132,15 +132,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
         setFavorites([{ id: 'default', name: '내 관심종목', items: [] }]);
       }
 
-      const savedSlots = localStorage.getItem('etf_current_slots');
-      if (savedSlots) {
-        try {
-          const parsed = JSON.parse(savedSlots);
-          if (Array.isArray(parsed) && parsed.length === 10) {
-            setSlots(parsed);
-          }
-        } catch (e) { }
-      }
+      // 종목분석 초기화면은 항상 비워져 있도록 이전 슬롯 기록을 불러오지 않습니다.
 
       // AIInsight toast 클릭 시 종목분석>즐겨찾기로 이동
       const handleNavToFav = () => {
@@ -963,7 +955,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
                     }
 
                     if (tab.id === 'analysis') {
-                      setActiveTab('select');
+                      clearAllSlots();
                       setIsEtfCheckModalOpen(false);
                       return;
                     }
@@ -1571,7 +1563,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
                   return;
                 }
                 if (tab.id === 'analysis') {
-                  setActiveTab('select');
+                  clearAllSlots();
                   setIsEtfCheckModalOpen(false);
                   return;
                 }
