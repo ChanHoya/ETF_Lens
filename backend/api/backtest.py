@@ -14,9 +14,14 @@ class HoldingItem(BaseModel):
     code: str
     amount: float
     name: str
+    category: str = "기타"
 
 class BacktestRequest(BaseModel):
     holdings: List[HoldingItem]
+
+class BacktestResultData(BaseModel):
+    results: dict  # Contains 3M, 6M, 1Y, 3Y, 10Y MDD and Return metrics
+    weights: dict
 
 def format_ticker(code: str) -> str:
     # 6자리 숫자는 한국 주식/ETF로 간주
@@ -38,14 +43,23 @@ async def run_backtest(req: BacktestRequest):
     if total_amount == 0:
          return {"status": "error", "message": "투자 금액이 없습니다."}
 
-    # 계산할 자산 가중치
     weights = {}
+    cat_weights = {} # category -> { ticker: amount }
+    overall_tickers = set()
+
     for h in req.holdings:
         if h.amount > 0:
             ticker = format_ticker(h.code)
             weights[ticker] = weights.get(ticker, 0) + (h.amount / total_amount)
+            overall_tickers.add(ticker)
+            
+            # exclude cash/spot from specific sub-portfolios, but keep in overall
+            if "현금" not in h.category and "현물" not in h.category:
+                if h.category not in cat_weights:
+                    cat_weights[h.category] = {}
+                cat_weights[h.category][ticker] = cat_weights[h.category].get(ticker, 0) + h.amount
     
-    tickers = list(weights.keys())
+    tickers = list(overall_tickers)
     benchmarks = ["^KS11", "^GSPC", "^IXIC"]  # 코스피, S&P500, 나스닥
     
     all_tickers = tickers + benchmarks
@@ -78,6 +92,16 @@ async def run_backtest(req: BacktestRequest):
 
         daily_returns['Portfolio'] = pf_returns
         
+        # 분야별 포트폴리오 수익률 계산
+        for cat, cw in cat_weights.items():
+            cat_total = sum(cw.values())
+            if cat_total == 0: continue
+            
+            sub_pf = pd.Series(0.0, index=daily_returns.index)
+            for t, amt in cw.items():
+                if t in daily_returns:
+                    sub_pf += daily_returns[t] * (amt / cat_total)
+            daily_returns[f'Portfolio_{cat}'] = sub_pf
         # 기준일 설정
         KST = timezone(timedelta(hours=9))
         end_date = datetime.now(KST).replace(tzinfo=None)
@@ -106,8 +130,8 @@ async def run_backtest(req: BacktestRequest):
             cum_returns = (1 + period_returns).cumprod()
             
             period_summary = {}
-            # Portfolio & Benchmarks
-            targets = ["Portfolio"] + benchmarks
+            # Portfolio, Sub-portfolios & Benchmarks
+            targets = ["Portfolio"] + [f"Portfolio_{cat}" for cat in cat_weights.keys()] + benchmarks
             for t in targets:
                 if t in cum_returns.columns:
                     final_ret = (cum_returns[t].iloc[-1] - 1) * 100 if not cum_returns[t].empty else 0
@@ -119,7 +143,7 @@ async def run_backtest(req: BacktestRequest):
                     
             results[p_name] = period_summary
             
-            # 차트 데이터 준비 (1Y까지만 차트 데이터 반환하여 트래픽 최소화, 필요시 전체도 가능하지만 여기서는 3Y로 제한 설정)
+            # 차트 데이터 준비
             if p_name in ["3M", "6M", "1Y", "3Y"]:
                 # 샘플링해서 100개 포인트 정도로 줄이기
                 step = max(1, len(cum_returns) // 100)
@@ -158,9 +182,72 @@ async def run_backtest(req: BacktestRequest):
             "weights": weights,
             "results": results,
             "chart_data": chart_data,
-            "insights": insights
+            # AI Insight는 성능 분리를 위해 더 이상 여기서 반환하지 않고
+            # 빈 배열만 반환하여 하위호환 유지
+            "insights": [] 
         }
 
     except Exception as e:
         logger.error(f"Backtest failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/insight")
+async def generate_backtest_insight(req: BacktestResultData):
+    """
+    백테스트 결과(수익률, MDD 등)를 전달받아 Gemini를 통해
+    방어력 및 상관관계 인사이트를 생성해 반환합니다.
+    """
+    import os
+    import asyncio
+    
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        return {"status": "error", "insight_md": "Gemini API 키가 설정되지 않았습니다."}
+        
+    results = req.results
+    weights = req.weights
+    
+    if not results or "1Y" not in results:
+        return {"status": "error", "insight_md": "데이터가 부족하여 AI 분석을 수행할 수 없습니다."}
+        
+    try:
+        from google import genai
+        client = genai.Client(api_key=api_key)
+        
+        # Build prompt using existing results
+        prompt = f"""당신은 최고 수준의 퀀트 투자 전문가이자 자산배분 매니저입니다.
+다음은 사용자의 포트폴리오와 벤치마크 지수들의 과거 수익률 및 최대 낙폭(MDD, 숫자가 낮을수록 하락폭이 큼) 데이터입니다.
+
+포트폴리오 비중: {weights}
+
+[1년 (1Y) 성과]
+- 내 포트폴리오: 수익률 {results.get('1Y', {}).get('Portfolio', {}).get('return', 0):.2f}%, MDD {results.get('1Y', {}).get('Portfolio', {}).get('mdd', 0):.2f}%
+- KOSPI: 수익률 {results.get('1Y', {}).get('^KS11', {}).get('return', 0):.2f}%, MDD {results.get('1Y', {}).get('^KS11', {}).get('mdd', 0):.2f}%
+- S&P 500: 수익률 {results.get('1Y', {}).get('^GSPC', {}).get('return', 0):.2f}%, MDD {results.get('1Y', {}).get('^GSPC', {}).get('mdd', 0):.2f}%
+- NASDAQ: 수익률 {results.get('1Y', {}).get('^IXIC', {}).get('return', 0):.2f}%, MDD {results.get('1Y', {}).get('^IXIC', {}).get('mdd', 0):.2f}%
+
+[3년 (3Y) 성과 (가능할 경우)]
+- 내 포트폴리오: 수익률 {results.get('3Y', {}).get('Portfolio', {}).get('return', 0):.2f}%, MDD {results.get('3Y', {}).get('Portfolio', {}).get('mdd', 0):.2f}%
+- S&P 500: 수익률 {results.get('3Y', {}).get('^GSPC', {}).get('return', 0):.2f}%, MDD {results.get('3Y', {}).get('^GSPC', {}).get('mdd', 0):.2f}%
+
+이 데이터를 객관적으로 분석하여 개인 투자자에게 도움이 될 보고서를 작성하세요. 다음 사항을 반드시 포함하세요:
+1. 방어력 평가 (하방 경직성): KOSPI 및 S&P500 대비 하락(MDD)을 얼마나 잘 방어했는가?
+2. 성장성 평가: 시장 대비 초과 수익을 달성했는가? 변동성 대비 수익을 잘 뽑아냈는가?
+3. 위험 요소 및 보유 비중에 대한 짧은 조언.
+
+마크다운 형식(Bold, Bullet point 적용)으로 3~4문단 이내로 아주 전문적이고 간결하게 작성하세요. 인사말이나 꼬릿말은 생략하세요.
+"""
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+        
+        return {
+            "status": "success",
+            "insight_md": response.text.strip()
+        }
+    except Exception as e:
+        logger.error(f"Insight generation failed: {e}")
+        return {"status": "error", "insight_md": "AI 분석 중 오류가 발생했습니다."}
+

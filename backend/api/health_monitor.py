@@ -152,8 +152,27 @@ async def get_integration_health():
     else:
         overall = "error"      # 핵심 실패
 
+    # 사용자 친화적 서비스명 매핑
+    SERVICE_LABELS = {
+        "yfinance_history": "Yahoo Finance",
+        "yfinance_period": "Yahoo Finance (legacy)",
+        "oecd_cli": "OECD CLI",
+        "fred": "FRED",
+        "naver_finance": "Naver Finance",
+        "gemini": "Gemini AI",
+    }
+    failed_services = [
+        SERVICE_LABELS.get(k, k)
+        for k, v in checks.items()
+        if not v.get("ok")
+    ]
+    # yfinance_period 단독 실패는 표시 제외 (레거시 방식이라 정상)
+    display_failed = [s for s in failed_services if s != "Yahoo Finance (legacy)"]
+
     response = {
-        "status": overall,
+        "overall": overall,
+        "status": overall,           # 하위 호환성 유지
+        "failed_services": display_failed,
         "checks": checks,
         "checked_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "notes": {

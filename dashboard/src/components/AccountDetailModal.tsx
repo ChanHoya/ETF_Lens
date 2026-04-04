@@ -236,12 +236,13 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
                             <table className="w-full text-left border-collapse whitespace-nowrap min-w-[700px]">
                                 <thead>
                                     <tr className="bg-black/30 border-b border-white/10 text-sm font-medium text-gray-400">
-                                        <th className="py-4 px-6">종목 <span className="text-xs text-gray-500 font-normal ml-1">(코드/이름)</span></th>
+                                        <th className="py-4 px-6">코드 <span className="text-gray-500 mx-1">/</span> 종목명</th>
                                         <th className="py-4 px-4 text-center">구분</th>
-                                        <th className="py-4 px-4 text-right">수량 <span className="text-xs text-gray-500 font-normal ml-1">(비중)</span></th>
-                                        <th className="py-4 px-4 text-right">매입평균 <span className="text-xs text-gray-500 font-normal ml-1">(현재가)</span></th>
-                                        <th className="py-4 px-4 text-right">매입금액 <span className="text-xs text-gray-500 font-normal ml-1">(평가금액)</span></th>
-                                        <th className="py-4 px-6 text-right">평가손익 <span className="text-xs text-gray-500 font-normal ml-1">(수익률)</span></th>
+                                        <th className="py-4 px-4 text-right">수량</th>
+                                        <th className="py-4 px-4 text-right">매입단가 <span className="text-gray-500 mx-1">/</span> 현재가</th>
+                                        <th className="py-4 px-4 text-right">매입금액 <span className="text-gray-500 mx-1">/</span> 평가금액</th>
+                                        <th className="py-4 px-4 text-right text-indigo-300">비중</th>
+                                        <th className="py-4 px-6 text-right">평가손익 <span className="text-gray-500 mx-1">/</span> 수익률</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5 text-sm">
@@ -266,26 +267,27 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
                                                         {categorizeItem(h.name, h.code)}
                                                     </span>
                                                 </td>
-                                                {/* Qty & Weight */}
+                                                {/* Qty */}
                                                 <td className="py-3 px-4 text-right">
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="text-gray-300 font-medium">{formatNumber(h.qty)} <span className="text-xs text-gray-500 font-normal">좌</span></span>
-                                                        <span className="text-xs text-indigo-400">{formatPercent(hWeight)}</span>
-                                                    </div>
+                                                    <span className="text-gray-300 font-medium">{formatNumber(h.qty)} <span className="text-xs text-gray-500 font-normal">좌</span></span>
                                                 </td>
                                                 {/* Avg Price & Current Price */}
                                                 <td className="py-3 px-4 text-right">
-                                                    <div className="flex flex-col gap-1">
+                                                    <div className="flex flex-col gap-1 items-end">
                                                         <span className="text-gray-400">{formatNumber(h.avg_price)}</span>
                                                         <span className="text-gray-200">{formatNumber(h.current_price)}</span>
                                                     </div>
                                                 </td>
                                                 {/* Purchase Amount & Eval Amount */}
                                                 <td className="py-3 px-4 text-right">
-                                                    <div className="flex flex-col gap-1">
+                                                    <div className="flex flex-col gap-1 items-end">
                                                         <span className="text-gray-400">{formatNumber(hPurchase)}</span>
                                                         <span className="text-white font-medium">{formatNumber(h.eval_amount)}</span>
                                                     </div>
+                                                </td>
+                                                {/* Weight (비중) */}
+                                                <td className="py-3 px-4 text-right">
+                                                    <span className="text-xs px-2 py-1 rounded-md bg-indigo-500/10 text-indigo-300 font-medium border border-indigo-500/20">{formatPercent(hWeight)}</span>
                                                 </td>
                                                 {/* Profit Loss & Return Rate */}
                                                 <td className="py-3 px-6 text-right">
