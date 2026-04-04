@@ -55,8 +55,8 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
         }
         if (n.includes('위탁') && code === "") return '현물/현금 (금, 예수금 등)'; // 예수금 처리
         
-        // 코스닥 식별
-        if (n.includes('코스닥') || n.includes('KOSDAQ')) {
+        // 코스닥 식별 (바이오 등도 코스닥으로 우선 분류)
+        if (n.includes('코스닥') || n.includes('KOSDAQ') || n.includes('바이오')) {
             return 'KOSDAQ';
         }
 
