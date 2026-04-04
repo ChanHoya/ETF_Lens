@@ -47,7 +47,7 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
         if (n.includes('머니마켓') || n.includes('CD금리') || n.includes('KOFR') || n.includes('단기채') || n.includes('파킹')) return '현물/현금 (금, 예수금 등)';
         
         // 특정 키워드에 따른 나스닥/S&P 매핑
-        if (n.includes('미국성장') || n.includes('미국우주항공') || n.includes('미국양자컴퓨팅') || n.includes('나스닥') || n.includes('NASDAQ')) {
+        if (n.includes('미국성장') || n.includes('미국우주항공') || n.includes('미국양자컴퓨팅') || n.includes('나스닥') || n.includes('NASDAQ') || n.includes('빅테크') || n.includes('QQQ') || n.includes('성장커버드콜') || n.includes('성장 커버드콜')) {
             return 'NASDAQ';
         }
         if (n.includes('미국배당') || n.includes('S&P500') || n.includes('S&P 500')) {

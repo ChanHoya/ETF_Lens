@@ -62,7 +62,7 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
         }
         
         // 특정 키워드에 따른 나스닥/S&P 매핑
-        if (n.includes('미국성장') || n.includes('미국우주항공') || n.includes('미국양자컴퓨팅') || n.includes('나스닥') || n.includes('NASDAQ')) {
+        if (n.includes('미국성장') || n.includes('미국우주항공') || n.includes('미국양자컴퓨팅') || n.includes('나스닥') || n.includes('NASDAQ') || n.includes('빅테크') || n.includes('QQQ') || n.includes('성장커버드콜') || n.includes('성장 커버드콜')) {
             return 'NASDAQ';
         }
         if (n.includes('미국배당') || n.includes('S&P500') || n.includes('S&P 500')) {

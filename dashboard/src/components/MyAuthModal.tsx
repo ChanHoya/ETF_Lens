@@ -79,9 +79,6 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: ()
                         잠금 해제
                     </button>
 
-                    <p className="text-center text-xs text-gray-500 mt-4 cursor-pointer hover:text-gray-300 transition-colors" onClick={handleReset}>
-                        PIN 번호 초기화
-                    </p>
                 </form>
             ) : (
                 <form onSubmit={handleSetup} className="space-y-4">
