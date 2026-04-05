@@ -235,10 +235,13 @@ function HoldingCard({ item, totalPortfolio, onOpenDetail, onAnalyzePeers }: { i
                                     ))}
                                 </div>
                                 <button 
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                        e.stopPropagation();
                                         if (onAnalyzePeers) {
                                             const peers = peerPeriod === "1m" ? item.peers_sorted_1m : item.peers_sorted_3m;
-                                            const peerItems = peers.map((p: any) => ({code: p.code, name: p.name}));
+                                            const peerItems = peers
+                                                                .filter((p: any) => p.code !== item.code)
+                                                                .map((p: any) => ({code: p.code, name: p.name}));
                                             onAnalyzePeers([{code: item.code, name: item.name}, ...peerItems]);
                                         }
                                     }}

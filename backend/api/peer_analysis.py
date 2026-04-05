@@ -125,10 +125,12 @@ CATEGORY_PEERS: list[dict] = [
         "group": "TDF 생애주기",
         "benchmark": "^KS11",
         "peers": [
-            ("434060", "KODEX TDF2050액티브"),
-            ("381180", "TIGER TDF2050액티브"),
-            ("426410", "HANARO TDF2050액티브"),
-            ("441640", "KODEX TDF2045액티브"),
+            ("434060", "KODEX TDF2050액티브 적격"),
+            ("442570", "RISE TDF2050액티브 적격"),
+            ("0021E0", "ACE TDF2050액티브 적격"),
+            ("435550", "KIWOOM TDF2050액티브 적격"),
+            ("0025N0", "TIGER TDF2045 적격"),
+            ("433980", "KODEX TDF2040액티브 적격"),
         ],
     },
     {

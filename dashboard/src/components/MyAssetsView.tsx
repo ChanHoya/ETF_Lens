@@ -7,15 +7,31 @@ import { API_BASE } from "@/lib/apiConfig";
 import RiskBanner from "@/components/RiskBanner";
 
 export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenDetail?: (code: string) => void, onAnalyzePeers?: (items: any[]) => void }) {
-    const [isAuthorized, setIsAuthorized] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isAuthorized, setIsAuthorized] = useState<boolean>(() => {
+        if (typeof window !== "undefined") {
+            return sessionStorage.getItem("kis_authorized") === "true";
+        }
+        return false;
+    });
+    const [isLoading, setIsLoading] = useState(!isAuthorized);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [kisData, setKisData] = useState<any>(null);
     const [tradesData, setTradesData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
     const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
 
-    useEffect(() => { setIsLoading(false); }, []);
+    useEffect(() => {
+        if (isAuthorized && typeof window !== "undefined") {
+            sessionStorage.setItem("kis_authorized", "true");
+        }
+    }, [isAuthorized]);
+
+    // 초기 마운트 시 인증되어 있으면 데이터 불러오기
+    useEffect(() => {
+        if (isAuthorized && !kisData) {
+            fetchPortfolioData();
+        }
+    }, [isAuthorized]);
 
     const fetchTrades = useCallback(async () => {
         try {
