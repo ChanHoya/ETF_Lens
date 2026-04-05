@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
+import React, { useState } from 'react';
 import AccountDetailModal from './AccountDetailModal';
 import HoldingsSignals from './HoldingsSignals';
 import RecentTrades from './RecentTrades';
 import PortfolioBacktester from './PortfolioBacktester';
 import RiskAlertBanner from './RiskAlertBanner';
+import PortfolioTreemap from './PortfolioTreemap';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type MyDashboardProps = {
@@ -22,13 +22,9 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
 
     // Formatting Helpers
     const formatNumber = (val: number) => new Intl.NumberFormat('ko-KR').format(Math.floor(val));
-    const formatPercent = (val: number) => `${(val * 100).toFixed(2)}%`;
 
     // Derived Metrics
     const cashBalance = summary.cash_balance || 0;
-    
-    // 사용자의 피드백을 반영하여 총자산금액을 KIS 응답(안 보일 수 있는 자산 포함)이 아닌,
-    // [보유 주식/ETF 평가금액 + 예수금]으로 명확히 합산합니다.
     const stockEvalAmount = summary.total_eval_amount || 0;
     const totalAsset = stockEvalAmount + cashBalance;
     const totalProfitLoss = summary.total_profit_loss || 0;
@@ -36,70 +32,6 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
     // Calculate total invest principal (매수금액)
     const stockPrincipal = stockEvalAmount - totalProfitLoss;
     const totalReturnRate = stockPrincipal > 0 ? (totalProfitLoss / stockPrincipal) * 100 : 0;
-
-    // 사용자 맞춤 카테고리 로직 (KOSPI, KOSDAQ, S&P500, Nasdaq, 현물, 기타)
-    const categorizeItem = (name: string, code: string = "", isCash: boolean = false) => {
-        if (isCash) return '현물/현금 (금, 예수금 등)';
-        if (!name) return 'KOSPI';
-        
-        const n = name.toUpperCase();
-        if (n.includes('금현물') || n.includes('국제금') || n.includes('은현물') || n.includes('금선물') || n.includes('GOLD')) return '현물/현금 (금, 예수금 등)';
-        if (n.includes('머니마켓') || n.includes('CD금리') || n.includes('KOFR') || n.includes('단기채') || n.includes('파킹')) return '현물/현금 (금, 예수금 등)';
-        
-        // 특정 키워드에 따른 나스닥/S&P 매핑
-        if (n.includes('미국성장') || n.includes('미국우주항공') || n.includes('미국양자컴퓨팅') || n.includes('나스닥') || n.includes('NASDAQ') || n.includes('빅테크') || n.includes('QQQ') || n.includes('성장커버드콜') || n.includes('성장 커버드콜')) {
-            return 'NASDAQ';
-        }
-        if (n.includes('미국배당') || n.includes('S&P500') || n.includes('S&P 500')) {
-            return 'S&P 500';
-        }
-        if (n.includes('위탁') && code === "") return '현물/현금 (금, 예수금 등)'; // 예수금 처리
-        
-        // 코스닥 식별 (바이오, 헬스케어, 2차전지 등도 코스닥으로 우선 분류)
-        if (n.includes('코스닥') || n.includes('KOSDAQ') || n.includes('바이오') || n.includes('헬스케어') || n.includes('2차전지')) {
-            return 'KOSDAQ';
-        }
-
-        // 종목명/코드에 영문약자 형태의 미국 증시코드인 경우 (숫자 미포함)
-        if (code && /^[A-Za-z]+(\.[A-Za-z]+)?$/.test(code)) {
-            // 별도 조건 없으면 나스닥 혹은 S&P500 등 지수 (기본값 나스닥)
-            return 'NASDAQ';
-        }
-
-        if (n.includes('미국')) return '미국';
-        return 'KOSPI'; // 기본값 한국 -> KOSPI로 변경
-    };
-
-    const aggregatedData = useMemo(() => {
-        const groups: Record<string, number> = {};
-        
-        if (cashBalance > 0) {
-            const cat = categorizeItem('예수금', "", true);
-            groups[cat] = cashBalance;
-        }
-
-        holdings.forEach((h: any) => {
-            const cat = categorizeItem(h.name, h.code);
-            groups[cat] = (groups[cat] || 0) + (h.eval_amount || 0);
-        });
-
-        return Object.keys(groups).map(k => ({ name: k, value: groups[k] })).sort((a, b) => b.value - a.value);
-    }, [holdings, cashBalance]);
-
-    const customColors: Record<string, string> = {
-        '한국': '#3b82f6',
-        'S&P 500': '#f43f5e',
-        'NASDAQ': '#8b5cf6',
-        '현물/현금 (금, 예수금 등)': '#eab308',
-        '기타 (해외자산 등)': '#71717a'
-    };
-
-    const getCustomColor = (name: string) => customColors[name] || '#71717a';
-
-    // Section 2 Dummy Chart Data (Since KIS TTTC8434R only gives current snapshot)
-    const dummyChartData = [
-        { name: '현재', returnRate: totalReturnRate }
-    ];
 
     return (
         <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-5 duration-700 font-sans pb-10">
@@ -112,7 +44,7 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
                     <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
                     나의 자산
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 flex flex-col justify-between backdrop-blur-md">
                         <span className="text-gray-400 font-medium mb-4">총액</span>
                         <div className="text-right">
@@ -136,116 +68,41 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
                             <button className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">가능금액 조회</button>
                         </div>
                     </div>
-
-                    <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 flex flex-col justify-center gap-3 backdrop-blur-md">
-                        <span className="text-gray-400 font-medium">대출</span>
-                        <button className="w-full bg-white/10 hover:bg-white/15 text-white py-3 rounded-lg font-medium transition-colors border border-white/5">
-                            대출약정 (신규)
-                        </button>
-                        <button className="w-full text-sm text-gray-400 hover:text-white transition-colors">
-                            대출 알아보기
-                        </button>
-                    </div>
                 </div>
             </section>
 
-            {/* Section 2: 수익률 (Return Rates) */}
-            <section className="flex flex-col gap-4 mt-4">
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                    <span className="w-1.5 h-6 bg-rose-500 rounded-full"></span>
-                    포트폴리오 수익률 및 비중
-                </h2>
-                <div className="bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-md overflow-hidden flex flex-col">
-                    {/* Header metrics */}
-                    <div className="grid grid-cols-2 divide-x divide-white/10 border-b border-white/10">
-                        <div className="p-6 flex flex-col items-center justify-center">
-                            <span className="text-sm text-gray-400 mb-2">• 누적 총 수익</span>
-                            <div className="flex items-baseline gap-2">
-                                <span className={`text-3xl font-bold ${totalProfitLoss > 0 ? 'text-rose-400' : totalProfitLoss < 0 ? 'text-blue-400' : 'text-gray-200'}`}>
-                                    {totalProfitLoss > 0 ? '+' : ''}{formatNumber(totalProfitLoss)}원
-                                </span>
-                                <span className={`font-semibold ${totalProfitLoss > 0 ? 'text-rose-400' : totalProfitLoss < 0 ? 'text-blue-400' : 'text-gray-400'}`}>
-                                    {totalReturnRate.toFixed(2)}%
-                                </span>
-                            </div>
+            {/* Section 2: 포트폴리오 현황 트리맵 */}
+            <section className="flex flex-col gap-4">
+                <div className="flex items-baseline gap-4 justify-between flex-wrap">
+                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                        <span className="w-1.5 h-6 bg-rose-500 rounded-full"></span>
+                        포트폴리오 현황
+                    </h2>
+                    <div className="flex items-baseline gap-6">
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-sm text-gray-400">누적 수익</span>
+                            <span className={`text-2xl font-bold ${totalProfitLoss > 0 ? 'text-rose-400' : totalProfitLoss < 0 ? 'text-blue-400' : 'text-gray-200'}`}>
+                                {totalProfitLoss > 0 ? '+' : ''}{formatNumber(totalProfitLoss)}원
+                            </span>
+                            <span className={`text-sm font-semibold ${totalProfitLoss > 0 ? 'text-rose-400' : totalProfitLoss < 0 ? 'text-blue-400' : 'text-gray-400'}`}>
+                                ({totalReturnRate.toFixed(2)}%)
+                            </span>
                         </div>
-                        <div className="p-6 flex flex-col items-center justify-center">
-                            <span className="text-sm text-gray-400 mb-2">• 당일 평가손익</span>
-                            <div className="flex items-baseline gap-2">
-                                {totalProfitLoss !== 0 ? (
-                                    <>
-                                        <span className={`text-3xl font-bold ${
-                                            totalProfitLoss > 0 ? 'text-rose-400' : 'text-blue-400'
-                                        }`}>
-                                            {totalProfitLoss > 0 ? '+' : ''}{formatNumber(totalProfitLoss)}원
-                                        </span>
-                                        <span className={`font-semibold text-sm ${
-                                            totalProfitLoss > 0 ? 'text-rose-400' : 'text-blue-400'
-                                        }`}>
-                                            {totalReturnRate > 0 ? '+' : ''}{totalReturnRate.toFixed(2)}%
-                                        </span>
-                                    </>
-                                ) : (
-                                    <span className="text-3xl font-bold text-gray-600">-</span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                    {/* Chart area */}
-                    <div className="p-6 h-[250px] w-full flex flex-col items-center justify-center">
-                        <div className="w-full max-w-2xl h-full flex items-center justify-center text-gray-500 bg-transparent rounded-xl relative">
-                            {(() => {
-                                const items = holdings
-                                    .filter((h: any) => (h.eval_amount || 0) > 0)
-                                    .map((h: any) => ({ name: h.name, value: h.eval_amount }));
-                                if (cashBalance > 0) {
-                                    items.push({ name: '예수금(현금)', value: cashBalance });
-                                }
-                                items.sort((a: any, b: any) => b.value - a.value);
-                                
-                                let finalPieData = items;
-                                if (items.length > 16) {
-                                    const top = items.slice(0, 15);
-                                    const others = items.slice(15).reduce((acc: number, curr: any) => acc + curr.value, 0);
-                                    finalPieData = [...top, { name: '기타 종목 합계', value: others }];
-                                }
-
-                                const PIE_COLORS = ['#F43F5E', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#14B8A6', '#64748B', '#a1a1aa'];
-
-                                return (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={finalPieData}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={60}
-                                                outerRadius={100}
-                                                paddingAngle={2}
-                                                dataKey="value"
-                                                stroke="none"
-                                            >
-                                                {finalPieData.map((entry: any, index: number) => (
-                                                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip 
-                                                formatter={(val: number) => `${formatNumber(val)}원`}
-                                                contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                                itemStyle={{ color: '#e4e4e7' }}
-                                            />
-                                            <Legend verticalAlign="middle" align="right" layout="vertical" wrapperStyle={{ fontSize: '12px' }} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                );
-                            })()}
+                        <div className="text-sm text-gray-500">
+                            전체 자산 <span className="text-gray-200 font-bold">{formatNumber(totalAsset)}원</span>
                         </div>
                     </div>
                 </div>
+
+                <PortfolioTreemap
+                    holdings={holdings}
+                    cashBalance={cashBalance}
+                    totalAsset={totalAsset}
+                />
             </section>
 
             {/* Section 3: 계좌내역 (Account Status) */}
-            <section className="flex flex-col gap-4 mt-4">
+            <section className="flex flex-col gap-4">
                 <div className="flex justify-between items-end">
                     <h2 className="text-2xl font-bold flex items-baseline gap-3">
                         <div className="flex items-center gap-2">
@@ -294,61 +151,11 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false }: 
             {/* 당일 체결 내역 */}
             <RecentTrades tradesData={tradesData} />
 
-            {/* Section 4: 상품 유형별 현황 (Assets by Product Type) */}
-            <section className="flex flex-col gap-4 mt-4">
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                    <span className="w-1.5 h-6 bg-cyan-500 rounded-full"></span>
-                    상품 유형별 현황
-                </h2>
-
-                <div className="bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-md p-6 flex flex-col items-center">
-
-                    {/* Unified Custom Pie Chart */}
-                    <div className="w-full max-w-2xl h-[300px] relative flex justify-center items-center">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={aggregatedData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={70}
-                                    outerRadius={110}
-                                    paddingAngle={2}
-                                    dataKey="value"
-                                    stroke="none"
-                                >
-                                    {aggregatedData.map((entry: any, index: number) => (
-                                        <Cell key={`cell-${index}`} fill={getCustomColor(entry.name)} />
-                                    ))}
-                                </Pie>
-                                <RechartsTooltip
-                                    formatter={(value: any) => `${formatNumber(value as number)}원`}
-                                    contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#e4e4e7' }}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-sm text-gray-400">총 자산</span>
-                            <span className="font-bold text-lg">{formatNumber(totalAsset)}</span>
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap justify-center gap-6 mt-4">
-                        {aggregatedData.map((d: any) => (
-                            <div key={d.name} className="flex items-center gap-2 text-sm text-gray-400">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getCustomColor(d.name) }}></div>
-                                {d.name} <span className="text-gray-200 font-medium ml-1">{formatPercent(totalAsset > 0 ? d.value / totalAsset : 0)}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
             {/* 포트폴리오 백테스터 */}
             <PortfolioBacktester holdings={holdings} />
 
             {/* Section 5: 당일 체결내역 */}
-            <section className="flex flex-col gap-4 mt-4">
+            <section className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
                     <h2 className="text-2xl font-bold flex items-center gap-2">
                         <span className="w-1.5 h-6 bg-amber-500 rounded-full"></span>
