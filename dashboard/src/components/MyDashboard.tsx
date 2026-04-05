@@ -12,9 +12,10 @@ type MyDashboardProps = {
     tradesData?: any;    // 당일 체결내역 (optional)
     isRefreshing?: boolean;
     onOpenDetail?: (code: string) => void;
+    onAnalyzePeers?: (items: any[]) => void;
 };
 
-export default function MyDashboard({ data, tradesData, isRefreshing = false, onOpenDetail }: MyDashboardProps) {
+export default function MyDashboard({ data, tradesData, isRefreshing = false, onOpenDetail, onAnalyzePeers }: MyDashboardProps) {
     const [selectedAccount, setSelectedAccount] = useState<any>(null);
     if (!data || !data.kis_raw) return null;
 
@@ -227,7 +228,7 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
             </section>
 
             {/* Section 6: 보유 ETF 전략 시그널 */}
-            <HoldingsSignals isAuthorized={true} onOpenDetail={onOpenDetail} />
+            <HoldingsSignals isAuthorized={true} onOpenDetail={onOpenDetail} onAnalyzePeers={onAnalyzePeers} />
 
             {/* Modals */}
             <AccountDetailModal

@@ -333,12 +333,23 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
     }
   };
 
-  const fetchComparison = async () => {
-    const validCodes = slots.map(s => s.code || s.search).filter(Boolean);
+  const fetchComparison = async (overrideSlots?: {search: string, code: string}[]) => {
+    // If it's a DOM event (has type property from React synthetic event), ignore it
+    const activeSlots = (overrideSlots && !Array.isArray(overrideSlots)) ? slots : (overrideSlots || slots);
+    const validCodes = activeSlots.map(s => s.code || s.search).filter(Boolean);
     if (validCodes.length < 2) {
       alert("비교를 위해 최소 2개의 종목을 입력해주세요.");
       return;
     }
+
+  const handleAnalyzePeers = (items: {code: string, name: string}[]) => {
+    const toAnalyze = items.slice(0, 10);
+    const newSlots = Array(10).fill(null).map((_, idx) => {
+      return toAnalyze[idx] ? { search: toAnalyze[idx].name, code: toAnalyze[idx].code } : { search: "", code: "" };
+    });
+    setSlots(newSlots);
+    fetchComparison(newSlots);
+  };
 
     setLoading(true);
     try {
@@ -1268,7 +1279,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
                     </button>
 
                     <button
-                      onClick={fetchComparison}
+                      onClick={() => fetchComparison()}
                       disabled={loading || slots.map(s => s.code || s.search).filter(Boolean).length < 2}
                       className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none active:scale-95 text-sm whitespace-nowrap"
                     >
@@ -1523,7 +1534,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
 
         {/* My Assets Section */}
         {activeTab === 'my' && (
-          <MyAssetsView onOpenDetail={handleOpenDetail} />
+          <MyAssetsView onOpenDetail={handleOpenDetail} onAnalyzePeers={handleAnalyzePeers} />
         )}
 
         {/* Discover Section */}

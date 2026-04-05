@@ -4,7 +4,11 @@ import React, { useState, useEffect, useCallback } from "react";
 import { API_BASE } from "@/lib/apiConfig";
 import { RefreshCw, TrendingUp, TrendingDown, Minus, Trophy, BarChart2, Target, Layers } from "lucide-react";
 
-type HoldingsSignalsProps = { isAuthorized: boolean; onOpenDetail?: (code: string) => void };
+interface HoldingsSignalsProps {
+    isAuthorized: boolean;
+    onOpenDetail?: (code: string) => void;
+    onAnalyzePeers?: (items: any[]) => void;
+}
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (v: number) => new Intl.NumberFormat("ko-KR").format(Math.floor(v));
@@ -114,7 +118,7 @@ function PeerBarChart({ peers, period, onOpenDetail }: { peers: any[]; period: "
 }
 
 // ─── 단일 종목 카드 ───────────────────────────────────────────────────────────
-function HoldingCard({ item, totalPortfolio, onOpenDetail }: { item: any; totalPortfolio: number; onOpenDetail?: (code: string) => void }) {
+function HoldingCard({ item, totalPortfolio, onOpenDetail, onAnalyzePeers }: { item: any; totalPortfolio: number; onOpenDetail?: (code: string) => void, onAnalyzePeers?: (items: any[]) => void }) {
     const [showPeers, setShowPeers] = useState(false);
     const [peerPeriod, setPeerPeriod] = useState<"1m" | "3m">("1m");
 
@@ -127,7 +131,12 @@ function HoldingCard({ item, totalPortfolio, onOpenDetail }: { item: any; totalP
             <div className="px-4 pt-4 pb-3 flex justify-between items-start gap-2">
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-bold text-white text-sm leading-tight">{item.name}</p>
+                        <p 
+                            className="font-bold text-white text-sm leading-tight cursor-pointer hover:underline"
+                            onClick={() => onOpenDetail && onOpenDetail(item.code)}
+                        >
+                            {item.name}
+                        </p>
                         {item.category && item.category !== "기타" && (
                             <span className="px-1.5 py-0.5 bg-indigo-500/15 border border-indigo-500/25 rounded text-[10px] text-indigo-400 font-medium flex-shrink-0">
                                 {item.category}
@@ -226,7 +235,13 @@ function HoldingCard({ item, totalPortfolio, onOpenDetail }: { item: any; totalP
                                     ))}
                                 </div>
                                 <button 
-                                    onClick={() => onOpenDetail && onOpenDetail(item.code)}
+                                    onClick={() => {
+                                        if (onAnalyzePeers) {
+                                            const peers = peerPeriod === "1m" ? item.peers_sorted_1m : item.peers_sorted_3m;
+                                            const peerItems = peers.map((p: any) => ({code: p.code, name: p.name}));
+                                            onAnalyzePeers([{code: item.code, name: item.name}, ...peerItems]);
+                                        }
+                                    }}
                                     className="text-[10px] px-2 flex items-center gap-1.5 py-0.5 rounded border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 transition-colors"
                                 >
                                     <Target className="w-3 h-3" />
@@ -254,8 +269,7 @@ function HoldingCard({ item, totalPortfolio, onOpenDetail }: { item: any; totalP
     );
 }
 
-// ─── 메인 컴포넌트 ────────────────────────────────────────────────────────────
-export default function HoldingsSignals({ isAuthorized, onOpenDetail }: HoldingsSignalsProps) {
+export default function HoldingsSignals({ isAuthorized, onOpenDetail, onAnalyzePeers }: HoldingsSignalsProps) {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -434,6 +448,7 @@ export default function HoldingsSignals({ isAuthorized, onOpenDetail }: Holdings
                                             item={item}
                                             totalPortfolio={data.total_portfolio ?? 0}
                                             onOpenDetail={onOpenDetail}
+                                            onAnalyzePeers={onAnalyzePeers}
                                         />
                                     ))}
                                 </div>

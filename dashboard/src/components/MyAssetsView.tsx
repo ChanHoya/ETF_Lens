@@ -6,7 +6,7 @@ import { Loader2, RefreshCw } from "lucide-react";
 import { API_BASE } from "@/lib/apiConfig";
 import RiskBanner from "@/components/RiskBanner";
 
-export default function MyAssetsView({ onOpenDetail }: { onOpenDetail?: (code: string) => void }) {
+export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenDetail?: (code: string) => void, onAnalyzePeers?: (items: any[]) => void }) {
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -129,7 +129,7 @@ export default function MyAssetsView({ onOpenDetail }: { onOpenDetail?: (code: s
             ) : (
                 <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col gap-6">
                     <RiskBanner isAuthorized={isAuthorized} />
-                    <MyDashboard data={kisData} tradesData={tradesData} isRefreshing={isRefreshing} onOpenDetail={onOpenDetail} />
+                    <MyDashboard data={kisData} tradesData={tradesData} isRefreshing={isRefreshing} onOpenDetail={onOpenDetail} onAnalyzePeers={onAnalyzePeers} />
                 </div>
             )}
         </div>
