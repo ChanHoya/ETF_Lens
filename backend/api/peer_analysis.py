@@ -44,11 +44,9 @@ CATEGORY_PEERS: list[dict] = [
         "group": "코스닥150",
         "benchmark": "^KQ11",
         "peers": [
-            ("261060", "TIGER 코스닥150"),
             ("229200", "KODEX 코스닥150"),
-            ("357870", "SOL 코스닥150"),
-            ("278540", "PLUS 코스닥150"),
-            ("236350", "TIGER 코스닥150레버리지"),
+            ("232080", "TIGER 코스닥150"),
+            ("227930", "KODEX 코스닥150레버리지"),
         ],
     },
     {
@@ -58,8 +56,8 @@ CATEGORY_PEERS: list[dict] = [
         "peers": [
             ("462900", "KoAct 바이오헬스케어액티브"),
             ("244580", "KODEX 바이오"),
-            ("143460", "TIGER 바이오TOP10"),
-            ("394280", "HANARO 헬스케어"),
+            ("364970", "TIGER 바이오TOP10"),
+            ("463050", "TIME K바이오액티브"),
         ],
     },
     {
@@ -68,8 +66,8 @@ CATEGORY_PEERS: list[dict] = [
         "benchmark": "^KQ11",
         "peers": [
             ("305540", "TIGER 2차전지테마"),
-            ("364980", "KODEX 2차전지산업"),
-            ("395160", "HANARO Fn2차전지소부장"),
+            ("305720", "KODEX 2차전지산업"),
+            ("364980", "TIGER 2차전지TOP10"),
         ],
     },
     {
@@ -115,8 +113,9 @@ CATEGORY_PEERS: list[dict] = [
         "benchmark": "GC=F",
         "peers": [
             ("411060", "ACE KRX금현물"),
+            ("0072R0", "TIGER KRX금현물"),
             ("132030", "KODEX 골드선물(H)"),
-            ("319640", "TIGER 금은선물(H)"),
+            ("319640", "TIGER 골드선물(H)"),
         ],
     },
     {
@@ -149,7 +148,7 @@ CATEGORY_PEERS: list[dict] = [
         "peers": [
             ("069500", "KODEX 200"),
             ("102110", "TIGER 200"),
-            ("278540", "PLUS 코스피200"),
+            ("148020", "KBSTAR 200"),
         ],
     },
     {
@@ -157,10 +156,10 @@ CATEGORY_PEERS: list[dict] = [
         "group": "배당·주주환원",
         "benchmark": "^KS11",
         "peers": [
-            ("400970", "KODEX 주주환원고배당"),
-            ("395160", "TIGER 코리아배당+"),
-            ("463050", "PLUS 고배당주"),
-            ("461580", "SOL 한국형배당귀족"),
+            ("279530", "KODEX 고배당주"),
+            ("161510", "PLUS 고배당주"),
+            ("211900", "KODEX 코리아배당성장"),
+            ("0153K0", "KODEX 주주환원고배당주"),
         ],
     },
     {
@@ -169,9 +168,9 @@ CATEGORY_PEERS: list[dict] = [
         "benchmark": None,
         "peers": [
             ("488770", "KODEX 머니마켓액티브"),
-            ("441680", "TIGER KOFR금리액티브"),
-            ("426410", "ACE CD금리&초단기채권액티브"),
-            ("463050", "SOL 단기채권액티브"),
+            ("449170", "TIGER KOFR금리액티브(합성)"),
+            ("487340", "ACE 머니마켓액티브"),
+            ("469830", "SOL 초단기채권액티브"),
         ],
     },
     {
@@ -181,9 +180,9 @@ CATEGORY_PEERS: list[dict] = [
         "peers": [
             ("091160", "KODEX 반도체"),
             ("091230", "TIGER 반도체"),
-            ("381180", "HANARO Fn반도체TOP10"),
-            ("453810", "KODEX AI반도체핵심장비"),
-            ("424610", "SOL 반도체소부장Fn"),
+            ("396500", "TIGER 반도체TOP10"),
+            ("471990", "KODEX AI반도체핵심장비"),
+            ("455850", "SOL AI반도체소부장"),
         ],
     },
 ]
@@ -366,12 +365,8 @@ async def get_peer_analysis(request: Request, db: AsyncSession = Depends(get_db)
 
     total_portfolio = sum(h.get("eval_amount", 0) for h in domestic)
     loop = asyncio.get_event_loop()
-    items: list[dict] = []
-
-    for h in domestic:
+    async def process_holding(h: dict) -> dict:
         code = h.get("code", "")
-
-        # 항목별 캐시
         cached_item = _PEER_CACHE.get(f"item_{code}")
         if cached_item and (now_ts - cached_item["ts"]) < _PEER_CACHE_TTL:
             item = dict(cached_item["data"])
@@ -389,13 +384,16 @@ async def get_peer_analysis(request: Request, db: AsyncSession = Depends(get_db)
                 logger.error(f"[peer-analysis] {code}: {e}")
                 item = {
                     "code": code, "name": h.get("name", ""),
-                    "eval_amount": h.get("eval_amount", 0),
+                    "eval_amount": float(h.get("eval_amount", 0)),
                     "category": "기타", "error": str(e),
                 }
             _PEER_CACHE[f"item_{code}"] = {"data": item, "ts": now_ts}
 
         item["account_no"] = h.get("account_no", "")
-        items.append(item)
+        return item
+
+    items_coros = [process_holding(h) for h in domestic]
+    items = await asyncio.gather(*items_coros)
 
     items.sort(key=lambda x: x.get("eval_amount", 0), reverse=True)
     return {
