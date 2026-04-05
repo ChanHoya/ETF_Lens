@@ -333,15 +333,6 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
     }
   };
 
-  const fetchComparison = async (overrideSlots?: {search: string, code: string}[]) => {
-    // If it's a DOM event (has type property from React synthetic event), ignore it
-    const activeSlots = (overrideSlots && !Array.isArray(overrideSlots)) ? slots : (overrideSlots || slots);
-    const validCodes = activeSlots.map(s => s.code || s.search).filter(Boolean);
-    if (validCodes.length < 2) {
-      alert("비교를 위해 최소 2개의 종목을 입력해주세요.");
-      return;
-    }
-
   const handleAnalyzePeers = (items: {code: string, name: string}[]) => {
     const toAnalyze = items.slice(0, 10);
     const newSlots = Array(10).fill(null).map((_, idx) => {
@@ -350,6 +341,15 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
     setSlots(newSlots);
     fetchComparison(newSlots);
   };
+
+  const fetchComparison = async (overrideSlots?: {search: string, code: string}[]) => {
+    // If it's a DOM event (has type property from React synthetic event), ignore it
+    const activeSlots = (overrideSlots && !Array.isArray(overrideSlots)) ? slots : (overrideSlots || slots);
+    const validCodes = activeSlots.map(s => s.code || s.search).filter(Boolean);
+    if (validCodes.length < 2) {
+      alert("비교를 위해 최소 2개의 종목을 입력해주세요.");
+      return;
+    }
 
     setLoading(true);
     try {
