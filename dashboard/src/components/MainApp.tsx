@@ -58,6 +58,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
   const [naverEtfCode, setNaverEtfCode] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isLoadingChart, setIsLoadingChart] = useState(false);
+  const [popupData, setPopupData] = useState<any>(null); // For ad-hoc detail fetch
   const [dbVersion, setDbVersion] = useState<string>("VER --");
   const [healthStatus, setHealthStatus] = useState<'pending' | 'ok' | 'error'>('pending');
   const [failedServices, setFailedServices] = useState<string[]>([]);
@@ -296,6 +297,40 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
     setSlots(newSlots);
     setActiveDropdownIndex(null);
     setFocusedSlotIndex(-1);
+  };
+
+  const handleOpenDetail = async (code: string) => {
+    // Try find locally first to avoid unnecessary fetch if we already have it in main analysis data
+    if (data?.raw_data) {
+      const etf = data.raw_data.find((e: any) => e.etf_code === code || e.ticker === code);
+      if (etf) {
+        setPopupData(null);
+        setSelectedDetailEtf(etf);
+        return;
+      }
+    }
+
+    // Fetch from backend specifically for this code
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/analyze/compare`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ etf_codes: [code], skip_holdings: false, skip_chart: false }),
+      });
+      const result = await res.json();
+      setPopupData(result);
+      if (result?.raw_data && result.raw_data.length > 0) {
+        setSelectedDetailEtf(result.raw_data[0]);
+      } else {
+        alert(`종목 정보를 찾을 수 없습니다. (${code})`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert(`종목 데이터를 불러오는데 실패했습니다. (${code})`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchComparison = async () => {
@@ -700,7 +735,8 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
     const priceData: any[] = [];
 
     // 1. Price Data (1 year from raw chart data if available)
-    const rawChart = data?.visual_data?.line_chart || [];
+    const sourceData = popupData || data;
+    const rawChart = sourceData?.visual_data?.line_chart || [];
     const etfKey = selectedDetailEtf.etf_name;
     const isKosdaq = etfKey.toUpperCase().includes('코스닥') || etfKey.toUpperCase().includes('KOSDAQ');
     const isNasdaq = etfKey.toUpperCase().includes('나스닥') || etfKey.toUpperCase().includes('NASDAQ');
@@ -822,17 +858,20 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
     }
 
     return { nav: navData, vol: volData, price: priceData, benchmarkName, domainLeft, domainRight };
-  }, [selectedDetailEtf, data, popupPeriod]);
+  }, [selectedDetailEtf, data, popupData, popupPeriod]);
 
   // Sync selectedDetailEtf when holdings data arrives
   useEffect(() => {
-    if (selectedDetailEtf && data?.raw_data) {
-      const freshData = data.raw_data.find((e: any) => e.etf_code === selectedDetailEtf.etf_code);
-      if (freshData && freshData.holdings !== selectedDetailEtf.holdings) {
-        setSelectedDetailEtf(freshData);
+    if (selectedDetailEtf) {
+      const sourceData = popupData || data;
+      if (sourceData?.raw_data) {
+        const freshData = sourceData.raw_data.find((e: any) => e.etf_code === selectedDetailEtf.etf_code);
+        if (freshData && freshData.holdings !== selectedDetailEtf.holdings) {
+          setSelectedDetailEtf(freshData);
+        }
       }
     }
-  }, [data, selectedDetailEtf]);
+  }, [data, popupData, selectedDetailEtf]);
 
   const radarData = data?.visual_data?.radar_chart || [];
 
@@ -1484,7 +1523,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
 
         {/* My Assets Section */}
         {activeTab === 'my' && (
-          <MyAssetsView />
+          <MyAssetsView onOpenDetail={handleOpenDetail} />
         )}
 
         {/* Discover Section */}

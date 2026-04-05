@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { API_BASE } from "@/lib/apiConfig";
 import { RefreshCw, TrendingUp, TrendingDown, Minus, Trophy, BarChart2, Target, Layers } from "lucide-react";
 
-type HoldingsSignalsProps = { isAuthorized: boolean };
+type HoldingsSignalsProps = { isAuthorized: boolean; onOpenDetail?: (code: string) => void };
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (v: number) => new Intl.NumberFormat("ko-KR").format(Math.floor(v));
@@ -71,7 +71,7 @@ function PercentileBar({ rank, total, label }: { rank: number | null; total: num
 }
 
 // ─── 피어 미니 차트 (가로 바 차트) ───────────────────────────────────────────
-function PeerBarChart({ peers, period }: { peers: any[]; period: "1m" | "3m" }) {
+function PeerBarChart({ peers, period, onOpenDetail }: { peers: any[]; period: "1m" | "3m"; onOpenDetail?: (code: string) => void }) {
     const key = period === "1m" ? "return_1m" : "return_3m";
     const valid = peers.filter(p => p[key] !== null && p[key] !== undefined);
     if (valid.length === 0) return null;
@@ -86,7 +86,11 @@ function PeerBarChart({ peers, period }: { peers: any[]; period: "1m" | "3m" }) 
                 const barW = Math.abs(val) / max * 100;
                 const isPos = val >= 0;
                 return (
-                    <div key={i} className={`flex items-center gap-2 text-[10px] rounded px-1.5 py-0.5 ${p.is_mine ? "bg-indigo-500/15 border border-indigo-500/30" : "border border-transparent"}`}>
+                    <div 
+                        key={i} 
+                        onClick={() => onOpenDetail && onOpenDetail(p.code)}
+                        className={`flex items-center gap-2 text-[10px] rounded px-1.5 py-0.5 ${p.is_mine ? "bg-indigo-500/15 border border-indigo-500/30" : "border border-transparent"} ${onOpenDetail ? "cursor-pointer hover:bg-white/10" : ""}`}
+                    >
                         <span className="w-4 text-gray-600 flex-shrink-0 font-mono">{i + 1}</span>
                         <span className={`flex-shrink-0 truncate ${p.is_mine ? "text-indigo-300 font-semibold" : "text-gray-400"}`} style={{ width: 130 }}>
                             {p.is_mine ? "★ " : ""}{p.name}
@@ -110,7 +114,7 @@ function PeerBarChart({ peers, period }: { peers: any[]; period: "1m" | "3m" }) 
 }
 
 // ─── 단일 종목 카드 ───────────────────────────────────────────────────────────
-function HoldingCard({ item, totalPortfolio }: { item: any; totalPortfolio: number }) {
+function HoldingCard({ item, totalPortfolio, onOpenDetail }: { item: any; totalPortfolio: number; onOpenDetail?: (code: string) => void }) {
     const [showPeers, setShowPeers] = useState(false);
     const [peerPeriod, setPeerPeriod] = useState<"1m" | "3m">("1m");
 
@@ -209,20 +213,30 @@ function HoldingCard({ item, totalPortfolio }: { item: any; totalPortfolio: numb
 
                     {showPeers && (
                         <div className="flex flex-col gap-2">
-                            <div className="flex gap-2">
-                                {(["1m", "3m"] as const).map(p => (
-                                    <button
-                                        key={p}
-                                        onClick={() => setPeerPeriod(p)}
-                                        className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all ${peerPeriod === p ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300" : "border-white/10 text-gray-500 hover:text-gray-300"}`}
-                                    >
-                                        {p === "1m" ? "1개월" : "3개월"}
-                                    </button>
-                                ))}
+                            <div className="flex justify-between items-center">
+                                <div className="flex gap-2">
+                                    {(["1m", "3m"] as const).map(p => (
+                                        <button
+                                            key={p}
+                                            onClick={() => setPeerPeriod(p)}
+                                            className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all ${peerPeriod === p ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300" : "border-white/10 text-gray-500 hover:text-gray-300"}`}
+                                        >
+                                            {p === "1m" ? "1개월" : "3개월"}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button 
+                                    onClick={() => onOpenDetail && onOpenDetail(item.code)}
+                                    className="text-[10px] px-2 flex items-center gap-1.5 py-0.5 rounded border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 transition-colors"
+                                >
+                                    <Target className="w-3 h-3" />
+                                    상세 비교하기
+                                </button>
                             </div>
                             <PeerBarChart
                                 peers={peerPeriod === "1m" ? item.peers_sorted_1m : item.peers_sorted_3m}
                                 period={peerPeriod}
+                                onOpenDetail={onOpenDetail}
                             />
                         </div>
                     )}
@@ -241,7 +255,7 @@ function HoldingCard({ item, totalPortfolio }: { item: any; totalPortfolio: numb
 }
 
 // ─── 메인 컴포넌트 ────────────────────────────────────────────────────────────
-export default function HoldingsSignals({ isAuthorized }: HoldingsSignalsProps) {
+export default function HoldingsSignals({ isAuthorized, onOpenDetail }: HoldingsSignalsProps) {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -296,7 +310,7 @@ export default function HoldingsSignals({ isAuthorized }: HoldingsSignalsProps) 
                 <div>
                     <h2 className="text-2xl font-bold flex items-center gap-2">
                         <span className="w-1.5 h-6 bg-violet-500 rounded-full" />
-                        보유 ETF 경쟁력 분석
+                        보유 ETF 경쟁력 분석 (TEST)
                         {data?.count > 0 && (
                             <span className="text-sm font-normal text-violet-400 ml-1">({data.count}개 종목)</span>
                         )}
@@ -419,6 +433,7 @@ export default function HoldingsSignals({ isAuthorized }: HoldingsSignalsProps) 
                                             key={`${accountNo}-${item.code}-${idx}`}
                                             item={item}
                                             totalPortfolio={data.total_portfolio ?? 0}
+                                            onOpenDetail={onOpenDetail}
                                         />
                                     ))}
                                 </div>
