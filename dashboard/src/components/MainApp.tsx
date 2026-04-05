@@ -368,6 +368,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
 
       setData(result);
       setActiveTab('info');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       setLoading(false);
       setIsLoadingHoldings(true);
       setIsLoadingChart(true);
@@ -1532,10 +1533,10 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
           )
         }
 
-        {/* My Assets Section */}
-        {activeTab === 'my' && (
+        {/* My Assets Section (유지) */}
+        <div style={{ display: activeTab === 'my' ? 'block' : 'none' }}>
           <MyAssetsView onOpenDetail={handleOpenDetail} onAnalyzePeers={handleAnalyzePeers} />
-        )}
+        </div>
 
         {/* Discover Section */}
         {activeTab === 'discover' && (
@@ -1639,6 +1640,15 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
           );
         })}
       </nav>
+
+      {/* Global Loading Overlay */}
+      {loading && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
+          <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">지표 및 분석 정보를 불러오고 있습니다</h2>
+          <p className="text-gray-400 text-sm">잠시만 기다려주세요...</p>
+        </div>
+      )}
     </main>
   );
 }
