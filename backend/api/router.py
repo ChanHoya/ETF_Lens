@@ -680,8 +680,8 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
     """
     Orchestrates the comparison between multiple ETFs.
     """
-    if len(request.etf_codes) < 2:
-        return {"error": "Provide at least two ETF codes for comparison."}
+    if not request.etf_codes:
+        return {"error": "Provide at least one ETF code."}
 
     # 1. Fetch data for each ETF on-demand (Agent 1)
     harvester = ETFHarvester()

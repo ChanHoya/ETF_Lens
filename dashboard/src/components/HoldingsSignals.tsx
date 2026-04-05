@@ -310,7 +310,7 @@ export default function HoldingsSignals({ isAuthorized, onOpenDetail }: Holdings
                 <div>
                     <h2 className="text-2xl font-bold flex items-center gap-2">
                         <span className="w-1.5 h-6 bg-violet-500 rounded-full" />
-                        보유 ETF 경쟁력 분석 (TEST)
+                        보유 ETF 경쟁력 분석
                         {data?.count > 0 && (
                             <span className="text-sm font-normal text-violet-400 ml-1">({data.count}개 종목)</span>
                         )}
