@@ -7,18 +7,25 @@ import { API_BASE } from "@/lib/apiConfig";
 import RiskBanner from "@/components/RiskBanner";
 
 export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenDetail?: (code: string) => void, onAnalyzePeers?: (items: any[]) => void }) {
-    const [isAuthorized, setIsAuthorized] = useState<boolean>(() => {
-        if (typeof window !== "undefined") {
-            return sessionStorage.getItem("kis_authorized") === "true";
-        }
-        return false;
-    });
-    const [isLoading, setIsLoading] = useState(!isAuthorized);
+    const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [kisData, setKisData] = useState<any>(null);
     const [tradesData, setTradesData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
     const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
+
+    useEffect(() => {
+        // 초기 마운트 시 세션스토리지 확인
+        if (typeof window !== "undefined") {
+            const savedSelected = sessionStorage.getItem("kis_authorized");
+            if (savedSelected === "true") {
+                setIsAuthorized(true);
+            } else {
+                setIsLoading(false); // 미인증 시 로딩 애니메이션 종료하고 패스워드 모달 전시
+            }
+        }
+    }, []);
 
     useEffect(() => {
         if (isAuthorized && typeof window !== "undefined") {
