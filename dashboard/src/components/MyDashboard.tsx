@@ -5,6 +5,7 @@ import RecentTrades from './RecentTrades';
 import PortfolioBacktester from './PortfolioBacktester';
 import RiskAlertBanner from './RiskAlertBanner';
 import PortfolioTreemap from './PortfolioTreemap';
+import RebalanceProposal from './RebalanceProposal';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type MyDashboardProps = {
@@ -229,6 +230,9 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
 
             {/* Section 6: 보유 ETF 전략 시그널 */}
             <HoldingsSignals isAuthorized={true} onOpenDetail={onOpenDetail} onAnalyzePeers={onAnalyzePeers} />
+
+            {/* AI 리밸런싱 제안 */}
+            <RebalanceProposal />
 
             {/* Modals */}
             <AccountDetailModal
