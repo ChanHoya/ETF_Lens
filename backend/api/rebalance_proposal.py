@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from google import genai
 from google.genai import types
 
-from db.session import get_db
+from db.database import get_db
 from core.logger import get_logger
 from api.peer_analysis import _analyze_one
 
