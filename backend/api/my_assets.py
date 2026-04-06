@@ -360,11 +360,13 @@ async def get_my_portfolio(
                     logger.warning(f"Failed to fetch account {acc} on attempt {attempt + 1}")
                     failed_accounts.append(acc)
             
-            if failed_accounts:
-                if attempt < MAX_RETRIES - 1:
-                    logger.info(f"Retrying {len(failed_accounts)} failed accounts (Attempt {attempt + 2})")
-                    await asyncio.sleep(1.5)  # Backoff before next attempt
-                pending_accounts = failed_accounts
+            if not failed_accounts:
+                break
+                
+            if attempt < MAX_RETRIES - 1:
+                logger.info(f"Retrying {len(failed_accounts)} failed accounts (Attempt {attempt + 2})")
+                await asyncio.sleep(1.5)  # Backoff before next attempt
+            pending_accounts = failed_accounts
 
         # 4. Aggregate
         valid_results = [r for r in results if r is not None]
