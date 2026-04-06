@@ -136,15 +136,11 @@ async def analyze_portfolio(holdings: list, db: AsyncSession):
         code = item["code"]
 
         # Region Heuristic
-        # US: purely alphabetical codes (like PLTR) OR name includes '미국', '나스닥', 'S&P', '다우존스', 'US'
-        if (
-            code.isalpha()
-            or "미국" in name
-            or "나스닥" in name
-            or "S&P" in name
-            or "다우존스" in name
-            or "US" in name
-        ):
+        if "200" in name:
+            item["category_region"] = "한국"
+        elif code.isalpha():
+            item["category_region"] = "미국"
+        elif any(kw in name.upper() for kw in ["미국", "나스닥", "NASDAQ", "S&P500", "다우존스"]):
             item["category_region"] = "미국"
         else:
             item["category_region"] = "한국"
