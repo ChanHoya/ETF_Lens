@@ -339,13 +339,32 @@ async def get_my_portfolio(
             )
             return None
 
-        # 3. Fetch all accounts sequentially to prevent KIS API TPS rate limits
+        # 3. Fetch all accounts sequentially with retry logic to prevent rate limits or intermittent KIS API drops
         results = []
         import asyncio
-        for acc in account_configs:
-            await asyncio.sleep(0.6)  # Rate limit padding
-            res = await fetch_single_account(acc)
-            results.append(res)
+        
+        MAX_RETRIES = 3
+        pending_accounts = list(account_configs)
+        
+        for attempt in range(MAX_RETRIES):
+            if not pending_accounts:
+                break
+                
+            failed_accounts = []
+            for acc in pending_accounts:
+                await asyncio.sleep(0.6)  # Rate limit padding
+                res = await fetch_single_account(acc)
+                if res is not None:
+                    results.append(res)
+                else:
+                    logger.warning(f"Failed to fetch account {acc} on attempt {attempt + 1}")
+                    failed_accounts.append(acc)
+            
+            if failed_accounts:
+                if attempt < MAX_RETRIES - 1:
+                    logger.info(f"Retrying {len(failed_accounts)} failed accounts (Attempt {attempt + 2})")
+                    await asyncio.sleep(1.5)  # Backoff before next attempt
+                pending_accounts = failed_accounts
 
         # 4. Aggregate
         valid_results = [r for r in results if r is not None]
