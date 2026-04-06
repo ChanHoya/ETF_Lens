@@ -9,10 +9,10 @@ from google import genai
 from google.genai import types
 
 from db.database import get_db
-from core.logger import get_logger
+import logging
 from api.peer_analysis import _analyze_one
 
-logger = get_logger("rebalance_proposal")
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
