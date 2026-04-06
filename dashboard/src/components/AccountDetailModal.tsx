@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { X, TrendingUp, TrendingDown, DollarSign, Wallet, FileText, PieChart as PieChartIcon } from 'lucide-react';
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip } from "recharts";
-
+import PortfolioTreemap from './PortfolioTreemap';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type AccountDetailModalProps = {
     isOpen: boolean;
@@ -194,46 +193,22 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
                     </div>
 
                     {/* Middle Section: Categorical Allocation Chart */}
-                    <div className="bg-white/[0.02] border border-white/10 rounded-xl p-5 flex flex-col pt-6">
+                    <div className="bg-white/[0.02] border border-white/10 rounded-xl p-5 flex flex-col pt-6 w-full">
                         <h3 className="text-lg font-semibold text-gray-200 mb-6 flex items-center gap-2">
                             <PieChartIcon className="w-5 h-5 text-fuchsia-400" />
                             계좌 포트폴리오 비중
                         </h3>
 
-                        <div className="flex flex-col items-center w-full">
-                            <div className="w-full h-[250px] relative flex justify-center items-center">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={aggregatedData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={100}
-                                            paddingAngle={2}
-                                            dataKey="value"
-                                            stroke="none"
-                                        >
-                                            {aggregatedData.map((entry: any, index: number) => (
-                                                <Cell key={`cell-${index}`} fill={getCustomColor(entry.name)} />
-                                            ))}
-                                        </Pie>
-                                        <RechartsTooltip
-                                            formatter={(value: any) => `${formatNumber(value as number)}원`}
-                                            contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }}
-                                            itemStyle={{ color: '#e4e4e7' }}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                            <div className="flex flex-wrap justify-center gap-4 mt-6">
-                                {aggregatedData.map((d: any) => (
-                                    <div key={d.name} className="flex items-center gap-1.5 text-sm text-gray-400">
-                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getCustomColor(d.name) }}></div>
-                                        {d.name} <span className="text-gray-200 font-medium ml-1">{formatPercent(totalAsset > 0 ? (d.value / totalAsset) * 100 : 0)}</span>
-                                    </div>
-                                ))}
-                            </div>
+                        <div className="w-full relative">
+                            {totalAsset > 0 ? (
+                                <PortfolioTreemap 
+                                    holdings={accountHoldings} 
+                                    cashBalance={cashBalance} 
+                                    totalAsset={totalAsset} 
+                                />
+                            ) : (
+                                <div className="py-12 text-center text-gray-500">자산 형성이 아직 충분하지 않습니다.</div>
+                            )}
                         </div>
                     </div>
 
