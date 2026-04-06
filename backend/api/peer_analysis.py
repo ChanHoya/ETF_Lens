@@ -167,9 +167,11 @@ def _fetch_one_ks(code: str) -> list[float]:
             import xml.etree.ElementTree as ET
             # 요청 100영업일 (약 4.5개월)
             url = f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=day&count=100&requestType=0"
-            resp = requests.get(url, timeout=5)
+            resp = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
             if resp.status_code == 200:
-                root = ET.fromstring(resp.text)
+                resp.encoding = 'euc-kr'
+                clean_text = resp.text.replace('encoding="EUC-KR"', '').replace("encoding='EUC-KR'", "")
+                root = ET.fromstring(clean_text)
                 items = root.findall(".//item")
                 naver_closes = []
                 for item in items:
