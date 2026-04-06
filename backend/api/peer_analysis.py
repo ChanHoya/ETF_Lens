@@ -141,23 +141,54 @@ _YF_CACHE: dict[str, list[float]] = {}
 _YF_CACHE_TIME: dict[str, float] = {}
 
 def _fetch_one_ks(code: str) -> list[float]:
-    """단일 KRX 종목 종가 조회 (.KS → .KQ fallback)."""
+    """단일 KRX 종목 종가 조회 (.KS → .KQ fallback). 야후 실패시 네이버 금융 API 연동."""
     now = time.time()
     # Cache valid for 4 hours
     if code in _YF_CACHE and now - _YF_CACHE_TIME.get(code, 0) < 14400:
         return _YF_CACHE[code]
 
+    closes = []
     import yfinance as yf
+    
+    # 1. Try Yahoo Finance
     for suffix in [".KS", ".KQ"]:
         try:
             hist = yf.Ticker(f"{code}{suffix}").history(period="4mo")
             if hist is not None and not hist.empty and len(hist) >= 22:
                 closes = [float(c) for c in hist["Close"].dropna().tolist()]
-                _YF_CACHE[code] = closes
-                _YF_CACHE_TIME[code] = now
-                return closes
+                break
         except Exception:
             continue
+            
+    # 2. Add Naver Fchart Fallback if Yahoo Finance fails or returns too little data
+    if not closes or len(closes) < 22:
+        try:
+            import requests
+            import xml.etree.ElementTree as ET
+            # 요청 100영업일 (약 4.5개월)
+            url = f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=day&count=100&requestType=0"
+            resp = requests.get(url, timeout=5)
+            if resp.status_code == 200:
+                root = ET.fromstring(resp.text)
+                items = root.findall(".//item")
+                naver_closes = []
+                for item in items:
+                    data_str = item.get("data")
+                    if data_str:
+                        parts = data_str.split("|")
+                        if len(parts) >= 5:
+                            naver_closes.append(float(parts[4]))
+                
+                if len(naver_closes) >= 22:
+                    closes = naver_closes
+        except Exception as e:
+            logger.warning(f"Naver Fchart Fallback failed for {code}: {e}")
+
+    if closes and len(closes) >= 22:
+        _YF_CACHE[code] = closes
+        _YF_CACHE_TIME[code] = now
+        return closes
+
     return []
 
 
