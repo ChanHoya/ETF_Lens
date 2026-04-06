@@ -414,7 +414,7 @@ async def get_peer_analysis(request: Request, db: AsyncSession = Depends(get_db)
     - 포트폴리오 기여도(비중)
     캐시: 4시간
     """
-    from api.my_assets import get_my_portfolio
+    from api.my_assets import get_my_portfolio, TOKEN_CACHE
 
     now_ts = time.time()
 
@@ -430,63 +430,150 @@ async def get_peer_analysis(request: Request, db: AsyncSession = Depends(get_db)
 
     total_portfolio = sum(h.get("eval_amount", 0) for h in domestic)
 
-    # ── KIS 토큰 컨텍스트 주입 (_fetch_one_ks에서 KIS 차트 API 사용) ─────────
-    from api.my_assets import TOKEN_CACHE
+    # ── KIS 토큰 컨텍스트 주입 ───────────────────────────────────────────
     from dotenv import load_dotenv
     import os as _os
     _env_path = _os.path.join(_os.path.dirname(_os.path.dirname(__file__)), ".env")
     load_dotenv(dotenv_path=_env_path, override=True)
     _kis_url_base = _os.environ.get("KIS_URL_BASE", "https://openapi.koreainvestment.com:9443")
-    # Pick the first valid cached token
     for _app_key, _cached in TOKEN_CACHE.items():
         if _cached.get("expires_at", 0) > time.time():
             _KIS_CTX.update({
                 "token": _cached["access_token"],
                 "app_key": _app_key,
-                "app_secret": next(
-                    (v for k, v in _os.environ.items() if k.startswith("KIS_APP_SECRET") and v),
-                    ""
-                ),
+                "app_secret": _cached.get("app_secret", ""),
                 "url_base": _kis_url_base,
             })
+            logger.info(f"[peer] KIS CTX: key={_app_key[:8]}... url={_kis_url_base}")
             break
 
-    loop = asyncio.get_event_loop()
-    async def process_holding(h: dict) -> dict:
+    # ── 1단계: 모든 종목 + 피어 목록 수집 (async, 병렬 DB 조회) ────────
+    holding_peers: dict[str, list[tuple[str, str]]] = {}
+    all_needed_codes: set[str] = set()
+    bench_syms: set[str] = set()
+
+    for h in domestic:
         code = h.get("code", "")
         name = h.get("name", "")
-        cached_item = _PEER_CACHE.get(f"item_{code}")
-        if cached_item and (now_ts - cached_item["ts"]) < _PEER_CACHE_TTL:
-            item = dict(cached_item["data"])
+        all_needed_codes.add(code)
+        cat = _match_category(name)
+        if cat:
+            peers_raw = await get_dynamic_peers(cat, db)
+            # 내 종목 포함
+            seen = {p[0] for p in peers_raw}
+            if code not in seen:
+                peers_raw.append((code, name))
+            peers_raw = peers_raw[:10]
+            holding_peers[code] = peers_raw
+            for pc, _ in peers_raw:
+                all_needed_codes.add(pc)
+            if cat.get("benchmark"):
+                bench_syms.add(cat["benchmark"])
         else:
-            try:
-                cat = _match_category(name)
-                peers_raw = await get_dynamic_peers(cat, db)
-                item = await loop.run_in_executor(
-                    None,
-                    _analyze_one,
-                    code,
-                    name,
-                    float(h.get("eval_amount", 0)),
-                    float(total_portfolio),
-                    peers_raw,
-                )
-            except Exception as e:
-                logger.error(f"[peer-analysis] {code}: {e}")
-                item = {
-                    "code": code, "name": name,
-                    "eval_amount": float(h.get("eval_amount", 0)),
-                    "category": "기타", "error": str(e),
-                }
-            _PEER_CACHE[f"item_{code}"] = {"data": item, "ts": now_ts}
+            holding_peers[code] = [(code, name)]
+
+    # ── 2단계: 모든 종목 종가 순차적으로 사전 수집 ──────────────────────
+    # (KIS 1 TPS 제한 → 0.35s 간격, 캐시에 없는 것만 조회)
+    uncached = [c for c in all_needed_codes
+                if c not in _YF_CACHE or now_ts - _YF_CACHE_TIME.get(c, 0) >= 14400]
+    logger.info(f"[peer] Pre-fetching {len(uncached)} tickers (total={len(all_needed_codes)})")
+
+    loop = asyncio.get_event_loop()
+    for code_to_fetch in uncached:
+        try:
+            await loop.run_in_executor(None, _fetch_one_ks, code_to_fetch)
+        except Exception as e:
+            logger.warning(f"[peer] pre-fetch {code_to_fetch}: {e}")
+        await asyncio.sleep(0.35)   # KIS 1 TPS 보호
+
+    # 벤치마크 (Yahoo Finance 전용 — ^KS11, ^GSPC 등)
+    bench_cache: dict[str, tuple[float | None, float | None]] = {}
+    for bs in bench_syms:
+        try:
+            def _fetch_bench(sym: str):
+                import yfinance as yf
+                bh = yf.Ticker(sym).history(period="5mo")
+                if bh is not None and not bh.empty:
+                    bc = [float(c) for c in bh["Close"].dropna().tolist()]
+                    return _calc_return_pct(bc, 21), _calc_return_pct(bc, 63)
+                return None, None
+            b1m, b3m = await loop.run_in_executor(None, _fetch_bench, bs)
+            bench_cache[bs] = (b1m, b3m)
+            await asyncio.sleep(0.3)
+        except Exception as e:
+            logger.warning(f"[peer] bench {bs}: {e}")
+            bench_cache[bs] = (None, None)
+
+    # ── 3단계: 분석 (캐시에서 읽기 — HTTP 요청 없음) ───────────────────
+    def _analyze_cached(
+        code: str, name: str, eval_amount: float, peers_raw: list[tuple[str, str]]
+    ) -> dict:
+        cat = _match_category(name)
+        base: dict = {
+            "code": code, "name": name, "eval_amount": eval_amount,
+            "weight_pct": round(eval_amount / total_portfolio * 100, 2) if total_portfolio > 0 else 0,
+            "category": cat["group"] if cat else "기타",
+            "benchmark_sym": cat["benchmark"] if cat else None,
+            "peer_count": 0, "rank_1m": None, "rank_3m": None,
+            "total_valid_1m": 0, "total_valid_3m": 0,
+            "return_1m": None, "return_3m": None,
+            "peer_avg_1m": None, "peer_avg_3m": None,
+            "excess_1m": None, "excess_3m": None,
+            "bench_return_1m": None, "bench_return_3m": None,
+            "alpha_1m": None, "alpha_3m": None,
+            "peers_sorted_1m": [], "peers_sorted_3m": [],
+        }
+        if cat is None:
+            return base
+
+        bench_sym = cat.get("benchmark")
+        bench_r1m, bench_r3m = bench_cache.get(bench_sym, (None, None)) if bench_sym else (None, None)
+
+        peer_results: list[dict] = []
+        for pc, pn in peers_raw:
+            closes = _YF_CACHE.get(pc, [])
+            r1m = _calc_return_pct(closes, 21)
+            r3m = _calc_return_pct(closes, 63)
+            peer_results.append({"code": pc, "name": pn, "return_1m": r1m, "return_3m": r3m, "is_mine": pc == code})
+
+        valid1 = [p for p in peer_results if p["return_1m"] is not None]
+        valid3 = [p for p in peer_results if p["return_3m"] is not None]
+        s1 = sorted(valid1, key=lambda x: x["return_1m"], reverse=True)  # type: ignore
+        s3 = sorted(valid3, key=lambda x: x["return_3m"], reverse=True)  # type: ignore
+        my_r1 = next((p["return_1m"] for p in peer_results if p["is_mine"]), None)
+        my_r3 = next((p["return_3m"] for p in peer_results if p["is_mine"]), None)
+        rank1 = next((i + 1 for i, p in enumerate(s1) if p["is_mine"]), None)
+        rank3 = next((i + 1 for i, p in enumerate(s3) if p["is_mine"]), None)
+        avg1 = round(sum(p["return_1m"] for p in valid1) / len(valid1), 2) if valid1 else None  # type: ignore
+        avg3 = round(sum(p["return_3m"] for p in valid3) / len(valid3), 2) if valid3 else None  # type: ignore
+
+        base.update({
+            "peer_count": len(peer_results),
+            "rank_1m": rank1, "rank_3m": rank3,
+            "total_valid_1m": len(valid1), "total_valid_3m": len(valid3),
+            "return_1m": my_r1, "return_3m": my_r3,
+            "peer_avg_1m": avg1, "peer_avg_3m": avg3,
+            "excess_1m": round(my_r1 - avg1, 2) if (my_r1 is not None and avg1 is not None) else None,
+            "excess_3m": round(my_r3 - avg3, 2) if (my_r3 is not None and avg3 is not None) else None,
+            "bench_return_1m": bench_r1m, "bench_return_3m": bench_r3m,
+            "alpha_1m": round(my_r1 - bench_r1m, 2) if (my_r1 is not None and bench_r1m is not None) else None,
+            "alpha_3m": round(my_r3 - bench_r3m, 2) if (my_r3 is not None and bench_r3m is not None) else None,
+            "peers_sorted_1m": [{"code": p["code"], "name": p["name"], "return_1m": p["return_1m"], "is_mine": p["is_mine"]} for p in s1],
+            "peers_sorted_3m": [{"code": p["code"], "name": p["name"], "return_3m": p["return_3m"], "is_mine": p["is_mine"]} for p in s3],
+        })
+        return base
+
+    items = []
+    for h in domestic:
+        code = h.get("code", "")
+        name = h.get("name", "")
+        peers_raw = holding_peers.get(code, [(code, name)])
+        item = _analyze_cached(code, name, float(h.get("eval_amount", 0)), peers_raw)
         item["account_no"] = h.get("account_no", "")
-        return item
-
-
-    items_coros = [process_holding(h) for h in domestic]
-    items = await asyncio.gather(*items_coros)
+        items.append(item)
 
     items.sort(key=lambda x: x.get("eval_amount", 0), reverse=True)
+    logger.info(f"[peer] Done: {len(items)} holdings analyzed")
     return {
         "status": "success",
         "count": len(items),

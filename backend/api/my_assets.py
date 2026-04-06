@@ -107,6 +107,7 @@ async def get_my_portfolio(
                         if access_token:
                             TOKEN_CACHE[app_key] = {
                                 "access_token": access_token,
+                                "app_secret": app_secret,
                                 "expires_at": time.time()
                                 + expires_in_sec
                                 - 3600,  # 1 hr buffer
