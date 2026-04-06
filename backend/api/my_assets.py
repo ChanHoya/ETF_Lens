@@ -184,17 +184,26 @@ async def get_my_portfolio(
                                 balance_url, headers=headers, params=params
                             )
                             if balance_res.status_code != 200:
-                                logger.debug(
-                                    f"KIS Balance Error for {acc_str} with {app_key}: {balance_res.text}"
-                                )
+                                if balance_res.status_code in [429, 503]:
+                                    logger.warning(f"Rate limited or unavailable for {acc_str}, waiting 2s")
+                                    await asyncio.sleep(2.0)
+                                    # Fallthrough to let the outer retry loop handle it instead of discarding
                                 continue  # Key failed, try next one
 
                         balance_data = balance_res.json()
 
                         if balance_data.get("rt_cd") != "0":
-                            # Invalid Account for this key, keep looping
+                            msg_cd = balance_data.get('msg_cd', '')
+                            # Rate limit error
+                            if msg_cd == "EGW00133" or "초과" in str(balance_data.get('msg1', '')):
+                                logger.warning(f"Rate limit hit for {acc_str} with {app_key}. Waiting 2.5s and will rely on outer retry.")
+                                await asyncio.sleep(2.5)
+                                # Force return None so outer loop retries THIS exact state again later
+                                return None
+                                
+                            # Otherwise Invalid Account for this key, keep looping to next key
                             logger.debug(
-                                f"KIS Logic Error for {acc_str} with {app_key}: {balance_data.get('msg_cd')} {balance_data.get('msg1')}"
+                                f"KIS Logic Error for {acc_str} with {app_key}: {msg_cd} {balance_data.get('msg1')}"
                             )
                             await asyncio.sleep(0.5)  # Add rate limit backoff padding here!
                             continue
@@ -268,6 +277,23 @@ async def get_my_portfolio(
                                 if ovrs_data.get("rt_cd") == "0":
                                     ovrs_output1 = ovrs_data.get("output1", [])
                                     ovrs_output3 = ovrs_data.get("output3", {})
+                                elif ovrs_data.get("msg_cd") == "EGW00133" or "초과" in str(ovrs_data.get("msg1", "")):
+                                    logger.warning(f"Rate limit hit for overseas {acc_str}. Retrying once after 2.5s.")
+                                    await asyncio.sleep(2.5)
+                                    ovrs_res = await ovrs_client.get(
+                                        ovrs_balance_url, headers=ovrs_headers, params=ovrs_params
+                                    )
+                                    if ovrs_res.status_code == 200:
+                                        ovrs_data = ovrs_res.json()
+                                        if ovrs_data.get("rt_cd") == "0":
+                                            ovrs_output1 = ovrs_data.get("output1", [])
+                                            ovrs_output3 = ovrs_data.get("output3", {})
+                                            
+                                    if ovrs_data.get("rt_cd") != "0":
+                                        logger.debug(f"Overseas Logic Error for {acc_str}: {ovrs_data.get('msg1')}")
+                                else:
+                                    logger.debug(f"Overseas Logic Error for {acc_str}: {ovrs_data.get('msg1')}")
+
 
                                     ovrs_tot_asst_amt = float(
                                         ovrs_output3.get("tot_asst_amt", 0)
@@ -348,7 +374,7 @@ async def get_my_portfolio(
         results = []
         import asyncio
         
-        MAX_RETRIES = 5
+        MAX_RETRIES = 12
         pending_accounts = list(account_configs)
         
         for attempt in range(MAX_RETRIES):
