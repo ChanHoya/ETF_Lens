@@ -343,7 +343,7 @@ async def get_my_portfolio(
         results = []
         import asyncio
         
-        MAX_RETRIES = 3
+        MAX_RETRIES = 5
         pending_accounts = list(account_configs)
         
         for attempt in range(MAX_RETRIES):
@@ -352,7 +352,7 @@ async def get_my_portfolio(
                 
             failed_accounts = []
             for acc in pending_accounts:
-                await asyncio.sleep(0.6)  # Rate limit padding
+                await asyncio.sleep(1.2)  # 1.2초 지연 (KIS 초당 1건 제한을 더 엄격하게 회피)
                 res = await fetch_single_account(acc)
                 if res is not None:
                     results.append(res)
@@ -364,8 +364,9 @@ async def get_my_portfolio(
                 break
                 
             if attempt < MAX_RETRIES - 1:
-                logger.info(f"Retrying {len(failed_accounts)} failed accounts (Attempt {attempt + 2})")
-                await asyncio.sleep(1.5)  # Backoff before next attempt
+                backoff = 2.0 * (attempt + 1)
+                logger.info(f"Retrying {len(failed_accounts)} failed accounts (Attempt {attempt + 2}), waiting {backoff}s...")
+                await asyncio.sleep(backoff)
             pending_accounts = failed_accounts
 
         # 4. Aggregate
