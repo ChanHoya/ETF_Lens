@@ -110,7 +110,7 @@ CATEGORY_PEERS: list[dict] = [
         "group": "한국 고배당",
         "benchmark": "^KS11",
         "peers": [
-            ("400970", "KODEX 주주환원고배당"),
+            ("0153K0", "KODEX 주주환원고배당주"),
             ("290080", "RISE 200고배당커버드콜ATM"),
             ("161510", "PLUS 고배당주"),
             ("213610", "TIGER 배당성장"),
