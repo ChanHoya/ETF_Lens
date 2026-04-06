@@ -52,12 +52,12 @@ CATEGORY_PEERS: list[dict] = [
         "benchmark": "^GSPC",
     },
     {
-        "keywords": ["나스닥", "nasdaq", "빅테크", "qqq", "성장커버드콜", "성장 커버드콜", "미국필라", "미국양자", "미국우주"],
+        "keywords": ["나스닥", "nasdaq", "미국필라", "미국테크", "미국빅테크", "미국우주"],
         "group": "나스닥·빅테크",
         "benchmark": "^IXIC",
     },
     {
-        "keywords": ["미국배당", "배당커버드콜", "배당 커버드콜", "미국성장커버드콜"],
+        "keywords": ["미국배당", "미국배당커버드콜", "미국성장커버드콜"],
         "group": "미국 배당/커버드콜",
         "benchmark": "^GSPC",
     },
@@ -103,9 +103,21 @@ CATEGORY_PEERS: list[dict] = [
 def _match_category(name: str) -> dict | None:
     """ETF 이름에서 카테고리 매칭 — 키워드 매치 길이 우선."""
     name_l = name.lower().replace(" ", "")
+    
+    # "200"이 포함된 경우, 명시적으로 "미국/나스닥/s&p" 가 없으면 무조건 국내 코스피200/한국고배당 그룹으로 강제할당
+    if "200" in name_l and not any(k in name_l for k in ["미국", "s&p", "나스닥", "nasdaq"]):
+        if "배당" in name_l or "커버드콜" in name_l:
+            return next((c for c in CATEGORY_PEERS if c["group"] == "한국 고배당"), None)
+        return next((c for c in CATEGORY_PEERS if c["group"] == "코스피200"), None)
+
     best: dict | None = None
     best_len = 0
     for cat in CATEGORY_PEERS:
+        # "미국"이나 "S&P" 그룹인데, 종목명에 "미국", "나스닥", "S&P" 등이 없으면 매칭에서 제외
+        if "미국" in cat["group"] or "나스닥" in cat["group"]:
+            if not any(k in name_l for k in ["미국", "나스닥", "nasdaq", "s&p", "빅테크", "qqq", "필라델피아"]):
+                continue
+
         for kw in cat["keywords"]:
             kw_norm = kw.replace(" ", "")
             if kw_norm in name_l and len(kw_norm) > best_len:
@@ -125,14 +137,25 @@ def _calc_return_pct(closes: list[float], days: int) -> float | None:
     return round((end - start) / start * 100, 2)
 
 
+_YF_CACHE: dict[str, list[float]] = {}
+_YF_CACHE_TIME: dict[str, float] = {}
+
 def _fetch_one_ks(code: str) -> list[float]:
     """단일 KRX 종목 종가 조회 (.KS → .KQ fallback)."""
+    now = time.time()
+    # Cache valid for 4 hours
+    if code in _YF_CACHE and now - _YF_CACHE_TIME.get(code, 0) < 14400:
+        return _YF_CACHE[code]
+
     import yfinance as yf
     for suffix in [".KS", ".KQ"]:
         try:
             hist = yf.Ticker(f"{code}{suffix}").history(period="4mo")
-            if hist is not None and len(hist) >= 22:
-                return [float(c) for c in hist["Close"].dropna().tolist()]
+            if hist is not None and not hist.empty and len(hist) >= 22:
+                closes = [float(c) for c in hist["Close"].dropna().tolist()]
+                _YF_CACHE[code] = closes
+                _YF_CACHE_TIME[code] = now
+                return closes
         except Exception:
             continue
     return []
