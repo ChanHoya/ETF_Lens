@@ -27,174 +27,77 @@ _PEER_CACHE_TTL = 3600 * 4
 # yfinance 호환 확인된 코드만 포함 (XXX.KS 형태로 조회 가능)
 CATEGORY_PEERS: list[dict] = [
     {
-        "keywords": ["반도체"],
+        "keywords": ["반도체top10", "반도체 top10", "반도체top", "반도체 탑", "반도체"],
         "group": "반도체",
         "benchmark": "^KS11",
-        "peers": [
-            ("091160", "KODEX 반도체"),
-            ("091230", "TIGER 반도체"),
-            ("381180", "HANARO Fn반도체TOP10"),
-            ("453810", "KODEX AI반도체핵심장비"),
-            ("424610", "SOL 반도체소부장Fn"),
-            ("463050", "TIGER 반도체TOP10레버리지"),
-        ],
     },
     {
         "keywords": ["코스닥150", "코스닥 150"],
         "group": "코스닥150",
         "benchmark": "^KQ11",
-        "peers": [
-            ("229200", "KODEX 코스닥150"),
-            ("232080", "TIGER 코스닥150"),
-            ("227930", "KODEX 코스닥150레버리지"),
-        ],
     },
     {
         "keywords": ["바이오", "헬스케어", "바이오헬스"],
         "group": "바이오·헬스케어",
         "benchmark": "^KQ11",
-        "peers": [
-            ("462900", "KoAct 바이오헬스케어액티브"),
-            ("244580", "KODEX 바이오"),
-            ("364970", "TIGER 바이오TOP10"),
-            ("463050", "TIME K바이오액티브"),
-        ],
     },
     {
         "keywords": ["2차전지", "배터리", "전기차"],
         "group": "2차전지·배터리",
         "benchmark": "^KQ11",
-        "peers": [
-            ("305540", "TIGER 2차전지테마"),
-            ("305720", "KODEX 2차전지산업"),
-            ("364980", "TIGER 2차전지TOP10"),
-        ],
     },
     {
         "keywords": ["s&p500", "s&p 500", "미국s&p", "미국 s&p", "미국s&p500"],
         "group": "미국 S&P500",
         "benchmark": "^GSPC",
-        "peers": [
-            ("360750", "TIGER 미국S&P500"),
-            ("379800", "KODEX 미국S&P500TR"),
-            ("426020", "TIME 미국S&P500액티브"),
-            ("360200", "ACE 미국S&P500"),
-            ("433330", "SOL 미국S&P500"),
-        ],
     },
     {
         "keywords": ["나스닥", "nasdaq", "빅테크", "qqq", "성장커버드콜", "성장 커버드콜", "미국필라", "미국양자", "미국우주"],
         "group": "나스닥·빅테크",
         "benchmark": "^IXIC",
-        "peers": [
-            ("133690", "TIGER 미국나스닥100"),
-            ("379810", "KODEX 미국나스닥100TR"),
-            ("381180", "TIGER 미국필라델피아반도체나스닥"),
-            ("0144L0", "KODEX 미국성장커버드콜액티브"),
-            ("476030", "SOL 미국나스닥100"),
-            ("465580", "ACE 미국빅테크TOP7 Plus"),
-        ],
     },
     {
         "keywords": ["미국배당", "배당커버드콜", "배당 커버드콜", "미국성장커버드콜"],
         "group": "미국 배당/커버드콜",
         "benchmark": "^GSPC",
-        "peers": [
-            ("441640", "KODEX 미국배당커버드콜액티브"),
-            ("0144L0", "KODEX 미국성장커버드콜액티브"),
-            ("472150", "TIGER 미국배당+7%프리미엄다우존스"),
-        ],
     },
     {
         "keywords": ["200고배당", "주주환원고배당", "고배당", "배당주"],
         "group": "한국 고배당",
         "benchmark": "^KS11",
-        "peers": [
-            ("0153K0", "KODEX 주주환원고배당주"),
-            ("290080", "RISE 200고배당커버드콜ATM"),
-            ("161510", "PLUS 고배당주"),
-            ("213610", "TIGER 배당성장"),
-        ],
     },
     {
         "keywords": ["금현물", "국제금", "krx금", "금선물", "gold"],
         "group": "금·귀금속",
         "benchmark": "GC=F",
-        "peers": [
-            ("411060", "ACE KRX금현물"),
-            ("0072R0", "TIGER KRX금현물"),
-            ("132030", "KODEX 골드선물(H)"),
-            ("319640", "TIGER 골드선물(H)"),
-        ],
     },
     {
         "keywords": ["tdf"],
         "group": "TDF 생애주기",
         "benchmark": "^KS11",
-        "peers": [
-            ("434060", "KODEX TDF2050액티브 적격"),
-            ("442570", "RISE TDF2050액티브 적격"),
-            ("0021E0", "ACE TDF2050액티브 적격"),
-            ("435550", "KIWOOM TDF2050액티브 적격"),
-            ("0025N0", "TIGER TDF2045 적격"),
-            ("433980", "KODEX TDF2040액티브 적격"),
-        ],
     },
     {
         "keywords": ["방산", "우주항공", "방위산업"],
         "group": "방산·우주항공",
         "benchmark": "^KS11",
-        "peers": [
-            ("453810", "KODEX 미국우주항공&방위산업"),
-            ("395160", "TIGER 우주항공&방산TOP10"),
-            ("441680", "ACE 방산"),
-        ],
     },
     {
         "keywords": ["코스피200", "kospi200"],
         "group": "코스피200",
         "benchmark": "^KS11",
-        "peers": [
-            ("069500", "KODEX 200"),
-            ("102110", "TIGER 200"),
-            ("148020", "KBSTAR 200"),
-        ],
     },
     {
         "keywords": ["고배당", "배당성장", "주주환원", "배당주", "코리아배당"],
         "group": "배당·주주환원",
         "benchmark": "^KS11",
-        "peers": [
-            ("279530", "KODEX 고배당주"),
-            ("161510", "PLUS 고배당주"),
-            ("211900", "KODEX 코리아배당성장"),
-            ("0153K0", "KODEX 주주환원고배당주"),
-        ],
     },
     {
         "keywords": ["머니마켓", "cd금리", "kofr", "단기채", "파킹"],
         "group": "단기채·현금성",
         "benchmark": None,
-        "peers": [
-            ("488770", "KODEX 머니마켓액티브"),
-            ("449170", "TIGER KOFR금리액티브(합성)"),
-            ("487340", "ACE 머니마켓액티브"),
-            ("469830", "SOL 초단기채권액티브"),
-        ],
-    },
-    {
-        "keywords": ["반도체top10", "반도체 top10", "반도체top", "반도체 탑"],
-        "group": "반도체",
-        "benchmark": "^KS11",
-        "peers": [
-            ("091160", "KODEX 반도체"),
-            ("091230", "TIGER 반도체"),
-            ("396500", "TIGER 반도체TOP10"),
-            ("471990", "KODEX AI반도체핵심장비"),
-            ("455850", "SOL AI반도체소부장"),
-        ],
     },
 ]
+
 
 
 def _match_category(name: str) -> dict | None:
@@ -273,8 +176,78 @@ def _analyze_one(
     if cat is None:
         return base
 
+async def get_dynamic_peers(cat: dict | None, db: AsyncSession) -> list[tuple[str, str]]:
+    """DB에서 AUM 기준으로 해당 카테고리의 상위 10개 ETF를 동적으로 조회합니다."""
+    if not cat:
+        return []
+        
+    try:
+        from sqlalchemy import select, or_
+        from db.models import ETFMaster
+        query = select(ETFMaster.code, ETFMaster.name, ETFMaster.aum)
+        conditions = [ETFMaster.name.ilike(f"%{kw}%") for kw in cat["keywords"]]
+        if conditions:
+            query = query.where(or_(*conditions))
+        
+        result = await db.execute(query)
+        rows = result.all()
+        
+        def parse_aum(aum_str):
+            if not aum_str: return 0.0
+            s = str(aum_str).replace(",", "").replace("억", "")
+            try: return float(s)
+            except Exception: return 0.0
+            
+        sorted_rows = sorted(rows, key=lambda x: parse_aum(x.aum), reverse=True)
+        return [(r.code, r.name) for r in sorted_rows[:10]]
+    except Exception as e:
+        logger.error(f"Error fetching dynamic peers for category {cat.get('group', 'Unknown')}: {e}")
+        return []
+
+
+def _analyze_one(
+    code: str,
+    name: str,
+    eval_amount: float,
+    total_portfolio: float,
+    peers_raw: list[tuple[str, str]] = None,
+) -> dict:
+    """단일 종목 전체 분석 (순수 동기 — ThreadPoolExecutor에서 실행)."""
+    cat = _match_category(name)
+
+    base: dict = {
+        "code": code,
+        "name": name,
+        "eval_amount": eval_amount,
+        "weight_pct": round(eval_amount / total_portfolio * 100, 2) if total_portfolio > 0 else 0,
+        "category": cat["group"] if cat else "기타",
+        "benchmark_sym": cat["benchmark"] if cat else None,
+        "peer_count": 0,
+        "rank_1m": None,
+        "rank_3m": None,
+        "total_valid_1m": 0,
+        "total_valid_3m": 0,
+        "return_1m": None,
+        "return_3m": None,
+        "peer_avg_1m": None,
+        "peer_avg_3m": None,
+        "excess_1m": None,
+        "excess_3m": None,
+        "bench_return_1m": None,
+        "bench_return_3m": None,
+        "alpha_1m": None,
+        "alpha_3m": None,
+        "peers_sorted_1m": [],
+        "peers_sorted_3m": [],
+    }
+
+    if cat is None:
+        return base
+
     # ── 피어 목록 구성 (내 종목 포함, 중복 제거) ──────────────────────────
-    peers_raw: list[tuple[str, str]] = list(cat["peers"])
+    if peers_raw is None:
+        peers_raw = []
+        
     seen = {p[0] for p in peers_raw}
     if code not in seen:
         peers_raw.append((code, name))
@@ -376,30 +349,34 @@ async def get_peer_analysis(request: Request, db: AsyncSession = Depends(get_db)
     loop = asyncio.get_event_loop()
     async def process_holding(h: dict) -> dict:
         code = h.get("code", "")
+        name = h.get("name", "")
         cached_item = _PEER_CACHE.get(f"item_{code}")
         if cached_item and (now_ts - cached_item["ts"]) < _PEER_CACHE_TTL:
             item = dict(cached_item["data"])
         else:
             try:
+                cat = _match_category(name)
+                peers_raw = await get_dynamic_peers(cat, db)
                 item = await loop.run_in_executor(
                     None,
                     _analyze_one,
                     code,
-                    h.get("name", ""),
+                    name,
                     float(h.get("eval_amount", 0)),
                     float(total_portfolio),
+                    peers_raw,
                 )
             except Exception as e:
                 logger.error(f"[peer-analysis] {code}: {e}")
                 item = {
-                    "code": code, "name": h.get("name", ""),
+                    "code": code, "name": name,
                     "eval_amount": float(h.get("eval_amount", 0)),
                     "category": "기타", "error": str(e),
                 }
             _PEER_CACHE[f"item_{code}"] = {"data": item, "ts": now_ts}
-
         item["account_no"] = h.get("account_no", "")
         return item
+
 
     items_coros = [process_holding(h) for h in domestic]
     items = await asyncio.gather(*items_coros)

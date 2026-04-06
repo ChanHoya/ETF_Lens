@@ -10,7 +10,7 @@ from google.genai import types
 
 from db.database import get_db
 import logging
-from api.peer_analysis import _analyze_one
+from api.peer_analysis import _analyze_one, get_dynamic_peers, _match_category
 
 logger = logging.getLogger(__name__)
 
@@ -138,16 +138,22 @@ async def get_rebalance_proposal(request: Request, db: AsyncSession = Depends(ge
     total_portfolio = sum(float(h.get("eval_amount", 0)) for h in domestic)
     loop = asyncio.get_event_loop()
     
+
     # 1. Fetch peer evaluation for all domestic holdings concurrently
     async def process_holding(h: dict) -> dict:
         code = h.get("code", "")
+        name = h.get("name", "")
+        cat = _match_category(name)
+        peers_raw = await get_dynamic_peers(cat, db)
+        
         return await loop.run_in_executor(
             None,
             _analyze_one,
             code,
-            h.get("name", ""),
+            name,
             float(h.get("eval_amount", 0)),
             float(total_portfolio),
+            peers_raw,
         )
 
     items_coros = [process_holding(h) for h in domestic]
