@@ -274,73 +274,50 @@ async def get_my_portfolio(
 
                             if ovrs_res.status_code == 200:
                                 ovrs_data = ovrs_res.json()
-                                if ovrs_data.get("rt_cd") == "0":
-                                    ovrs_output1 = ovrs_data.get("output1", [])
-                                    ovrs_output3 = ovrs_data.get("output3", {})
-                                elif ovrs_data.get("msg_cd") == "EGW00133" or "초과" in str(ovrs_data.get("msg1", "")):
-                                    logger.warning(f"Rate limit hit for overseas {acc_str}. Retrying once after 2.5s.")
-                                    await asyncio.sleep(2.5)
-                                    ovrs_res = await ovrs_client.get(
-                                        ovrs_balance_url, headers=ovrs_headers, params=ovrs_params
-                                    )
-                                    if ovrs_res.status_code == 200:
-                                        ovrs_data = ovrs_res.json()
-                                        if ovrs_data.get("rt_cd") == "0":
-                                            ovrs_output1 = ovrs_data.get("output1", [])
-                                            ovrs_output3 = ovrs_data.get("output3", {})
-                                            
-                                    if ovrs_data.get("rt_cd") != "0":
-                                        logger.debug(f"Overseas Logic Error for {acc_str}: {ovrs_data.get('msg1')}")
-                                else:
-                                    logger.debug(f"Overseas Logic Error for {acc_str}: {ovrs_data.get('msg1')}")
-
-
-                                    ovrs_tot_asst_amt = float(
-                                        ovrs_output3.get("tot_asst_amt", 0)
-                                    )
-                                    ovrs_tot_evlu_amt = float(
-                                        ovrs_output3.get("evlu_amt_smtl_amt", 0)
-                                    )
-                                    ovrs_evlu_pfls_amt = float(
-                                        ovrs_output3.get("tot_evlu_pfls_amt", 0)
-                                    )
-                                    ovrs_cash_balance = float(
-                                        ovrs_output3.get("tot_frcr_cblc_smtl", 0)
-                                    )
-
-                                    # 해외 예수금은 통합증거금 설정 시 국내 예수금(prvs_rcdl_excc_amt)에 이미 KRW 환산으로 
-                                    # 포함되어 있으므로 이중 합산을 방지합니다. 해외 주식 평가금액만 총액에 더합니다.
-                                    total_asset += ovrs_tot_evlu_amt
-                                    total_eval_amount += ovrs_tot_evlu_amt
-                                    total_profit_loss += ovrs_evlu_pfls_amt
-                                    # cash_balance += ovrs_cash_balance # 이중 합산 방지
-
-                                    for item in ovrs_output1:
-                                        local_holdings.append(
-                                            {
-                                                "code": item.get("pdno"),
-                                                "name": item.get("prdt_name"),
-                                                "qty": int(
-                                                    float(item.get("ccld_qty_smtl1", 0))
-                                                ),
-                                                "avg_price": float(
-                                                    item.get("avg_unpr3", 0)
-                                                ),
-                                                "current_price": float(
-                                                    item.get("ovrs_now_pric1", 0)
-                                                ),
-                                                "eval_amount": float(
-                                                    item.get("frcr_evlu_amt2", 0)
-                                                ),
-                                                "profit_loss": float(
-                                                    item.get("evlu_pfls_amt2", 0)
-                                                ),
-                                                "return_rate": float(
-                                                    item.get("evlu_pfls_rt1", 0)
-                                                ),
-                                                "account_no": formatted_account,
-                                            }
+                                if ovrs_data.get("rt_cd") != "0":
+                                    msg_cd = ovrs_data.get('msg_cd', '')
+                                    if msg_cd == "EGW00133" or "초과" in str(ovrs_data.get("msg1", "")):
+                                        logger.warning(f"Rate limit hit for overseas {acc_str}. Retrying once after 2.5s.")
+                                        await asyncio.sleep(2.5)
+                                        ovrs_res = await ovrs_client.get(
+                                            ovrs_balance_url, headers=ovrs_headers, params=ovrs_params
                                         )
+                                        if ovrs_res.status_code == 200:
+                                            ovrs_data = ovrs_res.json()
+                                    if ovrs_data.get("rt_cd") != "0":
+                                        logger.debug(f"Overseas skipped for {acc_str}: {ovrs_data.get('msg1')}")  
+                                        ovrs_data = {}  # 해외 데이터 없음으로 처리
+
+                                ovrs_output1 = ovrs_data.get("output1", [])
+                                ovrs_output3 = ovrs_data.get("output3", {})
+
+                                ovrs_tot_evlu_amt = float(
+                                    ovrs_output3.get("evlu_amt_smtl_amt", 0)
+                                )
+                                ovrs_evlu_pfls_amt = float(
+                                    ovrs_output3.get("tot_evlu_pfls_amt", 0)
+                                )
+
+                                # 해외 예수금은 통합증거금 설정 시 국내 예수금에 이미 포함.
+                                # 해외 주식 평가금액만 총액에 더합니다.
+                                total_asset += ovrs_tot_evlu_amt
+                                total_eval_amount += ovrs_tot_evlu_amt
+                                total_profit_loss += ovrs_evlu_pfls_amt
+
+                                for item in ovrs_output1:
+                                    local_holdings.append(
+                                        {
+                                            "code": item.get("pdno"),
+                                            "name": item.get("prdt_name"),
+                                            "qty": int(float(item.get("ccld_qty_smtl1", 0))),
+                                            "avg_price": float(item.get("avg_unpr3", 0)),
+                                            "current_price": float(item.get("ovrs_now_pric1", 0)),
+                                            "eval_amount": float(item.get("frcr_evlu_amt2", 0)),
+                                            "profit_loss": float(item.get("evlu_pfls_amt2", 0)),
+                                            "return_rate": float(item.get("evlu_pfls_rt1", 0)),
+                                            "account_no": formatted_account,
+                                        }
+                                    )
                     except Exception as ex:
                         logger.error(f"[{acc_str}] Overseas Test Error: {ex}")
 

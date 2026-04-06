@@ -139,58 +139,85 @@ def _calc_return_pct(closes: list[float], days: int) -> float | None:
 
 _YF_CACHE: dict[str, list[float]] = {}
 _YF_CACHE_TIME: dict[str, float] = {}
+# KIS context injected by the async endpoint before executor calls
+_KIS_CTX: dict = {}  # {"token": str, "app_key": str, "app_secret": str, "url_base": str}
 
 def _fetch_one_ks(code: str) -> list[float]:
-    """단일 KRX 종목 종가 조회 (.KS → .KQ fallback). 야후 실패시 네이버 금융 API 연동."""
+    """단일 KRX 종목 종가 조회.
+    1순위: KIS 일봉 차트 API (서버 환경에서 가장 안정적)
+    2순위: Yahoo Finance (.KS / .KQ)
+    """
     now = time.time()
-    # Cache valid for 4 hours
     if code in _YF_CACHE and now - _YF_CACHE_TIME.get(code, 0) < 14400:
         return _YF_CACHE[code]
 
-    closes = []
-    import yfinance as yf
-    
-    # 1. Try Yahoo Finance
-    for suffix in [".KS", ".KQ"]:
+    closes: list[float] = []
+
+    # ── 1순위: KIS 일봉 차트 FHKST03010100 ─────────────────────────────────
+    ctx = _KIS_CTX
+    if ctx.get("token") and ctx.get("url_base"):
         try:
-            hist = yf.Ticker(f"{code}{suffix}").history(period="4mo")
-            if hist is not None and not hist.empty and len(hist) >= 22:
-                closes = [float(c) for c in hist["Close"].dropna().tolist()]
-                break
-        except Exception:
-            continue
-            
-    # 2. Add Naver Fchart Fallback if Yahoo Finance fails or returns too little data
+            import requests as _req
+            from datetime import datetime, timedelta
+            today = datetime.today()
+            start = (today - timedelta(days=140)).strftime("%Y%m%d")
+            end = today.strftime("%Y%m%d")
+            url = f"{ctx['url_base']}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
+            headers = {
+                "content-type": "application/json; charset=utf-8",
+                "authorization": f"Bearer {ctx['token']}",
+                "appkey": ctx["app_key"],
+                "appsecret": ctx["app_secret"],
+                "tr_id": "FHKST03010100",
+            }
+            params = {
+                "FID_COND_MRKT_DIV_CODE": "J",
+                "FID_INPUT_ISCD": code,
+                "FID_INPUT_DATE_1": start,
+                "FID_INPUT_DATE_2": end,
+                "FID_PERIOD_DIV_CODE": "D",
+                "FID_ORG_ADJ_PRC": "0",
+            }
+            resp = _req.get(url, headers=headers, params=params, timeout=8)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("rt_cd") == "0":
+                    output2 = data.get("output2", [])
+                    kis_closes = []
+                    for row in reversed(output2):  # KIS는 최신→과거 순
+                        try:
+                            c = float(row.get("stck_clpr", 0))
+                            if c > 0:
+                                kis_closes.append(c)
+                        except Exception:
+                            continue
+                    if len(kis_closes) >= 22:
+                        closes = kis_closes
+                        logger.info(f"[KIS chart] {code}: {len(closes)} bars")
+                else:
+                    logger.debug(f"[KIS chart] {code}: rt_cd={data.get('rt_cd')} {data.get('msg1', '')}")
+        except Exception as e:
+            logger.warning(f"[KIS chart] {code} failed: {e}")
+
+    # ── 2순위: Yahoo Finance ────────────────────────────────────────────────
     if not closes or len(closes) < 22:
         try:
-            import requests
-            import xml.etree.ElementTree as ET
-            # 요청 100영업일 (약 4.5개월)
-            url = f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=day&count=100&requestType=0"
-            resp = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-            if resp.status_code == 200:
-                resp.encoding = 'euc-kr'
-                clean_text = resp.text.replace('encoding="EUC-KR"', '').replace("encoding='EUC-KR'", "")
-                root = ET.fromstring(clean_text)
-                items = root.findall(".//item")
-                naver_closes = []
-                for item in items:
-                    data_str = item.get("data")
-                    if data_str:
-                        parts = data_str.split("|")
-                        if len(parts) >= 5:
-                            naver_closes.append(float(parts[4]))
-                
-                if len(naver_closes) >= 22:
-                    closes = naver_closes
+            import yfinance as yf
+            for suffix in [".KS", ".KQ"]:
+                hist = yf.Ticker(f"{code}{suffix}").history(period="5mo")
+                if hist is not None and not hist.empty and len(hist) >= 22:
+                    closes = [float(c) for c in hist["Close"].dropna().tolist()]
+                    logger.info(f"[YF] {code}{suffix}: {len(closes)} bars")
+                    break
         except Exception as e:
-            logger.warning(f"Naver Fchart Fallback failed for {code}: {e}")
+            logger.warning(f"[YF] {code} failed: {e}")
 
     if closes and len(closes) >= 22:
         _YF_CACHE[code] = closes
         _YF_CACHE_TIME[code] = now
         return closes
 
+    logger.warning(f"[_fetch_one_ks] {code}: no data from any source")
     return []
 
 
@@ -402,6 +429,28 @@ async def get_peer_analysis(request: Request, db: AsyncSession = Depends(get_db)
         return {"status": "success", "count": 0, "items": [], "cached": False}
 
     total_portfolio = sum(h.get("eval_amount", 0) for h in domestic)
+
+    # ── KIS 토큰 컨텍스트 주입 (_fetch_one_ks에서 KIS 차트 API 사용) ─────────
+    from api.my_assets import TOKEN_CACHE
+    from dotenv import load_dotenv
+    import os as _os
+    _env_path = _os.path.join(_os.path.dirname(_os.path.dirname(__file__)), ".env")
+    load_dotenv(dotenv_path=_env_path, override=True)
+    _kis_url_base = _os.environ.get("KIS_URL_BASE", "https://openapi.koreainvestment.com:9443")
+    # Pick the first valid cached token
+    for _app_key, _cached in TOKEN_CACHE.items():
+        if _cached.get("expires_at", 0) > time.time():
+            _KIS_CTX.update({
+                "token": _cached["access_token"],
+                "app_key": _app_key,
+                "app_secret": next(
+                    (v for k, v in _os.environ.items() if k.startswith("KIS_APP_SECRET") and v),
+                    ""
+                ),
+                "url_base": _kis_url_base,
+            })
+            break
+
     loop = asyncio.get_event_loop()
     async def process_holding(h: dict) -> dict:
         code = h.get("code", "")
