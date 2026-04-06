@@ -79,10 +79,11 @@ def _call_gemini_rebalance(portfolio_data_text: str) -> dict:
 판단 기준:
 1. 내 종목의 1개월, 3개월 수익률이 해당 테마 피어 평균(Peer Avg) 대비 심각하게 저조한 경우 교체(REPLACE)를 고려하십시오.
 2. 교체를 추천할 때는 반드시 1순위(수익률 1위) 종목을 대안으로 제안하십시오.
-3. 사용자가 이미 해당 테마의 1위 종목을 보유 중이거나, 보유 종목들끼리 서로 교체하라고 제안하는 '순환 추천(Circular Recommendation)'은 절대 금지합니다. 대안 종목의 수익률이 원본 종목의 수익률보다 확연히 높을 때만 교체를 제안하십시오.
-4. 성과가 테마 내 상위권이거나, 대안 종목과 큰 차이가 없다면 불필요한 매매비용을 막기 위해 유지(KEEP)를 제안하십시오.
-5. 분석결과는 제공된 JSON 스키마 구조를 완벽하게 준수하여야 합니다.
-6. 어투는 전문적이고 논리적이며 명확해야 합니다.
+3. 데이터가 제공되지 않거나 '데이터부족'으로 표기된 종목은 가장 최근에 상장된 종목이므로 무조건 판단을 보류하고 'KEEP(유지)'을 제안하십시오. 데이터 부족으로 명확하게 대체재를 권고할 수 없습니다.
+4. 사용자가 이미 해당 테마의 1위 종목을 보유 중이거나, 보유 종목들끼리 서로 교체하라고 제안하는 '순환 추천(Circular Recommendation)'은 절대 금지합니다. 대안 종목의 수익률이 원본 종목의 수익률보다 확연히 높을 때만 교체를 제안하십시오.
+5. 성과가 테마 내 상위권이거나, 대안 종목과 큰 차이가 없다면 불필요한 매매비용을 막기 위해 유지(KEEP)를 제안하십시오.
+6. 분석결과는 제공된 JSON 스키마 구조를 완벽하게 준수하여야 합니다.
+7. 어투는 전문적이고 논리적이며 명확해야 합니다.
 """
 
     prompt = f"### 포트폴리오 분석 원시 데이터 ###\n{portfolio_data_text}\n\n위 데이터를 기반으로 리밸런싱을 제안해 주세요."
@@ -173,12 +174,17 @@ async def get_rebalance_proposal(request: Request, db: AsyncSession = Depends(ge
         peer_avg_3m = item.get("peer_avg_3m")
         
         peers_1m = item.get("peers_sorted_1m", [])
-        top_peer_1m = f"{peers_1m[0].get('name')} ({peers_1m[0].get('return_1m')}%)" if peers_1m else "데이터부족"
+        top_peer_1m = f"{peers_1m[0].get('code')} ({peers_1m[0].get('name')} {peers_1m[0].get('return_1m')}%)" if peers_1m else "데이터부족"
+        
+        my_1m_str = f"{my_1m}%" if my_1m is not None else "데이터부족"
+        my_3m_str = f"{my_3m}%" if my_3m is not None else "데이터부족"
+        peer_avg_1m_str = f"{peer_avg_1m}%" if peer_avg_1m is not None else "데이터부족"
+        peer_avg_3m_str = f"{peer_avg_3m}%" if peer_avg_3m is not None else "데이터부족"
 
         line = (
             f"종목: {name}({code}) | 비중: {weight}% | 테마: {cat}\n"
-            f"  - 1M 수익률: 내 종목 {my_1m}% vs 테마평균 {peer_avg_1m}%, 1위 종목: {top_peer_1m}\n"
-            f"  - 3M 수익률: 내 종목 {my_3m}% vs 테마평균 {peer_avg_3m}%\n"
+            f"  - 1M 수익률: 내 종목 {my_1m_str} vs 테마평균 {peer_avg_1m_str}, 1위 종목: {top_peer_1m}\n"
+            f"  - 3M 수익률: 내 종목 {my_3m_str} vs 테마평균 {peer_avg_3m_str}\n"
         )
         prompt_lines.append(line)
 
