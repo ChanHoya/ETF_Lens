@@ -133,6 +133,7 @@ async def get_my_portfolio(
 
         # 2. Define a helper function to fetch a single account using a brute-force key strategy
         async def fetch_single_account(acc_str: str):
+            import asyncio
             account_no_clean = "".join(filter(str.isdigit, acc_str))
             if not account_no_clean:
                 return None
@@ -233,6 +234,10 @@ async def get_my_portfolio(
 
                     # 예수금을 D+2 정산금액으로 변경 (실제 출금가능 금액 및 평가 기준에 부합)
                     cash_balance = float(output2.get("prvs_rcdl_excc_amt", output2.get("dnca_tot_amt", 0)))
+
+                    local_wait = 1.2
+                    logger.debug(f"Waiting {local_wait}s to respect 1 TPS before calling overseas balance...")
+                    await asyncio.sleep(local_wait)
 
                     # 4. Fetch Overseas Stocks (CTRP6504R)
                     try:
