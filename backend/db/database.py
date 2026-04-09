@@ -14,11 +14,18 @@ elif _raw_db_url.startswith("postgresql://") and "+asyncpg" not in _raw_db_url:
 
 DATABASE_URL = _raw_db_url
 
-# PostgreSQL은 connect_args 불필요 (SQLite는 check_same_thread 옵션 필요)
+# PostgreSQL(asyncpg)의 경우 무료 DB가 늦게 켜질 수 있으므로 timeout 지정
 _is_sqlite = DATABASE_URL.startswith("sqlite")
-_connect_args = {"check_same_thread": False} if _is_sqlite else {}
+_connect_args = {"check_same_thread": False} if _is_sqlite else {"timeout": 60}
 
-engine = create_async_engine(DATABASE_URL, echo=False, connect_args=_connect_args)
+engine = create_async_engine(
+    DATABASE_URL, 
+    echo=False, 
+    connect_args=_connect_args,
+    pool_pre_ping=True,  # 연결 유효성 검사 추가 (커넥션 드랍 방지)
+    pool_recycle=1800    # 연결 주기적으로 재생성
+)
+
 AsyncSessionLocal = async_sessionmaker(
     bind=engine, class_=AsyncSession, expire_on_commit=False
 )

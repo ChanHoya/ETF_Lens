@@ -29,8 +29,18 @@ async def lifespan(app: FastAPI):
     _is_sqlite = DATABASE_URL.startswith("sqlite")
 
     # ── 1. 테이블 생성 (별도 트랜잭션) ─────────────────────────────────────
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"[Startup] DB Connection timeout or error, retrying in 5 seconds... (Attempt {attempt+1}/{max_retries})\nError: {e}")
+                await asyncio.sleep(5)
+            else:
+                raise
 
     # ── 2. shares 컬럼 추가 (별도 트랜잭션 — PostgreSQL 호환) ───────────────
     try:
