@@ -66,7 +66,7 @@ CATEGORY_PEERS: list[dict] = [
         "benchmark": "^GSPC",
     },
     {
-        "keywords": ["나스닥", "nasdaq", "미국필라", "미국테크", "미국빅테크", "미국우주", "필라델피아반도체"],
+        "keywords": ["나스닥", "nasdaq", "미국필라", "미국테크", "미국빅테크", "미국우주", "필라델피아반도체", "양자", "양자컴퓨팅"],
         "group": "나스닥·빅테크",
         "benchmark": "^IXIC",
     },
