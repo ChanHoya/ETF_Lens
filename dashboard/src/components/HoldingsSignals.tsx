@@ -122,7 +122,8 @@ function HoldingCard({ item, totalPortfolio, onOpenDetail, onAnalyzePeers }: { i
     const [showPeers, setShowPeers] = useState(false);
     const [peerPeriod, setPeerPeriod] = useState<"1m" | "3m">("1m");
 
-    const hasPeer = item.peer_count > 0 && (item.return_1m !== null || item.return_3m !== null);
+    // 카테고리가 '기타'가 아니고, 내 종목 수익률이 하나라도 있으면 성과 블록 표시
+    const hasPeer = item.category !== "기타" && (item.return_1m !== null || item.return_3m !== null);
     const contributionAmt = (item.weight_pct / 100) * totalPortfolio;
 
     return (
