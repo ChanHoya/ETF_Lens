@@ -113,3 +113,56 @@ app.include_router(rebalance_proposal_router, prefix="/api/v1/analyze")
 @app.head("/health")
 def health_check():
     return {"status": "ok", "message": "ETF Analysis Platform API is running"}
+
+
+@app.get("/api/v1/debug/peer-fetch")
+async def debug_peer_fetch():
+    """Render 서버에서 각 데이터 소스별 종가 조회 상태 진단."""
+    import asyncio
+    import time
+    from datetime import datetime
+    from api.peer_analysis import _fetch_via_pykrx, _fetch_via_yf_v8, _calc_return_pct
+
+    TEST_CODES = {
+        "396500": "TIGER 반도체TOP10",
+        "381180": "TIGER 미국필라델피아반도체나스닥",
+        "441640": "KODEX 미국배당커버드콜액티브",
+    }
+
+    results = {}
+    for code, name in TEST_CODES.items():
+        entry: dict = {"name": name, "sources": {}}
+
+        # pykrx
+        t0 = time.time()
+        try:
+            loop = asyncio.get_event_loop()
+            closes = await loop.run_in_executor(None, _fetch_via_pykrx, code)
+            entry["sources"]["pykrx"] = {
+                "ok": len(closes) >= 22,
+                "rows": len(closes),
+                "last": closes[-1] if closes else None,
+                "1m": _calc_return_pct(closes, 21),
+                "latency_ms": round((time.time() - t0) * 1000),
+            }
+        except Exception as e:
+            entry["sources"]["pykrx"] = {"ok": False, "error": str(e)}
+
+        # Yahoo v8
+        t0 = time.time()
+        try:
+            closes = await loop.run_in_executor(None, _fetch_via_yf_v8, code)
+            entry["sources"]["yf_v8"] = {
+                "ok": len(closes) >= 22,
+                "rows": len(closes),
+                "last": closes[-1] if closes else None,
+                "1m": _calc_return_pct(closes, 21),
+                "latency_ms": round((time.time() - t0) * 1000),
+            }
+        except Exception as e:
+            entry["sources"]["yf_v8"] = {"ok": False, "error": str(e)}
+
+        results[code] = entry
+
+    return {"checked_at": datetime.now().isoformat(), "results": results}
+
