@@ -28,55 +28,59 @@ async def lifespan(app: FastAPI):
 
     _is_sqlite = DATABASE_URL.startswith("sqlite")
 
-    # ── 1. 테이블 생성 (별도 트랜잭션) ─────────────────────────────────────
-    max_retries = 3
-    for attempt in range(max_retries):
+    async def init_db_and_startup():
+        # ── 1. 테이블 생성 (별도 트랜잭션) ─────────────────────────────────────
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                async with engine.begin() as conn:
+                    await conn.run_sync(Base.metadata.create_all)
+                break
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"[Startup] DB Connection timeout or error, retrying in 5 seconds... (Attempt {attempt+1}/{max_retries})\nError: {e}")
+                    await asyncio.sleep(5)
+                else:
+                    print(f"[Startup] Failed to create tables: {e}")
+
+        # ── 2. shares 컬럼 추가 (별도 트랜잭션 — PostgreSQL 호환) ───────────────
         try:
             async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-            break
-        except Exception as e:
-            if attempt < max_retries - 1:
-                print(f"[Startup] DB Connection timeout or error, retrying in 5 seconds... (Attempt {attempt+1}/{max_retries})\nError: {e}")
-                await asyncio.sleep(5)
-            else:
-                raise
-
-    # ── 2. shares 컬럼 추가 (별도 트랜잭션 — PostgreSQL 호환) ───────────────
-    try:
-        async with engine.begin() as conn:
-            if _is_sqlite:
-                # SQLite: IF NOT EXISTS 미지원 → 예외 무시
-                try:
-                    await conn.execute(text("ALTER TABLE etf_holdings ADD COLUMN shares INTEGER"))
-                    print("Successfully added 'shares' column to etf_holdings (SQLite)")
-                except Exception:
-                    pass  # 이미 존재
-            else:
-                # PostgreSQL: ADD COLUMN IF NOT EXISTS (9.6+)
-                await conn.execute(text("ALTER TABLE etf_holdings ADD COLUMN IF NOT EXISTS shares INTEGER"))
-    except Exception as _e:
-        print(f"[Startup] shares column migration skipped: {_e}")
-
-    # ── 3. ETF 성과 컬럼 마이그레이션 (SQLite 전용 스크립트) ─────────────────
-    if _is_sqlite:
-        try:
-            from migrate_add_perf_columns import migrate as _migrate_perf
-            _migrate_perf()
+                if _is_sqlite:
+                    # SQLite: IF NOT EXISTS 미지원 → 예외 무시
+                    try:
+                        await conn.execute(text("ALTER TABLE etf_holdings ADD COLUMN shares INTEGER"))
+                        print("Successfully added 'shares' column to etf_holdings (SQLite)")
+                    except Exception:
+                        pass  # 이미 존재
+                else:
+                    # PostgreSQL: ADD COLUMN IF NOT EXISTS (9.6+)
+                    await conn.execute(text("ALTER TABLE etf_holdings ADD COLUMN IF NOT EXISTS shares INTEGER"))
         except Exception as _e:
-            print(f"[Startup] ETF perf column migration skipped: {_e}")
-    else:
-        # PostgreSQL: 성과 컬럼은 models.py / create_all 로 이미 생성됨
-        print("[Startup] PostgreSQL: perf columns managed by create_all, skipping SQLite migration script.")
+            print(f"[Startup] shares column migration skipped: {_e}")
 
-    # ── 4. 버전 기록 ────────────────────────────────────────────────────────
-    try:
-        from core.scheduler import update_app_version
-        await update_app_version("[startup]")
-    except Exception as _e:
-        print(f"[Startup] version update skipped: {_e}")
+        # ── 3. ETF 성과 컬럼 마이그레이션 (SQLite 전용 스크립트) ─────────────────
+        if _is_sqlite:
+            try:
+                from migrate_add_perf_columns import migrate as _migrate_perf
+                _migrate_perf()
+            except Exception as _e:
+                print(f"[Startup] ETF perf column migration skipped: {_e}")
+        else:
+            # PostgreSQL: 성과 컬럼은 models.py / create_all 로 이미 생성됨
+            print("[Startup] PostgreSQL: perf columns managed by create_all, skipping SQLite migration script.")
 
-    setup_scheduler()
+        # ── 4. 버전 기록 ────────────────────────────────────────────────────────
+        try:
+            from core.scheduler import update_app_version
+            await update_app_version("[startup]")
+        except Exception as _e:
+            print(f"[Startup] version update skipped: {_e}")
+
+        setup_scheduler()
+
+    # DB 연결 대기로 인한 Render 60초 포트바인딩 타임아웃 방지를 위해 백그라운드로 실행
+    asyncio.create_task(init_db_and_startup())
 
     # 앱 시작 시 ETF 마스터 목록 즉시 백그라운드 동기화
     from core.scheduler import sync_etf_master_list
