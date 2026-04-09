@@ -462,11 +462,13 @@ def _analyze_one(
     if cat is None:
         return base
 
-    # 피어 목록
+    # 피어 목록 추가 로직: 내 종목이 반드시 10개 안에 포함되도록 보장
     if peers_raw is None:
         peers_raw = []
     seen = {p[0] for p in peers_raw}
     if code not in seen:
+        if len(peers_raw) >= 10:
+            peers_raw.pop()  # AUM 가장 낮은 10번째 제거
         peers_raw.append((code, name))
     peers_raw = peers_raw[:10]
 
@@ -582,9 +584,11 @@ async def get_peer_analysis(request: Request, db: AsyncSession = Depends(get_db)
         cat = _match_category(name)
         if cat:
             peers_raw = await get_dynamic_peers(cat, db)
-            # 내 종목이 피어 목록에 없으면 추가
+            # 내 종목이 피어 목록에 없으면 맨 끝 항목과 교체해서라도 반드시 추가
             seen = {p[0] for p in peers_raw}
             if code not in seen:
+                if len(peers_raw) >= 10:
+                    peers_raw.pop()
                 peers_raw.append((code, name))
             peers_raw = peers_raw[:10]
             holding_peers[code] = peers_raw
