@@ -144,7 +144,15 @@ def _match_category(name: str) -> dict | None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _fetch_via_pykrx(code: str, days: int = 140) -> list[float]:
-    """1순위: pykrx — KRX 공식 데이터, SSL 문제 없음."""
+    """1순위: pykrx — KRX 공식 데이터, SSL 문제 없음.
+    
+    KRX 종목코드는 6자리이며, 숫자만(예: 396500) 또는 숫자+알파벳(예: 0093A0) 모두 존재함.
+    pykrx는 숫자 6자리 코드만 조회 가능. 알파벳 포함 코드는 조회 불가.
+    """
+    # 알파벳 포함 코드는 pykrx 조회 불가
+    if not code.isdigit():
+        logger.debug(f"[pykrx] {code}: 알파벳 포함 코드 → skip")
+        return []
     try:
         from pykrx import stock as pykrx_stock
         end_dt = datetime.now()
@@ -156,17 +164,15 @@ def _fetch_via_pykrx(code: str, days: int = 140) -> list[float]:
         )
         if df is None or df.empty:
             return []
-        # 컬럼명이 한글("종가") 또는 영어("Close") 등 버전에 따라 다를 수 있음
         close_col = None
         for cn in ["종가", "Close", "close"]:
             if cn in df.columns:
                 close_col = cn
                 break
         if close_col is None:
-            # 마지막 수치형 컬럼 사용
             num_cols = df.select_dtypes(include="number").columns.tolist()
             if num_cols:
-                close_col = num_cols[-1]  # 보통 종가가 마지막 수치 컬럼
+                close_col = num_cols[-1]
             else:
                 return []
         closes = [float(v) for v in df[close_col].dropna().tolist() if v > 0]
@@ -375,7 +381,10 @@ def _calc_return_pct(closes: list[float], days: int) -> float | None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 async def get_dynamic_peers(cat: dict | None, db: AsyncSession) -> list[tuple[str, str]]:
-    """DB에서 AUM 기준 상위 10개 동종 ETF 조회."""
+    """DB에서 AUM 기준 상위 10개 동종 ETF 조회.
+    
+    알파벳 포함 코드(예: 0093A0)는 pykrx 조회 불가이므로 피어 목록에서 제외.
+    """
     if not cat:
         return []
     try:
@@ -398,7 +407,13 @@ async def get_dynamic_peers(cat: dict | None, db: AsyncSession) -> list[tuple[st
                 return 0.0
 
         sorted_rows = sorted(rows, key=lambda x: parse_aum(x.aum), reverse=True)
-        return [(r.code, r.name) for r in sorted_rows[:10]]
+        # 알파벳 포함 코드는 pykrx 조회 불가 → 피어 목록에서 제외
+        valid_rows = [
+            (r.code, r.name) for r in sorted_rows
+            if r.code and r.code.isdigit() and len(r.code) == 6
+        ]
+        logger.info(f"[get_dynamic_peers] {cat['group']}: DB {len(sorted_rows)}개 중 pykrx 가능 {len(valid_rows)}개")
+        return valid_rows[:10]
     except Exception as e:
         logger.error(f"[get_dynamic_peers] {cat.get('group', '?')}: {e}")
         return []
@@ -522,9 +537,16 @@ async def get_peer_analysis(request: Request, db: AsyncSession = Depends(get_db)
     # ── 보유 종목 조회 ──────────────────────────────────────────────────────
     portfolio = await get_my_portfolio(request=request, db=db)
     all_h = portfolio.get("kis_raw", {}).get("holdings", [])
+    # KRX 국내 ETF/종목 필터: 6자리 코드 (숫자 또는 숫자+알파벳 모두 포함)
+    # 예: 396500(숫자), 0093A0(알파벳 포함) 모두 국내 종목
+    # 영문 티커(예: TSLA, AAPL)와 구분: 6자리이고 첫 글자가 숫자인 코드
     domestic = [
         h for h in all_h
-        if h.get("code", "").isdigit() and len(h.get("code", "")) == 6
+        if (
+            h.get("code", "") and
+            len(h.get("code", "")) == 6 and
+            h.get("code", "")[0].isdigit()  # 첫 글자가 숫자 → KRX 코드
+        )
     ]
     if not domestic:
         return {"status": "success", "count": 0, "items": [], "cached": False}
