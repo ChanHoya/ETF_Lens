@@ -377,6 +377,24 @@ async def flush_cache():
     return {"cleared": count, "message": f"{count}개 캐시 항목 삭제 완료. 다음 요청 시 fresh 데이터를 가져옵니다."}
 
 
+@router.post("/sync-etf-master")
+async def sync_etf_master_manual():
+    """ETF 마스터 리스트 (신규 상장 종목 등) 수동 동기화"""
+    try:
+        from core.scheduler import sync_etf_master_list
+        await sync_etf_master_list()
+        
+        # Clear frontend caches if needed, but not strictly needed here 
+        # since frontend uses ?t=Date.now()
+        global _etf_master_list
+        _etf_master_list = []
+        
+        return {"status": "ok", "message": "ETF 마스터 동기화 성공"}
+    except Exception as e:
+        logger.error(f"Manual ETF master sync failed: {e}")
+        return {"status": "error", "message": str(e)}
+
+
 async def fetch_korean_index_yahoo_v8(symbol: str, years: int = 10):
     """Yahoo Finance v8 Chart API로 KOSPI/KOSDAQ 지수 fetch.
     macro_compass.py에서 검증된 동일 패턴 사용. KST(UTC+9) 날짜 기준."""

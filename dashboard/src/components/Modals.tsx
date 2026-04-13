@@ -88,6 +88,7 @@ export default function Modals({
 
     // ── 포트폴리오 마켓 상태 ─────────────────────────────────────────────
     const [isMarketOpen, setIsMarketOpen] = React.useState(false);
+    const [isSyncing, setIsSyncing] = React.useState(false);
     const [marketList, setMarketList] = React.useState<any[]>([]);
     const [marketLoading, setMarketLoading] = React.useState(false);
     const [deletingMarketId, setDeletingMarketId] = React.useState<number | null>(null);
@@ -172,6 +173,28 @@ export default function Modals({
                                 <Star className="w-6 h-6 text-yellow-500 fill-yellow-500/20" /> 나의 관심종목 즐겨찾기
                             </h2>
                             <div className="flex items-center gap-2 w-full md:w-auto">
+                                <button
+                                    onClick={async () => {
+                                        if (isSyncing) return;
+                                        setIsSyncing(true);
+                                        try {
+                                            const res = await fetch(`${API_BASE}/api/v1/analyze/sync-etf-master`, { method: 'POST' });
+                                            if (res.ok) {
+                                                alert("신규 종목 업데이트 성공! 변경사항 적용을 위해 새로고침 합니다.");
+                                                window.location.reload();
+                                            } else {
+                                                alert("동기화 실패");
+                                            }
+                                        } catch (e) {
+                                            alert("수동 동기화 에러: " + e);
+                                        }
+                                        setIsSyncing(false);
+                                    }}
+                                    disabled={isSyncing}
+                                    className="flex items-center gap-1.5 px-3 py-2 bg-slate-600/20 hover:bg-slate-600/40 text-slate-300 border border-slate-500/30 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
+                                >
+                                    <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} /> DB 수동 갱신
+                                </button>
                                 <button
                                     onClick={() => { setIsMarketOpen(true); setIsFavModalOpen(false); }}
                                     className="flex items-center gap-1.5 px-3 py-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30 rounded-lg text-sm font-semibold transition-all"
