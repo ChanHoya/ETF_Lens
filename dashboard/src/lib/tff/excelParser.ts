@@ -189,7 +189,7 @@ function parseCumulativeSheet(rows: any[][]): TffCumulativeSummary {
         }
 
         let maxCols = 0;
-        for(let r=0; r<=baseIdx+10; r++) {
+        for (let r = 0; r < 35; r++) {
             if (rows[r] && rows[r].length > maxCols) maxCols = rows[r].length;
         }
 
