@@ -11,6 +11,17 @@ interface Props {
 export default function AssetsView({ data, onOpenDetail }: Props) {
   const { assets, total, benchmarks } = data;
   const [sortBy, setSortBy] = useState<string>('cumulative');
+  const [selectedType, setSelectedType] = useState<string>('전체');
+
+  const FILTER_TYPES = [
+      { label: '전체', value: '전체' },
+      { label: '국내주식형', value: '국내주식형 (Domestic)' },
+      { label: '미국주식형', value: '미국주식형 (US)' },
+      { label: '국내채권형', value: '국내채권 (Domestic Bonds)' },
+      { label: '미국채권형', value: '미국채권 (US Bonds)' },
+      { label: '신흥국형', value: '신흥국형 (EM)' },
+      { label: '대체자산형', value: '대체자산 (Alternatives)' }
+  ];
 
   // Get available months dynamically
   const availableMonths = [
@@ -33,29 +44,37 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
   });
 
   const groupedAssets = {
-      '국내형 (Domestic)': [] as typeof sortedAssets,
-      '미국형 (US)': [] as typeof sortedAssets,
-      '채권형 (Bonds)': [] as typeof sortedAssets,
-      '원자재형 (Commodities)': [] as typeof sortedAssets,
+      '국내주식형 (Domestic)': [] as typeof sortedAssets,
+      '미국주식형 (US)': [] as typeof sortedAssets,
+      '신흥국형 (EM)': [] as typeof sortedAssets,
+      '국내채권 (Domestic Bonds)': [] as typeof sortedAssets,
+      '미국채권 (US Bonds)': [] as typeof sortedAssets,
+      '대체자산 (Alternatives)': [] as typeof sortedAssets,
       '현금/파킹형 (Cash)': [] as typeof sortedAssets,
   };
 
   sortedAssets.forEach(asset => {
       const name = asset.name;
       if (name.includes("금현물") || name.includes("은현물") || name.includes("원자재") || name.includes("골드") || name.includes("구리") || name.includes("원유")) {
-          groupedAssets['원자재형 (Commodities)'].push(asset);
-      } else if (name.includes("채권") || name.includes("국고채") || name.includes("회사채") || name.includes("종합채권")) {
-          groupedAssets['채권형 (Bonds)'].push(asset);
+          groupedAssets['대체자산 (Alternatives)'].push(asset);
+      } else if (name.includes("채권") || name.includes("국고채") || name.includes("국채") || name.includes("회사채") || name.includes("종합채권")) {
+          if (name.includes("미국") || name.includes("US")) {
+              groupedAssets['미국채권 (US Bonds)'].push(asset);
+          } else {
+              groupedAssets['국내채권 (Domestic Bonds)'].push(asset);
+          }
       } else if (name.includes("머니마켓") || name.includes("CD") || name.includes("KOFR") || name.includes("현금") || name.includes("단기자금") || name.includes("파킹")) {
           groupedAssets['현금/파킹형 (Cash)'].push(asset);
+      } else if (name.includes("차이나") || name.includes("항셍") || name.includes("인도") || name.includes("베트남") || name.includes("EM")) {
+          groupedAssets['신흥국형 (EM)'].push(asset);
       } else if (name.includes("미국") || name.includes("S&P") || name.includes("나스닥") || name.includes("다우") || name.includes("필라델피아") || name.includes("테크") || name.includes("글로벌")) {
-          groupedAssets['미국형 (US)'].push(asset);
+          groupedAssets['미국주식형 (US)'].push(asset);
       } else {
-          groupedAssets['국내형 (Domestic)'].push(asset);
+          groupedAssets['국내주식형 (Domestic)'].push(asset);
       }
   });
 
-  const categoryOrder = ['국내형 (Domestic)', '미국형 (US)', '채권형 (Bonds)', '원자재형 (Commodities)', '현금/파킹형 (Cash)'];
+  const categoryOrder = ['국내주식형 (Domestic)', '미국주식형 (US)', '신흥국형 (EM)', '국내채권 (Domestic Bonds)', '미국채권 (US Bonds)', '대체자산 (Alternatives)', '현금/파킹형 (Cash)'];
 
   const normalizePct = (val?: number) => {
     if (val === undefined || val === null || isNaN(val)) return 0;
@@ -76,32 +95,53 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
 
   return (
     <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 mt-0">
-        <div>
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <Activity className="w-5 h-5 text-sky-400" />
-                종목별 성과 동향 (Monthly Trends)
-            </h3>
-            <p className="text-xs text-gray-400 mt-1">* 막대는 종목 월별 수익률, 꺾은선은 비교 벤치마크(KOSPI/S&P500) 월별 수익률입니다.</p>
-        </div>
+      <div className="flex flex-col gap-4 mb-2 mt-0">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+            <div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-sky-400" />
+                    종목별 성과 추이
+                </h3>
+            </div>
 
-        <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">정렬기준:</span>
-            <select 
-                value={sortBy} 
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-black/50 border border-white/10 rounded-lg text-sm text-gray-200 px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-sky-500"
-            >
-                <option value="cumulative">누적 수익률순</option>
-                {availableMonths.map(m => (
-                    <option key={m} value={m}>{m} 수익률순</option>
-                ))}
-            </select>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between xl:justify-end gap-3 w-full xl:w-auto">
+                <div className="flex items-center flex-wrap gap-1.5">
+                    {FILTER_TYPES.map(filter => (
+                        <button
+                            key={filter.value}
+                            onClick={() => setSelectedType(filter.value)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                                selectedType === filter.value 
+                                ? 'bg-sky-500/20 text-sky-400 border border-sky-500/50 shadow-sm' 
+                                : 'bg-black/40 text-gray-400 hover:bg-white/10 hover:text-gray-200 border border-white/5'
+                            }`}
+                        >
+                            {filter.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex items-center gap-2 sm:border-l sm:border-white/10 sm:pl-3">
+                    <span className="text-xs text-gray-400 whitespace-nowrap">정렬기준:</span>
+                    <select 
+                        value={sortBy} 
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="bg-black/50 border border-white/10 rounded-lg text-sm text-gray-200 px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    >
+                        <option value="cumulative">누적 수익률순</option>
+                        {availableMonths.map(m => (
+                            <option key={m} value={m}>{m} 수익률순</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
         </div>
       </div>
 
       <div className="space-y-6">
         {categoryOrder.map(category => {
+            if (selectedType !== '전체' && category !== selectedType) return null;
+
             const assetsInCategory = groupedAssets[category as keyof typeof groupedAssets];
             if (assetsInCategory.length === 0) return null;
 

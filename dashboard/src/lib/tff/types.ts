@@ -4,6 +4,7 @@ export interface TffHoldingsRow {
     accountNumber?: string;
     productType?: string;
     name: string;
+    code?: string;
     beginValue: number;
     buyAmount: number;
     sellAmount: number;

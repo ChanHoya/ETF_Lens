@@ -116,9 +116,11 @@ export default function CumulativeView({ data }: Props) {
         </h4>
         
         {processedMonthlyData && processedMonthlyData.length > 0 ? (
-            <div className="w-full h-[400px]">
+          <div className="flex flex-col gap-6 w-full">
+            {/* 1. 금액 차트 (기말평가액, 수익금) */}
+            <div className="w-full h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={processedMonthlyData} margin={{ top: 20, right: 0, left: 0, bottom: 5 }}>
+                <ComposedChart data={processedMonthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} syncId="tff-charts">
                   <defs>
                     <linearGradient id="colorAsset" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#818cf8" stopOpacity={0.3}/>
@@ -147,68 +149,42 @@ export default function CumulativeView({ data }: Props) {
                     }}
                   />
                   <YAxis 
-                    yAxisId="left" 
                     stroke="#818cf8" 
                     fontSize={12} 
                     tickFormatter={formatShortMoney}
                     axisLine={false}
                     tickLine={false}
                     domain={['auto', 'auto']}
-                  />
-                  <YAxis 
-                    yAxisId="right" 
-                    orientation="right" 
-                    stroke="#f43f5e" 
-                    fontSize={12} 
-                    tickFormatter={(v) => v.toFixed(1) + '%'}
-                    axisLine={false}
-                    tickLine={false}
-                    domain={['auto', 'auto']}
+                    width={60}
                   />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1e1e2d', borderColor: '#ffffff20', borderRadius: '12px' }}
                     itemStyle={{ fontSize: '13px' }}
                     labelStyle={{ color: '#9ca3af', marginBottom: '8px' }}
                     formatter={(value: number, name: string) => {
-                      if (name.includes('수익률')) {
-                        return [value.toFixed(1) + '%', name];
-                      }
                       return [formatMoney(value) + '원', name];
                     }}
                   />
                   <Legend 
-                    wrapperStyle={{ paddingTop: '20px' }} 
+                    wrapperStyle={{ paddingTop: '10px' }} 
                     onMouseEnter={(e: any) => setHoveredDataKey(e.dataKey)}
                     onMouseLeave={() => setHoveredDataKey(null)}
                   />
-                  <ReferenceLine y={0} yAxisId="left" stroke="#ffffff30" strokeWidth={1} />
-                  <ReferenceLine y={0} yAxisId="right" stroke="#ffffff30" strokeWidth={1} />
+                  <ReferenceLine y={0} stroke="#ffffff30" strokeWidth={1} />
                   
                   {/* 배경으로 깔리는 영역형 차트 (기말평가액) */}
                   <Area 
-                    yAxisId="left"
                     type="monotone" 
                     dataKey="endValue" 
-                    name="기말 자산규모" 
+                    name="기말평가액" 
                     stroke="#818cf8" 
                     strokeWidth={3}
                     strokeOpacity={hoveredDataKey && hoveredDataKey !== 'endValue' ? 0.3 : 1}
                     fillOpacity={hoveredDataKey && hoveredDataKey !== 'endValue' ? 0.3 : 1} 
                     fill="url(#colorAsset)" 
                   />
-                  {/* 순입출금 바 차트 */}
-                  <Bar 
-                    yAxisId="left"
-                    dataKey="netInOut" 
-                    name="순입출금" 
-                    fill="#38bdf8" 
-                    fillOpacity={hoveredDataKey && hoveredDataKey !== 'netInOut' ? 0.2 : 1}
-                    radius={[4, 4, 0, 0]} 
-                    maxBarSize={40}
-                  />
                   {/* 수익금액 바 차트 */}
                   <Bar 
-                    yAxisId="left"
                     dataKey="profitAmount" 
                     name="월별 투자수익금" 
                     fill="#f43f5e"
@@ -224,7 +200,6 @@ export default function CumulativeView({ data }: Props) {
 
                   {/* 누적 투자수익금 라인/영역 차트 */}
                   <Area 
-                    yAxisId="left"
                     type="monotone" 
                     dataKey="accProfitAmount" 
                     name="누적 투자수익금" 
@@ -235,13 +210,60 @@ export default function CumulativeView({ data }: Props) {
                     fill="url(#colorProfit)"
                     dot={false}
                   />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
 
+            {/* 2. 수익률 차트 (TFF, KOSPI, S&P500) */}
+            <div className="w-full h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={processedMonthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }} syncId="tff-charts">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                  <XAxis 
+                    dataKey="period" 
+                    stroke="#ffffff50" 
+                    fontSize={12} 
+                    tickMargin={10} 
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
+                    tickFormatter={(tickItem, index) => {
+                      if (!tickItem) return '';
+                      const [year, month] = tickItem.split('-');
+                      const m = parseInt(month, 10).toString();
+                      if (index === 0 || month === '01') return `'${year.slice(2)}.${m}`;
+                      return m;
+                    }}
+                  />
+                  <YAxis 
+                    stroke="#f43f5e" 
+                    fontSize={12} 
+                    tickFormatter={(v) => v.toFixed(1) + '%'}
+                    axisLine={false}
+                    tickLine={false}
+                    domain={['auto', 'auto']}
+                    width={60}
+                  />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1e1e2d', borderColor: '#ffffff20', borderRadius: '12px' }}
+                    itemStyle={{ fontSize: '13px' }}
+                    labelStyle={{ color: '#9ca3af', marginBottom: '8px' }}
+                    formatter={(value: number, name: string) => {
+                      return [value.toFixed(1) + '%', name];
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '10px' }} 
+                    onMouseEnter={(e: any) => setHoveredDataKey(e.dataKey)}
+                    onMouseLeave={() => setHoveredDataKey(null)}
+                  />
+                  <ReferenceLine y={0} stroke="#ffffff30" strokeWidth={1} />
+                  
                   {/* 수익률 라인 차트 */}
                   <Line 
-                    yAxisId="right"
                     type="monotone" 
                     dataKey="returnRateDisp" 
-                    name="포트폴리오 수익률" 
+                    name="TFF 수익률" 
                     stroke="#f43f5e" 
                     strokeWidth={2} 
                     strokeOpacity={
@@ -252,7 +274,6 @@ export default function CumulativeView({ data }: Props) {
                     activeDot={{ r: 5 }}
                   />
                   <Line 
-                    yAxisId="right"
                     type="monotone" 
                     dataKey="kospiRateDisp" 
                     name="KOSPI 수익률" 
@@ -267,7 +288,6 @@ export default function CumulativeView({ data }: Props) {
                     dot={(!hoveredDataKey || hoveredDataKey === 'kospiRateDisp') ? { r: 2, fill: '#eab308' } : false}
                   />
                   <Line 
-                    yAxisId="right"
                     type="monotone" 
                     dataKey="sp500RateDisp" 
                     name="S&P500 수익률" 
@@ -284,6 +304,7 @@ export default function CumulativeView({ data }: Props) {
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
+          </div>
         ) : (
             <div className="h-[200px] flex items-center justify-center text-gray-500 border border-dashed border-white/10 rounded-xl">
                 월별 시계열 데이터가 존재하지 않습니다.

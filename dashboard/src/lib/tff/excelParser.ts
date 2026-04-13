@@ -36,6 +36,23 @@ function parseOptionalNumber(val: any): number | undefined {
     return undefined;
 }
 
+function parseOptionalPercentage(val: any): number | undefined {
+    if (val === undefined || val === null || val === '') return undefined;
+    // Excel stores percentages as floats (e.g., 84.5% = 0.845)
+    if (typeof val === 'number') return val * 100;
+    if (typeof val === 'string') {
+        const cleaned = val.replace(/,/g, '').trim();
+        if (cleaned === '' || cleaned === '-') return undefined;
+        if (cleaned.endsWith('%')) {
+             const p = parseFloat(cleaned.replace('%', ''));
+             return isNaN(p) ? undefined : p;
+        }
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? undefined : num;
+    }
+    return undefined;
+}
+
 export function parseTffExcel(buffer: ArrayBuffer): { data: TffFundData, rawSheets: any } {
     const workbook = XLSX.read(buffer, { type: 'array' });
     const rawSheets: Record<string, any[]> = {};
@@ -213,10 +230,10 @@ function parseCumulativeSheet(rows: any[][]): TffCumulativeSummary {
                 netInOut: parseNumber(rows[netInOutIdx]?.[c]),
                 endValue: parseNumber(endValRaw),
                 profitAmount: parseNumber(profitValRaw),
-                returnRate: parseOptionalNumber(rows[returnRateIdx]?.[c]) ?? 0,
-                kospiRate: parseOptionalNumber(rows[kospiIdx]?.[c]) ?? 0,
-                sp500Rate: parseOptionalNumber(rows[sp500Idx]?.[c]) ?? 0,
-                timeWeightedReturn: parseOptionalNumber(rows[timeWeightedIdx]?.[c]) ?? 0,
+                returnRate: parseOptionalPercentage(rows[returnRateIdx]?.[c]) ?? 0,
+                kospiRate: parseOptionalPercentage(rows[kospiIdx]?.[c]) ?? 0,
+                sp500Rate: parseOptionalPercentage(rows[sp500Idx]?.[c]) ?? 0,
+                timeWeightedReturn: parseOptionalPercentage(rows[timeWeightedIdx]?.[c]) ?? 0,
             };
 
             if (isTotal) {
@@ -390,14 +407,15 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
         const colMap: Record<string, number> = {};
         hRow.forEach((val, c) => {
             if (typeof val === 'string') {
-                if (val.includes('종목명')) colMap.name = c;
-                if (val.includes('기초평가')) colMap.begin = c;
-                if (val.includes('매수')) colMap.buy = c;
-                if (val.includes('매도')) colMap.sell = c;
-                if (val.includes('기말 평가')) colMap.end = c;
-                if (val.includes('배당/')) colMap.div = c;
-                if (val.includes('신용')) colMap.credit = c;
-                if (val.includes('투자손익')) colMap.pnl = c;
+                const clean = val.replace(/\s/g, '');
+                if (clean.includes('종목명') && colMap.name === undefined) colMap.name = c;
+                else if (clean.includes('투자손익') && colMap.pnl === undefined) colMap.pnl = c;
+                else if (clean.includes('기초평가') && colMap.begin === undefined) colMap.begin = c;
+                else if (clean.includes('기말평가') && colMap.end === undefined) colMap.end = c;
+                else if (clean.includes('매수') && !clean.includes('손익') && colMap.buy === undefined) colMap.buy = c;
+                else if (clean.includes('매도') && !clean.includes('손익') && colMap.sell === undefined) colMap.sell = c;
+                else if ((clean.includes('배당') || clean.includes('이자')) && colMap.div === undefined) colMap.div = c;
+                else if ((clean.includes('신용') || clean.includes('대차')) && colMap.credit === undefined) colMap.credit = c;
             }
         });
 
@@ -440,6 +458,7 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
 
             info.holdings.push({
                 name: nameVal,
+                code: (krTickers as Record<string, string>)[nameVal],
                 beginValue: parseNumber(rowData[colMap.begin]),
                 buyAmount: parseNumber(rowData[colMap.buy]),
                 sellAmount: parseNumber(rowData[colMap.sell]),

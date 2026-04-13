@@ -8,19 +8,21 @@ interface Props {
 }
 
 function categorizeAsset(name: string) {
+    const isEM = name.includes("차이나") || name.includes("항셍") || name.includes("인도") || name.includes("베트남") || name.includes("EM");
     const isUS = name.includes("미국") || name.includes("S&P") || name.includes("나스닥") || name.includes("다우") || name.includes("필라델피아") || name.includes("테크") || name.includes("글로벌");
-    const isBond = name.includes("채권") || name.includes("국고채") || name.includes("회사채") || name.includes("종합채권");
+    const isBond = name.includes("채권") || name.includes("국고채") || name.includes("국채") || name.includes("회사채") || name.includes("종합채권");
     const isCash = name.includes("머니마켓") || name.includes("CD") || name.includes("KOFR") || name.includes("현금") || name.includes("단기자금") || name.includes("파킹");
     const isCommodity = name.includes("금현물") || name.includes("은현물") || name.includes("원자재") || name.includes("골드") || name.includes("구리") || name.includes("원유");
 
-    if (isCommodity) return "원자재형";
+    if (isCommodity) return "대체자산";
     if (isBond) {
-        return isUS ? "미국채권형" : "국내채권형"; // 미국채권형, 국내채권형 분리
+        return (name.includes("미국") || name.includes("US")) ? "미국채권" : "국내채권";
     }
     if (isCash) return "현금/파킹형";
     // TDF나 기타 특별 자산 방어
     if (name.includes("TDF")) return "혼합형(TDF)";
     
+    if (isEM) return "신흥국형(EM)";
     if (isUS) return "미국주식형";
     return "국내주식형";
 }
@@ -28,11 +30,29 @@ function categorizeAsset(name: string) {
 const CATEGORY_COLORS: Record<string, string> = {
     "국내주식형": "#3b82f6",     // blue
     "미국주식형": "#f43f5e",     // rose
-    "국내채권형": "#0ea5e9",     // sky
-    "미국채권형": "#f59e0b",     // amber
-    "원자재형": "#eab308",       // yellow
+    "신흥국형(EM)": "#d946ef",   // fuchsia
+    "국내채권": "#0ea5e9",       // sky
+    "미국채권": "#f59e0b",       // amber
+    "대체자산": "#eab308",       // yellow
     "현금/파킹형": "#10b981",    // emerald
     "혼합형(TDF)": "#8b5cf6"     // violet
+};
+
+const PRIMARY_CATEGORY_MAPPING: Record<string, string> = {
+    "국내주식형": "주식형",
+    "미국주식형": "주식형",
+    "신흥국형(EM)": "주식형",
+    "국내채권": "채권형",
+    "미국채권": "채권형",
+    "대체자산": "기타",
+    "현금/파킹형": "기타",
+    "혼합형(TDF)": "기타"
+};
+
+const PRIMARY_COLORS: Record<string, string> = {
+    "주식형": "#6366f1", // indigo
+    "채권형": "#0ea5e9", // sky
+    "기타": "#10b981"    // emerald
 };
 
 export default function OverviewView({ data }: Props) {
@@ -59,32 +79,55 @@ export default function OverviewView({ data }: Props) {
 
     const isProfit = totalData.profitAmount >= 0;
 
-    // 3. Asset Allocation (Pie Chart)
+    // 3. Asset Allocation (2-Tier Pie Chart)
     const allocationData = useMemo(() => {
-        const map: Record<string, number> = {};
+        const primaryMap: Record<string, number> = {};
+        const secondaryMap: Record<string, number> = {};
         
-        // 종목별 평가액 합산
         latestInfo!.holdings.forEach(h => {
              const cat = categorizeAsset(h.name);
-             if (!map[cat]) map[cat] = 0;
-             map[cat] += h.endValue;
+             const pCat = PRIMARY_CATEGORY_MAPPING[cat] || "기타";
+             
+             if (!secondaryMap[cat]) secondaryMap[cat] = 0;
+             secondaryMap[cat] += h.endValue;
+
+             if (!primaryMap[pCat]) primaryMap[pCat] = 0;
+             primaryMap[pCat] += h.endValue;
         });
 
         // 계좌 잔고(예수금) 더하기
         const cashBalance = latestInfo!.summary.cashBalance || 0;
         if (cashBalance > 0) {
-            if (!map["현금/파킹형"]) map["현금/파킹형"] = 0;
-            map["현금/파킹형"] += cashBalance;
+            if (!secondaryMap["현금/파킹형"]) secondaryMap["현금/파킹형"] = 0;
+            secondaryMap["현금/파킹형"] += cashBalance;
+
+            const pCat = PRIMARY_CATEGORY_MAPPING["현금/파킹형"];
+            if (!primaryMap[pCat]) primaryMap[pCat] = 0;
+            primaryMap[pCat] += cashBalance;
         }
 
-        const pieData = Object.keys(map).map(k => ({
+        const primaryData = Object.keys(primaryMap).map(k => ({
             name: k,
-            value: map[k],
-            color: CATEGORY_COLORS[k] || "#64748b"
-        })).filter(d => d.value > 0);
+            value: primaryMap[k],
+            color: PRIMARY_COLORS[k] || "#64748b"
+        })).sort((a, b) => b.value - a.value);
 
-        // 내림차순 정렬
-        return pieData.sort((a, b) => b.value - a.value);
+        const secondaryData = Object.keys(secondaryMap).map(k => ({
+            name: k,
+            value: secondaryMap[k],
+            color: CATEGORY_COLORS[k] || "#64748b",
+            primaryCat: PRIMARY_CATEGORY_MAPPING[k] || "기타"
+        })).sort((a, b) => {
+            const pA = a.primaryCat;
+            const pB = b.primaryCat;
+            if (pA !== pB) {
+                const order = ["주식형", "채권형", "기타"];
+                return order.indexOf(pA) - order.indexOf(pB);
+            }
+            return b.value - a.value;
+        });
+
+        return { primaryData, secondaryData };
     }, [latestInfo]);
 
     // 4. Top Contributors / Detractors
@@ -158,11 +201,17 @@ export default function OverviewView({ data }: Props) {
                 <div className={`bg-gradient-to-br ${isProfit ? 'from-rose-900/20 to-slate-900/60 border-rose-500/10' : 'from-blue-900/20 to-slate-900/60 border-blue-500/10'} border rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden`}>
                     <div className={`flex items-center gap-2 mb-2 ${isProfit ? 'text-rose-300' : 'text-blue-300'} relative z-10`}>
                         <div className={`w-2 h-2 rounded-full ${isProfit ? 'bg-rose-400' : 'bg-blue-400'}`}></div>
-                        <span className="text-xs md:text-sm font-bold opacity-80">시간가중 누적수익률</span>
+                        <span className="text-xs md:text-xs font-bold opacity-80">시간평잔수익률 / 이익률</span>
                     </div>
                     <div className="relative z-10">
-                        <span className={`text-2xl md:text-3xl font-black tracking-tight ${isProfit ? 'text-rose-400' : 'text-blue-400'}`}>
-                            {formatPct(totalData.timeWeightedReturn)}
+                        <span className={`text-xl md:text-2xl font-black tracking-tight ${isProfit ? 'text-rose-400' : 'text-blue-400'}`}>
+                            {formatPct(totalData.timeWeightedReturn || totalData.returnRate)} 
+                            <span className="text-gray-500 font-medium mx-1.5 opacity-60">/</span> 
+                            <span className="text-lg md:text-xl opacity-90">
+                                {formatPct(totalData.beginValue + (totalData.netInOut > 0 ? totalData.netInOut : 0) > 0 
+                                    ? (totalData.profitAmount / (totalData.beginValue + (totalData.netInOut > 0 ? totalData.netInOut : 0))) * 100 
+                                    : 0)}
+                            </span>
                         </span>
                         <div className="text-[10px] text-gray-500 mt-1 uppercase font-mono tracking-wider">
                             vs S&P500 {formatPct(totalData.sp500Rate)} / KOSPI {formatPct(totalData.kospiRate)}
@@ -197,78 +246,145 @@ export default function OverviewView({ data }: Props) {
                     <h4 className="text-sm font-bold text-gray-300 mb-6 flex items-center gap-2 border-l-2 border-sky-500 pl-2">
                         <Layers className="w-4 h-4 text-sky-400" /> 자산군별 배분 비중
                     </h4>
-                    <div className="flex flex-col md:flex-row items-center justify-center flex-1 gap-6">
-                        <div className="w-[200px] h-[200px] shrink-0 relative">
-                            {/* Inner Circle Label */}
-                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total Assets</span>
-                                <span className="text-lg font-black text-gray-200">100%</span>
+                        <div className="flex flex-col md:flex-row items-center justify-center flex-1 gap-6 md:gap-10">
+                            <div className="w-[240px] h-[240px] shrink-0 relative">
+                                {/* Inner Circle Label */}
+                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+                                    <span className="text-[10px] text-gray-400 font-bold tracking-wider mt-1 text-center px-4 leading-tight">
+                                        {hoveredCategory || "Total Assets"}
+                                    </span>
+                                    <span className="text-xl font-black text-white mt-1">
+                                        {hoveredCategory ? (
+                                            allocationData.primaryData.find(p => p.name === hoveredCategory) 
+                                                ? ((allocationData.primaryData.find(p => p.name === hoveredCategory)!.value / totalData.endValue) * 100).toFixed(1) + "%"
+                                                : allocationData.secondaryData.find(s => s.name === hoveredCategory)
+                                                    ? ((allocationData.secondaryData.find(s => s.name === hoveredCategory)!.value / totalData.endValue) * 100).toFixed(1) + "%"
+                                                    : ""
+                                        ) : "100%"}
+                                    </span>
+                                </div>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={allocationData.primaryData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={50}
+                                            outerRadius={65}
+                                            dataKey="value"
+                                            stroke="none"
+                                            paddingAngle={2}
+                                        >
+                                            {allocationData.primaryData.map((entry, index) => {
+                                                const isHighlighted = hoveredCategory 
+                                                    ? (hoveredCategory === entry.name || allocationData.secondaryData.filter(s => s.primaryCat === entry.name).some(s => s.name === hoveredCategory))
+                                                    : false;
+                                                return (
+                                                    <Cell 
+                                                        key={`primary-${index}`} 
+                                                        fill={entry.color} 
+                                                        style={{
+                                                            transition: 'all 0.3s ease',
+                                                            opacity: hoveredCategory ? (isHighlighted ? 1 : 0.2) : 0.75,
+                                                            filter: isHighlighted ? 'brightness(1.1)' : 'none'
+                                                        }}
+                                                    />
+                                                );
+                                            })}
+                                        </Pie>
+                                        <Pie
+                                            data={allocationData.secondaryData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={75}
+                                            outerRadius={105}
+                                            paddingAngle={3}
+                                            dataKey="value"
+                                            stroke="none"
+                                            cornerRadius={3}
+                                        >
+                                            {allocationData.secondaryData.map((entry, index) => {
+                                                const isHighlighted = hoveredCategory 
+                                                    ? (hoveredCategory === entry.name || hoveredCategory === entry.primaryCat)
+                                                    : false;
+                                                return (
+                                                    <Cell 
+                                                        key={`secondary-${index}`} 
+                                                        fill={entry.color} 
+                                                        style={{
+                                                            transition: 'all 0.3s ease',
+                                                            opacity: hoveredCategory ? (isHighlighted ? 1 : 0.2) : 1,
+                                                            filter: isHighlighted ? 'brightness(1.15)' : 'none'
+                                                        }}
+                                                    />
+                                                );
+                                            })}
+                                        </Pie>
+                                        <Tooltip 
+                                            formatter={(val: number, name: string) => [`${formatMoney(val)} 원`, name]}
+                                            contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#e2e8f0', fontSize: '12px' }}
+                                            itemStyle={{ color: '#f8fafc', fontWeight: 'bold' }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
                             </div>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={allocationData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={65}
-                                        outerRadius={90}
-                                        paddingAngle={4}
-                                        dataKey="value"
-                                        stroke="none"
-                                        cornerRadius={4}
-                                    >
-                                        {allocationData.map((entry, index) => (
-                                            <Cell 
-                                                key={`cell-${index}`} 
-                                                fill={entry.color} 
-                                                style={{
-                                                    transition: 'all 0.3s ease',
-                                                    opacity: hoveredCategory ? (hoveredCategory === entry.name ? 1 : 0.2) : 1,
-                                                    filter: hoveredCategory === entry.name ? 'brightness(1.2)' : 'none'
-                                                }}
-                                            />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip 
-                                        formatter={(val: number) => [`${formatMoney(val)} 원`, '자산규모']}
-                                        contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#e2e8f0', fontSize: '12px' }}
-                                        itemStyle={{ color: '#f8fafc', fontWeight: 'bold' }}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div className="flex flex-col flex-1 w-full gap-3 justify-center pl-2">
-                            {allocationData.map((d, i) => {
-                                const pct = (d.value / totalData.endValue) * 100;
-                                const isHovered = hoveredCategory === d.name;
-                                return (
-                                    <div 
-                                        key={i} 
-                                        className={`flex flex-col gap-1 w-full cursor-default transition-all duration-300 ${hoveredCategory && !isHovered ? 'opacity-40' : 'opacity-100'}`}
-                                        onMouseEnter={() => setHoveredCategory(d.name)}
-                                        onMouseLeave={() => setHoveredCategory(null)}
-                                    >
-                                        <div className="flex justify-between items-end text-xs font-bold w-full pr-2">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }}></div>
-                                                <span className="text-gray-300">{d.name}</span>
+                            <div className="flex flex-col flex-1 w-full gap-2 justify-center pl-2 h-full">
+                                {allocationData.primaryData.map((p, pIdx) => {
+                                    const pPct = (p.value / totalData.endValue) * 100;
+                                    const children = allocationData.secondaryData.filter(s => s.primaryCat === p.name);
+                                    if (children.length === 0) return null;
+
+                                    const isPrimaryHovered = hoveredCategory === p.name;
+
+                                    return (
+                                        <div key={`p-${pIdx}`} className={`w-full transition-opacity duration-300 ${hoveredCategory && !isPrimaryHovered && !children.some(s => s.name === hoveredCategory) ? 'opacity-40' : 'opacity-100'}`}>
+                                            <div 
+                                                className="flex justify-between items-center text-sm font-black w-full text-white mb-1.5 pb-1 border-b border-white/5 cursor-default hover:bg-white/5 rounded px-1 -mx-1"
+                                                onMouseEnter={() => setHoveredCategory(p.name)}
+                                                onMouseLeave={() => setHoveredCategory(null)}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: p.color }}></div>
+                                                    <span>{p.name} <span className="text-[10px] text-gray-500 font-normal ml-1">({children.length})</span></span>
+                                                </div>
+                                                <span className="text-gray-300 font-bold">{pPct.toFixed(1)}%</span>
                                             </div>
-                                            <span className="text-gray-400">{pct.toFixed(1)}%</span>
+                                            <div className="flex flex-col gap-1.5 pl-3">
+                                                {children.map((d, i) => {
+                                                    const pct = (d.value / totalData.endValue) * 100;
+                                                    const isChildHovered = hoveredCategory === d.name;
+                                                    return (
+                                                        <div 
+                                                            key={i} 
+                                                            className={`flex flex-col gap-0.5 w-full cursor-default transition-all duration-300 ${hoveredCategory && !isChildHovered && !isPrimaryHovered ? 'opacity-40' : 'opacity-100'}`}
+                                                            onMouseEnter={() => setHoveredCategory(d.name)}
+                                                            onMouseLeave={() => setHoveredCategory(null)}
+                                                        >
+                                                            <div className="flex justify-between items-end text-xs font-bold w-full pr-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }}></div>
+                                                                    <span className="text-gray-400">{d.name}</span>
+                                                                </div>
+                                                                <span className="text-gray-500 font-medium">{pct.toFixed(1)}%</span>
+                                                            </div>
+                                                            <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                                                                <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: d.color }}></div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                        <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
-                                            <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: d.color }}></div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
-                </div>
 
                 {/* 성과 기여도 */}
                 <div className="bg-black/20 border border-white/5 rounded-2xl p-4 md:p-6 flex flex-col">
                     <h4 className="text-sm font-bold text-gray-300 mb-2 flex items-center gap-2 border-l-2 border-rose-500 pl-2">
-                        <TrendingUp className="w-4 h-4 text-rose-400" /> 수익 기여 종목 (Top 3 & Bottom 3)
+                        <TrendingUp className="w-4 h-4 text-rose-400" /> 올해 수익 기여 종목 (Top 3 & Bottom 3)
                     </h4>
                     <p className="text-[10px] text-gray-500 mb-6 font-medium pl-2">* 실제 평가수익금(절대금액) 기준으로 포트폴리오에 가장 영향력이 컸던 종목입니다.</p>
                     

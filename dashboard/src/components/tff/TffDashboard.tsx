@@ -114,7 +114,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                         </h2>
                         <p className="flex items-center gap-2 text-gray-400 text-xs md:text-sm">
                             Time Future Forum 포트폴리오 분석 시스템
-                            <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[10px] md:text-xs font-bold border border-emerald-500/20">{fundData.latestMonth || "N/A"} 데이터 연동</span>
+                            <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[10px] md:text-xs font-bold border border-emerald-500/20">'26년 {fundData.latestMonth || "N/A"} 데이터 연동</span>
                         </p>
                     </div>
 
@@ -211,26 +211,28 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                             )}
 
                             {activeSubTab === 'ytm' && fundData.ytm && (
-                                <PortfolioDetailView data={fundData.ytm} title="Year To Date (YTM) 상세 분석" />
+                                <PortfolioDetailView data={fundData.ytm} title="Year To Date (YTM) 상세 분석" onOpenDetail={onOpenDetail} />
                             )}
 
                             {activeSubTab === 'monthly' && (
                                 <div className="space-y-4">
-                                    <div className="flex items-center gap-4 mb-4 bg-white/5 p-3 rounded-xl border border-white/10 w-fit">
-                                        <span className="text-sm font-medium text-gray-300">조회 월 선택:</span>
-                                        <select 
-                                            value={selectedMonth}
-                                            onChange={(e) => setSelectedMonth(e.target.value)}
-                                            className="bg-black/50 border border-white/20 text-white text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-2 outline-none"
-                                        >
-                                            {Object.keys(fundData.monthlyMap).sort((a,b) => parseInt(a)-parseInt(b)).map(m => (
-                                                <option key={m} value={m}>{m} 상세 현황</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    
                                     {selectedMonth && fundData.monthlyMap[selectedMonth] ? (
-                                        <PortfolioDetailView data={fundData.monthlyMap[selectedMonth]} title={`${selectedMonth} 상세 편입자산 및 손익 기록`} />
+                                        <PortfolioDetailView 
+                                            data={fundData.monthlyMap[selectedMonth]} 
+                                            title="상세 편입자산 및 손익 기록" 
+                                            onOpenDetail={onOpenDetail} 
+                                            titleRightElement={
+                                                <select 
+                                                    value={selectedMonth}
+                                                    onChange={(e) => setSelectedMonth(e.target.value)}
+                                                    className="bg-black/50 border border-white/20 text-white text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-1.5 outline-none ml-2"
+                                                >
+                                                    {Object.keys(fundData.monthlyMap).sort((a,b) => parseInt(a)-parseInt(b)).map(m => (
+                                                        <option key={m} value={m}>{m} 상세 현황</option>
+                                                    ))}
+                                                </select>
+                                            }
+                                        />
                                     ) : (
                                         <div className="text-gray-400 py-10 text-center">월 데이터를 선택해주세요.</div>
                                     )}
