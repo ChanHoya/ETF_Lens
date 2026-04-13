@@ -557,6 +557,23 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
     }
   };
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handleTffFavAdd = (e: any) => {
+        const { groupName, items } = e.detail;
+        addGroupWithItems(groupName, items);
+        setActiveTab('select');
+        setIsFavModalOpen(true);
+      };
+      window.addEventListener('add_tff_group_to_favorites', handleTffFavAdd);
+      return () => {
+        window.removeEventListener('add_tff_group_to_favorites', handleTffFavAdd);
+      };
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const chartData = useMemo(() => {
     if (!data?.visual_data?.line_chart || !data?.visual_data?.etf_keys) return [];
     let rawData = data.visual_data.line_chart;

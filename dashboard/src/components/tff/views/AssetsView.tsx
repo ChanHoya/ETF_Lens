@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TffAssetReturns } from '../../../lib/tff/types';
-import { Activity } from 'lucide-react';
+import { Activity, Star } from 'lucide-react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell } from 'recharts';
 
 interface Props {
@@ -147,7 +147,29 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
 
             return (
                 <div key={category} className="space-y-2">
-                    <h4 className="text-sm font-bold text-sky-300 border-l-2 border-sky-500 pl-2 ml-1">{category}</h4>
+                    <div className="flex items-center gap-3">
+                        <h4 className="text-sm font-bold text-sky-300 border-l-2 border-sky-500 pl-2 ml-1">{category}</h4>
+                        <button 
+                            onClick={() => {
+                                const groupName = "TFF" + category.split(' ')[0];
+                                const items = assetsInCategory
+                                    .filter(a => a.code)
+                                    .map(a => ({ code: a.code, name: a.name }));
+                                
+                                if (items.length > 0) {
+                                    window.dispatchEvent(new CustomEvent('add_tff_group_to_favorites', {
+                                        detail: { groupName, items }
+                                    }));
+                                } else {
+                                    alert('즐겨찾기에 추가할 수 있는 종목 코드가 없습니다.');
+                                }
+                            }}
+                            className="bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 border border-yellow-500/30 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-colors group"
+                        >
+                            <Star className="w-3 h-3 group-hover:fill-yellow-500" />
+                            즐겨찾기 추가
+                        </button>
+                    </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-2">
                         {assetsInCategory.map((asset, idx) => {
                             const isUS = asset.name.includes("미국") || asset.name.includes("S&P") || asset.name.includes("나스닥") || asset.name.includes("다우");

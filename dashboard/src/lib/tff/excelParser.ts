@@ -125,6 +125,8 @@ function parseCumulativeSheet(rows: any[][]): TffCumulativeSummary {
         let returnRateIdx = -1;
         let kospiIdx = -1;
         let sp500Idx = -1;
+        let kospiTwIdx = -1;
+        let sp500TwIdx = -1;
 
         for(let i=0; i<30; i++) {
             if (rows[i]) {
@@ -144,10 +146,24 @@ function parseCumulativeSheet(rows: any[][]): TffCumulativeSummary {
                     returnRateIdx = i;
                 }
                 
-                if (fullRowStr.toUpperCase().includes("KOSPI") || fullRowStr.includes("코스피")) kospiIdx = i;
-                if (fullRowStr.toUpperCase().includes("S&P") || fullRowStr.toUpperCase().includes("SP500") || fullRowStr.includes("에스앤피")) sp500Idx = i;
+                const isKospi = fullRowStr.toUpperCase().includes("KOSPI") || fullRowStr.includes("코스피");
+                const isSp500 = fullRowStr.toUpperCase().includes("S&P") || fullRowStr.toUpperCase().includes("SP500") || fullRowStr.includes("에스앤피");
+                const isTw = fullRowStr.replace(/\s/g,'').includes("시간평잔");
+
+                if (isKospi) {
+                    if (isTw) kospiTwIdx = i;
+                    else kospiIdx = i;
+                }
+                if (isSp500) {
+                    if (isTw) sp500TwIdx = i;
+                    else sp500Idx = i;
+                }
             }
         }
+        
+        // 시간평잔 지표 최우선 적용 (사용자 요청 사항)
+        if (kospiTwIdx !== -1) kospiIdx = kospiTwIdx;
+        if (sp500TwIdx !== -1) sp500Idx = sp500TwIdx;
         
         console.log(`[Parse] baseIdx=${baseIdx}, netInOutIdx=${netInOutIdx}, endValueIdx=${endValueIdx}, profitIdx=${profitIdx}, returnRateIdx=${returnRateIdx}, kospiIdx=${kospiIdx}, sp500Idx=${sp500Idx}`);
         
