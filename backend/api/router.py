@@ -44,7 +44,18 @@ _etf_master_list = []
 
 
 @router.get("/etfs")
-async def get_etf_list():
+async def get_etf_list(db: AsyncSession = Depends(get_db)):
+    from db.models import ETFMaster
+    from sqlalchemy import select
+    try:
+        result = await db.execute(select(ETFMaster.code, ETFMaster.name).order_by(ETFMaster.name))
+        rows = result.all()
+        if rows:
+            return [{"code": r.code, "name": r.name} for r in rows]
+    except Exception as e:
+        logger.error(f"Error fetching ETF list from DB: {e}")
+
+    # Fallback if DB fetch fails
     global _etf_master_list
     if not _etf_master_list:
         try:
