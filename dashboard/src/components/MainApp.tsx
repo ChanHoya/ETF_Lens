@@ -14,13 +14,14 @@ import CoveredCallTab from "@/components/CoveredCallTab";
 import ChatBot from "@/components/ChatBot";
 import { useRouter } from "next/navigation";
 import MyAssetsView from "./MyAssetsView";
+import TffGateWrapper from "./tff/TffGateWrapper";
 
 type FavGroup = { id: string; name: string; items: { code: string; name: string }[] };
 
 const BRAND_KEYWORDS = ['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'];
 const THEME_KEYWORDS = ['커버드콜', '배당', '액티브', 'AI', '반도체', '로봇', '원자력', '2차전지', '조선', '방산', '금융', '바이오'];
 
-export default function MainApp({ initialTab = 'select', showMyTab = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my', showMyTab?: boolean }) {
+export default function MainApp({ initialTab = 'select', showMyTab = false, showTffTab = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff', showMyTab?: boolean, showTffTab?: boolean }) {
   const router = useRouter();
   const [slots, setSlots] = useState<{ search: string, code: string }[]>([
     { search: "", code: "" },
@@ -37,7 +38,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
   const [globalSearch, setGlobalSearch] = useState("");
   const [globalActive, setGlobalActive] = useState(false);
   const [period, setPeriod] = useState<string>('6M');
-  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff'>(initialTab);
 
   const [etfDictionary, setEtfDictionary] = useState<{ code: string, name: string }[]>([]);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState<number | null>(null);
@@ -981,7 +982,8 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
               { id: 'discover', label: '모니터링' },
               { id: 'etftracker', label: 'ETF추적기' },
               { id: 'etfcheck', label: 'ETF Check' },
-              ...(showMyTab ? [{ id: 'my', label: 'My' }] : [])
+              ...(showMyTab ? [{ id: 'my', label: 'My' }] : []),
+              ...(showTffTab ? [{ id: 'tff', label: 'TFF_Fund' }] : [])
             ].map(tab => {
               const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call'].includes(activeTab);
               const isActive = (tab.id === 'etfcheck' && isEtfCheckModalOpen) ||
@@ -1004,13 +1006,17 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
                       setActiveTab('my');
                       return;
                     }
+                    if (tab.id === 'tff') {
+                      setActiveTab('tff');
+                      return;
+                    }
 
                     if (tab.id === 'analysis') {
                       clearAllSlots();
                       setIsEtfCheckModalOpen(false);
                       return;
                     }
-                    setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my');
+                    setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff');
                     setIsEtfCheckModalOpen(false);
                     setNaverEtfCode(null);
                     setSelectedDetailEtf(null);
@@ -1538,6 +1544,11 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
           <MyAssetsView onOpenDetail={handleOpenDetail} onAnalyzePeers={handleAnalyzePeers} />
         </div>
 
+        {/* TFF Fund Section */}
+        <div style={{ display: activeTab === 'tff' ? 'block' : 'none', width: '100%' }}>
+          {activeTab === 'tff' && <TffGateWrapper onOpenDetail={handleOpenDetail} />}
+        </div>
+
         {/* Discover Section */}
         {activeTab === 'discover' && (
           <DiscoverTab />
@@ -1618,7 +1629,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false }: { 
                   setIsEtfCheckModalOpen(false);
                   return;
                 }
-                setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call');
+                setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff');
                 setIsEtfCheckModalOpen(false);
                 setNaverEtfCode(null);
                 setSelectedDetailEtf(null);

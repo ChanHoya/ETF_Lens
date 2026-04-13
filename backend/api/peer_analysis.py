@@ -143,43 +143,35 @@ def _match_category(name: str) -> dict | None:
 # 가격 조회 함수 (3단계 폴백)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _fetch_via_pykrx(code: str, days: int = 140) -> list[float]:
-    """1순위: pykrx — KRX 공식 데이터, SSL 문제 없음.
-    
-    KRX 종목코드는 6자리이며, 숫자만(예: 396500) 또는 숫자+알파벳(예: 0093A0) 모두 존재함.
-    pykrx는 숫자 6자리 코드만 조회 가능. 알파벳 포함 코드는 조회 불가.
-    """
-    # 알파벳 포함 코드는 pykrx 조회 불가
-    if not code.isdigit():
-        logger.debug(f"[pykrx] {code}: 알파벳 포함 코드 → skip")
-        return []
+def _fetch_via_fdr(code: str, days: int = 140) -> list[float]:
+    """1순위: FinanceDataReader — Naver Finance 연동 (빠르고 안정적이며 영문혼용코드 지원)."""
     try:
-        from pykrx import stock as pykrx_stock
+        import FinanceDataReader as fdr
         end_dt = datetime.now()
         start_dt = end_dt - timedelta(days=days)
-        df = pykrx_stock.get_market_ohlcv(
-            start_dt.strftime("%Y%m%d"),
-            end_dt.strftime("%Y%m%d"),
-            code
-        )
+        df = fdr.DataReader(code, start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d"))
         if df is None or df.empty:
             return []
+            
         close_col = None
         for cn in ["종가", "Close", "close"]:
             if cn in df.columns:
                 close_col = cn
                 break
+                
         if close_col is None:
             num_cols = df.select_dtypes(include="number").columns.tolist()
             if num_cols:
                 close_col = num_cols[-1]
             else:
                 return []
+                
         closes = [float(v) for v in df[close_col].dropna().tolist() if v > 0]
-        logger.info(f"[pykrx] {code}: {len(closes)} bars")
+        if closes:
+            logger.info(f"[FDR] {code}: {len(closes)} bars")
         return closes
     except Exception as e:
-        logger.warning(f"[pykrx] {code} failed: {e}")
+        logger.warning(f"[FDR] {code} failed: {e}")
         return []
 
 
@@ -223,7 +215,8 @@ def _fetch_via_yfinance(code: str) -> list[float]:
                 end=end_dt.strftime("%Y-%m-%d"),
                 auto_adjust=True
             )
-            if hist is not None and not hist.empty and len(hist) >= 20:
+            # 최소 2일(시작~끝 비교 가능) 이상의 데이터가 존재하면 인정.
+            if hist is not None and not hist.empty and len(hist) >= 2:
                 closes = [float(c) for c in hist["Close"].dropna().tolist() if c > 0]
                 if closes:
                     logger.info(f"[yfinance] {code}{suffix}: {len(closes)} bars")
@@ -273,7 +266,7 @@ def _fetch_via_kis(code: str) -> list[float]:
                                 kis_closes.append(c)
                         except Exception:
                             continue
-                    if len(kis_closes) >= 20:
+                    if len(kis_closes) >= 2:
                         logger.info(f"[KIS] {code}: {len(kis_closes)} bars (mrkt={mrkt_code})")
                         return kis_closes
     except Exception as e:
@@ -292,28 +285,36 @@ def _fetch_one_ks(code: str) -> list[float]:
 
     closes: list[float] = []
 
-    # 1순위: pykrx
-    closes = _fetch_via_pykrx(code)
+    # 1순위: FDR(FinanceDataReader)
+    closes = _fetch_via_fdr(code)
 
     # 2순위: Yahoo Finance v8
     if len(closes) < 22:
-        closes = _fetch_via_yf_v8(code)
+        c_new = _fetch_via_yf_v8(code)
+        if len(c_new) > len(closes):
+            closes = c_new
 
     # 3순위: yfinance 폴백
     if len(closes) < 22:
-        closes = _fetch_via_yfinance(code)
+        c_new = _fetch_via_yfinance(code)
+        if len(c_new) > len(closes):
+            closes = c_new
 
     # 4순위: KIS (토큰 있을 때만)
     if len(closes) < 22:
-        closes = _fetch_via_kis(code)
+        c_new = _fetch_via_kis(code)
+        if len(c_new) > len(closes):
+            closes = c_new
 
-    if len(closes) >= 22:
+    if len(closes) >= 2:
         _PRICE_CACHE[code] = closes
         _PRICE_CACHE_TIME[code] = now
-        return closes
+        if len(closes) >= 22:
+            return closes
 
-    logger.warning(f"[fetch] {code}: 모든 소스 실패 또는 데이터 부족 ({len(closes)} rows)")
-    return closes  # 빈 리스트나 부족한 데이터도 반환 (None 아님)
+    if len(closes) < 22:
+        logger.warning(f"[fetch] {code}: 모든 소스 시도 후 데이터 {len(closes)} rows (신규 상장 가능성)")
+    return closes  # 부족하더라도 찾은 최장 길이의 데이터 반환
 
 
 def _fetch_bench_closes(bench_sym: str) -> list[float]:
@@ -367,7 +368,7 @@ def _fetch_bench_closes(bench_sym: str) -> list[float]:
 
 def _calc_return_pct(closes: list[float], days: int) -> float | None:
     """최근 N 거래일 수익률(%). closes 부족하면 None."""
-    if len(closes) < days + 1:
+    if not closes or len(closes) < days + 1:
         return None
     end = closes[-1]
     start = closes[-(days + 1)]
@@ -610,12 +611,21 @@ async def get_peer_analysis(request: Request, db: AsyncSession = Depends(get_db)
     logger.info(f"[peer] Pre-fetching {len(uncached)}/{len(all_needed_codes)} tickers")
 
     loop = asyncio.get_event_loop()
-    for code_to_fetch in uncached:
-        try:
-            await loop.run_in_executor(None, _fetch_one_ks, code_to_fetch)
-        except Exception as e:
-            logger.warning(f"[peer pre-fetch] {code_to_fetch}: {e}")
-        await asyncio.sleep(0.2)   # pykrx / KIS 속도 제한 보호
+    
+    # KIS/Naver(pykrx) API 속도 제한 방지를 위해 최대 5개 동시 병렬 요청
+    sem = asyncio.Semaphore(5)
+    
+    async def fetch_with_sem(code_to_fetch: str):
+        async with sem:
+            try:
+                await loop.run_in_executor(None, _fetch_one_ks, code_to_fetch)
+            except Exception as e:
+                logger.warning(f"[peer pre-fetch] {code_to_fetch}: {e}")
+            # 개별 워커 내 가벼운 지연 부여
+            await asyncio.sleep(0.05)
+            
+    if uncached:
+        await asyncio.gather(*(fetch_with_sem(c) for c in uncached))
 
     # ── 3단계: 벤치마크 수익률 수집 ───────────────────────────────────────
     bench_cache: dict[str, tuple[float | None, float | None]] = {}

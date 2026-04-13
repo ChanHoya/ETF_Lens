@@ -87,11 +87,42 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
     if (cashBalance > 0) {
         groupMap['현금'].push({ name: '예수금·CMA', code: '', value: cashBalance, returnRate: 0, group: '현금', pct: 0, groupPct: 0 });
     }
+
+    // 종목 병합 로직 (계좌 통합)
+    const mergedObj: Record<string, any> = {};
     holdings.forEach((h: any) => {
         const val = h.eval_amount || 0;
         if (val <= 0) return;
-        const g = categorize(h.name, h.code);
-        groupMap[g].push({ name: h.name, code: h.code, value: val, returnRate: parseFloat(h.return_rate ?? 0), group: g, pct: 0, groupPct: 0 });
+        
+        // 종목코드보다 이름(띄어쓰기 제거)을 기준으로 병합 (A붙은 코드 등 오류 방지)
+        const key = h.name ? h.name.replace(/\s+/g, '').toUpperCase() : (h.code || 'UNKNOWN');
+        
+        if (!mergedObj[key]) {
+            mergedObj[key] = {
+                name: h.name,
+                code: h.code,
+                eval_amount: 0,
+                profit_loss: 0,
+                invested: 0
+            };
+        }
+        mergedObj[key].eval_amount += val;
+        mergedObj[key].profit_loss += (h.profit_loss || 0);
+        mergedObj[key].invested += (val - (h.profit_loss || 0));
+    });
+
+    Object.values(mergedObj).forEach((m: any) => {
+        const g = categorize(m.name, m.code);
+        const return_rate = m.invested > 0 ? (m.profit_loss / m.invested) * 100 : 0;
+        groupMap[g].push({ 
+            name: m.name, 
+            code: m.code, 
+            value: m.eval_amount, 
+            returnRate: return_rate, 
+            group: g, 
+            pct: 0, 
+            groupPct: 0 
+        });
     });
 
     // 정렬 + 비중 계산
@@ -187,6 +218,11 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
                                     const colWidth = colPct * 100; // vw% 기준 예상 너비
                                     const isNarrow = colWidth < 8;
                                     const isTiny   = colWidth < 5;
+                                    
+                                    // 대략적인 셀 높이 (최소 24px)
+                                    const approxHeight = Math.max(24, 520 * (cellHeightPct / 100));
+                                    const isShort = approxHeight < 40;
+                                    const isVeryShort = approxHeight < 28;
 
                                     return (
                                         <div
@@ -220,11 +256,12 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
 
                                             {/* 텍스트 — 너비/높이에 따라 단계적 표시 */}
                                             {!isTiny && (
-                                                <div className="relative z-10 flex flex-col items-center justify-center px-1 text-center leading-tight w-full overflow-hidden">
-                                                    {!isNarrow && (
+                                                <div className="relative z-10 flex flex-col items-center justify-center px-1 text-center w-full overflow-hidden"
+                                                    style={{ lineHeight: 1.1 }}>
+                                                    {!isNarrow && !isVeryShort && (
                                                         <p
                                                             className="text-white font-semibold truncate w-full text-center"
-                                                            style={{ fontSize: colWidth > 15 ? 11 : 9 }}
+                                                            style={{ fontSize: colWidth > 15 && !isShort ? 11 : 9 }}
                                                         >
                                                             {cell.name}
                                                         </p>
@@ -232,13 +269,13 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
                                                     <p
                                                         className="font-bold tabular-nums"
                                                         style={{
-                                                            fontSize: colWidth > 12 ? 11 : 9,
+                                                            fontSize: colWidth > 12 && !isVeryShort ? 11 : 9,
                                                             color: getReturnText(cell.returnRate),
                                                         }}
                                                     >
                                                         {fmtPct(cell.returnRate)}
                                                     </p>
-                                                    {!isNarrow && colWidth > 10 && (
+                                                    {!isNarrow && colWidth > 10 && !isShort && (
                                                         <p className="text-white/40 tabular-nums" style={{ fontSize: 9 }}>
                                                             {cell.pct.toFixed(1)}%
                                                         </p>

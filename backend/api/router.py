@@ -579,22 +579,46 @@ async def fetch_etf_hybrid(
         naver_name = await fetch_naver_stock_name(code)
         etf_name = naver_name or master.name
 
-        # 당일 실시간 현재가를 Naver에서 가져와 historical_data에도 추가
         naver_live = await fetch_naver_live_price(code)
         if naver_live and naver_live > 0:
             live_price = naver_live  # DB 캐시 대신 Naver fresh price 사용
-            from datetime import timezone, timedelta
+            from datetime import timezone, timedelta, datetime
             kst = timezone(timedelta(hours=9))
-            today_kst = datetime.now(kst).strftime("%Y-%m-%d")
-            # 오늘 날짜가 historical_data에 없으면 추가
-            if today_kst not in dates:
-                dates.append(today_kst)
-                prices.append(naver_live)
-                logger.info(f"[hybrid] {code} 당일({today_kst}) 실시간가 {naver_live} → historical_data 추가")
-            else:
-                # 이미 있으면 최신 가격으로 갱신
-                idx = dates.index(today_kst)
-                prices[idx] = naver_live
+            now_kst = datetime.now(kst)
+            today_kst = now_kst.strftime("%Y-%m-%d")
+            
+            if dates:
+                last_db_date_str = dates[-1]
+                last_db_date = datetime.strptime(last_db_date_str, "%Y-%m-%d").date()
+                today_date = now_kst.date()
+                
+                # 중간 이빨 빠진 영업일이 있다면 fdr로 보충
+                if (today_date - last_db_date).days > 1:
+                    try:
+                        import asyncio
+                        import FinanceDataReader as fdr
+                        start_str = (last_db_date + timedelta(days=1)).strftime("%Y-%m-%d")
+                        recent_df = await asyncio.to_thread(fdr.DataReader, code, start_str)
+                        if recent_df is not None and not recent_df.empty:
+                            for idx, row in recent_df.iterrows():
+                                dt_str = str(idx.date())
+                                if dt_str > last_db_date_str and dt_str <= today_kst:
+                                    if dt_str not in dates:
+                                        dates.append(dt_str)
+                                        prices.append(row["Close"])
+                    except Exception as e:
+                        logger.warning(f"[hybrid] {code} gap fill failed: {e}")
+            
+            # 오늘이 평일일 때만 naver_live를 당일 종가로 추가 (휴일 우주 방어)
+            if now_kst.date().weekday() < 5:
+                if today_kst not in dates:
+                    dates.append(today_kst)
+                    prices.append(naver_live)
+                    logger.info(f"[hybrid] {code} 당일({today_kst}) 실시간가 {naver_live} → historical_data 추가")
+                else:
+                    # 이미 있으면 최신 가격으로 갱신
+                    idx = dates.index(today_kst)
+                    prices[idx] = naver_live
 
         return {
             "etf_code": code,

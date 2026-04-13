@@ -265,7 +265,7 @@ function HoldingCard({ item, totalPortfolio, onOpenDetail, onAnalyzePeers }: { i
                 <div className="border-t border-white/5 px-4 py-3">
                     <p className="text-xs text-gray-600 flex items-center gap-1.5">
                         <Minus className="w-3 h-3" />
-                        {item.category === "기타" ? "동종 ETF 카테고리 미분류" : "수익률 데이터 없음"}
+                        {item.category === "기타" ? "동종 ETF 카테고리 미분류" : "출시 1개월 미만 종목이므로 비교 제외"}
                     </p>
                 </div>
             )}

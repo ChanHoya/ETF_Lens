@@ -47,6 +47,14 @@ export default function Modals({
     naverEtfCode, setNaverEtfCode
 }: ModalsProps) {
 
+    // ── ETF 상세 모달 스크롤 관리 ──────────────────────────────────────────
+    const detailScrollRef = React.useRef<HTMLDivElement>(null);
+    React.useEffect(() => {
+        if (selectedDetailEtf && detailScrollRef.current) {
+            detailScrollRef.current.scrollTop = 0;
+        }
+    }, [selectedDetailEtf]);
+
     // ── 기능 1: 검색 드롭다운 다중 선택 state ─────────────────────────────
     // { [groupId]: Set<etfCode> }
     const [searchSelected, setSearchSelected] = React.useState<{ [groupId: string]: Set<string> }>({});
@@ -506,8 +514,8 @@ export default function Modals({
 
             {/* ===== 2. ETF 상세 정보 Modal ===== */}
             {selectedDetailEtf && (
-                <div className="absolute top-0 inset-x-0 bottom-2 md:bottom-4 z-[300] flex animate-in fade-in duration-200">
-                    <div className="bg-[#0B0F19] border border-white/10 rounded-2xl w-full h-full overflow-hidden flex flex-col shadow-2xl shadow-indigo-500/10">
+                <div className="fixed top-0 inset-x-0 bottom-2 md:bottom-4 lg:bottom-4 z-[300] flex animate-in fade-in duration-200">
+                    <div className="bg-[#0B0F19] border border-white/10 rounded-b-2xl md:rounded-2xl w-full h-full overflow-hidden flex flex-col shadow-2xl shadow-indigo-500/10">
 
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 lg:px-8 border-b border-white/10 relative gap-3 bg-gradient-to-r from-blue-900/20 to-transparent">
                             <div>
@@ -528,7 +536,7 @@ export default function Modals({
                             </button>
                         </div>
 
-                        <div className="p-4 md:p-6 lg:p-8 overflow-y-auto flex-1 custom-scrollbar space-y-8 bg-[#0B0F19]">
+                        <div ref={detailScrollRef} className="p-4 md:p-6 lg:p-8 overflow-y-auto flex-1 custom-scrollbar space-y-8 bg-[#0B0F19]">
 
                             {/* 1. 시세 및 주주현황 */}
                             <div>
