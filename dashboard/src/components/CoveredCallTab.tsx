@@ -185,7 +185,7 @@ export default function CoveredCallTab({
 
         const fetchEtfs = async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/v1/analyze/etfs`);
+                const res = await fetch(`${API_BASE}/api/v1/analyze/etfs?t=${Date.now()}`);
                 if (res.ok) {
                     const data = await res.json();
                     setEtfDictionary(data);

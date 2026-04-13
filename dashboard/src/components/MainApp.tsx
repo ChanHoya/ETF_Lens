@@ -187,7 +187,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
   // Fetch ETF Master List on mount
   useEffect(() => {
 
-    fetch(`${API_BASE}/api/v1/analyze/etfs`)
+    fetch(`${API_BASE}/api/v1/analyze/etfs?t=${Date.now()}`)
       .then(res => res.json())
       .then(data => setEtfDictionary(data))
       .catch(err => console.error("ETF load error", err));
