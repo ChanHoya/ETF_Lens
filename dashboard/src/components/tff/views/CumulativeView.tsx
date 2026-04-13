@@ -140,6 +140,7 @@ export default function CumulativeView({ data }: Props) {
                     axisLine={false}
                     tickLine={false}
                     interval={0}
+                    padding={{ left: 20, right: 20 }}
                     tickFormatter={(tickItem, index) => {
                       if (!tickItem) return '';
                       const [year, month] = tickItem.split('-');
@@ -227,6 +228,7 @@ export default function CumulativeView({ data }: Props) {
                     axisLine={false}
                     tickLine={false}
                     interval={0}
+                    padding={{ left: 20, right: 20 }}
                     tickFormatter={(tickItem, index) => {
                       if (!tickItem) return '';
                       const [year, month] = tickItem.split('-');
