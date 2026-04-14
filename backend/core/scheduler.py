@@ -87,6 +87,14 @@ async def sync_etf_master_list():
         except Exception as e:
             print(f"[ETF Master Sync] fdr also failed: {e}")
 
+    # === 강제 추가 (pykrx/fdr 지연 우회용) ===
+    manual_inclusions = [
+        {"code": "0180V0", "name": "ACE 미국우주테크액티브", "issuer": "ACE"}
+    ]
+    for m in manual_inclusions:
+        if not any(r["code"] == m["code"] for r in rows):
+            rows.append(m)
+
     if not rows:
         print("[ETF Master Sync] No ETF data retrieved. Skipping DB update.")
         return
