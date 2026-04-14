@@ -28,14 +28,14 @@ function categorizeAsset(name: string) {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-    "국내주식형": "#3b82f6",     // blue
-    "미국주식형": "#f43f5e",     // rose
-    "신흥국형(EM)": "#d946ef",   // fuchsia
-    "국내채권": "#0ea5e9",       // sky
-    "미국채권": "#f59e0b",       // amber
-    "대체자산": "#eab308",       // yellow
-    "현금/파킹형": "#10b981",    // emerald
-    "혼합형(TDF)": "#8b5cf6"     // violet
+    "국내주식형": "#fca5a5",     // red-300 (옅은 빨강)
+    "미국주식형": "#f43f5e",     // rose-500 (진분홍/중간 빨강)
+    "신흥국형(EM)": "#f472b6",   // pink-400 (연분홍)
+    "국내채권": "#34d399",       // emerald-400 (초록)
+    "미국채권": "#10b981",       // emerald-500 (진초록)
+    "대체자산": "#fb923c",       // orange-400 (주황)
+    "현금/파킹형": "#fcd34d",    // amber-300 (연주황/노랑)
+    "혼합형(TDF)": "#fdba74",    // orange-300 (옅은 주황)
 };
 
 const PRIMARY_CATEGORY_MAPPING: Record<string, string> = {
@@ -50,9 +50,9 @@ const PRIMARY_CATEGORY_MAPPING: Record<string, string> = {
 };
 
 const PRIMARY_COLORS: Record<string, string> = {
-    "주식형": "#6366f1", // indigo
-    "채권형": "#0ea5e9", // sky
-    "기타": "#10b981"    // emerald
+    "주식형": "#ef4444", // red-500
+    "채권형": "#22c55e", // green-500
+    "기타": "#f97316"    // orange-500
 };
 
 export default function OverviewView({ data }: Props) {
