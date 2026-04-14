@@ -40,9 +40,11 @@ async def update_app_version(job_label: str = "") -> None:
 
 async def sync_etf_master_list():
     """
-    KRX에서 ETF 전체 코드+이름+운용사 목록을 가져와 ETFMaster에 upsert합니다.
-    pykrx (1순위) → fdr.StockListing (2순위) 방식으로 시도합니다.
-    매일 07:00에 실행 (경량 작업, 보통 1분 이내 완료).
+    KRX ETF 전체 코드+이름+운용사 목록을 ETFMaster에 upsert합니다.
+    1순위: pykrx (KRX 공식)
+    2순위: FinanceDataReader StockListing
+    3순위: Naver ETF 리스트 API
+    + manual_inclusions: 당일 신규 상장 종목 (API 반영 지연 우회)
     """
     print(f"[{datetime.now()}] [ETF Master Sync] Starting KRX ETF list sync...")
     rows: list[dict] = []
@@ -53,7 +55,6 @@ async def sync_etf_master_list():
         date_str = datetime.now().strftime("%Y%m%d")
         tickers = await asyncio.to_thread(krx_stock.get_etf_ticker_list, date_str)
         if not tickers:
-            # 주말/공휴일엔 빈 목록 → 직전 금요일로 재시도
             from datetime import timedelta
             for delta in range(1, 5):
                 prev = (datetime.now() - timedelta(days=delta)).strftime("%Y%m%d")
@@ -73,10 +74,10 @@ async def sync_etf_master_list():
     except Exception as e:
         print(f"[ETF Master Sync] pykrx failed: {e}")
 
-    # --- 2순위: finance_datareader ---
+    # --- 2순위: FinanceDataReader ---
     if not rows:
         try:
-            import finance_datareader as fdr  # type: ignore
+            import FinanceDataReader as fdr  # type: ignore
             df = await asyncio.to_thread(fdr.StockListing, "ETF/KR")
             for _, row in df.iterrows():
                 code = str(row.get("Symbol", row.get("Code", ""))).strip().zfill(6)
@@ -87,13 +88,37 @@ async def sync_etf_master_list():
         except Exception as e:
             print(f"[ETF Master Sync] fdr also failed: {e}")
 
-    # === 강제 추가 (pykrx/fdr 지연 우회용) ===
+    # --- 3순위: Naver ETF 리스트 API (pykrx/fdr 모두 실패 시) ---
+    if not rows:
+        try:
+            import urllib.request, json, ssl
+            ctx = ssl._create_unverified_context()
+            url = "https://finance.naver.com/api/sise/etfItemList.nhn"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            res = await asyncio.to_thread(
+                lambda: urllib.request.urlopen(req, timeout=10, context=ctx).read()
+            )
+            data = json.loads(res)
+            items = data.get("result", {}).get("etfItemList", [])
+            for item in items:
+                code = str(item.get("itemcode", "")).strip()
+                raw_name = item.get("itemname", "")
+                # Naver 리스트 API 이름은 인코딩 이슈가 있을 수 있어 개별 API로 이름 확정
+                if code and len(code) >= 6:
+                    rows.append({"code": code.zfill(6), "name": raw_name, "issuer": ""})
+            print(f"[ETF Master Sync] Naver API fallback: {len(rows)} ETFs loaded")
+        except Exception as e:
+            print(f"[ETF Master Sync] Naver API also failed: {e}")
+
+    # === 강제 추가: 신규 상장 종목 (pykrx/fdr/Naver에 반영 지연 우회) ===
     manual_inclusions = [
-        {"code": "0180V0", "name": "ACE 미국우주테크액티브", "issuer": "ACE"}
+        {"code": "0180V0", "name": "ACE 미국우주테크액티브", "issuer": "ACE"},
+        {"code": "0183J0", "name": "TIGER 미국우주테크", "issuer": "TIGER"},
     ]
     for m in manual_inclusions:
         if not any(r["code"] == m["code"] for r in rows):
             rows.append(m)
+            print(f"[ETF Master Sync] Manual inclusion: {m['code']} {m['name']}")
 
     if not rows:
         print("[ETF Master Sync] No ETF data retrieved. Skipping DB update.")

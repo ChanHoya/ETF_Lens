@@ -378,21 +378,73 @@ async def flush_cache():
 
 
 @router.post("/sync-etf-master")
-async def sync_etf_master_manual():
-    """ETF 마스터 리스트 (신규 상장 종목 등) 수동 동기화"""
+async def sync_etf_master_manual(db: AsyncSession = Depends(get_db)):
+    """
+    ETF 마스터 리스트 수동 동기화 + 신규 상장 종목 초기 가격 데이터 즉시 주입.
+    pykrx/fdr 지연 시에도 Naver 모바일 API로 이름·현재가를 직접 채웁니다.
+    """
+    from core.scheduler import sync_etf_master_list
+    from db.models import ETFMaster, ETFDailyPrice
+    from sqlalchemy import select
+    import json
+
     try:
-        from core.scheduler import sync_etf_master_list
         await sync_etf_master_list()
-        
-        # Clear frontend caches if needed, but not strictly needed here 
-        # since frontend uses ?t=Date.now()
         global _etf_master_list
         _etf_master_list = []
-        
-        return {"status": "ok", "message": "ETF 마스터 동기화 성공"}
     except Exception as e:
         logger.error(f"Manual ETF master sync failed: {e}")
         return {"status": "error", "message": str(e)}
+
+    # --- 신규 상장 종목 이름·가격 Naver 모바일 API로 즉시 보강 ---
+    NEW_LISTINGS = ["0180V0", "0183J0"]
+    enriched = []
+    for code in NEW_LISTINGS:
+        try:
+            # ① 정식 이름 확정
+            naver_name = await fetch_naver_stock_name(code)
+            # ② 현재가 조회
+            naver_price = await fetch_naver_live_price(code)
+
+            if naver_name or naver_price:
+                # ETFMaster 업데이트
+                res = await db.execute(select(ETFMaster).where(ETFMaster.code == code))
+                master = res.scalars().first()
+                if not master:
+                    master = ETFMaster(code=code)
+                    db.add(master)
+                if naver_name:
+                    master.name = naver_name
+                if naver_price:
+                    master.price = naver_price
+
+                # ETFDailyPrice – 당일 가격이 없으면 추가
+                if naver_price:
+                    from datetime import timezone, timedelta, datetime as dt
+                    today = dt.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
+                    exists = await db.execute(
+                        select(ETFDailyPrice).where(
+                            ETFDailyPrice.code == code,
+                            ETFDailyPrice.date == today
+                        )
+                    )
+                    if not exists.scalars().first():
+                        db.add(ETFDailyPrice(code=code, date=today, close=naver_price))
+
+                enriched.append({"code": code, "name": naver_name, "price": naver_price})
+
+        except Exception as e:
+            logger.warning(f"[sync-etf-master] enrichment failed for {code}: {e}")
+
+    try:
+        await db.commit()
+    except Exception as e:
+        logger.error(f"[sync-etf-master] DB commit error: {e}")
+
+    return {
+        "status": "ok",
+        "message": f"ETF 마스터 동기화 완료. 신규 종목 즉시 반영: {enriched}"
+    }
 
 
 async def fetch_korean_index_yahoo_v8(symbol: str, years: int = 10):
@@ -615,12 +667,12 @@ async def fetch_etf_hybrid(
             kst = timezone(timedelta(hours=9))
             now_kst = datetime.now(kst)
             today_kst = now_kst.strftime("%Y-%m-%d")
-            
+
             if dates:
                 last_db_date_str = dates[-1]
                 last_db_date = datetime.strptime(last_db_date_str, "%Y-%m-%d").date()
                 today_date = now_kst.date()
-                
+
                 # 중간 이빨 빠진 영업일이 있다면 fdr로 보충
                 if (today_date - last_db_date).days > 1:
                     try:
@@ -637,7 +689,24 @@ async def fetch_etf_hybrid(
                                         prices.append(row["Close"])
                     except Exception as e:
                         logger.warning(f"[hybrid] {code} gap fill failed: {e}")
-            
+            else:
+                # 차트 데이터 전혀 없음 (신규 상장 종목) → FDR로 IPO 이후 데이터 시도
+                try:
+                    import FinanceDataReader as fdr
+                    from datetime import timedelta, datetime as dt
+                    # 최대 30일 이내 데이터 시도
+                    start_str = (now_kst - timedelta(days=30)).strftime("%Y-%m-%d")
+                    recent_df = await asyncio.to_thread(fdr.DataReader, code, start_str)
+                    if recent_df is not None and not recent_df.empty:
+                        for idx, row in recent_df.iterrows():
+                            dt_str = str(idx.date())
+                            if dt_str not in dates:
+                                dates.append(dt_str)
+                                prices.append(float(row.get("Close", 0) or 0))
+                        logger.info(f"[hybrid] {code} 신규 상장 FDR 보충: {len(dates)}일치")
+                except Exception as e:
+                    logger.warning(f"[hybrid] {code} new listing FDR fetch failed: {e}")
+
             # 오늘이 평일일 때만 naver_live를 당일 종가로 추가 (휴일 우주 방어)
             if now_kst.date().weekday() < 5:
                 if today_kst not in dates:
