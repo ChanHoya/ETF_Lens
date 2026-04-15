@@ -396,42 +396,91 @@ async def sync_etf_master_manual(db: AsyncSession = Depends(get_db)):
         logger.error(f"Manual ETF master sync failed: {e}")
         return {"status": "error", "message": str(e)}
 
-    # --- 신규 상장 종목 이름·가격 Naver 모바일 API로 즉시 보강 ---
-    NEW_LISTINGS = ["0180V0", "0183J0"]
+    # --- 신규 상장 종목: IPO 이후 전체 가격 이력 + 실시간가 즉시 주입 ---
+    # listing_date: FDR 조회 시작 기준일 (상장일 전날 포함해서 시도)
+    NEW_LISTINGS = [
+        {"code": "0180V0", "name": "ACE 미국우주테크액티브", "ipo": "2026-04-13"},
+        {"code": "0183J0", "name": "TIGER 미국우주테크",     "ipo": "2026-04-13"},
+    ]
     enriched = []
-    for code in NEW_LISTINGS:
+    for item in NEW_LISTINGS:
+        code = item["code"]
+        ipo_start = item["ipo"]
         try:
-            # ① 정식 이름 확정
-            naver_name = await fetch_naver_stock_name(code)
-            # ② 현재가 조회
+            import FinanceDataReader as fdr
+            from datetime import timezone, timedelta, datetime as dt
+
+            kst = timezone(timedelta(hours=9))
+            now_kst = dt.now(kst)
+            today_str = now_kst.strftime("%Y-%m-%d")
+
+            # ① 정식 이름 확정 (Naver 모바일 API 우선)
+            naver_name = await fetch_naver_stock_name(code) or item["name"]
+            # ② 현재가 (Naver 실시간)
             naver_price = await fetch_naver_live_price(code)
 
-            if naver_name or naver_price:
-                # ETFMaster 업데이트
-                res = await db.execute(select(ETFMaster).where(ETFMaster.code == code))
-                master = res.scalars().first()
-                if not master:
-                    master = ETFMaster(code=code)
-                    db.add(master)
-                if naver_name:
-                    master.name = naver_name
-                if naver_price:
-                    master.price = naver_price
+            # ③ ETFMaster 업서트
+            res = await db.execute(select(ETFMaster).where(ETFMaster.code == code))
+            master = res.scalars().first()
+            if not master:
+                master = ETFMaster(code=code)
+                db.add(master)
+            master.name = naver_name
+            if naver_price:
+                master.price = naver_price
 
-                # ETFDailyPrice – 당일 가격이 없으면 추가
-                if naver_price:
-                    from datetime import timezone, timedelta, datetime as dt
-                    today = dt.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
-                    exists = await db.execute(
-                        select(ETFDailyPrice).where(
-                            ETFDailyPrice.code == code,
-                            ETFDailyPrice.date == today
+            # ④ FDR로 IPO 이후 전체 가격 이력 주입 (상장일 포함)
+            fdr_inserted = 0
+            try:
+                hist_df = await asyncio.to_thread(fdr.DataReader, code, ipo_start)
+                if hist_df is not None and not hist_df.empty:
+                    for idx, row in hist_df.iterrows():
+                        dt_str = str(idx.date())
+                        close_val = float(row.get("Close", 0) or 0)
+                        if close_val <= 0:
+                            continue
+                        exists = await db.execute(
+                            select(ETFDailyPrice).where(
+                                ETFDailyPrice.code == code,
+                                ETFDailyPrice.date == dt_str
+                            )
                         )
-                    )
-                    if not exists.scalars().first():
-                        db.add(ETFDailyPrice(code=code, date=today, close=naver_price))
+                        if not exists.scalars().first():
+                            db.add(ETFDailyPrice(code=code, date=dt_str, close=close_val))
+                            fdr_inserted += 1
+                        else:
+                            # 이미 있으면 최신값으로 갱신
+                            existing = (await db.execute(
+                                select(ETFDailyPrice).where(
+                                    ETFDailyPrice.code == code,
+                                    ETFDailyPrice.date == dt_str
+                                )
+                            )).scalars().first()
+                            if existing:
+                                existing.close = close_val
+            except Exception as fdr_e:
+                logger.warning(f"[sync-etf-master] FDR fetch failed for {code}: {fdr_e}")
 
-                enriched.append({"code": code, "name": naver_name, "price": naver_price})
+            # ⑤ 오늘 실시간가 강제 주입/갱신 (FDR보다 최신)
+            if naver_price and now_kst.date().weekday() < 5:
+                exists_today = await db.execute(
+                    select(ETFDailyPrice).where(
+                        ETFDailyPrice.code == code,
+                        ETFDailyPrice.date == today_str
+                    )
+                )
+                today_row = exists_today.scalars().first()
+                if today_row:
+                    today_row.close = naver_price
+                else:
+                    db.add(ETFDailyPrice(code=code, date=today_str, close=naver_price))
+
+            enriched.append({
+                "code": code,
+                "name": naver_name,
+                "price": naver_price,
+                "fdr_days_inserted": fdr_inserted,
+            })
 
         except Exception as e:
             logger.warning(f"[sync-etf-master] enrichment failed for {code}: {e}")
