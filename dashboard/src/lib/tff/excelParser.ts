@@ -110,6 +110,42 @@ export function parseTffExcel(buffer: ArrayBuffer): { data: TffFundData, rawShee
         parsedData.latestMonth = "YTM";
     }
 
+    // 4. 투자비중 시트에서 현금 기말평가금액 → cashBalance 반영
+    const allSheetNames = Object.keys(rawSheets);
+    console.log('[TffExcelParser] 전체 시트 목록:', allSheetNames);
+
+    const weightSheetKey = allSheetNames.find(k => k.replace(/\s/g, '').includes('투자비중'));
+    console.log('[TffExcelParser] 투자비중 시트:', weightSheetKey ?? '미발견');
+
+    let cashFromWeight = 0;
+    if (weightSheetKey) {
+        cashFromWeight = parseCashFromWeightSheet(rawSheets[weightSheetKey]);
+        console.log('[TffExcelParser] 투자비중 시트 현금값:', cashFromWeight);
+    }
+
+    // 투자비중 시트에서 못 찾은 경우 최신 월/YTM 시트에서 fallback 탐색
+    if (cashFromWeight === 0) {
+        const latestKey = parsedData.latestMonth;
+        const latestSheetRows = latestKey === 'YTM' ? rawSheets['YTM'] : rawSheets[latestKey];
+        if (latestSheetRows) {
+            cashFromWeight = parseCashFromWeightSheet(latestSheetRows);
+            console.log('[TffExcelParser] 최신 시트 현금 fallback:', cashFromWeight);
+        }
+    }
+
+    // OverviewView는 data.ytm 우선, 없으면 monthlyMap 최신 월을 사용
+    // → 둘 다에 cashBalance를 주입해서 어느 쪽이 선택되어도 반영되도록
+    if (cashFromWeight > 0) {
+        if (parsedData.ytm) {
+            parsedData.ytm.summary.cashBalance = cashFromWeight;
+        }
+        const latestKey = parsedData.latestMonth;
+        if (latestKey !== 'YTM' && parsedData.monthlyMap[latestKey]) {
+            parsedData.monthlyMap[latestKey].summary.cashBalance = cashFromWeight;
+        }
+    }
+
+
     console.log('[TffExcelParser] 파싱 완료:', parsedData);
     return { data: parsedData, rawSheets };
 }
@@ -500,4 +536,70 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
     }
 
     return info;
+}
+
+// 투자비중 시트에서 '현금' 행의 기말평가금액을 추출합니다.
+function parseCashFromWeightSheet(rows: any[][]): number {
+    try {
+        console.log('[WeightSheet] 총 행 수:', rows.length);
+        for (let i = 0; i < Math.min(rows.length, 10); i++) {
+            if (rows[i]) console.log(`[WeightSheet] row[${i}]:`, JSON.stringify(rows[i].slice(0, 10)));
+        }
+
+        let endValueColIdx = -1;
+        let nameColIdx = -1;
+        let headerRowIdx = -1;
+
+        const endValueKeywords = ['기말평가금액', '기말평가액', '기말금액', '평가금액'];
+        const nameKeywords = ['종목명', '자산명', '구분', '항목'];
+
+        for (let i = 0; i < Math.min(rows.length, 15); i++) {
+            const row = rows[i];
+            if (!row) continue;
+            let foundEnd = -1;
+            let foundName = -1;
+            row.forEach((v: any, c: number) => {
+                if (typeof v !== 'string') return;
+                const clean = v.replace(/\s/g, '');
+                endValueKeywords.forEach(kw => { if (clean.includes(kw) && foundEnd === -1) foundEnd = c; });
+                nameKeywords.forEach(kw => { if (clean.includes(kw) && foundName === -1) foundName = c; });
+            });
+            if (foundEnd >= 0) {
+                endValueColIdx = foundEnd;
+                nameColIdx = foundName;
+                headerRowIdx = i;
+                console.log(`[WeightSheet] 헤더 발견 row[${i}]: endValueCol=${endValueColIdx} nameCol=${nameColIdx}`);
+                break;
+            }
+        }
+
+        if (headerRowIdx === -1 || endValueColIdx === -1) {
+            console.warn('[WeightSheet] 기말평가금액 헤더 미발견. 전체 시트명 확인 필요');
+            return 0;
+        }
+
+        const cashKeywords = ['현금', '예수금', 'Cash'];
+        for (let r = headerRowIdx + 1; r < rows.length; r++) {
+            const row = rows[r];
+            if (!row) continue;
+
+            const checkCells = nameColIdx >= 0
+                ? [row[nameColIdx], row[nameColIdx + 1]].filter(Boolean)
+                : row.filter((v: any) => typeof v === 'string').slice(0, 5);
+
+            const isCashRow = checkCells.some((v: any) =>
+                typeof v === 'string' && cashKeywords.some(kw => v.trim().includes(kw))
+            );
+
+            if (isCashRow) {
+                const cashVal = parseNumber(row[endValueColIdx]);
+                console.log(`[WeightSheet] 현금 행 발견 row[${r}]:`, JSON.stringify(row.slice(0, endValueColIdx + 3)), '→ 기말평가금액:', cashVal);
+                return cashVal;
+            }
+        }
+        console.warn('[WeightSheet] 현금 행 미발견');
+    } catch (e) {
+        console.warn('[TffExcelParser] 투자비중 시트 현금 파싱 실패:', e);
+    }
+    return 0;
 }
