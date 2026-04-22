@@ -842,3 +842,267 @@ async def get_holdings_signals(request: Request, db: AsyncSession = Depends(get_
     results.sort(key=lambda x: x.get("eval_amount", 0), reverse=True)
     return {"status": "success", "count": len(results), "signals": results}
 
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 수동 원금 (UserPrincipal) CRUD
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/principal")
+async def get_principal(db: AsyncSession = Depends(get_db)):
+    """저장된 계좌별 수동 원금을 반환합니다."""
+    from sqlalchemy import select
+    from db.models import UserPrincipal
+
+    result = await db.execute(select(UserPrincipal).order_by(UserPrincipal.account_no))
+    rows = result.scalars().all()
+    return {
+        "status": "ok",
+        "principals": [
+            {
+                "account_no": r.account_no,
+                "principal": r.principal,
+                "label": r.label,
+                "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+            }
+            for r in rows
+        ],
+    }
+
+
+@router.post("/principal")
+async def upsert_principal(payload: dict, db: AsyncSession = Depends(get_db)):
+    """
+    계좌별 수동 원금을 저장/수정합니다.
+    payload: { "account_no": "ALL" | "81060777-01", "principal": 500000000, "label": "비고" }
+    """
+    from sqlalchemy import select
+    from db.models import UserPrincipal
+
+    account_no = payload.get("account_no", "ALL").strip()
+    principal = float(payload.get("principal", 0))
+    label = payload.get("label", "")
+
+    if principal < 0:
+        raise HTTPException(status_code=400, detail="principal must be >= 0")
+
+    result = await db.execute(
+        select(UserPrincipal).where(UserPrincipal.account_no == account_no)
+    )
+    row = result.scalar_one_or_none()
+
+    if row:
+        row.principal = principal
+        row.label = label
+    else:
+        db.add(UserPrincipal(account_no=account_no, principal=principal, label=label))
+
+    await db.commit()
+    return {"status": "ok", "account_no": account_no, "principal": principal}
+
+
+@router.delete("/principal/{account_no}")
+async def delete_principal(account_no: str, db: AsyncSession = Depends(get_db)):
+    """저장된 원금 항목을 삭제합니다."""
+    from sqlalchemy import select
+    from db.models import UserPrincipal
+
+    result = await db.execute(
+        select(UserPrincipal).where(UserPrincipal.account_no == account_no)
+    )
+    row = result.scalar_one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail="Not found")
+    await db.delete(row)
+    await db.commit()
+    return {"status": "ok"}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# KIS 자동 입출금 조회 → 누적 순투자금 / TWR 기반 수익률
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.get("/cashflow")
+async def get_cashflow_return(request: Request, db: AsyncSession = Depends(get_db)):
+    """
+    KIS TTTC8508R: 계좌별 입출금 내역을 최대 1년치 조회하여
+    누적 순투자금(총입금 - 총출금)과 현재 평가금액 기반 수익률을 반환합니다.
+    """
+    from dotenv import load_dotenv
+    from datetime import datetime, timezone, timedelta
+
+    load_dotenv(
+        dotenv_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
+        override=True,
+    )
+    kis_url = os.environ.get("KIS_URL_BASE", "https://openapi.koreainvestment.com:9443")
+    is_mock = "vts" in kis_url
+
+    # 날짜 범위 (최근 1년)
+    KST = timezone(timedelta(hours=9))
+    today = datetime.now(KST)
+    start_dt = (today - timedelta(days=365)).strftime("%Y%m%d")
+    end_dt = today.strftime("%Y%m%d")
+
+    # 계좌 / 토큰 확보
+    accounts_raw = [v.strip() for k, v in os.environ.items() if k.startswith("KIS_ACC") and v.strip()]
+    keypairs = []
+    for k, v in os.environ.items():
+        if k.startswith("KIS_APP_KEY") and v:
+            suffix = k.replace("KIS_APP_KEY", "")
+            secret = os.environ.get(f"KIS_APP_SECRET{suffix}", "")
+            if secret:
+                keypairs.append({"app_key": v.strip(), "app_secret": secret.strip()})
+
+    if not accounts_raw or not keypairs:
+        raise HTTPException(status_code=400, detail="KIS 설정 없음")
+
+    # 토큰 (캐시 재사용)
+    active_token = None
+    active_kp = None
+    import time as _time
+    async with httpx.AsyncClient(timeout=15) as cl:
+        for kp in keypairs:
+            cached = TOKEN_CACHE.get(kp["app_key"])
+            if cached and cached["expires_at"] > _time.time():
+                active_token = cached["access_token"]
+                active_kp = kp
+                break
+            try:
+                res = await cl.post(
+                    f"{kis_url}/oauth2/tokenP",
+                    json={"grant_type": "client_credentials",
+                          "appkey": kp["app_key"], "appsecret": kp["app_secret"]},
+                )
+                token = res.json().get("access_token")
+                if token:
+                    TOKEN_CACHE[kp["app_key"]] = {
+                        "access_token": token,
+                        "expires_at": _time.time() + 82800 - 3600,
+                    }
+                    active_token = token
+                    active_kp = kp
+                    break
+            except Exception as e:
+                logger.warning(f"[cashflow] token error: {e}")
+
+    if not active_token:
+        return {"status": "error", "detail": "토큰 발급 실패", "accounts": []}
+
+    # 계좌별 입출금 조회 (TTTC8508R)
+    tr_id = "VTTC8508R" if is_mock else "TTTC8508R"
+    account_results = []
+    total_deposit = 0.0
+    total_withdrawal = 0.0
+
+    async with httpx.AsyncClient(timeout=20) as cl:
+        for acc_raw in accounts_raw:
+            digits = "".join(filter(str.isdigit, acc_raw))
+            if len(digits) < 8:
+                continue
+            cano = digits[:8]
+            acnt = digits[8:] or "01"
+            account_no = f"{cano}-{acnt}"
+
+            headers = {
+                "content-type": "application/json; charset=utf-8",
+                "authorization": f"Bearer {active_token}",
+                "appkey": active_kp["app_key"],
+                "appsecret": active_kp["app_secret"],
+                "tr_id": tr_id,
+                "custtype": "P",
+            }
+            params = {
+                "CANO": cano,
+                "ACNT_PRDT_CD": acnt,
+                "INQR_STRT_DT": start_dt,
+                "INQR_END_DT": end_dt,
+                "SLL_BUY_DVSN_CD": "00",
+                "INQR_DVSN": "00",
+                "PDNO": "",
+                "CCLD_DVSN": "01",
+                "ORD_GNO_BRNO": "",
+                "ODNO": "",
+                "INQR_DVSN_3": "00",
+                "INQR_DVSN_1": "",
+                "CTX_AREA_FK100": "",
+                "CTX_AREA_NK100": "",
+            }
+
+            # 입출금 조회 — TTTC8508R 포맷 (입출금 현황)
+            cf_params = {
+                "CANO": cano,
+                "ACNT_PRDT_CD": acnt,
+                "INQR_STRT_DT": start_dt,
+                "INQR_END_DT": end_dt,
+                "RVSE_CNCL_DVSN_CD": "0",
+                "PRDT_TYPE_CD": "",
+                "CTX_AREA_FK100": "",
+                "CTX_AREA_NK100": "",
+            }
+
+            deposit_sum = 0.0
+            withdrawal_sum = 0.0
+            try:
+                cf_headers = headers.copy()
+                cf_url = f"{kis_url}/uapi/domestic-stock/v1/trading/inquire-deposit"
+                # 실제 입출금 조회 endpoint: inquire-transaction-history
+                cf_url2 = f"{kis_url}/uapi/domestic-stock/v1/trading/inquire-transaction-history"
+                cf_headers["tr_id"] = "TTTC8508R" if not is_mock else "VTTC8508R"
+
+                cf_res = await cl.get(cf_url2, headers=cf_headers, params=cf_params)
+                if cf_res.status_code == 200:
+                    cf_data = cf_res.json()
+                    if cf_data.get("rt_cd") == "0":
+                        for item in cf_data.get("output1", []):
+                            amt = float(item.get("trad_amt", 0) or 0)
+                            dvsn = item.get("afex_cpst_mthd_cd", "") or item.get("rvse_cncl_dvsn_cd", "")
+                            # 입금(이체입금 등)
+                            in_amt = float(item.get("dpst_amt", 0) or 0)
+                            out_amt = float(item.get("wdrl_amt", 0) or 0)
+                            deposit_sum += in_amt
+                            withdrawal_sum += out_amt
+                    else:
+                        logger.warning(f"[cashflow] {account_no}: {cf_data.get('msg1')}")
+            except Exception as e:
+                logger.error(f"[cashflow] {account_no} inquire error: {e}")
+
+            net_invested = deposit_sum - withdrawal_sum
+            total_deposit += deposit_sum
+            total_withdrawal += withdrawal_sum
+
+            account_results.append({
+                "account_no": account_no,
+                "deposit_sum": deposit_sum,
+                "withdrawal_sum": withdrawal_sum,
+                "net_invested": net_invested,
+                "period": f"{start_dt[:4]}.{start_dt[4:6]}.{start_dt[6:]} ~ {end_dt[:4]}.{end_dt[4:6]}.{end_dt[6:]}",
+            })
+
+            import asyncio as _aio
+            await _aio.sleep(0.8)
+
+    total_net = total_deposit - total_withdrawal
+
+    # 포트폴리오 총 평가금액 가져오기 (캐시에서)
+    total_eval = 0.0
+    global _PORTFOLIO_CACHE
+    if _PORTFOLIO_CACHE:
+        total_eval = float(_PORTFOLIO_CACHE.get("kis_raw", {}).get("summary", {}).get("total_eval_amount", 0))
+
+    # 수익률 계산
+    auto_return_rate = None
+    if total_net > 0 and total_eval > 0:
+        auto_return_rate = round((total_eval - total_net) / total_net * 100, 2)
+
+    return {
+        "status": "ok",
+        "period": f"{start_dt} ~ {end_dt}",
+        "total_deposit": total_deposit,
+        "total_withdrawal": total_withdrawal,
+        "total_net_invested": total_net,
+        "total_eval_amount": total_eval,
+        "auto_return_rate": auto_return_rate,
+        "accounts": account_results,
+        "note": "KIS TTTC8508R 입출금 내역 기반 (최근 1년). 1년 이전 입금액은 미반영됩니다.",
+    }
+

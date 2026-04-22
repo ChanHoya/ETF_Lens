@@ -155,3 +155,14 @@ class SharedPortfolio(Base):
     pin_hash = Column(String, nullable=False)   # sha256(user_pin) — 삭제 인증용
     download_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class UserPrincipal(Base):
+    """사용자가 직접 입력한 계좌별 초기 투자 원금"""
+    __tablename__ = "user_principal"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    account_no = Column(String, index=True, nullable=False)  # e.g. '81060777-01' or 'ALL'
+    principal = Column(Float, nullable=False)                # 원금 (원)
+    label = Column(String, nullable=True)                    # 사용자 메모 (선택)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
