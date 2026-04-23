@@ -1,0 +1,26 @@
+{
+  "status": "complete",
+  "project_type": "brownfield",
+  "current_section": "complete",
+  "current_question": 0,
+  "completed_sections": ["product", "guidelines", "tech_stack", "workflow", "styleguides"],
+  "answers": {
+    "project_name": "ETF Lens (ETF One)",
+    "product_type": "Web SaaS — ETF 분석 대시보드",
+    "target_users": "한국 개인 ETF 투자자",
+    "tech_stack": "FastAPI + Next.js 16 + PostgreSQL (Render) + Vercel",
+    "workflow": "main 브랜치 직접 커밋, Render 자동 배포"
+  },
+  "files_created": [
+    "conductor/index.md",
+    "conductor/product.md",
+    "conductor/product-guidelines.md",
+    "conductor/tech-stack.md",
+    "conductor/workflow.md",
+    "conductor/tracks.md",
+    "conductor/code_styleguides/python.md",
+    "conductor/code_styleguides/typescript.md"
+  ],
+  "started_at": "2026-04-23T08:33:00+09:00",
+  "last_updated": "2026-04-23T08:33:00+09:00"
+}
