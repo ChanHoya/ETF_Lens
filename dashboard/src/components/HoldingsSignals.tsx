@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { API_BASE } from "@/lib/apiConfig";
 import { RefreshCw, TrendingUp, TrendingDown, Minus, Trophy, BarChart2, Target, Layers } from "lucide-react";
+import { useTouchTap } from "@/hooks/useTouchTap";
 
 interface HoldingsSignalsProps {
     isAuthorized: boolean;
@@ -89,10 +90,14 @@ function PeerBarChart({ peers, period, onOpenDetail }: { peers: any[]; period: "
                 const val: number = p[key];
                 const barW = Math.abs(val) / max * 100;
                 const isPos = val >= 0;
+                // useTouchTap: 드래그 후 손가락 뗄 때 팝업 방지
+                // eslint-disable-next-line react-hooks/rules-of-hooks
+                const tapProps = useTouchTap(() => onOpenDetail && onOpenDetail(p.code));
                 return (
                     <div 
                         key={i} 
                         onClick={() => onOpenDetail && onOpenDetail(p.code)}
+                        {...tapProps}
                         className={`flex items-center gap-2 text-[10px] rounded px-1.5 py-0.5 ${p.is_mine ? "bg-indigo-500/15 border border-indigo-500/30" : "border border-transparent"} ${onOpenDetail ? "cursor-pointer hover:bg-white/10" : ""}`}
                     >
                         <span className="w-4 text-gray-600 flex-shrink-0 font-mono">{i + 1}</span>
@@ -121,6 +126,8 @@ function PeerBarChart({ peers, period, onOpenDetail }: { peers: any[]; period: "
 function HoldingCard({ item, totalPortfolio, onOpenDetail, onAnalyzePeers }: { item: any; totalPortfolio: number; onOpenDetail?: (code: string) => void, onAnalyzePeers?: (items: any[]) => void }) {
     const [showPeers, setShowPeers] = useState(false);
     const [peerPeriod, setPeerPeriod] = useState<"1m" | "3m">("1m");
+    // 종목명 탭: 드래그 후 손가락 뗄 때 상세 팝업 방지
+    const nameTapProps = useTouchTap(() => onOpenDetail && onOpenDetail(item.code));
 
     // 카테고리가 '기타'가 아니고, 내 종목 수익률이 하나라도 있으면 성과 블록 표시
     const hasPeer = item.category !== "기타" && (item.return_1m !== null || item.return_3m !== null);
@@ -135,6 +142,7 @@ function HoldingCard({ item, totalPortfolio, onOpenDetail, onAnalyzePeers }: { i
                         <p 
                             className="font-bold text-white text-sm leading-tight cursor-pointer hover:underline"
                             onClick={() => onOpenDetail && onOpenDetail(item.code)}
+                            {...nameTapProps}
                         >
                             {item.name}
                         </p>

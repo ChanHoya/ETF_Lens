@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import PasswordGate from "../components/PasswordGate";
+import PortraitLockScreen from "../components/PortraitLockScreen";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {/* 모바일/태블릿 세로 모드 시 회전 안내 오버레이 */}
+        <PortraitLockScreen />
         <PasswordGate>
           {children}
         </PasswordGate>
