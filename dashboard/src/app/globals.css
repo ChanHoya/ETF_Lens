@@ -8,6 +8,20 @@ body {
   /* gray-100 */
   background-color: #030712;
   /* gray-950 */
+  /* iOS Safari: 스크롤 관성 */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* iOS Safari: 버튼/링크 터치 시 파란 하이라이트 제거 */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS Safari: overflow-y-auto 컨테이너에 관성 스크롤 */
+.overflow-y-auto,
+.overflow-auto,
+.overflow-y-scroll {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* 모바일 하단 네비게이션 높이 만큼 콘텐츠 여백 확보 */

@@ -20,17 +20,22 @@ export default function TffGateWrapper({ onOpenDetail }: Props) {
 
     useEffect(() => {
         setMounted(true);
-        if (sessionStorage.getItem(SESSION_KEY) === 'true') {
-            setAuthenticated(true);
-        } else {
-            setTimeout(() => inputRef.current?.focus(), 100);
+        try {
+            if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+                setAuthenticated(true);
+            } else {
+                setTimeout(() => inputRef.current?.focus(), 100);
+            }
+        } catch {
+            // iOS 시크릿 모드 등 sessionStorage 불가 시 미인증 유지
+            setAuthenticated(false);
         }
     }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (input === CORRECT_PASSWORD) {
-            sessionStorage.setItem(SESSION_KEY, 'true');
+            try { sessionStorage.setItem(SESSION_KEY, 'true'); } catch { /* 시크릿 모드 무시 */ }
             setAuthenticated(true);
         } else {
             setError(true);
@@ -51,7 +56,7 @@ export default function TffGateWrapper({ onOpenDetail }: Props) {
 
     // 암호 입력 화면
     return (
-        <div className="flex-1 flex flex-col items-center justify-center w-full min-h-[60vh] relative z-10 animate-in fade-in duration-500">
+        <div className="flex-1 flex flex-col items-center justify-center w-full min-h-[60vh] relative z-10">
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-sky-600/10 rounded-full blur-[100px]" />
             </div>
@@ -71,7 +76,7 @@ export default function TffGateWrapper({ onOpenDetail }: Props) {
 
                 <form
                     onSubmit={handleSubmit}
-                    className={`w-full flex flex-col gap-4 ${shaking ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}
+                    className={`w-full flex flex-col gap-4 ${shaking ? 'animate-shake' : ''}`}
                 >
                     <div className="relative">
                         <input
@@ -86,7 +91,7 @@ export default function TffGateWrapper({ onOpenDetail }: Props) {
                     </div>
 
                     {error && (
-                        <p className="text-red-400 text-xs text-center animate-in fade-in duration-200">
+                        <p className="text-red-400 text-xs text-center transition-opacity duration-200">
                             PIN 번호가 올바르지 않습니다
                         </p>
                     )}
@@ -100,17 +105,7 @@ export default function TffGateWrapper({ onOpenDetail }: Props) {
                 </form>
             </div>
 
-            <style jsx global>{`
-                @keyframes shake {
-                    0%, 100% { transform: translateX(0); }
-                    15%       { transform: translateX(-8px); }
-                    30%       { transform: translateX(8px); }
-                    45%       { transform: translateX(-6px); }
-                    60%       { transform: translateX(6px); }
-                    75%       { transform: translateX(-3px); }
-                    90%       { transform: translateX(3px); }
-                }
-            `}</style>
+
         </div>
     );
 }
