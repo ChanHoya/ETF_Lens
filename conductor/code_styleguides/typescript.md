@@ -1,5 +1,8 @@
 # TypeScript / React Style Guide — ETF Lens Dashboard
 
+> **제1 원칙**: [`conductor/index.md` → Karpathy's Laws](../index.md) 준수.
+> 단순함 우선 · 외과적 변경 · 구현 전 질문.
+
 ## 기본 규칙
 
 - TypeScript strict mode, `any` 최소화

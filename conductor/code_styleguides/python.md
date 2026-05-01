@@ -1,5 +1,8 @@
 # Python Style Guide — ETF Lens Backend
 
+> **제1 원칙**: [`conductor/index.md` → Karpathy's Laws](../index.md) 준수.
+> 단순함 우선 · 외과적 변경 · 구현 전 질문.
+
 ## 기본 규칙
 
 - Python 3.11+, 타입 힌트 사용 권장
