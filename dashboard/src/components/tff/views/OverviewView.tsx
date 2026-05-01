@@ -300,7 +300,7 @@ export default function OverviewView({ data }: Props) {
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
-                        <div className="flex flex-col flex-1 w-full gap-4 justify-center pl-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                        <div className="flex flex-col flex-1 w-full gap-4 justify-start pl-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                             {allocationData.primaryData.map((p, pIdx) => {
                                 const pPct = (p.value / totalData.endValue) * 100;
                                 const children = allocationData.secondaryData.filter(s => s.primaryCat === p.name);
