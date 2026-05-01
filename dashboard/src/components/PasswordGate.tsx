@@ -15,18 +15,22 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
 
     useEffect(() => {
         setMounted(true);
-        if (sessionStorage.getItem(SESSION_KEY) === 'true') {
-            setAuthenticated(true);
-        } else {
-            // 자동 포커스
-            setTimeout(() => inputRef.current?.focus(), 100);
+        try {
+            if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+                setAuthenticated(true);
+            } else {
+                setTimeout(() => inputRef.current?.focus(), 100);
+            }
+        } catch {
+            // 시크릿 모드 등 sessionStorage 접근 불가 시 미인증 상태 유지
+            setAuthenticated(false);
         }
     }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (input === CORRECT_PASSWORD) {
-            sessionStorage.setItem(SESSION_KEY, 'true');
+            try { sessionStorage.setItem(SESSION_KEY, 'true'); } catch { /* 시크릿 모드 무시 */ }
             setAuthenticated(true);
         } else {
             setError(true);
@@ -70,7 +74,7 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
                 {/* 비밀번호 입력 폼 */}
                 <form
                     onSubmit={handleSubmit}
-                    className={`w-full flex flex-col gap-4 ${shaking ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}
+                    className={`w-full flex flex-col gap-4 ${shaking ? 'animate-shake' : ''}`}
                 >
                     <div className="relative">
                         <input
@@ -86,7 +90,7 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
                     </div>
 
                     {error && (
-                        <p className="text-red-400 text-sm text-center animate-in fade-in duration-200">
+                        <p className="text-red-400 text-sm text-center transition-opacity duration-200">
                             비밀번호가 올바르지 않습니다
                         </p>
                     )}
@@ -101,18 +105,6 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
 
                 <p className="text-xs text-gray-600">© Hoya 2026 · Private Access Only</p>
             </div>
-
-            <style jsx global>{`
-                @keyframes shake {
-                    0%, 100% { transform: translateX(0); }
-                    15%       { transform: translateX(-8px); }
-                    30%       { transform: translateX(8px); }
-                    45%       { transform: translateX(-6px); }
-                    60%       { transform: translateX(6px); }
-                    75%       { transform: translateX(-3px); }
-                    90%       { transform: translateX(3px); }
-                }
-            `}</style>
         </div>
     );
 }

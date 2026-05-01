@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, Info, Hash } from 'lucide-react';
 
 export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: () => void, initialError: string | null }) {
     const [pin, setPin] = useState('');
-    const [hasExistingPin, setHasExistingPin] = useState(!!localStorage.getItem("etf_lens_pin"));
+    const [hasExistingPin, setHasExistingPin] = useState(false); // SSR-safe: useEffect에서 초기화
     const [setupPin, setSetupPin] = useState('');
     const [error, setError] = useState(initialError || '');
+
+    // localStorage는 클라이언트 전용 — useEffect에서 안전하게 접근
+    useEffect(() => {
+        setHasExistingPin(!!localStorage.getItem("etf_lens_pin"));
+    }, []);
 
     const handlePinLogin = (e: React.FormEvent) => {
         e.preventDefault();
