@@ -19,18 +19,27 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
     useEffect(() => {
         // 초기 마운트 시 세션스토리지 확인
         if (typeof window !== "undefined") {
-            const savedSelected = sessionStorage.getItem("kis_authorized");
-            if (savedSelected === "true") {
-                setIsAuthorized(true);
-            } else {
-                setIsLoading(false); // 미인증 시 로딩 애니메이션 종료하고 패스워드 모달 전시
+            try {
+                const savedSelected = sessionStorage.getItem("kis_authorized");
+                if (savedSelected === "true") {
+                    setIsAuthorized(true);
+                } else {
+                    setIsLoading(false); // 미인증 시 로딩 애니메이션 종료하고 패스워드 모달 전시
+                }
+            } catch (e) {
+                console.warn("sessionStorage 접근 실패:", e);
+                setIsLoading(false); // 접근 불가 시에도 로딩은 멈추고 모달을 보여줌
             }
         }
     }, []);
 
     useEffect(() => {
         if (isAuthorized && typeof window !== "undefined") {
-            sessionStorage.setItem("kis_authorized", "true");
+            try {
+                sessionStorage.setItem("kis_authorized", "true");
+            } catch (e) {
+                console.warn("sessionStorage 저장 실패:", e);
+            }
         }
     }, [isAuthorized]);
 
