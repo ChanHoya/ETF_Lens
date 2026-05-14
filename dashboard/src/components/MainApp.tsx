@@ -999,8 +999,8 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
               { id: 'discover', label: '모니터링' },
               { id: 'etftracker', label: 'ETF추적기' },
               { id: 'etfcheck', label: 'ETF Check' },
-              ...(showMyTab ? [{ id: 'my', label: 'My' }] : []),
-              ...(showTffTab ? [{ id: 'tff', label: 'TFF_Fund' }] : [])
+              ...(showTffTab ? [{ id: 'tff', label: 'TFF_Fund' }] : []),
+              ...(showMyTab ? [{ id: 'my', label: 'My' }] : [])
             ].map(tab => {
               const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call'].includes(activeTab);
               const isActive = (tab.id === 'etfcheck' && isEtfCheckModalOpen) ||
