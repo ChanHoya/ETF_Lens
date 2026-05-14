@@ -140,14 +140,20 @@ export default function InvestmentReturnCard({ totalEvalAmount, cashBalance }: P
                 <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-1 flex-1 max-w-[60%]">
                         <div className="flex justify-between text-[11px] font-bold text-gray-500 px-1">
-                            <span>원금 대비 평가 비중</span>
+                            <span>현 자산 총액 대비 원금 비중</span>
                             <span>{fmtShort(currentTotalAsset)} 기준</span>
                         </div>
-                        <div className="relative w-full h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                        <div className="relative w-full h-4 bg-white/5 rounded-full overflow-hidden border border-white/5">
                             <div
-                                className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full transition-all duration-1000"
+                                className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full transition-all duration-1000 flex items-center justify-center"
                                 style={{ width: `${principalPct}%` }}
-                            />
+                            >
+                                {principalPct > 15 && (
+                                    <span className="text-[9px] font-black text-white/90 drop-shadow-sm">
+                                        {principalPct.toFixed(1)}%
+                                    </span>
+                                )}
+                            </div>
                             <div
                                 className={`absolute inset-y-0 left-0 rounded-full mix-blend-overlay transition-all duration-1000 ${isPos ? "bg-emerald-400" : "bg-slate-400"}`}
                                 style={{ width: `${assetPct}%`, opacity: 0.4 }}

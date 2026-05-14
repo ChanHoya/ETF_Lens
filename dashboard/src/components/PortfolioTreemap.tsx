@@ -78,6 +78,7 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
     const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
 
     const fmt = (v: number) => new Intl.NumberFormat('ko-KR').format(Math.floor(v));
+    const fmtM = (v: number) => `${Math.round(v / 1e6)}백만원`;
     const fmtPct = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
 
     // ─── 데이터 빌드 ──────────────────────────────────────────────────────────
@@ -144,7 +145,7 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
         <div className="flex flex-col gap-3 w-full select-none">
 
             {/* 상단 그룹 요약 뱃지 */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
                 {activeGroups.map(g => {
                     const cfg = GROUP_CONFIG[g];
                     const total = groupTotals[g];
@@ -155,16 +156,16 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
                             key={g}
                             onMouseEnter={() => setHoveredGroup(g)}
                             onMouseLeave={() => setHoveredGroup(null)}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all duration-150 cursor-default text-sm"
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-150 cursor-default text-[13px]"
                             style={{
-                                borderColor: isHov ? cfg.accentColor : `${cfg.accentColor}55`,
-                                backgroundColor: isHov ? `${cfg.accentColor}20` : 'rgba(255,255,255,0.02)',
+                                borderColor: isHov ? cfg.accentColor : `${cfg.accentColor}40`,
+                                backgroundColor: isHov ? `${cfg.accentColor}15` : 'rgba(255,255,255,0.01)',
                             }}
                         >
-                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.accentColor }} />
-                            <span className="text-gray-300 font-semibold">{cfg.label}</span>
-                            <span className="text-gray-500 font-mono text-xs">{pct}%</span>
-                            <span className="text-gray-400 font-mono text-xs">{fmt(total)}원</span>
+                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.accentColor }} />
+                            <span className="text-gray-300 font-bold">{cfg.label}</span>
+                            <span className="text-indigo-400/80 font-mono text-[11px] font-bold">{pct}%</span>
+                            <span className="text-gray-400 font-mono text-[11px]">{fmtM(total)}</span>
                         </div>
                     );
                 })}

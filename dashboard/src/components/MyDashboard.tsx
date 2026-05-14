@@ -50,7 +50,7 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                     </h2>
                     <div className="flex items-baseline gap-6">
                         <div className="flex items-baseline gap-2">
-                            <span className="text-sm text-gray-400">누적 수익</span>
+                            <span className="text-sm text-gray-400">최종 매매기준 수익</span>
                             <span className={`text-2xl font-bold ${totalProfitLoss > 0 ? 'text-rose-400' : totalProfitLoss < 0 ? 'text-blue-400' : 'text-gray-200'}`}>
                                 {totalProfitLoss > 0 ? '+' : ''}{formatNumber(totalProfitLoss)}원
                             </span>
