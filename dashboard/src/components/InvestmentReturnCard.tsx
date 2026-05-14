@@ -14,8 +14,13 @@ interface Props {
     cashBalance: number;
 }
 
-const fmtKRW = (n: number) => new Intl.NumberFormat("ko-KR").format(Math.round(n));
+const fmtKRW = (n: number) => {
+    if (isNaN(n) || n === null || n === undefined) return "0";
+    return new Intl.NumberFormat("ko-KR").format(Math.round(n));
+};
+
 const fmtShort = (n: number) => {
+    if (isNaN(n) || n === null || n === undefined) return "0";
     const abs = Math.abs(n);
     if (abs >= 1e8) return `${(n / 1e8).toFixed(2)}억`;
     if (abs >= 1e4) return `${Math.round(n / 1e4)}만`;
@@ -27,7 +32,7 @@ const fmtInput = (s: string) => {
     return digits ? new Intl.NumberFormat("ko-KR").format(Number(digits)) : "";
 };
 
-export default function InvestmentReturnCard({ totalEvalAmount }: Props) {
+export default function InvestmentReturnCard({ totalEvalAmount, cashBalance }: Props) {
     const [entries, setEntries] = useState<PrincipalEntry[]>([]);
     const [loaded, setLoaded] = useState(false);
 
@@ -38,13 +43,18 @@ export default function InvestmentReturnCard({ totalEvalAmount }: Props) {
     const [saving, setSaving] = useState(false);
     const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
-    const currentTotalAsset = totalEvalAmount + cashBalance;
-    const totalPrincipal = entries.reduce((s, e) => s + e.principal, 0);
+    const currentTotalAsset = (totalEvalAmount ?? 0) + (cashBalance ?? 0);
+    const totalPrincipal = entries.reduce((s, e) => s + (e.principal ?? 0), 0);
     const profit = totalPrincipal > 0 ? currentTotalAsset - totalPrincipal : null;
-    const returnRate = totalPrincipal > 0 && currentTotalAsset > 0
+    const returnRate = totalPrincipal > 0 
         ? (currentTotalAsset - totalPrincipal) / totalPrincipal * 100
         : null;
     const isPos = returnRate !== null && returnRate >= 0;
+
+    // Safety for UI Progress Bars
+    const maxVal = Math.max(totalPrincipal, currentTotalAsset, 1);
+    const principalPct = Math.min(100, (totalPrincipal / maxVal) * 100);
+    const assetPct = Math.min(100, (currentTotalAsset / maxVal) * 100);
 
     useEffect(() => { load(); }, []);
 
@@ -111,10 +121,10 @@ export default function InvestmentReturnCard({ totalEvalAmount }: Props) {
 
                 {/* (3) 수익금 / 수익률 */}
                 <div className="flex-1 flex flex-col items-center md:items-end text-center md:text-right border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-8 w-full md:w-auto">
-                    <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">누적 수익금</p>
-                    <div className={`flex flex-col items-center md:items-end ${isPos ? "text-rose-400" : "text-blue-400"}`}>
+                    <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">누적 수익률</p>
+                    <div className={`flex flex-col items-center md:items-end ${returnRate === null ? "text-gray-400" : isPos ? "text-rose-400" : "text-blue-400"}`}>
                         <div className="text-2xl md:text-4xl font-extrabold tracking-tight flex items-center gap-1">
-                            {isPos ? "+" : ""}{returnRate?.toFixed(2)}%
+                            {returnRate !== null ? `${isPos ? "+" : ""}${returnRate.toFixed(2)}%` : "-- %"}
                         </div>
                         {profit !== null && (
                             <p className="text-sm md:text-base font-bold opacity-80 mt-1">
@@ -136,11 +146,11 @@ export default function InvestmentReturnCard({ totalEvalAmount }: Props) {
                         <div className="relative w-full h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
                             <div
                                 className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full transition-all duration-1000"
-                                style={{ width: `${Math.min(100, totalPrincipal / Math.max(totalPrincipal, currentTotalAsset) * 100)}%` }}
+                                style={{ width: `${principalPct}%` }}
                             />
                             <div
                                 className={`absolute inset-y-0 left-0 rounded-full mix-blend-overlay transition-all duration-1000 ${isPos ? "bg-emerald-400" : "bg-slate-400"}`}
-                                style={{ width: `${Math.min(100, currentTotalAsset / Math.max(totalPrincipal, currentTotalAsset) * 100)}%`, opacity: 0.4 }}
+                                style={{ width: `${assetPct}%`, opacity: 0.4 }}
                             />
                         </div>
                     </div>
