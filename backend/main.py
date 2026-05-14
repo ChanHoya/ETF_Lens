@@ -102,8 +102,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "*"
-    ],  # 실제 서비스에서는 ["http://localhost:3000"] 등 프론트 주소로 제한
+        "https://etf-lens.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
