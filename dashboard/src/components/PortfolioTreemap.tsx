@@ -172,8 +172,8 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
 
             {/* 메인 컬럼 레이아웃 */}
             <div
-                className="flex gap-1.5 w-full rounded-2xl border border-white/10"
-                style={{ minHeight: 600 }}
+                className="flex gap-1.5 w-full rounded-2xl overflow-hidden border border-white/10"
+                style={{ height: 640 }}
                 onMouseLeave={() => { setTooltip(null); setHoveredGroup(null); }}
             >
                 {activeGroups.map(g => {
@@ -211,8 +211,8 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
                                 </span>
                             </div>
 
-                            {/* 종목 셀들 (flex-col, 높이 = groupPct 비례) */}
-                            <div className="flex flex-col flex-1 gap-px p-px">
+                            {/* 종목 셀들 (flex-col, 높이 = groupPct 비례) — 종목 과다 시 내부 스크롤 */}
+                            <div className="flex flex-col flex-1 overflow-y-auto gap-px p-px custom-scrollbar scroll-smooth">
                                 {groupMap[g].map((cell, idx) => {
                                     const cellHeightPct = cell.groupPct; // 0~100
                                     const colWidth = colPct * 100; // vw% 기준 예상 너비

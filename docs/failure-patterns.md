@@ -44,9 +44,9 @@
 - **원인**: `.db` 파일 커밋
 - **해결**: `.gitignore` 확인
 
-## 일반 패턴
+## 네트워크 및 보안 (CORS)
 
-### `_PORTFOLIO_CACHE` 오래된 데이터
-- **증상**: My Assets 새로고침 후에도 이전 데이터 표시
-- **원인**: 5분 캐시 TTL
-- **해결**: "새로고침" 버튼 → `isManualRefresh=true` → 캐시 무효화
+### "Failed to fetch" — CORS 차단
+- **증상**: 브라우저에서 서버가 살아있음에도 API 호출 실패 (서버 로그에는 기록 안 됨)
+- **원인**: `CORSMiddleware` 설정에서 `allow_origins=["*"]`와 `allow_credentials=True`를 동시에 사용
+- **해결**: `allow_origins`에 실제 도메인(`https://etf-lens.vercel.app`)을 명시하거나, `allow_credentials=False`로 설정해야 함 (보안 정책 상 와일드카드와 자격증명 동시 허용 불가)

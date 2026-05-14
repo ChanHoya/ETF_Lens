@@ -4,9 +4,9 @@
 
 ## Quick Summary
 
-✅ Last session: Bootstrap 완료 — Conductor 문서 세트 생성 + DB 복구 + 투자수익률 카드 구현
-🔄 In progress: S1-5 InvestmentReturnCard (KIS cashflow 실제 응답 검증 필요)
-➡️ Next: git push → 배포 확인 → /my 페이지에서 KIS 자동 조회 버튼 테스트
+✅ Last session: CORS 접속 오류 수정 + 투자 원금 카드 UI 개선 (토글형) + 히트맵 폰트 시인성 강화
+🔄 In progress: S1-3 TFF 대시보드 (예수금 파싱 이슈 해결 필요)
+➡️ Next: /my 페이지에서 KIS 자동 조회 버튼 테스트 및 배포 결과 최종 확인
 
 ## Current Sprint
 
@@ -22,7 +22,7 @@
 | S1-2 | KIS 포트폴리오 4계좌 연동 | ✅ done | Rate limit 보호 완료 |
 | S1-3 | TFF 대시보드 | 🔧 active | 예수금 파싱 이슈 잔존 |
 | S1-4 | Render DB 복구 (PostgreSQL 전환) | ✅ done | 유료 $7/월 |
-| S1-5 | 초기 투자금 대비 수익률 카드 | 🔧 active | cashflow API 검증 필요 |
+| S1-5 | 초기 투자금 대비 수익률 카드 | ✅ done | UI 개선 및 CORS 수정 완료 |
 | S1-6 | Bootstrap / Conductor 문서화 | ✅ done | 이번 세션 |
 
 ## Module Registry
@@ -31,10 +31,10 @@
 |--------|-------|--------|-----------|
 | ETF Master | Backend | ✅ stable | api/router.py, db/models.py |
 | KIS Portfolio | Backend | ✅ stable | api/my_assets.py |
-| Investment Return | Backend | 🔧 active | api/my_assets.py (cashflow endpoint) |
+| Investment Return | Backend | ✅ stable | api/my_assets.py (cashflow endpoint) |
 | TFF Parser | Frontend | 🔧 active | src/lib/tff/excelParser.ts |
 | My Assets View | Frontend | ✅ stable | src/components/MyAssetsView.tsx |
-| InvestmentReturnCard | Frontend | 🔧 active | src/components/InvestmentReturnCard.tsx |
+| InvestmentReturnCard | Frontend | ✅ stable | src/components/InvestmentReturnCard.tsx |
 | AI Chat | Backend | ✅ stable | api/chat.py |
 | Macro Compass | Backend | ✅ stable | api/macro_compass.py |
 | Exit Signal | Backend | ✅ stable | api/exit_signal.py |
@@ -48,6 +48,9 @@
 
 ## Recent Changes
 
+- 2026-05-14: backend/main.py CORS 설정 수정 (Vercel 도메인 명시)
+- 2026-05-14: InvestmentReturnCard UI 개선 (원금 추가 폼 하단 이동 및 토글 적용)
+- 2026-05-14: PortfolioTreemap 시인성 개선 (폰트 확대 및 하단 잘림 해결)
 - 2026-04-23: Render PostgreSQL URL 교체 (dpg-d6uh7jqa214c73d4g47g-a)
 - 2026-04-23: UserPrincipal DB 모델 추가
 - 2026-04-23: /api/v1/my/principal + /cashflow 엔드포인트 추가

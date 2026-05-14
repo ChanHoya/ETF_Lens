@@ -103,8 +103,8 @@ export default function InvestmentReturnCard({ totalEvalAmount }: Props) {
                         <>
                             <div className="flex items-start justify-between">
                                  <div>
-                                    <p className="text-[11px] text-gray-500 mb-1">총 투자 원금</p>
-                                    <p className="text-xl md:text-2xl font-extrabold tracking-tight text-white">{fmtKRW(totalPrincipal)}원</p>
+                                    <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">총 투자 원금</p>
+                                    <p className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">{fmtKRW(totalPrincipal)}원</p>
                                 </div>
                                 <div className="text-right">
                                     <div className={`text-3xl font-black flex items-center gap-1 justify-end ${isPos ? "text-rose-400" : "text-blue-400"}`}>

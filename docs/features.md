@@ -12,7 +12,7 @@
 | KIS 포트폴리오 조회 | ✅ done | backend/api/my_assets.py (portfolio) | 4계좌, Rate limit 캐시 |
 | KIS 당일 체결 내역 | ✅ done | backend/api/my_assets.py (trades/today) | |
 | KIS 종목별 시그널 | ✅ done | backend/api/my_assets.py (holdings-signals) | MA5/MA20/RSI |
-| 초기투자금 대비 수익률 | 🔧 active | backend/api/my_assets.py (principal, cashflow), dashboard/src/components/InvestmentReturnCard.tsx | cashflow 검증 필요 |
+| 초기투자금 대비 수익률 | ✅ done | backend/api/my_assets.py (principal, cashflow), dashboard/src/components/InvestmentReturnCard.tsx | UI 개선 완료 |
 | TFF 대시보드 | 🔧 active | dashboard/src/lib/tff/excelParser.ts, dashboard/src/components/tff/ | 예수금 파싱 이슈 잔존 |
 | AI 채팅 (Gemini) | ✅ done | backend/api/chat.py, dashboard/src/components/ChatBot.tsx | |
 | 매크로 컴퍼스 | ✅ done | backend/api/macro_compass.py, dashboard/src/components/MacroCompass.tsx | |
