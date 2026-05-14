@@ -226,4 +226,3 @@ export default function InvestmentReturnCard({ totalEvalAmount }: Props) {
         </div>
     );
 }
-}
