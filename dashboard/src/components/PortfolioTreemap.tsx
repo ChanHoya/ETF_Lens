@@ -172,8 +172,8 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
 
             {/* 메인 컬럼 레이아웃 */}
             <div
-                className="flex gap-1.5 w-full rounded-2xl overflow-hidden border border-white/10"
-                style={{ minHeight: 520 }}
+                className="flex gap-1.5 w-full rounded-2xl border border-white/10"
+                style={{ minHeight: 600 }}
                 onMouseLeave={() => { setTooltip(null); setHoveredGroup(null); }}
             >
                 {activeGroups.map(g => {
@@ -212,7 +212,7 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
                             </div>
 
                             {/* 종목 셀들 (flex-col, 높이 = groupPct 비례) */}
-                            <div className="flex flex-col flex-1 overflow-hidden gap-px p-px">
+                            <div className="flex flex-col flex-1 gap-px p-px">
                                 {groupMap[g].map((cell, idx) => {
                                     const cellHeightPct = cell.groupPct; // 0~100
                                     const colWidth = colPct * 100; // vw% 기준 예상 너비
@@ -261,7 +261,7 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
                                                     {!isNarrow && !isVeryShort && (
                                                         <p
                                                             className="text-white font-semibold truncate w-full text-center"
-                                                            style={{ fontSize: colWidth > 15 && !isShort ? 11 : 9 }}
+                                                            style={{ fontSize: colWidth > 15 && !isShort ? 13 : 10 }}
                                                         >
                                                             {cell.name}
                                                         </p>
@@ -269,7 +269,7 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
                                                     <p
                                                         className="font-bold tabular-nums"
                                                         style={{
-                                                            fontSize: colWidth > 12 && !isVeryShort ? 11 : 9,
+                                                            fontSize: colWidth > 12 && !isVeryShort ? 12 : 10,
                                                             color: getReturnText(cell.returnRate),
                                                         }}
                                                     >

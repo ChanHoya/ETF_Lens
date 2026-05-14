@@ -30,7 +30,8 @@ export default function InvestmentReturnCard({ totalEvalAmount }: Props) {
     const [entries, setEntries] = useState<PrincipalEntry[]>([]);
     const [loaded, setLoaded] = useState(false);
 
-    // 인라인 입력 (항상 화면에 표시)
+    // 인라인 입력 (토글형으로 변경)
+    const [showAddForm, setShowAddForm] = useState(false);
     const [newLabel, setNewLabel] = useState("");
     const [newValue, setNewValue] = useState("");
     const [saving, setSaving] = useState(false);
@@ -101,9 +102,9 @@ export default function InvestmentReturnCard({ totalEvalAmount }: Props) {
                     {returnRate !== null ? (
                         <>
                             <div className="flex items-start justify-between">
-                                <div>
+                                 <div>
                                     <p className="text-[11px] text-gray-500 mb-1">총 투자 원금</p>
-                                    <p className="text-xl font-black text-white">{fmtKRW(totalPrincipal)}원</p>
+                                    <p className="text-xl md:text-2xl font-extrabold tracking-tight text-white">{fmtKRW(totalPrincipal)}원</p>
                                 </div>
                                 <div className="text-right">
                                     <div className={`text-3xl font-black flex items-center gap-1 justify-end ${isPos ? "text-rose-400" : "text-blue-400"}`}>
@@ -149,43 +150,6 @@ export default function InvestmentReturnCard({ totalEvalAmount }: Props) {
                 {/* ── 오른쪽: 입력 + 목록 ── */}
                 <div className="bg-gradient-to-br from-emerald-950/40 to-slate-900/80 border border-emerald-500/15 rounded-2xl p-5 flex flex-col gap-3">
 
-                    {/* ▸ 인라인 입력폼 (항상 표시) */}
-                    <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-xl p-3 flex flex-col gap-2">
-                        <p className="text-[11px] font-bold text-emerald-400 mb-0.5">투자 원금 추가</p>
-                        <input
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/40"
-                            placeholder="메모 (예: 은퇴자금, CMA계좌)"
-                            value={newLabel}
-                            onChange={e => setNewLabel(e.target.value)}
-                        />
-                        <div className="flex gap-2">
-                            <div className="relative flex-1">
-                                <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/40 pr-8"
-                                    placeholder="금액 입력"
-                                    value={newValue}
-                                    onChange={e => setNewValue(fmtInput(e.target.value))}
-                                    onKeyDown={e => e.key === "Enter" && save()}
-                                />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-500">원</span>
-                            </div>
-                            <button
-                                onClick={save}
-                                disabled={saving}
-                                className="flex items-center gap-1 px-3 py-2 bg-emerald-500/25 hover:bg-emerald-500/40 border border-emerald-500/30 rounded-lg text-xs text-emerald-300 font-bold transition-all disabled:opacity-40 whitespace-nowrap"
-                            >
-                                {saving ? "..." : <><PlusCircle className="w-3.5 h-3.5" /> 추가</>}
-                            </button>
-                        </div>
-                        {saveMsg && (
-                            <p className={`text-[11px] font-medium ${saveMsg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
-                                {saveMsg}
-                            </p>
-                        )}
-                    </div>
-
                     {/* ▸ 저장된 항목 목록 */}
                     {loaded && entries.length > 0 && (
                         <div className="flex flex-col gap-1.5">
@@ -213,6 +177,59 @@ export default function InvestmentReturnCard({ totalEvalAmount }: Props) {
                             )}
                         </div>
                     )}
+
+                    {/* ▸ 원금 추가 버튼 및 폼 (목록 아래로 이동) */}
+                    <div className="mt-2">
+                        {!showAddForm ? (
+                            <button
+                                onClick={() => setShowAddForm(true)}
+                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs text-gray-400 font-medium transition-all"
+                            >
+                                <PlusCircle className="w-3.5 h-3.5" />
+                                투자 원금 추가
+                            </button>
+                        ) : (
+                            <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-xl p-3 flex flex-col gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div className="flex justify-between items-center mb-0.5">
+                                    <p className="text-[11px] font-bold text-emerald-400">투자 원금 추가</p>
+                                    <button onClick={() => setShowAddForm(false)} className="text-[10px] text-gray-500 hover:text-gray-300">취소</button>
+                                </div>
+                                <input
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/40"
+                                    placeholder="메모 (예: 은퇴자금, CMA계좌)"
+                                    autoFocus
+                                    value={newLabel}
+                                    onChange={e => setNewLabel(e.target.value)}
+                                />
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/40 pr-8"
+                                            placeholder="금액 입력"
+                                            value={newValue}
+                                            onChange={e => setNewValue(fmtInput(e.target.value))}
+                                            onKeyDown={e => e.key === "Enter" && save()}
+                                        />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-500">원</span>
+                                    </div>
+                                    <button
+                                        onClick={save}
+                                        disabled={saving}
+                                        className="flex items-center gap-1 px-3 py-2 bg-emerald-500/25 hover:bg-emerald-500/40 border border-emerald-500/30 rounded-lg text-xs text-emerald-300 font-bold transition-all disabled:opacity-40 whitespace-nowrap"
+                                    >
+                                        {saving ? "..." : <><PlusCircle className="w-3.5 h-3.5" /> 추가</>}
+                                    </button>
+                                </div>
+                                {saveMsg && (
+                                    <p className={`text-[11px] font-medium ${saveMsg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
+                                        {saveMsg}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
 
                     <div className="flex items-start gap-1.5 mt-auto pt-1">
                         <Info className="w-3 h-3 text-gray-700 shrink-0 mt-0.5" />
