@@ -162,10 +162,10 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
             ) : (
                 <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col gap-6">
                     <RiskBanner isAuthorized={isAuthorized} />
-                    {/* 초기 투자금 대비 수익률 카드 */}
-                    <div className="w-full bg-white/[0.02] border border-white/5 rounded-3xl p-5 backdrop-blur-sm">
+                    <div className="w-full">
                         <InvestmentReturnCard
                             totalEvalAmount={kisData?.kis_raw?.summary?.total_eval_amount ?? 0}
+                            cashBalance={kisData?.kis_raw?.summary?.cash_balance ?? 0}
                         />
                     </div>
                     <MyDashboard data={kisData} tradesData={tradesData} isRefreshing={isRefreshing} onOpenDetail={onOpenDetail} onAnalyzePeers={onAnalyzePeers} />

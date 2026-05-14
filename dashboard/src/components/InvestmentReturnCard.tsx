@@ -11,6 +11,7 @@ interface PrincipalEntry {
 
 interface Props {
     totalEvalAmount: number;
+    cashBalance: number;
 }
 
 const fmtKRW = (n: number) => new Intl.NumberFormat("ko-KR").format(Math.round(n));
@@ -30,17 +31,18 @@ export default function InvestmentReturnCard({ totalEvalAmount }: Props) {
     const [entries, setEntries] = useState<PrincipalEntry[]>([]);
     const [loaded, setLoaded] = useState(false);
 
-    // 인라인 입력 (토글형으로 변경)
+    const [isEditMode, setIsEditMode] = useState(false);
     const [showAddForm, setShowAddForm] = useState(false);
     const [newLabel, setNewLabel] = useState("");
     const [newValue, setNewValue] = useState("");
     const [saving, setSaving] = useState(false);
     const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
+    const currentTotalAsset = totalEvalAmount + cashBalance;
     const totalPrincipal = entries.reduce((s, e) => s + e.principal, 0);
-    const profit = totalPrincipal > 0 ? totalEvalAmount - totalPrincipal : null;
-    const returnRate = totalPrincipal > 0 && totalEvalAmount > 0
-        ? (totalEvalAmount - totalPrincipal) / totalPrincipal * 100
+    const profit = totalPrincipal > 0 ? currentTotalAsset - totalPrincipal : null;
+    const returnRate = totalPrincipal > 0 && currentTotalAsset > 0
+        ? (currentTotalAsset - totalPrincipal) / totalPrincipal * 100
         : null;
     const isPos = returnRate !== null && returnRate >= 0;
 
@@ -83,120 +85,94 @@ export default function InvestmentReturnCard({ totalEvalAmount }: Props) {
     };
 
     return (
-        <div className="w-full flex flex-col gap-4">
-            {/* 헤더 */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-emerald-400" />
-                    <h3 className="text-sm font-bold text-white">초기 투자금 대비 총 수익률</h3>
+        <div className="w-full flex flex-col gap-6">
+            {/* ── 1. 통합 요약 헤더 (3컬럼) ── */}
+            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-0 justify-between bg-white/[0.03] border border-white/5 rounded-[32px] p-6 md:p-8 backdrop-blur-md">
+                
+                {/* (1) 초기 투자금 */}
+                <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left border-b md:border-b-0 md:border-r border-white/10 pb-4 md:pb-0 md:pr-8 w-full md:w-auto">
+                    <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">초기 투자금</p>
+                    <div className="flex items-baseline gap-1">
+                        <p className="text-2xl md:text-4xl font-extrabold tracking-tight text-white">{fmtKRW(totalPrincipal)}</p>
+                        <span className="text-xs md:text-sm text-gray-500">원</span>
+                    </div>
                 </div>
-                <span className="text-[11px] text-gray-500">
-                    총평가 <span className="text-gray-300 font-semibold">{fmtShort(totalEvalAmount)}원</span> 기준
-                </span>
+
+                {/* (2) 현재 자산 총액 */}
+                <div className="flex-2 flex flex-col items-center text-center px-4 md:px-12 w-full md:w-auto">
+                    <p className="text-xs md:text-sm text-gray-400 mb-1 font-bold">현재 자산 총액</p>
+                    <div className="flex items-baseline gap-1">
+                        <p className="text-3xl md:text-5xl font-black tracking-tighter text-white bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400">
+                            {fmtKRW(currentTotalAsset)}
+                        </p>
+                        <span className="text-sm md:text-base text-gray-400">원</span>
+                    </div>
+                </div>
+
+                {/* (3) 수익금 / 수익률 */}
+                <div className="flex-1 flex flex-col items-center md:items-end text-center md:text-right border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-8 w-full md:w-auto">
+                    <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">누적 수익금</p>
+                    <div className={`flex flex-col items-center md:items-end ${isPos ? "text-rose-400" : "text-blue-400"}`}>
+                        <div className="text-2xl md:text-4xl font-extrabold tracking-tight flex items-center gap-1">
+                            {isPos ? "+" : ""}{returnRate?.toFixed(2)}%
+                        </div>
+                        {profit !== null && (
+                            <p className="text-sm md:text-base font-bold opacity-80 mt-1">
+                                {isPos ? "+" : ""}{fmtShort(profit)}원
+                            </p>
+                        )}
+                    </div>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                {/* ── 왼쪽: 수익률 표시 ── */}
-                <div className="bg-gradient-to-br from-slate-800/60 to-slate-900/80 border border-white/8 rounded-2xl p-5 flex flex-col justify-center gap-4 min-h-[160px]">
-                    {returnRate !== null ? (
-                        <>
-                            <div className="flex items-start justify-between">
-                                 <div>
-                                    <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">총 투자 원금</p>
-                                    <p className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">{fmtKRW(totalPrincipal)}원</p>
-                                </div>
-                                <div className="text-right">
-                                    <div className={`text-3xl font-black flex items-center gap-1 justify-end ${isPos ? "text-rose-400" : "text-blue-400"}`}>
-                                        {isPos ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-                                        {isPos ? "+" : ""}{returnRate.toFixed(2)}%
-                                    </div>
-                                    {profit !== null && (
-                                        <p className={`text-sm font-semibold mt-0.5 ${isPos ? "text-rose-400/80" : "text-blue-400/80"}`}>
-                                            {isPos ? "+" : ""}{fmtShort(profit)}원
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                            {/* 비교 바 */}
-                            <div className="flex flex-col gap-1.5">
-                                <div className="flex justify-between text-[10px] text-gray-600 mb-0.5">
-                                    <span>원금 {fmtShort(totalPrincipal)}</span>
-                                    <span>평가 {fmtShort(totalEvalAmount)}</span>
-                                </div>
-                                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 rounded-full"
-                                        style={{ width: `${Math.min(100, totalPrincipal / Math.max(totalPrincipal, totalEvalAmount) * 100)}%` }}
-                                    />
-                                </div>
-                                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                                    <div
-                                        className={`h-full rounded-full ${isPos ? "bg-gradient-to-r from-emerald-500 to-teal-400" : "bg-gradient-to-r from-slate-500 to-slate-400"}`}
-                                        style={{ width: `${Math.min(100, totalEvalAmount / Math.max(totalPrincipal, totalEvalAmount) * 100)}%` }}
-                                    />
-                                </div>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center text-center gap-2">
-                            <TrendingUp className="w-8 h-8 text-gray-700" />
-                            <p className="text-sm text-gray-500 font-medium">투자 원금을 입력하면</p>
-                            <p className="text-xs text-gray-600">실제 수익률이 계산됩니다</p>
+            {/* ── 2. 비교 그래프 및 관리 버튼 ── */}
+            <div className="flex flex-col gap-4 px-2">
+                <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-1 flex-1 max-w-[60%]">
+                        <div className="flex justify-between text-[11px] font-bold text-gray-500 px-1">
+                            <span>원금 대비 평가 비중</span>
+                            <span>{fmtShort(currentTotalAsset)} 기준</span>
                         </div>
-                    )}
+                        <div className="relative w-full h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                            <div
+                                className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full transition-all duration-1000"
+                                style={{ width: `${Math.min(100, totalPrincipal / Math.max(totalPrincipal, currentTotalAsset) * 100)}%` }}
+                            />
+                            <div
+                                className={`absolute inset-y-0 left-0 rounded-full mix-blend-overlay transition-all duration-1000 ${isPos ? "bg-emerald-400" : "bg-slate-400"}`}
+                                style={{ width: `${Math.min(100, currentTotalAsset / Math.max(totalPrincipal, currentTotalAsset) * 100)}%`, opacity: 0.4 }}
+                            />
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={() => setIsEditMode(!isEditMode)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                            isEditMode ? "bg-white/20 text-white" : "bg-white/5 text-gray-400 hover:bg-white/10"
+                        }`}
+                    >
+                        {isEditMode ? "관리 종료" : "투자금 상세 관리"}
+                    </button>
                 </div>
 
-                {/* ── 오른쪽: 입력 + 목록 ── */}
-                <div className="bg-gradient-to-br from-emerald-950/40 to-slate-900/80 border border-emerald-500/15 rounded-2xl p-5 flex flex-col gap-3">
-
-                    {/* ▸ 저장된 항목 목록 */}
-                    {loaded && entries.length > 0 && (
-                        <div className="flex flex-col gap-1.5">
-                            <p className="text-[10px] text-gray-500 font-medium">저장된 항목</p>
-                            {entries.map(e => (
-                                <div key={e.account_no} className="flex items-center justify-between bg-white/[0.03] hover:bg-white/[0.06] rounded-xl px-3 py-2 group transition-colors">
-                                    <div className="min-w-0">
-                                        <p className="text-[11px] text-gray-400 truncate">{e.label}</p>
-                                        <p className="text-sm font-bold text-white">{fmtKRW(e.principal)}원</p>
-                                    </div>
-                                    <button
-                                        onClick={() => remove(e.account_no)}
-                                        className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 rounded-lg transition-all"
-                                        title="삭제"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5 text-gray-500" />
-                                    </button>
-                                </div>
-                            ))}
-                            {entries.length > 1 && (
-                                <div className="flex justify-between items-center px-3 pt-1 border-t border-white/5 mt-0.5">
-                                    <span className="text-[10px] text-gray-500">합계</span>
-                                    <span className="text-xs font-black text-white">{fmtKRW(totalPrincipal)}원</span>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* ▸ 원금 추가 버튼 및 폼 (목록 아래로 이동) */}
-                    <div className="mt-2">
-                        {!showAddForm ? (
+                {/* ── 3. 상세 관리 리스트 (Edit Mode 시 노출) ── */}
+                {isEditMode && (
+                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 animate-in fade-in slide-in-from-top-4 duration-500">
+                        <div className="flex items-center justify-between mb-4">
+                            <h4 className="text-sm font-bold text-gray-300">투자 원금 상세 내역</h4>
                             <button
-                                onClick={() => setShowAddForm(true)}
-                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs text-gray-400 font-medium transition-all"
+                                onClick={() => setShowAddForm(!showAddForm)}
+                                className="text-xs text-emerald-400 font-bold hover:underline"
                             >
-                                <PlusCircle className="w-3.5 h-3.5" />
-                                투자 원금 추가
+                                {showAddForm ? "닫기" : "+ 내역 추가"}
                             </button>
-                        ) : (
-                            <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-xl p-3 flex flex-col gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                <div className="flex justify-between items-center mb-0.5">
-                                    <p className="text-[11px] font-bold text-emerald-400">투자 원금 추가</p>
-                                    <button onClick={() => setShowAddForm(false)} className="text-[10px] text-gray-500 hover:text-gray-300">취소</button>
-                                </div>
+                        </div>
+
+                        {showAddForm && (
+                            <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-xl p-4 mb-4 flex flex-col gap-3">
                                 <input
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/40"
-                                    placeholder="메모 (예: 은퇴자금, CMA계좌)"
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/40"
+                                    placeholder="항목 이름 (예: 개인연금, 퇴직금)"
                                     autoFocus
                                     value={newLabel}
                                     onChange={e => setNewLabel(e.target.value)}
@@ -206,39 +182,48 @@ export default function InvestmentReturnCard({ totalEvalAmount }: Props) {
                                         <input
                                             type="text"
                                             inputMode="numeric"
-                                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/40 pr-8"
-                                            placeholder="금액 입력"
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-lg font-black text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/40 pr-8"
+                                            placeholder="금액"
                                             value={newValue}
                                             onChange={e => setNewValue(fmtInput(e.target.value))}
-                                            onKeyDown={e => e.key === "Enter" && save()}
                                         />
-                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-500">원</span>
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">원</span>
                                     </div>
                                     <button
                                         onClick={save}
                                         disabled={saving}
-                                        className="flex items-center gap-1 px-3 py-2 bg-emerald-500/25 hover:bg-emerald-500/40 border border-emerald-500/30 rounded-lg text-xs text-emerald-300 font-bold transition-all disabled:opacity-40 whitespace-nowrap"
+                                        className="px-6 bg-emerald-500 hover:bg-emerald-400 rounded-lg text-white font-bold transition-all disabled:opacity-40"
                                     >
-                                        {saving ? "..." : <><PlusCircle className="w-3.5 h-3.5" /> 추가</>}
+                                        저장
                                     </button>
                                 </div>
-                                {saveMsg && (
-                                    <p className={`text-[11px] font-medium ${saveMsg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
-                                        {saveMsg}
-                                    </p>
-                                )}
                             </div>
                         )}
-                    </div>
 
-                    <div className="flex items-start gap-1.5 mt-auto pt-1">
-                        <Info className="w-3 h-3 text-gray-700 shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-gray-600 leading-relaxed">
-                            계좌에 입금한 누적 금액을 입력하세요. 저장 후 다음 방문 시에도 유지됩니다.
-                        </p>
+                        <div className="flex flex-col gap-2">
+                            {entries.length > 0 ? (
+                                entries.map(e => (
+                                    <div key={e.account_no} className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-3 group">
+                                        <div>
+                                            <p className="text-xs text-gray-400">{e.label}</p>
+                                            <p className="text-base font-bold text-white">{fmtKRW(e.principal)}원</p>
+                                        </div>
+                                        <button
+                                            onClick={() => remove(e.account_no)}
+                                            className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-center py-8 text-gray-500 text-sm">저장된 투자 원금 내역이 없습니다.</p>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );
+}
 }

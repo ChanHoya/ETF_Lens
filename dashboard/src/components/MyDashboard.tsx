@@ -41,39 +41,6 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
 
             <RiskAlertBanner />
 
-            {/* Section 1: 나의 자산 (Overview) */}
-            <section className="flex flex-col gap-4">
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                    <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
-                    나의 자산
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 flex flex-col justify-between backdrop-blur-md">
-                        <span className="text-gray-400 font-medium mb-4">총액</span>
-                        <div className="text-right">
-                            <span className="text-4xl font-extrabold tracking-tight text-white">{formatNumber(totalAsset)}</span>
-                            <span className="text-gray-400 ml-1">원</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-4">* 고객님께서 보유하신 총 자산 합계액입니다.</p>
-                    </div>
-
-                    <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 flex flex-col justify-between backdrop-blur-md">
-                        <span className="text-gray-400 font-medium mb-4">출금 가능 금액</span>
-                        <div className="flex justify-between items-end mb-2 border-b border-white/5 pb-4">
-                            <span className="text-gray-400">예수금+CMA</span>
-                            <div className="text-right">
-                                <span className="text-2xl font-bold text-white">{formatNumber(cashBalance)}</span>
-                                <span className="text-sm text-gray-400 ml-1">원</span>
-                            </div>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500">출금 가능 금액</span>
-                            <button className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">가능금액 조회</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             {/* Section 2: 포트폴리오 현황 트리맵 */}
             <section className="flex flex-col gap-4">
                 <div className="flex items-baseline gap-4 justify-between flex-wrap">
