@@ -4,9 +4,9 @@
 
 ## Quick Summary
 
-✅ Last session: CORS 접속 오류 수정 + 투자 원금 카드 UI 개선 (토글형) + 히트맵 폰트 시인성 강화
-🔄 In progress: S1-3 TFF 대시보드 (예수금 파싱 이슈 해결 필요)
-➡️ Next: /my 페이지에서 KIS 자동 조회 버튼 테스트 및 배포 결과 최종 확인
+✅ Last session: UI/UX 고도화, 용어 표준화 ("최종 매매기준 수익"), localStorage 기반 원금 관리 로직 추가
+🔄 In progress: S1-3 TFF 대시보드 (통합 네비게이션 적용 완료)
+➡️ Next: TFF_Fund 상세 데이터 카드화 및 KIS 자동 조회 안정성 최종 확인
 
 ## Current Sprint
 
@@ -48,9 +48,10 @@
 
 ## Recent Changes
 
+- 2026-05-14: InvestmentReturnCard UI 고도화 (용어 표준화, 비중 % 표시, localStorage 저장 로직 추가)
+- 2026-05-14: PortfolioTreemap 최적화 (백만원 단위 적용, 한 줄 뱃지 레이아웃)
+- 2026-05-14: TFF_Fund 탭 메인 네비게이션 통합
 - 2026-05-14: backend/main.py CORS 설정 수정 (Vercel 도메인 명시)
-- 2026-05-14: InvestmentReturnCard UI 개선 (원금 추가 폼 하단 이동 및 토글 적용)
-- 2026-05-14: PortfolioTreemap 시인성 개선 (폰트 확대 및 하단 잘림 해결)
 - 2026-04-23: Render PostgreSQL URL 교체 (dpg-d6uh7jqa214c73d4g47g-a)
 - 2026-04-23: UserPrincipal DB 모델 추가
 - 2026-04-23: /api/v1/my/principal + /cashflow 엔드포인트 추가

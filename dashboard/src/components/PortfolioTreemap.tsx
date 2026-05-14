@@ -78,7 +78,7 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
     const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
 
     const fmt = (v: number) => new Intl.NumberFormat('ko-KR').format(Math.floor(v));
-    const fmtM = (v: number) => `${Math.round(v / 1e6)}백만원`;
+    const fmtM = (v: number) => `${Math.round(v / 1e6).toLocaleString('ko-KR')}백만원`;
     const fmtPct = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
 
     // ─── 데이터 빌드 ──────────────────────────────────────────────────────────

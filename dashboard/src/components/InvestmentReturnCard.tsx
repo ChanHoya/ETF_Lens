@@ -56,41 +56,78 @@ export default function InvestmentReturnCard({ totalEvalAmount, cashBalance }: P
     const principalPct = Math.min(100, (totalPrincipal / maxVal) * 100);
     const assetPct = Math.min(100, (currentTotalAsset / maxVal) * 100);
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("etf_lens_principals");
+            if (saved) {
+                try {
+                    setEntries(JSON.parse(saved));
+                } catch (e) {
+                    console.error("Failed to parse principals", e);
+                }
+            } else {
+                // Fallback to API once on first load if localStorage is empty
+                loadFromApi();
+            }
+            setLoaded(true);
+        }
+    }, []);
 
-    const load = async () => {
+    const loadFromApi = async () => {
         try {
             const res = await fetch(`${API_BASE}/api/v1/my/principal`);
-            if (res.ok) setEntries((await res.json()).principals || []);
-        } catch { /* silent */ } finally { setLoaded(true); }
+            if (res.ok) {
+                const data = await res.json();
+                if (data.principals) {
+                    setEntries(data.principals);
+                    localStorage.setItem("etf_lens_principals", JSON.stringify(data.principals));
+                }
+            }
+        } catch { /* silent */ }
     };
 
     const save = async () => {
         const val = parseAmount(newValue);
-        if (val <= 0) { setSaveMsg("금액을 입력해주세요"); setTimeout(() => setSaveMsg(null), 2000); return; }
+        if (val <= 0) { 
+            setSaveMsg("금액을 입력해주세요"); 
+            setTimeout(() => setSaveMsg(null), 2000); 
+            return; 
+        }
         setSaving(true);
+        
+        const newEntry: PrincipalEntry = {
+            account_no: `entry_${Date.now()}`,
+            principal: val,
+            label: newLabel.trim() || "투자금"
+        };
+        
+        const updated = [...entries, newEntry];
+        setEntries(updated);
+        localStorage.setItem("etf_lens_principals", JSON.stringify(updated));
+        
+        // Optional: Background sync to API
         try {
-            const key = `entry_${Date.now()}`;
-            const res = await fetch(`${API_BASE}/api/v1/my/principal`, {
+            await fetch(`${API_BASE}/api/v1/my/principal`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ account_no: key, principal: val, label: newLabel.trim() || "투자금" }),
+                body: JSON.stringify(newEntry),
             });
-            if (res.ok) {
-                setNewLabel(""); setNewValue("");
-                await load();
-                setSaveMsg("✓ 저장됨");
-            } else {
-                setSaveMsg("저장 실패 — 잠시 후 재시도");
-            }
-        } catch { setSaveMsg("네트워크 오류"); }
-        finally { setSaving(false); setTimeout(() => setSaveMsg(null), 2500); }
+        } catch { /* background fail is okay since we have local storage */ }
+
+        setNewLabel(""); 
+        setNewValue("");
+        setSaveMsg("✓ 저장됨");
+        setSaving(false); 
+        setTimeout(() => setSaveMsg(null), 2500);
     };
 
     const remove = async (key: string) => {
+        const updated = entries.filter(e => e.account_no !== key);
+        setEntries(updated);
+        localStorage.setItem("etf_lens_principals", JSON.stringify(updated));
+        
         try {
             await fetch(`${API_BASE}/api/v1/my/principal/${encodeURIComponent(key)}`, { method: "DELETE" });
-            await load();
         } catch { /* silent */ }
     };
 
@@ -121,7 +158,7 @@ export default function InvestmentReturnCard({ totalEvalAmount, cashBalance }: P
 
                 {/* (3) 수익금 / 수익률 */}
                 <div className="flex-1 flex flex-col items-center md:items-end text-center md:text-right border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-8 w-full md:w-auto">
-                    <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">최근 매매기준의 수익</p>
+                    <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">최종 매매기준 수익</p>
                     <div className={`flex flex-col items-center md:items-end ${returnRate === null ? "text-gray-400" : isPos ? "text-rose-400" : "text-blue-400"}`}>
                         <div className="text-2xl md:text-4xl font-extrabold tracking-tight flex items-center gap-1">
                             {returnRate !== null ? `${isPos ? "+" : ""}${returnRate.toFixed(2)}%` : "-- %"}
@@ -148,9 +185,9 @@ export default function InvestmentReturnCard({ totalEvalAmount, cashBalance }: P
                                 className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full transition-all duration-1000 flex items-center justify-center"
                                 style={{ width: `${principalPct}%` }}
                             >
-                                {principalPct > 15 && (
+                                {totalPrincipal > 0 && currentTotalAsset > 0 && (
                                     <span className="text-[9px] font-black text-white/90 drop-shadow-sm">
-                                        {principalPct.toFixed(1)}%
+                                        {((totalPrincipal / currentTotalAsset) * 100).toFixed(1)}%
                                     </span>
                                 )}
                             </div>
