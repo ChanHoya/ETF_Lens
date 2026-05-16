@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { Activity, X } from 'lucide-react';
 import KospiExitAnalyzer from '@/components/KospiExitAnalyzer';
-import SemiChart from '@/components/SemiChart';
 import MacroCompass from '@/components/MacroCompass';
 import AIInsight from '@/components/AIInsight';
 
@@ -72,23 +71,6 @@ export default function DiscoverTab() {
                         </div>
                     </div>
                 </div>
-
-                {/* SemiChart: Semiconductor Indices — "도메인별 지표" 섹션 타이틀 */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2 mb-0 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md w-full">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 shrink-0">
-                            <Activity className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <div className="flex flex-wrap items-center gap-3">
-                                <h2 className="text-xl font-extrabold text-white">도메인별 지표</h2>
-                            </div>
-                            <p className="text-sm text-gray-400 font-medium mt-0.5">반도체 지수 및 글로벌 섹터 동향</p>
-                        </div>
-                    </div>
-                </div>
-                <SemiChart />
-
 
                 {/* AI 매크로 로테이션 나침반 (미국/한국 분석) */}
                 <MacroCompass />

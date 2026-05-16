@@ -14,6 +14,7 @@ import CoveredCallTab from "@/components/CoveredCallTab";
 import ChatBot from "@/components/ChatBot";
 import { useRouter } from "next/navigation";
 import MyAssetsView from "./MyAssetsView";
+import SectorAnalysisTab from "./SectorAnalysisTab";
 import TffGateWrapper from "./tff/TffGateWrapper";
 
 type FavGroup = { id: string; name: string; items: { code: string; name: string }[] };
@@ -21,7 +22,7 @@ type FavGroup = { id: string; name: string; items: { code: string; name: string 
 const BRAND_KEYWORDS = ['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'];
 const THEME_KEYWORDS = ['커버드콜', '배당', '액티브', 'AI', '반도체', '로봇', '원자력', '2차전지', '조선', '방산', '금융', '바이오'];
 
-export default function MainApp({ initialTab = 'select', showMyTab = false, showTffTab = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff', showMyTab?: boolean, showTffTab?: boolean }) {
+export default function MainApp({ initialTab = 'select', showMyTab = false, showTffTab = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff' | 'sector', showMyTab?: boolean, showTffTab?: boolean }) {
   const router = useRouter();
   const [slots, setSlots] = useState<{ search: string, code: string }[]>([
     { search: "", code: "" },
@@ -38,7 +39,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
   const [globalSearch, setGlobalSearch] = useState("");
   const [globalActive, setGlobalActive] = useState(false);
   const [period, setPeriod] = useState<string>('6M');
-  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff' | 'sector'>(initialTab);
 
   const [etfDictionary, setEtfDictionary] = useState<{ code: string, name: string }[]>([]);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState<number | null>(null);
@@ -72,7 +73,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
     setIsClient(true);
   }, []);
 
-  // 백그라운드 프리페치: 앱 로드 2.5초 후 모니터링 탭 데이터 미리 fetch
+  // 백그라운드 프리페치: 앱 로드 2.5초 후 시장동향 탭 데이터 미리 fetch
   useEffect(() => {
     const timer = setTimeout(() => {
       prefetchMonitorData(API_BASE);
@@ -996,7 +997,8 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
           <nav className="hidden md:flex items-center gap-2 md:gap-4 bg-white/[0.03] px-4 md:px-6 py-2 rounded-full border border-white/10 backdrop-blur-md shadow-sm">
             {[
               { id: 'analysis', label: '종목분석' },
-              { id: 'discover', label: '모니터링' },
+              { id: 'sector', label: '섹터분석' },
+              { id: 'discover', label: '시장동향' },
               { id: 'etftracker', label: 'ETF추적기' },
               { id: 'etfcheck', label: 'ETF Check' },
               ...(showTffTab ? [{ id: 'tff', label: 'TFF_Fund' }] : []),
@@ -1033,7 +1035,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                       setIsEtfCheckModalOpen(false);
                       return;
                     }
-                    setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff');
+                    setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff' | 'sector');
                     setIsEtfCheckModalOpen(false);
                     setNaverEtfCode(null);
                     setSelectedDetailEtf(null);
@@ -1567,6 +1569,10 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
         </div>
 
         {/* Discover Section */}
+        {activeTab === 'sector' && (
+          <SectorAnalysisTab />
+        )}
+
         {activeTab === 'discover' && (
           <DiscoverTab />
         )}
@@ -1619,7 +1625,8 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
       >
         {[
           { id: 'analysis',     label: '종목분석',  icon: <BarChart2 className="w-6 h-6" /> },
-          { id: 'discover',     label: '모니터링',  icon: <Cpu       className="w-6 h-6" /> },
+          { id: 'sector',       label: '섹터분석',  icon: <Layers    className="w-6 h-6" /> },
+          { id: 'discover',     label: '시장동향',  icon: <Cpu       className="w-6 h-6" /> },
           { id: 'etftracker',   label: 'ETF추적기', icon: <Target    className="w-6 h-6" /> },
           { id: 'etfcheck',     label: 'ETF Check', icon: <BookOpen  className="w-6 h-6" /> },
         ].map(tab => {
@@ -1646,7 +1653,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                   setIsEtfCheckModalOpen(false);
                   return;
                 }
-                setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff');
+                setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff' | 'sector');
                 setIsEtfCheckModalOpen(false);
                 setNaverEtfCode(null);
                 setSelectedDetailEtf(null);
