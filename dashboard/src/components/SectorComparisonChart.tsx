@@ -8,9 +8,10 @@ import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 
 interface SectorComparisonChartProps {
     region: 'KR' | 'US' | 'ALL';
+    selectedSector?: string | null;
 }
 
-export default function SectorComparisonChart({ region }: SectorComparisonChartProps) {
+export default function SectorComparisonChart({ region, selectedSector = null }: SectorComparisonChartProps) {
     const [period, setPeriod] = useState('1Y');
     const [chartData, setChartData] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -18,6 +19,24 @@ export default function SectorComparisonChart({ region }: SectorComparisonChartP
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
     const [keys, setKeys] = useState<string[]>([]);
     const [originalData, setOriginalData] = useState<any[]>([]);
+
+    const getVisibleKeys = () => {
+        if (!selectedSector) return keys;
+        
+        const mapping: Record<string, string[]> = {
+            '반도체': ['K-반도체', 'US-Semi'],
+            '2차전지': ['K-2차전지', 'US-Battery'],
+            '바이오': ['K-바이오', 'US-Bio'],
+            '금융': ['K-금융', 'US-Finance'],
+            '방산': ['K-방산', 'US-Defense'],
+            '우주': ['K-우주', 'US-Space'],
+            '에너지': ['K-에너지', 'US-Energy']
+        };
+        
+        return (mapping[selectedSector] || []).filter(k => keys.includes(k));
+    };
+
+    const visibleKeys = getVisibleKeys();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -157,13 +176,26 @@ export default function SectorComparisonChart({ region }: SectorComparisonChartP
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-                        <Globe className="w-5 h-5 text-indigo-400" />
+                        {selectedSector ? (
+                            <Activity className="w-5 h-5 text-indigo-400" />
+                        ) : (
+                            <Globe className="w-5 h-5 text-indigo-400" />
+                        )}
                     </div>
                     <div>
                         <h3 className="text-lg font-bold text-white">
-                            {region === 'KR' ? '국내 섹터 비교' : region === 'US' ? '미국 섹터 비교' : '글로벌 섹터 통합 비교'}
+                            {selectedSector ? (
+                                <span className="flex items-center gap-2">
+                                    <span className="text-indigo-400">{selectedSector}</span>
+                                    <span>섹터 집중 비교</span>
+                                </span>
+                            ) : (
+                                region === 'KR' ? '국내 섹터 비교' : region === 'US' ? '미국 섹터 비교' : '글로벌 섹터 통합 비교'
+                            )}
                         </h3>
-                        <p className="text-xs text-gray-400">기준점 100 대비 누적 수익률 추이</p>
+                        <p className="text-xs text-gray-400">
+                            {selectedSector ? `한-미 ${selectedSector} 테마 ETF 성과 비교` : '기준점 100 대비 누적 수익률 추이'}
+                        </p>
                     </div>
                 </div>
                 
@@ -213,23 +245,27 @@ export default function SectorComparisonChart({ region }: SectorComparisonChartP
                                 wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }}
                                 iconType="circle"
                             />
-                            {keys.map((k, idx) => (
-                                <Line
-                                    key={k}
-                                    type="monotone"
-                                    dataKey={k}
-                                    stroke={colors[idx % colors.length]}
-                                    strokeWidth={hoveredLine === k ? 4 : hoveredLine ? 1 : 2}
-                                    dot={false}
-                                    activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
-                                    name={k}
-                                    connectNulls={true}
-                                    style={{
-                                        opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8,
-                                        transition: 'all 0.3s ease'
-                                    }}
-                                />
-                            ))}
+                            {visibleKeys.map((k) => {
+                                const originalIdx = keys.indexOf(k);
+                                const color = colors[originalIdx % colors.length];
+                                return (
+                                    <Line
+                                        key={k}
+                                        type="monotone"
+                                        dataKey={k}
+                                        stroke={color}
+                                        strokeWidth={hoveredLine === k ? 4 : hoveredLine ? 1 : 2}
+                                        dot={false}
+                                        activeDot={{ r: 4, strokeWidth: 0, fill: color }}
+                                        name={k}
+                                        connectNulls={true}
+                                        style={{
+                                            opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8,
+                                            transition: 'all 0.3s ease'
+                                        }}
+                                    />
+                                );
+                            })}
                         </LineChart>
                     </ResponsiveContainer>
                 )}

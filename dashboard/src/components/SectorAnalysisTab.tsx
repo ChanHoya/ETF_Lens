@@ -8,6 +8,7 @@ import SectorStatusGrid from '@/components/SectorStatusGrid';
 
 export default function SectorAnalysisTab() {
     const [region, setRegion] = useState<'KR' | 'US' | 'ALL'>('ALL');
+    const [selectedSector, setSelectedSector] = useState<string | null>(null);
 
     return (
         <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-500 bg-[#121217]/80 p-4 lg:p-6 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
@@ -31,7 +32,10 @@ export default function SectorAnalysisTab() {
                         {(['ALL', 'KR', 'US'] as const).map((r) => (
                             <button
                                 key={r}
-                                onClick={() => setRegion(r)}
+                                onClick={() => {
+                                    setRegion(r);
+                                    setSelectedSector(null); // Reset sector selection on region change
+                                }}
                                 className={`px-4 py-2 text-sm font-bold rounded-lg transition-all flex items-center gap-2 ${
                                     region === r 
                                     ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg' 
@@ -48,10 +52,17 @@ export default function SectorAnalysisTab() {
                 </div>
 
                 {/* Sector Performance Overview Grid */}
-                <SectorStatusGrid region={region} />
+                <SectorStatusGrid 
+                    region={region} 
+                    selectedSector={selectedSector}
+                    onSelectSector={setSelectedSector}
+                />
 
                 {/* Major Sector Comparison Chart */}
-                <SectorComparisonChart region={region} />
+                <SectorComparisonChart 
+                    region={region} 
+                    selectedSector={selectedSector}
+                />
 
                 {/* SemiChart: Semiconductor Indices (Detailed View) */}
                 {region !== 'US' && (
