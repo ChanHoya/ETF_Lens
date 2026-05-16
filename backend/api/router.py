@@ -1344,6 +1344,128 @@ async def get_holdings(request: CompareRequest, db: AsyncSession = Depends(get_d
         return {"error": str(e), "traceback": traceback.format_exc()}
 
 
+@router.get("/sector-comparison")
+async def get_sector_comparison_data(region: str = "ALL"):
+    """
+    Returns normalized close prices for various sectors (Semi, Battery, Bio, Finance, Defense, Space, Energy).
+    Supports region filtering: KR, US, or ALL.
+    """
+    import yfinance as yf
+    import pandas as pd
+    import asyncio
+    from datetime import datetime, timedelta, timezone as _tz
+
+    # 1. Define Ticker Universe
+    kr_tickers = {
+        "K-반도체": "091160.KS",
+        "K-2차전지": "133690.KS",
+        "K-바이오": "244580.KS",
+        "K-금융": "091170.KS",
+        "K-방산": "449450.KS",
+        "K-우주": "441680.KS",
+        "K-에너지": "139250.KS",
+        "KOSPI 200": "069500.KS",
+    }
+    us_tickers = {
+        "US-Semi": "SMH",
+        "US-Battery": "LIT",
+        "US-Bio": "XLV",
+        "US-Finance": "XLF",
+        "US-Defense": "ITA",
+        "US-Space": "ARKX",
+        "US-Energy": "XLE",
+        "S&P 500": "SPY",
+    }
+
+    tickers = {}
+    if region.upper() == "KR":
+        tickers = kr_tickers
+    elif region.upper() == "US":
+        tickers = us_tickers
+    else:
+        tickers = {**kr_tickers, **us_tickers}
+
+    # 2. Cache Logic
+    cache_key = f"sector_comp_{region.upper()}_v1"
+    _kst = _tz(timedelta(hours=9))
+    _kst_now = datetime.now(_kst)
+    _kst_h, _kst_m = _kst_now.hour, _kst_now.minute
+    _in_kr_market = (9, 0) <= (_kst_h, _kst_m) <= (15, 30)
+    _in_us_market = (23, 30) <= (_kst_h, _kst_m) or (_kst_h, _kst_m) <= (6, 0)
+    _ttl = 300 if (_in_kr_market or _in_us_market) else 1800
+
+    if cache_key in _bench_cache:
+        cached_val, cached_ts = _bench_cache[cache_key]
+        if time.time() - cached_ts < _ttl:
+            return cached_val
+
+    # 3. Fetch Parameters
+    end_date = (_kst_now + timedelta(days=1)).date()
+    start_date = _kst_now.date() - timedelta(days=5 * 365) # 5 years for comparison
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    yf_to_fdr = {code: code.replace(".KS", "") for code in kr_tickers.values()}
+
+    def _fetch_one(t_code: str) -> pd.Series:
+        series = pd.Series(dtype=float)
+        try:
+            df = yf.download(t_code, start=start_str, end=end_str, progress=False)
+            if not df.empty:
+                # Handle MultiIndex and Close/Adj Close
+                if isinstance(df.columns, pd.MultiIndex):
+                    lvl0 = df.columns.get_level_values(0).unique().tolist()
+                    if "Close" in lvl0:
+                        sub = df["Close"]
+                        series = sub.iloc[:, 0] if isinstance(sub, pd.DataFrame) else sub
+                    else:
+                        series = df.iloc[:, 0]
+                else:
+                    series = df["Close"] if "Close" in df.columns else df.iloc[:, 0]
+                series = series.dropna()
+        except Exception as e:
+            logger.warning(f"sector-comp: yf failed for {t_code}: {e}")
+
+        if series.empty and ".KS" in t_code:
+            fdr_code = yf_to_fdr.get(t_code)
+            try:
+                import FinanceDataReader as fdr
+                fdr_df = fdr.DataReader(fdr_code, start_str, end_str)
+                if not fdr_df.empty and "Close" in fdr_df.columns:
+                    series = fdr_df["Close"].dropna()
+            except Exception as e2:
+                logger.warning(f"sector-comp: fdr failed for {fdr_code}: {e2}")
+
+        if not series.empty and series.index.tz is not None:
+            series.index = series.index.tz_convert(None)
+        return series
+
+    # 4. Execute Fetch
+    results: dict[str, pd.Series] = {}
+    for t_name, t_code in tickers.items():
+        results[t_name] = await asyncio.to_thread(_fetch_one, t_code)
+
+    # 5. Process & Sample
+    chart_data_map: dict = {}
+    for t_name, series in results.items():
+        for dt_ts, val in series.items():
+            dt_str = str(dt_ts.date())
+            if dt_str not in chart_data_map:
+                chart_data_map[dt_str] = {"date": dt_str}
+            chart_data_map[dt_str][t_name] = float(val)
+
+    sorted_dates = sorted(chart_data_map.keys())
+    if not sorted_dates:
+        return {"line_chart_data": [], "keys": list(tickers.keys())}
+
+    sampled_dates = smart_sample_dates(sorted_dates)
+    line_chart_data = [chart_data_map[dt] for dt in sampled_dates]
+    
+    result = {"line_chart_data": line_chart_data, "keys": list(tickers.keys())}
+    _bench_cache[cache_key] = (result, time.time())
+    return result
+
+
 @router.get("/semi-chart")
 async def get_semi_chart_data():
     """

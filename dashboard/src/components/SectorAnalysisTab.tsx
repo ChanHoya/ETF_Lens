@@ -1,29 +1,68 @@
 "use client";
 
-import React from 'react';
-import { Activity } from 'lucide-react';
+import React, { useState } from 'react';
+import { Activity, Globe, Zap, Layers } from 'lucide-react';
 import SemiChart from '@/components/SemiChart';
+import SectorComparisonChart from '@/components/SectorComparisonChart';
+import SectorStatusGrid from '@/components/SectorStatusGrid';
 
 export default function SectorAnalysisTab() {
+    const [region, setRegion] = useState<'KR' | 'US' | 'ALL'>('ALL');
+
     return (
         <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-500 bg-[#121217]/80 p-4 lg:p-6 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
-            <div className="flex flex-col gap-3 w-full h-full">
+            <div className="flex flex-col gap-6 w-full h-full">
                 
-                {/* SemiChart: Semiconductor Indices — "도메인별 지표" 섹션 타이틀 */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2 mb-0 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md w-full">
+                {/* Header & Region Filter */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-md w-full">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 shrink-0">
-                            <Activity className="w-6 h-6 text-white" />
+                            <Layers className="w-6 h-6 text-white" />
                         </div>
                         <div>
                             <div className="flex flex-wrap items-center gap-3">
-                                <h2 className="text-xl font-extrabold text-white">도메인별 지표</h2>
+                                <h2 className="text-xl font-extrabold text-white">섹터 분석</h2>
                             </div>
-                            <p className="text-sm text-gray-400 font-medium mt-0.5">반도체 지수 및 글로벌 섹터 동향</p>
+                            <p className="text-sm text-gray-400 font-medium mt-0.5">글로벌 테마별 지수 및 섹터 순환매 동향</p>
                         </div>
                     </div>
+
+                    <div className="flex bg-[#1a1a23] p-1 rounded-xl border border-white/10 self-start md:self-center">
+                        {(['ALL', 'KR', 'US'] as const).map((r) => (
+                            <button
+                                key={r}
+                                onClick={() => setRegion(r)}
+                                className={`px-4 py-2 text-sm font-bold rounded-lg transition-all flex items-center gap-2 ${
+                                    region === r 
+                                    ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg' 
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                }`}
+                            >
+                                {r === 'ALL' && <Globe className="w-4 h-4" />}
+                                {r === 'KR' && <span className="text-[10px] bg-white/10 px-1 rounded">KR</span>}
+                                {r === 'US' && <span className="text-[10px] bg-white/10 px-1 rounded">US</span>}
+                                {r === 'ALL' ? '통합' : r === 'KR' ? '국내' : '미국'}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-                <SemiChart />
+
+                {/* Sector Performance Overview Grid */}
+                <SectorStatusGrid region={region} />
+
+                {/* Major Sector Comparison Chart */}
+                <SectorComparisonChart region={region} />
+
+                {/* SemiChart: Semiconductor Indices (Detailed View) */}
+                {region !== 'US' && (
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 px-2">
+                            <Zap className="w-4 h-4 text-amber-400" />
+                            <h4 className="text-sm font-bold text-gray-300">반도체 특화 분석</h4>
+                        </div>
+                        <SemiChart />
+                    </div>
+                )}
 
             </div>
         </div>
