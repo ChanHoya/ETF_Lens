@@ -19,7 +19,7 @@
 | Exit Signal | ✅ done | backend/api/exit_signal.py | |
 | 위험도 배너 | ✅ done | dashboard/src/components/RiskBanner.tsx | |
 | 포트폴리오 마켓 | ✅ done | backend/api/portfolio_market.py, db/models.py (SharedPortfolio) | 공유 포트폴리오 |
-| 섹터분석 | ✅ done | dashboard/src/components/SectorAnalysisTab.tsx | 반도체 지수 및 도메인별 지표 |
+| 섹터분석 | ✅ done | SectorAnalysisTab.tsx, SectorComparisonChart.tsx, SectorStatusGrid.tsx | 국내/해외/통합 필터링, 우주/에너지 섹터 포함 16종 지표 |
 | 커버드콜 분석 | ✅ done | backend/api/covered_call.py, dashboard/src/components/CoveredCallTab.tsx | |
 | 헬스체크 | ✅ done | backend/api/health_monitor.py | /api/v1/analyze/health |
 

@@ -1401,49 +1401,78 @@ async def get_sector_comparison_data(region: str = "ALL"):
 
     # 3. Fetch Parameters
     end_date = (_kst_now + timedelta(days=1)).date()
-    start_date = _kst_now.date() - timedelta(days=5 * 365) # 5 years for comparison
+    start_date = _kst_now.date() - timedelta(days=3 * 365) # Reduce to 3 years for faster fetching
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
 
-    yf_to_fdr = {code: code.replace(".KS", "") for code in kr_tickers.values()}
+    import requests
 
-    def _fetch_one(t_code: str) -> pd.Series:
+    def _fetch_one_robust(t_name: str, t_code: str) -> pd.Series:
         series = pd.Series(dtype=float)
-        try:
-            df = yf.download(t_code, start=start_str, end=end_str, progress=False)
-            if not df.empty:
-                # Handle MultiIndex and Close/Adj Close
-                if isinstance(df.columns, pd.MultiIndex):
-                    lvl0 = df.columns.get_level_values(0).unique().tolist()
-                    if "Close" in lvl0:
-                        sub = df["Close"]
-                        series = sub.iloc[:, 0] if isinstance(sub, pd.DataFrame) else sub
-                    else:
-                        series = df.iloc[:, 0]
-                else:
-                    series = df["Close"] if "Close" in df.columns else df.iloc[:, 0]
-                series = series.dropna()
-        except Exception as e:
-            logger.warning(f"sector-comp: yf failed for {t_code}: {e}")
-
-        if series.empty and ".KS" in t_code:
-            fdr_code = yf_to_fdr.get(t_code)
+        is_kr = ".KS" in t_code or t_code.isdigit()
+        
+        # Strategy A: FinanceDataReader (Prioritized for KR tickers for stability)
+        if is_kr:
+            fdr_code = t_code.replace(".KS", "")
             try:
                 import FinanceDataReader as fdr
+                # Fetch slightly more data to ensure we have enough after dropping NaNs
                 fdr_df = fdr.DataReader(fdr_code, start_str, end_str)
                 if not fdr_df.empty and "Close" in fdr_df.columns:
                     series = fdr_df["Close"].dropna()
-            except Exception as e2:
-                logger.warning(f"sector-comp: fdr failed for {fdr_code}: {e2}")
+                    if not series.empty:
+                        logger.info(f"sector-comp: fdr success for {fdr_code} ({len(series)} pts)")
+            except Exception as e:
+                logger.warning(f"sector-comp: fdr failed for {fdr_code}: {e}")
 
-        if not series.empty and series.index.tz is not None:
-            series.index = series.index.tz_convert(None)
+        # Strategy B: Yahoo v8 API (Primary for US, Fallback for KR)
+        if series.empty:
+            try:
+                # Use requests directly to bypass some yfinance/SSL issues
+                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{t_code}?interval=1d&range=5y"
+                resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+                if resp.status_code == 200:
+                    rb = resp.json().get("chart", {}).get("result", [])
+                    if rb:
+                        res = rb[0]
+                        timestamps = res.get("timestamp", [])
+                        closes = res.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+                        if timestamps and closes:
+                            valid_data = [(datetime.fromtimestamp(ts), c) for ts, c in zip(timestamps, closes) if c is not None]
+                            if valid_data:
+                                idx, vals = zip(*valid_data)
+                                series = pd.Series(vals, index=idx)
+                                logger.info(f"sector-comp: v8 success for {t_code} ({len(series)} pts)")
+            except Exception as e:
+                logger.warning(f"sector-comp: v8 failed for {t_code}: {e}")
+
+        # Strategy C: yfinance library (Final Fallback)
+        if series.empty:
+            try:
+                import yfinance as yf
+                ticker_obj = yf.Ticker(t_code)
+                df = ticker_obj.history(start=start_str, end=end_str, auto_adjust=True)
+                if not df.empty and "Close" in df.columns:
+                    series = df["Close"].dropna()
+                    logger.info(f"sector-comp: yf success for {t_code} ({len(series)} pts)")
+            except Exception as e:
+                logger.warning(f"sector-comp: yf final failed for {t_code}: {e}")
+
+        if not series.empty:
+            if series.index.tz is not None:
+                series.index = series.index.tz_convert(None)
+        
         return series
 
-    # 4. Execute Fetch
-    results: dict[str, pd.Series] = {}
-    for t_name, t_code in tickers.items():
-        results[t_name] = await asyncio.to_thread(_fetch_one, t_code)
+    # 4. Execute Fetch (Parallel)
+    sem = asyncio.Semaphore(10)
+    async def _fetch_task(name, code):
+        async with sem:
+            return name, await asyncio.to_thread(_fetch_one_robust, name, code)
+
+    fetch_tasks = [_fetch_task(n, c) for n, c in tickers.items()]
+    fetch_results = await asyncio.gather(*fetch_tasks)
+    results = {name: s for name, s in fetch_results}
 
     # 5. Process & Sample
     chart_data_map: dict = {}

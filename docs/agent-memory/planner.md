@@ -19,6 +19,7 @@
 - **User Input Resilience**: 투자 원금과 같이 사용자가 직접 입력하는 데이터는 백엔드 동기화 이전에 `localStorage`를 1순위로 사용하여 저장/조회. 서버 응답 지연이나 DNS 장애 상황에서도 UI 기능을 유지할 수 있음.
 - **Visual Density Optimization**: 대규모 포트폴리오 데이터를 표시할 때 수치 단위를 축약('백만원')하고 뱃지 레이아웃을 한 줄로 고정함으로써 모바일/대형 화면 모두에서 가독성을 확보.
 - **Navigation Scalability**: 탑레벨 탭마다 독립적인 View 컴포넌트(`DiscoverTab`, `SectorAnalysisTab` 등)를 할당함으로써 콘텐츠 이동 및 확장이 용이한 구조를 유지.
+- **Client-side Dynamic Normalization**: 멀티 리전 시계열 데이터 비교 시, 선택된 기간 내에서 모든 티커의 공통 유효 데이터 시작일을 실시간으로 찾아 기준점(100)을 재설정함으로써 휴장일 차이로 인한 왜곡을 방지.
 
 <!-- Record structural patterns that affect planning.
    Format: Pattern — Planning Impact

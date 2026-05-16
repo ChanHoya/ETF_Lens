@@ -4,9 +4,9 @@
 
 ## Quick Summary
 
-✅ Last session: 네비게이션 개편 (모니터링 → 시장동향), "섹터분석" 탭 추가, 반도체 지수 차트 이동 배치
+✅ Last session: 섹터분석 고도화 (국내/해외/통합 필터, 우주/에너지 섹터 추가, 실시간 현황 Grid 구현)
 🔄 In progress: S1-3 TFF 대시보드 (디자인 시스템 고도화 예정)
-➡️ Next: TFF_Fund 상세 데이터 카드화 및 섹터분석 탭 내 추가 지표 확충
+➡️ Next: TFF_Fund 상세 데이터 카드화 및 섹터별 상관관계 분석 기능 검토
 
 ## Current Sprint
 
@@ -24,6 +24,7 @@
 | S1-4 | Render DB 복구 (PostgreSQL 전환) | ✅ done | 유료 $7/월 |
 | S1-5 | 초기 투자금 대비 수익률 카드 | ✅ done | UI 개선 및 CORS 수정 완료 |
 | S1-6 | Bootstrap / Conductor 문서화 | ✅ done | 이번 세션 |
+| S1-7 | 섹터분석 고도화 | ✅ done | 국내/해외/통합 필터 및 우주/에너지 추가 |
 
 ## Module Registry
 
@@ -48,8 +49,8 @@
 
 ## Recent Changes
 
+- 2026-05-16: 섹터분석 고도화 (국내/해외 구분 조회, 우주/에너지 섹터 추가, Bento Grid 현황판 구현)
 - 2026-05-16: 네비게이션 구조 개편 (모니터링 -> 시장동향 명칭 변경, 섹터분석 탭 신설)
-- 2026-05-16: 콘텐츠 재배치 (SemiChart를 섹터분석 탭으로 이동)
 - 2026-05-14: InvestmentReturnCard UI 고도화 (용어 표준화, 비중 % 표시, localStorage 저장 로직 추가)
 - 2026-04-23: Render PostgreSQL URL 교체 (dpg-d6uh7jqa214c73d4g47g-a)
 - 2026-04-23: UserPrincipal DB 모델 추가
