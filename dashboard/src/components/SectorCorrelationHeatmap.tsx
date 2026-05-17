@@ -73,31 +73,31 @@ export default function SectorCorrelationHeatmap() {
     // Continuous color scaling function based on correlation value (-1.0 to 1.0)
     const getCellStyles = (val: number) => {
         // Red: [239, 68, 68] (Rose/Red)
-        // Yellow: [234, 179, 8] (Amber/Yellow)
+        // Yellow: [250, 204, 21] (Yellow 400 - bright neon yellow for dark themes)
         // Green: [34, 197, 94] (Emerald/Green)
         
         let r, g, b;
-        let alpha = 0.15 + 0.65 * Math.abs(val); // opacity scales from 0.15 (near 0) to 0.8 (near 1 or -1)
+        let alpha = 0.35 + 0.45 * Math.abs(val); // base opacity is 0.35 to prevent muddy brown blending in dark theme
         
         if (val >= 0) {
             // Interpolate between Yellow (val = 0) and Green (val = 1)
-            r = Math.round(234 + (34 - 234) * val);
-            g = Math.round(179 + (197 - 179) * val);
-            b = Math.round(8 + (94 - 8) * val);
+            r = Math.round(250 + (34 - 250) * val);
+            g = Math.round(204 + (197 - 204) * val);
+            b = Math.round(21 + (94 - 21) * val);
         } else {
             // Interpolate between Red (val = -1) and Yellow (val = 0)
             const ratio = Math.abs(val); // 0 to 1
-            r = Math.round(234 + (239 - 234) * ratio);
-            g = Math.round(179 + (68 - 179) * ratio);
-            b = Math.round(8 + (68 - 8) * ratio);
+            r = Math.round(250 + (239 - 250) * ratio);
+            g = Math.round(204 + (68 - 204) * ratio);
+            b = Math.round(21 + (68 - 21) * ratio);
         }
         
         // Text color: white for high correlation, light gray for lower
         const isStrong = Math.abs(val) > 0.4;
         const textColor = isStrong ? 'text-white font-extrabold' : 'text-gray-300 font-medium';
         const borderColor = isStrong 
-            ? `rgba(${r}, ${g}, ${b}, 0.4)` 
-            : `rgba(255, 255, 255, 0.05)`;
+            ? `rgba(${r}, ${g}, ${b}, 0.45)` 
+            : `rgba(255, 255, 255, 0.08)`;
             
         return {
             style: {
