@@ -14,6 +14,29 @@ export default function SpaceChart() {
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
     const [keys, setKeys] = useState<string[]>([]);
     const [originalData, setOriginalData] = useState<any[]>([]);
+    
+    // Holdings comparison state
+    const [holdingsData, setHoldingsData] = useState<any[]>([]);
+    const [isHoldingsLoading, setIsHoldingsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchHoldings = async () => {
+            setIsHoldingsLoading(true);
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/analyze/space-holdings`);
+                if (!res.ok) throw new Error('API fetch error');
+                const data = await res.json();
+                if (data.table_data) {
+                    setHoldingsData(data.table_data);
+                }
+            } catch (err) {
+                console.error('Error fetching space holdings:', err);
+            } finally {
+                setIsHoldingsLoading(false);
+            }
+        };
+        fetchHoldings();
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -237,6 +260,77 @@ export default function SpaceChart() {
             <p className="text-[10px] text-gray-500 text-right mt-2 font-mono">
                 * 기준점 100으로 환산된 지수/주가 추이 (배당/분배금 제외)
             </p>
+
+            {/* Divider */}
+            <div className="w-full border-t border-white/10 my-5"></div>
+
+            {/* Holdings Table Section */}
+            <div className="flex flex-col gap-3">
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-emerald-400" />
+                    우주섹터 주요 ETF 구성종목 및 비중 비교 (%)
+                </h4>
+                
+                {isHoldingsLoading ? (
+                    <div className="py-8 flex justify-center items-center text-xs text-gray-400 font-medium">
+                        구성종목 데이터를 로드하는 중...
+                    </div>
+                ) : holdingsData.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-rose-400">
+                        구성종목 데이터를 불러오지 못했습니다.
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto w-full rounded-2xl border border-white/10 bg-black/30 shadow-inner">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-white/5">
+                                    <th className="px-4 py-3 text-xs font-bold text-gray-300 border-b border-white/10">
+                                        구성종목명
+                                    </th>
+                                    {keys.map((k, idx) => (
+                                        <th key={k} className="px-3 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10">
+                                            <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                                                <span style={{ color: colors[idx % colors.length] }}>●</span>
+                                                {k}
+                                            </div>
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {holdingsData.map((row) => (
+                                    <tr 
+                                        key={row.constituent} 
+                                        className="hover:bg-white/5 transition-colors"
+                                    >
+                                        <td className="px-4 py-2.5 text-xs font-bold text-gray-200 border-b border-white/5 max-w-[200px] truncate">
+                                            {row.constituent}
+                                        </td>
+                                        {keys.map((k) => {
+                                            const val = row[k];
+                                            const isZero = !val || val === 0;
+                                            return (
+                                                <td 
+                                                    key={k} 
+                                                    className={`px-3 py-2.5 text-center text-xs font-semibold border-b border-white/5 font-mono ${
+                                                        isZero 
+                                                            ? 'text-gray-600' 
+                                                            : val >= 15 
+                                                                ? 'text-amber-400 font-bold' 
+                                                                : 'text-gray-200'
+                                                    }`}
+                                                >
+                                                    {isZero ? '-' : `${val.toFixed(1)}%`}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
