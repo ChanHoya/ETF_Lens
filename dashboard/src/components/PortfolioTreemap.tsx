@@ -257,28 +257,39 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
 
                                             {/* 텍스트 — 너비/높이에 따라 단계적 표시 */}
                                             {!isTiny && (
-                                                <div className="relative z-10 flex flex-col items-center justify-center px-1 text-center w-full overflow-hidden"
-                                                    style={{ lineHeight: 1.1 }}>
-                                                    {!isNarrow && !isVeryShort && (
-                                                        <p
-                                                            className="text-white font-semibold truncate w-full text-center"
-                                                            style={{ fontSize: colWidth > 15 && !isShort ? 13 : 10 }}
-                                                        >
+                                                <div className="relative z-10 flex flex-col items-center justify-center px-1.5 text-center w-full overflow-hidden"
+                                                    style={{ lineHeight: 1.2 }}>
+                                                    {(!isNarrow && approxHeight >= 48) ? (
+                                                        <>
+                                                            <p
+                                                                className="text-white font-semibold truncate w-full text-center"
+                                                                style={{ fontSize: colWidth > 15 ? 12 : 10 }}
+                                                            >
+                                                                {cell.name}
+                                                            </p>
+                                                            <p
+                                                                className="font-bold tabular-nums mt-0.5"
+                                                                style={{
+                                                                    fontSize: colWidth > 12 ? 11 : 9,
+                                                                    color: getReturnText(cell.returnRate),
+                                                                }}
+                                                            >
+                                                                {fmtPct(cell.returnRate)}
+                                                            </p>
+                                                            <p className="text-white/40 tabular-nums text-[9px] mt-0.5">
+                                                                {cell.pct.toFixed(1)}%
+                                                            </p>
+                                                        </>
+                                                    ) : (
+                                                        /* 3칸 공간이 안 나오는 얇은/좁은 셀의 경우 한 줄로 종목명 / 등락율 / 보유비중 병합 노출 */
+                                                        <p className="text-white/90 font-semibold truncate w-full text-center text-[10px] md:text-[11px] tracking-tight px-0.5">
                                                             {cell.name}
-                                                        </p>
-                                                    )}
-                                                    <p
-                                                        className="font-bold tabular-nums"
-                                                        style={{
-                                                            fontSize: colWidth > 12 && !isVeryShort ? 12 : 10,
-                                                            color: getReturnText(cell.returnRate),
-                                                        }}
-                                                    >
-                                                        {fmtPct(cell.returnRate)}
-                                                    </p>
-                                                    {!isNarrow && colWidth > 10 && !isShort && (
-                                                        <p className="text-white/40 tabular-nums" style={{ fontSize: 9 }}>
-                                                            {cell.pct.toFixed(1)}%
+                                                            <span className="ml-1 font-bold" style={{ color: getReturnText(cell.returnRate) }}>
+                                                                {fmtPct(cell.returnRate)}
+                                                            </span>
+                                                            <span className="ml-1 text-white/45 font-mono text-[9px]">
+                                                                {cell.pct.toFixed(1)}%
+                                                            </span>
                                                         </p>
                                                     )}
                                                 </div>
