@@ -66,7 +66,7 @@ export default function SectorAnalysisTab() {
                 />
 
                 {/* SemiChart: Semiconductor Indices (Detailed View) */}
-                {region !== 'US' && (
+                {region !== 'US' && selectedSector === '반도체' && (
                     <div className="space-y-3">
                         <div className="flex items-center gap-2 px-2">
                             <Zap className="w-4 h-4 text-amber-400" />

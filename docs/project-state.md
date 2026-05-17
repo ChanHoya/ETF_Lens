@@ -52,6 +52,7 @@
 
 ## Recent Changes
 
+- 2026-05-17: 반도체 섹터 클릭 시에만 하단 반도체 특화 분석(SemiChart)이 보이도록 조건부 렌더링 수정 완료 (화면 복잡도 최적화)
 - 2026-05-17: S1-9 섹터별 상관관계 분석 기능 추가 완료 (Pandas Pearson 계수 연산 및 프리미엄 글래스모피즘 히트맵 구현)
 - 2026-05-17: TFF 상세 뷰 카드화 (S1-8) 완료, YtmView 및 MonthlyView 전용 카드 레이아웃 전환
 - 2026-05-17: CumulativeView 및 SectorStatusGrid TypeScript 형변환 버그(cloneElement, undefined check) 해결
