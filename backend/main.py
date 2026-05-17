@@ -14,6 +14,7 @@ from api.portfolio_market import router as market_router
 from api.backtest import router as backtest_router
 from api.peer_analysis import router as peer_router
 from api.rebalance_proposal import router as rebalance_proposal_router
+from api.db_sync import router as db_sync_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -123,6 +124,7 @@ app.include_router(market_router, prefix="/api/v1")
 app.include_router(backtest_router, prefix="/api/v1/my/backtest")
 app.include_router(peer_router, prefix="/api/v1/my")
 app.include_router(rebalance_proposal_router, prefix="/api/v1/analyze")
+app.include_router(db_sync_router, prefix="/api/v1/sync")
 
 
 @app.get("/health")

@@ -4,9 +4,9 @@
 
 ## Quick Summary
 
-✅ Last session: S2-1 KIS 4개 실시간 잔고 연동 및 Gemini 2.5 기반 맞춤형 포트폴리오 자산 리밸런싱 교체 권고 카드 구현 및 UI 연동 완료
-🔄 In progress: 없음 (스프린트 2 AI 추천 코어 마일스톤 성공적 수렴)
-➡️ Next: 다음 스프린트 2-2 '배포 스크립트 최적화 및 Render PostgreSQL DB 동기화' 개시
+✅ Last session: S2-2 로컬 SQLite ↔ PostgreSQL 무중단 복제, db_sync API 및 프론트엔드 정합성 관리자 패널(DbSyncControl) 구현 완료 및 Git 형상 관리 통과
+🔄 In progress: 없음 (스프린트 2-2 무중단 복제 마일스톤 성공적 수렴)
+➡️ Next: 스프린트 2의 세 번째 스토리인 'Vercel + Render production-grade serverless 배포 스크립트 고도화' 개시
 
 ## Current Sprint
 
@@ -18,6 +18,7 @@
 
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
+| S2-2 | 로컬 SQLite ↔ PostgreSQL 무중단 복제 및 백업 스케줄러 고도화 | ✅ done | APScheduler 자동 트리거 연동, db_sync API 및 UI 정합성 관리자 패널(DbSyncControl) 구현 완료 |
 | S2-1 | AI 기반 포트폴리오 자산 재조정 추천 엔진 | ✅ done | KIS 4계좌 실시간 7대 테마 분류 분석 및 Gemini API 연동 완료 |
 | S1-1 | ETF 마스터 DB + 종목 분석 | ✅ done | 1,000+종목 |
 | S1-2 | KIS 포트폴리오 4계좌 연동 | ✅ done | Rate limit 보호 완료 |

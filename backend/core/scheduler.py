@@ -273,23 +273,28 @@ async def sync_etf_batch():
 def setup_scheduler():
     from scheduler.etf_price_sync import sync_etf_prices_yfinance
     from core.etf_performance import update_all_etf_performance_job
+    from core.db_replicator import trigger_replication_background
 
-    # wrapper: 각 job 완료 후 버전 자동 업데이트
+    # wrapper: 각 job 완료 후 버전 자동 업데이트 및 PostgreSQL 복제 트리거
     async def _job_master():
         await sync_etf_master_list()
         await update_app_version("[master]")
+        trigger_replication_background()
 
     async def _job_batch():
         await sync_etf_batch()
         await update_app_version("[batch]")
+        trigger_replication_background()
 
     async def _job_price():
         await sync_etf_prices_yfinance()
         await update_app_version("[price]")
+        trigger_replication_background()
 
     async def _job_perf():
         await update_all_etf_performance_job()
         await update_app_version("[perf]")
+        trigger_replication_background()
 
     # 07:00 - 경량 ETF 마스터 목록 upsert
     scheduler.add_job(_job_master, "cron", hour=7, minute=0, id="daily_etf_master_sync")
