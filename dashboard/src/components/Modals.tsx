@@ -816,10 +816,10 @@ export default function Modals({
                                         </div>
                                         <div className="flex-1 min-h-[250px] w-full">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <ComposedChart key={`price-${popupPeriod}`} data={detailChartData.price} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                                <ComposedChart key={`price-${popupPeriod}`} data={detailChartData.price} margin={{ top: 5, right: 15, left: 15, bottom: 5 }}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                                                     <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 11 }} tickMargin={10} stroke="#1e293b" minTickGap={30} />
-                                                    <YAxis tick={{ fill: '#e2e8f0', fontSize: 11 }} tickFormatter={(val) => `${val > 0 ? '+' : ''}${val}%`} stroke="#1e293b" axisLine={false} domain={detailChartData.domainLeft as any} width={45} />
+                                                    <YAxis orientation="right" width={55} tick={{ fill: '#e2e8f0', fontSize: 11 }} tickFormatter={(val) => `${val > 0 ? '+' : ''}${val.toFixed(1)}%`} stroke="#1e293b" axisLine={false} domain={detailChartData.domainLeft as any} />
                                                     <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} formatter={(val: any, name: string, props: any) => {
                                                         const isUSD = isStock || selectedDetailEtf.etf_code?.toUpperCase() === 'ARKX';
                                                         const sign = val > 0 ? '+' : '';
@@ -924,10 +924,10 @@ export default function Modals({
                                             <span className="absolute right-[20px] top-3 text-[11px] text-gray-500 font-bold">[%]</span>
                                             <div className="flex-1 min-h-[250px] w-full">
                                                 <ResponsiveContainer width="100%" height="100%">
-                                                    <ComposedChart data={detailChartData.nav} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+                                                    <ComposedChart data={detailChartData.nav} margin={{ top: 5, right: 15, left: 15, bottom: 5 }}>
                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                                                         <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 11 }} tickMargin={10} stroke="#1e293b" minTickGap={15} />
-                                                        <YAxis yAxisId="left" tick={{ fill: '#ef4444', fontSize: 11 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="#1e293b" axisLine={false} domain={['auto', 'auto']} />
+                                                        <YAxis yAxisId="left" width={55} tick={{ fill: '#ef4444', fontSize: 11 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="#1e293b" axisLine={false} domain={['auto', 'auto']} />
                                                         <YAxis yAxisId="right" orientation="right" tick={{ fill: '#3b82f6', fontSize: 11 }} tickFormatter={(val) => `${val.toFixed(2)}`} stroke="#1e293b" axisLine={false} domain={[-0.5, 0.5]} />
                                                         <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
                                                         <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />

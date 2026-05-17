@@ -247,7 +247,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                     </div>
                 ) : (
                     <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <LineChart data={chartData} margin={{ top: 10, right: 15, left: 15, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                             <XAxis
                                 dataKey="date"
@@ -257,10 +257,12 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                 minTickGap={30}
                             />
                             <YAxis
+                                orientation="right"
+                                width={55}
                                 domain={['auto', 'auto']}
                                 stroke="rgba(255,255,255,0.2)"
                                 tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
-                                tickFormatter={(val) => `${val}`}
+                                tickFormatter={(val) => `${val.toFixed(0)}%`}
                             />
                             <RechartsTooltip content={<CustomTooltip />} />
                             <Legend

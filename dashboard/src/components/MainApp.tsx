@@ -797,9 +797,31 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
     let domainLeft = ['auto', 'auto'];
 
     if (rawChart.length > 0) {
-      const periodDaysMap: { [key: string]: number } = { '1M': 22, '3M': 63, '6M': 126, '1Y': 252 };
-      const sliceDays = Math.min(rawChart.length, periodDaysMap[popupPeriod] || 252);
-      const oneYearGlimpse = rawChart.slice(rawChart.length - sliceDays);
+      // Calendar-based slicing: filter precisely by date instead of index slicing
+      const lastDateStr = rawChart[rawChart.length - 1]?.date;
+      let oneYearGlimpse = rawChart;
+      
+      if (lastDateStr) {
+        const lastDateObj = new Date(lastDateStr);
+        const startDateObj = new Date(lastDateStr);
+        
+        switch (popupPeriod) {
+          case '1M': startDateObj.setMonth(lastDateObj.getMonth() - 1); break;
+          case '3M': startDateObj.setMonth(lastDateObj.getMonth() - 3); break;
+          case '6M': startDateObj.setMonth(lastDateObj.getMonth() - 6); break;
+          case '1Y': startDateObj.setFullYear(lastDateObj.getFullYear() - 1); break;
+          default: startDateObj.setFullYear(lastDateObj.getFullYear() - 1); break;
+        }
+        
+        oneYearGlimpse = rawChart.filter((d: any) => new Date(d.date) >= startDateObj);
+        
+        // Fail-safe: if filtering returns nothing, default to the last 252 points
+        if (oneYearGlimpse.length === 0) {
+          oneYearGlimpse = rawChart.slice(Math.max(rawChart.length - 252, 0));
+        }
+      } else {
+        oneYearGlimpse = rawChart.slice(Math.max(rawChart.length - 252, 0));
+      }
 
       // Pre-process: build a clean dataset with robust forward-fill & backward-fill
       const cleanChart = oneYearGlimpse.map((d: any) => ({
