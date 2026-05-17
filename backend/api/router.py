@@ -1799,14 +1799,14 @@ async def get_space_chart_data():
     from datetime import datetime, timedelta
 
     tickers = {
-        "KODEX 미국우주항공": "488050.KS",
-        "ACE 미국우주테크액티브": "484930.KS",
-        "Tiger 미국우주테크": "488100.KS",
-        "SOL 미국우주항공TOP10": "495470.KS",
+        "KODEX 미국우주항공": "0167Z0.KS",
+        "ACE 미국우주테크액티브": "0180V0.KS",
+        "Tiger 미국우주테크": "0183J0.KS",
+        "SOL 미국우주항공TOP10": "0181L0.KS",
     }
 
     # 스마트 캐시 TTL (kst 날짜 기반)
-    space_cache_key = "space_chart_v1"
+    space_cache_key = "space_chart_v2"
     from datetime import timezone, timedelta as _td
     _kst = timezone(_td(hours=9))
     _kst_now = datetime.now(_kst)
@@ -1828,10 +1828,10 @@ async def get_space_chart_data():
     end_str = end_date.strftime("%Y-%m-%d")
 
     yf_to_fdr = {
-        "488050.KS": "488050",
-        "484930.KS": "484930",
-        "488100.KS": "488100",
-        "495470.KS": "495470",
+        "0167Z0.KS": "0167Z0",
+        "0180V0.KS": "0180V0",
+        "0183J0.KS": "0183J0",
+        "0181L0.KS": "0181L0",
     }
 
     def _fetch_one(t_code: str) -> pd.Series:
