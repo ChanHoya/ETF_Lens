@@ -24,9 +24,9 @@ export default function CumulativeView({ data }: Props) {
       // % 지표들 (만약 엑셀 파서에서 0.05 로 들어왔다면 100을 곱함)
       // 파서의 parseNumber는 % 기호 제거시 자동으로 float을 반환하지만
       // 소수로 되어있는 경우 툴팁/차트 표시를 위해 스케일 조정 (예: 0.05 -> 5.0)
-      returnRateDisp: (Math.abs(m.returnRate) < 2 && m.returnRate !== 0) ? m.returnRate * 100 : m.returnRate,
-      kospiRateDisp: (Math.abs(m.kospiRate) < 2 && m.kospiRate !== 0) ? m.kospiRate * 100 : m.kospiRate,
-      sp500RateDisp: (Math.abs(m.sp500Rate) < 2 && m.sp500Rate !== 0) ? m.sp500Rate * 100 : m.sp500Rate,
+      returnRateDisp: (Math.abs(m.returnRate || 0) < 2 && m.returnRate !== 0) ? (m.returnRate || 0) * 100 : m.returnRate,
+      kospiRateDisp: (Math.abs(m.kospiRate || 0) < 2 && m.kospiRate !== 0) ? (m.kospiRate || 0) * 100 : (m.kospiRate || 0),
+      sp500RateDisp: (Math.abs(m.sp500Rate || 0) < 2 && m.sp500Rate !== 0) ? (m.sp500Rate || 0) * 100 : (m.sp500Rate || 0),
     };
   });
 

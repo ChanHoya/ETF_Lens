@@ -138,7 +138,7 @@ export default function SectorStatusGrid({
                         {/* Header: Sector Icon & Name */}
                         <div className="flex items-center gap-2 px-2 pt-1">
                             <div className={`p-1.5 rounded-lg bg-gradient-to-br ${meta.color || 'from-gray-500 to-slate-500'} shadow-lg shadow-black/20`}>
-                                {React.cloneElement((meta.icon || <Activity />) as React.isValidElement, { className: 'w-3.5 h-3.5 text-white' })}
+                                {React.cloneElement((meta.icon || <Activity />) as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5 text-white' })}
                             </div>
                             <span className="text-xs font-black text-white">{group.baseName}</span>
                         </div>

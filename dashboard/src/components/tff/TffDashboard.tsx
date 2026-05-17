@@ -8,6 +8,8 @@ import CumulativeView from './views/CumulativeView';
 import AssetsView from './views/AssetsView';
 import PortfolioDetailView from './views/PortfolioDetailView';
 import OverviewView from './views/OverviewView';
+import YtmView from './views/YtmView';
+import MonthlyView from './views/MonthlyView';
 
 const LOCAL_STORAGE_KEY = 'tff_fund_data';
 
@@ -211,15 +213,14 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                             )}
 
                             {activeSubTab === 'ytm' && fundData.ytm && (
-                                <PortfolioDetailView data={fundData.ytm} title="Year To Date (YTM) 상세 분석" onOpenDetail={onOpenDetail} />
+                                <YtmView data={fundData.ytm} onOpenDetail={onOpenDetail} />
                             )}
 
                             {activeSubTab === 'monthly' && (
                                 <div className="space-y-4">
                                     {selectedMonth && fundData.monthlyMap[selectedMonth] ? (
-                                        <PortfolioDetailView 
+                                        <MonthlyView 
                                             data={fundData.monthlyMap[selectedMonth]} 
-                                            title="상세 편입자산 및 손익 기록" 
                                             onOpenDetail={onOpenDetail} 
                                             titleRightElement={
                                                 <select 
