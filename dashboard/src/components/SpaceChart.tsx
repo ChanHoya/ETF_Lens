@@ -6,7 +6,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 
-export default function SemiChart() {
+export default function SpaceChart() {
     const [period, setPeriod] = useState('1Y');
     const [chartData, setChartData] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -19,7 +19,7 @@ export default function SemiChart() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const res = await fetch(`${API_BASE}/api/v1/analyze/semi-chart`);
+                const res = await fetch(`${API_BASE}/api/v1/analyze/space-chart`);
                 if (!res.ok) throw new Error('API fetch error');
                 const data = await res.json();
                 
@@ -31,7 +31,7 @@ export default function SemiChart() {
                 }
             } catch (err) {
                 console.error(err);
-                setError('서버에서 반도체 지수 데이터를 불러오지 못했습니다.');
+                setError('서버에서 우주 지수 데이터를 불러오지 못했습니다.');
             } finally {
                 setIsLoading(false);
             }
@@ -63,7 +63,6 @@ export default function SemiChart() {
 
         // ─── 공통 기준일 계산 ───────────────────────────────────────────
         // 모든 티커에 유효한 데이터가 있는 첫 번째 날짜를 공통 base=100 기준일로 사용.
-        // (티커별로 다른 날을 기준으로 삼으면 미국/한국 시장 개장일 차이로 그래프가 어긋남)
         const commonBaseRow = filtered.find(d => keys.every(k => d[k] != null && d[k] > 0));
         if (!commonBaseRow) {
             setChartData([]);
@@ -100,13 +99,12 @@ export default function SemiChart() {
     };
 
     const periodOptions = ['1M', '3M', '6M', '1Y', '3Y', '10Y'];
-    const colors = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
+    const colors = ['#f59e0b', '#ec4899', '#3b82f6', '#10b981'];
 
     // ── 커스텀 툴팁: 전일 대비 증감율 표시 ──────────────────────────────
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (!active || !payload || payload.length === 0) return null;
 
-        // chartData에서 현재 날짜 인덱스를 찾아 전일 데이터 참조
         const currentIdx = chartData.findIndex((d) => d.date === label);
         const prevRow = currentIdx > 0 ? chartData[currentIdx - 1] : null;
 
@@ -145,7 +143,6 @@ export default function SemiChart() {
                             </span>
                             <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                                 {val.toFixed(1)}%
-                                {/* 전일 대비 증감율 */}
                                 {dailyPct !== null && (
                                     <span style={{ color: dailyColor, marginLeft: '6px', fontSize: '11px' }}>
                                         {dailyText}
@@ -161,14 +158,13 @@ export default function SemiChart() {
             </div>
         );
     };
-    // ─────────────────────────────────────────────────────────────────────
 
     return (
         <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                     <Activity className="w-5 h-5 text-indigo-400" />
-                    반도체 지수현황
+                    우주섹터 주요 종목 현황
                 </h3>
                 <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
                     {periodOptions.map(p => (
@@ -188,7 +184,7 @@ export default function SemiChart() {
 
             <div className="w-full h-[400px]">
                 {isLoading ? (
-                    <ChartLoadingPlaceholder height={400} message="섹터 ETF 데이터 로딩중" />
+                    <ChartLoadingPlaceholder height={400} message="우주 ETF 데이터 로딩중" />
                 ) : error ? (
                     <div className="w-full h-full flex items-center justify-center text-rose-400 text-sm">
                         {error}

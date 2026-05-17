@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Activity, Globe, Zap, Layers } from 'lucide-react';
 import SemiChart from '@/components/SemiChart';
+import SpaceChart from '@/components/SpaceChart';
 import SectorComparisonChart from '@/components/SectorComparisonChart';
 import SectorStatusGrid from '@/components/SectorStatusGrid';
 import SectorCorrelationHeatmap from '@/components/SectorCorrelationHeatmap';
@@ -73,6 +74,17 @@ export default function SectorAnalysisTab() {
                             <h4 className="text-sm font-bold text-gray-300">반도체 특화 분석</h4>
                         </div>
                         <SemiChart />
+                    </div>
+                )}
+
+                {/* SpaceChart: Space Indices (Detailed View) */}
+                {region !== 'US' && selectedSector === '우주' && (
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 px-2">
+                            <Zap className="w-4 h-4 text-cyan-400" />
+                            <h4 className="text-sm font-bold text-gray-300">우주 특화 분석</h4>
+                        </div>
+                        <SpaceChart />
                     </div>
                 )}
 

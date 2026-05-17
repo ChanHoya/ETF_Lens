@@ -1786,3 +1786,139 @@ async def get_semi_chart_data():
     _bench_cache[semi_cache_key] = (result, time.time())
     return result
 
+
+@router.get("/space-chart")
+async def get_space_chart_data():
+    """
+    Returns split/dividend-adjusted close prices for 4 space assets.
+    """
+    import yfinance as yf
+    import pandas as pd
+    import asyncio
+    import time
+    from datetime import datetime, timedelta
+
+    tickers = {
+        "KODEX 미국우주항공": "488050.KS",
+        "ACE 미국우주테크액티브": "484930.KS",
+        "Tiger 미국우주테크": "488100.KS",
+        "SOL 미국우주항공TOP10": "495470.KS",
+    }
+
+    # 스마트 캐시 TTL (kst 날짜 기반)
+    space_cache_key = "space_chart_v1"
+    from datetime import timezone, timedelta as _td
+    _kst = timezone(_td(hours=9))
+    _kst_now = datetime.now(_kst)
+    # 장중(KST 09:00~15:30) 1분, 장외 10분
+    _kst_h, _kst_m = _kst_now.hour, _kst_now.minute
+    _in_kr_market = (9, 0) <= (_kst_h, _kst_m) <= (15, 30)
+    _in_us_market = (23, 30) <= (_kst_h, _kst_m) or (_kst_h, _kst_m) <= (6, 0)
+    _space_ttl = 60 if (_in_kr_market or _in_us_market) else 600
+    if space_cache_key in _bench_cache:
+        cached_val, cached_ts = _bench_cache[space_cache_key]
+        if time.time() - cached_ts < _space_ttl:
+            return cached_val
+
+    # KST 기준 오늘+1을 end로 설정
+    now_kst = datetime.now(_kst)
+    end_date = (now_kst + _td(days=1)).date()
+    start_date = now_kst.date() - _td(days=10 * 365 + 30)
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    yf_to_fdr = {
+        "488050.KS": "488050",
+        "484930.KS": "484930",
+        "488100.KS": "488100",
+        "495470.KS": "495470",
+    }
+
+    def _fetch_one(t_code: str) -> pd.Series:
+        series = pd.Series(dtype=float)
+        try:
+            df = yf.download(
+                t_code,
+                start=start_str,
+                end=end_str,
+                progress=False,
+            )
+            if not df.empty:
+                if isinstance(df.columns, pd.MultiIndex):
+                    lvl0 = df.columns.get_level_values(0).unique().tolist()
+                    lvl1 = df.columns.get_level_values(1).unique().tolist()
+                    if "Close" in lvl0:
+                        sub = df["Close"]
+                        series = sub.iloc[:, 0] if isinstance(sub, pd.DataFrame) else sub
+                    elif t_code in lvl0:
+                        series = df[t_code]["Close"] if "Close" in df[t_code].columns else df[t_code].iloc[:, 0]
+                    elif "Close" in lvl1:
+                        series = df.xs("Close", axis=1, level=1)
+                        series = series.iloc[:, 0] if isinstance(series, pd.DataFrame) else series
+                    else:
+                        series = df.iloc[:, 0]
+                else:
+                    if "Close" in df.columns:
+                        series = df["Close"]
+                    elif "Adj Close" in df.columns:
+                        series = df["Adj Close"]
+                    else:
+                        series = df.iloc[:, 0]
+                series = series.dropna()
+            else:
+                logger.warning(f"space-chart: yfinance empty for {t_code}")
+        except Exception as e:
+            logger.warning(f"space-chart: yfinance failed for {t_code}: {e}")
+
+        # Fallback to fdr
+        if series.empty:
+            fdr_code = yf_to_fdr.get(t_code, t_code.replace(".KS", ""))
+            try:
+                import FinanceDataReader as fdr
+                fdr_df = fdr.DataReader(fdr_code, start_str, end_str)
+                if not fdr_df.empty and "Close" in fdr_df.columns:
+                    series = fdr_df["Close"].dropna()
+                    logger.info(f"space-chart: fdr fallback OK for {t_code} → {fdr_code} ({len(series)} pts)")
+                else:
+                    logger.warning(f"space-chart: fdr also empty for {fdr_code}")
+            except Exception as e2:
+                logger.warning(f"space-chart: fdr fallback failed for {fdr_code}: {e2}")
+
+        if series.empty:
+            return pd.Series(dtype=float)
+
+        if series.index.tz is not None:
+            series.index = series.index.tz_convert(None)
+
+        logger.info(
+            f"space-chart {t_code}: {len(series)} pts, "
+            f"{series.index[0].date()} – {series.index[-1].date()}"
+        )
+        return series
+
+    results: dict[str, pd.Series] = {}
+    for t_name, t_code in tickers.items():
+        results[t_name] = await asyncio.to_thread(_fetch_one, t_code)
+
+    chart_data_map: dict = {}
+    for t_name, series in results.items():
+        if series.empty:
+            logger.warning(f"space-chart: skipping {t_name} (no data)")
+            continue
+        for dt_ts, val in series.items():
+            dt_str = str(dt_ts.date())
+            if dt_str not in chart_data_map:
+                chart_data_map[dt_str] = {"date": dt_str}
+            chart_data_map[dt_str][t_name] = float(val)
+
+    sorted_dates = sorted(chart_data_map.keys())
+    if not sorted_dates:
+        return {"line_chart_data": [], "keys": list(tickers.keys())}
+
+    sampled_dates = smart_sample_dates(sorted_dates)
+
+    line_chart_data = [chart_data_map[dt] for dt in sampled_dates]
+    result = {"line_chart_data": line_chart_data, "keys": list(tickers.keys())}
+    _bench_cache[space_cache_key] = (result, time.time())
+    return result
+
