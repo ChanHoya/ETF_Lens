@@ -1788,7 +1788,7 @@ async def get_semi_chart_data():
 
 
 @router.get("/space-chart")
-async def get_space_chart_data():
+async def get_space_chart_data(db: AsyncSession = Depends(get_db)):
     """
     Returns split/dividend-adjusted close prices for 4 space assets.
     """
@@ -1900,7 +1900,30 @@ async def get_space_chart_data():
 
     results: dict[str, pd.Series] = {}
     for t_name, t_code in tickers.items():
-        results[t_name] = await asyncio.to_thread(_fetch_one, t_code)
+        series = await asyncio.to_thread(_fetch_one, t_code)
+        
+        # If yfinance & FDR both empty, recover from database ETFDailyPrice where code == fdr_code
+        if series.empty:
+            fdr_code = yf_to_fdr.get(t_code, t_code.replace(".KS", ""))
+            logger.info(f"space-chart: yfinance/FDR empty for {t_name} ({t_code}), attempting DB fallback for code {fdr_code}")
+            try:
+                from sqlalchemy import select
+                from db.models import ETFDailyPrice
+                db_res = await db.execute(
+                    select(ETFDailyPrice)
+                    .where(ETFDailyPrice.code == fdr_code)
+                    .order_by(ETFDailyPrice.date)
+                )
+                rows = db_res.scalars().all()
+                if rows:
+                    dates = [datetime.strptime(r.date, "%Y-%m-%d") for r in rows]
+                    closes = [float(r.close) for r in rows]
+                    series = pd.Series(closes, index=dates)
+                    logger.info(f"space-chart: successfully recovered {len(series)} real points from DB for {t_name}")
+            except Exception as db_e:
+                logger.warning(f"space-chart: DB fallback failed for {fdr_code}: {db_e}")
+                
+        results[t_name] = series
 
     # ── Fail-safe fallback: if any series is empty, generate highly realistic simulated space sector daily paths ──
     import random
