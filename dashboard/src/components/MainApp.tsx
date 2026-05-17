@@ -774,10 +774,16 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
     const isSP500 = etfKey.toUpperCase().includes('S&P') || etfKey.toUpperCase().includes('S&P500') || (etfKey.includes('배당') && etfKey.includes('미국'));
     const isUS = etfKey.includes('미국') || isNasdaq || isSP500;
 
+    const INDIVIDUAL_STOCKS = ['RKLB', 'SATS', 'ASTS', 'LUNR', 'RDW', 'PL', 'LHX', 'AMD', 'TER', 'BA', 'GSAT', 'KTOS', 'DE', 'ACHR', 'MDALF'];
+    const isStock = INDIVIDUAL_STOCKS.includes(selectedDetailEtf.etf_code?.toUpperCase()) || (selectedDetailEtf.basic_info?.['운용사'] === '-' && selectedDetailEtf.etf_code !== 'ARKX');
+
     let benchmarkName = 'to KOSPI(좌)';
     let benchKey = 'KOSPI';
 
-    if (isNasdaq) {
+    if (isStock) {
+      benchmarkName = 'to NASDAQ(좌)';
+      benchKey = 'NASDAQ';
+    } else if (isNasdaq) {
       benchmarkName = 'to NASDAQ(좌)';
       benchKey = 'NASDAQ';
     } else if (isSP500 || isUS) {
@@ -794,25 +800,35 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
       const oneYearGlimpse = rawChart.slice(rawChart.length - sliceDays);
       let basePrice = 0;
       let baseBench = 0;
+      let baseSpace = 0;
       let minYield = 0;
       let maxYield = 0;
       let lastBenchVal = 0;
+      let lastSpaceVal = 0;
 
       oneYearGlimpse.forEach((d: any, idx: number) => {
         const price = d[etfKey] || d[`${etfKey}_raw`] || 0;
         let benchVal = d[benchKey];
+        let spaceVal = d["US-Space (ARKX)"];
 
-        // Carry forward previous benchmark value on holidays where data is missing
+        // Carry forward previous values on holidays where data is missing
         if (benchVal === undefined || benchVal === null || benchVal === 0) {
           benchVal = lastBenchVal;
         } else {
           lastBenchVal = benchVal;
         }
 
+        if (spaceVal === undefined || spaceVal === null || spaceVal === 0) {
+          spaceVal = lastSpaceVal;
+        } else {
+          lastSpaceVal = spaceVal;
+        }
+
         if (price > 0) {
           if (basePrice === 0) {
             basePrice = price; // Initialize on the first day the ETF has a valid price
             if (benchVal > 0) baseBench = benchVal;
+            if (spaceVal > 0) baseSpace = spaceVal;
           }
 
           if (basePrice > 0) {
@@ -823,18 +839,32 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
             if (benchVal > 0 && baseBench > 0) {
               benchRate = ((benchVal / baseBench) - 1) * 100;
             }
+
+            let spaceRate = 0;
+            if (spaceVal > 0 && baseSpace === 0) {
+              baseSpace = spaceVal; // fallback initialization
+            }
+            if (spaceVal > 0 && baseSpace > 0) {
+              spaceRate = ((spaceVal / baseSpace) - 1) * 100;
+            }
+
             const priceRate = ((price / basePrice) - 1) * 100;
 
             if (benchRate < minYield) minYield = benchRate;
             if (benchRate > maxYield) maxYield = benchRate;
             if (priceRate < minYield) minYield = priceRate;
             if (priceRate > maxYield) maxYield = priceRate;
+            if (isStock && spaceRate !== 0) {
+              if (spaceRate < minYield) minYield = spaceRate;
+              if (spaceRate > maxYield) maxYield = spaceRate;
+            }
 
             priceData.push({
               date: d.date,
               day: d.date.substring(2).replace(/-/g, '/'),
               price: price,
-              rel_yield: Number(benchRate.toFixed(2))
+              rel_yield: Number(benchRate.toFixed(2)),
+              space_yield: Number(spaceRate.toFixed(2))
             });
           }
         }
@@ -874,8 +904,6 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
     let domainRight = ['auto', 'auto'];
     if (priceData.length > 0 && rawChart.length > 0 && priceData[0].price > 0) {
       const bPrice = priceData[0].price;
-      // We stored minYield and maxYield locally, so we need to recalculate or extract from priceData.
-      // Wait, let's just do a quick loop to find min/max again if needed or use the already computed ones
       let mMin = 0; let mMax = 0;
       priceData.forEach((pd: any) => {
         const pRate = ((pd.price / bPrice) - 1) * 100;
@@ -883,6 +911,10 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
         if (pd.rel_yield > mMax) mMax = pd.rel_yield;
         if (pRate < mMin) mMin = pRate;
         if (pRate > mMax) mMax = pRate;
+        if (isStock && pd.space_yield !== undefined && !isNaN(pd.space_yield)) {
+          if (pd.space_yield < mMin) mMin = pd.space_yield;
+          if (pd.space_yield > mMax) mMax = pd.space_yield;
+        }
       });
       domainLeft = [Math.floor(mMin - 5), Math.ceil(mMax + 5)] as any;
       domainRight = [Math.floor(bPrice * (1 + (mMin - 5) / 100)), Math.ceil(bPrice * (1 + (mMax + 5) / 100))] as any;

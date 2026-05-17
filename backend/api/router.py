@@ -1124,6 +1124,15 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
         if c_clean in space_map:
             c_clean = space_map[c_clean]
         mapped_codes.append(c_clean)
+    
+    # Auto-include ARKX as sector benchmark if space stock is requested
+    us_space_constituents = {
+        "RKLB", "SATS", "ASTS", "LUNR", "RDW", "PL", "LHX", "AMD", "TER", "BA", "GSAT", "KTOS", "DE", "ACHR", "MDALF"
+    }
+    has_space_stock = any(c.upper() in us_space_constituents for c in mapped_codes)
+    if has_space_stock and "ARKX" not in [c.upper() for c in mapped_codes]:
+        mapped_codes.append("ARKX")
+        
     request.etf_codes = mapped_codes
 
     # 1. Fetch data for each ETF on-demand (Agent 1)
