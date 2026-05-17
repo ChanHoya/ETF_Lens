@@ -16,6 +16,10 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
     const [error, setError] = useState<string | null>(null);
     const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
 
+    const [isSimulatedMode, setIsSimulatedMode] = useState<boolean>(false);
+    const [hasSimulated, setHasSimulated] = useState<boolean>(false);
+    const [simulatedData, setSimulatedData] = useState<any>(null);
+
     useEffect(() => {
         // 초기 마운트 시 세션스토리지 확인
         if (typeof window !== "undefined") {
@@ -50,6 +54,17 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
         }
     }, [isAuthorized]);
 
+    useEffect(() => {
+        const handleRefresh = (e: any) => {
+            fetchPortfolioData(true);
+            if (e.detail && e.detail.enableSimulation) {
+                setIsSimulatedMode(true);
+            }
+        };
+        window.addEventListener('refresh-portfolio', handleRefresh);
+        return () => window.removeEventListener('refresh-portfolio', handleRefresh);
+    }, [fetchPortfolioData]);
+
     const fetchTrades = useCallback(async () => {
         try {
             const res = await fetch(`${API_BASE}/api/v1/my/trades/today`);
@@ -62,6 +77,23 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
         else setIsLoading(true);
         setError(null);
         try {
+            // 1. Fetch simulated state first
+            try {
+                const simRes = await fetch(`${API_BASE}/api/v1/order/simulated-portfolio`);
+                if (simRes.ok) {
+                    const simJson = await simRes.json();
+                    if (simJson.has_simulated && simJson.data) {
+                        setHasSimulated(true);
+                        setSimulatedData(simJson.data);
+                    } else {
+                        setHasSimulated(false);
+                        setSimulatedData(null);
+                    }
+                }
+            } catch (simErr) {
+                console.warn("Simulated portfolio fetch failed:", simErr);
+            }
+
             const [portfolioRes] = await Promise.all([
                 fetch(`${API_BASE}/api/v1/my/portfolio`),
                 fetchTrades(),
@@ -120,6 +152,18 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        {hasSimulated && (
+                            <button
+                                onClick={() => setIsSimulatedMode(!isSimulatedMode)}
+                                className={`px-3 py-1.5 border rounded-xl text-[10px] sm:text-xs font-semibold transition-all ${
+                                    isSimulatedMode 
+                                        ? "bg-purple-500/25 text-purple-300 border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.35)]" 
+                                        : "bg-white/5 text-gray-400 border-white/10 hover:bg-white/10"
+                                }`}
+                            >
+                                ✨ {isSimulatedMode ? "실제 자산 보기" : "시뮬레이션 자산 보기"}
+                            </button>
+                        )}
                         <button
                             onClick={() => fetchPortfolioData(true)}
                             disabled={isRefreshing}
@@ -161,14 +205,35 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
                 </div>
             ) : (
                 <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col gap-6">
+                    {isSimulatedMode && (
+                        <div className="w-full bg-gradient-to-r from-purple-500/20 via-indigo-500/20 to-blue-500/20 border border-purple-500/30 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl animate-pulse">✨</span>
+                                <div className="text-left">
+                                    <p className="text-sm font-bold text-white">AI 리밸런싱 가상 포트폴리오 적용 중</p>
+                                    <p className="text-xs text-purple-200">현재 보시는 자산 현황과 보유 종목 비중은 AI 제안 주문에 맞춰 가상으로 실시간 매칭된 시뮬레이션 데이터입니다.</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={async () => {
+                                    await fetch(`${API_BASE}/api/v1/order/simulated-portfolio`, { method: "DELETE" });
+                                    setIsSimulatedMode(false);
+                                    fetchPortfolioData(true);
+                                }}
+                                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shrink-0 hover:scale-105"
+                            >
+                                시뮬레이션 초기화
+                            </button>
+                        </div>
+                    )}
                     <RiskBanner isAuthorized={isAuthorized} />
                     <div className="w-full">
                         <InvestmentReturnCard
-                            totalEvalAmount={kisData?.kis_raw?.summary?.total_eval_amount ?? 0}
-                            cashBalance={kisData?.kis_raw?.summary?.cash_balance ?? 0}
+                            totalEvalAmount={(isSimulatedMode ? simulatedData : kisData)?.kis_raw?.summary?.total_eval_amount ?? 0}
+                            cashBalance={(isSimulatedMode ? simulatedData : kisData)?.kis_raw?.summary?.cash_balance ?? 0}
                         />
                     </div>
-                    <MyDashboard data={kisData} tradesData={tradesData} isRefreshing={isRefreshing} onOpenDetail={onOpenDetail} onAnalyzePeers={onAnalyzePeers} />
+                    <MyDashboard data={isSimulatedMode ? simulatedData : kisData} tradesData={tradesData} isRefreshing={isRefreshing} onOpenDetail={onOpenDetail} onAnalyzePeers={onAnalyzePeers} />
                 </div>
             )}
         </div>
