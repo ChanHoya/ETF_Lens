@@ -70,33 +70,53 @@ export default function SectorCorrelationHeatmap() {
         matrixMap[p.x][p.y] = p.value;
     });
 
-    // Color scaling function based on correlation value (-1.0 to 1.0)
-    const getCellColor = (val: number) => {
-        if (val === 1.0) return 'bg-indigo-600/90 text-white font-bold border border-indigo-400/30';
+    // Continuous color scaling function based on correlation value (-1.0 to 1.0)
+    const getCellStyles = (val: number) => {
+        // Red: [239, 68, 68] (Rose/Red)
+        // Yellow: [234, 179, 8] (Amber/Yellow)
+        // Green: [34, 197, 94] (Emerald/Green)
         
-        if (val > 0) {
-            // Positives: Blue Scale (using tailwind opacity)
-            if (val > 0.7) return 'bg-indigo-500/80 text-white font-semibold';
-            if (val > 0.4) return 'bg-blue-500/60 text-blue-100';
-            if (val > 0.2) return 'bg-blue-500/30 text-gray-300';
-            return 'bg-blue-500/10 text-gray-400';
-        } else if (val < 0) {
-            // Negatives: Red/Orange Scale (excellent diversification)
-            const abs = Math.abs(val);
-            if (abs > 0.5) return 'bg-emerald-500/50 text-emerald-100 font-semibold border border-emerald-400/20';
-            if (abs > 0.2) return 'bg-emerald-500/35 text-emerald-200';
-            return 'bg-emerald-500/15 text-gray-400';
+        let r, g, b;
+        let alpha = 0.15 + 0.65 * Math.abs(val); // opacity scales from 0.15 (near 0) to 0.8 (near 1 or -1)
+        
+        if (val >= 0) {
+            // Interpolate between Yellow (val = 0) and Green (val = 1)
+            r = Math.round(234 + (34 - 234) * val);
+            g = Math.round(179 + (197 - 179) * val);
+            b = Math.round(8 + (94 - 8) * val);
+        } else {
+            // Interpolate between Red (val = -1) and Yellow (val = 0)
+            const ratio = Math.abs(val); // 0 to 1
+            r = Math.round(234 + (239 - 234) * ratio);
+            g = Math.round(179 + (68 - 179) * ratio);
+            b = Math.round(8 + (68 - 8) * ratio);
         }
-        return 'bg-white/5 text-gray-500';
+        
+        // Text color: white for high correlation, light gray for lower
+        const isStrong = Math.abs(val) > 0.4;
+        const textColor = isStrong ? 'text-white font-extrabold' : 'text-gray-300 font-medium';
+        const borderColor = isStrong 
+            ? `rgba(${r}, ${g}, ${b}, 0.4)` 
+            : `rgba(255, 255, 255, 0.05)`;
+            
+        return {
+            style: {
+                backgroundColor: `rgba(${r}, ${g}, ${b}, ${alpha})`,
+                borderColor: borderColor,
+                borderWidth: '1px',
+                borderStyle: 'solid',
+            },
+            className: `${textColor}`,
+        };
     };
 
     // Educational interpretation based on correlation value
     const getInterpretation = (val: number) => {
-        if (val >= 0.8) return { label: '동일 흐름 (매우 높음)', color: 'text-red-400', desc: '두 섹터가 사실상 동조하여 움직입니다. 분산 투자 시너지가 거의 없습니다.' };
-        if (val >= 0.5) return { label: '강한 양의 상관성', color: 'text-orange-400', desc: '유사한 경제 모멘텀을 공유하므로 동시 하락 리스크에 주의하세요.' };
-        if (val >= 0.2) return { label: '약한 양의 상관성', color: 'text-yellow-400', desc: '어느 정도의 완충 지대가 존재하지만 약한 동조화가 나타납니다.' };
-        if (val >= -0.1 && val <= 0.19) return { label: '상관없음 (중립)', color: 'text-slate-300', desc: '두 자산이 독립적으로 작용하여 우수한 분산 효과를 냅니다.' };
-        return { label: '음의 상관성 (헤지 효과)', color: 'text-emerald-400', desc: '역방향으로 움직이는 성향이 있어 하락장을 방어하는 최고의 파트너입니다.' };
+        if (val >= 0.8) return { label: '동일 흐름 (매우 높음)', color: 'text-emerald-400', desc: '두 섹터가 사실상 동조하여 움직입니다. 분산 투자 시너지가 거의 없습니다.' };
+        if (val >= 0.5) return { label: '강한 양의 상관성', color: 'text-emerald-500', desc: '유사한 경제 모멘텀을 공유하므로 동시 하락 리스크에 주의하세요.' };
+        if (val >= 0.2) return { label: '약한 양의 상관성', color: 'text-lime-400', desc: '어느 정도의 완충 지대가 존재하지만 약한 동조화가 나타납니다.' };
+        if (val >= -0.1 && val <= 0.19) return { label: '상관없음 (중립)', color: 'text-amber-400', desc: '두 자산이 독립적으로 작용하여 우수한 분산 효과를 냅니다.' };
+        return { label: '음의 상관성 (헤지 효과)', color: 'text-rose-400', desc: '역방향으로 움직이는 성향이 있어 하락장을 방어하는 최고의 파트너입니다.' };
     };
 
     const cleanLabel = (lbl: string) => lbl.replace('K-', '').replace('US-', '');
@@ -200,26 +220,27 @@ export default function SectorCorrelationHeatmap() {
 
                                     {/* Cell Grid */}
                                     <div className="flex w-full gap-1 justify-between">
-                                        {filteredKeys.map(xKey => {
-                                            const val = matrixMap[xKey]?.[yKey] ?? 0;
-                                            const colorClass = getCellColor(val);
-                                            const isHovered = hoveredCell?.x === xKey && hoveredCell?.y === yKey;
-
-                                            return (
-                                                <div
-                                                    key={xKey}
-                                                    onMouseEnter={() => setHoveredCell({ x: xKey, y: yKey, val })}
-                                                    onMouseLeave={() => setHoveredCell(null)}
-                                                    className={`w-full aspect-square flex items-center justify-center rounded-lg text-[11px] transition-all cursor-crosshair duration-100 ${colorClass} ${
-                                                        isHovered 
-                                                        ? 'ring-2 ring-white scale-110 z-10 shadow-lg shadow-indigo-500/50' 
-                                                        : 'hover:scale-105'
-                                                    }`}
-                                                >
-                                                    {val.toFixed(2)}
-                                                </div>
-                                            );
-                                        })}
+                                            {filteredKeys.map(xKey => {
+                                                const val = matrixMap[xKey]?.[yKey] ?? 0;
+                                                const { style: cellStyle, className: textClass } = getCellStyles(val);
+                                                const isHovered = hoveredCell?.x === xKey && hoveredCell?.y === yKey;
+ 
+                                                return (
+                                                    <div
+                                                        key={xKey}
+                                                        onMouseEnter={() => setHoveredCell({ x: xKey, y: yKey, val })}
+                                                        onMouseLeave={() => setHoveredCell(null)}
+                                                        style={cellStyle}
+                                                        className={`w-full aspect-square flex items-center justify-center rounded-lg text-[11px] transition-all cursor-crosshair duration-100 ${textClass} ${
+                                                            isHovered 
+                                                            ? 'ring-2 ring-white scale-110 z-10 shadow-lg shadow-indigo-500/50' 
+                                                            : 'hover:scale-105'
+                                                        }`}
+                                                    >
+                                                        {val.toFixed(2)}
+                                                    </div>
+                                                );
+                                            })}
                                     </div>
                                 </div>
                             ))}
@@ -274,24 +295,20 @@ export default function SectorCorrelationHeatmap() {
                     {/* Educational Color Legend Card */}
                     <div className="bg-[#1a1a23]/20 border border-white/5 p-4 rounded-2xl text-xs space-y-3">
                         <div className="font-bold text-gray-300">상관계수 해석 가이드</div>
-                        <div className="grid grid-cols-2 gap-2 text-[10px] font-semibold text-gray-400">
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 rounded bg-indigo-500/80 shrink-0" />
-                                <span>0.7 ~ 1.0 (매우 강함)</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 rounded bg-blue-500/60 shrink-0" />
-                                <span>0.4 ~ 0.7 (보통 동조)</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 rounded bg-emerald-500/35 shrink-0" />
-                                <span>0.0 ~ -0.5 (역방향 헤지)</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 rounded bg-white/5 shrink-0" />
-                                <span>-0.1 ~ 0.2 (분산효과)</span>
+                        
+                        {/* Continuous Gradient Bar */}
+                        <div className="space-y-1.5">
+                            <div className="h-2.5 w-full rounded-full bg-gradient-to-r from-red-500 via-yellow-400 to-emerald-500" />
+                            <div className="flex justify-between text-[9px] font-black text-gray-400 px-0.5">
+                                <span className="text-red-400">-1.0 (역방향 헤지)</span>
+                                <span className="text-yellow-400">0.0 (독립/중립)</span>
+                                <span className="text-emerald-400">+1.0 (동일 흐름)</span>
                             </div>
                         </div>
+                        
+                        <p className="text-[10px] text-gray-400 font-semibold leading-relaxed pt-1.5 border-t border-white/5">
+                            수치가 <strong className="text-red-400 font-extrabold">음수(-1.0 방향)</strong>로 갈수록 역방향으로 움직여 리스크 헤지 효과가 극대화되며, <strong className="text-emerald-400 font-extrabold">양수(+1.0 방향)</strong>로 갈수록 동시 등락 리스크가 높음을 의미합니다.
+                        </p>
                     </div>
                 </div>
 
