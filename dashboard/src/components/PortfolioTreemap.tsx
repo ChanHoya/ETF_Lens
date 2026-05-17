@@ -281,16 +281,16 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
                                                             </p>
                                                         </>
                                                     ) : (
-                                                        /* 3칸 공간이 안 나오는 얇은/좁은 셀의 경우 한 줄로 종목명 / 등락율 / 보유비중 병합 노출 */
-                                                        <p className="text-white/90 font-semibold truncate w-full text-center text-[10px] md:text-[11px] tracking-tight px-0.5">
-                                                            {cell.name}
-                                                            <span className="ml-1 font-bold" style={{ color: getReturnText(cell.returnRate) }}>
+                                                        /* 3칸 공간이 안 나오는 얇은/좁은 셀의 경우 한 줄로 종목명 / 등락율 / 보유비중 병합 노출 (종목명만 자동 생략 처리) */
+                                                        <div className="flex items-center justify-center w-full min-w-0 px-1 text-[10px] md:text-[11px] font-semibold text-white/90 tracking-tight gap-1">
+                                                            <span className="truncate min-w-0 flex-1 text-center">{cell.name}</span>
+                                                            <span className="font-bold shrink-0" style={{ color: getReturnText(cell.returnRate) }}>
                                                                 {fmtPct(cell.returnRate)}
                                                             </span>
-                                                            <span className="ml-1 text-white/45 font-mono text-[9px]">
+                                                            <span className="text-white/45 font-mono text-[9px] shrink-0">
                                                                 {cell.pct.toFixed(1)}%
                                                             </span>
-                                                        </p>
+                                                        </div>
                                                     )}
                                                 </div>
                                             )}
