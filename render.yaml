@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: etf-lens-backend
+    env: python
+    buildCommand: "cd backend && pip install -r requirements.txt"
+    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        value: sqlite:///backend/etf_data_v2.db # local read-only copy or local SQLite fallback
+      - key: RENDER_DATABASE_URL
+        sync: false # Remote postgres URL injected in Render Dashboard
+      - key: KIS_APPKEY
+        sync: false
+      - key: KIS_APPSECRET
+        sync: false
+      - key: KIS_CANO
+        sync: false
+      - key: KIS_ACNT_PRDT_CD
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: TZ
+        value: Asia/Seoul

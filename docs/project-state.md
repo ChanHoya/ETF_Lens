@@ -4,9 +4,9 @@
 
 ## Quick Summary
 
-✅ Last session: S2-2 로컬 SQLite ↔ PostgreSQL 무중단 복제, db_sync API 및 프론트엔드 정합성 관리자 패널(DbSyncControl) 구현 완료 및 Git 형상 관리 통과
-🔄 In progress: 없음 (스프린트 2-2 무중단 복제 마일스톤 성공적 수렴)
-➡️ Next: 스프린트 2의 세 번째 스토리인 'Vercel + Render production-grade serverless 배포 스크립트 고도화' 개시
+✅ Last session: S2-3 Vercel + Render production-grade serverless 배포 스크립트(render.yaml, vercel.json, deploy_verify.py) 고도화 및 Git 형상 관리 커밋 완료
+🔄 In progress: 없음 (스프린트 2-3 서버리스 배포 마일스톤 성공적 수렴)
+➡️ Next: 스프린트 2의 네 번째 스토리인 'Multi-broker KIS Order Routing Integrations' 개시
 
 ## Current Sprint
 
@@ -18,6 +18,7 @@
 
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
+| S2-3 | Vercel + Render production-grade serverless 배포 스크립트 고도화 | ✅ done | vercel.json 보안 헤더 및 CORS 정책, render.yaml IaC 템플릿, deploy_verify.py 환경 진단 검증 유틸리티 구현 완료 |
 | S2-2 | 로컬 SQLite ↔ PostgreSQL 무중단 복제 및 백업 스케줄러 고도화 | ✅ done | APScheduler 자동 트리거 연동, db_sync API 및 UI 정합성 관리자 패널(DbSyncControl) 구현 완료 |
 | S2-1 | AI 기반 포트폴리오 자산 재조정 추천 엔진 | ✅ done | KIS 4계좌 실시간 7대 테마 분류 분석 및 Gemini API 연동 완료 |
 | S1-1 | ETF 마스터 DB + 종목 분석 | ✅ done | 1,000+종목 |
