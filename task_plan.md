@@ -1,50 +1,46 @@
-# Task Plan: S1-9 섹터별 상관관계 분석 기능 추가
+# Task Plan: S2-1 AI 기반 포트폴리오 자산 재조정 추천 엔진
 
 ## Goal
-섹터별 과거 시계열 수익률을 기반으로 상관계수(Correlation Matrix)를 백엔드에서 산출하고, 프론트엔드 섹터분석 탭 하단에 인터랙티브하고 직관적인 상관관계 히트맵(Heatmap) 차트를 구현하여 포트폴리오의 분산 투자 시너지를 시각화합니다.
+사용자의 KIS 4개 계좌 실시간 자산 현황을 기반으로 현재 자산 배분 비중(반도체, 우주항공, 지수 추종, 현금 등)을 분석하고, 매크로 지표 및 AI 시장 분석 엔진(Gemini 2.5/Flash-Pro)을 활용하여 최적의 포트폴리오 재배정(Rebalancing) 비중 및 단계별 매매 추천 시나리오를 제공하는 프리미엄 AI 자산 관리 모듈을 구축합니다.
 
 ## Current Phase
-Phase 1: Requirements & Backend Design
+Phase 1: Architecture & Data Modeling
 
 ## Phases
 
-### Phase 1: Requirements & Backend Design
-- [x] 한/미 7대 섹터(반도체, 2차전지, 바이오, 금융, 방산, 우주, 에너지)의 과거 데이터 수집 범위 정의 (과거 6개월~1년 일별 시계열)
-- [x] 상관관계 연산을 위한 백엔드 엔드포인트 기획
-- **Status:** complete
+### Phase 1: Architecture & Data Modeling
+- [ ] 7대 카테고리 자산 분류 체계 매핑 (S&P 500, KOSPI/KOSDAQ, 미국 우주, 한국 우주, 반도체, 커버드콜, 현금/예수금)
+- [ ] AI 프롬프트 엔지니어링 및 추천 알고리즘 설계 (목표 투자 성향 및 리스크 수용 한도 조율 기능 포함)
+- **Status:** planned
 
-### Phase 2: Backend Correlation Engine Implementation
-- [x] `backend/api/router.py`에 `/api/v1/analyze/sector-correlation` 엔드포인트 신설
-- [x] `FinanceDataReader` 및 Yahoo v8 Chart API를 활용하여 7대 섹터 ETF들의 과거 180일 종가(Close) 수집 로직 작성
-- [x] 날짜 기준으로 데이터 정렬(Inner Join) 및 `Pandas`를 이용한 일별 수익률(`.pct_change()`) 변환
-- [x] 상관계수 매트릭스(`.corr()`) 연산 및 JSON 형태로 리턴 구조화
-- **Status:** complete
+### Phase 2: Backend Recommendation Engine Implementation
+- [ ] `backend/api/router.py`에 `/api/v1/my/rebalance-recommendation` POST/GET 엔드포인트 구현
+- [ ] 실시간 KIS 포트폴리오 조회 및 자산 카테고리별 비중 자동 집계 로직 연동
+- [ ] Gemini API를 이용한 맞춤형 자산 진단 및 추천 포트폴리오 비중 연산 모듈 (`backend/agents/rebalancer.py` 신설)
+- [ ] 구체적이고 바로 복사 가능한 단계별 거래 지침(Actionable Trade Steps) 생성 로직 작성
+- **Status:** planned
 
-### Phase 3: Frontend Heatmap UI Component Implementation
-- [x] React용 상관관계 히트맵 컴포넌트(`SectorCorrelationHeatmap.tsx`) 신설
-- [x] Tailwind HSL 컬러 팔레트 기반의 프리미엄 그래디언트 색상 매핑 (1.0 = 진한 파랑/에메랄드, -1.0 = 진한 빨강, 0 = 무채색/회색)
-- [x] 히트맵 셀 호버 시 툴팁 연동 (해당 섹터 쌍의 한글 설명 및 상관도 세부 해석 노출)
-- **Status:** complete
+### Phase 3: Frontend Rebalancing Dashboard Implementation
+- [ ] React용 AI 재조정 추천 대시보드 컴포넌트 (`RebalanceRecommendation.tsx` 신설)
+- [ ] Recharts 기반의 "현재 자산 비중 vs. 추천 자산 비중" 비교 수평 누적 막대 차트(Horizontal Bar Chart) 시각화
+- [ ] AI 투자 소견 및 카테고리별 자산 진단을 담은 글래스모피즘 Bento Grid 레이아웃 구현
+- [ ] 단계별 매매 지침 카드 디자인 및 원클릭 복사 클립보드 기능 연동
+- **Status:** planned
 
-### Phase 4: Tab Integration & Page Assembly
-- [x] `SectorAnalysisTab.tsx` 하단에 히트맵 컴포넌트 마운트
-- [x] 한-미 전체 보기 / 국내 섹터 보기 / 해외 섹터 보기 등 히트맵 필터 토글 구현
-- [x] 전체 빌드 테스트 및 타입 안정성 검증 (`npx tsc --noEmit`)
-- **Status:** complete
+### Phase 4: Integration & UX Polishing
+- [ ] 포트폴리오 탭 혹은 자산 조회 메인 뷰 상단에 'AI 자산 리밸런싱 진단받기' 프리미엄 진입 버튼/모달 배치
+- [ ] API 비동기 로딩 스피너 및 미려한 스켈레톤 UI 처리
+- [ ] 전체 빌드 테스트 및 TypeScript 정적 타입 검증 (`npm run build`)
+- **Status:** planned
 
-### Phase 5: Verification & Delivery
-- [x] 실제 동작 테스트 및 렌더링 검증
-- [x] `project-state.md` 및 `features.md` 완료 반영 및 세션 마무리
-- **Status:** complete
+---
 
-## Key Questions
-1. **과거 시계열 데이터 수집 속도 최적화 방법은?**
-   * *답변*: 이미 구현한 `asyncio.Semaphore(10)` 병렬 수집 파이프라인과 인메모리 캐싱을 재활용하여 API 응답 지연을 0.5초 이내로 제어합니다.
-2. **Recharts를 사용하지 않고 히트맵을 구현하는 방법은?**
-   * *답변*: Recharts의 `ScatterChart`나 `BarChart`로도 가능하나, 고도화된 Bento 스타일 그리드를 위해 순수 Tailwind CSS Grid와 투명도(opacity) 스케일을 활용한 Custom CSS Grid 렌더링 방식을 사용하여 디자인 완성도와 반응형 가독성을 극대화합니다.
+## Key Questions & Decisions
 
-## Decisions Made
-| Decision | Rationale |
-|----------|-----------|
-| 백엔드 Pandas 연산 | Python의 Pandas 패키지는 수학적 피어슨 상관계수 연산(`.corr()`)에 고도로 최적화되어 있어 서버사이드 연산이 가장 안정적임 |
-| Custom Grid 기반 Heatmap | 모바일 화면에서의 레이블 찌그러짐을 방지하고, HSL 테마에 어우러지는 글래스모피즘 효과 구현을 위해 커스텀 React 그리드 렌더링 선택 |
+### 1. 사용자의 투자 성향(보수/중립/공격)을 어떻게 입력받거나 추정할 것인가?
+* **결정:** 기본값으로 현재 사용자의 계좌 자산 구성(예: 현금 대비 우주/성장형 섹터 비중)을 분석하여 AI가 투자 성향을 자동 역추산(Reverse-estimate)하되, 프론트엔드 UI에 **3단계 투자 성향 선택 슬라이더/버튼**을 배치하여 사용자가 즉석에서 성향별 추천 비중을 실시간 요청할 수 있게 유연성을 극대화합니다.
+
+### 2. 추천 엔진의 신뢰성과 실시간성을 어떻게 보장할 것인가?
+* **결정:** 
+  1. KIS API에서 수집된 가장 신선한 4개 계좌 잔고를 기준으로 연산합니다.
+  2. Gemini 프롬프트에 최근 매크로 금리 정보(FRED), VKOSPI/FGI 공포지수 및 주요 우주/반도체 ETF 최근 등락률을 컨텍스트로 주입하여 최신 트렌드를 정확하게 반영합니다.
