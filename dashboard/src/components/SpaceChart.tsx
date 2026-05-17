@@ -270,10 +270,15 @@ export default function SpaceChart() {
 
             {/* Holdings Table Section */}
             <div className="flex flex-col gap-3">
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-emerald-400" />
-                    우주섹터 주요 ETF 구성종목 및 비중 비교 (%)
-                </h4>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-1">
+                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-emerald-400" />
+                        우주섹터 주요 ETF 구성종목 및 비중 비교 (%)
+                    </h4>
+                    <span className="text-[10px] sm:text-xs text-gray-400 font-bold font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                        NASDAQ 26.5.15 기준
+                    </span>
+                </div>
                 
                 {isHoldingsLoading ? (
                     <div className="py-8 flex justify-center items-center text-xs text-gray-400 font-medium">
@@ -313,18 +318,43 @@ export default function SpaceChart() {
                                         {holdingsKeys.map((k) => {
                                             const val = row[k];
                                             const isZero = !val || val === 0;
+                                            if (isZero) {
+                                                return (
+                                                    <td key={k} className="px-3 py-2.5 text-center text-xs font-semibold text-gray-600 border-b border-white/5 font-mono">
+                                                        -
+                                                    </td>
+                                                );
+                                            }
+                                            
+                                            // Dynamic coloring based on weight value
+                                            let cellColor = '#ffffff'; // < 5%: 흰색 (white)
+                                            if (val >= 20) {
+                                                cellColor = '#10b981'; // >= 20%: 짙은초록 (emerald-500)
+                                            } else if (val >= 10) {
+                                                cellColor = '#84cc16'; // >= 10%: 연두색 (lime-500)
+                                            } else if (val >= 5) {
+                                                cellColor = '#fbbf24'; // >= 5%: 노란색 (amber-400)
+                                            }
+
                                             return (
-                                                <td 
-                                                    key={k} 
-                                                    className={`px-3 py-2.5 text-center text-xs font-semibold border-b border-white/5 font-mono ${
-                                                        isZero 
-                                                            ? 'text-gray-600' 
-                                                            : val >= 15 
-                                                                ? 'text-amber-400 font-bold' 
-                                                                : 'text-gray-200'
-                                                    }`}
-                                                >
-                                                    {isZero ? '-' : `${val.toFixed(1)}%`}
+                                                <td key={k} className="px-2 py-1.5 border-b border-white/5 align-middle min-w-[120px]">
+                                                    <div className="relative w-full h-6 flex items-center justify-end px-2 rounded overflow-hidden bg-white/[0.03]">
+                                                        {/* Horizontal bar fill from left */}
+                                                        <div 
+                                                            className="absolute left-0 top-0 bottom-0 opacity-20 transition-all duration-300"
+                                                            style={{ 
+                                                                width: `${Math.min(val, 100)}%`,
+                                                                backgroundColor: cellColor
+                                                            }}
+                                                        />
+                                                        {/* Value text on top */}
+                                                        <span 
+                                                            className="relative z-10 text-[10.5px] font-bold font-mono"
+                                                            style={{ color: cellColor }}
+                                                        >
+                                                            {val.toFixed(1)}%
+                                                        </span>
+                                                    </div>
                                                 </td>
                                             );
                                         })}
