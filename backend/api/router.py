@@ -1495,6 +1495,145 @@ async def get_sector_comparison_data(region: str = "ALL"):
     return result
 
 
+@router.get("/sector-correlation")
+async def get_sector_correlation(period: str = "180d"):
+    """
+    Returns the correlation matrix for major KR and US sectors.
+    Uses daily returns calculated from Yahoo Finance / FDR robust daily prices.
+    """
+    import yfinance as yf
+    import pandas as pd
+    import numpy as np
+    import asyncio
+    import time
+    from datetime import datetime, timedelta, timezone as _tz
+    import requests
+
+    kr_tickers = {
+        "K-반도체": "091160.KS",
+        "K-2차전지": "133690.KS",
+        "K-바이오": "244580.KS",
+        "K-금융": "091170.KS",
+        "K-방산": "449450.KS",
+        "K-우주": "441680.KS",
+        "K-에너지": "139250.KS",
+    }
+    us_tickers = {
+        "US-Semi": "SMH",
+        "US-Battery": "LIT",
+        "US-Bio": "XLV",
+        "US-Finance": "XLF",
+        "US-Defense": "ITA",
+        "US-Space": "ARKX",
+        "US-Energy": "XLE",
+    }
+    tickers = {**kr_tickers, **us_tickers}
+
+    cache_key = f"sector_corr_{period}_v1"
+    cached = get_bench_cached(cache_key)
+    if cached:
+        return cached
+
+    _kst = _tz(timedelta(hours=9))
+    _kst_now = datetime.now(_kst)
+    
+    calendar_days = 270 if period == "180d" else 450
+    end_date = (_kst_now + timedelta(days=1)).date()
+    start_date = _kst_now.date() - timedelta(days=calendar_days)
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    def _fetch_one_robust(t_name: str, t_code: str) -> pd.Series:
+        series = pd.Series(dtype=float)
+        is_kr = ".KS" in t_code or t_code.isdigit()
+        
+        if is_kr:
+            fdr_code = t_code.replace(".KS", "")
+            try:
+                import FinanceDataReader as fdr
+                fdr_df = fdr.DataReader(fdr_code, start_str, end_str)
+                if not fdr_df.empty and "Close" in fdr_df.columns:
+                    series = fdr_df["Close"].dropna()
+            except Exception as e:
+                logger.warning(f"sector-corr: fdr failed for {fdr_code}: {e}")
+
+        if series.empty:
+            try:
+                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{t_code}?interval=1d&range=1y"
+                resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+                if resp.status_code == 200:
+                    rb = resp.json().get("chart", {}).get("result", [])
+                    if rb:
+                        res = rb[0]
+                        timestamps = res.get("timestamp", [])
+                        closes = res.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+                        if timestamps and closes:
+                            valid_data = [(datetime.fromtimestamp(ts), c) for ts, c in zip(timestamps, closes) if c is not None]
+                            if valid_data:
+                                idx, vals = zip(*valid_data)
+                                series = pd.Series(vals, index=idx)
+            except Exception as e:
+                logger.warning(f"sector-corr: v8 failed for {t_code}: {e}")
+
+        if series.empty:
+            try:
+                import yfinance as yf
+                ticker_obj = yf.Ticker(t_code)
+                df = ticker_obj.history(start=start_str, end=end_str, auto_adjust=True)
+                if not df.empty and "Close" in df.columns:
+                    series = df["Close"].dropna()
+            except Exception as e:
+                logger.warning(f"sector-corr: yf final failed for {t_code}: {e}")
+
+        if not series.empty:
+            if series.index.tz is not None:
+                series.index = series.index.tz_convert(None)
+            series.index = series.index.map(lambda x: x.date())
+        
+        return series
+
+    sem = asyncio.Semaphore(10)
+    async def _fetch_task(name, code):
+        async with sem:
+            return name, await asyncio.to_thread(_fetch_one_robust, name, code)
+
+    fetch_tasks = [_fetch_task(n, c) for n, c in tickers.items()]
+    fetch_results = await asyncio.gather(*fetch_tasks)
+    results = {name: s for name, s in fetch_results}
+
+    df_dict = {}
+    for t_name, series in results.items():
+        if not series.empty:
+            df_dict[t_name] = series
+            
+    if not df_dict:
+        return {"keys": [], "data": []}
+
+    df = pd.DataFrame(df_dict)
+    df = df.ffill().dropna()
+    returns_df = df.pct_change().dropna()
+    corr_matrix = returns_df.corr(method="pearson").fillna(0)
+    
+    data = []
+    available_keys = list(corr_matrix.columns)
+    for x in available_keys:
+        for y in available_keys:
+            val = float(corr_matrix.at[x, y])
+            data.append({
+                "x": x,
+                "y": y,
+                "value": round(val, 4)
+            })
+
+    result = {
+        "keys": available_keys,
+        "data": data
+    }
+    
+    set_bench_cached(cache_key, result)
+    return result
+
+
 @router.get("/semi-chart")
 async def get_semi_chart_data():
     """

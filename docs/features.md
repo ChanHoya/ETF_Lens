@@ -21,7 +21,7 @@
 | 위험도 배너 | ✅ done | dashboard/src/components/RiskBanner.tsx | |
 | 포트폴리오 마켓 | ✅ done | backend/api/portfolio_market.py, db/models.py (SharedPortfolio) | 공유 포트폴리오 |
 | 섹터분석 고도화 | ✅ done | SectorAnalysisTab.tsx, SectorComparisonChart.tsx, SectorStatusGrid.tsx | 국내/해외/통합 필터링, 우주/에너지 섹터 포함 16종 지표, 집중 분석 연동 |
-| 섹터별 상관관계 히트맵 | 🔧 active | - | 섹터 간 상관계수 분석 및 포트폴리오 영향 분석 |
+| 섹터별 상관관계 히트맵 | ✅ done | router.py (sector-correlation), SectorCorrelationHeatmap.tsx | 국내/해외 7대 주요 섹터 간 피어슨 상관계수 연산 및 프리미엄 2D 그리드 히트맵 시각화 완료 |
 | 커버드콜 분석 | ✅ done | backend/api/covered_call.py, dashboard/src/components/CoveredCallTab.tsx | |
 | 헬스체크 | ✅ done | backend/api/health_monitor.py | /api/v1/analyze/health |
 

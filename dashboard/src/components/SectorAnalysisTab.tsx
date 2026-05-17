@@ -5,6 +5,7 @@ import { Activity, Globe, Zap, Layers } from 'lucide-react';
 import SemiChart from '@/components/SemiChart';
 import SectorComparisonChart from '@/components/SectorComparisonChart';
 import SectorStatusGrid from '@/components/SectorStatusGrid';
+import SectorCorrelationHeatmap from '@/components/SectorCorrelationHeatmap';
 
 export default function SectorAnalysisTab() {
     const [region, setRegion] = useState<'KR' | 'US' | 'ALL'>('ALL');
@@ -74,6 +75,11 @@ export default function SectorAnalysisTab() {
                         <SemiChart />
                     </div>
                 )}
+
+                {/* Sector Correlation Heatmap */}
+                <div className="space-y-3">
+                    <SectorCorrelationHeatmap />
+                </div>
 
             </div>
         </div>

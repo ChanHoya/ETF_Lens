@@ -4,9 +4,9 @@
 
 ## Quick Summary
 
-✅ Last session: TFF 상세 뷰 카드화 (`S1-8`) 완료 (YtmView, MonthlyView 전용 카드형 컴포넌트 구현 및 타입 에러 원천 해결)
-🔄 In progress: S1-9 섹터별 상관관계 분석 기능 추가
-➡️ Next: 섹터 간 상관계수 히트맵 시각화 및 포트폴리오 영향 분석
+✅ Last session: S1-9 섹터별 상관관계 분석 기능 추가 완료 (Pandas Pearson 계수 연산 및 프리미엄 글래스모피즘 히트맵 구현)
+🔄 In progress: 없음 (스프린트 1 핵심 목표 달성)
+➡️ Next: 다음 스프린트 기획 및 운영 피드백 반영
 
 ## Current Sprint
 
@@ -26,7 +26,7 @@
 | S1-6 | Bootstrap / Conductor 문서화 | ✅ done | 이번 세션 |
 | S1-7 | 섹터분석 고도화 | ✅ done | 국내/해외/통합 필터 및 우주/에너지 추가, 한-미 집중 비교 연동 |
 | S1-8 | TFF 상세 데이터 카드화 및 고도화 | ✅ done | YtmView, MonthlyView 개별 뷰 카드화 전환 및 TypeScript 수정 완료 |
-| S1-9 | 섹터별 상관관계 분석 기능 추가 | 🔧 active | 섹터 간 상관계수 히트맵 및 포트폴리오 분산 효과 분석 |
+| S1-9 | 섹터별 상관관계 분석 기능 추가 | ✅ done | 섹터 간 상관계수 히트맵 및 포트폴리오 분산 효과 분석 완료 |
 
 ## Module Registry
 
@@ -52,6 +52,7 @@
 
 ## Recent Changes
 
+- 2026-05-17: S1-9 섹터별 상관관계 분석 기능 추가 완료 (Pandas Pearson 계수 연산 및 프리미엄 글래스모피즘 히트맵 구현)
 - 2026-05-17: TFF 상세 뷰 카드화 (S1-8) 완료, YtmView 및 MonthlyView 전용 카드 레이아웃 전환
 - 2026-05-17: CumulativeView 및 SectorStatusGrid TypeScript 형변환 버그(cloneElement, undefined check) 해결
 - 2026-05-17: TFF 대시보드 예수금 파싱 검증 완료 (화면상 26.6만원 정상 노출 확인)

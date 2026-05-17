@@ -14,28 +14,28 @@ Phase 1: Requirements & Backend Design
 - **Status:** complete
 
 ### Phase 2: Backend Correlation Engine Implementation
-- [ ] `backend/api/router.py`에 `/api/v1/analyze/sector-correlation` 엔드포인트 신설
-- [ ] `FinanceDataReader` 및 Yahoo v8 Chart API를 활용하여 7대 섹터 ETF들의 과거 180일 종가(Close) 수집 로직 작성
-- [ ] 날짜 기준으로 데이터 정렬(Inner Join) 및 `Pandas`를 이용한 일별 수익률(`.pct_change()`) 변환
-- [ ] 상관계수 매트릭스(`.corr()`) 연산 및 JSON 형태로 리턴 구조화
-- **Status:** pending
+- [x] `backend/api/router.py`에 `/api/v1/analyze/sector-correlation` 엔드포인트 신설
+- [x] `FinanceDataReader` 및 Yahoo v8 Chart API를 활용하여 7대 섹터 ETF들의 과거 180일 종가(Close) 수집 로직 작성
+- [x] 날짜 기준으로 데이터 정렬(Inner Join) 및 `Pandas`를 이용한 일별 수익률(`.pct_change()`) 변환
+- [x] 상관계수 매트릭스(`.corr()`) 연산 및 JSON 형태로 리턴 구조화
+- **Status:** complete
 
 ### Phase 3: Frontend Heatmap UI Component Implementation
-- [ ] React용 상관관계 히트맵 컴포넌트(`SectorCorrelationHeatmap.tsx`) 신설
-- [ ] Tailwind HSL 컬러 팔레트 기반의 프리미엄 그래디언트 색상 매핑 (1.0 = 진한 파랑/에메랄드, -1.0 = 진한 빨강, 0 = 무채색/회색)
-- [ ] 히트맵 셀 호버 시 툴팁 연동 (해당 섹터 쌍의 한글 설명 및 상관도 세부 해석 노출)
-- **Status:** pending
+- [x] React용 상관관계 히트맵 컴포넌트(`SectorCorrelationHeatmap.tsx`) 신설
+- [x] Tailwind HSL 컬러 팔레트 기반의 프리미엄 그래디언트 색상 매핑 (1.0 = 진한 파랑/에메랄드, -1.0 = 진한 빨강, 0 = 무채색/회색)
+- [x] 히트맵 셀 호버 시 툴팁 연동 (해당 섹터 쌍의 한글 설명 및 상관도 세부 해석 노출)
+- **Status:** complete
 
 ### Phase 4: Tab Integration & Page Assembly
-- [ ] `SectorAnalysisTab.tsx` 하단에 히트맵 컴포넌트 마운트
-- [ ] 한-미 전체 보기 / 국내 섹터 보기 / 해외 섹터 보기 등 히트맵 필터 토글 구현
-- [ ] 전체 빌드 테스트 및 타입 안정성 검증 (`npx tsc --noEmit`)
-- **Status:** pending
+- [x] `SectorAnalysisTab.tsx` 하단에 히트맵 컴포넌트 마운트
+- [x] 한-미 전체 보기 / 국내 섹터 보기 / 해외 섹터 보기 등 히트맵 필터 토글 구현
+- [x] 전체 빌드 테스트 및 타입 안정성 검증 (`npx tsc --noEmit`)
+- **Status:** complete
 
 ### Phase 5: Verification & Delivery
-- [ ] 실제 동작 테스트 및 렌더링 검증
-- [ ] `project-state.md` 및 `features.md` 완료 반영 및 세션 마무리
-- **Status:** pending
+- [x] 실제 동작 테스트 및 렌더링 검증
+- [x] `project-state.md` 및 `features.md` 완료 반영 및 세션 마무리
+- **Status:** complete
 
 ## Key Questions
 1. **과거 시계열 데이터 수집 속도 최적화 방법은?**
