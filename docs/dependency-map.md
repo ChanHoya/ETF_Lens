@@ -12,6 +12,7 @@ A living document of module relationships. Update whenever modules are added or 
 | services   | application   | Business logic         | auth, database | api           | Alice |
 | database   | infrastructure| Data persistence       | -              | services      | Carol |
 -->
+| AI Rebalancing | Presentation | AI-driven ETF portfolio rebalancing recommendations | my_assets, peer_analysis | MyDashboard | Antigravity |
 <!-- Add new modules above this line -->
 
 ## Dependency Rules

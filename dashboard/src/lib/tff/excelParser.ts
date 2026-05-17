@@ -58,7 +58,7 @@ export function parseTffExcel(buffer: ArrayBuffer): { data: TffFundData, rawShee
     const rawSheets: Record<string, any[]> = {};
 
     // 로깅용으로 원본 추출
-    workbook.SheetNames.forEach(sheetName => {
+    workbook.SheetNames.forEach((sheetName: string) => {
         rawSheets[sheetName] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
     });
 
@@ -87,7 +87,7 @@ export function parseTffExcel(buffer: ArrayBuffer): { data: TffFundData, rawShee
     const monthRegex = /^(\d+)월$/;
     let maxMonthNum = 0;
 
-    workbook.SheetNames.forEach(sheetName => {
+    workbook.SheetNames.forEach((sheetName: string) => {
         if (sheetName === "YTM") {
             parsedData.ytm = parseMonthOrYtmSheet(rawSheets[sheetName], "YTM");
         } else {

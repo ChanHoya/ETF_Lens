@@ -22,8 +22,9 @@ export default function PortraitLockScreen() {
         window.addEventListener('orientationchange', check);
 
         // Android Chrome: 가로 모드 잠금 시도
-        if (typeof screen !== 'undefined' && screen.orientation?.lock) {
-            screen.orientation.lock('landscape').catch(() => {
+        const orientation: any = (screen as any).orientation || (screen as any).mozOrientation || (screen as any).msOrientation;
+        if (typeof screen !== 'undefined' && orientation?.lock) {
+            orientation.lock('landscape').catch(() => {
                 // iOS 등 미지원 브라우저 — 오버레이로 대체
             });
         }

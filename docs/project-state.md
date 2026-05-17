@@ -4,9 +4,9 @@
 
 ## Quick Summary
 
-✅ Last session: S1-12 개별종목 상세 미국 우주섹터(ARKX) 지수 비교 및 최근 3개월 언론보도 벤토 카드 연동 완료 & 개별종목 팝업 주가 등락률 캘린더 기준 정합성 수정 및 전체 차트 우측 Y축(orientation='right') 쏠림 개선 완료
-🔄 In progress: S2-1 AI 기반 포트폴리오 자산 재조정 추천 엔진 개발 중
-➡️ Next: S2-1 백엔드 추천 연산 엔진 및 프론트엔드 리밸런싱 대시보드 컴포넌트 구현
+✅ Last session: S2-1 KIS 4개 실시간 잔고 연동 및 Gemini 2.5 기반 맞춤형 포트폴리오 자산 리밸런싱 교체 권고 카드 구현 및 UI 연동 완료
+🔄 In progress: 없음 (스프린트 2 AI 추천 코어 마일스톤 성공적 수렴)
+➡️ Next: 다음 스프린트 2-2 '배포 스크립트 최적화 및 Render PostgreSQL DB 동기화' 개시
 
 ## Current Sprint
 
@@ -18,7 +18,7 @@
 
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
-| S2-1 | AI 기반 포트폴리오 자산 재조정 추천 엔진 | 🔧 active | 개발 및 연동 돌입 |
+| S2-1 | AI 기반 포트폴리오 자산 재조정 추천 엔진 | ✅ done | KIS 4계좌 실시간 7대 테마 분류 분석 및 Gemini API 연동 완료 |
 | S1-1 | ETF 마스터 DB + 종목 분석 | ✅ done | 1,000+종목 |
 | S1-2 | KIS 포트폴리오 4계좌 연동 | ✅ done | Rate limit 보호 완료 |
 | S1-3 | TFF 대시보드 | ✅ done | 예수금 파싱 및 핵심 기능 작동 완료 (26.6만 원 정상 노출) |
