@@ -64,3 +64,17 @@
 - **해결**: Multi-source Fallback 전략을 구현하여 극복:
   1. **국내 자산/지수**: pykrx 또는 `FinanceDataReader`(네이버 파이낸스)를 1순위로 지정하여 야후 파이낸스 의존도 최소화.
   2. **해외 자산/지수**: `yfinance` 라이브러리 대신 Yahoo v8 Chart API를 `requests` 직접 호출하여 버그 회피 및 병렬 처리(`asyncio.to_thread` + Semaphore)를 적용해 타임아웃 방지.
+
+## TypeScript Typings & UI Rendering
+
+### React.cloneElement Type Casting Error (TypeScript)
+- **증상**: `React.cloneElement(child, { className: ... })` 호출 시 `React.isValidElement` 검사 후에 복제 속성의 타입 불일치 에러 발생.
+- **원인**: TypeScript의 엄격한 제네릭 형변환으로 인해 기본 `ReactNode` 타입을 `ReactElement` 복제 매개변수로 안전하게 취급하지 못함.
+- **해결**: 대상 노드를 `React.ReactElement<{ className?: string }>`로 명시적으로 형변환(Casting) 후 클론을 실행하여 컴파일러 통과.
+
+## Quantitative Analysis & Returns Merging
+
+### Cross-Market Correlation Merge Timezone Gap
+- **증상**: 한국(KOSPI)과 미국(US) ETF 간의 상관계수 연산 시, 병합된 DataFrame에 대부분 NaN이 채워지거나 `.dropna()` 후 데이터포인트가 급감하는 현상.
+- **원인**: 한국과 미국의 다른 영업일(공휴일 차이) 및 실시간 타임스탬프 timezone 오프셋 불일치로 인해 날짜 매핑이 완전히 꼬임.
+- **해결**: 각 시계열 인덱스의 타임존을 제거(`tz_convert(None)`) 후 `.date()` 객체 단위로 날짜를 포맷팅하고, Pandas 병합 후 Forward Fill(`.ffill()`)과 `.dropna()`를 순차적으로 실행하여 통계 신뢰성을 안정적으로 확보함.
