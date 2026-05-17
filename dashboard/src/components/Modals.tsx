@@ -55,6 +55,16 @@ export default function Modals({
         }
     }, [selectedDetailEtf]);
 
+    const INDIVIDUAL_STOCKS = React.useMemo(() => new Set([
+        "RKLB", "SATS", "ASTS", "LUNR", "RDW", "PL", "LHX", "AMD", "TER", "BA", "GSAT", "KTOS", "DE", "ACHR", "MDALF"
+    ]), []);
+
+    const isStock = React.useMemo(() => {
+        if (!selectedDetailEtf) return false;
+        const codeUpper = selectedDetailEtf.etf_code?.toUpperCase();
+        return INDIVIDUAL_STOCKS.has(codeUpper) || (selectedDetailEtf.basic_info?.['운용사'] === '-' && selectedDetailEtf.etf_code !== 'ARKX');
+    }, [selectedDetailEtf, INDIVIDUAL_STOCKS]);
+
     // ── 기능 1: 검색 드롭다운 다중 선택 state ─────────────────────────────
     // { [groupId]: Set<etfCode> }
     const [searchSelected, setSearchSelected] = React.useState<{ [groupId: string]: Set<string> }>({});
@@ -545,13 +555,25 @@ export default function Modals({
                                 <h2 className="text-2xl lg:text-3xl font-bold flex items-center gap-3 text-white tracking-tight">
                                     <span className="text-blue-400">{selectedDetailEtf.etf_name}</span>
                                     <span className="text-sm font-mono text-gray-400 bg-white/5 px-2 py-1 rounded-md">{selectedDetailEtf.etf_code}</span>
-                                    <span className="text-sm font-medium text-gray-500 hidden sm:inline-block">| 기초지수: {selectedDetailEtf.basic_info?.['기초지수명'] || 'N/A'}</span>
+                                    <span className="text-sm font-medium text-gray-500 hidden sm:inline-block">
+                                        {isStock ? "| 상장시장: NASDAQ / NYSE (US)" : `| 기초지수: ${selectedDetailEtf.basic_info?.['기초지수명'] || 'N/A'}`}
+                                    </span>
                                 </h2>
                                 <div className="text-xs text-gray-400 mt-2 flex gap-4 hidden md:flex items-center">
-                                    <span>운용사: {selectedDetailEtf.basic_info?.['자산운용사'] || selectedDetailEtf.basic_info?.['운용사'] || '-'}</span>
-                                    <span className="flex items-center gap-1">총보수: <strong className="text-rose-400 bg-rose-400/10 px-1.5 py-0.5 rounded">{selectedDetailEtf.basic_info?.['펀드보수'] || '-'}</strong></span>
-                                    <span className="flex items-center gap-1">분배율(TTM): <strong className="text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">{selectedDetailEtf.basic_info?.['최근 분배율(TTM)'] || '-'}</strong></span>
-                                    <span className="flex items-center gap-1">1M 수익률: <strong className="text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded">{selectedDetailEtf.basic_info?.['1M 수익률'] || '-'}</strong></span>
+                                    {isStock ? (
+                                        <>
+                                            <span>종목구분: <strong className="text-indigo-400 bg-indigo-400/10 px-1.5 py-0.5 rounded">개별 주식 (Equity)</strong></span>
+                                            <span className="flex items-center gap-1">52주 최고/최저: <strong className="text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">{selectedDetailEtf.basic_info?.['52주 최고/최저'] || '-'}</strong></span>
+                                            <span className="flex items-center gap-1">1M 수익률: <strong className="text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded">{selectedDetailEtf.basic_info?.['1M 수익률'] || '-'}</strong></span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>운용사: {selectedDetailEtf.basic_info?.['자산운용사'] || selectedDetailEtf.basic_info?.['운용사'] || '-'}</span>
+                                            <span className="flex items-center gap-1">총보수: <strong className="text-rose-400 bg-rose-400/10 px-1.5 py-0.5 rounded">{selectedDetailEtf.basic_info?.['펀드보수'] || '-'}</strong></span>
+                                            <span className="flex items-center gap-1">분배율(TTM): <strong className="text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">{selectedDetailEtf.basic_info?.['최근 분배율(TTM)'] || '-'}</strong></span>
+                                            <span className="flex items-center gap-1">1M 수익률: <strong className="text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded">{selectedDetailEtf.basic_info?.['1M 수익률'] || '-'}</strong></span>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                             <button onClick={() => setSelectedDetailEtf(null)} className="absolute top-5 right-5 text-gray-400 hover:text-white transition-colors bg-white/5 p-2 rounded-xl flex-shrink-0 z-10">
@@ -564,12 +586,15 @@ export default function Modals({
                             {/* 1. 시세 및 주주현황 */}
                             <div>
                                 <div className="flex justify-between items-end mb-3 border-b-2 border-slate-700 pb-2">
-                                    <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">시세 <span className="text-white font-medium">및 주주현황</span></h3>
+                                    <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">시세 <span className="text-white font-medium">{isStock ? "및 주가현황" : "및 주주현황"}</span></h3>
                                     <span className="text-xs text-gray-500">[기준: 오늘]</span>
                                 </div>
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     <div className="border-t border-slate-700">
-                                        {['종가/전일대비/수익률', '52주 최고/최저', '상장주식수', '거래량/거래대금', '20일평균 거래량/대금', '시가총액', '순자산총액'].map((k) => (
+                                        {(isStock
+                                            ? ['종가/전일대비/수익률', '52주 최고/최저', '상장주식수', '거래량/거래대금', '20일평균 거래량/대금', '시가총액']
+                                            : ['종가/전일대비/수익률', '52주 최고/최저', '상장주식수', '거래량/거래대금', '20일평균 거래량/대금', '시가총액', '순자산총액']
+                                        ).map((k) => (
                                             <div key={k} className="flex border-b border-slate-800 text-sm">
                                                 <div className="w-1/3 bg-slate-900/50 text-gray-400 p-3 font-medium flex items-center">{k.replace('20일평균 거래량/대금', '20일평균 거래량/거래대금')}</div>
                                                 <div className="w-2/3 p-3 text-right flex items-center justify-end text-gray-200 font-semibold">{selectedDetailEtf.basic_info?.[k] || '-'}</div>
@@ -621,149 +646,155 @@ export default function Modals({
                             {/* 3. 상품설명 */}
                             <div>
                                 <div className="flex justify-between items-end mb-3 border-b-2 border-slate-700 pb-2">
-                                    <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">상품설명</h3>
+                                    <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">{isStock ? "기업소개 및 주요사업" : "상품설명"}</h3>
                                 </div>
                                 <div className="bg-slate-900/30 p-5 rounded-xl border border-slate-800 text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
-                                    {selectedDetailEtf.basic_info?.['상품설명'] || `1좌당 순자산가치의 변동률을 기초지수의 변동률과 유사하도록 투자신탁재산을 운용하는 것을 목표로 합니다.\n${selectedDetailEtf.etf_name}는 해당 기초지수 구성종목을 바탕으로 포트폴리오를 구축하여 시장 대비 안정적인 수익을 추구합니다.`}
+                                    {selectedDetailEtf.basic_info?.['상품설명'] || (isStock
+                                        ? `${selectedDetailEtf.etf_name}는 우주항공/우주기술 분야의 선도적인 기업으로서, 지속적인 연구개발과 시장 선점을 통해 안정적인 주주가치를 창출하고자 합니다.`
+                                        : `1좌당 순자산가치의 변동률을 기초지수의 변동률과 유사하도록 투자신탁재산을 운용하는 것을 목표로 합니다.\n${selectedDetailEtf.etf_name}는 해당 기초지수 구성종목을 바탕으로 포트폴리오를 구축하여 시장 대비 안정적인 수익을 추구합니다.`)}
                                 </div>
                             </div>
 
                             {/* 4. 순자산가치(NAV)추이 */}
-                            <div>
-                                <div className="flex justify-between items-end mb-3 border-b-2 border-slate-700 pb-2">
-                                    <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">순자산가치(NAV) <span className="text-white font-medium">추이</span></h3>
-                                </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    <div className="border border-slate-700 rounded-xl overflow-hidden">
-                                        <table className="w-full text-right text-sm">
-                                            <thead className="bg-slate-900/80 text-gray-400">
-                                                <tr>
-                                                    <th className="p-3 text-center border-b border-slate-700 font-medium">날짜</th>
-                                                    <th className="p-3 border-b border-slate-700 font-medium">순자산가치(NAV)</th>
-                                                    <th className="p-3 border-b border-slate-700 font-medium">ETF종가</th>
-                                                    <th className="p-3 border-b border-slate-700 font-medium whitespace-nowrap">괴리율(%)</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {detailChartData.nav.slice().reverse().slice(0, 7).map((n: any, i: number) => (
-                                                    <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20">
-                                                        <td className="p-2.5 text-center text-gray-400">{n.date}</td>
-                                                        <td className="p-2.5 text-gray-200">{n.nav?.toLocaleString() || '-'}</td>
-                                                        <td className="p-2.5 text-gray-200">{n.price?.toLocaleString() || '-'}</td>
-                                                        <td className={`p-2.5 font-medium ${n.diff > 0 ? 'text-rose-400' : n.diff < 0 ? 'text-blue-400' : 'text-gray-300'}`}>{n.diff?.toFixed(2) || '-'}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                            {!isStock && (
+                                <div>
+                                    <div className="flex justify-between items-end mb-3 border-b-2 border-slate-700 pb-2">
+                                        <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">순자산가치(NAV) <span className="text-white font-medium">추이</span></h3>
                                     </div>
-                                    <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col relative pt-7">
-                                        <span className="absolute left-[65px] top-3 text-[11px] text-gray-500 font-bold">[원]</span>
-                                        <span className="absolute right-[20px] top-3 text-[11px] text-gray-500 font-bold">[%]</span>
-                                        <div className="flex-1 min-h-[250px] w-full">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <ComposedChart data={detailChartData.nav} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                                                    <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 11 }} tickMargin={10} stroke="#1e293b" minTickGap={15} />
-                                                    <YAxis yAxisId="left" tick={{ fill: '#ef4444', fontSize: 11 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="#1e293b" axisLine={false} domain={['auto', 'auto']} />
-                                                    <YAxis yAxisId="right" orientation="right" tick={{ fill: '#3b82f6', fontSize: 11 }} tickFormatter={(val) => `${val.toFixed(2)}`} stroke="#1e293b" axisLine={false} domain={[-0.5, 0.5]} />
-                                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
-                                                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                                                    <Bar yAxisId="right" dataKey="diff" name="괴리율" fill="#3b82f6" maxBarSize={4} />
-                                                    <Line yAxisId="left" type="monotone" dataKey="nav" name="순자산가치(NAV)" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls={true} />
-                                                    <Line yAxisId="left" type="monotone" dataKey="price" name="ETF 종가" stroke="#84cc16" strokeDasharray="5 5" strokeWidth={2} dot={false} connectNulls={true} />
-                                                </ComposedChart>
-                                            </ResponsiveContainer>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div className="border border-slate-700 rounded-xl overflow-hidden">
+                                            <table className="w-full text-right text-sm">
+                                                <thead className="bg-slate-900/80 text-gray-400">
+                                                    <tr>
+                                                        <th className="p-3 text-center border-b border-slate-700 font-medium">날짜</th>
+                                                        <th className="p-3 border-b border-slate-700 font-medium">순자산가치(NAV)</th>
+                                                        <th className="p-3 border-b border-slate-700 font-medium">ETF종가</th>
+                                                        <th className="p-3 border-b border-slate-700 font-medium whitespace-nowrap">괴리율(%)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {detailChartData.nav.slice().reverse().slice(0, 7).map((n: any, i: number) => (
+                                                        <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20">
+                                                            <td className="p-2.5 text-center text-gray-400">{n.date}</td>
+                                                            <td className="p-2.5 text-gray-200">{n.nav?.toLocaleString() || '-'}</td>
+                                                            <td className="p-2.5 text-gray-200">{n.price?.toLocaleString() || '-'}</td>
+                                                            <td className={`p-2.5 font-medium ${n.diff > 0 ? 'text-rose-400' : n.diff < 0 ? 'text-blue-400' : 'text-gray-300'}`}>{n.diff?.toFixed(2) || '-'}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col relative pt-7">
+                                            <span className="absolute left-[65px] top-3 text-[11px] text-gray-500 font-bold">[원]</span>
+                                            <span className="absolute right-[20px] top-3 text-[11px] text-gray-500 font-bold">[%]</span>
+                                            <div className="flex-1 min-h-[250px] w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ComposedChart data={detailChartData.nav} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                                                        <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 11 }} tickMargin={10} stroke="#1e293b" minTickGap={15} />
+                                                        <YAxis yAxisId="left" tick={{ fill: '#ef4444', fontSize: 11 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="#1e293b" axisLine={false} domain={['auto', 'auto']} />
+                                                        <YAxis yAxisId="right" orientation="right" tick={{ fill: '#3b82f6', fontSize: 11 }} tickFormatter={(val) => `${val.toFixed(2)}`} stroke="#1e293b" axisLine={false} domain={[-0.5, 0.5]} />
+                                                        <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
+                                                        <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                                                        <Bar yAxisId="right" dataKey="diff" name="괴리율" fill="#3b82f6" maxBarSize={4} />
+                                                        <Line yAxisId="left" type="monotone" dataKey="nav" name="순자산가치(NAV)" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls={true} />
+                                                        <Line yAxisId="left" type="monotone" dataKey="price" name="ETF 종가" stroke="#84cc16" strokeDasharray="5 5" strokeWidth={2} dot={false} connectNulls={true} />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* 5. 구성항목 */}
-                            <div>
-                                <div className="flex justify-between items-end mb-3 border-b-2 border-slate-700 pb-2">
-                                    <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">CU당 구성종목 <span className="text-white font-medium text-sm ml-2">[Top 10]</span></h3>
-                                </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    <div className="border border-slate-700 rounded-xl overflow-hidden">
-                                        <table className="w-full text-right text-sm">
-                                            <thead className="bg-slate-900/80 text-gray-400">
-                                                <tr>
-                                                    <th className="p-3 text-left border-b border-slate-700 font-medium pl-5">구성종목명</th>
-                                                    <th className="p-3 border-b border-slate-700 font-medium">주식수(계약수)</th>
-                                                    <th className="p-3 border-b border-slate-700 font-medium pr-5">구성비중(%)</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {selectedDetailEtf.holdings?.length > 0 ? (
-                                                    selectedDetailEtf.holdings.slice(0, 10).map((h: any, i: number) => (
-                                                        <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20">
-                                                            <td className="p-2.5 text-left text-gray-200 pl-5">{h.ticker}</td>
-                                                            <td className="p-2.5 text-gray-400">{h.shares ? h.shares.toLocaleString() : Math.round(h.weight * 50).toLocaleString()}</td>
-                                                            <td className="p-2.5 font-bold text-indigo-300 pr-5">{h.weight > 0 ? h.weight.toFixed(2) : '-'}</td>
-                                                        </tr>
-                                                    ))
-                                                ) : (
-                                                    <tr>
-                                                        <td colSpan={3} className="p-8 text-center text-gray-500">
-                                                            미국 ETF 등 구성종목 데이터가 아직 제공되지 않았습니다.<br /><br />
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setNaverEtfCode(selectedDetailEtf.etf_code);
-                                                                }}
-                                                                className="px-4 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 rounded-lg text-sm font-bold hover:bg-indigo-500 hover:text-white transition-all shadow-md"
-                                                            >
-                                                                네이버 정보 검색
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
+                            {!isStock && (
+                                <div>
+                                    <div className="flex justify-between items-end mb-3 border-b-2 border-slate-700 pb-2">
+                                        <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">CU당 구성종목 <span className="text-white font-medium text-sm ml-2">[Top 10]</span></h3>
                                     </div>
-                                    <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col items-center justify-center">
-                                        <h4 className="text-xs text-gray-500 font-bold mb-0 w-full text-left">비중 Top 10 차트</h4>
-                                        <div className="flex-1 w-full min-h-[300px]">
-                                            {selectedDetailEtf.holdings?.length > 0 && selectedDetailEtf.holdings.some((h: any) => h.weight > 0) ? (
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <PieChart>
-                                                        <Pie
-                                                            data={selectedDetailEtf.holdings.slice(0, 10)}
-                                                            cx="50%"
-                                                            cy="50%"
-                                                            labelLine={true}
-                                                            label={(props: any) => (
-                                                                <text
-                                                                    x={props.x} y={props.y} fill="#cbd5e1"
-                                                                    fontSize={10} textAnchor={props.textAnchor}
-                                                                    dominantBaseline={props.dominantBaseline}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div className="border border-slate-700 rounded-xl overflow-hidden">
+                                            <table className="w-full text-right text-sm">
+                                                <thead className="bg-slate-900/80 text-gray-400">
+                                                    <tr>
+                                                        <th className="p-3 text-left border-b border-slate-700 font-medium pl-5">구성종목명</th>
+                                                        <th className="p-3 border-b border-slate-700 font-medium">주식수(계약수)</th>
+                                                        <th className="p-3 border-b border-slate-700 font-medium pr-5">구성비중(%)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {selectedDetailEtf.holdings?.length > 0 ? (
+                                                        selectedDetailEtf.holdings.slice(0, 10).map((h: any, i: number) => (
+                                                            <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20">
+                                                                <td className="p-2.5 text-left text-gray-200 pl-5">{h.ticker}</td>
+                                                                <td className="p-2.5 text-gray-400">{h.shares ? h.shares.toLocaleString() : Math.round(h.weight * 50).toLocaleString()}</td>
+                                                                <td className="p-2.5 font-bold text-indigo-300 pr-5">{h.weight > 0 ? h.weight.toFixed(2) : '-'}</td>
+                                                            </tr>
+                                                        ))
+                                                    ) : (
+                                                        <tr>
+                                                            <td colSpan={3} className="p-8 text-center text-gray-500">
+                                                                미국 ETF 등 구성종목 데이터가 아직 제공되지 않았습니다.<br /><br />
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setNaverEtfCode(selectedDetailEtf.etf_code);
+                                                                    }}
+                                                                    className="px-4 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 rounded-lg text-sm font-bold hover:bg-indigo-500 hover:text-white transition-all shadow-md"
                                                                 >
-                                                                    {props.payload.ticker} ({props.value.toFixed(1)}%)
-                                                                </text>
-                                                            )}
-                                                            outerRadius={90}
-                                                            fill="#8884d8"
-                                                            dataKey="weight"
-                                                            stroke="rgba(0,0,0,0.5)"
-                                                            strokeWidth={2}
-                                                        >
-                                                            {selectedDetailEtf.holdings.slice(0, 10).map((entry: any, index: number) => {
-                                                                const pieColors = ['#2563eb', '#dc2626', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f43f5e', '#64748b'];
-                                                                return <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />;
-                                                            })}
-                                                        </Pie>
-                                                        <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} itemStyle={{ color: '#e2e8f0' }} />
-                                                    </PieChart>
-                                                </ResponsiveContainer>
-                                            ) : (
-                                                <div className="flex items-center justify-center h-full text-gray-500 text-sm px-6 text-center">
-                                                    해외/합성 ETF는 비중 데이터가 제공되지 않아 차트를 그릴 수 없습니다.
-                                                </div>
-                                            )}
+                                                                    네이버 정보 검색
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col items-center justify-center">
+                                            <h4 className="text-xs text-gray-500 font-bold mb-0 w-full text-left">비중 Top 10 차트</h4>
+                                            <div className="flex-1 w-full min-h-[300px]">
+                                                {selectedDetailEtf.holdings?.length > 0 && selectedDetailEtf.holdings.some((h: any) => h.weight > 0) ? (
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <PieChart>
+                                                            <Pie
+                                                                data={selectedDetailEtf.holdings.slice(0, 10)}
+                                                                cx="50%"
+                                                                cy="50%"
+                                                                labelLine={true}
+                                                                label={(props: any) => (
+                                                                    <text
+                                                                        x={props.x} y={props.y} fill="#cbd5e1"
+                                                                        fontSize={10} textAnchor={props.textAnchor}
+                                                                        dominantBaseline={props.dominantBaseline}
+                                                                    >
+                                                                        {props.payload.ticker} ({props.value.toFixed(1)}%)
+                                                                    </text>
+                                                                )}
+                                                                outerRadius={90}
+                                                                fill="#8884d8"
+                                                                dataKey="weight"
+                                                                stroke="rgba(0,0,0,0.5)"
+                                                                strokeWidth={2}
+                                                            >
+                                                                {selectedDetailEtf.holdings.slice(0, 10).map((entry: any, index: number) => {
+                                                                    const pieColors = ['#2563eb', '#dc2626', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f43f5e', '#64748b'];
+                                                                    return <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />;
+                                                                })}
+                                                            </Pie>
+                                                            <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} itemStyle={{ color: '#e2e8f0' }} />
+                                                        </PieChart>
+                                                    </ResponsiveContainer>
+                                                ) : (
+                                                    <div className="flex items-center justify-center h-full text-gray-500 text-sm px-6 text-center">
+                                                        해외/합성 ETF는 비중 데이터가 제공되지 않아 차트를 그릴 수 없습니다.
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* 6. 거래량/거래대금 */}
                             <div>

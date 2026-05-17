@@ -4,8 +4,8 @@
 
 ## Quick Summary
 
-✅ Last session: S1-10 구성종목 테이블 개별 종목명 클릭 시 상세 정보 모달(RKLB, ASTS 등) 연동 완료 & 백엔드 yfinance 동적 수익률 계산 최적화 완료
-🔄 In progress: 없음 (스프린트 1 핵심 목표 및 연동 고도화 완벽 달성)
+✅ Last session: S1-11 개별종목 상세 팝업창 주가현황 및 기업소개 중심 리디자인 완료 (NAV 및 CU 구성종목 Omit 처리)
+🔄 In progress: 없음 (스프린트 1 핵심 목표 및 개별종목 맞춤화 연동 고도화 완벽 달성)
 ➡️ Next: 다음 스프린트 기획 및 프로덕션 배포 피드백 반영
 
 ## Current Sprint
@@ -28,6 +28,7 @@
 | S1-8 | TFF 상세 데이터 카드화 및 고도화 | ✅ done | YtmView, MonthlyView 개별 뷰 카드화 전환 및 TypeScript 수정 완료 |
 | S1-9 | 섹터별 상관관계 분석 기능 추가 | ✅ done | 섹터 간 상관계수 히트맵 및 포트폴리오 분산 효과 분석 완료 |
 | S1-10 | 즐겨찾기 우주섹터 비교 오류 해결 및 폰트 일원화 | ✅ done | ARKX yfinance 다이내믹 연동 및 구성종목 비중 fallback, 박스 안팎 폰트 조화로운 표준화 완료 |
+| S1-11 | 개별종목 팝업 주가현황/기업소개 중심 리디자인 | ✅ done | NAV 및 CU 구성종목 Omit 및 메타데이터 주가/기업소개 맞춤화 완료 |
 
 ## Module Registry
 
@@ -53,6 +54,7 @@
 
 ## Recent Changes
 
+- 2026-05-17: 개별종목 상세 팝업창 주가현황 및 기업소개 중심 리디자인 완료 (NAV 구성추이 및 CU 구성종목 Omit, 타이틀/메타데이터 최적화)
 - 2026-05-17: 즐겨찾기 우주섹터 비교 오류 해결 및 종목비교 standardisation 완료 (ARKX yfinance 연동 및 KR space ETF holdings fallback 지원)
 - 2026-05-17: 섹터분석 탭 내의 폰트 스케일을 조화롭게 일원화 완료 (박스 바깥은 text-xl 큰 폰트, 박스 내부는 text-base 작은 폰트 적용)
 - 2026-05-17: 우주 섹터 클릭 시 KODEX 미국우주항공 등 4대 우주 ETF 주요 종목 현황을 비교 분석하는 '우주 특화 분석' 및 SpaceChart 컴포넌트 추가 완료
