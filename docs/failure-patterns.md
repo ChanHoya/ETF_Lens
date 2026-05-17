@@ -50,7 +50,17 @@
 - **증상**: 브라우저에서 서버가 살아있음에도 API 호출 실패 (서버 로그에는 기록 안 됨)
 - **원인**: `CORSMiddleware` 설정에서 `allow_origins=["*"]`와 `allow_credentials=True`를 동시에 사용
 - **해결**: `allow_origins`에 실제 도메인(`https://etf-lens.vercel.app`)을 명시하거나, `allow_credentials=False`
+
 ### "Application Error" — 런타임 크래시
 - **증상**: 브라우저 로드 시 Vercel 오류 페이지 노출 또는 "Failed to fetch" 반복
 - **원인**: 백엔드 응답이 `null`이거나 `NaN`인 데이터를 처리하지 않고 렌더링 시도
 - **해결**: 모든 수치 데이터에 `isNaN()` 및 `null` 체크 방어 로직 적용, 투자 원금과 같이 유실되면 안 되는 핵심 입력 데이터는 `localStorage`를 1순위 저장소(fallback)로 활용하여 오프라인 환경에서도 작동하게 함
+
+## Finance Data APIs
+
+### yfinance "NoneType object is not subscriptable" & SSL/DNS Failures
+- **증상**: 야후 파이낸스 데이터를 긁어올 때 API 500 에러 발생 및 차트 데이터 로딩 실패.
+- **원인**: `yfinance` 라이브러리의 최신 스크래핑 파서 버그로 인해 특정 지수/티커 조회 시 내부 `NoneType` 오류 발생, 혹은 서버 IP 차단(SSL/DNS 연결 실패).
+- **해결**: Multi-source Fallback 전략을 구현하여 극복:
+  1. **국내 자산/지수**: pykrx 또는 `FinanceDataReader`(네이버 파이낸스)를 1순위로 지정하여 야후 파이낸스 의존도 최소화.
+  2. **해외 자산/지수**: `yfinance` 라이브러리 대신 Yahoo v8 Chart API를 `requests` 직접 호출하여 버그 회피 및 병렬 처리(`asyncio.to_thread` + Semaphore)를 적용해 타임아웃 방지.
