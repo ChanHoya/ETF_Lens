@@ -99,7 +99,7 @@ export default function SpaceChart() {
     };
 
     const periodOptions = ['1M', '3M', '6M', '1Y', '3Y', '10Y'];
-    const colors = ['#f59e0b', '#ec4899', '#3b82f6', '#10b981'];
+    const colors = ['#f59e0b', '#ec4899', '#3b82f6', '#10b981', '#8b5cf6', '#06b6d4'];
 
     // ── 커스텀 툴팁: 전일 대비 증감율 표시 ──────────────────────────────
     const CustomTooltip = ({ active, payload, label }: any) => {

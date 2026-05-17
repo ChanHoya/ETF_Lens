@@ -1803,10 +1803,11 @@ async def get_space_chart_data():
         "ACE 미국우주테크액티브": "0180V0.KS",
         "Tiger 미국우주테크": "0183J0.KS",
         "SOL 미국우주항공TOP10": "0181L0.KS",
+        "US-Space (ARKX)": "ARKX",
     }
 
     # 스마트 캐시 TTL (kst 날짜 기반)
-    space_cache_key = "space_chart_v4"
+    space_cache_key = "space_chart_v5"
     from datetime import timezone, timedelta as _td
     _kst = timezone(_td(hours=9))
     _kst_now = datetime.now(_kst)
@@ -1832,6 +1833,7 @@ async def get_space_chart_data():
         "0180V0.KS": "0180V0",
         "0183J0.KS": "0183J0",
         "0181L0.KS": "0181L0",
+        "ARKX": "ARKX",
     }
 
     def _fetch_one(t_code: str) -> pd.Series:
@@ -1919,8 +1921,8 @@ async def get_space_chart_data():
             prices = []
             dates = []
             
-            # Simulated listing date offsets: KODEX (March 17), ACE/Tiger (April 14), SOL (April 20)
-            if "KODEX" in t_name:
+            # Simulated listing date offsets: KODEX (March 17), ACE/Tiger (April 14), SOL (April 20), ARKX (2021)
+            if "KODEX" in t_name or "ARKX" in t_name:
                 list_offset = 0
             elif "SOL" in t_name:
                 list_offset = 24  # listed later
