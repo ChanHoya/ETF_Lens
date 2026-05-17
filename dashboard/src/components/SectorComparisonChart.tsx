@@ -183,7 +183,7 @@ export default function SectorComparisonChart({ region, selectedSector = null }:
                         )}
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-white">
+                        <h3 className="text-base font-bold text-white">
                             {selectedSector ? (
                                 <span className="flex items-center gap-2">
                                     <span className="text-indigo-400">{selectedSector}</span>

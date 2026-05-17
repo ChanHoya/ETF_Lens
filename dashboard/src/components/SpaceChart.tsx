@@ -189,7 +189,7 @@ export default function SpaceChart() {
     return (
         <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
                     <Activity className="w-5 h-5 text-indigo-400" />
                     우주섹터 주요 종목 현황
                 </h3>
@@ -271,7 +271,7 @@ export default function SpaceChart() {
             {/* Holdings Table Section */}
             <div className="flex flex-col gap-3">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-1">
-                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    <h4 className="text-base font-bold text-white flex items-center gap-2">
                         <Activity className="w-4 h-4 text-emerald-400" />
                         우주섹터 주요 ETF 구성종목 및 비중 비교 (%)
                     </h4>

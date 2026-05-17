@@ -68,10 +68,10 @@ export default function SectorAnalysisTab() {
 
                 {/* SemiChart: Semiconductor Indices (Detailed View) */}
                 {region !== 'US' && selectedSector === '반도체' && (
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2 px-2">
-                            <Zap className="w-4 h-4 text-amber-400" />
-                            <h4 className="text-sm font-bold text-gray-300">반도체 특화 분석</h4>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2.5 px-2 mt-4">
+                            <Zap className="w-5 h-5 text-amber-400" />
+                            <h3 className="text-xl font-extrabold text-white">반도체 특화 분석</h3>
                         </div>
                         <SemiChart />
                     </div>
@@ -79,10 +79,10 @@ export default function SectorAnalysisTab() {
 
                 {/* SpaceChart: Space Indices (Detailed View) */}
                 {region !== 'US' && selectedSector === '우주' && (
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2 px-2">
-                            <Zap className="w-4 h-4 text-cyan-400" />
-                            <h4 className="text-sm font-bold text-gray-300">우주 특화 분석</h4>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2.5 px-2 mt-4">
+                            <Zap className="w-5 h-5 text-cyan-400" />
+                            <h3 className="text-xl font-extrabold text-white">우주 특화 분석</h3>
                         </div>
                         <SpaceChart />
                     </div>

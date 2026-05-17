@@ -127,7 +127,7 @@ export default function SectorCorrelationHeatmap() {
                         <BarChart2 className="w-5 h-5 text-indigo-400" />
                     </div>
                     <div>
-                        <h3 className="text-md font-bold text-white flex items-center gap-1.5">
+                        <h3 className="text-base font-bold text-white flex items-center gap-1.5">
                             섹터 간 상관관계 분석 계수 (Correlation Matrix)
                         </h3>
                         <p className="text-xs text-gray-400 mt-1">
