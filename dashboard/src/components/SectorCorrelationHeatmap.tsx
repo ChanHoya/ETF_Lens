@@ -72,38 +72,34 @@ export default function SectorCorrelationHeatmap() {
 
     // Continuous color scaling function based on correlation value (-1.0 to 1.0)
     const getCellStyles = (val: number) => {
-        // Red: [239, 68, 68] (Rose/Red)
-        // Yellow: [250, 204, 21] (Yellow 400 - bright neon yellow for dark themes)
-        // Green: [34, 197, 94] (Emerald/Green)
+        // Red: [239, 68, 68] (Rose/Red 500)
+        // Yellow: [234, 179, 8] (Amber/Yellow 500 - vibrant, pure solid yellow)
+        // Green: [34, 197, 94] (Emerald/Green 500)
         
         let r, g, b;
-        let alpha = 0.35 + 0.45 * Math.abs(val); // base opacity is 0.35 to prevent muddy brown blending in dark theme
         
         if (val >= 0) {
             // Interpolate between Yellow (val = 0) and Green (val = 1)
-            r = Math.round(250 + (34 - 250) * val);
-            g = Math.round(204 + (197 - 204) * val);
-            b = Math.round(21 + (94 - 21) * val);
+            r = Math.round(234 + (34 - 234) * val);
+            g = Math.round(179 + (197 - 179) * val);
+            b = Math.round(8 + (94 - 8) * val);
         } else {
             // Interpolate between Red (val = -1) and Yellow (val = 0)
             const ratio = Math.abs(val); // 0 to 1
-            r = Math.round(250 + (239 - 250) * ratio);
-            g = Math.round(204 + (68 - 204) * ratio);
-            b = Math.round(21 + (68 - 21) * ratio);
+            r = Math.round(234 + (239 - 234) * ratio);
+            g = Math.round(179 + (68 - 179) * ratio);
+            b = Math.round(8 + (68 - 8) * ratio);
         }
         
-        // Text color: white for high correlation, light gray for lower
-        const isStrong = Math.abs(val) > 0.4;
-        const textColor = isStrong ? 'text-white font-extrabold' : 'text-gray-300 font-medium';
-        const borderColor = isStrong 
-            ? `rgba(${r}, ${g}, ${b}, 0.45)` 
-            : `rgba(255, 255, 255, 0.08)`;
+        // Text color: dark slate/black for perfect high-contrast readability on solid colored tiles
+        const textColor = 'text-[#0e0e13] font-black tracking-tight';
+        const borderColor = `rgba(255, 255, 255, 0.12)`;
             
         return {
             style: {
-                backgroundColor: `rgba(${r}, ${g}, ${b}, ${alpha})`,
+                backgroundColor: `rgb(${r}, ${g}, ${b})`,
                 borderColor: borderColor,
-                borderWidth: '1px',
+                borderWidth: '1.3px',
                 borderStyle: 'solid',
             },
             className: `${textColor}`,
