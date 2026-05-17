@@ -17,6 +17,7 @@ export default function SpaceChart() {
     
     // Holdings comparison state
     const [holdingsData, setHoldingsData] = useState<any[]>([]);
+    const [holdingsKeys, setHoldingsKeys] = useState<string[]>([]);
     const [isHoldingsLoading, setIsHoldingsLoading] = useState(true);
 
     useEffect(() => {
@@ -28,6 +29,9 @@ export default function SpaceChart() {
                 const data = await res.json();
                 if (data.table_data) {
                     setHoldingsData(data.table_data);
+                    if (data.keys) {
+                        setHoldingsKeys(data.keys);
+                    }
                 }
             } catch (err) {
                 console.error('Error fetching space holdings:', err);
@@ -287,7 +291,7 @@ export default function SpaceChart() {
                                     <th className="px-4 py-3 text-xs font-bold text-gray-300 border-b border-white/10">
                                         구성종목명
                                     </th>
-                                    {keys.map((k, idx) => (
+                                    {holdingsKeys.map((k, idx) => (
                                         <th key={k} className="px-3 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10">
                                             <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                                                 <span style={{ color: colors[idx % colors.length] }}>●</span>
@@ -306,7 +310,7 @@ export default function SpaceChart() {
                                         <td className="px-4 py-2.5 text-xs font-bold text-gray-200 border-b border-white/5 max-w-[200px] truncate">
                                             {row.constituent}
                                         </td>
-                                        {keys.map((k) => {
+                                        {holdingsKeys.map((k) => {
                                             const val = row[k];
                                             const isZero = !val || val === 0;
                                             return (
