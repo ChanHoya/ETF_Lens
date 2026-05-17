@@ -1570,7 +1570,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
 
         {/* Discover Section */}
         {activeTab === 'sector' && (
-          <SectorAnalysisTab />
+          <SectorAnalysisTab onOpenDetail={handleOpenDetail} />
         )}
 
         {activeTab === 'discover' && (

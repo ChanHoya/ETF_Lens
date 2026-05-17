@@ -6,7 +6,36 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 
-export default function SpaceChart() {
+interface SpaceChartProps {
+    onOpenDetail?: (code: string) => void;
+}
+
+const constituentTickerMap: { [key: string]: string } = {
+    "Rocket Lab (로켓랩)": "RKLB",
+    "EchoStar (에코스타)": "SATS",
+    "AST SpaceMobile (스페이스모바일)": "ASTS",
+    "Intuitive Machines (인튜이티브 머신스)": "LUNR",
+    "Redwire (레드와이어)": "RDW",
+    "Planet Labs (플래닛랩스)": "PL",
+    "L3Harris Technologies": "LHX",
+    "Advanced Micro Devices": "AMD",
+    "Teradyne": "TER",
+    "Boeing (보잉)": "BA",
+    "Globalstar (글로벌스타)": "GSAT",
+    "Kratos Defense": "KTOS",
+    "Deere & Company (디어앤컴퍼니)": "DE",
+    "Archer Aviation": "ACHR",
+    "MDA Space (MDA 스페이스)": "MDALF",
+};
+
+const getTickerFromConstituent = (name: string): string => {
+    if (constituentTickerMap[name]) return constituentTickerMap[name];
+    const normalized = name.trim();
+    if (constituentTickerMap[normalized]) return constituentTickerMap[normalized];
+    return normalized;
+};
+
+export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
     const [period, setPeriod] = useState('1Y');
     const [chartData, setChartData] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -312,8 +341,20 @@ export default function SpaceChart() {
                                         key={row.constituent} 
                                         className="hover:bg-white/5 transition-colors"
                                     >
-                                        <td className="px-4 py-2.5 text-xs font-bold text-gray-200 border-b border-white/5 max-w-[200px] truncate">
-                                            {row.constituent}
+                                        <td className="px-4 py-2.5 text-xs font-bold border-b border-white/5 max-w-[200px] truncate">
+                                            {onOpenDetail ? (
+                                                <button
+                                                    onClick={() => {
+                                                        const ticker = getTickerFromConstituent(row.constituent);
+                                                        onOpenDetail(ticker);
+                                                    }}
+                                                    className="text-gray-200 hover:text-indigo-400 hover:underline transition-all duration-200 text-left font-bold"
+                                                >
+                                                    {row.constituent}
+                                                </button>
+                                            ) : (
+                                                <span className="text-gray-200">{row.constituent}</span>
+                                            )}
                                         </td>
                                         {holdingsKeys.map((k) => {
                                             const val = row[k];

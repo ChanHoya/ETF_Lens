@@ -8,7 +8,11 @@ import SectorComparisonChart from '@/components/SectorComparisonChart';
 import SectorStatusGrid from '@/components/SectorStatusGrid';
 import SectorCorrelationHeatmap from '@/components/SectorCorrelationHeatmap';
 
-export default function SectorAnalysisTab() {
+interface SectorAnalysisTabProps {
+    onOpenDetail?: (code: string) => void;
+}
+
+export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabProps) {
     const [region, setRegion] = useState<'KR' | 'US' | 'ALL'>('ALL');
     const [selectedSector, setSelectedSector] = useState<string | null>(null);
 
@@ -84,7 +88,7 @@ export default function SectorAnalysisTab() {
                             <Zap className="w-5 h-5 text-cyan-400" />
                             <h3 className="text-xl font-extrabold text-white">우주 특화 분석</h3>
                         </div>
-                        <SpaceChart />
+                        <SpaceChart onOpenDetail={onOpenDetail} />
                     </div>
                 )}
 

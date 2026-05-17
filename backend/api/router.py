@@ -746,8 +746,74 @@ async def fetch_etf_hybrid(
         ],
     }
 
-    # Intercept ARKX (US space sector ETF)
-    if code == "ARKX":
+    # US Space Constituents rich metadata
+    us_space_constituents = {
+        "RKLB": {
+            "name": "Rocket Lab USA Inc. (RKLB)",
+            "desc": "로켓랩(Rocket Lab)은 소형 우주 발사체 및 위성 시스템 제조 분야의 선도 기업입니다. 일렉트론(Electron) 소형 발사체와 재사용 가능한 중형 발사체 뉴트론(Neutron)을 개발하여 저비용 고효율 우주 수송 솔루션을 제공합니다.",
+        },
+        "SATS": {
+            "name": "EchoStar Corp (SATS)",
+            "desc": "에코스타(EchoStar)는 전 세계 고객에게 고품질 위성 통신 솔루션, 지상 모바일 서비스, 브로드밴드 및 멀티미디어 비디오 콘텐츠 배포 서비스를 제공하는 선도적인 글로벌 위성 및 무선 서비스 사업자입니다.",
+        },
+        "ASTS": {
+            "name": "AST SpaceMobile Inc. (ASTS)",
+            "desc": "스페이스모바일(AST SpaceMobile)은 일반 모바일 표준 스마트폰으로 직접 우주 인터넷을 수신할 수 있도록 지원하는 저궤도 셀룰러 브로드밴드 위성 네트워크 선구 기업으로, 글로벌 무선 연결 시장의 혁신을 주도하고 있습니다.",
+        },
+        "LUNR": {
+            "name": "Intuitive Machines Inc. (LUNR)",
+            "desc": "인튜이티브 머신스(Intuitive Machines)는 달 탐사선 및 무인 달 착륙 인프라를 설계 및 개발하는 우주 탐사 선도 기업입니다. NASA의 민간 달 탑재체 수송 서비스(CLPS) 계약 하에 인류의 지속 가능한 달 탐사를 주도하고 있습니다.",
+        },
+        "RDW": {
+            "name": "Redwire Corp (RDW)",
+            "desc": "레드와이어(Redwire)는 3D 프린팅을 통한 우주 제조 솔루션, 고정밀 디지털 우주선 카메라, 태양광 어레이(iROSA) 등 선진 우주 구성요소 및 우주 환경 인프라를 공급하는 핵심 하드웨어 전문 우주항공 기업입니다.",
+        },
+        "PL": {
+            "name": "Planet Labs PBC (PL)",
+            "desc": "플래닛랩스(Planet Labs)는 전 세계 지구 표면 전체의 초고해상도 다중 분광 위성 이미지를 거의 매일 촬영하는 대규모 초소형 저궤도 인공위성 군집(Dove/SkySat)을 운용하며 인공지능 기반 분석 데이터를 제공하는 지구 관측 기업입니다.",
+        },
+        "LHX": {
+            "name": "L3Harris Technologies (LHX)",
+            "desc": "L3해리스(L3Harris)는 미 육해공군 및 방위 정보 기관에 우주/공중 전술 통신 장비, 고해상도 위성 영상 페이로드, 지상 관제 시스템 등 국가 안보급 첨단 항법 및 전자기 전술 솔루션을 제공하는 세계적인 군사 방산 기업입니다.",
+        },
+        "AMD": {
+            "name": "Advanced Micro Devices (AMD)",
+            "desc": "AMD는 고성능 컴퓨팅 및 그래픽용 CPU/GPU 제조 분야의 핵심 기업입니다. 인수합병한 자일링스(Xilinx)의 우주 항공 등급 FPGA 반도체 기술을 통하여 가혹한 우주 방사선 환경에서도 동작하는 전자장치 컴퓨팅 칩을 독점 공급합니다.",
+        },
+        "TER": {
+            "name": "Teradyne Inc. (TER)",
+            "desc": "테라다인(Teradyne)은 첨단 반도체 및 회로 기판 등의 신뢰성 검사를 위한 자동화 테스트 장비(ATE) 글로벌 시장 리더입니다. 우주 방산 등급 부품 및 정밀 우주 항공 전자기기의 불량 검사와 내구성 테스트 솔루션을 설계합니다.",
+        },
+        "BA": {
+            "name": "Boeing Co (BA)",
+            "desc": "보잉(Boeing)은 전 세계 민간 항공기 제조 및 미 우주 항공 시스템 설계의 대부입니다. NASA의 우주왕복선, 국제우주정거장(ISS), 차세대 유인 캡슐 스타라이너(Starliner) 및 대형 발사체 SLS의 제작을 주도해 왔습니다.",
+        },
+        "GSAT": {
+            "name": "Globalstar Inc. (GSAT)",
+            "desc": "글로벌스타(Globalstar)는 전 세계 수많은 사용자들에게 우주 기반 저궤도 인공위성을 통한 모바일 음성 및 데이터 양방향 전술 위성 통신망을 제공하는 기업으로, 최근 애플(Apple) 스마트폰의 긴급 구조 위성 신호 서비스 파트너입니다.",
+        },
+        "KTOS": {
+            "name": "Kratos Defense & Security (KTOS)",
+            "desc": "크라토스(Kratos)는 첨단 저궤도 위성 지상 관제 허브 안테나 설계, 무인 전투 드론 시스템, 전술 군용 로켓 및 방산 소프트웨어를 전문적으로 구축하여 국가 지능형 국가 안보와 우주 네트워크를 책임지는 방산 테크 기업입니다.",
+        },
+        "DE": {
+            "name": "Deere & Company (DE)",
+            "desc": "디어앤컴퍼니(Deere & Company)는 '존디어(John Deere)'로 잘 알려진 글로벌 정밀 자율 농기계 및 건설 장비 1위 기업입니다. 우주 기반의 초정밀 GPS 신호 및 스타링크 저궤도 인공위성 네트워크 연결을 장비에 도입하여 스마트 농업을 혁신하고 있습니다.",
+        },
+        "ACHR": {
+            "name": "Archer Aviation Inc. (ACHR)",
+            "desc": "아처 에비에이션(Archer Aviation)은 도심 항공 모빌리티(UAM) 실현을 위한 고성능 전기 수직 이착륙(eVTOL) 항공기 개발 분야의 선두주자입니다. 항공 우주 등급 안전 기술과 항공전자 제어 시스템을 통하여 도심 공중 셔틀 서비스를 준비 중입니다.",
+        },
+        "MDALF": {
+            "name": "MDA Space Ltd. (MDALF)",
+            "desc": "MDA 스페이스(MDA Space)는 국제우주정거장(ISS) 및 달 궤도 게이트웨이에 사용되는 차세대 우주 로봇 팔 '캐나다암(Canadarm)' 시리즈를 독점 제작 및 운용하는 캐나다 대표 우주항공 로봇 및 레이더 위성 시스템 기업입니다.",
+        },
+    }
+
+    clean_code_upper = code.strip().upper()
+
+    # Intercept ARKX or any US Space constituent
+    if clean_code_upper == "ARKX" or clean_code_upper in us_space_constituents:
         import yfinance as yf
         import pandas as pd
         from datetime import datetime, timedelta
@@ -760,40 +826,81 @@ async def fetch_etf_hybrid(
         
         dates = []
         prices = []
-        live_price = 21.5 # default fallback
+        live_price = 20.0 # default fallback
         
+        if clean_code_upper == "ARKX":
+            etf_name = "US-Space (ARKX)"
+            product_desc = "1좌당 순자산가치의 변동률을 기초지수의 변동률과 유사하도록 투자신탁재산을 운용하는 것을 목표로 합니다.\nARKX는 해당 기초지수 구성종목을 바탕으로 포트폴리오를 구축하여 시장 대비 안정적인 수익을 추구합니다."
+            holdings = fallbacks["ARKX"]
+            basic_info = {
+                "운용사": "ARK Invest",
+                "순자산총액": "$250M",
+                "펀드보수": "연 0.75%",
+                "상장주식수": "N/A",
+                "52주 최고/최저": "N/A",
+                "종가/전일대비/수익률": f"${live_price:.2f} / - / 0.00%",
+                "6M 수익률": "N/A",
+                "1M 수익률": "N/A",
+                "3M 수익률": "N/A",
+                "1Y 수익률": "N/A",
+                "수익률(1M/3M/6M/1Y)": "N/A",
+            }
+        else:
+            meta = us_space_constituents[clean_code_upper]
+            etf_name = meta["name"]
+            product_desc = meta["desc"]
+            holdings = []
+            basic_info = {
+                "운용사": "-",
+                "순자산총액": "-",
+                "펀드보수": "-",
+                "상장주식수": "N/A",
+                "52주 최고/최저": "N/A",
+                "종가/전일대비/수익률": f"${live_price:.2f} / - / 0.00%",
+                "6M 수익률": "N/A",
+                "1M 수익률": "N/A",
+                "3M 수익률": "N/A",
+                "1Y 수익률": "N/A",
+                "수익률(1M/3M/6M/1Y)": "N/A",
+            }
+            
         try:
-            ticker_yf = yf.Ticker("ARKX")
+            ticker_yf = yf.Ticker(clean_code_upper)
             df = await asyncio.to_thread(ticker_yf.history, start=start_str, end=end_str)
             if df is not None and not df.empty:
                 dates = [str(d.date()) for d in df.index]
                 prices = df["Close"].tolist()
                 live_price = float(df["Close"].iloc[-1])
+                basic_info["종가/전일대비/수익률"] = f"${live_price:.2f} / - / 0.00%"
+                
+                # Compute returns dynamically from history
+                if len(prices) > 20:
+                    yield_1m = ((prices[-1] / prices[-21]) - 1) * 100
+                    basic_info["1M 수익률"] = f"{yield_1m:+.2f}%"
+                if len(prices) > 60:
+                    yield_3m = ((prices[-1] / prices[-61]) - 1) * 100
+                    basic_info["3M 수익률"] = f"{yield_3m:+.2f}%"
+                if len(prices) > 120:
+                    yield_6m = ((prices[-1] / prices[-121]) - 1) * 100
+                    basic_info["6M 수익률"] = f"{yield_6m:+.2f}%"
+                if len(prices) > 250:
+                    yield_1y = ((prices[-1] / prices[-251]) - 1) * 100
+                    basic_info["1Y 수익률"] = f"{yield_1y:+.2f}%"
+                
+                high_52w = float(df["High"].iloc[-252:].max()) if len(df) >= 252 else float(df["High"].max())
+                low_52w = float(df["Low"].iloc[-252:].min()) if len(df) >= 252 else float(df["Low"].min())
+                basic_info["52주 최고/최저"] = f"${low_52w:.2f} ~ ${high_52w:.2f}"
         except Exception as e:
-            logger.warning(f"[ARKX] yfinance history fetch failed: {e}")
+            logger.warning(f"[{clean_code_upper}] yfinance history fetch failed: {e}")
             
-        holdings = fallbacks["ARKX"]
-        
-        basic_info = {
-            "운용사": "ARK Invest",
-            "순자산총액": "$250M",
-            "펀드보수": "연 0.75%",
-            "상장주식수": "N/A",
-            "52주 최고/최저": "N/A",
-            "종가/전일대비/수익률": f"${live_price:.2f} / - / 0.00%",
-            "6M 수익률": "N/A",
-            "1M 수익률": "N/A",
-            "3M 수익률": "N/A",
-            "1Y 수익률": "N/A",
-            "수익률(1M/3M/6M/1Y)": "N/A",
-        }
+        basic_info["상품설명"] = product_desc
         
         return {
-            "etf_code": "ARKX",
-            "etf_name": "US-Space (ARKX)",
+            "etf_code": clean_code_upper,
+            "etf_name": etf_name,
             "market_data": {
                 "price": live_price,
-                "nav": live_price * 1.001,
+                "nav": live_price,
             },
             "basic_info": basic_info,
             "historical_data": {"dates": dates, "prices": prices},
