@@ -337,23 +337,27 @@ export default function SpaceChart() {
                                             }
 
                                             return (
-                                                <td key={k} className="px-2 py-1.5 border-b border-white/5 align-middle min-w-[120px]">
-                                                    <div className="relative w-full h-6 flex items-center justify-end px-2 rounded overflow-hidden bg-white/[0.03]">
-                                                        {/* Horizontal bar fill from left */}
-                                                        <div 
-                                                            className="absolute left-0 top-0 bottom-0 opacity-20 transition-all duration-300"
-                                                            style={{ 
-                                                                width: `${Math.min(val, 100)}%`,
-                                                                backgroundColor: cellColor
-                                                            }}
-                                                        />
-                                                        {/* Value text on top */}
-                                                        <span 
-                                                            className="relative z-10 text-[10.5px] font-bold font-mono"
-                                                            style={{ color: cellColor }}
-                                                        >
-                                                            {val.toFixed(1)}%
-                                                        </span>
+                                                <td key={k} className="px-3 py-2 border-b border-white/5 align-middle min-w-[125px]">
+                                                    <div className="flex flex-col gap-1 w-full">
+                                                        {/* Value text on top aligned to the right */}
+                                                        <div className="flex justify-end w-full">
+                                                            <span 
+                                                                className="text-[10.5px] font-bold font-mono"
+                                                                style={{ color: cellColor }}
+                                                            >
+                                                                {val.toFixed(1)}%
+                                                            </span>
+                                                        </div>
+                                                        {/* Progress bar track & solid vibrant color fill */}
+                                                        <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                            <div 
+                                                                className="h-full rounded-full transition-all duration-300"
+                                                                style={{ 
+                                                                    width: `${Math.min(val, 100)}%`,
+                                                                    backgroundColor: cellColor
+                                                                }}
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </td>
                                             );
