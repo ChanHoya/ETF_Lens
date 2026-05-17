@@ -136,36 +136,36 @@ export default function SectorStatusGrid({
                         }`}
                     >
                         {/* Header: Sector Icon & Name */}
-                        <div className="flex items-center gap-2 px-2 pt-1">
-                            <div className={`p-1.5 rounded-lg bg-gradient-to-br ${meta.color || 'from-gray-500 to-slate-500'} shadow-lg shadow-black/20`}>
-                                {React.cloneElement((meta.icon || <Activity />) as React.ReactElement<{ className?: string }>, { className: 'w-3.5 h-3.5 text-white' })}
+                        <div className="flex items-center gap-2.5 px-2 pt-1.5">
+                            <div className={`p-1.5 md:p-2 rounded-xl bg-gradient-to-br ${meta.color || 'from-gray-500 to-slate-500'} shadow-lg shadow-black/20`}>
+                                {React.cloneElement((meta.icon || <Activity />) as React.ReactElement<{ className?: string }>, { className: 'w-4 h-4 md:w-4.5 h-4.5 text-white' })}
                             </div>
-                            <span className="text-xs font-black text-white">{group.baseName}</span>
+                            <span className="text-sm md:text-base font-black text-white">{group.baseName}</span>
                         </div>
 
                         {/* KR Card (Top) */}
                         {group.kr && (
-                            <div className={`flex flex-col p-2 rounded-xl transition-all ${isActive ? 'bg-white/5' : 'bg-black/20 group-hover:bg-white/5'}`}>
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-[9px] font-bold text-blue-400">KOREA</span>
-                                    <span className={`text-[11px] font-black ${group.kr.change_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            <div className={`flex flex-col p-2.5 rounded-xl transition-all ${isActive ? 'bg-white/5' : 'bg-black/20 group-hover:bg-white/5'}`}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-[11px] md:text-xs font-black text-blue-400">KOREA</span>
+                                    <span className={`text-xs md:text-sm font-black ${group.kr.change_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                                         {group.kr.change_pct >= 0 ? '+' : ''}{group.kr.change_pct.toFixed(2)}%
                                     </span>
                                 </div>
-                                <div className="text-[10px] text-gray-500 truncate font-medium">{group.kr.name}</div>
+                                <div className="text-[11px] md:text-xs text-gray-400 truncate font-bold">{group.kr.name}</div>
                             </div>
                         )}
 
                         {/* US Card (Bottom) */}
                         {group.us && (
-                            <div className={`flex flex-col p-2 rounded-xl transition-all ${isActive ? 'bg-white/5' : 'bg-black/20 group-hover:bg-white/5'}`}>
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-[9px] font-bold text-amber-400">USA</span>
-                                    <span className={`text-[11px] font-black ${group.us.change_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            <div className={`flex flex-col p-2.5 rounded-xl transition-all ${isActive ? 'bg-white/5' : 'bg-black/20 group-hover:bg-white/5'}`}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-[11px] md:text-xs font-black text-amber-400">USA</span>
+                                    <span className={`text-xs md:text-sm font-black ${group.us.change_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                                         {group.us.change_pct >= 0 ? '+' : ''}{group.us.change_pct.toFixed(2)}%
                                     </span>
                                 </div>
-                                <div className="text-[10px] text-gray-500 truncate font-medium">{group.us.name}</div>
+                                <div className="text-[11px] md:text-xs text-gray-400 truncate font-bold">{group.us.name}</div>
                             </div>
                         )}
                         
