@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ShieldAlert, TrendingDown, DollarSign, Activity, AlertTriangle, ArrowRight, Info, ChevronRight, BarChart2, X, AlertCircle } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 import { DollarModalContent, PerModalContent, CliModalContent, SentimentModalContent } from './ExitSignalModals';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
+import RiskGaugeChart from './RiskGaugeChart';
 
 // Mock Data for the 1-year Historical Trends (12 Months)
 const mockDollarData = [
@@ -77,7 +78,25 @@ export default function KospiExitAnalyzer() {
     const [oecdCliValue, setOecdCliValue] = useState(mockCliData[11].val);
     const [oecdCliDownMonths, setOecdCliDownMonths] = useState(2); // Based on recent mock drops
     const [vixValue, setVixValue] = useState(18.5);
+    const [vkospiValue, setVkospiValue] = useState(15.0);
     const [fgiValue, setFgiValue] = useState(50.0);
+    const [exitScore, setExitScore] = useState(0);
+
+    // Multi-Dimensional Risk State
+    const [riskData, setRiskData] = useState<any>({
+        level: 'safe',
+        label: '안전',
+        color: 'green',
+        score: 0,
+        max_score: 15,
+        breakdown: {
+            vix: { value: 18.5, score: 0, label: 'VIX 공포지수' },
+            vkospi_proxy: { value: 15.0, score: 0, label: 'VKOSPI 변동성' },
+            fgi: { value: 50.0, score: 0, label: '공포-탐욕 지수' },
+            cli: { value: 100.4, score: 0, label: '경기선행지수(CLI)' },
+            per: { value: 12.4, score: 0, label: 'KOSPI PER' }
+        }
+    });
 
     // Chart Data State
     const [baseDollar, setBaseDollar] = useState([...mockDollarData]);
@@ -122,11 +141,19 @@ export default function KospiExitAnalyzer() {
                     setForwardPer(data.current_status.per);
                     setOecdCliValue(data.current_status.cli);
                     setOecdCliDownMonths(data.current_status.cli_down_months);
+                    setExitScore(data.risk?.score || data.current_score || 0);
+
+                    if (data.risk) {
+                        setRiskData(data.risk);
+                    }
 
                     if (data.indicators.sentiment) {
                         setBaseSentiment(data.indicators.sentiment);
                         setVixValue(data.current_status.vix);
                         setFgiValue(data.current_status.fgi);
+                        if (data.current_status.vkospi_proxy !== undefined) {
+                            setVkospiValue(data.current_status.vkospi_proxy);
+                        }
                     }
 
                     // Fetch real CLI data for 3 lines (Dashboard)
@@ -205,7 +232,6 @@ export default function KospiExitAnalyzer() {
     const getPerStatus = () => {
         if (forwardPer < 11.5) return { level: 'safe', text: '저평가', color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' };
         if (forwardPer < 12.5) return { level: 'warning', text: '관망', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/30' };
-        // If it touched 12.5 and is now dropping, it's a trend reversal
         return { level: 'danger', text: '추세 반전', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/30' };
     };
 
@@ -217,8 +243,16 @@ export default function KospiExitAnalyzer() {
 
     const getVixStatus = () => {
         if (vixValue < 15) return { level: 'safe', text: '안정', color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' };
-        if (vixValue <= 20) return { level: 'warning', text: '경계', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/30' };
+        if (vixValue <= 20) return { level: 'warning', text: '주의', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/30' };
+        if (vixValue <= 25) return { level: 'warning', text: '경계', color: 'text-orange-400', bg: 'bg-orange-400/10', border: 'border-orange-400/30' };
         return { level: 'danger', text: '공포 확산', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/30' };
+    };
+
+    const getVkospiStatus = () => {
+        if (vkospiValue < 15) return { level: 'safe', text: '안정', color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' };
+        if (vkospiValue <= 20) return { level: '주의', text: '주의', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/30' };
+        if (vkospiValue <= 25) return { level: 'warning', text: '경계', color: 'text-orange-400', bg: 'bg-orange-400/10', border: 'border-orange-400/30' };
+        return { level: 'danger', text: '위험 (변동성 극대)', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/30' };
     };
 
     const getFgiStatus = () => {
@@ -231,106 +265,108 @@ export default function KospiExitAnalyzer() {
     const pStatus = getPerStatus();
     const cStatus = getCliStatus();
     const vStatus = getVixStatus();
+    const vkStatus = getVkospiStatus();
     const fStatus = getFgiStatus();
 
-    const exitStatuses = [dStatus.level, pStatus.level, cStatus.level];
-    const exitDangerCount = exitStatuses.filter(s => s === 'danger').length;
-    const exitWarningCount = exitStatuses.filter(s => s === 'warning').length;
-    const exitSafeCount = exitStatuses.filter(s => s === 'safe').length;
-
-    const getExitStatus = () => {
-        if (exitDangerCount >= 2) return { label: '위험 (매도 준비)', color: 'text-rose-400', border: 'border-rose-500/40', bg: 'bg-rose-500/20' };
-        if (exitWarningCount >= 2 || exitDangerCount === 1) return { label: '경계 (비중 조절)', color: 'text-amber-400', border: 'border-amber-500/40', bg: 'bg-amber-500/20' };
-        if (exitSafeCount >= 2) return { label: '안정 (비중 확대)', color: 'text-emerald-400', border: 'border-emerald-500/40', bg: 'bg-emerald-500/20' };
-        return { label: '중립 (관망)', color: 'text-gray-300', border: 'border-gray-500/40', bg: 'bg-gray-500/20' };
+    const exitOverall = () => {
+        if (exitScore >= 11) return { label: `위험 (매도 준비 | ${exitScore}/15점)`, color: 'text-rose-400', border: 'border-rose-500/40', bg: 'bg-rose-500/20' };
+        if (exitScore >= 6) return { label: `경계 (비중 조절 | ${exitScore}/15점)`, color: 'text-amber-400', border: 'border-amber-500/40', bg: 'bg-amber-500/20' };
+        if (exitScore >= 3) return { label: `주의 (예의 주시 | ${exitScore}/15점)`, color: 'text-orange-400', border: 'border-orange-500/40', bg: 'bg-orange-500/20' };
+        return { label: `안정 (비중 확대 | ${exitScore}/15점)`, color: 'text-emerald-400', border: 'border-emerald-500/40', bg: 'bg-emerald-500/20' };
     };
 
     const getExitAnalysisText = () => {
-        if (exitDangerCount >= 2) return "거시 경제 및 밸류에이션 지표가 위험 수준입니다. 주식 비중을 최소화하고 보수적으로 대응하세요.";
-        if (exitWarningCount >= 2 || exitDangerCount === 1) return "일부 지표에서 경고 신호가 확인됩니다. 리스크 관리를 강화하고 시장의 변화를 예의주시하세요.";
-        if (exitSafeCount >= 2) return "거시 지표와 밸류에이션이 전반적으로 양호합니다. 주식 자산 편입에 우호적인 환경입니다.";
-        return "거시 지표가 방향성을 탐색 중입니다. 추가적인 데이터 확인이 필요합니다.";
+        if (exitScore >= 11) return `종합 위험도가 ${exitScore}점으로 위험 수준입니다. 거시 지표 및 국내 변동성이 극대화되었으므로 주식 비중을 최소화하고 리스크 관리에 집중하세요.`;
+        if (exitScore >= 6) return `종합 위험도가 ${exitScore}점입니다. 주요 거시 지표에서 불안 신호가 감지되고 있으므로 포트폴리오 비중을 선제적으로 조절하시기 바랍니다.`;
+        if (exitScore >= 3) return `종합 위험도가 ${exitScore}점입니다. 일부 변동성 지표와 밸류에이션에서 미세한 주의 신호가 확인됩니다. 시장 추이를 예의주시하세요.`;
+        return `종합 위험도가 ${exitScore}점으로 매우 안정적인 국면입니다. 거시 지표, 밸류에이션, 투자자 심리가 모두 양호하므로 적극적인 비중 확대를 추천합니다.`;
     };
-
-    const sentimentStatuses = [vStatus.level, fStatus.level];
-    const sentDangerCount = sentimentStatuses.filter(s => s === 'danger').length;
-    const sentWarningCount = sentimentStatuses.filter(s => s === 'warning').length;
-
-    const getSentimentStatus = () => {
-        if (sentDangerCount >= 1) return { label: '추세 반전 경고', color: 'text-rose-400', border: 'border-rose-500/40', bg: 'bg-rose-500/20' };
-        if (sentWarningCount >= 1) return { label: '변동성 확대 주의', color: 'text-amber-400', border: 'border-amber-500/40', bg: 'bg-amber-500/20' };
-        return { label: '시장 심리 안정', color: 'text-emerald-400', border: 'border-emerald-500/40', bg: 'bg-emerald-500/20' };
-    };
-
-    const getSentimentAnalysisText = () => {
-        if (sentDangerCount >= 1) return "시장 심리가 극단적인 방향으로 쏠려 있어, 단기 충격 가능성에 대비해야 합니다.";
-        if (sentWarningCount >= 1) return "시장 변동성이 다소 커질 수 있는 구간입니다. 방어적 포지션을 점검해보세요.";
-        return "시장 심리와 변동성이 안정적으로 유지되고 있어, 큰 충격 없이 순항할 가능성이 높습니다.";
-    };
-
-    const exitOverall = getExitStatus();
-    const sentOverall = getSentimentStatus();
 
     return (
-        <div className="w-full flex flex-col gap-4 mb-2 relative">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md">
-                <div className="flex items-center gap-4">
+        <div className="w-full flex flex-col gap-5 mb-2 relative">
+            
+            {/* Header section with liquid glass style */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/30 p-5 rounded-2xl border border-white/5 backdrop-blur-xl shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none" />
+                <div className="flex items-center gap-4 relative z-10">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
-                        <ShieldAlert className="w-6 h-6 text-white" />
+                        <ShieldAlert className="w-6 h-6 text-white animate-pulse" />
                     </div>
                     <div>
                         <div className="flex flex-wrap items-center gap-3">
-                            <h2 className="text-xl font-extrabold text-white">
+                            <h2 className="text-xl font-extrabold text-white tracking-tight">
                                 코스피 출구 전략 모니터링 (Exit-Signal)
                             </h2>
-                            <span className={`px-2.5 py-1 text-xs font-bold flex items-center gap-1.5 rounded-lg border ${exitOverall.bg} ${exitOverall.color} ${exitOverall.border}`}>
-                                {exitOverall.label}
+                            <span className="px-2 py-0.5 text-[10px] font-bold text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 rounded-md">
+                                Multi-Dimensional
                             </span>
                         </div>
-                        <p className="text-sm text-gray-400 font-medium mt-0.5">거시경제 및 밸류에이션 기반 위기 감지 시스템</p>
+                        <p className="text-xs text-gray-400 font-medium mt-0.5">VIX·VKOSPI 및 글로벌 매크로 인텔리전스 결합 분석</p>
                     </div>
                 </div>
-                <div className="text-sm text-gray-300 md:text-right md:max-w-xs border-t md:border-t-0 md:border-l border-white/10 pt-3 md:pt-0 md:pl-4">
+                <div className="text-xs text-gray-300 md:text-right md:max-w-md border-t md:border-t-0 md:border-l border-white/10 pt-3 md:pt-0 md:pl-5 font-medium relative z-10 leading-relaxed">
                     {getExitAnalysisText()}
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* 1. Dollar Index */}
-                <div onClick={(e) => openPopup('dollar', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-2 md:p-4 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-3">
-                            <h4 className="text-white/80 text-base font-bold flex items-center gap-1.5"><DollarSign className="w-4 h-4" /> 달러 인덱스/환율 추이</h4>
-                            <span className="text-2xl font-black text-white font-mono">{dollarIndex.toFixed(2)}</span>
+            {/* Premium Bento Grid Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5">
+                
+                {/* Bento Card 1: Neon Risk Gauge Chart (Spans 2 columns on medium screens) */}
+                <div className="md:col-span-2 h-full">
+                    <RiskGaugeChart 
+                        score={exitScore} 
+                        maxScore={15} 
+                        level={riskData.level} 
+                        label={riskData.label} 
+                        breakdown={riskData.breakdown} 
+                    />
+                </div>
+
+                {/* Bento Card 2: Dollar Index / Exchange Rate */}
+                <div 
+                    onClick={(e) => openPopup('dollar', e)} 
+                    className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-3xl p-4 flex flex-col justify-between hover:bg-white/[0.05] hover:scale-[1.01] hover:shadow-2xl transition-all duration-300 relative overflow-hidden group min-h-[250px]"
+                >
+                    <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center gap-2">
+                            <span className="p-1.5 rounded-lg bg-white/5 border border-white/5">
+                                <DollarSign className="w-4 h-4 text-emerald-400" />
+                            </span>
+                            <h4 className="text-white text-xs font-extrabold">달러 인덱스 및 환율</h4>
                         </div>
-                        <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${dStatus.bg} ${dStatus.color} ${dStatus.border}`}>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${dStatus.badge || dStatus.bg} ${dStatus.color} ${dStatus.border}`}>
                             {dStatus.text}
                         </span>
                     </div>
 
-                    <div className="flex-1 w-full min-h-[160px] mt-2 -ml-2 -mb-2">
+                    <div className="flex items-baseline gap-2 mb-2">
+                        <span className="text-2xl font-black text-white font-mono">{dollarIndex.toFixed(2)}</span>
+                        <span className="text-xs text-gray-400 font-mono font-medium">({Math.round(dollarKrw)}원)</span>
+                    </div>
+
+                    <div className="flex-1 w-full min-h-[110px] -ml-2 -mb-2">
                         {loading ? (
-                            <ChartLoadingPlaceholder height={160} />
+                            <ChartLoadingPlaceholder height={110} />
                         ) : (
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartDollar} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
-                                <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#34d399') }} tickLine={false} axisLine={false} width={45} />
-                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#60a5fa' }} tickLine={false} axisLine={false} width={45} />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                <XAxis dataKey="date" hide={true} />
+                                <YAxis yAxisId="left" domain={['auto', 'auto']} hide={true} />
+                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} hide={true} />
                                 <RechartsTooltip
-                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', borderRadius: '8px' }}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
-                                            const sortedPayload = [...payload].sort((a: any, b: any) => getNormDollar(b.dataKey, b.value) - getNormDollar(a.dataKey, a.value));
                                             const isLast = payload[0]?.payload === chartDollar[chartDollar.length - 1];
-                                            const displayLabel = `${label} ${isLast ? '(최근/전일)' : ''}`;
+                                            const displayLabel = `${label} ${isLast ? '(최근)' : ''}`;
                                             return (
-                                                <div className="bg-black/80 border border-white/10 p-2 rounded-lg text-[11px]">
+                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[10px]">
                                                     <p className="text-gray-400 mb-1">{displayLabel}</p>
-                                                    {sortedPayload.map((entry: any, index: number) => (
-                                                        <div key={`item-${index}`} className="flex items-center gap-2 mb-0.5 font-medium" style={{ color: entry.color }}>
-                                                            <span>{entry.name === 'krw' ? 'USD/KRW' : '달러 인덱스'} :</span>
+                                                    {payload.map((entry: any, index: number) => (
+                                                        <div key={`item-${index}`} className="flex items-center gap-2 font-medium" style={{ color: entry.color }}>
+                                                            <span>{entry.name === 'krw' ? 'USD/KRW' : 'DXY'} :</span>
                                                             <span>{entry.name === 'krw' ? `${Math.round(entry.value)}원` : entry.value.toFixed(2)}</span>
                                                         </div>
                                                     ))}
@@ -340,58 +376,62 @@ export default function KospiExitAnalyzer() {
                                         return null;
                                     }}
                                 />
-                                <ReferenceLine yAxisId="left" y={100} stroke="#f59e0b" strokeDasharray="3 3" />
-                                <ReferenceLine yAxisId="left" y={101.5} stroke="#f43f5e" strokeDasharray="3 3" />
-                                <Line name="달러 인덱스" yAxisId="left" type="monotone" dataKey="dollar" stroke={dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                                <Line name="USD/KRW" yAxisId="right" type="monotone" dataKey="krw" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={{ r: 4 }} />
-                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
+                                <Line name="DXY" yAxisId="left" type="monotone" dataKey="dollar" stroke={dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#10b981')} strokeWidth={2} dot={false} />
+                                <Line name="krw" yAxisId="right" type="monotone" dataKey="krw" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" dot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}
                     </div>
 
-                    <div className="mt-4 text-xs text-gray-400 bg-black/40 p-3 rounded-xl flex items-start gap-2">
-                        <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-400" />
-                        <p>101.5 초과 시 본격적인 출구 전략 실행 검토 및 ETF 비중 축소를 권고합니다.</p>
+                    <div className="mt-3 text-[10px] text-gray-400 bg-black/30 p-2 rounded-xl flex items-start gap-1.5 border border-white/5">
+                        <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
+                        <p>DXY 101.5 돌파 시 달러 초강세 국면으로 ETF 리스크 관리가 권장됩니다.</p>
                     </div>
                 </div>
 
-                {/* 2. Forward P/E */}
-                <div onClick={(e) => openPopup('per', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-2 md:p-4 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
-                    <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-3">
-                            <h4 className="text-white/80 text-base font-bold flex items-center gap-1.5"><BarChart2 className="w-4 h-4" /> 포워드 PER</h4>
-                            <span className="text-2xl font-black text-white font-mono">{forwardPer.toFixed(1)}x</span>
+                {/* Bento Card 3: Forward P/E */}
+                <div 
+                    onClick={(e) => openPopup('per', e)} 
+                    className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-3xl p-4 flex flex-col justify-between hover:bg-white/[0.05] hover:scale-[1.01] hover:shadow-2xl transition-all duration-300 relative overflow-hidden group min-h-[250px]"
+                >
+                    <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center gap-2">
+                            <span className="p-1.5 rounded-lg bg-white/5 border border-white/5">
+                                <BarChart2 className="w-4 h-4 text-blue-400" />
+                            </span>
+                            <h4 className="text-white text-xs font-extrabold">KOSPI 포워드 P/E</h4>
                         </div>
-                        <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${pStatus.bg} ${pStatus.color} ${pStatus.border}`}>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${pStatus.badge || pStatus.bg} ${pStatus.color} ${pStatus.border}`}>
                             {pStatus.text}
                         </span>
                     </div>
 
-                    <div className="flex-1 w-full min-h-[160px] mt-2 -ml-2 -mb-2">
+                    <div className="flex items-baseline gap-2 mb-2">
+                        <span className="text-2xl font-black text-white font-mono">{forwardPer.toFixed(1)}x</span>
+                        <span className="text-xs text-gray-400 font-medium">KOSPI 밸류에이션</span>
+                    </div>
+
+                    <div className="flex-1 w-full min-h-[110px] -ml-2 -mb-2">
                         {loading ? (
-                            <ChartLoadingPlaceholder height={160} />
+                            <ChartLoadingPlaceholder height={110} />
                         ) : (
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartPer} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
-                                <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: forwardPer >= 12.5 || pStatus.level === 'danger' ? '#f43f5e' : '#34d399' }} tickLine={false} axisLine={false} width={45} />
-                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 9, fill: '#60a5fa' }} tickLine={false} axisLine={false} width={45} tickFormatter={(val) => Math.round(val).toLocaleString()} />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                <XAxis dataKey="month" hide={true} />
+                                <YAxis yAxisId="left" hide={true} />
+                                <YAxis yAxisId="right" orientation="right" hide={true} />
                                 <RechartsTooltip
-                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', borderRadius: '8px' }}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
-                                            const sortedPayload = [...payload].sort((a: any, b: any) => getNormPer(b.dataKey, b.value) - getNormPer(a.dataKey, a.value));
-                                            const isLast = payload[0]?.payload === chartPer[chartPer.length - 1];
-                                            const displayLabel = `${label} ${isLast ? '(최근/전일)' : ''}`;
                                             return (
-                                                <div className="bg-black/80 border border-white/10 p-2 rounded-lg text-[11px]">
-                                                    <p className="text-gray-400 mb-1">{displayLabel}</p>
-                                                    {sortedPayload.map((entry: any, index: number) => (
-                                                        <div key={`item-${index}`} className="flex items-center gap-2 mb-0.5 font-medium" style={{ color: entry.color }}>
-                                                            <span>{entry.name === 'KOSPI' ? 'KOSPI' : 'P/E'} :</span>
-                                                            <span>{entry.name === 'KOSPI' ? `${Math.round(entry.value).toLocaleString()}pt` : `${entry.value.toFixed(1)}x`}</span>
+                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[10px]">
+                                                    <p className="text-gray-400 mb-1">{label}</p>
+                                                    {payload.map((entry: any, index: number) => (
+                                                        <div key={`item-${index}`} className="flex items-center gap-2 font-medium" style={{ color: entry.color }}>
+                                                            <span>{entry.name === 'price' || entry.name === 'KOSPI' ? 'KOSPI' : 'P/E'} :</span>
+                                                            <span>{entry.name === 'price' || entry.name === 'KOSPI' ? `${Math.round(entry.value).toLocaleString()}pt` : `${entry.value.toFixed(1)}x`}</span>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -400,61 +440,67 @@ export default function KospiExitAnalyzer() {
                                         return null;
                                     }}
                                 />
-                                <ReferenceLine yAxisId="left" y={12.5} stroke="#f59e0b" strokeDasharray="3 3" />
-                                <Line name="P/E" yAxisId="left" type="monotone" dataKey="val" stroke={forwardPer >= 12.5 || pStatus.level === 'danger' ? '#f43f5e' : '#34d399'} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                                <Line name="KOSPI" yAxisId="right" type="monotone" dataKey="price" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
-                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
+                                <Line name="P/E" yAxisId="left" type="monotone" dataKey="val" stroke={forwardPer >= 12.5 ? '#f43f5e' : '#10b981'} strokeWidth={2} dot={false} />
+                                <Line name="KOSPI" yAxisId="right" type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" dot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}
                     </div>
 
-                    <div className="mt-2 text-xs text-gray-400 bg-black/40 p-3 rounded-xl flex items-start gap-2">
-                        <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-400" />
-                        <p>포워드 PER 12.5 터치 후 우하향 전환 시 '추세 반전'에 따른 강력 매도 시그널입니다.</p>
+                    <div className="mt-3 text-[10px] text-gray-400 bg-black/30 p-2 rounded-xl flex items-start gap-1.5 border border-white/5">
+                        <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
+                        <p>PER 12.5배 터치 후 꺾이면 밸류에이션 한계 도달에 의한 매도 위험 신호입니다.</p>
                     </div>
                 </div>
 
-                {/* 3. OECD CLI */}
-                <div onClick={(e) => openPopup('cli', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-2 md:p-4 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-3">
-                            <h4 className="text-white/80 text-base font-bold flex items-center gap-1.5"><TrendingDown className="w-4 h-4" /> 경기 선행 지수 (CLI)</h4>
-                            <div className="flex items-end gap-2 text-2xl font-black text-white font-mono">
-                                {(100.2 - (oecdCliDownMonths * 0.4)).toFixed(1)}
-                                {oecdCliDownMonths > 0 && <span className="text-rose-400 text-xs font-bold mb-1 flex items-center border border-rose-500/20 bg-rose-500/10 px-1.5 py-0.5 rounded-md"><TrendingDown className="w-3 h-3 mr-0.5" /> 하락 {oecdCliDownMonths}M</span>}
-                            </div>
+                {/* Bento Card 4: OECD CLI */}
+                <div 
+                    onClick={(e) => openPopup('cli', e)} 
+                    className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-3xl p-4 flex flex-col justify-between hover:bg-white/[0.05] hover:scale-[1.01] hover:shadow-2xl transition-all duration-300 relative overflow-hidden group min-h-[250px]"
+                >
+                    <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center gap-2">
+                            <span className="p-1.5 rounded-lg bg-white/5 border border-white/5">
+                                <TrendingDown className="w-4 h-4 text-rose-400" />
+                            </span>
+                            <h4 className="text-white text-xs font-extrabold">경기 선행 지수 (CLI)</h4>
                         </div>
-                        <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${cStatus.bg} ${cStatus.color} ${cStatus.border}`}>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${cStatus.badge || cStatus.bg} ${cStatus.color} ${cStatus.border}`}>
                             {cStatus.text}
                         </span>
                     </div>
 
-                    <div className="flex-1 w-full min-h-[160px] mt-2 -ml-2 -mb-2">
+                    <div className="flex items-baseline gap-2 mb-2">
+                        <span className="text-2xl font-black text-white font-mono">{oecdCliValue.toFixed(2)}</span>
+                        {oecdCliDownMonths > 0 && (
+                            <span className="text-[10px] text-rose-400 font-bold flex items-center border border-rose-500/15 bg-rose-500/5 px-1.5 py-0.5 rounded-md">
+                                하락 {oecdCliDownMonths}개월째
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex-1 w-full min-h-[110px] -ml-2 -mb-2">
                         {loading ? (
-                            <ChartLoadingPlaceholder height={160} />
+                            <ChartLoadingPlaceholder height={110} />
                         ) : (
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartCli} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
-                                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#f43f5e' }} tickLine={false} axisLine={false} width={45} />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                <XAxis dataKey="month" hide={true} />
+                                <YAxis domain={['auto', 'auto']} hide={true} />
                                 <RechartsTooltip
-                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', borderRadius: '8px' }}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
-                                            const sortedPayload = [...payload].sort((a: any, b: any) => getNormCli(b.dataKey, b.value) - getNormCli(a.dataKey, a.value));
-                                            const isLast = payload[0]?.payload === chartCli[chartCli.length - 1];
-                                            const displayLabel = `${label} ${isLast ? '(최근/전일)' : ''}`;
                                             return (
-                                                <div className="bg-black/80 border border-white/10 p-2 rounded-lg text-[11px]">
-                                                    <p className="text-gray-400 mb-1">{displayLabel}</p>
-                                                    {sortedPayload.map((entry: any, index: number) => {
-                                                        const nameMap: any = { kor_cli: '한국 CLI', usa_cli: '미국 CLI', oecd_cli: 'G7(OECD Proxy)' };
+                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[10px]">
+                                                    <p className="text-gray-400 mb-1">{label}</p>
+                                                    {payload.map((entry: any, index: number) => {
+                                                        const nameMap: any = { kor_cli: '한국 CLI', usa_cli: '미국 CLI', oecd_cli: 'G7 CLI' };
                                                         return (
-                                                            <div key={`item-${index}`} className="flex items-center gap-2 mb-0.5 font-medium" style={{ color: entry.color }}>
-                                                                <span>{nameMap[entry.name]} :</span>
-                                                                <span>{entry.value.toFixed(1)}</span>
+                                                            <div key={`item-${index}`} className="flex items-center gap-2 font-medium" style={{ color: entry.color }}>
+                                                                <span>{nameMap[entry.name] || entry.name} :</span>
+                                                                <span>{entry.value.toFixed(2)}</span>
                                                             </div>
                                                         );
                                                     })}
@@ -464,139 +510,164 @@ export default function KospiExitAnalyzer() {
                                         return null;
                                     }}
                                 />
-                                <Line name="한국 CLI" type="monotone" dataKey="kor_cli" stroke={cStatus.level === 'danger' ? '#f43f5e' : (cStatus.level === 'warning' ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={{ r: 2, fill: '#121217' }} activeDot={{ r: 5 }} />
-                                <Line name="미국 CLI" type="monotone" dataKey="usa_cli" stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
-                                <Line name="G7 CLI(Proxy)" type="monotone" dataKey="oecd_cli" stroke="#10b981" strokeWidth={1.5} strokeDasharray="3 3" dot={false} activeDot={false} />
-                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
+                                <Line name="kor_cli" type="monotone" dataKey="kor_cli" stroke={cStatus.level === 'danger' ? '#f43f5e' : (cStatus.level === 'warning' ? '#f59e0b' : '#10b981')} strokeWidth={2} dot={false} />
+                                <Line name="usa_cli" type="monotone" dataKey="usa_cli" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" dot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}
                     </div>
 
-                    <div className="mt-4 text-xs text-gray-400 bg-black/40 p-3 rounded-xl flex items-start gap-2">
-                        <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-400" />
-                        <p>미국 및 G20 경기 선행 지수가 2개월 연속 하락 시, 국내 주식 비중 축소 자동 리포트가 발행됩니다.</p>
+                    <div className="mt-3 text-[10px] text-gray-400 bg-black/30 p-2 rounded-xl flex items-start gap-1.5 border border-white/5">
+                        <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
+                        <p>2개월 연속 하락 국면 진입 시 국내 주식 비중을 단계적으로 하향 조절할 필요가 있습니다.</p>
                     </div>
                 </div>
-            </div>
 
-            {/* Sentiment Indicators Row */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2 mb-2 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
-                        <Activity className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                        <div className="flex flex-wrap items-center gap-3">
-                            <h3 className="text-xl font-extrabold text-white">
-                                시장 심리 지표
-                            </h3>
-                            <span className={`px-2.5 py-1 text-xs font-bold flex items-center gap-1.5 rounded-lg border ${sentOverall.bg} ${sentOverall.color} ${sentOverall.border}`}>
-                                {sentOverall.label}
+                {/* Bento Card 5: VIX & VKOSPI (Korean realized volatility proxy) */}
+                <div 
+                    onClick={(e) => openPopup('vix', e)} 
+                    className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-3xl p-4 flex flex-col justify-between hover:bg-white/[0.05] hover:scale-[1.01] hover:shadow-2xl transition-all duration-300 relative overflow-hidden group min-h-[250px]"
+                >
+                    <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2">
+                            <span className="p-1.5 rounded-lg bg-white/5 border border-white/5">
+                                <Activity className="w-4 h-4 text-purple-400" />
+                            </span>
+                            <h4 className="text-white text-xs font-extrabold">양국 변동성 (VIX & VKOSPI)</h4>
+                        </div>
+                        <div className="flex gap-1.5">
+                            <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded border ${vStatus.badge || vStatus.bg} ${vStatus.color} ${vStatus.border}`}>
+                                US {vStatus.text}
+                            </span>
+                            <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded border ${vkStatus.badge || vkStatus.bg} ${vkStatus.color} ${vkStatus.border}`}>
+                                KR {vkStatus.text}
                             </span>
                         </div>
-                        <p className="text-sm text-gray-400 font-medium mt-0.5">투자자들의 단기 변동성 우려와 탐욕 수준을 나타내는 지수</p>
-                    </div>
-                </div>
-                <div className="text-sm text-gray-300 md:text-right md:max-w-xs border-t md:border-t-0 md:border-l border-white/10 pt-3 md:pt-0 md:pl-4">
-                    {getSentimentAnalysisText()}
-                </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* VIX */}
-                <div onClick={(e) => openPopup('vix', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-2 md:p-4 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-3">
-                            <h4 className="text-white/80 text-base font-bold flex items-center gap-1.5"><Activity className="w-4 h-4" /> VIX(CBOE Volatility Index)</h4>
-                            <span className="text-2xl font-black text-white font-mono">{vixValue.toFixed(2)}</span>
-                        </div>
-                        <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${vStatus.bg} ${vStatus.color} ${vStatus.border}`}>
-                            {vStatus.text}
-                        </span>
                     </div>
 
-                    <div className="flex-1 w-full min-h-[140px] mt-2 -ml-2 -mb-1">
+                    <div className="flex gap-4 mb-2">
+                        <div className="flex flex-col">
+                            <span className="text-[9px] text-gray-400 font-semibold">VIX 공포지수</span>
+                            <span className="text-xl font-black text-white font-mono">{vixValue.toFixed(2)}</span>
+                        </div>
+                        <div className="w-px h-8 bg-white/10" />
+                        <div className="flex flex-col">
+                            <span className="text-[9px] text-gray-400 font-semibold">VKOSPI Proxy</span>
+                            <span className="text-xl font-black text-white font-mono">{vkospiValue.toFixed(1)}%</span>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 w-full min-h-[100px] -ml-2 -mb-2">
                         {loading || baseSentiment.length === 0 ? (
-                            <ChartLoadingPlaceholder height={140} message="심리지표 로딩중" />
+                            <ChartLoadingPlaceholder height={100} message="변동성 데이터 로딩" />
                         ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 5 }}>
-                                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={4} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
-                                <YAxis yAxisId="left" domain={['auto', 'auto']} width={35} tick={{ fontSize: 10, fill: vStatus.level === 'danger' ? '#f43f5e' : (vStatus.level === 'warning' ? '#f59e0b' : '#34d399') }} tickLine={false} axisLine={false} />
-                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} width={45} tick={{ fontSize: 9, fill: '#60a5fa' }} tickLine={false} axisLine={false} tickFormatter={(val) => Math.round(val).toLocaleString()} />
+                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                <XAxis dataKey="date" hide={true} />
+                                <YAxis yAxisId="left" hide={true} />
                                 <RechartsTooltip
-                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
-                                    formatter={(value: any, name: any) => [name === 'KOSPI' ? Math.round(value).toLocaleString() + 'pt' : value.toFixed(2), name]}
-                                    labelFormatter={(label: any, payload: any) => {
-                                        const isLast = payload && payload[0] && payload[0].payload === chartSentiment[chartSentiment.length - 1];
-                                        return `${label} ${isLast ? '(최근/전일)' : ''}`;
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', borderRadius: '8px' }}
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            return (
+                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[10px]">
+                                                    <p className="text-gray-400 mb-1">{label}</p>
+                                                    {payload.map((entry: any, index: number) => (
+                                                        <div key={`item-${index}`} className="flex items-center gap-2 font-medium" style={{ color: entry.color }}>
+                                                            <span>{entry.name === 'vkospi_proxy' ? 'VKOSPI 프록시' : 'VIX'} :</span>
+                                                            <span>{entry.value.toFixed(1)}{entry.name === 'vkospi_proxy' ? '%' : ''}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+                                        return null;
                                     }}
-                                    labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                                 />
-                                <Line name="VIX" yAxisId="left" type="monotone" dataKey="vix" stroke={vStatus.level === 'danger' ? '#f43f5e' : (vStatus.level === 'warning' ? '#f59e0b' : '#34d399')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                                <Line name="KOSPI" yAxisId="right" type="monotone" dataKey="kospi" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
-                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
+                                <Line name="vix" yAxisId="left" type="monotone" dataKey="vix" stroke={vStatus.level === 'danger' ? '#f43f5e' : '#10b981'} strokeWidth={1.5} dot={false} />
+                                <Line name="vkospi_proxy" yAxisId="left" type="monotone" dataKey="vkospi_proxy" stroke={vkStatus.level === 'danger' ? '#ef4444' : '#f97316'} strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}
                     </div>
 
-                    <div className="mt-4 text-xs text-gray-400 bg-black/40 p-3 rounded-xl flex items-start gap-2">
-                        <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-400" />
-                        <p>평상시 15~20 구간 유지. 20을 돌파하여 급등하는 추세가 나타날 경우 단기 급락 위험 경고.</p>
+                    <div className="mt-3 text-[10px] text-gray-400 bg-black/30 p-2 rounded-xl flex items-start gap-1.5 border border-white/5">
+                        <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
+                        <p>KOSPI 20일 실현 변동성(VKOSPI 프록시)이 20% 초과 시 국내 변동성 급증 국면입니다.</p>
                     </div>
                 </div>
 
-                {/* Fear & Greed */}
-                <div onClick={(e) => openPopup('fgi', e)} className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-2xl p-2 md:p-4 flex flex-col justify-between hover:bg-white/[0.06] transition-colors relative overflow-hidden group">
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-3">
-                            <h4 className="text-white/80 text-base font-bold flex items-center gap-1.5"><Activity className="w-4 h-4" /> Fear & Greed Index (공포탐욕지수)</h4>
-                            <span className="text-2xl font-black text-white font-mono">{fgiValue.toFixed(1)}</span>
+                {/* Bento Card 6: Fear & Greed Index */}
+                <div 
+                    onClick={(e) => openPopup('fgi', e)} 
+                    className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-3xl p-4 flex flex-col justify-between hover:bg-white/[0.05] hover:scale-[1.01] hover:shadow-2xl transition-all duration-300 relative overflow-hidden group min-h-[250px]"
+                >
+                    <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center gap-2">
+                            <span className="p-1.5 rounded-lg bg-white/5 border border-white/5">
+                                <Activity className="w-4 h-4 text-amber-400" />
+                            </span>
+                            <h4 className="text-white text-xs font-extrabold">Fear & Greed Index</h4>
                         </div>
-                        <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${fStatus.bg} ${fStatus.color} ${fStatus.border}`}>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${fStatus.badge || fStatus.bg} ${fStatus.color} ${fStatus.border}`}>
                             {fStatus.text}
                         </span>
                     </div>
 
-                    <div className="flex-1 w-full min-h-[140px] mt-2 -ml-2 -mb-1">
+                    <div className="flex items-baseline gap-2 mb-2">
+                        <span className="text-2xl font-black text-white font-mono">{fgiValue.toFixed(1)}</span>
+                        <span className="text-xs text-gray-400 font-medium">하이브리드 FGI</span>
+                    </div>
+
+                    <div className="flex-1 w-full min-h-[100px] -ml-2 -mb-2">
                         {loading || baseSentiment.length === 0 ? (
-                            <ChartLoadingPlaceholder height={140} message="심리지표 로딩중" />
+                            <ChartLoadingPlaceholder height={100} message="심리지표 로딩중" />
                         ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 5 }}>
-                                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={4} minTickGap={30} tickFormatter={(val) => val ? val.substring(5, 10) : ''} />
-                                <YAxis yAxisId="left" domain={['auto', 'auto']} width={35} tick={{ fontSize: 10, fill: fStatus.level === 'danger' ? '#f43f5e' : (fgiValue < 30 ? '#34d399' : '#f59e0b') }} tickLine={false} axisLine={false} />
-                                <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} width={45} tick={{ fontSize: 9, fill: '#60a5fa' }} tickLine={false} axisLine={false} tickFormatter={(val) => Math.round(val).toLocaleString()} />
+                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                <XAxis dataKey="date" hide={true} />
+                                <YAxis hide={true} />
                                 <RechartsTooltip
-                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
-                                    formatter={(value: any, name: any) => [name === 'KOSPI' ? Math.round(value).toLocaleString() + 'pt' : value.toFixed(1), name]}
-                                    labelFormatter={(label: any, payload: any) => {
-                                        const isLast = payload && payload[0] && payload[0].payload === chartSentiment[chartSentiment.length - 1];
-                                        return `${label} ${isLast ? '(최근/전일)' : ''}`;
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', borderRadius: '8px' }}
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            return (
+                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[10px]">
+                                                    <p className="text-gray-400 mb-1">{label}</p>
+                                                    {payload.map((entry: any, index: number) => (
+                                                        <div key={`item-${index}`} className="flex items-center gap-2 font-medium" style={{ color: entry.color }}>
+                                                            <span>FGI :</span>
+                                                            <span>{entry.value.toFixed(1)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+                                        return null;
                                     }}
-                                    labelStyle={{ color: '#aaa', marginBottom: '4px' }}
                                 />
-                                <Line name="FGI" yAxisId="left" type="monotone" dataKey="fgi" stroke={fStatus.level === 'danger' ? '#f43f5e' : (fgiValue < 30 ? '#34d399' : '#f59e0b')} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                                <Line name="KOSPI" yAxisId="right" type="monotone" dataKey="kospi" stroke="#60a5fa" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} />
-                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
+                                <Line name="fgi" type="monotone" dataKey="fgi" stroke={fgiValue < 30 ? '#10b981' : (fgiValue >= 70 ? '#f43f5e' : '#f59e0b')} strokeWidth={2} dot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}
                     </div>
 
-                    <div className="mt-4 text-xs text-gray-400 bg-black/40 p-3 rounded-xl flex items-start gap-2">
-                        <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-400" />
-                        <p>'극단적 탐욕 (75 이상)' 구간 진입 시 단기 고점 형성 가능성을 경고하며 분할 매도를 권고합니다.</p>
+                    <div className="mt-3 text-[10px] text-gray-400 bg-black/30 p-2 rounded-xl flex items-start gap-1.5 border border-white/5">
+                        <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
+                        <p>글로벌 탐욕(75배 이상) 진입 시 고점 경고, 극단적 공포(25 이하) 시 저점 매수 기회로 해독합니다.</p>
                     </div>
                 </div>
+
             </div>
 
-            {/* 환율-증시 디커플링 현상 안내 */}
-            <div className="bg-indigo-900/20 border border-indigo-500/20 rounded-xl p-3 flex items-start sm:items-center gap-3 mt-2 text-xs">
-                <AlertTriangle className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5 sm:mt-0" />
-                <p className="text-indigo-200/80 leading-relaxed">
-                    <span className="font-bold text-indigo-300">💡 환율-증시 디커플링 예외 안내:</span> 원·달러 환율이 상승함에도 코스피가 동반 리레이팅되는 최근의 예외적 현상(원화 약세 요인)을 고려하여, 단순 환율뿐 아니라 PER 추세 및 매크로 지표(CLI) 가중치를 종합 계산합니다.
+            {/* Exchange rate-stock decoupling guide with premium glassmorphism */}
+            <div className="bg-indigo-950/20 border border-indigo-500/10 rounded-2xl p-4 flex items-start sm:items-center gap-3.5 mt-1 text-xs backdrop-blur-md relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-3 h-full bg-indigo-500/30" />
+                <AlertTriangle className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5 sm:mt-0" />
+                <p className="text-indigo-200/70 leading-relaxed pl-1">
+                    <span className="font-extrabold text-indigo-300">💡 환율-증시 디커플링 예외 안내:</span> 원·달러 환율이 강세를 유지하고 있음에도 코스피 지수가 강하게 우상향하는 역사적 디커플링 현상을 종합 감안하여, 환율 외에도 국내 상위 기업 포워드 PER 밸류에이션 추세와 OECD CLI 경제 선행 주기 가중치를 고도화 적용하여 출구 전략 정합성을 극대화합니다.
                 </p>
             </div>
 
@@ -608,34 +679,34 @@ export default function KospiExitAnalyzer() {
                     onClick={() => setActivePopup(null)}
                 >
                     {/* 반투명 배경 */}
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+                    <div className="absolute inset-0 bg-black/85 backdrop-blur-sm transition-all duration-300" />
 
                     {/* 팝업 패널 — 컨텐츠 높이에 맞춤, 최대 90vh */}
                     <div
-                        className="relative w-full max-w-4xl bg-[#1a1a2e] border border-white/20 rounded-t-2xl flex flex-col shadow-[0_-8px_60px_rgba(0,0,0,0.9)] animate-in fade-in slide-in-from-bottom-2 duration-200 overflow-hidden"
+                        className="relative w-full max-w-4xl bg-[#11111f] border border-white/10 rounded-t-3xl flex flex-col shadow-[0_-8px_60px_rgba(0,0,0,0.95)] animate-in fade-in slide-in-from-bottom-2 duration-300 overflow-hidden"
                         style={{ maxHeight: `calc(100vh - ${popupTop}px)` }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* 헤더 */}
-                        <div className="flex justify-between items-center px-5 py-3.5 border-b border-white/10 shrink-0">
-                            <h2 className="text-base font-bold text-white flex items-center gap-2">
-                                {activePopup === 'dollar' && <DollarSign className="w-5 h-5 text-emerald-400" />}
-                                {activePopup === 'per' && <BarChart2 className="w-5 h-5 text-blue-400" />}
-                                {activePopup === 'cli' && <TrendingDown className="w-5 h-5 text-rose-400" />}
-                                {activePopup === 'vix' && <Activity className="w-5 h-5 text-amber-400" />}
-                                {activePopup === 'fgi' && <Activity className="w-5 h-5 text-amber-400" />}
-                                {activePopup === 'dollar' ? '달러 인덱스 & 환율 장기 추이' :
-                                    (activePopup === 'per' ? '주요 종목 포워드 PER 추이 비교' :
-                                        (activePopup === 'cli' ? '경기 선행 지수 (CLI) 매크로 사이클' :
-                                            (activePopup === 'vix' ? 'VIX 지수 (변동성) 사이클' : '공포/탐욕 지수 투자자 심리')))}
+                        <div className="flex justify-between items-center px-6 py-4.5 border-b border-white/5 shrink-0 bg-black/40">
+                            <h2 className="text-sm font-black text-white flex items-center gap-2.5">
+                                {activePopup === 'dollar' && <DollarSign className="w-4.5 h-4.5 text-emerald-400" />}
+                                {activePopup === 'per' && <BarChart2 className="w-4.5 h-4.5 text-blue-400" />}
+                                {activePopup === 'cli' && <TrendingDown className="w-4.5 h-4.5 text-rose-400" />}
+                                {activePopup === 'vix' && <Activity className="w-4.5 h-4.5 text-purple-400" />}
+                                {activePopup === 'fgi' && <Activity className="w-4.5 h-4.5 text-amber-400" />}
+                                {activePopup === 'dollar' ? '달러 인덱스 & 환율 장기 추이 상세조회' :
+                                    (activePopup === 'per' ? '주요 섹터 포워드 PER 밸류에이션 비교' :
+                                        (activePopup === 'cli' ? '경기 선행 지수 (CLI) 매크로 주기 분석' :
+                                            (activePopup === 'vix' ? 'VIX & VKOSPI 다차원 변동성 분석' : '글로벌 Fear & Greed Index 투자 심리')))}
                             </h2>
                             <button onClick={() => setActivePopup(null)} className="p-1.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white">
-                                <X className="w-5 h-5" />
+                                <X className="w-4.5 h-4.5" />
                             </button>
                         </div>
 
                         {/* 팝업 콘텐츠 */}
-                        <div className="overflow-y-auto px-1 py-2 md:px-2 md:py-3">
+                        <div className="overflow-y-auto px-2 py-3 md:px-4 md:py-5">
                             {activePopup === 'dollar' && <DollarModalContent />}
                             {activePopup === 'per' && <PerModalContent />}
                             {activePopup === 'cli' && <CliModalContent />}
@@ -646,7 +717,6 @@ export default function KospiExitAnalyzer() {
                 </div>,
                 document.body
             )}
-
 
         </div>
     );

@@ -5,6 +5,7 @@ import yfinance as yf
 from datetime import datetime, timedelta, timezone as _tz
 from fastapi import APIRouter
 import pandas as pd
+from core.quant_sentiment import calculate_realized_volatility, calculate_rsi, calculate_hybrid_fgi
 
 logger = logging.getLogger(__name__)
 
@@ -281,17 +282,26 @@ async def fetch_market_sentiment():
         k_s.name = "kospi"
         g_s.name = "sp500"
 
+        # 퀀트 계산: KOSPI 20일 실현 변동성 및 S&P 500 14일 RSI 산출
+        kospi_rv_s = calculate_realized_volatility(k_s, window=20)
+        kospi_rv_s.name = "vkospi_proxy"
+        sp500_rsi_s = calculate_rsi(g_s, window=14)
+        sp500_rsi_s.name = "sp500_rsi"
+
         # VIX 기준으로 인덱스 설정 (미국 영업일 기준)
-        # KOSPI는 미국 장에 없는 날(한국 공휴일 등)은 전일 값으로 채움
-        aligned = pd.concat([v_s, k_s, g_s], axis=1)
+        # KOSPI 및 변동성 지수들은 미국 장에 없는 날(한국 공휴일 등)은 전일 값으로 채움
+        aligned = pd.concat([v_s, k_s, g_s, kospi_rv_s, sp500_rsi_s], axis=1)
         aligned["vix"] = aligned["vix"].ffill()
         aligned["sp500"] = aligned["sp500"].ffill()
         aligned["kospi"] = aligned["kospi"].ffill()
+        aligned["vkospi_proxy"] = aligned["vkospi_proxy"].ffill().fillna(15.0)
+        aligned["sp500_rsi"] = aligned["sp500_rsi"].ffill().fillna(50.0)
+
         # VIX가 있는 날(미국 영업일)만 유지
         aligned = aligned[aligned["vix"].notna()].copy()
 
         if aligned.empty:
-            return [], 20.0, 50.0
+            return [], 20.0, 15.0, 50.0
 
         sentiment_data = []
 
@@ -303,14 +313,17 @@ async def fetch_market_sentiment():
             vix_val = float(row["vix"])
             kospi_val = float(row["kospi"]) if pd.notna(row.get("kospi")) else 0.0
             sp500_val = float(row["sp500"]) if pd.notna(row.get("sp500")) else 0.0
+            kospi_rv_val = float(row["vkospi_proxy"])
+            sp500_rsi_val = float(row["sp500_rsi"])
 
-            # Proxy formula: FGI = 50 - (VIX - 18) * 3
-            fgi_val = max(0.0, min(100.0, 50.0 - (vix_val - 18.0) * 3.0))
+            # 하이브리드 다차원 FGI 산출식 적용
+            fgi_val = calculate_hybrid_fgi(vix_val, kospi_rv_val, sp500_rsi_val)
 
             sentiment_data.append(
                 {
                     "date": dt.strftime("%Y-%m-%d"),
                     "vix": round(vix_val, 2),
+                    "vkospi_proxy": round(kospi_rv_val, 2),
                     "fgi": round(fgi_val, 1),
                     "kospi": round(kospi_val, 2),
                     "sp500": round(sp500_val, 2),
@@ -318,12 +331,13 @@ async def fetch_market_sentiment():
             )
 
         final_vix = sentiment_data[-1]["vix"]
+        final_vkospi_proxy = sentiment_data[-1]["vkospi_proxy"]
         final_fgi = sentiment_data[-1]["fgi"]
 
-        return sentiment_data, final_vix, final_fgi
+        return sentiment_data, final_vix, final_vkospi_proxy, final_fgi
     except Exception as e:
         logger.error(f"Failed to fetch Sentiment data: {e}")
-        return [], 20.0, 50.0
+        return [], 20.0, 15.0, 50.0
 
 
 async def fetch_oecd_cli_simple() -> tuple[list, float | None, int]:
@@ -393,11 +407,91 @@ async def reset_main_cache():
     return {"status": "ok", "message": "Cache cleared. Next / call will re-fetch data."}
 
 
-@router.get("")
+@router.get("/history")
+async def get_market_sentiment_history(period: str = "1Y"):
+    """DB에 적재된 마켓 센티먼트(VIX, VKOSPI Proxy, FGI 등) 시계열 로그 반환"""
+    try:
+        from db.database import AsyncSessionLocal
+        from db.models import MarketSentimentLog
+        from sqlalchemy import select
+        
+        limit_days = 250
+        if period == "6M": limit_days = 125
+        elif period == "1Y": limit_days = 250
+        elif period == "3Y": limit_days = 750
+        elif period == "10Y": limit_days = 2500
+        
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(MarketSentimentLog)
+                .order_by(MarketSentimentLog.date.desc())
+                .limit(limit_days)
+            )
+            records = result.scalars().all()
+            
+        # UI 차트 포맷에 맞춤 (오래된 순)
+        records.reverse()
+        return [
+            {
+                "date": r.date,
+                "vix": r.vix,
+                "vkospi_proxy": r.vkospi_proxy,
+                "fgi": r.fgi,
+                "kospi": r.kospi,
+                "sp500": r.sp500
+            }
+            for r in records
+        ]
+    except Exception as e:
+        logger.error(f"Failed to fetch market sentiment history: {e}")
+        return []
 
+
+async def seed_market_sentiment_db_if_empty():
+    """DB에 마켓 센티먼트 히스토리가 없는 경우 야후 파이낸스 3년 데이터를 기반으로 자동 시딩을 진행합니다."""
+    try:
+        from db.database import AsyncSessionLocal
+        from db.models import MarketSentimentLog
+        from sqlalchemy import select, func
+        
+        async with AsyncSessionLocal() as db:
+            count_res = await db.execute(select(func.count(MarketSentimentLog.id)))
+            count = count_res.scalar()
+            if count and count > 0:
+                return
+                
+            logger.info("[DB Seeding] MarketSentimentLog is empty. Starting 3-year history seeding...")
+            sentiment_data, _, _, _ = await fetch_market_sentiment()
+            if not sentiment_data:
+                logger.warning("[DB Seeding] No sentiment data retrieved from Yahoo, skipping seed.")
+                return
+                
+            db_entries = []
+            for item in sentiment_data:
+                db_entries.append(
+                    MarketSentimentLog(
+                        date=item["date"],
+                        vix=item["vix"],
+                        vkospi_proxy=item["vkospi_proxy"],
+                        fgi=item["fgi"],
+                        kospi=item["kospi"],
+                        sp500=item["sp500"]
+                    )
+                )
+            db.add_all(db_entries)
+            await db.commit()
+            logger.info(f"[DB Seeding] Successfully seeded {len(db_entries)} market sentiment records.")
+    except Exception as e:
+        logger.error(f"[DB Seeding] Seeding failed: {e}")
+
+
+@router.get("")
 async def get_exit_signal_data():
     global _cache
     now = datetime.now().timestamp()
+
+    # 1회성 DB 자동 시딩 실행
+    await seed_market_sentiment_db_if_empty()
 
     if (
         _cache["data"]
@@ -429,11 +523,39 @@ async def get_exit_signal_data():
             mock["indicators"]["per"] = pe_data
             mock["current_status"]["per"] = pe_data[-1]["val"]
 
-        sentiment_data, current_vix, current_fgi = await fetch_market_sentiment()
+        sentiment_data, current_vix, current_vkospi, current_fgi = await fetch_market_sentiment()
         if sentiment_data:
             mock["indicators"]["sentiment"] = sentiment_data
             mock["current_status"]["vix"] = current_vix
+            mock["current_status"]["vkospi_proxy"] = current_vkospi
             mock["current_status"]["fgi"] = current_fgi
+
+        # DB에 오늘의 sentiment 기록 저장 (중복 방지)
+        try:
+            from db.database import AsyncSessionLocal
+            from db.models import MarketSentimentLog
+            from sqlalchemy import select
+            
+            today_str = datetime.now(_KST).strftime("%Y-%m-%d")
+            async with AsyncSessionLocal() as db:
+                exist_res = await db.execute(
+                    select(MarketSentimentLog).where(MarketSentimentLog.date == today_str)
+                )
+                exist_rec = exist_res.scalars().first()
+                if not exist_rec:
+                    log_entry = MarketSentimentLog(
+                        date=today_str,
+                        vix=current_vix,
+                        vkospi_proxy=current_vkospi,
+                        fgi=current_fgi,
+                        kospi=sentiment_data[-1]["kospi"] if sentiment_data else None,
+                        sp500=sentiment_data[-1]["sp500"] if sentiment_data else None
+                    )
+                    db.add(log_entry)
+                    await db.commit()
+                    logger.info(f"[DB] Persisted market sentiment for {today_str}")
+        except Exception as db_err:
+            logger.error(f"Failed to persist market sentiment log to DB: {db_err}")
 
         _cache["data"] = mock
         _cache["timestamp"] = now
@@ -444,11 +566,13 @@ async def get_exit_signal_data():
     # ── 종합 위험도 산출 ──────────────────────────────────────────────────────
     # 각 지표별 점수 부여 → 합산 → 4단계 분류
     # VIX: < 20 안전(0), 20~25 주의(1), 25~30 경계(2), >= 30 위험(3)
+    # VKOSPI Proxy: < 15 안전(0), 15~20 주의(1), 20~25 경계(2), >= 25 위험(3)
     # FGI: >= 50 안전(0), 30~50 주의(1), 25~30 경계(2), < 25 위험(3)
     # CLI: >= 100.5 안전(0), 100~100.5 주의(1), 99.5~100 경계(2), < 99.5 위험(3)
     # PER: < 11 저평가(0), 11~13 적정(1), 13~15 경계(2), >= 15 위험(3)
     cs = mock.get("current_status", {})
     vix = cs.get("vix") or 0
+    vkospi = cs.get("vkospi_proxy") or 15.0
     fgi = cs.get("fgi") or 50
     cli = cs.get("cli") or 100
     per = cs.get("per") or 12
@@ -457,6 +581,12 @@ async def get_exit_signal_data():
         if v < 20: return 0
         if v < 25: return 1
         if v < 30: return 2
+        return 3
+
+    def _vkospi_score(vk):
+        if vk < 15: return 0
+        if vk < 20: return 1
+        if vk < 25: return 2
         return 3
 
     def _fgi_score(f):
@@ -477,17 +607,18 @@ async def get_exit_signal_data():
         if p < 15: return 2
         return 3
 
-    total_score = _vix_score(vix) + _fgi_score(fgi) + _cli_score(cli) + _per_score(per)
-    # 0~2: 안전, 3~4: 주의, 5~7: 경계, 8~12: 위험
-    if total_score <= 2:
+    # KOSPI 실현 변동성(VKOSPI Proxy)이 추가되어 총점 15점으로 확장
+    total_score = _vix_score(vix) + _vkospi_score(vkospi) + _fgi_score(fgi) + _cli_score(cli) + _per_score(per)
+    # 0~3: 안전, 4~6: 주의, 7~10: 경계, 11~15: 위험
+    if total_score <= 3:
         risk_level = "safe"
         risk_label = "안전"
         risk_color = "green"
-    elif total_score <= 4:
+    elif total_score <= 6:
         risk_level = "caution"
         risk_label = "주의"
         risk_color = "yellow"
-    elif total_score <= 7:
+    elif total_score <= 10:
         risk_level = "warning"
         risk_label = "경계"
         risk_color = "orange"
@@ -501,9 +632,10 @@ async def get_exit_signal_data():
         "label": risk_label,
         "color": risk_color,
         "score": total_score,
-        "max_score": 12,
+        "max_score": 15,
         "breakdown": {
             "vix": {"value": round(vix, 1), "score": _vix_score(vix), "label": "VIX 공포지수"},
+            "vkospi_proxy": {"value": round(vkospi, 1), "score": _vkospi_score(vkospi), "label": "VKOSPI 변동성"},
             "fgi": {"value": round(fgi, 1), "score": _fgi_score(fgi), "label": "공포-탐욕 지수"},
             "cli": {"value": round(cli, 2), "score": _cli_score(cli), "label": "경기선행지수(CLI)"},
             "per": {"value": round(per, 1), "score": _per_score(per), "label": "KOSPI PER"},

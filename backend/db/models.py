@@ -179,3 +179,18 @@ class NotificationSettings(Base):
     alert_rebalance = Column(Integer, default=1)
     alert_daily_summary = Column(Integer, default=0)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class MarketSentimentLog(Base):
+    """실시간 및 일일 마켓 센티먼트 로그 (VIX, VKOSPI Proxy, FGI, KOSPI, S&P500 등)"""
+    __tablename__ = "market_sentiment_log"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    date = Column(String, index=True, nullable=False)   # YYYY-MM-DD
+    vix = Column(Float, nullable=True)
+    vkospi_proxy = Column(Float, nullable=True)         # KOSPI 20일 실현 변동성 (VKOSPI 프록시)
+    fgi = Column(Float, nullable=True)                  # 하이브리드 Fear & Greed 지수
+    kospi = Column(Float, nullable=True)
+    sp500 = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+

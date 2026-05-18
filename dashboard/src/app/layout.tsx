@@ -1,18 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+const geistSans = { variable: "font-sans" };
+const geistMono = { variable: "font-mono" };
 import "./globals.css";
 import PasswordGate from "../components/PasswordGate";
 import PortraitLockScreen from "../components/PortraitLockScreen";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "ETF Lens — 데이터 기반 ETF 분석",

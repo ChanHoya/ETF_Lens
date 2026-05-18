@@ -566,10 +566,10 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                 <div className="flex justify-between items-center mb-2 shrink-0">
                     <div className="flex flex-col">
                         <h3 className="text-white font-bold ml-2 text-lg">
-                            {isFgi ? 'Fear & Greed Index (공포탐욕지수)' : 'VIX (CBOE Volatility Index)'}
+                            {isFgi ? 'Fear & Greed Index (공포탐욕지수)' : 'VIX & VKOSPI Proxy (변동성 지표)'}
                         </h3>
                         <span className="text-xs text-gray-500 ml-2 mt-1">
-                            출처: {isFgi ? 'CNN Business (Proxy by Proxy 계산)' : 'Yahoo Finance (^VIX)'}
+                            출처: {isFgi ? 'CNN Business (Proxy by Proxy 계산)' : 'Yahoo Finance (^VIX) & KOSPI Realized Volatility'}
                         </span>
                     </div>
                     <div className="flex gap-1 bg-black/40 p-1 rounded-xl shrink-0">
@@ -604,12 +604,20 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                                         return (
                                             <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
                                                 <p className="text-gray-400 mb-2">{displayLabel}</p>
-                                                {sortedPayload.map((entry: any, index: number) => (
-                                                    <div key={`item-${index}`} className="flex items-center gap-2 mb-1 font-medium" style={{ color: entry.color }}>
-                                                        <span>{entry.name} :</span>
-                                                        <span>{entry.name === 'Fear & Greed' || entry.name === 'VIX' ? entry.value.toFixed(1) : Math.round(entry.value).toLocaleString() + 'pt'}</span>
-                                                    </div>
-                                                ))}
+                                                {sortedPayload.map((entry: any, index: number) => {
+                                                    const isPct = entry.name.includes('VKOSPI') || entry.name.includes('Proxy') || entry.name.includes('프록시');
+                                                    const displayVal = isPct 
+                                                        ? entry.value.toFixed(1) + '%' 
+                                                        : (entry.name === 'Fear & Greed' || entry.name === 'VIX' 
+                                                            ? entry.value.toFixed(2) 
+                                                            : Math.round(entry.value).toLocaleString() + 'pt');
+                                                    return (
+                                                        <div key={`item-${index}`} className="flex items-center gap-2 mb-1 font-medium" style={{ color: entry.color }}>
+                                                            <span>{entry.name} :</span>
+                                                            <span>{displayVal}</span>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         );
                                     }
@@ -637,9 +645,10 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                                     { yAxisId: "right", name: "KOSPI", dataKey: "kospi", color: "#60a5fa", width: 1.5, dash: '4 4' },
                                     { yAxisId: "right", name: "S&P 500", dataKey: "sp500", color: "#c084fc", width: 1.5, dash: '4 4' },
                                 ] : [
-                                    { yAxisId: "left", name: "VIX", dataKey: "vix", color: currentVal && currentVal.vix >= 20 ? '#f43f5e' : '#f59e0b', width: 3, dash: '' },
-                                    { yAxisId: "right", name: "KOSPI", dataKey: "kospi", color: "#60a5fa", width: 1.5, dash: '4 4' },
-                                    { yAxisId: "right", name: "S&P 500", dataKey: "sp500", color: "#c084fc", width: 1.5, dash: '4 4' },
+                                    { yAxisId: "left", name: "VIX (미국)", dataKey: "vix", color: currentVal && currentVal.vix >= 20 ? '#f59e0b' : '#34d399', width: 2.5, dash: '' },
+                                    { yAxisId: "left", name: "VKOSPI 프록시 (한국)", dataKey: "vkospi_proxy", color: currentVal && currentVal.vkospi_proxy >= 20 ? '#ef4444' : '#10b981', width: 2, dash: '3 3' },
+                                    { yAxisId: "right", name: "KOSPI", dataKey: "kospi", color: "#60a5fa", width: 1.2, dash: '4 4' },
+                                    { yAxisId: "right", name: "S&P 500", dataKey: "sp500", color: "#c084fc", width: 1.2, dash: '4 4' },
                                 ];
                                 if (lData) {
                                     lines.sort((a, b) => (lData[b.dataKey] || 0) - (lData[a.dataKey] || 0));
@@ -654,7 +663,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
             </div>
 
             <div className="bg-indigo-900/20 border border-indigo-500/20 p-3 rounded-xl shrink-0">
-                <h4 className="font-bold text-indigo-300 mb-2 text-xs">💡 시장 심리 가이드</h4>
+                <h4 className="font-bold text-indigo-300 mb-2 text-xs">💡 시장 심리 및 변동성 가이드</h4>
                 {isFgi ? (
                     <div className="flex w-full gap-2 px-2 pb-2">
                         <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-rose-500/80">
@@ -686,33 +695,29 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                 ) : (
                     <div className="flex flex-col gap-2">
                         <p className="text-[11px] text-indigo-100/80 leading-tight text-justify">
-                            내재변동성은 일반적으로 시장이 불안정하거나 경제가 흔들릴 때 증가합니다. 이와 대조적으로 주가가 상승하고 있고 극적인 변화가 없을 것 같으면 VIX는 하락하거나 범위의 하단에서 안정을 유지하는 경향이 있습니다. 즉, VIX는 주가와 음의 상관관계를 갖습니다.
+                            내재변동성(VIX) 및 역사적 변동성(VKOSPI Proxy)은 시장이 불안정하거나 급락할 때 증가하며, 주가와 강한 음의 상관관계를 갖습니다.
+                            최근 VKOSPI Proxy(코스피 20일 종가 표준편차의 연율화 값)를 도입하여 국내 증시 고유의 변동성 리스크를 다차원 모니터링합니다.
                         </p>
                         <div className="flex w-full gap-2">
                             <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-emerald-500/80">
-                                <h5 className="font-bold text-emerald-500 text-sm mb-1">0 - 15</h5>
+                                <h5 className="font-bold text-emerald-500 text-sm mb-1">0 - 15%</h5>
                                 <span className="text-white font-semibold text-xs mb-1 block">낮은 수준 (안정)</span>
-                                <p className="text-[11px] text-gray-400 leading-tight">일반적으로 시장의 낙관론을 나타냅니다.</p>
+                                <p className="text-[11px] text-gray-400 leading-tight">일반적으로 시장 낙관 및 코스피 박스권 순항 구간입니다.</p>
                             </div>
                             <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-gray-400/80">
-                                <h5 className="font-bold text-gray-400 text-sm mb-1">15 - 20</h5>
-                                <span className="text-white font-semibold text-xs mb-1 block">보통 수준</span>
-                                <p className="text-[11px] text-gray-400 leading-tight">일반적으로 정상적인 시장 환경을 나타냅니다.</p>
+                                <h5 className="font-bold text-gray-400 text-sm mb-1">15 - 20%</h5>
+                                <span className="text-white font-semibold text-xs mb-1 block">보통 (주의 요망)</span>
+                                <p className="text-[11px] text-gray-400 leading-tight">정상 범위이나 단기 매물 소화가 빈번한 구간입니다.</p>
                             </div>
                             <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-orange-400/80">
-                                <h5 className="font-bold text-orange-400 text-sm mb-1">20 - 25</h5>
-                                <span className="text-white font-semibold text-xs mb-1 block">중간 (경계)</span>
-                                <p className="text-[11px] text-gray-400 leading-tight">일반적으로 시장에서 우려가 커지고 있음을 나타냅니다.</p>
+                                <h5 className="font-bold text-orange-400 text-sm mb-1">20 - 25%</h5>
+                                <span className="text-white font-semibold text-xs mb-1 block">경계 (비중 조절)</span>
+                                <p className="text-[11px] text-gray-400 leading-tight">국내외 시장 불안 요소가 확대되는 시점으로 포트폴리오 관리가 필요합니다.</p>
                             </div>
-                            <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-rose-400/80">
-                                <h5 className="font-bold text-rose-400 text-sm mb-1">25 - 30</h5>
-                                <span className="text-white font-semibold text-xs mb-1 block">높은 수준 (공포)</span>
-                                <p className="text-[11px] text-gray-400 leading-tight">일반적으로 시장의 동요를 나타냅니다.</p>
-                            </div>
-                            <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-rose-600/80">
-                                <h5 className="font-bold text-rose-600 text-sm mb-1">&gt; 30+</h5>
-                                <span className="text-white font-semibold text-xs mb-1 block">매우 높은 수준 (극심한 공포)</span>
-                                <p className="text-[11px] text-gray-400 leading-tight">일반적으로 시장에 극심한 혼란이 있음을 나타냅니다.</p>
+                            <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-rose-500/80">
+                                <h5 className="font-bold text-rose-500 text-sm mb-1">&gt; 25%</h5>
+                                <span className="text-white font-semibold text-xs mb-1 block">위험 (적극 대피)</span>
+                                <p className="text-[11px] text-gray-400 leading-tight">투매와 급락 장세가 연출될 확률이 극대화되는 공포 국면입니다.</p>
                             </div>
                         </div>
                     </div>

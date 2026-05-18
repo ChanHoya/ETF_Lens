@@ -340,6 +340,7 @@ async def check_exit_signal_and_alert() -> None:
             # Compile Indicators Breakdown
             cs = data.get("current_status", {})
             vix_val = cs.get("vix", 0)
+            vkospi_val = cs.get("vkospi_proxy", 15.0)
             fgi_val = cs.get("fgi", 50)
             cli_val = cs.get("cli", 100)
             per_val = cs.get("per", 12)
@@ -351,6 +352,12 @@ async def check_exit_signal_and_alert() -> None:
                 if v < 30: return "경계"
                 return "위험"
             
+            def _get_vkospi_label(vk):
+                if vk < 15: return "안전"
+                if vk < 20: return "주의"
+                if vk < 25: return "경계"
+                return "위험"
+
             def _get_fgi_label(f):
                 if f >= 50: return "안전"
                 if f >= 30: return "주의"
@@ -376,7 +383,7 @@ async def check_exit_signal_and_alert() -> None:
             # Compile nice rich text HTML
             header = f"{emoji} <b>[시장 위험도(Exit Signal) 변동 알림]</b>\n\n"
             if is_first_run:
-                transition = f"시장 종합 위험도 모니터링이 시작되었습니다.\n현재 상태: <b>{curr_label} ({curr_score}/12점)</b>\n"
+                transition = f"시장 종합 위험도 모니터링이 시작되었습니다.\n현재 상태: <b>{curr_label} ({curr_score}/15점)</b>\n"
             else:
                 def _get_label_by_level(lvl):
                     m = {"safe": "안전", "caution": "주의", "warning": "경계", "danger": "위험"}
@@ -385,8 +392,9 @@ async def check_exit_signal_and_alert() -> None:
                 
             body = (
                 f"\n📊 <b>주요 매크로 지표 현황:</b>\n"
-                f"- <b>VIX 공포지수:</b> <code>{vix_val:.1f}</code> ({_get_vix_label(vix_val)})\n"
-                f"- <b>공포-탐욕 지수(FGI):</b> <code>{fgi_val:.1f}</code> ({_get_fgi_label(fgi_val)})\n"
+                f"- <b>VIX 미국 공포지수:</b> <code>{vix_val:.1f}</code> ({_get_vix_label(vix_val)})\n"
+                f"- <b>VKOSPI 국내 변동성(Proxy):</b> <code>{vkospi_val:.1f}%</code> ({_get_vkospi_label(vkospi_val)})\n"
+                f"- <b>하이브리드 FGI 지수:</b> <code>{fgi_val:.1f}</code> ({_get_fgi_label(fgi_val)})\n"
                 f"- <b>경기선행지수(CLI):</b> <code>{cli_val:.2f}</code> ({_get_cli_label(cli_val)})\n"
                 f"- <b>KOSPI PER:</b> <code>{per_val:.1f}</code> ({_get_per_label(per_val)})\n"
                 f"\n💡 <i>대시보드(<a href='https://etf-lens.vercel.app'>etf-lens.vercel.app</a>)에서 AI 포트폴리오 자산 추천 및 가상 체결 리밸런싱을 즉시 진행할 수 있습니다.</i>"
