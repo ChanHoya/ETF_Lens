@@ -4,9 +4,9 @@
 
 ## Quick Summary
  
-✅ Last session: S3-1 Telegram 실시간 알림 채널(Settings DB, async Notifier engine, masked APIs, and settings bento UI) 및 MyAssetsView 클라이언트 훅 순서 ReferenceError 크래시 해결 완료
-🔄 In progress: S3-2 실시간 가격 변동/손절(Exit) 시그널 및 AI 리밸런싱 발생 시 텔레그램 실시간 알림 자동 스케줄러 연동 진행 중
-➡️ Next: S3-2 APScheduler를 통해 크론잡 실행 시 notifier.py와 연동하여 실시간 모니터링 이벤트 자동 발송 연동
+✅ Last session: S3-2 실시간 가격 변동/손절(Exit) 시그널 스케줄러 자동 감지 엔진 및 AI 리밸런싱 발생 시 텔레그램 실시간 알림 자동 연동 완료, 비동기 테스트 패스(2 passed)
+🔄 In progress: S3-3 포트폴리오 다차원 시장 감정 모니터링 고도화 및 고급 지표 분석 연동 기획 중
+➡️ Next: S3-3 VKOSPI / Fear & Greed 다차원 시장 감정 지표 고도화
  
 ## Current Sprint
  
@@ -18,6 +18,7 @@
  
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
+| S3-2 | 실시간 가격 변동/손절(Exit) 시그널 및 AI 리밸런싱 발생 시 텔레그램 실시간 알림 자동 스케줄러 연동 | ✅ done | daily_perf_calc 후 위험도 변화(2점 이상 변동 또는 등급 변화) 자동 감지 엔진 & AI 제안 시 실시간 rich HTML 메시지 자동 발송 연동 |
 | S3-1 | Telegram 실시간 전략 알림 시스템 구축 | ✅ done | 가격 변동/손절(Exit) 시그널 및 AI 리밸런싱 발생 시 텔레그램 실시간 알림 엔진, DB, 마스킹 API 및 벤토 UI 완벽 구축 |
 | S2-4 | 다계좌 리밸런싱 오더 라우팅 및 가상 체결 시뮬레이터 | ✅ done | KIS 4계좌 실시간 포트폴리오를 기반으로 AI 제안 리밸런싱 모의 주문 설계 및 가상 체결 오버레이 시뮬레이터 구현 완료 |
 | S2-3 | Vercel + Render production-grade serverless 배포 스크립트 고도화 | ✅ done | vercel.json 보안 헤더 및 CORS 정책, render.yaml IaC 템플릿, deploy_verify.py 환경 진단 검증 유틸리티 구현 완료 |
