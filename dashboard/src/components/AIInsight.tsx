@@ -125,11 +125,80 @@ function StrategyContent({ content, onSaveToFavorites, toastMsg }: {
                       const parenMatch = item.match(/^(.*?)\s*(\([^)]{4,120}\))\s*$/)
                       const mainText = parenMatch ? parenMatch[1].trim() : item
                       const quantReason = parenMatch ? parenMatch[2] : null
+
+                      const bracketMatch = mainText.match(/^\[([A-Z0-9]{4,7})\]\s*(.*)$/i)
+                      const plainMatch = !bracketMatch ? mainText.match(/^([A-Z0-9]{4,7})\s+(.*)$/i) : null
+
+                      let etfCode: string | null = null
+                      let etfName: string = mainText
+                      let description: string = ''
+
+                      if (bracketMatch) {
+                        etfCode = bracketMatch[1]
+                        const rest = bracketMatch[2].trim()
+                        const splitIdx = rest.indexOf(':') !== -1 ? rest.indexOf(':') : (rest.indexOf('：') !== -1 ? rest.indexOf('：') : -1)
+                        if (splitIdx !== -1) {
+                          etfName = rest.slice(0, splitIdx).trim()
+                          description = rest.slice(splitIdx).trim()
+                        } else {
+                          const spaceIdx = rest.indexOf(' ')
+                          if (spaceIdx !== -1) {
+                            etfName = rest.slice(0, spaceIdx).trim()
+                            description = rest.slice(spaceIdx).trim()
+                          } else {
+                            etfName = rest
+                          }
+                        }
+                      } else if (plainMatch) {
+                        etfCode = plainMatch[1]
+                        const rest = plainMatch[2].trim()
+                        const splitIdx = rest.indexOf(':') !== -1 ? rest.indexOf(':') : (rest.indexOf('：') !== -1 ? rest.indexOf('：') : -1)
+                        if (splitIdx !== -1) {
+                          etfName = rest.slice(0, splitIdx).trim()
+                          description = rest.slice(splitIdx).trim()
+                        } else {
+                          const spaceIdx = rest.indexOf(' ')
+                          if (spaceIdx !== -1) {
+                            etfName = rest.slice(0, spaceIdx).trim()
+                            description = rest.slice(spaceIdx).trim()
+                          } else {
+                            etfName = rest
+                          }
+                        }
+                      }
+
+                      const handleCodeClick = () => {
+                        if (etfCode) {
+                          const event = new CustomEvent('open_etf_detail', { detail: { code: etfCode } });
+                          window.dispatchEvent(event);
+                        }
+                      }
+
                       return (
                         <li key={i} className="flex items-start gap-2 text-[14px] leading-relaxed">
                           <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${dotMap[sec.color] ?? 'bg-gray-400'}`} />
                           <span className="flex-1">
-                            {mainText}
+                            {etfCode ? (
+                              <>
+                                <span 
+                                  onClick={handleCodeClick}
+                                  className="inline-flex items-center gap-1 font-bold text-indigo-400 hover:text-indigo-300 cursor-pointer bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 px-1.5 py-0.5 rounded transition-all duration-150 mr-1.5"
+                                  title="클릭하여 상세 정보 보기"
+                                >
+                                  [{etfCode}]
+                                </span>
+                                <span 
+                                  onClick={handleCodeClick}
+                                  className="font-bold text-white hover:text-indigo-300 cursor-pointer transition-colors duration-150"
+                                  title="클릭하여 상세 정보 보기"
+                                >
+                                  {etfName}
+                                </span>
+                                <span className="text-gray-300">{description}</span>
+                              </>
+                            ) : (
+                              mainText
+                            )}
                             {quantReason && (
                               <span className="ml-1.5 inline-block text-[10px] font-semibold text-yellow-300/80 bg-yellow-400/10 border border-yellow-400/20 rounded px-1.5 py-0.5 leading-tight">
                                 {quantReason}

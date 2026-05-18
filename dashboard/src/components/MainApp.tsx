@@ -149,6 +149,19 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const handleOpenEtfDetailEvent = (e: Event) => {
+        const customEvent = e as CustomEvent<{ code: string }>;
+        if (customEvent.detail?.code) {
+          handleOpenDetail(customEvent.detail.code);
+        }
+      };
+      window.addEventListener('open_etf_detail', handleOpenEtfDetailEvent);
+      return () => window.removeEventListener('open_etf_detail', handleOpenEtfDetailEvent);
+    }
+  }, [handleOpenDetail]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
       // Don't save completely empty initial state if we just loaded
       localStorage.setItem('etf_current_slots', JSON.stringify(slots));
     }

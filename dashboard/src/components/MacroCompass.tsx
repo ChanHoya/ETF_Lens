@@ -242,9 +242,23 @@ function EtfList({ etfs, phase_en }: { etfs: EtfReco[]; phase_en: string }) {
             minWidth: 20, paddingTop: 1,
           }}>{i + 1}</span>
           <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{e.ticker}</span>
-              <span style={{ fontSize: 13, color: '#94a3b8' }}>{e.name}</span>
+            <div 
+              onClick={() => {
+                const event = new CustomEvent('open_etf_detail', { detail: { code: e.ticker } });
+                window.dispatchEvent(event);
+              }}
+              style={{ 
+                display: 'flex', 
+                gap: 8, 
+                alignItems: 'baseline', 
+                flexWrap: 'wrap', 
+                cursor: 'pointer' 
+              }}
+              className="group/etf-title hover:opacity-80"
+              title="클릭하여 상세 정보 보기"
+            >
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }} className="group-hover/etf-title:text-indigo-400 transition-colors">{e.ticker}</span>
+              <span style={{ fontSize: 13, color: '#94a3b8' }} className="group-hover/etf-title:text-indigo-300 transition-colors">{e.name}</span>
             </div>
             <span style={{ fontSize: 12, color: '#64748b', marginTop: 2, display: 'block' }}>
               {e.reason}

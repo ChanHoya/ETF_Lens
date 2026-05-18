@@ -232,9 +232,16 @@ export default function RebalanceProposal() {
                             return (
                                 <div key={idx} className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 hover:bg-white/[0.05] transition-colors flex flex-col h-full text-left">
                                     <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <h4 className="font-bold text-white text-base">{rec.name}</h4>
-                                            <p className="text-xs text-gray-500 font-mono">{rec.code}</p>
+                                        <div 
+                                            className="cursor-pointer group/header hover:opacity-80 transition-all"
+                                            title="클릭하여 상세 정보 보기"
+                                            onClick={() => {
+                                                const event = new CustomEvent('open_etf_detail', { detail: { code: rec.code } });
+                                                window.dispatchEvent(event);
+                                            }}
+                                        >
+                                            <h4 className="font-bold text-white text-base group-hover/header:text-indigo-400 transition-colors">{rec.name}</h4>
+                                            <p className="text-xs text-gray-500 font-mono group-hover/header:text-indigo-300 transition-colors">{rec.code}</p>
                                         </div>
                                         <div className={`px-3 py-1 rounded-full text-xs font-bold border ${matchesBadge(rec.action)}`}>
                                             {rec.action}
@@ -248,17 +255,30 @@ export default function RebalanceProposal() {
                                         </p>
                                     </div>
 
-                                    {isReplace && rec.alternative_etf && (
-                                        <div className="mt-auto flex items-center gap-3 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">
-                                            <div className="bg-rose-500/20 p-1.5 rounded-lg shrink-0">
-                                                <ArrowRight className="w-4 h-4 text-rose-400" />
+                                    {isReplace && rec.alternative_etf && (() => {
+                                        const match = rec.alternative_etf.match(/\d{6}/);
+                                        const altCode = match ? match[0] : null;
+                                        return (
+                                            <div 
+                                                onClick={() => {
+                                                    if (altCode) {
+                                                        const event = new CustomEvent('open_etf_detail', { detail: { code: altCode } });
+                                                        window.dispatchEvent(event);
+                                                    }
+                                                }}
+                                                className={`mt-auto flex items-center gap-3 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 ${altCode ? 'cursor-pointer hover:bg-rose-500/20 transition-all' : ''}`}
+                                                title={altCode ? "클릭하여 상세 정보 보기" : undefined}
+                                            >
+                                                <div className="bg-rose-500/20 p-1.5 rounded-lg shrink-0">
+                                                    <ArrowRight className="w-4 h-4 text-rose-400" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] text-rose-400/80 font-medium mb-0.5">교체 추천 대안</p>
+                                                    <p className={`text-sm text-rose-200 font-bold ${altCode ? 'hover:text-rose-100 transition-colors' : ''}`}>{rec.alternative_etf}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-[10px] text-rose-400/80 font-medium mb-0.5">교체 추천 대안</p>
-                                                <p className="text-sm text-rose-200 font-bold">{rec.alternative_etf}</p>
-                                            </div>
-                                        </div>
-                                    )}
+                                        );
+                                    })()}
                                 </div>
                             );
                         })}
