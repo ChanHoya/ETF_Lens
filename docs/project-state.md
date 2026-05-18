@@ -4,7 +4,7 @@
 
 ## Quick Summary
  
-✅ Last session: S3-3 AI추천 ETF 항목 클릭 시 개별종목 상세 팝업창 연동 및 Next.js 무결성 빌드 패스 완료
+✅ Last session: S3-3 AI추천 ETF 항목 클릭 시 개별종목 상세 팝업창 연동 및 S3-4 Vercel 배포 런타임 TDZ Client-Side Exception 디버깅 핫픽스 완벽 해결 완료
 🔄 In progress: S3-3 포트폴리오 다차원 시장 감정 모니터링 고도화 및 고급 지표 분석 연동 기획 중
 ➡️ Next: S3-3 VKOSPI / Fear & Greed 다차원 시장 감정 지표 고도화
  
@@ -18,6 +18,7 @@
  
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
+| S3-4 | Vercel 배포 런타임 TDZ Client-Side Exception 디버깅 및 핫픽스 | ✅ done | MainApp.tsx 내 useEffect 의존성 평가 호이스팅/Temporal Dead Zone 참조 오류 해결 및 Vercel 실시간 배포 정상화 완료 |
 | S3-3 | AI추천 ETF 항목 클릭 시 상세 종목 팝업창 연동 | ✅ done | AI Insight, 매크로 컴퍼스, 리밸런싱 원본/대안 ETF 대상 커스텀 이벤트 버스 연동 및 클릭 마이크로 인터랙션 완벽 구현 |
 | S3-2 | 실시간 가격 변동/손절(Exit) 시그널 및 AI 리밸런싱 발생 시 텔레그램 실시간 알림 자동 스케줄러 연동 | ✅ done | daily_perf_calc 후 위험도 변화(2점 이상 변동 또는 등급 변화) 자동 감지 엔진 & AI 제안 시 실시간 rich HTML 메시지 자동 발송 연동 |
 | S3-1 | Telegram 실시간 전략 알림 시스템 구축 | ✅ done | 가격 변동/손절(Exit) 시그널 및 AI 리밸런싱 발생 시 텔레그램 실시간 알림 엔진, DB, 마스킹 API 및 벤토 UI 완벽 구축 |
