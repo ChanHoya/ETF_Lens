@@ -20,51 +20,6 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
     const [hasSimulated, setHasSimulated] = useState<boolean>(false);
     const [simulatedData, setSimulatedData] = useState<any>(null);
 
-    useEffect(() => {
-        // 초기 마운트 시 세션스토리지 확인
-        if (typeof window !== "undefined") {
-            try {
-                const savedSelected = sessionStorage.getItem("kis_authorized");
-                if (savedSelected === "true") {
-                    setIsAuthorized(true);
-                } else {
-                    setIsLoading(false); // 미인증 시 로딩 애니메이션 종료하고 패스워드 모달 전시
-                }
-            } catch (e) {
-                console.warn("sessionStorage 접근 실패:", e);
-                setIsLoading(false); // 접근 불가 시에도 로딩은 멈추고 모달을 보여줌
-            }
-        }
-    }, []);
-
-    useEffect(() => {
-        if (isAuthorized && typeof window !== "undefined") {
-            try {
-                sessionStorage.setItem("kis_authorized", "true");
-            } catch (e) {
-                console.warn("sessionStorage 저장 실패:", e);
-            }
-        }
-    }, [isAuthorized]);
-
-    // 초기 마운트 시 인증되어 있으면 데이터 불러오기
-    useEffect(() => {
-        if (isAuthorized && !kisData) {
-            fetchPortfolioData();
-        }
-    }, [isAuthorized]);
-
-    useEffect(() => {
-        const handleRefresh = (e: any) => {
-            fetchPortfolioData(true);
-            if (e.detail && e.detail.enableSimulation) {
-                setIsSimulatedMode(true);
-            }
-        };
-        window.addEventListener('refresh-portfolio', handleRefresh);
-        return () => window.removeEventListener('refresh-portfolio', handleRefresh);
-    }, [fetchPortfolioData]);
-
     const fetchTrades = useCallback(async () => {
         try {
             const res = await fetch(`${API_BASE}/api/v1/my/trades/today`);
@@ -120,6 +75,51 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
             setIsRefreshing(false);
         }
     }, [fetchTrades]);
+
+    useEffect(() => {
+        // 초기 마운트 시 세션스토리지 확인
+        if (typeof window !== "undefined") {
+            try {
+                const savedSelected = sessionStorage.getItem("kis_authorized");
+                if (savedSelected === "true") {
+                    setIsAuthorized(true);
+                } else {
+                    setIsLoading(false); // 미인증 시 로딩 애니메이션 종료하고 패스워드 모달 전시
+                }
+            } catch (e) {
+                console.warn("sessionStorage 접근 실패:", e);
+                setIsLoading(false); // 접근 불가 시에도 로딩은 멈추고 모달을 보여줌
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (isAuthorized && typeof window !== "undefined") {
+            try {
+                sessionStorage.setItem("kis_authorized", "true");
+            } catch (e) {
+                console.warn("sessionStorage 저장 실패:", e);
+            }
+        }
+    }, [isAuthorized]);
+
+    // 초기 마운트 시 인증되어 있으면 데이터 불러오기
+    useEffect(() => {
+        if (isAuthorized && !kisData) {
+            fetchPortfolioData();
+        }
+    }, [isAuthorized, kisData, fetchPortfolioData]);
+
+    useEffect(() => {
+        const handleRefresh = (e: any) => {
+            fetchPortfolioData(true);
+            if (e.detail && e.detail.enableSimulation) {
+                setIsSimulatedMode(true);
+            }
+        };
+        window.addEventListener('refresh-portfolio', handleRefresh);
+        return () => window.removeEventListener('refresh-portfolio', handleRefresh);
+    }, [fetchPortfolioData]);
 
     const handleAuthSuccess = () => fetchPortfolioData(false);
     const handleLogout = () => {

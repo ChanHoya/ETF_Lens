@@ -7,6 +7,7 @@ import RiskAlertBanner from './RiskAlertBanner';
 import PortfolioTreemap from './PortfolioTreemap';
 import RebalanceProposal from './RebalanceProposal';
 import DbSyncControl from './DbSyncControl';
+import NotificationSettings from './NotificationSettings';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type MyDashboardProps = {
@@ -204,6 +205,9 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
 
             {/* 무중단 DB 동기화 및 백업 제어 */}
             <DbSyncControl />
+
+            {/* 실시간 AI 전략 알림 설정 */}
+            <NotificationSettings />
 
             {/* Modals */}
             <AccountDetailModal

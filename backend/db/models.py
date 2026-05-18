@@ -166,3 +166,16 @@ class UserPrincipal(Base):
     principal = Column(Float, nullable=False)                # 원금 (원)
     label = Column(String, nullable=True)                    # 사용자 메모 (선택)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class NotificationSettings(Base):
+    """실시간 전략/신호 텔레그램 알림 설정"""
+    __tablename__ = "notification_settings"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    telegram_token = Column(String, nullable=True)
+    telegram_chat_id = Column(String, nullable=True)
+    alert_exit_signal = Column(Integer, default=1)  # 0: 비활성, 1: 활성
+    alert_rebalance = Column(Integer, default=1)
+    alert_daily_summary = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
