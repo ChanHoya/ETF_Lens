@@ -3,22 +3,22 @@
 > **Keep this file under 200 lines.**
 
 ## Quick Summary
-
-✅ Last session: S2-4 다계좌 리밸런싱 오더 라우팅 & 가상 체결 시뮬레이터(order_router, simulated-portfolio API, RebalanceProposal UI) 구현 및 검증 완료, git push 배포 성공
-🔄 In progress: S3-1 Telegram 실시간 전략 알림 시스템 구축 기획 및 설계 완료
-➡️ Next: S3-1 Telegram 알림 엔진 비동기 백엔드 모듈 개발 및 프론트엔드 Bento 설정 패널 UI 구현
-
+ 
+✅ Last session: S3-1 Telegram 실시간 알림 채널(Settings DB, async Notifier engine, masked APIs, and settings bento UI) 및 MyAssetsView 클라이언트 훅 순서 ReferenceError 크래시 해결 완료
+🔄 In progress: S3-2 실시간 가격 변동/손절(Exit) 시그널 및 AI 리밸런싱 발생 시 텔레그램 실시간 알림 자동 스케줄러 연동 진행 중
+➡️ Next: S3-2 APScheduler를 통해 크론잡 실행 시 notifier.py와 연동하여 실시간 모니터링 이벤트 자동 발송 연동
+ 
 ## Current Sprint
-
+ 
 - Sprint: 3 — Real-Time Alerts & Advanced Analytics
 - Started: 2026-05-19
 - Branch: main
-
+ 
 ## Story Status
-
+ 
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
-| S3-1 | Telegram 실시간 전략 알림 시스템 구축 | 🔧 active | 가격 변동/손절(Exit) 시그널 및 AI 리밸런싱 발생 시 텔레그램 실시간 알림 설계 진행 중 |
+| S3-1 | Telegram 실시간 전략 알림 시스템 구축 | ✅ done | 가격 변동/손절(Exit) 시그널 및 AI 리밸런싱 발생 시 텔레그램 실시간 알림 엔진, DB, 마스킹 API 및 벤토 UI 완벽 구축 |
 | S2-4 | 다계좌 리밸런싱 오더 라우팅 및 가상 체결 시뮬레이터 | ✅ done | KIS 4계좌 실시간 포트폴리오를 기반으로 AI 제안 리밸런싱 모의 주문 설계 및 가상 체결 오버레이 시뮬레이터 구현 완료 |
 | S2-3 | Vercel + Render production-grade serverless 배포 스크립트 고도화 | ✅ done | vercel.json 보안 헤더 및 CORS 정책, render.yaml IaC 템플릿, deploy_verify.py 환경 진단 검증 유틸리티 구현 완료 |
 | S2-2 | 로컬 SQLite ↔ PostgreSQL 무중단 복제 및 백업 스케줄러 고도화 | ✅ done | APScheduler 자동 트리거 연동, db_sync API 및 UI 정합성 관리자 패널(DbSyncControl) 구현 완료 |
@@ -35,11 +35,12 @@
 | S1-10 | 즐겨찾기 우주섹터 비교 오류 해결 및 폰트 일원화 | ✅ done | ARKX yfinance 다이내믹 연동 및 구성종목 비중 fallback, 박스 안팎 폰트 조화로운 표준화 완료 |
 | S1-11 | 개별종목 팝업 주가현황/기업소개 중심 리디자인 | ✅ done | NAV 및 CU 구성종목 Omit 및 메타데이터 주가/기업소개 맞춤화 완료 |
 | S1-12 | 개별종목 상세 미국 우주섹터 지수 및 3개월 뉴스 연동 | ✅ done | NASDAQ 벤치마크, 미국 우주섹터(ARKX) 다중 오버레이 차트 구현 및 최근 3개월 언론보도 벤토 레이아웃 연동 완료 |
-
+ 
 ## Module Registry
-
+ 
 | Module | Layer | Status | Key Files |
 |--------|-------|--------|-----------|
+| Notification Settings | Shared | ✅ stable | core/notifier.py, api/notification_settings.py, components/NotificationSettings.tsx |
 | ETF Master | Backend | ✅ stable | api/router.py, db/models.py |
 | KIS Portfolio | Backend | ✅ stable | api/my_assets.py |
 | Investment Return | Backend | ✅ stable | api/my_assets.py (cashflow endpoint) |
