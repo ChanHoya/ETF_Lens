@@ -67,6 +67,16 @@
 
 ## TypeScript Typings & UI Rendering
 
+### Recharts Line Chart Horizontally Clipped Edges
+- **증상**: Bento Grid 카드의 미니 차트(달러인덱스, PER 등) 좌우 끝부분 선이 잘려나간 것처럼 렌더링됨.
+- **원인**: 여백을 없애기 위해 Recharts `LineChart`에 음수 마진(`margin={{ right: -5, left: -5 }}`)을 사용할 때, 컨테이너의 `overflow-hidden` 속성에 의해 차트 선의 좌우 끝 좌표가 가려져 잘림 현상 발생.
+- **해결**: 안전한 양수 마진(`margin={{ right: 6, left: 6 }}`)으로 변경하여 선 전체 좌표가 완전하게 영역 내부에 렌더링되도록 방어함.
+
+### Fear & Greed Index (FGI) 역방향 위험도 매핑
+- **증상**: 극단적 공포(0-25)가 빨간색(경고), 극단적 탐욕(76-100)이 초록색(안전)으로 설정되어 정량 퀀트 분석과 정성 매수/매도 시그널의 불일치 발생.
+- **원인**: 단순 수치 크기 기준(높음=초록, 낮음=빨강)으로 색상을 지정하여, 오히려 "공포에 매수(초록), 탐욕에 경고(빨강)"라는 투자 원칙에 역행하는 색상 매핑이 기입됨.
+- **해결**: 극단적 공포(0-25) 및 공포(26-45) 구간을 초록/에메랄드(매수 적기)로 매핑하고, 극단적 탐욕(76-100) 및 탐욕(56-75) 구간을 빨강/오렌지(시장 과열 경고)로 색상 및 차트 가이드(ReferenceArea)를 전면 스왑함.
+
 ### React.cloneElement Type Casting Error (TypeScript)
 - **증상**: `React.cloneElement(child, { className: ... })` 호출 시 `React.isValidElement` 검사 후에 복제 속성의 타입 불일치 에러 발생.
 - **원인**: TypeScript의 엄격한 제네릭 형변환으로 인해 기본 `ReactNode` 타입을 `ReactElement` 복제 매개변수로 안전하게 취급하지 못함.
