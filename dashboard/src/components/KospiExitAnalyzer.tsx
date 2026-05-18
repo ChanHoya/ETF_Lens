@@ -106,16 +106,24 @@ export default function KospiExitAnalyzer() {
 
     // Popup State
     const [activePopup, setActivePopup] = useState<'dollar' | 'per' | 'cli' | 'vix' | 'fgi' | null>(null);
-    const [popupTop, setPopupTop] = useState(0);
+    const [popupTop, setPopupTop] = useState(140);
     const [isMounted, setIsMounted] = useState(false); // Portal SSR 가드
+
+    // Header section ref to dynamically align modals
+    const headerRef = React.useRef<HTMLDivElement>(null);
 
     // 클라이언트 마운트 확인
     useEffect(() => { setIsMounted(true); }, []);
 
-    // 카드 클릭 시 Y 위치 캡처 후 팝업 열기
+    // 카드 클릭 시 헤더 위치 기준 팝업 위치 결정
     const openPopup = (type: 'dollar' | 'per' | 'cli' | 'vix' | 'fgi', e: React.MouseEvent<HTMLDivElement>) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        setPopupTop(Math.round(rect.top));
+        if (headerRef.current) {
+            const rect = headerRef.current.getBoundingClientRect();
+            // Position the modal directly below the title header block
+            setPopupTop(Math.round(rect.bottom + 12));
+        } else {
+            setPopupTop(140);
+        }
         setActivePopup(type);
     };
 
@@ -286,7 +294,7 @@ export default function KospiExitAnalyzer() {
         <div className="w-full flex flex-col gap-5 mb-2 relative">
             
             {/* Header section with liquid glass style */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/30 p-5 rounded-2xl border border-white/5 backdrop-blur-xl shadow-lg relative overflow-hidden">
+            <div ref={headerRef} className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/30 p-5 rounded-2xl border border-white/5 backdrop-blur-xl shadow-lg relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none" />
                 <div className="flex items-center gap-4 relative z-10">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
@@ -348,7 +356,7 @@ export default function KospiExitAnalyzer() {
                             <ChartLoadingPlaceholder height={110} />
                         ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartDollar} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
+                            <LineChart data={chartDollar} margin={{ top: 5, right: 6, left: 6, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                 <XAxis dataKey="date" hide={true} />
                                 <YAxis yAxisId="left" domain={['auto', 'auto']} hide={true} />
@@ -422,7 +430,7 @@ export default function KospiExitAnalyzer() {
                             <ChartLoadingPlaceholder height={110} />
                         ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartPer} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
+                            <LineChart data={chartPer} margin={{ top: 5, right: 6, left: 6, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                 <XAxis dataKey="month" hide={true} />
                                 <YAxis yAxisId="left" hide={true} />
@@ -490,7 +498,7 @@ export default function KospiExitAnalyzer() {
                             <ChartLoadingPlaceholder height={110} />
                         ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartCli} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
+                            <LineChart data={chartCli} margin={{ top: 5, right: 6, left: 6, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                 <XAxis dataKey="month" hide={true} />
                                 <YAxis domain={['auto', 'auto']} hide={true} />
@@ -568,7 +576,7 @@ export default function KospiExitAnalyzer() {
                             <ChartLoadingPlaceholder height={100} message="변동성 데이터 로딩" />
                         ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
+                            <LineChart data={chartSentiment} margin={{ top: 5, right: 6, left: 6, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                 <XAxis dataKey="date" hide={true} />
                                 <YAxis yAxisId="left" hide={true} />
@@ -631,7 +639,7 @@ export default function KospiExitAnalyzer() {
                             <ChartLoadingPlaceholder height={100} message="심리지표 로딩중" />
                         ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartSentiment} margin={{ top: 5, right: -5, left: -5, bottom: 0 }}>
+                            <LineChart data={chartSentiment} margin={{ top: 5, right: 6, left: 6, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                 <XAxis dataKey="date" hide={true} />
                                 <YAxis hide={true} />
@@ -680,17 +688,17 @@ export default function KospiExitAnalyzer() {
             {/* Portal: document.body에 직접 렌더링 → overflow 컨테이너 영향 없음 */}
             {activePopup && isMounted && createPortal(
                 <div
-                    className="fixed left-0 right-0 bottom-0 z-[9999] flex items-end justify-center"
+                    className="fixed left-0 right-0 bottom-0 z-[9999] flex items-start justify-center pt-2 px-4"
                     style={{ top: `${popupTop}px` }}
                     onClick={() => setActivePopup(null)}
                 >
                     {/* 반투명 배경 */}
                     <div className="absolute inset-0 bg-black/85 backdrop-blur-sm transition-all duration-300" />
 
-                    {/* 팝업 패널 — 컨텐츠 높이에 맞춤, 최대 90vh */}
+                    {/* 팝업 패널 — 컨텐츠 높이에 맞춤, floating card style */}
                     <div
-                        className="relative w-full max-w-4xl bg-[#11111f] border border-white/10 rounded-t-3xl flex flex-col shadow-[0_-8px_60px_rgba(0,0,0,0.95)] animate-in fade-in slide-in-from-bottom-2 duration-300 overflow-hidden"
-                        style={{ maxHeight: `calc(100vh - ${popupTop}px)` }}
+                        className="relative w-full max-w-4xl bg-[#11111f] border border-white/10 rounded-2xl flex flex-col shadow-[0_15px_50px_rgba(0,0,0,0.85)] animate-in fade-in zoom-in-95 duration-200 overflow-hidden"
+                        style={{ maxHeight: `calc(100vh - ${popupTop}px - 24px)` }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* 헤더 */}

@@ -627,10 +627,10 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                             <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
 
                             {/* FGI Elements */}
-                            {isFgi && <ReferenceArea yAxisId="left" y1={0} y2={25} strokeOpacity={0} fill="#f43f5e" fillOpacity={0.15} />}
-                            {isFgi && <ReferenceArea yAxisId="left" y1={75} y2={100} strokeOpacity={0} fill="#34d399" fillOpacity={0.15} />}
-                            {isFgi && <ReferenceLine yAxisId="left" y={25} stroke="#f43f5e" strokeDasharray="3 3" />}
-                            {isFgi && <ReferenceLine yAxisId="left" y={75} stroke="#34d399" strokeDasharray="3 3" />}
+                            {isFgi && <ReferenceArea yAxisId="left" y1={0} y2={25} strokeOpacity={0} fill="#34d399" fillOpacity={0.15} />}
+                            {isFgi && <ReferenceArea yAxisId="left" y1={75} y2={100} strokeOpacity={0} fill="#f43f5e" fillOpacity={0.15} />}
+                            {isFgi && <ReferenceLine yAxisId="left" y={25} stroke="#34d399" strokeDasharray="3 3" />}
+                            {isFgi && <ReferenceLine yAxisId="left" y={75} stroke="#f43f5e" strokeDasharray="3 3" />}
 
                             {/* VIX Elements */}
                             {!isFgi && <ReferenceArea yAxisId="left" y1={0} y2={15} strokeOpacity={0} fill="#34d399" fillOpacity={0.15} />}
@@ -641,7 +641,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                             {(() => {
                                 const lData = displayData.length > 0 ? displayData[displayData.length - 1] : null;
                                 const lines = isFgi ? [
-                                    { yAxisId: "left", name: "Fear & Greed", dataKey: "fgi", color: currentVal && currentVal.fgi < 30 ? '#f43f5e' : '#34d399', width: 3, dash: '' },
+                                    { yAxisId: "left", name: "Fear & Greed", dataKey: "fgi", color: currentVal && currentVal.fgi >= 75 ? '#f43f5e' : (currentVal && currentVal.fgi <= 25 ? '#34d399' : '#f59e0b'), width: 3, dash: '' },
                                     { yAxisId: "right", name: "KOSPI", dataKey: "kospi", color: "#60a5fa", width: 1.5, dash: '4 4' },
                                     { yAxisId: "right", name: "S&P 500", dataKey: "sp500", color: "#c084fc", width: 1.5, dash: '4 4' },
                                 ] : [
@@ -666,13 +666,13 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                 <h4 className="font-bold text-indigo-300 mb-2 text-xs">💡 시장 심리 및 변동성 가이드</h4>
                 {isFgi ? (
                     <div className="flex w-full gap-2 px-2 pb-2">
-                        <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-rose-500/80">
-                            <h5 className="font-bold text-rose-400 text-sm mb-1">0 - 25</h5>
+                        <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-emerald-500/80">
+                            <h5 className="font-bold text-emerald-500 text-sm mb-1">0 - 25</h5>
                             <span className="text-white font-semibold text-xs mb-1 block">Extreme Fear (극단적 공포)</span>
                             <p className="text-[11px] text-gray-400 leading-tight">극단적 공포는 시장 참여자들이 지나치게 우려하고 있음을 나타내며, 이는 좋은 매수 기회가 될 수 있습니다.</p>
                         </div>
-                        <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-orange-400/80">
-                            <h5 className="font-bold text-orange-400 text-sm mb-1">26 - 45</h5>
+                        <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-emerald-400/80">
+                            <h5 className="font-bold text-emerald-400 text-sm mb-1">26 - 45</h5>
                             <span className="text-white font-semibold text-xs mb-1 block">Fear (공포)</span>
                             <p className="text-[11px] text-gray-400 leading-tight">일반적으로 시장의 동요를 나타냅니다.</p>
                         </div>
@@ -681,13 +681,13 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                             <span className="text-white font-semibold text-xs mb-1 block">Neutral (중립)</span>
                             <p className="text-[11px] text-gray-400 leading-tight">정상적인 시장 환경을 나타냅니다.</p>
                         </div>
-                        <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-emerald-400/80">
-                            <h5 className="font-bold text-emerald-400 text-sm mb-1">56 - 75</h5>
+                        <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-orange-400/80">
+                            <h5 className="font-bold text-orange-400 text-sm mb-1">56 - 75</h5>
                             <span className="text-white font-semibold text-xs mb-1 block">Greed (탐욕)</span>
                             <p className="text-[11px] text-gray-400 leading-tight">시장이 긍정적인 추세를 보이고 있음을 나타냅니다.</p>
                         </div>
-                        <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-emerald-500/80">
-                            <h5 className="font-bold text-emerald-500 text-sm mb-1">76 - 100</h5>
+                        <div className="flex-1 bg-[#1e1e24] p-3 rounded-lg border-l-4 border-rose-500/80">
+                            <h5 className="font-bold text-rose-500 text-sm mb-1">76 - 100</h5>
                             <span className="text-white font-semibold text-xs mb-1 block">Extreme Greed (극단적 탐욕)</span>
                             <p className="text-[11px] text-gray-400 leading-tight">투자자들이 지나치게 탐욕스러워졌을 때(극단적 탐욕) 시장이 조정(하락)을 겪을 가능성을 경고합니다.</p>
                         </div>

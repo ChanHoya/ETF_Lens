@@ -92,14 +92,14 @@ export default function RiskGaugeChart({
     const angle = -90 + ratio * 180;
 
     return (
-        <div className={`w-full bg-gradient-to-br ${config.bgGradient} backdrop-blur-xl border ${config.borderGlow} rounded-3xl p-5 md:p-6 shadow-2xl transition-all duration-500 flex flex-col relative overflow-hidden group hover:shadow-[0_15px_40px_rgba(0,0,0,0.4)]`}>
+        <div className={`w-full bg-gradient-to-br ${config.bgGradient} backdrop-blur-xl border ${config.borderGlow} rounded-3xl p-4 md:p-4.5 shadow-2xl transition-all duration-500 flex flex-col relative overflow-hidden group hover:shadow-[0_15px_40px_rgba(0,0,0,0.4)]`}>
             {/* Background glowing sphere */}
             <div 
                 className="absolute -top-24 -left-24 w-48 h-48 rounded-full blur-[80px] pointer-events-none transition-all duration-700 opacity-60 group-hover:scale-125"
                 style={{ backgroundColor: config.color }}
             />
 
-            <div className="flex justify-between items-center mb-4 relative z-10">
+            <div className="flex justify-between items-center mb-3 relative z-10">
                 <div className="flex items-center gap-2">
                     <span className="p-2 rounded-xl bg-white/5 border border-white/10 shrink-0">
                         {config.icon}
@@ -119,7 +119,7 @@ export default function RiskGaugeChart({
                 </span>
             </div>
 
-            <div className="flex flex-col lg:flex-row items-center lg:justify-around gap-6 lg:gap-12 relative z-10 mt-2">
+            <div className="flex flex-col lg:flex-row items-center lg:justify-around gap-4 lg:gap-8 relative z-10 mt-0.5">
                 {/* Visual Gauge Column */}
                 <div className="relative w-[240px] h-[135px] flex items-center justify-center select-none">
                     <svg className="w-full h-full overflow-visible" viewBox="0 0 100 55">
@@ -222,15 +222,15 @@ export default function RiskGaugeChart({
                 </div>
 
                 {/* Score Breakdown Column */}
-                <div className="flex-1 w-full lg:max-w-[320px] flex flex-col gap-2 bg-black/35 p-3 rounded-2xl border border-white/5 backdrop-blur-md">
-                    <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase mb-1">지표별 위험 기여도</span>
+                <div className="flex-1 w-full lg:max-w-[320px] flex flex-col gap-1 bg-black/35 p-2 rounded-2xl border border-white/5 backdrop-blur-md">
+                    <span className="text-[9px] text-gray-400 font-bold tracking-wider uppercase mb-0.5">지표별 위험 기여도</span>
                     
                     {breakdown ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5 text-[11px] font-medium font-mono text-gray-300">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-1.5 text-[11px] font-medium font-mono text-gray-300">
                             {Object.entries(breakdown).map(([key, item]: [string, any]) => {
                                 const barColor = item.score >= 3 ? '#ef4444' : (item.score >= 2 ? '#f97316' : (item.score >= 1 ? '#eab308' : '#10b981'));
                                 return (
-                                    <div key={key} className="flex flex-col gap-1 bg-white/[0.01] p-1.5 rounded-lg border border-white/5">
+                                    <div key={key} className="flex flex-col gap-0.5 bg-white/[0.01] p-1 rounded-lg border border-white/5">
                                         <div className="flex justify-between items-center text-gray-400">
                                             <span className="text-[10px] font-semibold text-gray-200">{item.label}</span>
                                             <span className="text-[10px]">
@@ -241,7 +241,7 @@ export default function RiskGaugeChart({
                                             </span>
                                         </div>
                                         {/* Score visual strip */}
-                                        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                                        <div className="w-full h-0.5 bg-white/10 rounded-full overflow-hidden">
                                             <div 
                                                 className="h-full rounded-full transition-all duration-1000 ease-out"
                                                 style={{ 
@@ -261,9 +261,9 @@ export default function RiskGaugeChart({
             </div>
 
             {/* Bottom Insight / Action Recommendation Bar */}
-            <div className="mt-4 pt-3.5 border-t border-white/5 flex flex-col gap-2.5 relative z-10 text-[11px]">
+            <div className="mt-3 pt-2.5 border-t border-white/5 flex flex-col gap-2 relative z-10 text-[11px]">
                 {analysisText && (
-                    <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-3 text-xs leading-relaxed text-gray-300 font-medium relative overflow-hidden">
+                    <div className="bg-white/[0.02] border border-white/10 rounded-xl p-2 text-xs leading-normal text-gray-300 font-medium relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500/40" />
                         <span className="text-white font-extrabold mr-1.5 flex items-center gap-1 mb-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
