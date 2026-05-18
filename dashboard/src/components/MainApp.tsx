@@ -147,18 +147,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
     }
   }, []);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const handleOpenEtfDetailEvent = (e: Event) => {
-        const customEvent = e as CustomEvent<{ code: string }>;
-        if (customEvent.detail?.code) {
-          handleOpenDetail(customEvent.detail.code);
-        }
-      };
-      window.addEventListener('open_etf_detail', handleOpenEtfDetailEvent);
-      return () => window.removeEventListener('open_etf_detail', handleOpenEtfDetailEvent);
-    }
-  }, [handleOpenDetail]);
+
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -347,6 +336,19 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const handleOpenEtfDetailEvent = (e: Event) => {
+        const customEvent = e as CustomEvent<{ code: string }>;
+        if (customEvent.detail?.code) {
+          handleOpenDetail(customEvent.detail.code);
+        }
+      };
+      window.addEventListener('open_etf_detail', handleOpenEtfDetailEvent);
+      return () => window.removeEventListener('open_etf_detail', handleOpenEtfDetailEvent);
+    }
+  }, [handleOpenDetail]);
 
   const handleAnalyzePeers = (items: {code: string, name: string}[]) => {
     const toAnalyze = items.slice(0, 10);
