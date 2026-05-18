@@ -5,7 +5,7 @@
 ## Quick Summary
  
 ✅ Last session: S4-2: AI 기반 리밸런싱 주문 시나리오 백테스트 시뮬레이터(S4-2) 개발 완료 및 프론트/백엔드 완전 정합 탑재
-✅ Current: Sprint 4 — S4-2 개발 완료 & S4-3 기획 및 검토 준비
+✅ Current: Sprint 4 — Exit-Signal UI 개선 완료 (종합위험지수 세로폭 축소, 달러 차트 잘림 해결, 팝업창 헤더 고정, FGI 가이드 색상 반전)
 ➡️ Next: S4-3 ETF 실질 비용(TER+거래비용+추적오차) 종합 진단 랭킹 보드 고도화
  
 ## Current Sprint
@@ -69,6 +69,7 @@
 
 ## Recent Changes
 
+- 2026-05-19: Exit-Signal UI 개선 (종합위험지수 세로 크기 축소, 달러 차트 잘림 해결, 팝업 위치 고정, FGI 색상 반전) 완료
 - 2026-05-19: KOSPI Exit Strategy 모니터링 (Exit-Signal) 대시보드 박스 구조 및 리스크 게이지 UI 리팩토링 및 개선 완료
 - 2026-05-19: S3-3 AI Insight 실데이터 연동 고도화 및 실제 성과 지표 동적 배지(✨ 실제 성과 지표 반영됨) 전환 구현 완료
 - 2026-05-19: 섹터분석 탭 SWR LocalStorage Caching 성능 극대화 고도화 완료 (0ms 즉시 로딩 보장 및 백그라운드 갱신 패턴 적용)
