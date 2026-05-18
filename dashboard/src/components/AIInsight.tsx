@@ -8,6 +8,7 @@ interface InsightData {
   insight: string
   us_phase?: string
   kr_phase?: string
+  has_real_perf?: boolean
   analyzed_at: string
 }
 
@@ -246,11 +247,12 @@ function StrategyContent({ content, onSaveToFavorites, toastMsg }: {
   )
 }
 
-function InsightSection({ icon, title, content, isStrategy, onSaveToFavorites, toastMsg }: {
+function InsightSection({ icon, title, content, isStrategy, hasRealPerf, onSaveToFavorites, toastMsg }: {
   icon: React.ReactNode
   title: string
   content: string
   isStrategy?: boolean
+  hasRealPerf?: boolean
   onSaveToFavorites?: (items: { code: string; name: string }[]) => void
   toastMsg?: string | null
 }) {
@@ -260,9 +262,15 @@ function InsightSection({ icon, title, content, isStrategy, onSaveToFavorites, t
         {icon}
         <span className="text-[16px] font-bold text-white/90">{title}</span>
         {isStrategy && (
-          <span className="ml-auto flex items-center gap-1 text-[11px] font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-full shrink-0">
-            ⚠ 수익률 수치는 데모 데이터
-          </span>
+          hasRealPerf ? (
+            <span className="ml-auto flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0">
+              ✨ 실제 성과 지표 반영됨
+            </span>
+          ) : (
+            <span className="ml-auto flex items-center gap-1 text-[11px] font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-full shrink-0">
+              ⚠ 수익률 수치는 데모 데이터
+            </span>
+          )
         )}
       </div>
       {isStrategy
@@ -428,6 +436,7 @@ export default function AIInsight() {
                 title={s.title}
                 content={s.content}
                 isStrategy={s.isStrategy}
+                hasRealPerf={data?.has_real_perf}
                 onSaveToFavorites={s.isStrategy ? handleSaveToFavorites : undefined}
                 toastMsg={s.isStrategy ? toast : undefined}
               />

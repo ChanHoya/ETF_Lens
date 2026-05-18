@@ -1025,6 +1025,7 @@ async def get_ai_insight(
         "insight": insight_text,
         "us_phase": us.get("phase"),
         "kr_phase": kr.get("phase"),
+        "has_real_perf": has_real_perf,
         "analyzed_at": analyzed_at,
     }
     _cache_set(_insight_cache, cache_key, (result, now_ts))
