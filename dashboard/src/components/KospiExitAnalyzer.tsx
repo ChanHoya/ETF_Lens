@@ -304,9 +304,6 @@ export default function KospiExitAnalyzer() {
                         <p className="text-xs text-gray-400 font-medium mt-0.5">VIX·VKOSPI 및 글로벌 매크로 인텔리전스 결합 분석</p>
                     </div>
                 </div>
-                <div className="text-xs text-gray-300 md:text-right md:max-w-md border-t md:border-t-0 md:border-l border-white/10 pt-3 md:pt-0 md:pl-5 font-medium relative z-10 leading-relaxed">
-                    {getExitAnalysisText()}
-                </div>
             </div>
 
             {/* Premium Bento Grid Layout */}
@@ -320,6 +317,7 @@ export default function KospiExitAnalyzer() {
                         level={riskData.level} 
                         label={riskData.label} 
                         breakdown={riskData.breakdown} 
+                        analysisText={getExitAnalysisText()}
                     />
                 </div>
 
@@ -341,8 +339,8 @@ export default function KospiExitAnalyzer() {
                     </div>
 
                     <div className="flex items-baseline gap-2 mb-2">
-                        <span className="text-2xl font-black text-white font-mono">{dollarIndex.toFixed(2)}</span>
-                        <span className="text-xs text-gray-400 font-mono font-medium">({Math.round(dollarKrw)}원)</span>
+                        <span className={`text-2xl font-black ${dStatus.color} font-mono transition-all duration-300`}>{dollarIndex.toFixed(2)}</span>
+                        <span className={`text-xs ${dStatus.color} font-mono font-medium opacity-80 transition-all duration-300`}>({Math.round(dollarKrw)}원)</span>
                     </div>
 
                     <div className="flex-1 w-full min-h-[110px] -ml-2 -mb-2">
@@ -376,6 +374,14 @@ export default function KospiExitAnalyzer() {
                                         return null;
                                     }}
                                 />
+                                <Legend 
+                                    verticalAlign="top" 
+                                    height={18} 
+                                    iconSize={6} 
+                                    iconType="circle"
+                                    wrapperStyle={{ fontSize: '9px', marginTop: '-5px', marginBottom: '5px' }} 
+                                    formatter={(value) => <span className="text-[10px] text-gray-400 font-semibold">{value === 'DXY' ? '달러인덱스 (DXY)' : '원/달러 환율 (KRW)'}</span>}
+                                />
                                 <Line name="DXY" yAxisId="left" type="monotone" dataKey="dollar" stroke={dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#10b981')} strokeWidth={2} dot={false} />
                                 <Line name="krw" yAxisId="right" type="monotone" dataKey="krw" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" dot={false} />
                             </LineChart>
@@ -407,7 +413,7 @@ export default function KospiExitAnalyzer() {
                     </div>
 
                     <div className="flex items-baseline gap-2 mb-2">
-                        <span className="text-2xl font-black text-white font-mono">{forwardPer.toFixed(1)}x</span>
+                        <span className={`text-2xl font-black ${pStatus.color} font-mono transition-all duration-300`}>{forwardPer.toFixed(1)}x</span>
                         <span className="text-xs text-gray-400 font-medium">KOSPI 밸류에이션</span>
                     </div>
 
@@ -471,9 +477,9 @@ export default function KospiExitAnalyzer() {
                     </div>
 
                     <div className="flex items-baseline gap-2 mb-2">
-                        <span className="text-2xl font-black text-white font-mono">{oecdCliValue.toFixed(2)}</span>
+                        <span className={`text-2xl font-black ${cStatus.color} font-mono transition-all duration-300`}>{oecdCliValue.toFixed(2)}</span>
                         {oecdCliDownMonths > 0 && (
-                            <span className="text-[10px] text-rose-400 font-bold flex items-center border border-rose-500/15 bg-rose-500/5 px-1.5 py-0.5 rounded-md">
+                            <span className={`text-[10px] ${cStatus.color} font-bold flex items-center border ${cStatus.border} bg-white/5 px-1.5 py-0.5 rounded-md transition-all duration-300`}>
                                 하락 {oecdCliDownMonths}개월째
                             </span>
                         )}
@@ -547,13 +553,13 @@ export default function KospiExitAnalyzer() {
 
                     <div className="flex gap-4 mb-2">
                         <div className="flex flex-col">
-                            <span className="text-[9px] text-gray-400 font-semibold">VIX 공포지수</span>
-                            <span className="text-xl font-black text-white font-mono">{vixValue.toFixed(2)}</span>
+                            <span className="text-[9px] font-bold uppercase tracking-wider transition-all duration-300" style={{ color: vStatus.level === 'danger' ? '#f43f5e' : '#10b981' }}>VIX 공포지수</span>
+                            <span className={`text-xl font-black ${vStatus.color} font-mono transition-all duration-300`}>{vixValue.toFixed(2)}</span>
                         </div>
                         <div className="w-px h-8 bg-white/10" />
                         <div className="flex flex-col">
-                            <span className="text-[9px] text-gray-400 font-semibold">VKOSPI Proxy</span>
-                            <span className="text-xl font-black text-white font-mono">{vkospiValue.toFixed(1)}%</span>
+                            <span className="text-[9px] font-bold uppercase tracking-wider transition-all duration-300" style={{ color: vkStatus.level === 'danger' ? '#ef4444' : '#f97316' }}>VKOSPI Proxy</span>
+                            <span className={`text-xl font-black ${vkStatus.color} font-mono transition-all duration-300`}>{vkospiValue.toFixed(1)}%</span>
                         </div>
                     </div>
 
@@ -616,7 +622,7 @@ export default function KospiExitAnalyzer() {
                     </div>
 
                     <div className="flex items-baseline gap-2 mb-2">
-                        <span className="text-2xl font-black text-white font-mono">{fgiValue.toFixed(1)}</span>
+                        <span className={`text-2xl font-black ${fStatus.color} font-mono transition-all duration-300`}>{fgiValue.toFixed(1)}</span>
                         <span className="text-xs text-gray-400 font-medium">하이브리드 FGI</span>
                     </div>
 

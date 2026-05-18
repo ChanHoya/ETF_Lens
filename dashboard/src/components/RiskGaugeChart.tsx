@@ -13,6 +13,7 @@ interface RiskGaugeChartProps {
         cli: { value: number; score: number; label: string };
         per: { value: number; score: number; label: string };
     };
+    analysisText?: string;
 }
 
 export default function RiskGaugeChart({
@@ -20,7 +21,8 @@ export default function RiskGaugeChart({
     maxScore = 15,
     level,
     label,
-    breakdown
+    breakdown,
+    analysisText
 }: RiskGaugeChartProps) {
     const [animatedScore, setAnimatedScore] = useState(0);
 
@@ -117,9 +119,9 @@ export default function RiskGaugeChart({
                 </span>
             </div>
 
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-6 relative z-10 mt-2">
+            <div className="flex flex-col lg:flex-row items-center lg:justify-around gap-6 lg:gap-12 relative z-10 mt-2">
                 {/* Visual Gauge Column */}
-                <div className="relative w-[180px] h-[105px] flex items-center justify-center select-none">
+                <div className="relative w-[240px] h-[135px] flex items-center justify-center select-none">
                     <svg className="w-full h-full overflow-visible" viewBox="0 0 100 55">
                         <defs>
                             {/* Track Gradients */}
@@ -208,7 +210,7 @@ export default function RiskGaugeChart({
                     </svg>
 
                     {/* Numeric overlay inside the gauge */}
-                    <div className="absolute bottom-2 flex flex-col items-center">
+                    <div className="absolute bottom-3 flex flex-col items-center">
                         <span className="text-3xl font-black text-white font-mono leading-none tracking-tight">
                             {score}
                             <span className="text-gray-500 text-xs font-normal font-sans ml-0.5">/{maxScore}점</span>
@@ -220,7 +222,7 @@ export default function RiskGaugeChart({
                 </div>
 
                 {/* Score Breakdown Column */}
-                <div className="flex-1 w-full flex flex-col gap-2 bg-black/35 p-3 rounded-2xl border border-white/5 backdrop-blur-md">
+                <div className="flex-1 w-full lg:max-w-[320px] flex flex-col gap-2 bg-black/35 p-3 rounded-2xl border border-white/5 backdrop-blur-md">
                     <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase mb-1">지표별 위험 기여도</span>
                     
                     {breakdown ? (
@@ -259,12 +261,24 @@ export default function RiskGaugeChart({
             </div>
 
             {/* Bottom Insight / Action Recommendation Bar */}
-            <div className="mt-4 pt-3.5 border-t border-white/5 flex items-center gap-2 relative z-10 text-[11px]">
-                <span className={`w-2 h-2 rounded-full animate-pulse shrink-0`} style={{ backgroundColor: config.color }} />
-                <p className="text-gray-300 font-medium">
-                    <span className="text-white font-extrabold mr-1">권장 액션:</span> 
-                    {config.action}
-                </p>
+            <div className="mt-4 pt-3.5 border-t border-white/5 flex flex-col gap-2.5 relative z-10 text-[11px]">
+                {analysisText && (
+                    <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-3 text-xs leading-relaxed text-gray-300 font-medium relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500/40" />
+                        <span className="text-white font-extrabold mr-1.5 flex items-center gap-1 mb-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                            시장 진단 리스크 분석:
+                        </span>
+                        {analysisText}
+                    </div>
+                )}
+                <div className="flex items-center gap-2 mt-1">
+                    <span className={`w-2 h-2 rounded-full animate-pulse shrink-0`} style={{ backgroundColor: config.color }} />
+                    <p className="text-gray-300 font-medium">
+                        <span className="text-white font-extrabold mr-1">권장 액션:</span> 
+                        {config.action}
+                    </p>
+                </div>
             </div>
         </div>
     );
