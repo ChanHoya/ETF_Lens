@@ -16,6 +16,7 @@ A living document of module relationships. Update whenever modules are added or 
 | DB Sync | Infrastructure | SQLite-to-PostgreSQL replication core & management | db/models, db/database | scheduler, MyDashboard | Antigravity |
 | AI Rebalancing | Presentation | AI-driven ETF portfolio rebalancing recommendations | my_assets, peer_analysis | MyDashboard | Antigravity |
 | ETF Overlap Analysis | Presentation | Pairwise holding overlaps, underlying stock exposure, and diversification efficiency score | my_assets, core/overlap_analyzer | MyDashboard | Antigravity |
+| AI Rebalance Simulator | Presentation | Dynamic risk-triggered asset rebalancing simulation engine | my_assets, api/backtest | MyDashboard | Antigravity |
 <!-- Add new modules above this line -->
 
 

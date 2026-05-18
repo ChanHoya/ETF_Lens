@@ -4,8 +4,8 @@
 
 ## Quick Summary
  
-✅ Last session: S4-1: ETF 구성 종목 중복도 분석 및 포트폴리오 중복 진단 퀀트 백엔드 엔진 설계, 구현 및 테스트 완벽 구축 (Sprint 4)
-✅ Current: Sprint 4 — S4-2 AI 리밸런싱 백테스트 시뮬레이터 개발 진행 중
+✅ Last session: S4-2: AI 기반 리밸런싱 주문 시나리오 백테스트 시뮬레이터(S4-2) 개발 완료 및 프론트/백엔드 완전 정합 탑재
+✅ Current: Sprint 4 — S4-2 개발 완료 & S4-3 기획 및 검토 준비
 ➡️ Next: S4-3 ETF 실질 비용(TER+거래비용+추적오차) 종합 진단 랭킹 보드 고도화
  
 ## Current Sprint
@@ -19,7 +19,7 @@
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
 | S4-1 | ETF 구성 종목 중복도 분석 및 포트폴리오 중복 진단 도구 개발 | ✅ done | KIS 포트폴리오의 ETF 실질 구성 종목 중복 노출율과 분산 투자 효과를 퀀트 연산하는 백엔드 엔진 및 API 엔드포인트 구현 완료 |
-| S4-2 | AI 기반 리밸런싱 주문 시나리오 백테스트 시뮬레이터 | 🔧 active | 과거 Exit Signal과 AI 제안 리밸런싱 주문을 실제로 실행했을 시의 누적 성과 대조 시뮬레이션 Historical Backtester 구현 |
+| S4-2 | AI 기반 리밸런싱 주문 시나리오 백테스트 시뮬레이터 | ✅ done | 과거 Exit Signal 위험 감지에 따라 안전 자산으로 대피하고 회복 시 복귀하는 동적 자산배분 퀀트 연산 및 Recharts/로그 단말기 UI 구현 완료 |
 
 | S4-3 | ETF 실질 비용(TER+거래비용+추적오차) 종합 진단 랭킹 보드 고도화 | ⬜ planned | 금투협 공시 실질 TER과 추적오차 데이터를 연동하여 국내 상장 최적 비용 우수 ETF 상품 큐레이션 랭킹 보드 구축 |
 | S3-5 | VKOSPI / Fear & Greed 다차원 시장 감정 지표 고도화 & Bento Grid UI | ✅ done | KOSPI 실현 변동성(VKOSPI 프록시) 퀀트 연산 탑재, DB 영속성 시딩, SVG 반원형 네온 리스크 게이지 및 6패널 Bento Grid 고도화 완료 |

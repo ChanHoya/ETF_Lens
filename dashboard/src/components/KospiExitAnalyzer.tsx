@@ -333,7 +333,7 @@ export default function KospiExitAnalyzer() {
                             </span>
                             <h4 className="text-white text-xs font-extrabold">달러 인덱스 및 환율</h4>
                         </div>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${dStatus.badge || dStatus.bg} ${dStatus.color} ${dStatus.border}`}>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${dStatus.bg} ${dStatus.color} ${dStatus.border}`}>
                             {dStatus.text}
                         </span>
                     </div>
@@ -407,7 +407,7 @@ export default function KospiExitAnalyzer() {
                             </span>
                             <h4 className="text-white text-xs font-extrabold">KOSPI 포워드 P/E</h4>
                         </div>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${pStatus.badge || pStatus.bg} ${pStatus.color} ${pStatus.border}`}>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${pStatus.bg} ${pStatus.color} ${pStatus.border}`}>
                             {pStatus.text}
                         </span>
                     </div>
@@ -471,7 +471,7 @@ export default function KospiExitAnalyzer() {
                             </span>
                             <h4 className="text-white text-xs font-extrabold">경기 선행 지수 (CLI)</h4>
                         </div>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${cStatus.badge || cStatus.bg} ${cStatus.color} ${cStatus.border}`}>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${cStatus.bg} ${cStatus.color} ${cStatus.border}`}>
                             {cStatus.text}
                         </span>
                     </div>
@@ -542,10 +542,10 @@ export default function KospiExitAnalyzer() {
                             <h4 className="text-white text-xs font-extrabold">양국 변동성 (VIX & VKOSPI)</h4>
                         </div>
                         <div className="flex gap-1.5">
-                            <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded border ${vStatus.badge || vStatus.bg} ${vStatus.color} ${vStatus.border}`}>
+                            <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded border ${vStatus.bg} ${vStatus.color} ${vStatus.border}`}>
                                 US {vStatus.text}
                             </span>
-                            <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded border ${vkStatus.badge || vkStatus.bg} ${vkStatus.color} ${vkStatus.border}`}>
+                            <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded border ${vkStatus.bg} ${vkStatus.color} ${vkStatus.border}`}>
                                 KR {vkStatus.text}
                             </span>
                         </div>
@@ -616,7 +616,7 @@ export default function KospiExitAnalyzer() {
                             </span>
                             <h4 className="text-white text-xs font-extrabold">Fear & Greed Index</h4>
                         </div>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${fStatus.badge || fStatus.bg} ${fStatus.color} ${fStatus.border}`}>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${fStatus.bg} ${fStatus.color} ${fStatus.border}`}>
                             {fStatus.text}
                         </span>
                     </div>

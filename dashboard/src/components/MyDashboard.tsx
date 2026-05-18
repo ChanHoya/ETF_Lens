@@ -3,7 +3,9 @@ import AccountDetailModal from './AccountDetailModal';
 import HoldingsSignals from './HoldingsSignals';
 import RecentTrades from './RecentTrades';
 import PortfolioBacktester from './PortfolioBacktester';
+import AIRebalanceSimulator from './AIRebalanceSimulator';
 import RiskAlertBanner from './RiskAlertBanner';
+import { Sparkles } from 'lucide-react';
 import PortfolioTreemap from './PortfolioTreemap';
 import RebalanceProposal from './RebalanceProposal';
 import DbSyncControl from './DbSyncControl';
@@ -20,6 +22,8 @@ type MyDashboardProps = {
 
 export default function MyDashboard({ data, tradesData, isRefreshing = false, onOpenDetail, onAnalyzePeers }: MyDashboardProps) {
     const [selectedAccount, setSelectedAccount] = useState<any>(null);
+    const [backtestTab, setBacktestTab] = useState<'static' | 'dynamic'>('dynamic');
+
     if (!data || !data.kis_raw) return null;
 
     const { kis_raw } = data;
@@ -123,8 +127,43 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
             {/* 당일 체결 내역 */}
             <RecentTrades tradesData={tradesData} />
 
-            {/* 포트폴리오 백테스터 */}
-            <PortfolioBacktester holdings={holdings} />
+            {/* 포트폴리오 백테스터 & AI 리밸런싱 시뮬레이터 통합 탭 */}
+            <div className="flex flex-col gap-4 mt-2">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                        <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
+                        포트폴리오 시뮬레이션
+                    </h2>
+                    <div className="flex gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
+                        <button
+                            onClick={() => setBacktestTab('dynamic')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 flex items-center gap-1 ${
+                                backtestTab === 'dynamic'
+                                ? 'bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                                : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            <Sparkles className="w-3.5 h-3.5" /> AI 동적 리밸런싱
+                        </button>
+                        <button
+                            onClick={() => setBacktestTab('static')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${
+                                backtestTab === 'static'
+                                ? 'bg-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.3)]'
+                                : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            일반 백테스터
+                        </button>
+                    </div>
+                </div>
+
+                {backtestTab === 'dynamic' ? (
+                    <AIRebalanceSimulator holdings={holdings} />
+                ) : (
+                    <PortfolioBacktester holdings={holdings} />
+                )}
+            </div>
 
             {/* Section 5: 당일 체결내역 */}
             <section className="flex flex-col gap-4">

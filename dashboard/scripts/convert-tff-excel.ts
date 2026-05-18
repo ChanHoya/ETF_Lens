@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as xlsx from 'xlsx';
+import xlsx from 'xlsx';
 
 // 엑셀 파일 경로
 const EXCEL_FILE_PATH = path.join(__dirname, '../data/tff/TFF 펀드 현황 2026년 3월말_2026-3-31.xlsx');
