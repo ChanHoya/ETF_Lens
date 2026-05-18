@@ -1106,3 +1106,43 @@ async def get_cashflow_return(request: Request, db: AsyncSession = Depends(get_d
         "note": "KIS TTTC8508R 입출금 내역 기반 (최근 1년). 1년 이전 입금액은 미반영됩니다.",
     }
 
+
+@router.get("/portfolio/overlap")
+async def get_portfolio_overlap(request: Request, db: AsyncSession = Depends(get_db)):
+    """
+    Analyzes pairwise ETF holding overlaps and true underlying stock exposure.
+    Reads current holdings from the portfolio (using the same global 5-min cache).
+    """
+    from core.overlap_analyzer import ETFOverlapAnalyzer
+    
+    # 1. Fetch active KIS holdings (returns the cache if valid)
+    try:
+        portfolio = await get_my_portfolio(request=request, db=db)
+    except Exception as e:
+        logger.exception("Error fetching my portfolio for overlap analysis")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch portfolio data: {str(e)}"
+        )
+        
+    kis_raw = portfolio.get("kis_raw", {})
+    holdings = kis_raw.get("holdings", [])
+    
+    # If portfolio has cash_balance, add it to the holdings list so overlap analyzer can process it
+    summary = kis_raw.get("summary", {})
+    cash_balance = float(summary.get("cash_balance", 0.0))
+    
+    holdings_with_cash = list(holdings)
+    if cash_balance > 0:
+        holdings_with_cash.append({
+            "code": "CASH",
+            "name": "현금/예수금",
+            "eval_amount": cash_balance
+        })
+
+    # 2. Run the overlap quantitative analyzer
+    analyzer = ETFOverlapAnalyzer(holdings_with_cash, db)
+    result = await analyzer.analyze()
+    return result
+
+
