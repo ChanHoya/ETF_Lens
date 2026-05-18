@@ -110,6 +110,53 @@ def _call_gemini_rebalance(portfolio_data_text: str) -> dict:
     raise last_err or Exception("All GenAI attempts failed.")
 
 
+async def notify_rebalance_proposal(proposal_data: dict) -> None:
+    """Sends a formatted Telegram alert for a newly generated AI rebalancing proposal."""
+    from core.notifier import send_telegram_message
+    try:
+        overall_summary = proposal_data.get("overall_summary", "")
+        recommendations = proposal_data.get("recommendations", [])
+        
+        # Build recommendations HTML block
+        recs_lines = []
+        for r in recommendations:
+            code = r.get("code", "")
+            name = r.get("name", "")
+            action = r.get("action", "KEEP")
+            reasoning = r.get("reasoning", "")
+            alt = r.get("alternative_etf")
+            
+            if action == "KEEP":
+                recs_lines.append(f"🟢 <b>[유지] {name} ({code})</b>")
+            elif action == "REPLACE":
+                alt_str = f" ➡️ <b>{alt}</b>" if alt else ""
+                recs_lines.append(
+                    f"🔄 <b>[교체] {name} ({code}){alt_str}</b>\n"
+                    f"   <i>사유: {reasoning}</i>"
+                )
+            elif action == "ADD":
+                recs_lines.append(
+                    f"➕ <b>[추가] {name} ({code})</b>\n"
+                    f"   <i>사유: {reasoning}</i>"
+                )
+        
+        recs_html = "\n\n".join(recs_lines)
+        
+        html_msg = (
+            f"🤖 <b>[AI 포트폴리오 자산 재조정 제안]</b>\n\n"
+            f"💡 <b>종합 코멘트:</b>\n"
+            f"<i>{overall_summary}</i>\n\n"
+            f"📋 <b>핵심 리밸런싱 권고:</b>\n"
+            f"{recs_html}\n\n"
+            f"🔗 <a href='https://etf-lens.vercel.app'>ETF Lens 대시보드</a>에서 가상 주문 체결 시뮬레이션을 실행해 보세요!"
+        )
+        
+        await send_telegram_message(html_msg, category="rebalance")
+        logger.info("[RebalanceAlert] Telegram notification dispatched successfully.")
+    except Exception as e:
+        logger.error(f"[RebalanceAlert] Failed to send Telegram alert: {e}")
+
+
 @router.post("/rebalance-proposal")
 async def get_rebalance_proposal(request: Request, db: AsyncSession = Depends(get_db)):
     """
@@ -196,6 +243,9 @@ async def get_rebalance_proposal(request: Request, db: AsyncSession = Depends(ge
         
         # Cache successful result
         _PROPOSAL_CACHE[cache_key] = {"data": result_json, "ts": now_ts}
+        
+        # Fire non-blocking Telegram notification task
+        asyncio.create_task(notify_rebalance_proposal(result_json))
         
         return {
             "status": "success",

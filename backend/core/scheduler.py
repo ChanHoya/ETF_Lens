@@ -270,6 +270,135 @@ async def sync_etf_batch():
     print(f"[{datetime.now()}] ETF DB sync completed.")
 
 
+async def check_exit_signal_and_alert() -> None:
+    """
+    exit-signal 데이터를 집계하여 이전 등급/점수와 비교한 후,
+    변경 사항이 있거나 '경계'/'위험' 단계 진입 시 텔레그램 알림을 발송합니다.
+    """
+    from api.exit_signal import get_exit_signal_data
+    from core.notifier import send_telegram_message
+    from db.models import AppVersion
+    
+    print("[ExitSignalAlert] Checking exit-signals and computing risk level...")
+    try:
+        # 1. Fetch current exit signal status
+        data = await get_exit_signal_data()
+        risk = data.get("risk", {})
+        curr_level = risk.get("level", "safe")
+        curr_label = risk.get("label", "안전")
+        curr_color = risk.get("color", "green")
+        curr_score = risk.get("score", 0)
+        
+        # 2. Get last saved state from DB
+        prev_level = None
+        prev_score = None
+        
+        async with AsyncSessionLocal() as db:
+            lvl_res = await db.execute(select(AppVersion).where(AppVersion.key == "last_exit_risk_level"))
+            lvl_rec = lvl_res.scalars().first()
+            if lvl_rec:
+                prev_level = lvl_rec.value
+            else:
+                db.add(AppVersion(key="last_exit_risk_level", value=curr_level))
+                
+            scr_res = await db.execute(select(AppVersion).where(AppVersion.key == "last_exit_risk_score"))
+            scr_rec = scr_res.scalars().first()
+            if scr_rec:
+                try:
+                    prev_score = int(scr_rec.value)
+                except ValueError:
+                    prev_score = 0
+            else:
+                db.add(AppVersion(key="last_exit_risk_score", value=str(curr_score)))
+                
+            await db.commit()
+            
+        print(f"[ExitSignalAlert] Current: {curr_label} ({curr_score}점) | Previous: {prev_level} ({prev_score}점)")
+        
+        # 3. Check transition / alerting conditions:
+        # - Level changed (e.g. caution -> warning)
+        # - Or Score changed by 2+ points
+        # - Or first-time run (prev_level was None)
+        is_changed = (prev_level is not None and prev_level != curr_level)
+        is_score_jump = (prev_score is not None and abs(curr_score - prev_score) >= 2)
+        is_first_run = (prev_level is None)
+        
+        if is_changed or is_score_jump or is_first_run:
+            # Update DB with new values
+            async with AsyncSessionLocal() as db:
+                lvl_res = await db.execute(select(AppVersion).where(AppVersion.key == "last_exit_risk_level"))
+                lvl_rec = lvl_res.scalars().first()
+                if lvl_rec:
+                    lvl_rec.value = curr_level
+                
+                scr_res = await db.execute(select(AppVersion).where(AppVersion.key == "last_exit_risk_score"))
+                scr_rec = scr_res.scalars().first()
+                if scr_rec:
+                    scr_rec.value = str(curr_score)
+                await db.commit()
+                
+            # Compile Indicators Breakdown
+            cs = data.get("current_status", {})
+            vix_val = cs.get("vix", 0)
+            fgi_val = cs.get("fgi", 50)
+            cli_val = cs.get("cli", 100)
+            per_val = cs.get("per", 12)
+            
+            # Map score to label for indicator breakdown
+            def _get_vix_label(v):
+                if v < 20: return "안전"
+                if v < 25: return "주의"
+                if v < 30: return "경계"
+                return "위험"
+            
+            def _get_fgi_label(f):
+                if f >= 50: return "안전"
+                if f >= 30: return "주의"
+                if f >= 25: return "경계"
+                return "위험"
+            
+            def _get_cli_label(c):
+                if c >= 100.5: return "안전"
+                if c >= 100.0: return "주의"
+                if c >= 99.5: return "경계"
+                return "위험"
+                
+            def _get_per_label(p):
+                if p < 11: return "저평가"
+                if p < 13: return "적정"
+                if p < 15: return "경계"
+                return "고평가"
+            
+            # Choose header emoji based on risk level
+            emoji_map = {"safe": "🟢", "caution": "🟡", "warning": "🟠", "danger": "🔴"}
+            emoji = emoji_map.get(curr_level, "⚠️")
+            
+            # Compile nice rich text HTML
+            header = f"{emoji} <b>[시장 위험도(Exit Signal) 변동 알림]</b>\n\n"
+            if is_first_run:
+                transition = f"시장 종합 위험도 모니터링이 시작되었습니다.\n현재 상태: <b>{curr_label} ({curr_score}/12점)</b>\n"
+            else:
+                def _get_label_by_level(lvl):
+                    m = {"safe": "안전", "caution": "주의", "warning": "경계", "danger": "위험"}
+                    return m.get(lvl, lvl)
+                transition = f"위험도 등급 변화: <b>{_get_label_by_level(prev_level)} ({prev_score}점)</b> ➡️ <b>{curr_label} ({curr_score}점)</b>\n"
+                
+            body = (
+                f"\n📊 <b>주요 매크로 지표 현황:</b>\n"
+                f"- <b>VIX 공포지수:</b> <code>{vix_val:.1f}</code> ({_get_vix_label(vix_val)})\n"
+                f"- <b>공포-탐욕 지수(FGI):</b> <code>{fgi_val:.1f}</code> ({_get_fgi_label(fgi_val)})\n"
+                f"- <b>경기선행지수(CLI):</b> <code>{cli_val:.2f}</code> ({_get_cli_label(cli_val)})\n"
+                f"- <b>KOSPI PER:</b> <code>{per_val:.1f}</code> ({_get_per_label(per_val)})\n"
+                f"\n💡 <i>대시보드(<a href='https://etf-lens.vercel.app'>etf-lens.vercel.app</a>)에서 AI 포트폴리오 자산 추천 및 가상 체결 리밸런싱을 즉시 진행할 수 있습니다.</i>"
+            )
+            
+            await send_telegram_message(header + transition + body, category="exit_signal")
+            print("[ExitSignalAlert] Telegram notification dispatched successfully.")
+            
+    except Exception as e:
+        print(f"[ExitSignalAlert] Failed to run exit signal check and notification: {e}")
+
+
 def setup_scheduler():
     from scheduler.etf_price_sync import sync_etf_prices_yfinance
     from core.etf_performance import update_all_etf_performance_job
@@ -294,6 +423,7 @@ def setup_scheduler():
     async def _job_perf():
         await update_all_etf_performance_job()
         await update_app_version("[perf]")
+        await check_exit_signal_and_alert()
         trigger_replication_background()
 
     # 07:00 - 경량 ETF 마스터 목록 upsert
