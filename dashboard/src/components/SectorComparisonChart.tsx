@@ -39,9 +39,39 @@ export default function SectorComparisonChart({ region, selectedSector = null }:
     const visibleKeys = getVisibleKeys();
 
     useEffect(() => {
+        const loadCache = () => {
+            try {
+                const cached = localStorage.getItem(`sector_data_cache_${region}`);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (parsed && parsed.line_chart_data && parsed.line_chart_data.length > 0) {
+                        setOriginalData(parsed.line_chart_data);
+                        setKeys(parsed.keys);
+                        setIsLoading(false);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load cached sector comparison chart data', e);
+            }
+        };
+
         const fetchData = async () => {
-            setIsLoading(true);
+            let hasCache = false;
+            try {
+                const cached = localStorage.getItem(`sector_data_cache_${region}`);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (parsed && parsed.line_chart_data && parsed.line_chart_data.length > 0) {
+                        hasCache = true;
+                    }
+                }
+            } catch (e) {}
+
+            if (!hasCache) {
+                setIsLoading(true);
+            }
             setError(null);
+            
             try {
                 const res = await fetch(`${API_BASE}/api/v1/analyze/sector-comparison?region=${region}`);
                 if (!res.ok) throw new Error('API fetch error');
@@ -50,16 +80,24 @@ export default function SectorComparisonChart({ region, selectedSector = null }:
                 if (data.line_chart_data && data.line_chart_data.length > 0) {
                     setOriginalData(data.line_chart_data);
                     setKeys(data.keys);
+                    // Save to cache
+                    localStorage.setItem(`sector_data_cache_${region}`, JSON.stringify(data));
                 } else {
-                    setError('데이터가 없습니다.');
+                    if (!hasCache) {
+                        setError('데이터가 없습니다.');
+                    }
                 }
             } catch (err) {
                 console.error(err);
-                setError('서버에서 섹터 데이터를 불러오지 못했습니다.');
+                if (!hasCache) {
+                    setError('서버에서 섹터 데이터를 불러오지 못했습니다.');
+                }
             } finally {
                 setIsLoading(false);
             }
         };
+
+        loadCache();
         fetchData();
     }, [region]);
 

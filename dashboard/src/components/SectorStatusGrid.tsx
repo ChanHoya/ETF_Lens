@@ -51,63 +51,95 @@ export default function SectorStatusGrid({
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        const processData = (data: any) => {
+            if (data.line_chart_data && data.line_chart_data.length >= 2) {
+                const latest = data.line_chart_data[data.line_chart_data.length - 1];
+                const prev = data.line_chart_data[data.line_chart_data.length - 2];
+                
+                const rawSectors: SectorStatus[] = data.keys
+                    .filter((k: string) => !k.includes('KOSPI') && !k.includes('S&P'))
+                    .map((k: string) => {
+                        const curVal = latest[k];
+                        const prevVal = prev[k];
+                        const change_pct = ((curVal - prevVal) / prevVal) * 100;
+                        
+                        const baseNameRaw = k.replace('K-', '').replace('US-', '');
+                        const meta = SECTOR_METADATA[baseNameRaw] || {};
+                        const baseName = meta.alias || baseNameRaw;
+                        
+                        return {
+                            name: k,
+                            baseName,
+                            current: curVal,
+                            change: curVal - prevVal,
+                            change_pct,
+                            region: k.startsWith('K-') ? 'KR' : 'US',
+                            icon: meta.icon || <Activity />,
+                            color: meta.color || 'from-gray-500 to-slate-500'
+                        };
+                    });
+                
+                // Grouping
+                const groupMap: Record<string, SectorGroup> = {};
+                rawSectors.forEach(s => {
+                    if (!groupMap[s.baseName]) {
+                        groupMap[s.baseName] = { baseName: s.baseName };
+                    }
+                    if (s.region === 'KR') groupMap[s.baseName].kr = s;
+                    else groupMap[s.baseName].us = s;
+                });
+                
+                // Sort by average absolute change or just fixed order
+                const order = ['반도체', '2차전지', '바이오', '금융', '방산', '우주', '에너지'];
+                const sortedGroups = Object.values(groupMap).sort((a, b) => {
+                    return order.indexOf(a.baseName) - order.indexOf(b.baseName);
+                });
+                
+                setGroups(sortedGroups);
+            }
+        };
+
+        const loadCache = () => {
+            try {
+                const cached = localStorage.getItem(`sector_data_cache_${region}`);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    processData(parsed);
+                    setIsLoading(false);
+                }
+            } catch (e) {
+                console.error('Failed to load cached sector status grid data', e);
+            }
+        };
+
         const fetchData = async () => {
-            setIsLoading(true);
+            let hasCache = false;
+            try {
+                const cached = localStorage.getItem(`sector_data_cache_${region}`);
+                if (cached) {
+                    hasCache = true;
+                }
+            } catch (e) {}
+
+            if (!hasCache) {
+                setIsLoading(true);
+            }
+            
             try {
                 const res = await fetch(`${API_BASE}/api/v1/analyze/sector-comparison?region=${region}`);
                 const data = await res.json();
+                processData(data);
                 
-                if (data.line_chart_data && data.line_chart_data.length >= 2) {
-                    const latest = data.line_chart_data[data.line_chart_data.length - 1];
-                    const prev = data.line_chart_data[data.line_chart_data.length - 2];
-                    
-                    const rawSectors: SectorStatus[] = data.keys
-                        .filter((k: string) => !k.includes('KOSPI') && !k.includes('S&P'))
-                        .map((k: string) => {
-                            const curVal = latest[k];
-                            const prevVal = prev[k];
-                            const change_pct = ((curVal - prevVal) / prevVal) * 100;
-                            
-                            const baseNameRaw = k.replace('K-', '').replace('US-', '');
-                            const meta = SECTOR_METADATA[baseNameRaw] || {};
-                            const baseName = meta.alias || baseNameRaw;
-                            
-                            return {
-                                name: k,
-                                baseName,
-                                current: curVal,
-                                change: curVal - prevVal,
-                                change_pct,
-                                region: k.startsWith('K-') ? 'KR' : 'US',
-                                icon: meta.icon || <Activity />,
-                                color: meta.color || 'from-gray-500 to-slate-500'
-                            };
-                        });
-                    
-                    // Grouping
-                    const groupMap: Record<string, SectorGroup> = {};
-                    rawSectors.forEach(s => {
-                        if (!groupMap[s.baseName]) {
-                            groupMap[s.baseName] = { baseName: s.baseName };
-                        }
-                        if (s.region === 'KR') groupMap[s.baseName].kr = s;
-                        else groupMap[s.baseName].us = s;
-                    });
-                    
-                    // Sort by average absolute change or just fixed order
-                    const order = ['반도체', '2차전지', '바이오', '금융', '방산', '우주', '에너지'];
-                    const sortedGroups = Object.values(groupMap).sort((a, b) => {
-                        return order.indexOf(a.baseName) - order.indexOf(b.baseName);
-                    });
-                    
-                    setGroups(sortedGroups);
-                }
+                // Save to cache
+                localStorage.setItem(`sector_data_cache_${region}`, JSON.stringify(data));
             } catch (err) {
                 console.error(err);
             } finally {
                 setIsLoading(false);
             }
         };
+
+        loadCache();
         fetchData();
     }, [region]);
 
