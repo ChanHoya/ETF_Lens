@@ -86,3 +86,10 @@
 - **원인**: 백엔드 API 응답에 실제 데이터 포함 여부(`has_real_perf`) 플래그가 정의되어 있으나 응답 JSON에 반환되지 않았고, 프론트엔드가 이를 알지 못해 항상 무조건 데모 데이터로 가정한 디자인 적용.
 - **해결**: API 응답에 `has_real_perf` boolean 필드를 보강하고, 프론트엔드 UI 컴포넌트(`AIInsight.tsx`)에서 이 플래그에 따라 에메랄드빛 `✨ 실제 성과 지표 반영됨` 또는 주황/빨강 경고 배지를 동적으로 스위칭 렌더링하도록 전환함.
 
+## Git & Deployment
+
+### GitHub Push Network Timeout / connection blocked
+- **증상**: git push origin main 실행 시 `Failed to connect to github.com port 443: Couldn't connect to server` 에러 발생.
+- **원인**: 로컬 개발 망 또는 특정 샌드박스 내부 네트워크 방화벽이 외부 포트 443 연결을 차단.
+- **해결**: 로컬 개발 환경 터미널에서 `git push`를 수동으로 수행하거나, 프록시가 필요한 경우 로컬 환경의 my-context.md 프록시 정보 반영.
+
