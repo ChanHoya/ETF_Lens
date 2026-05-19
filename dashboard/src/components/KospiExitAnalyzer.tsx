@@ -130,20 +130,68 @@ export default function KospiExitAnalyzer() {
     // API State
     const [loading, setLoading] = useState(true);
 
-    // Fetch Real Data on Mount
+    // Fetch Real Data on Mount with LocalStorage Caching (0ms load + background update)
     useEffect(() => {
+        // 1. Try to load cached data from localStorage for instant 0ms render
+        try {
+            const cachedMain = localStorage.getItem('kospi_exit_main_data');
+            const cachedCli = localStorage.getItem('kospi_exit_cli_data');
+            const cachedMacro = localStorage.getItem('kospi_exit_macro_data');
+            const cachedPer = localStorage.getItem('kospi_exit_per_data');
+
+            if (cachedMain) {
+                const data = JSON.parse(cachedMain);
+                setBaseDollar(data.indicators.dollar);
+                setBasePer(data.indicators.per);
+                setBaseCli(data.indicators.cli);
+                setDollarIndex(data.current_status.dollar);
+                setDollarKrw(data.current_status.krw);
+                setForwardPer(data.current_status.per);
+                setOecdCliValue(data.current_status.cli);
+                setOecdCliDownMonths(data.current_status.cli_down_months);
+                setExitScore(data.risk?.score || data.current_score || 0);
+                if (data.risk) setRiskData(data.risk);
+                if (data.indicators.sentiment) {
+                    setBaseSentiment(data.indicators.sentiment);
+                    setVixValue(data.current_status.vix);
+                    setFgiValue(data.current_status.fgi);
+                    if (data.current_status.vkospi_proxy !== undefined) {
+                        setVkospiValue(data.current_status.vkospi_proxy);
+                    }
+                }
+                setLoading(false); // Disable loading overlay immediately!
+            }
+
+            if (cachedCli) {
+                const recent12 = JSON.parse(cachedCli);
+                setBaseCli(recent12);
+            }
+            if (cachedMacro) {
+                const macro1Y = JSON.parse(cachedMacro);
+                setBaseDollar(macro1Y);
+            }
+            if (cachedPer) {
+                const per1Y = JSON.parse(cachedPer);
+                setBasePer(per1Y);
+            }
+        } catch (cacheErr) {
+            console.warn("Failed to load exit-signal cache:", cacheErr);
+        }
+
+        // 2. Fetch fresh data from API in background to update the cache
         const fetchData = async () => {
             try {
                 const res = await fetch(`${API_BASE}/api/v1/exit-signal`);
                 if (res.ok) {
                     const data = await res.json();
+                    
+                    // Cache the main endpoint data
+                    localStorage.setItem('kospi_exit_main_data', JSON.stringify(data));
 
-                    // Update base chart data
+                    // Update main states
                     setBaseDollar(data.indicators.dollar);
                     setBasePer(data.indicators.per);
                     setBaseCli(data.indicators.cli);
-
-                    // Update current values
                     setDollarIndex(data.current_status.dollar);
                     setDollarKrw(data.current_status.krw);
                     setForwardPer(data.current_status.per);
@@ -164,25 +212,24 @@ export default function KospiExitAnalyzer() {
                         }
                     }
 
-                    // Fetch real CLI data for 3 lines (Dashboard)
+                    // Fetch other detail endpoints in parallel
                     try {
                         const cliRes = await fetch(`${API_BASE}/api/v1/exit-signal/cli`);
                         if (cliRes.ok) {
                             const cliDataRaw = await cliRes.json();
                             if (cliDataRaw.length > 0) {
-                                // Take last 12 items for dashboard mini chart
                                 const recent12 = cliDataRaw.slice(-12).map((item: any) => ({
-                                    month: item.date.substring(5, 7) + '월', // format "YYYY-MM" -> "MM월"
+                                    month: item.date.substring(5, 7) + '월',
                                     kor_cli: item.kor_cli,
                                     usa_cli: item.usa_cli,
                                     oecd_cli: item.oecd_cli
                                 }));
                                 setBaseCli(recent12);
+                                localStorage.setItem('kospi_exit_cli_data', JSON.stringify(recent12));
 
                                 const lastItem = cliDataRaw[cliDataRaw.length - 1];
                                 setOecdCliValue(lastItem.kor_cli);
 
-                                // Recalculate down months for Korea CLI
                                 let downMonths = 0;
                                 for (let i = cliDataRaw.length - 1; i > 0; i--) {
                                     if (cliDataRaw[i].kor_cli < cliDataRaw[i - 1].kor_cli) {
@@ -195,7 +242,6 @@ export default function KospiExitAnalyzer() {
                             }
                         }
 
-                        // Fetch Daily 1Y data for Dollar and PER to match Popup Charts
                         const [macroRes, perRes] = await Promise.all([
                             fetch(`${API_BASE}/api/v1/exit-signal/macro?period=1Y`),
                             fetch(`${API_BASE}/api/v1/exit-signal/per?period=1Y`)
@@ -203,17 +249,19 @@ export default function KospiExitAnalyzer() {
                         if (macroRes.ok) {
                             const macro1Y = await macroRes.json();
                             setBaseDollar(macro1Y);
+                            localStorage.setItem('kospi_exit_macro_data', JSON.stringify(macro1Y));
                         }
                         if (perRes.ok) {
                             const per1Y = await perRes.json();
                             setBasePer(per1Y);
+                            localStorage.setItem('kospi_exit_per_data', JSON.stringify(per1Y));
                         }
                     } catch (cliErr) {
-                        console.error("Failed to fetch CLI 3-line data:", cliErr);
+                        console.error("Failed to fetch CLI/Macro/PER background data:", cliErr);
                     }
                 }
             } catch (err) {
-                console.error("Failed to fetch Exit Signal data:", err);
+                console.error("Failed to fetch Exit Signal background data:", err);
             } finally {
                 setLoading(false);
             }

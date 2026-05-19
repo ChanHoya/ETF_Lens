@@ -112,14 +112,9 @@ export default function RiskGaugeChart({
                         <p className="text-[11px] text-gray-400 font-medium">실시간 다차원 매크로 감정 연산</p>
                     </div>
                 </div>
-                
-                <span className={`px-2.5 py-1 text-xs font-black rounded-lg border ${config.badge} flex items-center gap-1`}>
-                    <Sparkles className="w-3.5 h-3.5" />
-                    {label}
-                </span>
             </div>
 
-            <div className="flex flex-col lg:flex-row items-center lg:justify-around gap-4 lg:gap-8 relative z-10 mt-0.5">
+            <div className="flex flex-col lg:flex-row items-center lg:justify-around gap-3 lg:gap-5 relative z-10 mt-0.5">
                 {/* Visual Gauge Column */}
                 <div className="relative w-[240px] h-[135px] flex items-center justify-center select-none">
                     <svg className="w-full h-full overflow-visible" viewBox="0 0 100 55">
@@ -260,25 +255,29 @@ export default function RiskGaugeChart({
                 </div>
             </div>
 
-            {/* Bottom Insight / Action Recommendation Bar */}
-            <div className="mt-3 pt-2.5 border-t border-white/5 flex flex-col gap-2 relative z-10 text-[11px]">
-                {analysisText && (
-                    <div className="bg-white/[0.02] border border-white/10 rounded-xl p-2 text-xs leading-normal text-gray-300 font-medium relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500/40" />
-                        <span className="text-white font-extrabold mr-1.5 flex items-center gap-1 mb-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                            시장 진단 리스크 분석:
-                        </span>
-                        {analysisText}
+            {/* Bottom Insight / Action Recommendation Bar - Redesigned to be extremely compact in a single box */}
+            <div className="mt-2 pt-2 border-t border-white/5 relative z-10 text-[11px]">
+                {(analysisText || config.action) && (
+                    <div className="bg-white/[0.02] border border-white/10 rounded-xl p-2 text-xs leading-normal text-gray-300 font-medium relative overflow-hidden flex flex-col gap-1.5">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/40" />
+                        {analysisText && (
+                            <div className="flex items-baseline flex-wrap gap-x-1.5">
+                                <span className="text-white font-extrabold shrink-0 flex items-center gap-1">
+                                    <span className="w-1 h-1 rounded-full bg-indigo-400 animate-pulse" />
+                                    시장 진단:
+                                </span>
+                                <span className="text-gray-300 text-[11.5px]">{analysisText}</span>
+                            </div>
+                        )}
+                        <div className="flex items-center gap-1.5 border-t border-white/5 pt-1 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0" style={{ backgroundColor: config.color }} />
+                            <p className="text-gray-300 font-medium text-[11.5px]">
+                                <span className="text-white font-extrabold mr-1">권장 액션:</span> 
+                                <span className="text-indigo-200 font-bold">{config.action}</span>
+                            </p>
+                        </div>
                     </div>
                 )}
-                <div className="flex items-center gap-2 mt-1">
-                    <span className={`w-2 h-2 rounded-full animate-pulse shrink-0`} style={{ backgroundColor: config.color }} />
-                    <p className="text-gray-300 font-medium">
-                        <span className="text-white font-extrabold mr-1">권장 액션:</span> 
-                        {config.action}
-                    </p>
-                </div>
             </div>
         </div>
     );
