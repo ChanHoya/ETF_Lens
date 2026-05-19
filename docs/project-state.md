@@ -4,8 +4,8 @@
 
 ## Quick Summary
  
-✅ Last session: S4-2: AI 기반 리밸런싱 주문 시나리오 백테스트 시뮬레이터(S4-2) 개발 완료 및 프론트/백엔드 완전 정합 탑재
-✅ Current: Sprint 4 — Exit-Signal UI 개선 완료 (종합위험지수 세로폭 축소, 달러 차트 잘림 해결, 팝업창 헤더 고정, FGI 가이드 색상 반전)
+Base: Exit Strategy Monitoring (KOSPI)
+✅ Current: Sprint 4 — Exit-Signal UI 개선 및 로컬 스토리지 SWR 캐싱 고도화 완료 (종합위험지수 박스 초소형화, 중복 경고 배지 제거, 시장 진단/권장 액션 단일 박스 병합 및 한 줄 렌더링, 0ms 즉시 화면 로드 보장)
 ➡️ Next: S4-3 ETF 실질 비용(TER+거래비용+추적오차) 종합 진단 랭킹 보드 고도화
  
 ## Current Sprint
@@ -67,8 +67,8 @@
 - 캐시: 포트폴리오 5분 인메모리, ETF 마스터 5분 캐시
 - 클라이언트 Excel 파싱: XLSX.js (서버 업로드 없음)
 
-## Recent Changes
-
+- 2026-05-19: KOSPI Exit Strategy 모니터링 대시보드 로컬 스토리지 SWR 캐싱 도입 완료 (0ms 즉시 렌더링 보장 및 백그라운드 갱신 패턴 적용)
+- 2026-05-19: 종합위험지수(RiskGaugeChart) 극단적 소형화 레이아웃 최적화 완료 (중복 "주의" 배지 삭제, 시장진단/권장액션 단일 박스 병합 및 한 줄 flex 렌더링 구현)
 - 2026-05-19: Exit-Signal UI 개선 (종합위험지수 세로 크기 축소, 달러 차트 잘림 해결, 팝업 위치 고정, FGI 색상 반전) 완료
 - 2026-05-19: KOSPI Exit Strategy 모니터링 (Exit-Signal) 대시보드 박스 구조 및 리스크 게이지 UI 리팩토링 및 개선 완료
 - 2026-05-19: S3-3 AI Insight 실데이터 연동 고도화 및 실제 성과 지표 동적 배지(✨ 실제 성과 지표 반영됨) 전환 구현 완료
