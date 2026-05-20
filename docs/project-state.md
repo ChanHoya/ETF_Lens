@@ -5,7 +5,7 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 4 — Exit-Signal UI 개선 및 로컬 스토리지 SWR 캐싱 고도화 완료 (종합위험지수 박스 초소형화, 중복 경고 배지 제거, 시장 진단/권장 액션 단일 박스 병합 및 한 줄 렌더링, 0ms 즉시 화면 로드 보장)
+✅ Current: Sprint 4 — Exit-Signal UI 개선, 로컬 스토리지 SWR 캐싱 고도화 및 KIS 연동/텔레그램 핫픽스 완료 (종합위험지수 박스 초소형화, 중복 경고 배지 제거, 0ms 화면 로드 보장, KIS 4계좌 Rate Limit 루프 탈출 및 텔레그램 연동 401 오류 해결)
 ➡️ Next: S4-3 ETF 실질 비용(TER+거래비용+추적오차) 종합 진단 랭킹 보드 고도화
  
 ## Current Sprint
@@ -67,9 +67,10 @@ Base: Exit Strategy Monitoring (KOSPI)
 - 캐시: 포트폴리오 5분 인메모리, ETF 마스터 5분 캐시
 - 클라이언트 Excel 파싱: XLSX.js (서버 업로드 없음)
 
+- 2026-05-20: KIS API Rate Limit (EGW00133) 발생 시 무한 루프로 빠지며 Render 100초 타임아웃을 유발하던 문제를 `return None` 대신 `continue`로 교체하여 다른 키로 즉시 우회 순회하도록 핫픽스
+- 2026-05-20: 텔레그램 알림 테스트 전송 시 DB에 저장된 값을 덮어쓰거나 무시하던 문제를 test_token 파라미터 격리로 수정하고, 401 Unauthorized 등 상세 API 오류 문구를 화면에 바로 표출하여 유효성 진단 고도화
 - 2026-05-19: KOSPI Exit Strategy 모니터링 대시보드 로컬 스토리지 SWR 캐싱 도입 완료 (0ms 즉시 렌더링 보장 및 백그라운드 갱신 패턴 적용)
-- 2026-05-19: 종합위험지수(RiskGaugeChart) 극단적 소형화 레이아웃 최적화 완료 (중복 "주의" 배지 삭제, 시장진단/권장액션 단일 박스 병합 및 한 줄 flex 렌더링 구현)
-- 2026-05-19: Exit-Signal UI 개선 (종합위험지수 세로 크기 축소, 달러 차트 잘림 해결, 팝업 위치 고정, FGI 색상 반전) 완료
+- 2026-05-19: 종합위험지수(RiskGaugeChart) 극단적 소형화 레이아웃 최적화 완료 (종합위험지수 세로 크기 축소, 달러 차트 잘림 해결, FGI 색상 반전) 완료
 - 2026-05-19: KOSPI Exit Strategy 모니터링 (Exit-Signal) 대시보드 박스 구조 및 리스크 게이지 UI 리팩토링 및 개선 완료
 - 2026-05-19: S3-3 AI Insight 실데이터 연동 고도화 및 실제 성과 지표 동적 배지(✨ 실제 성과 지표 반영됨) 전환 구현 완료
 - 2026-05-19: 섹터분석 탭 SWR LocalStorage Caching 성능 극대화 고도화 완료 (0ms 즉시 로딩 보장 및 백그라운드 갱신 패턴 적용)
