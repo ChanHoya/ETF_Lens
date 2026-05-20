@@ -153,7 +153,7 @@ async def notify_rebalance_proposal(proposal_data: dict) -> None:
         
         success, _ = await send_telegram_message(html_msg, category="rebalance")
         if success:
-        logger.info("[RebalanceAlert] Telegram notification dispatched successfully.")
+            logger.info("[RebalanceAlert] Telegram notification dispatched successfully.")
     except Exception as e:
         logger.error(f"[RebalanceAlert] Failed to send Telegram alert: {e}")
 
