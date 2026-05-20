@@ -400,7 +400,7 @@ async def check_exit_signal_and_alert() -> None:
                 f"\n💡 <i>대시보드(<a href='https://etf-lens.vercel.app'>etf-lens.vercel.app</a>)에서 AI 포트폴리오 자산 추천 및 가상 체결 리밸런싱을 즉시 진행할 수 있습니다.</i>"
             )
             
-            await send_telegram_message(header + transition + body, category="exit_signal")
+            success, _ = await send_telegram_message(header + transition + body, category="exit_signal")
             print("[ExitSignalAlert] Telegram notification dispatched successfully.")
             
     except Exception as e:

@@ -100,15 +100,15 @@ async def test_notification(data: TestSchema, db: AsyncSession = Depends(get_db)
     )
     
     try:
-        success = await send_telegram_message(
+        success, error_msg = await send_telegram_message(
             test_message, 
             force=True, 
             test_token=token, 
             test_chat_id=data.telegram_chat_id
         )
         if not success:
-            raise HTTPException(status_code=400, detail="메시지 전송 실패. 토큰 또는 Chat ID를 다시 확인해 주세요.")
+            raise HTTPException(status_code=400, detail=f"전송 실패: {error_msg}")
     except Exception as e:
-        raise HTTPException(status_code=400, detail="메시지 전송 중 오류가 발생했습니다.")
+        raise HTTPException(status_code=400, detail=f"메시지 전송 중 서버 오류: {str(e)}")
             
     return {"status": "success", "msg": "테스트 텔레그램 알림을 성공적으로 발송했습니다. 수신 상태를 확인해 보세요!"}

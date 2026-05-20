@@ -57,8 +57,11 @@ async def send_telegram_message(text: str, force: bool = False, category: str = 
 
     if not token or not chat_id:
         logger.warning("[Notifier] Telegram Token or Chat ID not configured. Skipping notification.")
-        return False
+        return False, "토큰 또는 Chat ID가 설정되지 않았습니다."
 
+    token = str(token).strip()
+    chat_id = str(chat_id).strip()
+    
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {
         "chat_id": chat_id,
@@ -72,10 +75,12 @@ async def send_telegram_message(text: str, force: bool = False, category: str = 
             res = await client.post(url, json=payload)
             if res.status_code == 200:
                 logger.info("[Notifier] Telegram notification sent successfully.")
-                return True
+                return True, "성공"
             else:
-                logger.error(f"[Notifier] Telegram API failed with status {res.status_code}: {res.text}")
-                return False
+                err_msg = f"API 오류 {res.status_code}: {res.text}"
+                logger.error(f"[Notifier] {err_msg}")
+                return False, err_msg
     except Exception as e:
-        logger.error(f"[Notifier] Failed to send Telegram message due to exception: {e}")
-        return False
+        err_msg = f"네트워크 예외: {str(e)}"
+        logger.error(f"[Notifier] {err_msg}")
+        return False, err_msg

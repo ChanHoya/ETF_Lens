@@ -151,7 +151,8 @@ async def notify_rebalance_proposal(proposal_data: dict) -> None:
             f"🔗 <a href='https://etf-lens.vercel.app'>ETF Lens 대시보드</a>에서 가상 주문 체결 시뮬레이션을 실행해 보세요!"
         )
         
-        await send_telegram_message(html_msg, category="rebalance")
+        success, _ = await send_telegram_message(html_msg, category="rebalance")
+        if success:
         logger.info("[RebalanceAlert] Telegram notification dispatched successfully.")
     except Exception as e:
         logger.error(f"[RebalanceAlert] Failed to send Telegram alert: {e}")
