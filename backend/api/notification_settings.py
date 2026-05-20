@@ -99,28 +99,16 @@ async def test_notification(data: TestSchema, db: AsyncSession = Depends(get_db)
         "앞으로 포트폴리오의 <b>Exit(손절) 시그널</b> 및 <b>AI 자산 리밸런싱 추천 제안</b>이 감지되면 이 채널로 실시간 브리핑을 보내드립니다. 📈"
     )
     
-    # Temporarily override environment variables for sending this message
-    import os
-    orig_token = os.environ.get("TELEGRAM_TOKEN")
-    orig_chat_id = os.environ.get("TELEGRAM_CHAT_ID")
-    
     try:
-        os.environ["TELEGRAM_TOKEN"] = token
-        os.environ["TELEGRAM_CHAT_ID"] = data.telegram_chat_id
-        
-        success = await send_telegram_message(test_message, force=True)
+        success = await send_telegram_message(
+            test_message, 
+            force=True, 
+            test_token=token, 
+            test_chat_id=data.telegram_chat_id
+        )
         if not success:
             raise HTTPException(status_code=400, detail="메시지 전송 실패. 토큰 또는 Chat ID를 다시 확인해 주세요.")
-    finally:
-        # Restore environment variables
-        if orig_token is not None:
-            os.environ["TELEGRAM_TOKEN"] = orig_token
-        else:
-            os.environ.pop("TELEGRAM_TOKEN", None)
-            
-        if orig_chat_id is not None:
-            os.environ["TELEGRAM_CHAT_ID"] = orig_chat_id
-        else:
-            os.environ.pop("TELEGRAM_CHAT_ID", None)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="메시지 전송 중 오류가 발생했습니다.")
             
     return {"status": "success", "msg": "테스트 텔레그램 알림을 성공적으로 발송했습니다. 수신 상태를 확인해 보세요!"}

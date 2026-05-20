@@ -214,12 +214,11 @@ async def get_my_portfolio(
     
                             if balance_data.get("rt_cd") != "0":
                                 msg_cd = balance_data.get('msg_cd', '')
-                                # Rate limit error
                                 if msg_cd == "EGW00133" or "초과" in str(balance_data.get('msg1', '')):
-                                    logger.warning(f"Rate limit hit for {acc_str} with {app_key}. Waiting 2.5s and will rely on outer retry.")
+                                    logger.warning(f"Rate limit hit for {acc_str} with {app_key}. Waiting 2.5s and trying next key.")
                                     await asyncio.sleep(2.5)
-                                    # Force return None so outer loop retries THIS exact state again later
-                                    return None
+                                    # Try the next API key instead of immediately failing the account
+                                    continue
                                     
                                 # Otherwise Invalid Account for this key, keep looping to next key
                                 logger.debug(

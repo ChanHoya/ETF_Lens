@@ -21,24 +21,26 @@ async def get_notification_settings():
     # Fallback to environment variables if database is empty or errors out
     return None
 
-async def send_telegram_message(text: str, force: bool = False, category: str = "general") -> bool:
+async def send_telegram_message(text: str, force: bool = False, category: str = "general", test_token: str = None, test_chat_id: str = None) -> bool:
     """
     Send a message via Telegram Bot API asynchronously.
     
     :param text: Message body (supports HTML tags).
     :param force: If True, bypass category settings checking.
     :param category: One of "exit_signal", "rebalance", "daily_summary", "general"
+    :param test_token: Explicit token for testing purposes.
+    :param test_chat_id: Explicit chat ID for testing purposes.
     """
     settings = await get_notification_settings()
     
-    token = os.environ.get("TELEGRAM_TOKEN")
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    token = test_token or os.environ.get("TELEGRAM_TOKEN")
+    chat_id = test_chat_id or os.environ.get("TELEGRAM_CHAT_ID")
     
-    # Check database override
+    # Check database override (only if not explicitly testing)
     if settings:
-        if settings.telegram_token:
+        if settings.telegram_token and not test_token:
             token = settings.telegram_token
-        if settings.telegram_chat_id:
+        if settings.telegram_chat_id and not test_chat_id:
             chat_id = settings.telegram_chat_id
             
         # Check if the specific alert category is disabled
