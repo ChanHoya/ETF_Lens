@@ -344,37 +344,25 @@ async def check_exit_signal_and_alert() -> None:
             fgi_val = cs.get("fgi", 50)
             cli_val = cs.get("cli", 100)
             per_val = cs.get("per", 12)
+            t10y2y_val = cs.get("t10y2y", 1.0)
+            hy_val = cs.get("hy_spread", 3.0)
             
-            # Map score to label for indicator breakdown
-            def _get_vix_label(v):
-                if v < 20: return "안전"
-                if v < 25: return "주의"
-                if v < 30: return "경계"
-                return "위험"
+            breakdown = risk.get("breakdown", {})
+            vix_score = breakdown.get("vix", {}).get("score", 0)
+            vkospi_score = breakdown.get("vkospi_proxy", {}).get("score", 0)
+            fgi_score = breakdown.get("fgi", {}).get("score", 0)
+            cli_score = breakdown.get("cli", {}).get("score", 0)
+            per_score = breakdown.get("per", {}).get("score", 0)
+            t10y2y_score = breakdown.get("t10y2y", {}).get("score", 0)
+            hy_score = breakdown.get("hy_spread", {}).get("score", 0)
             
-            def _get_vkospi_label(vk):
-                if vk < 15: return "안전"
-                if vk < 20: return "주의"
-                if vk < 25: return "경계"
-                return "위험"
-
-            def _get_fgi_label(f):
-                if f >= 50: return "안전"
-                if f >= 30: return "주의"
-                if f >= 25: return "경계"
-                return "위험"
+            def _score_label(score):
+                m = {0: "안전", 1: "주의", 2: "경계", 3: "위험"}
+                return m.get(score, "안전")
             
-            def _get_cli_label(c):
-                if c >= 100.5: return "안전"
-                if c >= 100.0: return "주의"
-                if c >= 99.5: return "경계"
-                return "위험"
-                
-            def _get_per_label(p):
-                if p < 11: return "저평가"
-                if p < 13: return "적정"
-                if p < 15: return "경계"
-                return "고평가"
+            def _per_label(score):
+                m = {0: "저평가", 1: "적정", 2: "경계", 3: "고평가"}
+                return m.get(score, "적정")
             
             # Choose header emoji based on risk level
             emoji_map = {"safe": "🟢", "caution": "🟡", "warning": "🟠", "danger": "🔴"}
@@ -383,7 +371,7 @@ async def check_exit_signal_and_alert() -> None:
             # Compile nice rich text HTML
             header = f"{emoji} <b>[시장 위험도(Exit Signal) 변동 알림]</b>\n\n"
             if is_first_run:
-                transition = f"시장 종합 위험도 모니터링이 시작되었습니다.\n현재 상태: <b>{curr_label} ({curr_score}/15점)</b>\n"
+                transition = f"시장 종합 위험도 모니터링이 시작되었습니다.\n현재 상태: <b>{curr_label} ({curr_score}/21점)</b>\n"
             else:
                 def _get_label_by_level(lvl):
                     m = {"safe": "안전", "caution": "주의", "warning": "경계", "danger": "위험"}
@@ -392,11 +380,13 @@ async def check_exit_signal_and_alert() -> None:
                 
             body = (
                 f"\n📊 <b>주요 매크로 지표 현황:</b>\n"
-                f"- <b>VIX 미국 공포지수:</b> <code>{vix_val:.1f}</code> ({_get_vix_label(vix_val)})\n"
-                f"- <b>VKOSPI 국내 변동성(Proxy):</b> <code>{vkospi_val:.1f}%</code> ({_get_vkospi_label(vkospi_val)})\n"
-                f"- <b>하이브리드 FGI 지수:</b> <code>{fgi_val:.1f}</code> ({_get_fgi_label(fgi_val)})\n"
-                f"- <b>경기선행지수(CLI):</b> <code>{cli_val:.2f}</code> ({_get_cli_label(cli_val)})\n"
-                f"- <b>KOSPI PER:</b> <code>{per_val:.1f}</code> ({_get_per_label(per_val)})\n"
+                f"- <b>VIX 미국 공포지수:</b> <code>{vix_val:.1f}</code> ({_score_label(vix_score)})\n"
+                f"- <b>VKOSPI 국내 변동성(Proxy):</b> <code>{vkospi_val:.1f}%</code> ({_score_label(vkospi_score)})\n"
+                f"- <b>하이브리드 FGI 지수:</b> <code>{fgi_val:.1f}</code> ({_score_label(fgi_score)})\n"
+                f"- <b>경기선행지수(CLI):</b> <code>{cli_val:.2f}</code> ({_score_label(cli_score)})\n"
+                f"- <b>KOSPI PER:</b> <code>{per_val:.1f}</code> ({_per_label(per_score)})\n"
+                f"- <b>미 장단기 금리차 (10Y-2Y):</b> <code>{t10y2y_val:.2f}%</code> ({_score_label(t10y2y_score)})\n"
+                f"- <b>미 하이일드 스프레드:</b> <code>{hy_val:.2f}%</code> ({_score_label(hy_score)})\n"
                 f"\n💡 <i>대시보드(<a href='https://etf-lens.vercel.app'>etf-lens.vercel.app</a>)에서 AI 포트폴리오 자산 추천 및 가상 체결 리밸런싱을 즉시 진행할 수 있습니다.</i>"
             )
             
@@ -434,6 +424,12 @@ def setup_scheduler():
         await check_exit_signal_and_alert()
         trigger_replication_background()
 
+    async def _job_macro():
+        from api.exit_signal import sync_us_macro_indicators_job
+        await sync_us_macro_indicators_job()
+        await update_app_version("[macro]")
+        trigger_replication_background()
+
     # 07:00 - 경량 ETF 마스터 목록 upsert
     scheduler.add_job(_job_master, "cron", hour=7, minute=0, id="daily_etf_master_sync")
 
@@ -446,6 +442,10 @@ def setup_scheduler():
     # 21:00 - ETF 수익률/변동성/샤프 계산 (price sync 완료 후 실행)
     scheduler.add_job(_job_perf, "cron", hour=21, minute=0, id="daily_perf_calc")
 
+    # 매월 1일 08:00 - 미국 매크로 지표 동기화
+    scheduler.add_job(_job_macro, "cron", day=1, hour=8, minute=0, id="monthly_us_macro_sync")
+
     scheduler.start()
     print("DB and Email Scheduler started.")
+
 

@@ -5,8 +5,8 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 4 — Exit-Signal UI 개선, 로컬 스토리지 SWR 캐싱 고도화 및 KIS 연동/텔레그램 핫픽스 완료 (종합위험지수 박스 초소형화, 중복 경고 배지 제거, 0ms 화면 로드 보장, KIS 4계좌 Rate Limit 루프 탈출 및 텔레그램 연동 401 오류 해결)
-➡️ Next: S4-3 ETF 실질 비용(TER+거래비용+추적오차) 종합 진단 랭킹 보드 고도화
+✅ Current: Sprint 4 — Exit-Signal UI 개선, 로컬 스토리지 SWR 캐싱 고도화 및 미국 매크로 인플레이션 차트 연동 완료 (0ms 화면 로드 보장, Recharts 네온 라인 차트 구현 및 FRED 실시간 DB 동기화 탑재)
+➡️ Next: S4-4 ETF 실질 비용(TER+거래비용+추적오차) 종합 진단 랭킹 보드 고도화
  
 ## Current Sprint
  
@@ -21,7 +21,8 @@ Base: Exit Strategy Monitoring (KOSPI)
 | S4-1 | ETF 구성 종목 중복도 분석 및 포트폴리오 중복 진단 도구 개발 | ✅ done | KIS 포트폴리오의 ETF 실질 구성 종목 중복 노출율과 분산 투자 효과를 퀀트 연산하는 백엔드 엔진 및 API 엔드포인트 구현 완료 |
 | S4-2 | AI 기반 리밸런싱 주문 시나리오 백테스트 시뮬레이터 | ✅ done | 과거 Exit Signal 위험 감지에 따라 안전 자산으로 대피하고 회복 시 복귀하는 동적 자산배분 퀀트 연산 및 Recharts/로그 단말기 UI 구현 완료 |
 
-| S4-3 | ETF 실질 비용(TER+거래비용+추적오차) 종합 진단 랭킹 보드 고도화 | ⬜ planned | 금투협 공시 실질 TER과 추적오차 데이터를 연동하여 국내 상장 최적 비용 우수 ETF 상품 큐레이션 랭킹 보드 구축 |
+| S4-3 | 미국 주요 매크로 인플레이션 지표 (CPI, PPI, PCE YoY) Recharts 및 SWR 캐시 연동 고도화 | ✅ done | TradingEconomics/Investing.com 아이프레임을 제거하고 DB 캐싱 데이터 및 SWR 로컬 캐시 기반 Recharts 네온 라인 차트로 완벽 리팩토링 완료 |
+| S4-4 | ETF 실질 비용(TER+거래비용+추적오차) 종합 진단 랭킹 보드 고도화 | ⬜ planned | 금투협 공시 실질 TER과 추적오차 데이터를 연동하여 국내 상장 최적 비용 우수 ETF 상품 큐레이션 랭킹 보드 구축 |
 | S3-5 | VKOSPI / Fear & Greed 다차원 시장 감정 지표 고도화 & Bento Grid UI | ✅ done | KOSPI 실현 변동성(VKOSPI 프록시) 퀀트 연산 탑재, DB 영속성 시딩, SVG 반원형 네온 리스크 게이지 및 6패널 Bento Grid 고도화 완료 |
 | S3-4 | Vercel 배포 런타임 TDZ Client-Side Exception 디버깅 및 핫픽스 | ✅ done | MainApp.tsx 내 useEffect 의존성 평가 호이스팅/Temporal Dead Zone 참조 오류 해결 및 Vercel 실시간 배포 정상화 완료 |
 | S3-3 | AI추천 ETF 항목 클릭 시 상세 종목 팝업창 연동 | ✅ done | AI Insight, 매크로 컴퍼스, 리밸런싱 원본/대안 ETF 대상 커스텀 이벤트 버스 연동 및 클릭 마이크로 인터랙션 완벽 구현 |
@@ -67,6 +68,7 @@ Base: Exit Strategy Monitoring (KOSPI)
 - 캐시: 포트폴리오 5분 인메모리, ETF 마스터 5분 캐시
 - 클라이언트 Excel 파싱: XLSX.js (서버 업로드 없음)
 
+- 2026-05-21: 미국 주요 매크로 인플레이션 지표 (CPI, PPI, PCE YoY) Recharts 네온 라인 차트 및 SWR 로컬 캐싱 고도화 완료
 - 2026-05-20: KIS API Rate Limit (EGW00133) 발생 시 무한 루프로 빠지며 Render 100초 타임아웃을 유발하던 문제를 `return None` 대신 `continue`로 교체하여 다른 키로 즉시 우회 순회하도록 핫픽스
 - 2026-05-20: 텔레그램 알림 테스트 전송 시 DB에 저장된 값을 덮어쓰거나 무시하던 문제를 test_token 파라미터 격리로 수정하고, 401 Unauthorized 등 상세 API 오류 문구를 화면에 바로 표출하여 유효성 진단 고도화
 - 2026-05-19: KOSPI Exit Strategy 모니터링 대시보드 로컬 스토리지 SWR 캐싱 도입 완료 (0ms 즉시 렌더링 보장 및 백그라운드 갱신 패턴 적용)

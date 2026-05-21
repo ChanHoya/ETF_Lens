@@ -80,6 +80,14 @@ async def lifespan(app: FastAPI):
         except Exception as _e:
             print(f"[Startup] version update skipped: {_e}")
 
+        # ── 5. 미국 매크로 및 시장 심리 지표 시딩 ───────────────────────────────
+        try:
+            from api.exit_signal import seed_us_macro_db_if_empty, seed_market_sentiment_db_if_empty
+            await seed_market_sentiment_db_if_empty()
+            await seed_us_macro_db_if_empty()
+        except Exception as _e:
+            print(f"[Startup] Seeding skipped: {_e}")
+
         setup_scheduler()
 
     # DB 연결 대기로 인한 Render 60초 포트바인딩 타임아웃 방지를 위해 백그라운드로 실행

@@ -33,6 +33,7 @@
 | VKOSPI / FGI 다차원 지표 & Bento Grid | ✅ done | backend/core/quant_sentiment.py, backend/api/exit_signal.py, RiskGaugeChart.tsx, KospiExitAnalyzer.tsx | KOSPI 실현 변동성(VKOSPI 프록시) 퀀트 계산 탑재, DB 영속성 시딩, SVG 반원형 네온 리스크 게이지 및 6패널 Bento Grid 고도화 완료 |
 | S4-1: ETF 구성 종목 중복도 분석 백엔드 | ✅ done | backend/core/overlap_analyzer.py, backend/api/my_assets.py | 실질 주식 노출 및 ETF 간 중복도 퀀트 분석 엔진 |
 | S4-2: AI 기반 리밸런싱 백테스트 시뮬레이터 | ✅ done | backend/api/backtest.py, AIRebalanceSimulator.tsx | Exit-Signal 기반 동적 자산 대피/복귀 시뮬레이션 및 UI |
+| S4-3: 미국 주요 매크로 인플레이션 차트 | ✅ done | backend/api/exit_signal.py, DiscoverTab.tsx | DB 캐싱된 미국 CPI/PPI/PCE YoY 데이터 조회 API 및 Recharts 미려한 네온 LineChart 연동 |
 ## Status Legend
 
 - ✅ **done** — 기능 완전 구현, 운영 중

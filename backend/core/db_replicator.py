@@ -7,7 +7,8 @@ from db.database import AsyncSessionLocal as LocalSession
 from db.models import (
     Base, AppVersion, UserPrincipal, SharedPortfolio, BenchmarkPrice,
     ETFMaster, ETFEvaluation, ETFDailyPrice, ETFHoldings,
-    IndicatorHistory, StockEPSHistory, SimulationHistory
+    IndicatorHistory, StockEPSHistory, SimulationHistory,
+    MarketSentimentLog, USMacroIndicatorLog
 )
 
 logger = logging.getLogger(__name__)
@@ -83,6 +84,8 @@ async def replicate_sqlite_to_postgres():
                 (IndicatorHistory, "indicator_history"),
                 (StockEPSHistory, "stock_eps_history"),
                 (SimulationHistory, "simulation_history"),
+                (MarketSentimentLog, "market_sentiment_log"),
+                (USMacroIndicatorLog, "us_macro_indicator_log"),
                 (ETFMaster, "etf_master"),
                 (ETFEvaluation, "etf_evaluation"),
                 (ETFDailyPrice, "etf_daily_prices"),

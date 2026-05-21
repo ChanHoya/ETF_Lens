@@ -12,13 +12,15 @@ interface RiskGaugeChartProps {
         fgi: { value: number; score: number; label: string };
         cli: { value: number; score: number; label: string };
         per: { value: number; score: number; label: string };
+        t10y2y?: { value: number; score: number; label: string };
+        hy_spread?: { value: number; score: number; label: string };
     };
     analysisText?: string;
 }
 
 export default function RiskGaugeChart({
     score,
-    maxScore = 15,
+    maxScore = 21,
     level,
     label,
     breakdown,
@@ -231,7 +233,9 @@ export default function RiskGaugeChart({
                                             <span className="text-[10px]">
                                                 {key === 'cli' ? `${item.value.toFixed(2)}` : 
                                                  (key === 'vkospi_proxy' ? `${item.value.toFixed(1)}%` : 
-                                                  (key === 'per' ? `${item.value.toFixed(1)}x` : `${item.value.toFixed(1)}`))}
+                                                  (key === 'per' ? `${item.value.toFixed(1)}x` : 
+                                                   (key === 't10y2y' ? `${item.value.toFixed(2)}` : 
+                                                    (key === 'hy_spread' ? `${item.value.toFixed(2)}%` : `${item.value.toFixed(1)}`))))}
                                                 <span className="text-[9px] text-gray-500 ml-1">({item.score}점)</span>
                                             </span>
                                         </div>

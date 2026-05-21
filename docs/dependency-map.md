@@ -17,6 +17,7 @@ A living document of module relationships. Update whenever modules are added or 
 | AI Rebalancing | Presentation | AI-driven ETF portfolio rebalancing recommendations | my_assets, peer_analysis | MyDashboard | Antigravity |
 | ETF Overlap Analysis | Presentation | Pairwise holding overlaps, underlying stock exposure, and diversification efficiency score | my_assets, core/overlap_analyzer | MyDashboard | Antigravity |
 | AI Rebalance Simulator | Presentation | Dynamic risk-triggered asset rebalancing simulation engine | my_assets, api/backtest | MyDashboard | Antigravity |
+| US Macro Indicators | Presentation | US macro inflation indicator time-series charting & caching | db/models, api/exit_signal | MyDashboard | Antigravity |
 <!-- Add new modules above this line -->
 
 

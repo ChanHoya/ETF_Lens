@@ -194,3 +194,16 @@ class MarketSentimentLog(Base):
     sp500 = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
+class USMacroIndicatorLog(Base):
+    """미국 주요 거시경제 지표 로그 (CPI, PPI, PCE YoY)"""
+    __tablename__ = "us_macro_indicator_log"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    date = Column(String, index=True, nullable=False)   # YYYY-MM
+    cpi_yoy = Column(Float, nullable=True)
+    ppi_yoy = Column(Float, nullable=True)
+    pce_yoy = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+

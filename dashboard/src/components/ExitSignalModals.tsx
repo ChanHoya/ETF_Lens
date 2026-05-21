@@ -726,3 +726,239 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
         </div>
     );
 }
+
+export function T10y2yModalContent() {
+    const [data, setData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [currentStatus, setCurrentStatus] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchT10y2y = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/exit-signal`);
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.indicators && json.indicators.t10y2y) {
+                        setData(json.indicators.t10y2y);
+                    }
+                    if (json.current_status) {
+                        setCurrentStatus(json.current_status);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch T10Y2Y detail:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchT10y2y();
+    }, []);
+
+    if (loading) return <div className="flex h-full items-center justify-center text-gray-500 font-medium py-20">Loading data...</div>;
+
+    const currentVal = currentStatus ? currentStatus.t10y2y : (data.length > 0 ? data[data.length - 1].val : 0.0);
+    
+    return (
+        <div className="flex flex-col w-full gap-4">
+            <div className="bg-black/20 rounded-xl p-1 md:p-3 border border-white/5 flex flex-col">
+                <div className="flex justify-between items-center mb-2 shrink-0">
+                    <div className="flex flex-col">
+                        <h3 className="text-white font-bold ml-2 text-lg">
+                            US 10Y-2Y Treasury Yield Spread (미 장단기 금리차)
+                        </h3>
+                        <span className="text-xs text-gray-500 ml-2 mt-1 font-medium">
+                            출처: FRED (T10Y2Y)
+                        </span>
+                    </div>
+                    <div className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 shrink-0 flex flex-col items-end">
+                        <span className="text-[10px] text-gray-400 font-medium">현재 스프레드</span>
+                        <span className="text-xl font-black text-white font-mono">{currentVal.toFixed(2)}%p</span>
+                    </div>
+                </div>
+                <div className="w-full mt-2" style={{ height: '260px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                            <XAxis dataKey="month" stroke="#71717a" fontSize={10} tickMargin={8} />
+                            <YAxis domain={['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
+                            <RechartsTooltip
+                                contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                content={({ active, payload, label }) => {
+                                    if (active && payload && payload.length) {
+                                        const val = typeof payload[0].value === 'number' ? payload[0].value : Number(payload[0].value);
+                                        return (
+                                            <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
+                                                <p className="text-gray-400 mb-1">{label}</p>
+                                                <div className="flex items-center gap-2 font-medium text-emerald-400">
+                                                    <span>장단기 금리차 :</span>
+                                                    <span>{isNaN(val) ? 'N/A' : val.toFixed(2)}%p</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                }}
+                            />
+                            {/* Inversion boundary line */}
+                            <ReferenceLine y={0} stroke="#ef4444" strokeWidth={1.5} strokeDasharray="3 3" />
+                            {/* Inversion area (Below 0) */}
+                            <ReferenceArea y1={-1.5} y2={0} strokeOpacity={0} fill="#ef4444" fillOpacity={0.08} />
+                            
+                            <Line type="monotone" name="장단기 금리차" dataKey="val" stroke="#10b981" strokeWidth={3} dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            <div className="bg-indigo-900/20 border border-indigo-500/20 p-3 rounded-xl shrink-0">
+                <h4 className="font-bold text-indigo-300 mb-2 text-xs">💡 미 장단기 금리차(10Y-2Y) 리스크 매트릭스</h4>
+                <div className="flex flex-col gap-2">
+                    <p className="text-[11px] text-indigo-100/80 leading-tight text-justify">
+                        장단기 금리차 역전(10Y-2Y &lt; 0)은 역사적으로 경기 침체(Recession)의 가장 정확한 선행 지표입니다. 
+                        특히 역전 상태 자체보다, <strong>역전된 후 다시 0%p 위로 급격히 상승(Steepening Reversal)하는 국면</strong>에서 실제 경기 침체와 증시 폭락이 발생했습니다.
+                    </p>
+                    <div className="flex w-full gap-2 mt-1">
+                        <div className="flex-1 bg-[#1e1e24] p-2.5 rounded-lg border-l-4 border-emerald-500/80">
+                            <h5 className="font-bold text-emerald-500 text-xs mb-0.5">&gt; 0.0%p</h5>
+                            <span className="text-white font-semibold text-[10px] mb-0.5 block">안정 (0점)</span>
+                            <p className="text-[10px] text-gray-400 leading-tight">정상적인 우상향 금리 곡선입니다. 단, 최근 180일 내 역전 이력이 있다면 위험(3점)으로 판정합니다.</p>
+                        </div>
+                        <div className="flex-1 bg-[#1e1e24] p-2.5 rounded-lg border-l-4 border-yellow-500/80">
+                            <h5 className="font-bold text-yellow-500 text-xs mb-0.5">-0.4%p ~ 0.0%p</h5>
+                            <span className="text-white font-semibold text-[10px] mb-0.5 block">주의 (1점)</span>
+                            <p className="text-[10px] text-gray-400 leading-tight">금리 역전 진입 단계입니다. 채권 시장이 미래 경기 둔화 가능성을 선반영하고 있습니다.</p>
+                        </div>
+                        <div className="flex-1 bg-[#1e1e24] p-2.5 rounded-lg border-l-4 border-orange-500/80">
+                            <h5 className="font-bold text-orange-500 text-xs mb-0.5">&lt; -0.4%p</h5>
+                            <span className="text-white font-semibold text-[10px] mb-0.5 block">경계 (2점)</span>
+                            <p className="text-[10px] text-gray-400 leading-tight">심각한 금리 역전 상태입니다. 장기 성장에 대한 신뢰가 약화되어 리스크 관리가 필요합니다.</p>
+                        </div>
+                        <div className="flex-1 bg-[#1e1e24] p-2.5 rounded-lg border-l-4 border-rose-500/80">
+                            <h5 className="font-bold text-rose-500 text-xs mb-0.5">역전 후 재상승</h5>
+                            <span className="text-white font-semibold text-[10px] mb-0.5 block">위험 (3점)</span>
+                            <p className="text-[10px] text-gray-400 leading-tight">역전 후 0%p 돌파(Bull Steepening) 국면입니다. 역사적으로 침체 직전의 최종 탈출 신호입니다.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export function HySpreadModalContent() {
+    const [data, setData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [currentStatus, setCurrentStatus] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchHy = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/exit-signal`);
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.indicators && json.indicators.hy_spread) {
+                        setData(json.indicators.hy_spread);
+                    }
+                    if (json.current_status) {
+                        setCurrentStatus(json.current_status);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch HY Spread detail:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchHy();
+    }, []);
+
+    if (loading) return <div className="flex h-full items-center justify-center text-gray-500 font-medium py-20 font-medium">Loading data...</div>;
+
+    const currentVal = currentStatus ? currentStatus.hy_spread : (data.length > 0 ? data[data.length - 1].val : 3.0);
+
+    return (
+        <div className="flex flex-col w-full gap-4">
+            <div className="bg-black/20 rounded-xl p-1 md:p-3 border border-white/5 flex flex-col">
+                <div className="flex justify-between items-center mb-2 shrink-0">
+                    <div className="flex flex-col">
+                        <h3 className="text-white font-bold ml-2 text-lg">
+                            US High-Yield OAS (미 하이일드 신용 스프레드)
+                        </h3>
+                        <span className="text-xs text-gray-500 ml-2 mt-1 font-medium">
+                            출처: FRED (BAMLH0A0HYM2)
+                        </span>
+                    </div>
+                    <div className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 shrink-0 flex flex-col items-end">
+                        <span className="text-[10px] text-gray-400 font-medium">현재 스프레드</span>
+                        <span className="text-xl font-black text-white font-mono">{currentVal.toFixed(2)}%</span>
+                    </div>
+                </div>
+                <div className="w-full mt-2" style={{ height: '260px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                            <XAxis dataKey="month" stroke="#71717a" fontSize={10} tickMargin={8} />
+                            <YAxis domain={['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
+                            <RechartsTooltip
+                                contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                content={({ active, payload, label }) => {
+                                    if (active && payload && payload.length) {
+                                        const val = typeof payload[0].value === 'number' ? payload[0].value : Number(payload[0].value);
+                                        return (
+                                            <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
+                                                <p className="text-gray-400 mb-1">{label}</p>
+                                                <div className="flex items-center gap-2 font-medium text-amber-400">
+                                                    <span>하이일드 스프레드 :</span>
+                                                    <span>{isNaN(val) ? 'N/A' : val.toFixed(2)}%</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                }}
+                            />
+                            {/* Threshold Reference Lines */}
+                            <ReferenceLine y={3.5} stroke="#10b981" strokeWidth={1} strokeDasharray="2 2" />
+                            <ReferenceLine y={5.0} stroke="#eab308" strokeWidth={1} strokeDasharray="2 2" />
+                            <ReferenceLine y={6.5} stroke="#ef4444" strokeWidth={1} strokeDasharray="2 2" />
+                            
+                            <Line type="monotone" name="하이일드 스프레드" dataKey="val" stroke="#f59e0b" strokeWidth={3} dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            <div className="bg-indigo-900/20 border border-indigo-500/20 p-3 rounded-xl shrink-0">
+                <h4 className="font-bold text-indigo-300 mb-2 text-xs">💡 미 하이일드 신용 스프레드 가이드</h4>
+                <div className="flex flex-col gap-2">
+                    <p className="text-[11px] text-indigo-100/80 leading-tight text-justify">
+                        하이일드 신용 스프레드는 투기 등급 기업 부채의 이자율과 국채 이자율의 격차(OAS)입니다. 
+                        금융 시장의 신용 경색 및 부도 리스크를 대변하며, 기업들의 자금 조달 여건이 악화되어 스프레드가 급등할 시 증시도 강력한 하락 동조화를 보입니다.
+                    </p>
+                    <div className="flex w-full gap-2 mt-1">
+                        <div className="flex-1 bg-[#1e1e24] p-2.5 rounded-lg border-l-4 border-emerald-500/80">
+                            <h5 className="font-bold text-emerald-500 text-xs mb-0.5">&lt; 3.5%</h5>
+                            <span className="text-white font-semibold text-[10px] mb-0.5 block">안정 (0점)</span>
+                            <p className="text-[10px] text-gray-400 leading-tight">신용 위험이 낮고 자금 조달 환경이 매우 원활하여 자산 성장이 지지됩니다.</p>
+                        </div>
+                        <div className="flex-1 bg-[#1e1e24] p-2.5 rounded-lg border-l-4 border-yellow-500/80">
+                            <h5 className="font-bold text-yellow-500 text-xs mb-0.5">3.5% ~ 5.0%</h5>
+                            <span className="text-white font-semibold text-[10px] mb-0.5 block">주의 (1점)</span>
+                            <p className="text-[10px] text-gray-400 leading-tight">자금 여건이 점차 수축하기 시작하며, 잠재적 크레딧 리스크의 경고음이 울립니다.</p>
+                        </div>
+                        <div className="flex-1 bg-[#1e1e24] p-2.5 rounded-lg border-l-4 border-orange-500/80">
+                            <h5 className="font-bold text-orange-500 text-xs mb-0.5">5.0% ~ 6.5%</h5>
+                            <span className="text-white font-semibold text-[10px] mb-0.5 block">경계 (2점)</span>
+                            <p className="text-[10px] text-gray-400 leading-tight">한계 기업들의 부도 우려가 가시화되며, 리스크 오프 심리가 주식 시장을 누릅니다.</p>
+                        </div>
+                        <div className="flex-1 bg-[#1e1e24] p-2.5 rounded-lg border-l-4 border-rose-500/80">
+                            <h5 className="font-bold text-rose-500 text-xs mb-0.5">&gt; 6.5%</h5>
+                            <span className="text-white font-semibold text-[10px] mb-0.5 block">위험 (3점)</span>
+                            <p className="text-[10px] text-gray-400 leading-tight">신용 경색과 자금 마비 단계입니다. 주식 시장 투매 국면의 대표적인 신호입니다.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

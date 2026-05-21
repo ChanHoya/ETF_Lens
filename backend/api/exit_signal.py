@@ -485,6 +485,24 @@ async def seed_market_sentiment_db_if_empty():
         logger.error(f"[DB Seeding] Seeding failed: {e}")
 
 
+async def seed_us_macro_db_if_empty():
+    try:
+        from db.database import AsyncSessionLocal
+        from db.models import USMacroIndicatorLog
+        from sqlalchemy import select, func
+        
+        async with AsyncSessionLocal() as db:
+            count_res = await db.execute(select(func.count(USMacroIndicatorLog.id)))
+            count = count_res.scalar()
+            if count and count > 0:
+                return
+                
+            logger.info("[DB Seeding] USMacroIndicatorLog is empty. Starting FRED US macro seeding...")
+            await sync_us_macro_indicators_job()
+    except Exception as e:
+        logger.error(f"[DB Seeding] US Macro seeding check failed: {e}")
+
+
 @router.get("")
 async def get_exit_signal_data():
     global _cache
@@ -492,6 +510,7 @@ async def get_exit_signal_data():
 
     # 1회성 DB 자동 시딩 실행
     await seed_market_sentiment_db_if_empty()
+    await seed_us_macro_db_if_empty()
 
     if (
         _cache["data"]
@@ -530,6 +549,54 @@ async def get_exit_signal_data():
             mock["current_status"]["vkospi_proxy"] = current_vkospi
             mock["current_status"]["fgi"] = current_fgi
 
+        # ── 신규 2개 지표 수집 (T10Y2Y, BAMLH0A0HYM2) ──────────────────────────
+        t10y2y_dict = await _fetch_fred_series("T10Y2Y", days=400)
+        hy_dict = await _fetch_fred_series("BAMLH0A0HYM2", days=400)
+
+        # 월별 마지막값 집계용 로컬 helper
+        def _monthly_last_local(d: dict[str, float]) -> dict[str, float]:
+            monthly: dict[str, float] = {}
+            for date_str, val in sorted(d.items()):
+                ym = date_str[:7]
+                monthly[ym] = val
+            return monthly
+
+        # 최근 12개월 월별 추이 집계
+        t10y2y_mo = _monthly_last_local(t10y2y_dict) if t10y2y_dict else {}
+        hy_mo = _monthly_last_local(hy_dict) if hy_dict else {}
+
+        all_yms_t10y2y = sorted(t10y2y_mo.keys())[-12:]
+        t10y2y_data = [{"month": f"{int(ym[5:7]):02d}월", "val": round(t10y2y_mo[ym], 2)} for ym in all_yms_t10y2y]
+
+        all_yms_hy = sorted(hy_mo.keys())[-12:]
+        hy_data = [{"month": f"{int(ym[5:7]):02d}월", "val": round(hy_mo[ym], 2)} for ym in all_yms_hy]
+
+        mock["indicators"]["t10y2y"] = t10y2y_data
+        mock["indicators"]["hy_spread"] = hy_data
+
+        # 현재값 및 과거 180일 역전 여부 산출
+        current_t10y2y = 1.0
+        t10y2y_was_inverted = False
+        if t10y2y_dict:
+            sorted_dates = sorted(t10y2y_dict.keys())
+            current_t10y2y = t10y2y_dict[sorted_dates[-1]]
+            # 최근 180일 역전 감지 (0.0 미만이 아니라 -0.1 기준 검사)
+            for d in sorted_dates:
+                cutoff_180 = datetime.now() - timedelta(days=180)
+                if pd.to_datetime(d) >= pd.Timestamp(cutoff_180.date()):
+                    if t10y2y_dict[d] < -0.1:
+                        t10y2y_was_inverted = True
+                        break
+
+        current_hy = 3.0
+        if hy_dict:
+            sorted_dates_hy = sorted(hy_dict.keys())
+            current_hy = hy_dict[sorted_dates_hy[-1]]
+
+        mock["current_status"]["t10y2y"] = round(current_t10y2y, 2)
+        mock["current_status"]["hy_spread"] = round(current_hy, 2)
+        # ───────────────────────────────────────────────────────────────────────
+
         # DB에 오늘의 sentiment 기록 저장 (중복 방지)
         try:
             from db.database import AsyncSessionLocal
@@ -564,18 +631,14 @@ async def get_exit_signal_data():
         logger.error(f"Error compiling exit signal data: {e}")
 
     # ── 종합 위험도 산출 ──────────────────────────────────────────────────────
-    # 각 지표별 점수 부여 → 합산 → 4단계 분류
-    # VIX: < 20 안전(0), 20~25 주의(1), 25~30 경계(2), >= 30 위험(3)
-    # VKOSPI Proxy: < 15 안전(0), 15~20 주의(1), 20~25 경계(2), >= 25 위험(3)
-    # FGI: >= 50 안전(0), 30~50 주의(1), 25~30 경계(2), < 25 위험(3)
-    # CLI: >= 100.5 안전(0), 100~100.5 주의(1), 99.5~100 경계(2), < 99.5 위험(3)
-    # PER: < 11 저평가(0), 11~13 적정(1), 13~15 경계(2), >= 15 위험(3)
     cs = mock.get("current_status", {})
     vix = cs.get("vix") or 0
     vkospi = cs.get("vkospi_proxy") or 15.0
     fgi = cs.get("fgi") or 50
     cli = cs.get("cli") or 100
     per = cs.get("per") or 12
+    t10y2y = cs.get("t10y2y") or 1.0
+    hy_spread = cs.get("hy_spread") or 3.0
 
     def _vix_score(v):
         if v < 20: return 0
@@ -607,18 +670,52 @@ async def get_exit_signal_data():
         if p < 15: return 2
         return 3
 
-    # KOSPI 실현 변동성(VKOSPI Proxy)이 추가되어 총점 15점으로 확장
-    total_score = _vix_score(vix) + _vkospi_score(vkospi) + _fgi_score(fgi) + _cli_score(cli) + _per_score(per)
-    # 0~3: 안전, 4~6: 주의, 7~10: 경계, 11~15: 위험
-    if total_score <= 3:
+    def _t10y2y_score(t, was_inv):
+        if t >= 0.0:
+            if was_inv:
+                return 3  # Steepening Reversal
+            return 0
+        if t >= -0.4:
+            return 1
+        return 2
+
+    def _hy_score(h):
+        if h < 3.5: return 0
+        if h < 5.0: return 1
+        if h < 6.5: return 2
+        return 3
+
+    t10y2y_was_inverted = False
+    if 't10y2y_dict' in locals() and t10y2y_dict:
+        sorted_dates = sorted(t10y2y_dict.keys())
+        for d in sorted_dates:
+            cutoff_180 = datetime.now() - timedelta(days=180)
+            if pd.to_datetime(d) >= pd.Timestamp(cutoff_180.date()):
+                if t10y2y_dict[d] < -0.1:
+                    t10y2y_was_inverted = True
+                    break
+
+    score_vix = _vix_score(vix)
+    score_vkospi = _vkospi_score(vkospi)
+    score_fgi = _fgi_score(fgi)
+    score_cli = _cli_score(cli)
+    score_per = _per_score(per)
+    score_t10y2y = _t10y2y_score(t10y2y, t10y2y_was_inverted)
+    score_hy = _hy_score(hy_spread)
+
+    # 7대 지표 총합 최대 21점
+    total_score = score_vix + score_vkospi + score_fgi + score_cli + score_per + score_t10y2y + score_hy
+    
+    # 0~4: 안전, 5~8: 주의, 9~14: 경계, 15~21: 위험
+    if total_score <= 4:
         risk_level = "safe"
         risk_label = "안전"
         risk_color = "green"
-    elif total_score <= 6:
+    elif total_score <= 8:
         risk_level = "caution"
         risk_label = "주의"
         risk_color = "yellow"
-    elif total_score <= 10:
+    elif total_score <= 14:
         risk_level = "warning"
         risk_label = "경계"
         risk_color = "orange"
@@ -632,13 +729,15 @@ async def get_exit_signal_data():
         "label": risk_label,
         "color": risk_color,
         "score": total_score,
-        "max_score": 15,
+        "max_score": 21,
         "breakdown": {
-            "vix": {"value": round(vix, 1), "score": _vix_score(vix), "label": "VIX 공포지수"},
-            "vkospi_proxy": {"value": round(vkospi, 1), "score": _vkospi_score(vkospi), "label": "VKOSPI 변동성"},
-            "fgi": {"value": round(fgi, 1), "score": _fgi_score(fgi), "label": "공포-탐욕 지수"},
-            "cli": {"value": round(cli, 2), "score": _cli_score(cli), "label": "경기선행지수(CLI)"},
-            "per": {"value": round(per, 1), "score": _per_score(per), "label": "KOSPI PER"},
+            "vix": {"value": round(vix, 1), "score": score_vix, "label": "VIX 공포지수"},
+            "vkospi_proxy": {"value": round(vkospi, 1), "score": score_vkospi, "label": "VKOSPI 변동성"},
+            "fgi": {"value": round(fgi, 1), "score": score_fgi, "label": "공포-탐욕 지수"},
+            "cli": {"value": round(cli, 2), "score": score_cli, "label": "경기선행지수(CLI)"},
+            "per": {"value": round(per, 1), "score": score_per, "label": "KOSPI PER"},
+            "t10y2y": {"value": round(t10y2y, 2), "score": score_t10y2y, "label": "미 장단기 금리차"},
+            "hy_spread": {"value": round(hy_spread, 2), "score": score_hy, "label": "미 하이일드 스프레드"},
         },
     }
     # ─────────────────────────────────────────────────────────────────────────
@@ -1066,3 +1165,143 @@ async def debug_vix_dates():
     result = await asyncio.to_thread(_fetch_v8)
     result["server_utc"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     return result
+
+
+async def sync_us_macro_indicators_job() -> bool:
+    """FRED에서 미국 CPI, PPI, PCE 인덱스를 수집하고 YoY(%)를 계산하여 DB에 저장합니다."""
+    try:
+        from db.database import AsyncSessionLocal
+        from db.models import USMacroIndicatorLog
+        from sqlalchemy import select
+        
+        logger.info("[Macro Sync] Fetching 11 years of monthly CPI, PPI, PCE data from FRED...")
+        # 11년치 (약 4100일) 데이터 수집해 10년치 YoY 계산에 필요한 t-12 시점 확보
+        cpi_raw = await _fetch_fred_series("CPIAUCSL", days=4100)
+        ppi_raw = await _fetch_fred_series("PPIACO", days=4100)
+        pce_raw = await _fetch_fred_series("PCEPILFE", days=4100)
+        
+        def _get_monthly_map(raw_data: dict[str, float]) -> dict[str, float]:
+            res = {}
+            for k, v in raw_data.items():
+                ym = k[:7]
+                res[ym] = v
+            return res
+            
+        cpi_map = _get_monthly_map(cpi_raw)
+        ppi_map = _get_monthly_map(ppi_raw)
+        pce_map = _get_monthly_map(pce_raw)
+        
+        all_yms = sorted(list(set(cpi_map.keys()) | set(ppi_map.keys()) | set(pce_map.keys())))
+        
+        def _get_prev_month(ym: str) -> str:
+            y = int(ym[:4])
+            m = int(ym[5:7])
+            prev_y = y - 1
+            return f"{prev_y}-{m:02d}"
+            
+        db_records = {}
+        for ym in all_yms:
+            prev_ym = _get_prev_month(ym)
+            
+            cpi_yoy = None
+            if ym in cpi_map and prev_ym in cpi_map:
+                cpi_yoy = round(((cpi_map[ym] - cpi_map[prev_ym]) / cpi_map[prev_ym]) * 100, 2)
+                
+            ppi_yoy = None
+            if ym in ppi_map and prev_ym in ppi_map:
+                ppi_yoy = round(((ppi_map[ym] - ppi_map[prev_ym]) / ppi_map[prev_ym]) * 100, 2)
+                
+            pce_yoy = None
+            if ym in pce_map and prev_ym in pce_map:
+                pce_yoy = round(((pce_map[ym] - pce_map[prev_ym]) / pce_map[prev_ym]) * 100, 2)
+                
+            if cpi_yoy is not None or ppi_yoy is not None or pce_yoy is not None:
+                db_records[ym] = {
+                    "cpi_yoy": cpi_yoy,
+                    "ppi_yoy": ppi_yoy,
+                    "pce_yoy": pce_yoy
+                }
+                
+        if not db_records:
+            logger.warning("[Macro Sync] Calculated YoY records list is empty.")
+            return False
+            
+        cutoff_year = datetime.now().year - 10
+        async with AsyncSessionLocal() as db:
+            stmt = select(USMacroIndicatorLog)
+            exist_res = await db.execute(stmt)
+            exist_recs = {r.date: r for r in exist_res.scalars().all()}
+            
+            new_objs = []
+            for ym, vals in sorted(db_records.items()):
+                if int(ym[:4]) < cutoff_year:
+                    continue
+                if ym in exist_recs:
+                    rec = exist_recs[ym]
+                    rec.cpi_yoy = vals["cpi_yoy"]
+                    rec.ppi_yoy = vals["ppi_yoy"]
+                    rec.pce_yoy = vals["pce_yoy"]
+                else:
+                    new_objs.append(
+                        USMacroIndicatorLog(
+                            date=ym,
+                            cpi_yoy=vals["cpi_yoy"],
+                            ppi_yoy=vals["ppi_yoy"],
+                            pce_yoy=vals["pce_yoy"]
+                        )
+                    )
+            if new_objs:
+                db.add_all(new_objs)
+            await db.commit()
+            logger.info(f"[Macro Sync] Synced US Macro Indicators: {len(new_objs)} added, {len(exist_recs)} updated.")
+            
+            # DB 복제 비동기 백그라운드 호출
+            try:
+                from core.db_replicator import trigger_replication_background
+                trigger_replication_background()
+            except Exception as rep_err:
+                logger.error(f"[Macro Sync] Failed to trigger replication: {rep_err}")
+                
+        return True
+    except Exception as e:
+        logger.error(f"[Macro Sync] Error during macro sync: {e}", exc_info=True)
+        return False
+
+
+@router.get("/macro/us")
+async def get_us_macro_indicators():
+    """DB에 캐싱된 10년 치 월별 미국 경기지표(CPI, PPI, PCE YoY) 시계열 데이터 반환"""
+    try:
+        from db.database import AsyncSessionLocal
+        from db.models import USMacroIndicatorLog
+        from sqlalchemy import select
+        
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(USMacroIndicatorLog)
+                .order_by(USMacroIndicatorLog.date.asc())
+            )
+            records = result.scalars().all()
+            
+        return [
+            {
+                "date": r.date,
+                "cpi_yoy": r.cpi_yoy,
+                "ppi_yoy": r.ppi_yoy,
+                "pce_yoy": r.pce_yoy
+            }
+            for r in records
+        ]
+    except Exception as e:
+        logger.error(f"Failed to retrieve US macro indicators: {e}")
+        return []
+
+
+@router.get("/macro/us/sync")
+async def force_sync_us_macro_indicators():
+    """FRED 공공 API로부터 US 매크로 지표 동기화를 즉시 강제 트리거합니다."""
+    success = await sync_us_macro_indicators_job()
+    if success:
+        return {"status": "success", "message": "Successfully synchronized US Macro Indicators from FRED to DB."}
+    else:
+        return {"status": "error", "message": "Failed to synchronize US Macro Indicators."}

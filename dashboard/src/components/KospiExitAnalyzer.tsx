@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { ShieldAlert, TrendingDown, DollarSign, Activity, AlertTriangle, ArrowRight, Info, ChevronRight, BarChart2, X, AlertCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
-import { DollarModalContent, PerModalContent, CliModalContent, SentimentModalContent } from './ExitSignalModals';
+import { DollarModalContent, PerModalContent, CliModalContent, SentimentModalContent, T10y2yModalContent, HySpreadModalContent } from './ExitSignalModals';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import RiskGaugeChart from './RiskGaugeChart';
 
@@ -71,6 +71,37 @@ const useVisualSort = (data: any[], keys: string[]) => {
 };
 
 export default function KospiExitAnalyzer() {
+    // Sensible fallbacks for t10y2y and hy_spread
+    const mockT10y2yData = [
+        { month: '03월', val: -0.22 },
+        { month: '04월', val: -0.25 },
+        { month: '05월', val: -0.28 },
+        { month: '06월', val: -0.32 },
+        { month: '07월', val: -0.18 },
+        { month: '08월', val: -0.15 },
+        { month: '09월', val: -0.12 },
+        { month: '10월', val: -0.08 },
+        { month: '11월', val: -0.03 },
+        { month: '12월', val: 0.05 },
+        { month: '01월', val: 0.12 },
+        { month: '02월', val: 0.15 },
+    ];
+
+    const mockHySpreadData = [
+        { month: '03월', val: 3.12 },
+        { month: '04월', val: 3.25 },
+        { month: '05월', val: 3.42 },
+        { month: '06월', val: 3.55 },
+        { month: '07월', val: 3.32 },
+        { month: '08월', val: 3.21 },
+        { month: '09월', val: 3.15 },
+        { month: '10월', val: 3.08 },
+        { month: '11월', val: 2.98 },
+        { month: '12월', val: 3.02 },
+        { month: '01월', val: 3.10 },
+        { month: '02월', val: 3.15 },
+    ];
+
     // Current Active Status
     const [dollarIndex, setDollarIndex] = useState(mockDollarData[11].val);
     const [dollarKrw, setDollarKrw] = useState(mockDollarData[11].krw);
@@ -80,6 +111,8 @@ export default function KospiExitAnalyzer() {
     const [vixValue, setVixValue] = useState(18.5);
     const [vkospiValue, setVkospiValue] = useState(15.0);
     const [fgiValue, setFgiValue] = useState(50.0);
+    const [t10y2yValue, setT10y2yValue] = useState(mockT10y2yData[11].val);
+    const [hySpreadValue, setHySpreadValue] = useState(mockHySpreadData[11].val);
     const [exitScore, setExitScore] = useState(0);
 
     // Multi-Dimensional Risk State
@@ -88,13 +121,15 @@ export default function KospiExitAnalyzer() {
         label: '안전',
         color: 'green',
         score: 0,
-        max_score: 15,
+        max_score: 21,
         breakdown: {
             vix: { value: 18.5, score: 0, label: 'VIX 공포지수' },
             vkospi_proxy: { value: 15.0, score: 0, label: 'VKOSPI 변동성' },
             fgi: { value: 50.0, score: 0, label: '공포-탐욕 지수' },
             cli: { value: 100.4, score: 0, label: '경기선행지수(CLI)' },
-            per: { value: 12.4, score: 0, label: 'KOSPI PER' }
+            per: { value: 12.4, score: 0, label: 'KOSPI PER' },
+            t10y2y: { value: 0.15, score: 0, label: '미 장단기 금리차' },
+            hy_spread: { value: 3.15, score: 0, label: '미 하이일드 스프레드' }
         }
     });
 
@@ -103,9 +138,11 @@ export default function KospiExitAnalyzer() {
     const [basePer, setBasePer] = useState([...mockPerData]);
     const [baseCli, setBaseCli] = useState([...mockCliData]);
     const [baseSentiment, setBaseSentiment] = useState<any[]>([]);
+    const [baseT10y2y, setBaseT10y2y] = useState([...mockT10y2yData]);
+    const [baseHySpread, setBaseHySpread] = useState([...mockHySpreadData]);
 
     // Popup State
-    const [activePopup, setActivePopup] = useState<'dollar' | 'per' | 'cli' | 'vix' | 'fgi' | null>(null);
+    const [activePopup, setActivePopup] = useState<'dollar' | 'per' | 'cli' | 'vix' | 'fgi' | 't10y2y' | 'hy_spread' | null>(null);
     const [popupTop, setPopupTop] = useState(140);
     const [isMounted, setIsMounted] = useState(false); // Portal SSR 가드
 
@@ -116,7 +153,7 @@ export default function KospiExitAnalyzer() {
     useEffect(() => { setIsMounted(true); }, []);
 
     // 카드 클릭 시 헤더 위치 기준 팝업 위치 결정
-    const openPopup = (type: 'dollar' | 'per' | 'cli' | 'vix' | 'fgi', e: React.MouseEvent<HTMLDivElement>) => {
+    const openPopup = (type: 'dollar' | 'per' | 'cli' | 'vix' | 'fgi' | 't10y2y' | 'hy_spread', e: React.MouseEvent<HTMLDivElement>) => {
         if (headerRef.current) {
             const rect = headerRef.current.getBoundingClientRect();
             // Position the modal directly below the title header block
@@ -158,6 +195,14 @@ export default function KospiExitAnalyzer() {
                     if (data.current_status.vkospi_proxy !== undefined) {
                         setVkospiValue(data.current_status.vkospi_proxy);
                     }
+                }
+                if (data.indicators.t10y2y) {
+                    setBaseT10y2y(data.indicators.t10y2y);
+                    setT10y2yValue(data.current_status.t10y2y);
+                }
+                if (data.indicators.hy_spread) {
+                    setBaseHySpread(data.indicators.hy_spread);
+                    setHySpreadValue(data.current_status.hy_spread);
                 }
                 setLoading(false); // Disable loading overlay immediately!
             }
@@ -210,6 +255,15 @@ export default function KospiExitAnalyzer() {
                         if (data.current_status.vkospi_proxy !== undefined) {
                             setVkospiValue(data.current_status.vkospi_proxy);
                         }
+                    }
+
+                    if (data.indicators.t10y2y) {
+                        setBaseT10y2y(data.indicators.t10y2y);
+                        setT10y2yValue(data.current_status.t10y2y);
+                    }
+                    if (data.indicators.hy_spread) {
+                        setBaseHySpread(data.indicators.hy_spread);
+                        setHySpreadValue(data.current_status.hy_spread);
                     }
 
                     // Fetch other detail endpoints in parallel
@@ -273,6 +327,8 @@ export default function KospiExitAnalyzer() {
     const chartPer = basePer;
     const chartCli = baseCli;
     const chartSentiment = baseSentiment.length > 0 ? baseSentiment : [];
+    const chartT10y2y = baseT10y2y;
+    const chartHySpread = baseHySpread;
 
     const getNormDollar = useVisualSort(chartDollar, ['dollar', 'krw']);
     const getNormPer = useVisualSort(chartPer, ['val', 'kospi']);
@@ -306,7 +362,7 @@ export default function KospiExitAnalyzer() {
 
     const getVkospiStatus = () => {
         if (vkospiValue < 15) return { level: 'safe', text: '안정', color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' };
-        if (vkospiValue <= 20) return { level: '주의', text: '주의', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/30' };
+        if (vkospiValue <= 20) return { level: '주의', text: '주의', color: 'text-amber-400', bg: 'bg-emerald-400/10', border: 'border-amber-400/30' };
         if (vkospiValue <= 25) return { level: 'warning', text: '경계', color: 'text-orange-400', bg: 'bg-orange-400/10', border: 'border-orange-400/30' };
         return { level: 'danger', text: '위험 (변동성 극대)', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/30' };
     };
@@ -317,24 +373,42 @@ export default function KospiExitAnalyzer() {
         return { level: 'danger', text: '극단적 탐욕(매도 경고)', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/30' };
     };
 
+    const getT10y2yStatus = () => {
+        const score = riskData.breakdown?.t10y2y?.score ?? 0;
+        if (score === 0) return { level: 'safe', text: '안정', color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' };
+        if (score === 1) return { level: 'caution', text: '역전(주의)', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' };
+        if (score === 2) return { level: 'warning', text: '심각한 역전(경계)', color: 'text-orange-400', bg: 'bg-orange-400/10', border: 'border-orange-400/30' };
+        return { level: 'danger', text: '정상화(위험)', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/30' };
+    };
+
+    const getHySpreadStatus = () => {
+        const score = riskData.breakdown?.hy_spread?.score ?? 0;
+        if (score === 0) return { level: 'safe', text: '안정', color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' };
+        if (score === 1) return { level: 'caution', text: '주의', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' };
+        if (score === 2) return { level: 'warning', text: '경계', color: 'text-orange-400', bg: 'bg-orange-400/10', border: 'border-orange-400/30' };
+        return { level: 'danger', text: '위험 (신용경색)', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/30' };
+    };
+
     const dStatus = getDollarStatus();
     const pStatus = getPerStatus();
     const cStatus = getCliStatus();
     const vStatus = getVixStatus();
     const vkStatus = getVkospiStatus();
     const fStatus = getFgiStatus();
+    const tStatus = getT10y2yStatus();
+    const hyStatus = getHySpreadStatus();
 
     const exitOverall = () => {
-        if (exitScore >= 11) return { label: `위험 (매도 준비 | ${exitScore}/15점)`, color: 'text-rose-400', border: 'border-rose-500/40', bg: 'bg-rose-500/20' };
-        if (exitScore >= 6) return { label: `경계 (비중 조절 | ${exitScore}/15점)`, color: 'text-amber-400', border: 'border-amber-500/40', bg: 'bg-amber-500/20' };
-        if (exitScore >= 3) return { label: `주의 (예의 주시 | ${exitScore}/15점)`, color: 'text-orange-400', border: 'border-orange-500/40', bg: 'bg-orange-500/20' };
-        return { label: `안정 (비중 확대 | ${exitScore}/15점)`, color: 'text-emerald-400', border: 'border-emerald-500/40', bg: 'bg-emerald-500/20' };
+        if (exitScore >= 15) return { label: `위험 (매도 준비 | ${exitScore}/21점)`, color: 'text-rose-400', border: 'border-rose-500/40', bg: 'bg-rose-500/20' };
+        if (exitScore >= 9) return { label: `경계 (비중 조절 | ${exitScore}/21점)`, color: 'text-amber-400', border: 'border-amber-500/40', bg: 'bg-amber-500/20' };
+        if (exitScore >= 5) return { label: `주의 (예의 주시 | ${exitScore}/21점)`, color: 'text-orange-400', border: 'border-orange-500/40', bg: 'bg-orange-500/20' };
+        return { label: `안정 (비중 확대 | ${exitScore}/21점)`, color: 'text-emerald-400', border: 'border-emerald-500/40', bg: 'bg-emerald-500/20' };
     };
 
     const getExitAnalysisText = () => {
-        if (exitScore >= 11) return `종합 위험도가 ${exitScore}점으로 위험 수준입니다. 거시 지표 및 국내 변동성이 극대화되었으므로 주식 비중을 최소화하고 리스크 관리에 집중하세요.`;
-        if (exitScore >= 6) return `종합 위험도가 ${exitScore}점입니다. 주요 거시 지표에서 불안 신호가 감지되고 있으므로 포트폴리오 비중을 선제적으로 조절하시기 바랍니다.`;
-        if (exitScore >= 3) return `종합 위험도가 ${exitScore}점입니다. 일부 변동성 지표와 밸류에이션에서 미세한 주의 신호가 확인됩니다. 시장 추이를 예의주시하세요.`;
+        if (exitScore >= 15) return `종합 위험도가 ${exitScore}점으로 위험 수준입니다. 거시 지표 및 국내 변동성이 극대화되었으므로 주식 비중을 최소화하고 리스크 관리에 집중하세요.`;
+        if (exitScore >= 9) return `종합 위험도가 ${exitScore}점입니다. 주요 거시 지표에서 불안 신호가 감지되고 있으므로 포트폴리오 비중을 선제적으로 조절하시기 바랍니다.`;
+        if (exitScore >= 5) return `종합 위험도가 ${exitScore}점입니다. 일부 변동성 지표와 밸류에이션에서 미세한 주의 신호가 확인됩니다. 시장 추이를 예의주시하세요.`;
         return `종합 위험도가 ${exitScore}점으로 매우 안정적인 국면입니다. 거시 지표, 밸류에이션, 투자자 심리가 모두 양호하므로 적극적인 비중 확대를 추천합니다.`;
     };
 
@@ -369,7 +443,7 @@ export default function KospiExitAnalyzer() {
                 <div className="md:col-span-2 h-full">
                     <RiskGaugeChart 
                         score={exitScore} 
-                        maxScore={15} 
+                        maxScore={21} 
                         level={riskData.level} 
                         label={riskData.label} 
                         breakdown={riskData.breakdown} 
@@ -722,6 +796,131 @@ export default function KospiExitAnalyzer() {
                     </div>
                 </div>
 
+                {/* Bento Card 7: US 10Y-2Y Spread */}
+                <div 
+                    onClick={(e) => openPopup('t10y2y', e)} 
+                    className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-3xl p-4 flex flex-col justify-between hover:bg-white/[0.05] hover:scale-[1.01] hover:shadow-2xl transition-all duration-300 relative overflow-hidden group min-h-[250px]"
+                >
+                    <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center gap-2">
+                            <span className="p-1.5 rounded-lg bg-white/5 border border-white/5">
+                                <TrendingDown className="w-4 h-4 text-blue-400" />
+                            </span>
+                            <h4 className="text-white text-xs font-extrabold">미 장단기 금리차 (10Y-2Y)</h4>
+                        </div>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${tStatus.bg} ${tStatus.color} ${tStatus.border}`}>
+                            {tStatus.text}
+                        </span>
+                    </div>
+
+                    <div className="flex items-baseline gap-2 mb-2">
+                        <span className={`text-2xl font-black ${tStatus.color} font-mono transition-all duration-300`}>{t10y2yValue.toFixed(2)}%</span>
+                        <span className="text-xs text-gray-400 font-medium">국채 10년 - 2년</span>
+                    </div>
+
+                    <div className="flex-1 w-full min-h-[100px] -ml-2 -mb-2">
+                        {loading || baseT10y2y.length === 0 ? (
+                            <ChartLoadingPlaceholder height={100} message="장단기 금리차 로딩중" />
+                        ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartT10y2y} margin={{ top: 5, right: 6, left: 6, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                <XAxis dataKey="month" hide={true} />
+                                <YAxis hide={true} domain={['auto', 'auto']} />
+                                <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3" />
+                                <RechartsTooltip
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', borderRadius: '8px' }}
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            return (
+                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[10px]">
+                                                    <p className="text-gray-400 mb-1">{label}</p>
+                                                    {payload.map((entry: any, index: number) => (
+                                                        <div key={`item-${index}`} className="flex items-center gap-2 font-medium" style={{ color: entry.color }}>
+                                                            <span>스프레드 :</span>
+                                                            <span>{entry.value.toFixed(2)}%</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
+                                />
+                                <Line name="t10y2y" type="monotone" dataKey="val" stroke={t10y2yValue < 0 ? '#f43f5e' : '#10b981'} strokeWidth={2} dot={false} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                        )}
+                    </div>
+
+                    <div className="mt-3 text-[10px] text-gray-400 bg-black/30 p-2 rounded-xl flex items-start gap-1.5 border border-white/5">
+                        <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
+                        <p>금리 역전(0% 미만) 이후 급격한 정상화(Steepening) 시 경기 침체가 임박한 강력한 매도 신호입니다.</p>
+                    </div>
+                </div>
+
+                {/* Bento Card 8: US High-Yield OAS */}
+                <div 
+                    onClick={(e) => openPopup('hy_spread', e)} 
+                    className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-3xl p-4 flex flex-col justify-between hover:bg-white/[0.05] hover:scale-[1.01] hover:shadow-2xl transition-all duration-300 relative overflow-hidden group min-h-[250px]"
+                >
+                    <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center gap-2">
+                            <span className="p-1.5 rounded-lg bg-white/5 border border-white/5">
+                                <DollarSign className="w-4 h-4 text-purple-400" />
+                            </span>
+                            <h4 className="text-white text-xs font-extrabold">미 하이일드 스프레드 (OAS)</h4>
+                        </div>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${hyStatus.bg} ${hyStatus.color} ${hyStatus.border}`}>
+                            {hyStatus.text}
+                        </span>
+                    </div>
+
+                    <div className="flex items-baseline gap-2 mb-2">
+                        <span className={`text-2xl font-black ${hyStatus.color} font-mono transition-all duration-300`}>{hySpreadValue.toFixed(2)}%</span>
+                        <span className="text-xs text-gray-400 font-medium">크레딧 부도 위험</span>
+                    </div>
+
+                    <div className="flex-1 w-full min-h-[100px] -ml-2 -mb-2">
+                        {loading || baseHySpread.length === 0 ? (
+                            <ChartLoadingPlaceholder height={100} message="하이일드 스프레드 로딩중" />
+                        ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartHySpread} margin={{ top: 5, right: 6, left: 6, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                <XAxis dataKey="month" hide={true} />
+                                <YAxis hide={true} domain={['auto', 'auto']} />
+                                <RechartsTooltip
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', borderRadius: '8px' }}
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            return (
+                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[10px]">
+                                                    <p className="text-gray-400 mb-1">{label}</p>
+                                                    {payload.map((entry: any, index: number) => (
+                                                        <div key={`item-${index}`} className="flex items-center gap-2 font-medium" style={{ color: entry.color }}>
+                                                            <span>스프레드 :</span>
+                                                            <span>{entry.value.toFixed(2)}%</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
+                                />
+                                <Line name="hy_spread" type="monotone" dataKey="val" stroke={hySpreadValue >= 5.0 ? '#f43f5e' : '#10b981'} strokeWidth={2} dot={false} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                        )}
+                    </div>
+
+                    <div className="mt-3 text-[10px] text-gray-400 bg-black/30 p-2 rounded-xl flex items-start gap-1.5 border border-white/5">
+                        <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
+                        <p>글로벌 신용 스프레드로, 5.0% 이상 돌파 시 신용 경색 우려가 높아지며 채권 위험관리가 필수적입니다.</p>
+                    </div>
+                </div>
+
             </div>
 
             {/* Exchange rate-stock decoupling guide with premium glassmorphism */}
@@ -757,10 +956,14 @@ export default function KospiExitAnalyzer() {
                                 {activePopup === 'cli' && <TrendingDown className="w-4.5 h-4.5 text-rose-400" />}
                                 {activePopup === 'vix' && <Activity className="w-4.5 h-4.5 text-purple-400" />}
                                 {activePopup === 'fgi' && <Activity className="w-4.5 h-4.5 text-amber-400" />}
+                                {activePopup === 't10y2y' && <TrendingDown className="w-4.5 h-4.5 text-blue-400" />}
+                                {activePopup === 'hy_spread' && <DollarSign className="w-4.5 h-4.5 text-purple-400" />}
                                 {activePopup === 'dollar' ? '달러 인덱스 & 환율 장기 추이 상세조회' :
                                     (activePopup === 'per' ? '주요 섹터 포워드 PER 밸류에이션 비교' :
                                         (activePopup === 'cli' ? '경기 선행 지수 (CLI) 매크로 주기 분석' :
-                                            (activePopup === 'vix' ? 'VIX & VKOSPI 다차원 변동성 분석' : '글로벌 Fear & Greed Index 투자 심리')))}
+                                            (activePopup === 'vix' ? 'VIX & VKOSPI 다차원 변동성 분석' :
+                                                (activePopup === 'fgi' ? '글로벌 Fear & Greed Index 투자 심리' :
+                                                    (activePopup === 't10y2y' ? '미국 국채 장단기 금리차 (10Y-2Y) 상세분석' : '미국 하이일드 채권 스프레드 (OAS) 상세분석')))))}
                             </h2>
                             <button onClick={() => setActivePopup(null)} className="p-1.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white">
                                 <X className="w-4.5 h-4.5" />
@@ -774,6 +977,8 @@ export default function KospiExitAnalyzer() {
                             {activePopup === 'cli' && <CliModalContent />}
                             {activePopup === 'vix' && <SentimentModalContent isFgi={false} />}
                             {activePopup === 'fgi' && <SentimentModalContent isFgi={true} />}
+                            {activePopup === 't10y2y' && <T10y2yModalContent />}
+                            {activePopup === 'hy_spread' && <HySpreadModalContent />}
                         </div>
                     </div>
                 </div>,
