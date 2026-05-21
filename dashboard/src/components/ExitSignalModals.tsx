@@ -786,25 +786,33 @@ export function T10y2yModalContent() {
                                 content={({ active, payload, label }) => {
                                     if (active && payload && payload.length) {
                                         const val = typeof payload[0].value === 'number' ? payload[0].value : Number(payload[0].value);
+                                        const zoneColor = val < -0.4 ? '#f97316' : val < 0 ? '#eab308' : '#10b981';
+                                        const zoneLabel = val < -0.4 ? '경계 (2점)' : val < 0 ? '주의 (1점)' : '안정 (0점)';
                                         return (
                                             <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
                                                 <p className="text-gray-400 mb-1">{label}</p>
-                                                <div className="flex items-center gap-2 font-medium text-emerald-400">
+                                                <div className="flex items-center gap-2 font-medium" style={{ color: zoneColor }}>
                                                     <span>장단기 금리차 :</span>
                                                     <span>{isNaN(val) ? 'N/A' : val.toFixed(2)}%p</span>
                                                 </div>
+                                                <div className="text-[10px] mt-0.5" style={{ color: zoneColor }}>{zoneLabel}</div>
                                             </div>
                                         );
                                     }
                                     return null;
                                 }}
                             />
-                            {/* Inversion boundary line */}
-                            <ReferenceLine y={0} stroke="#ef4444" strokeWidth={1.5} strokeDasharray="3 3" />
-                            {/* Inversion area (Below 0) */}
-                            <ReferenceArea y1={-1.5} y2={0} strokeOpacity={0} fill="#ef4444" fillOpacity={0.08} />
-                            
-                            <Line type="monotone" name="장단기 금리차" dataKey="val" stroke="#10b981" strokeWidth={3} dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                            {/* Zone: Safe (above 0) */}
+                            <ReferenceArea y1={0} y2={3} strokeOpacity={0} fill="#10b981" fillOpacity={0.06} />
+                            {/* Zone: Caution (-0.4 ~ 0) */}
+                            <ReferenceArea y1={-0.4} y2={0} strokeOpacity={0} fill="#eab308" fillOpacity={0.15} />
+                            {/* Zone: Warning (below -0.4) */}
+                            <ReferenceArea y1={-3} y2={-0.4} strokeOpacity={0} fill="#f97316" fillOpacity={0.15} />
+                            {/* Critical threshold: inversion line */}
+                            <ReferenceLine y={0} stroke="#ef4444" strokeWidth={2} strokeDasharray="4 4" label={{ value: '역전 경계', position: 'insideTopLeft', fill: '#ef4444', fontSize: 10 }} />
+                            {/* Warning line: deep inversion */}
+                            <ReferenceLine y={-0.4} stroke="#f97316" strokeWidth={1.5} strokeDasharray="3 5" label={{ value: '경계(-0.4%p)', position: 'insideBottomLeft', fill: '#f97316', fontSize: 9 }} />
+                            <Line type="monotone" name="장단기 금리차" dataKey="val" stroke={currentVal < -0.4 ? '#f97316' : currentVal < 0 ? '#eab308' : '#10b981'} strokeWidth={3} dot={{ r: 3, fill: currentVal < -0.4 ? '#f97316' : currentVal < 0 ? '#eab308' : '#10b981', strokeWidth: 0 }} activeDot={{ r: 6 }} />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
@@ -904,25 +912,32 @@ export function HySpreadModalContent() {
                                 content={({ active, payload, label }) => {
                                     if (active && payload && payload.length) {
                                         const val = typeof payload[0].value === 'number' ? payload[0].value : Number(payload[0].value);
+                                        const zoneColor = val >= 6.5 ? '#ef4444' : val >= 5.0 ? '#f97316' : val >= 3.5 ? '#eab308' : '#10b981';
+                                        const zoneLabel = val >= 6.5 ? '위험 (3점)' : val >= 5.0 ? '경계 (2점)' : val >= 3.5 ? '주의 (1점)' : '안정 (0점)';
                                         return (
                                             <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
                                                 <p className="text-gray-400 mb-1">{label}</p>
-                                                <div className="flex items-center gap-2 font-medium text-amber-400">
+                                                <div className="flex items-center gap-2 font-medium" style={{ color: zoneColor }}>
                                                     <span>하이일드 스프레드 :</span>
                                                     <span>{isNaN(val) ? 'N/A' : val.toFixed(2)}%</span>
                                                 </div>
+                                                <div className="text-[10px] mt-0.5" style={{ color: zoneColor }}>{zoneLabel}</div>
                                             </div>
                                         );
                                     }
                                     return null;
                                 }}
                             />
-                            {/* Threshold Reference Lines */}
-                            <ReferenceLine y={3.5} stroke="#10b981" strokeWidth={1} strokeDasharray="2 2" />
-                            <ReferenceLine y={5.0} stroke="#eab308" strokeWidth={1} strokeDasharray="2 2" />
-                            <ReferenceLine y={6.5} stroke="#ef4444" strokeWidth={1} strokeDasharray="2 2" />
-                            
-                            <Line type="monotone" name="하이일드 스프레드" dataKey="val" stroke="#f59e0b" strokeWidth={3} dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                            {/* Zone backgrounds */}
+                            <ReferenceArea y1={0} y2={3.5} strokeOpacity={0} fill="#10b981" fillOpacity={0.07} />
+                            <ReferenceArea y1={3.5} y2={5.0} strokeOpacity={0} fill="#eab308" fillOpacity={0.09} />
+                            <ReferenceArea y1={5.0} y2={6.5} strokeOpacity={0} fill="#f97316" fillOpacity={0.12} />
+                            <ReferenceArea y1={6.5} y2={20} strokeOpacity={0} fill="#ef4444" fillOpacity={0.15} />
+                            {/* Threshold reference lines */}
+                            <ReferenceLine y={3.5} stroke="#10b981" strokeWidth={1.5} strokeDasharray="3 4" label={{ value: '3.5%', position: 'insideTopLeft', fill: '#10b981', fontSize: 9 }} />
+                            <ReferenceLine y={5.0} stroke="#f97316" strokeWidth={1.5} strokeDasharray="4 3" label={{ value: '5.0%', position: 'insideTopLeft', fill: '#f97316', fontSize: 9 }} />
+                            <ReferenceLine y={6.5} stroke="#ef4444" strokeWidth={1.5} strokeDasharray="2 3" label={{ value: '6.5%', position: 'insideTopLeft', fill: '#ef4444', fontSize: 9 }} />
+                            <Line type="monotone" name="하이일드 스프레드" dataKey="val" stroke={currentVal >= 6.5 ? '#ef4444' : currentVal >= 5.0 ? '#f97316' : currentVal >= 3.5 ? '#eab308' : '#10b981'} strokeWidth={3} dot={{ r: 3, fill: currentVal >= 6.5 ? '#ef4444' : currentVal >= 5.0 ? '#f97316' : currentVal >= 3.5 ? '#eab308' : '#10b981', strokeWidth: 0 }} activeDot={{ r: 6 }} />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>

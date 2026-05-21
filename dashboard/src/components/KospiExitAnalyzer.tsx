@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ShieldAlert, TrendingDown, DollarSign, Activity, AlertTriangle, ArrowRight, Info, ChevronRight, BarChart2, X, AlertCircle } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 import { DollarModalContent, PerModalContent, CliModalContent, SentimentModalContent, T10y2yModalContent, HySpreadModalContent } from './ExitSignalModals';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
@@ -113,6 +113,8 @@ export default function KospiExitAnalyzer() {
     const [fgiValue, setFgiValue] = useState(50.0);
     const [t10y2yValue, setT10y2yValue] = useState(mockT10y2yData[11].val);
     const [hySpreadValue, setHySpreadValue] = useState(mockHySpreadData[11].val);
+    // Track if API data has been loaded (to know when to override mock values)
+    const [apiLoaded, setApiLoaded] = useState(false);
     const [exitScore, setExitScore] = useState(0);
 
     // Multi-Dimensional Risk State
@@ -198,12 +200,13 @@ export default function KospiExitAnalyzer() {
                 }
                 if (data.indicators.t10y2y) {
                     setBaseT10y2y(data.indicators.t10y2y);
-                    setT10y2yValue(data.current_status.t10y2y);
+                    if (data.current_status.t10y2y !== undefined) setT10y2yValue(data.current_status.t10y2y);
                 }
                 if (data.indicators.hy_spread) {
                     setBaseHySpread(data.indicators.hy_spread);
-                    setHySpreadValue(data.current_status.hy_spread);
+                    if (data.current_status.hy_spread !== undefined) setHySpreadValue(data.current_status.hy_spread);
                 }
+                setApiLoaded(true);
                 setLoading(false); // Disable loading overlay immediately!
             }
 
@@ -259,11 +262,11 @@ export default function KospiExitAnalyzer() {
 
                     if (data.indicators.t10y2y) {
                         setBaseT10y2y(data.indicators.t10y2y);
-                        setT10y2yValue(data.current_status.t10y2y);
+                        if (data.current_status.t10y2y !== undefined) setT10y2yValue(data.current_status.t10y2y);
                     }
                     if (data.indicators.hy_spread) {
                         setBaseHySpread(data.indicators.hy_spread);
-                        setHySpreadValue(data.current_status.hy_spread);
+                        if (data.current_status.hy_spread !== undefined) setHySpreadValue(data.current_status.hy_spread);
                     }
 
                     // Fetch other detail endpoints in parallel
@@ -827,27 +830,31 @@ export default function KospiExitAnalyzer() {
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                 <XAxis dataKey="month" hide={true} />
                                 <YAxis hide={true} domain={['auto', 'auto']} />
-                                <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3" />
+                                {/* Danger zone: inversion area */}
+                                <ReferenceArea y1={-3} y2={0} strokeOpacity={0} fill="#ef4444" fillOpacity={0.10} />
+                                {/* Reference lines: threshold boundaries */}
+                                <ReferenceLine y={0} stroke="#ef4444" strokeWidth={1.2} strokeDasharray="3 3" />
+                                <ReferenceLine y={-0.4} stroke="#f97316" strokeWidth={1} strokeDasharray="2 4" />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', borderRadius: '8px' }}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
+                                            const v = typeof payload[0].value === 'number' ? payload[0].value : Number(payload[0].value);
+                                            const zoneColor = v < -0.4 ? '#f97316' : v < 0 ? '#eab308' : '#10b981';
                                             return (
                                                 <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[10px]">
                                                     <p className="text-gray-400 mb-1">{label}</p>
-                                                    {payload.map((entry: any, index: number) => (
-                                                        <div key={`item-${index}`} className="flex items-center gap-2 font-medium" style={{ color: entry.color }}>
-                                                            <span>스프레드 :</span>
-                                                            <span>{entry.value.toFixed(2)}%</span>
-                                                        </div>
-                                                    ))}
+                                                    <div className="flex items-center gap-2 font-medium" style={{ color: zoneColor }}>
+                                                        <span>스프레드 :</span>
+                                                        <span>{isNaN(v) ? 'N/A' : v.toFixed(2)}%p</span>
+                                                    </div>
                                                 </div>
                                             );
                                         }
                                         return null;
                                     }}
                                 />
-                                <Line name="t10y2y" type="monotone" dataKey="val" stroke={t10y2yValue < 0 ? '#f43f5e' : '#10b981'} strokeWidth={2} dot={false} />
+                                <Line name="t10y2y" type="monotone" dataKey="val" stroke={t10y2yValue < -0.4 ? '#f97316' : t10y2yValue < 0 ? '#eab308' : '#10b981'} strokeWidth={2} dot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}
@@ -890,26 +897,38 @@ export default function KospiExitAnalyzer() {
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
                                 <XAxis dataKey="month" hide={true} />
                                 <YAxis hide={true} domain={['auto', 'auto']} />
+                                {/* Safe zone */}
+                                <ReferenceArea y1={0} y2={3.5} strokeOpacity={0} fill="#10b981" fillOpacity={0.06} />
+                                {/* Caution zone */}
+                                <ReferenceArea y1={3.5} y2={5.0} strokeOpacity={0} fill="#eab308" fillOpacity={0.06} />
+                                {/* Warning zone */}
+                                <ReferenceArea y1={5.0} y2={6.5} strokeOpacity={0} fill="#f97316" fillOpacity={0.08} />
+                                {/* Danger zone */}
+                                <ReferenceArea y1={6.5} y2={20} strokeOpacity={0} fill="#ef4444" fillOpacity={0.10} />
+                                {/* Threshold reference lines */}
+                                <ReferenceLine y={3.5} stroke="#10b981" strokeWidth={1} strokeDasharray="2 4" />
+                                <ReferenceLine y={5.0} stroke="#f97316" strokeWidth={1.2} strokeDasharray="3 3" />
+                                <ReferenceLine y={6.5} stroke="#ef4444" strokeWidth={1} strokeDasharray="2 2" />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', borderRadius: '8px' }}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
+                                            const v = typeof payload[0].value === 'number' ? payload[0].value : Number(payload[0].value);
+                                            const zoneColor = v >= 6.5 ? '#ef4444' : v >= 5.0 ? '#f97316' : v >= 3.5 ? '#eab308' : '#10b981';
                                             return (
                                                 <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[10px]">
                                                     <p className="text-gray-400 mb-1">{label}</p>
-                                                    {payload.map((entry: any, index: number) => (
-                                                        <div key={`item-${index}`} className="flex items-center gap-2 font-medium" style={{ color: entry.color }}>
-                                                            <span>스프레드 :</span>
-                                                            <span>{entry.value.toFixed(2)}%</span>
-                                                        </div>
-                                                    ))}
+                                                    <div className="flex items-center gap-2 font-medium" style={{ color: zoneColor }}>
+                                                        <span>스프레드 :</span>
+                                                        <span>{isNaN(v) ? 'N/A' : v.toFixed(2)}%</span>
+                                                    </div>
                                                 </div>
                                             );
                                         }
                                         return null;
                                     }}
                                 />
-                                <Line name="hy_spread" type="monotone" dataKey="val" stroke={hySpreadValue >= 5.0 ? '#f43f5e' : '#10b981'} strokeWidth={2} dot={false} />
+                                <Line name="hy_spread" type="monotone" dataKey="val" stroke={hySpreadValue >= 6.5 ? '#ef4444' : hySpreadValue >= 5.0 ? '#f97316' : hySpreadValue >= 3.5 ? '#eab308' : '#10b981'} strokeWidth={2} dot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}
