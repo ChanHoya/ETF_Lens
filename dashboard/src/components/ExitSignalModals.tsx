@@ -731,6 +731,7 @@ export function T10y2yModalContent() {
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentStatus, setCurrentStatus] = useState<any>(null);
+    const [t10y2yScore, setT10y2yScore] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchT10y2y = async () => {
@@ -743,6 +744,10 @@ export function T10y2yModalContent() {
                     }
                     if (json.current_status) {
                         setCurrentStatus(json.current_status);
+                    }
+                    // 백엔드 실제 점수 가져오기 (역전 이력 반영됨)
+                    if (json.risk && json.risk.breakdown && json.risk.breakdown.t10y2y) {
+                        setT10y2yScore(json.risk.breakdown.t10y2y.score);
                     }
                 }
             } catch (err) {
@@ -757,9 +762,51 @@ export function T10y2yModalContent() {
     if (loading) return <div className="flex h-full items-center justify-center text-gray-500 font-medium py-20">Loading data...</div>;
 
     const currentVal = currentStatus ? currentStatus.t10y2y : (data.length > 0 ? data[data.length - 1].val : 0.0);
+
+    // 판정: 백엔드 점수 우선, 없으면 프론트엔드 계산 (역전 이력 감지 불가)
+    const effectiveScore = t10y2yScore !== null ? t10y2yScore : (currentVal >= 0 ? 0 : currentVal >= -0.4 ? 1 : 2);
+    const statusMap: Record<number, { label: string; sub: string; borderColor: string; bgColor: string; textColor: string }> = {
+        3: {
+            label: '⚠️ 위험 (3점) — 역전 후 재상승 (Bull Steepening)',
+            sub: '현재 +' + currentVal.toFixed(2) + '%p는 양수이지만, 최근 180일 내 역전(-0.1%p 이하) 이력이 확인됩니다. 역전에서 회복되어 0%p를 재돌파하는 이 국면은 역사적으로 경기침체 직전의 최종 신호입니다. 단순히 양수 값을 보고 "안정"으로 오해해서는 안 됩니다.',
+            borderColor: 'border-rose-500/50', bgColor: 'bg-rose-900/20', textColor: 'text-rose-400',
+        },
+        2: {
+            label: '🟠 경계 (2점) — 심각한 역전',
+            sub: '수치가 -0.4%p 미만으로 심각한 역전 상태입니다. 장기 성장에 대한 시장 신뢰가 약화되어 있습니다.',
+            borderColor: 'border-orange-500/50', bgColor: 'bg-orange-900/20', textColor: 'text-orange-400',
+        },
+        1: {
+            label: '🟡 주의 (1점) — 역전 진입 단계',
+            sub: '-0.4%p ~ 0%p 사이로 역전 진입 중입니다. 채권 시장이 미래 경기 둔화 가능성을 선반영하고 있습니다.',
+            borderColor: 'border-yellow-500/50', bgColor: 'bg-yellow-900/20', textColor: 'text-yellow-400',
+        },
+        0: {
+            label: '🟢 안정 (0점) — 정상 우상향',
+            sub: '안정적인 양(+)의 스프레드로 최근 역전 이력이 없습니다. 정상적인 금리 구조입니다.',
+            borderColor: 'border-emerald-500/50', bgColor: 'bg-emerald-900/20', textColor: 'text-emerald-400',
+        },
+    };
+    const statusInfo = statusMap[effectiveScore] || statusMap[0];
+
     
     return (
         <div className="flex flex-col w-full gap-4">
+            {/* 현재 상태 판정 배너 — 백엔드 점수 기반 */}
+            <div className={`flex items-start gap-3 p-4 rounded-xl border ${statusInfo.borderColor} ${statusInfo.bgColor}`}>
+                <div className="flex flex-col flex-1 min-w-0">
+                    <span className={`font-extrabold text-sm ${statusInfo.textColor}`}>{statusInfo.label}</span>
+                    <span className="text-[11px] text-gray-400 mt-1 leading-snug">{statusInfo.sub}</span>
+                </div>
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                    <span className="text-[10px] text-gray-500">현재 스프레드</span>
+                    <span className={`text-2xl font-black font-mono ${statusInfo.textColor}`}>{currentVal >= 0 ? '+' : ''}{currentVal.toFixed(2)}%p</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${statusInfo.borderColor} ${statusInfo.textColor} bg-black/20`}>
+                        위험도 {effectiveScore}점 / 3점
+                    </span>
+                </div>
+            </div>
+
             <div className="bg-black/20 rounded-xl p-1 md:p-3 border border-white/5 flex flex-col">
                 <div className="flex justify-between items-center mb-2 shrink-0">
                     <div className="flex flex-col">
@@ -769,10 +816,6 @@ export function T10y2yModalContent() {
                         <span className="text-xs text-gray-500 ml-2 mt-1 font-medium">
                             출처: FRED (T10Y2Y)
                         </span>
-                    </div>
-                    <div className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 shrink-0 flex flex-col items-end">
-                        <span className="text-[10px] text-gray-400 font-medium">현재 스프레드</span>
-                        <span className="text-xl font-black text-white font-mono">{currentVal.toFixed(2)}%p</span>
                     </div>
                 </div>
                 <div className="w-full mt-2" style={{ height: '260px' }}>
