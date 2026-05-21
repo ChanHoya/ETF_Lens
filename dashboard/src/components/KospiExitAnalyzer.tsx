@@ -156,15 +156,26 @@ export default function KospiExitAnalyzer() {
 
     // 카드 클릭 시 헤더 위치 기준 팝업 위치 결정
     const openPopup = (type: 'dollar' | 'per' | 'cli' | 'vix' | 'fgi' | 't10y2y' | 'hy_spread', e: React.MouseEvent<HTMLDivElement>) => {
-        if (headerRef.current) {
-            const rect = headerRef.current.getBoundingClientRect();
-            // Position the modal directly below the title header block
-            setPopupTop(Math.round(rect.bottom + 12));
-        } else {
-            setPopupTop(140);
-        }
+        // sticky 헤더는 항상 viewport 상단에 고정되어 있으므로 getBoundingClientRect().bottom이 스크롤 상태와 무관하게 정확함
+        const headerBottom = headerRef.current
+            ? Math.max(headerRef.current.getBoundingClientRect().bottom, 56)
+            : 100;
+        setPopupTop(Math.round(headerBottom + 8));
         setActivePopup(type);
     };
+
+    // 팝업이 열린 상태에서 스크롤 시 popupTop 동기화 (이미 팝업 열려있을 때 스크롤하지 않도록)
+    useEffect(() => {
+        if (!activePopup) return;
+        const syncPopupTop = () => {
+            if (headerRef.current) {
+                const bottom = Math.max(headerRef.current.getBoundingClientRect().bottom, 56);
+                setPopupTop(Math.round(bottom + 8));
+            }
+        };
+        window.addEventListener('scroll', syncPopupTop, { passive: true });
+        return () => window.removeEventListener('scroll', syncPopupTop);
+    }, [activePopup]);
 
     // API State
     const [loading, setLoading] = useState(true);
@@ -418,8 +429,12 @@ export default function KospiExitAnalyzer() {
     return (
         <div className="w-full flex flex-col gap-5 mb-2 relative">
             
-            {/* Header section with liquid glass style */}
-            <div ref={headerRef} className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/30 p-5 rounded-2xl border border-white/5 backdrop-blur-xl shadow-lg relative overflow-hidden">
+            {/* Header section — sticky so it stays at top when scrolling */}
+            <div
+                ref={headerRef}
+                className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0d0d1a]/95 p-5 rounded-2xl border border-white/5 backdrop-blur-xl shadow-lg relative overflow-hidden"
+                style={{ position: 'sticky', top: 0, zIndex: 40 }}
+            >
                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none" />
                 <div className="flex items-center gap-4 relative z-10">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
