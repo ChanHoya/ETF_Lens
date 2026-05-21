@@ -130,21 +130,202 @@ export default function DiscoverTab() {
                 <KospiExitAnalyzer />
 
                 {/* Section Title: US Economic Indicators */}
-                <div 
-                    id="us-economy-title"
-                    className={`flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2 mb-2 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md w-full transition-all duration-300 ${activeModal === 'inflation' ? 'relative z-[110] shadow-2xl' : ''}`}
-                >
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
-                            <Activity className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <div className="flex flex-wrap items-center gap-3">
-                                <h2 className="text-xl font-extrabold text-white">미국 경기 지표</h2>
+                <div className="relative z-50">
+                    <div 
+                        id="us-economy-title"
+                        className={`scroll-mt-28 flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2 mb-2 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md w-full transition-all duration-300 ${activeModal === 'inflation' ? 'relative z-[110] shadow-2xl' : ''}`}
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
+                                <Activity className="w-6 h-6 text-white" />
                             </div>
-                            <p className="text-sm text-gray-400 font-medium mt-0.5">글로벌 매크로 인플레이션 및 소비자물가지수 등락</p>
+                            <div>
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <h2 className="text-xl font-extrabold text-white">미국 경기 지표</h2>
+                                </div>
+                                <p className="text-sm text-gray-400 font-medium mt-0.5">글로벌 매크로 인플레이션 및 소비자물가지수 등락</p>
+                            </div>
                         </div>
                     </div>
+                {activeModal === 'inflation' && (
+                    <div className="absolute left-0 right-0 top-full mt-2 z-[110] flex items-start justify-center bg-black/80 backdrop-blur-sm p-4 rounded-3xl shadow-2xl animate-in fade-in duration-300" onClick={() => setActiveModal(null)}>
+                        <div 
+                            className="bg-[#0d0d12] border border-white/10 rounded-3xl w-full max-w-4xl p-6 relative overflow-y-auto shadow-[0_10px_50px_rgba(0,0,0,0.8)]"
+                            style={{ maxHeight: 'calc(100vh - 160px)' }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <button 
+                                onClick={() => setActiveModal(null)} 
+                                className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors z-10"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                            
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pr-10">
+                                <div className="flex flex-col gap-1">
+                                    <h3 className="text-lg font-bold text-white/90 flex items-center gap-2">
+                                        <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
+                                        미국 3대 인플레이션 지표 상세 추이
+                                    </h3>
+                                    <p className="text-xs text-gray-400 font-medium">
+                                        미국 연방준비제도(Fed) 통화정책 결정을 좌우하는 핵심 물가상승률(YoY) 전체 추세
+                                    </p>
+                                </div>
+                                
+                                <div className="flex items-center gap-3 shrink-0">
+                                    <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/5 shadow-inner">
+                                        {timeframes.map((tf) => (
+                                            <button
+                                                key={tf}
+                                                onClick={() => setTimeframe(tf)}
+                                                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-300 ${
+                                                    timeframe === tf
+                                                        ? 'bg-white/10 text-white shadow-md'
+                                                        : 'text-gray-400 hover:text-white'
+                                                }`}
+                                            >
+                                                {timeframeLabels[tf]}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+    
+                            <div className="w-full bg-black/30 rounded-2xl border border-white/5 p-4 relative" style={{ height: '380px' }}>
+                                {!hasData ? (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 gap-2">
+                                        <Info className="w-8 h-8 text-yellow-400" />
+                                        <span className="text-sm font-semibold">저장된 데이터가 없습니다.</span>
+                                    </div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={displayChartData} margin={{ top: 15, right: 15, left: -20, bottom: 5 }}>
+                                            <defs>
+                                                <filter id="glow-cpi-modal" x="-10%" y="-10%" width="120%" height="120%">
+                                                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                                    <feMerge>
+                                                        <feMergeNode in="coloredBlur"/>
+                                                        <feMergeNode in="SourceGraphic"/>
+                                                    </feMerge>
+                                                </filter>
+                                                <filter id="glow-ppi-modal" x="-10%" y="-10%" width="120%" height="120%">
+                                                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                                    <feMerge>
+                                                        <feMergeNode in="coloredBlur"/>
+                                                        <feMergeNode in="SourceGraphic"/>
+                                                    </feMerge>
+                                                </filter>
+                                                <filter id="glow-pce-modal" x="-10%" y="-10%" width="120%" height="120%">
+                                                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                                    <feMerge>
+                                                        <feMergeNode in="coloredBlur"/>
+                                                        <feMergeNode in="SourceGraphic"/>
+                                                    </feMerge>
+                                                </filter>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                            <XAxis 
+                                                dataKey="displayDate" 
+                                                stroke="#71717a" 
+                                                fontSize={10} 
+                                                tickMargin={8} 
+                                                axisLine={false}
+                                                tickLine={false}
+                                            />
+                                            <YAxis 
+                                                domain={['auto', 'auto']} 
+                                                width={40} 
+                                                tick={{ fontSize: 10, fill: '#71717a' }} 
+                                                axisLine={false} 
+                                                tickLine={false} 
+                                            />
+                                            <RechartsTooltip
+                                                contentStyle={{
+                                                    backgroundColor: 'rgba(10, 10, 15, 0.95)',
+                                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                                    borderRadius: '16px',
+                                                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                                                    backdropFilter: 'blur(10px)'
+                                                }}
+                                                content={({ active, payload, label }) => {
+                                                    if (active && payload && payload.length) {
+                                                        return (
+                                                            <div className="bg-[#0e0e12]/95 border border-white/10 p-3 rounded-2xl shadow-xl backdrop-blur-md text-[12px] flex flex-col gap-1.5 min-w-[155px]">
+                                                                <p className="text-gray-400 font-semibold mb-1 flex items-center gap-1.5">
+                                                                    <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                                                                    {label}
+                                                                </p>
+                                                                <div className="h-px bg-white/10 my-1" />
+                                                                {payload.map((entry: any, idx: number) => (
+                                                                    <div key={idx} className="flex justify-between items-center gap-4">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.stroke }} />
+                                                                            <span className="text-gray-300 font-medium">{entry.name}</span>
+                                                                        </div>
+                                                                        <span className="font-mono font-bold text-white text-right">
+                                                                            {Number(entry.value).toFixed(1)}%
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                }}
+                                            />
+                                            <Legend 
+                                                verticalAlign="top" 
+                                                height={36} 
+                                                iconType="circle"
+                                                iconSize={8}
+                                                content={({ payload }) => (
+                                                    <div className="flex justify-center gap-6 text-[11px] font-semibold text-gray-400 mb-2">
+                                                        {payload?.map((entry: any, index: number) => (
+                                                            <div key={index} className="flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors">
+                                                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                                                                <span>{entry.value}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            />
+                                            <Line 
+                                                type="monotone" 
+                                                name="CPI (소비자물가)" 
+                                                dataKey="cpi_yoy" 
+                                                stroke="#3b82f6" 
+                                                strokeWidth={3} 
+                                                dot={{ r: 2, fill: '#3b82f6', strokeWidth: 0 }} 
+                                                activeDot={{ r: 5, strokeWidth: 0 }}
+                                                filter="url(#glow-cpi-modal)"
+                                            />
+                                            <Line 
+                                                type="monotone" 
+                                                name="PPI (생산자물가)" 
+                                                dataKey="ppi_yoy" 
+                                                stroke="#10b981" 
+                                                strokeWidth={3} 
+                                                dot={{ r: 2, fill: '#10b981', strokeWidth: 0 }} 
+                                                activeDot={{ r: 5, strokeWidth: 0 }}
+                                                filter="url(#glow-ppi-modal)"
+                                            />
+                                            <Line 
+                                                type="monotone" 
+                                                name="PCE (개인소비지출)" 
+                                                dataKey="pce_yoy" 
+                                                stroke="#ec4899" 
+                                                strokeWidth={3} 
+                                                dot={{ r: 2, fill: '#ec4899', strokeWidth: 0 }} 
+                                                activeDot={{ r: 5, strokeWidth: 0 }}
+                                                filter="url(#glow-pce-modal)"
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
                 </div>
 
                 {/* US Macroecon Indicators (Premium Wide Recharts Card) */}
@@ -312,185 +493,6 @@ export default function DiscoverTab() {
                 <AIInsight />
 
             </div>
-            {activeModal === 'inflation' && (
-                <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/80 backdrop-blur-sm p-4 pt-[96px] animate-in fade-in duration-300" onClick={() => setActiveModal(null)}>
-                    <div 
-                        className="bg-[#0d0d12] border border-white/10 rounded-3xl w-full max-w-4xl p-6 shadow-[0_10px_50px_rgba(0,0,0,0.8)] relative animate-in zoom-in-95 duration-300 overflow-y-auto"
-                        style={{ maxHeight: 'calc(100vh - 160px)' }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <button 
-                            onClick={() => setActiveModal(null)} 
-                            className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors z-10"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                        
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pr-10">
-                            <div className="flex flex-col gap-1">
-                                <h3 className="text-lg font-bold text-white/90 flex items-center gap-2">
-                                    <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
-                                    미국 3대 인플레이션 지표 상세 추이
-                                </h3>
-                                <p className="text-xs text-gray-400 font-medium">
-                                    미국 연방준비제도(Fed) 통화정책 결정을 좌우하는 핵심 물가상승률(YoY) 전체 추세
-                                </p>
-                            </div>
-                            
-                            <div className="flex items-center gap-3 shrink-0">
-                                <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/5 shadow-inner">
-                                    {timeframes.map((tf) => (
-                                        <button
-                                            key={tf}
-                                            onClick={() => setTimeframe(tf)}
-                                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-300 ${
-                                                timeframe === tf
-                                                    ? 'bg-white/10 text-white shadow-md'
-                                                    : 'text-gray-400 hover:text-white'
-                                            }`}
-                                        >
-                                            {timeframeLabels[tf]}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="w-full bg-black/30 rounded-2xl border border-white/5 p-4 relative" style={{ height: '380px' }}>
-                            {!hasData ? (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 gap-2">
-                                    <Info className="w-8 h-8 text-yellow-400" />
-                                    <span className="text-sm font-semibold">저장된 데이터가 없습니다.</span>
-                                </div>
-                            ) : (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={displayChartData} margin={{ top: 15, right: 15, left: -20, bottom: 5 }}>
-                                        <defs>
-                                            <filter id="glow-cpi-modal" x="-10%" y="-10%" width="120%" height="120%">
-                                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                                                <feMerge>
-                                                    <feMergeNode in="coloredBlur"/>
-                                                    <feMergeNode in="SourceGraphic"/>
-                                                </feMerge>
-                                            </filter>
-                                            <filter id="glow-ppi-modal" x="-10%" y="-10%" width="120%" height="120%">
-                                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                                                <feMerge>
-                                                    <feMergeNode in="coloredBlur"/>
-                                                    <feMergeNode in="SourceGraphic"/>
-                                                </feMerge>
-                                            </filter>
-                                            <filter id="glow-pce-modal" x="-10%" y="-10%" width="120%" height="120%">
-                                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                                                <feMerge>
-                                                    <feMergeNode in="coloredBlur"/>
-                                                    <feMergeNode in="SourceGraphic"/>
-                                                </feMerge>
-                                            </filter>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                        <XAxis 
-                                            dataKey="displayDate" 
-                                            stroke="#71717a" 
-                                            fontSize={10} 
-                                            tickMargin={8} 
-                                            axisLine={false}
-                                            tickLine={false}
-                                        />
-                                        <YAxis 
-                                            domain={['auto', 'auto']} 
-                                            width={40} 
-                                            tick={{ fontSize: 10, fill: '#71717a' }} 
-                                            axisLine={false} 
-                                            tickLine={false} 
-                                        />
-                                        <RechartsTooltip
-                                            contentStyle={{
-                                                backgroundColor: 'rgba(10, 10, 15, 0.95)',
-                                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                                borderRadius: '16px',
-                                                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                                                backdropFilter: 'blur(10px)'
-                                            }}
-                                            content={({ active, payload, label }) => {
-                                                if (active && payload && payload.length) {
-                                                    return (
-                                                        <div className="bg-[#0e0e12]/95 border border-white/10 p-3 rounded-2xl shadow-xl backdrop-blur-md text-[12px] flex flex-col gap-1.5 min-w-[155px]">
-                                                            <p className="text-gray-400 font-semibold mb-1 flex items-center gap-1.5">
-                                                                <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-                                                                {label}
-                                                            </p>
-                                                            <div className="h-px bg-white/10 my-1" />
-                                                            {payload.map((entry: any, idx: number) => (
-                                                                <div key={idx} className="flex justify-between items-center gap-4">
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.stroke }} />
-                                                                        <span className="text-gray-300 font-medium">{entry.name}</span>
-                                                                    </div>
-                                                                    <span className="font-mono font-bold text-white text-right">
-                                                                        {Number(entry.value).toFixed(1)}%
-                                                                    </span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    );
-                                                }
-                                                return null;
-                                            }}
-                                        />
-                                        <Legend 
-                                            verticalAlign="top" 
-                                            height={36} 
-                                            iconType="circle"
-                                            iconSize={8}
-                                            content={({ payload }) => (
-                                                <div className="flex justify-center gap-6 text-[11px] font-semibold text-gray-400 mb-2">
-                                                    {payload?.map((entry: any, index: number) => (
-                                                        <div key={index} className="flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors">
-                                                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
-                                                            <span>{entry.value}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        />
-                                        <Line 
-                                            type="monotone" 
-                                            name="CPI (소비자물가)" 
-                                            dataKey="cpi_yoy" 
-                                            stroke="#3b82f6" 
-                                            strokeWidth={3} 
-                                            dot={{ r: 2, fill: '#3b82f6', strokeWidth: 0 }} 
-                                            activeDot={{ r: 5, strokeWidth: 0 }}
-                                            filter="url(#glow-cpi-modal)"
-                                        />
-                                        <Line 
-                                            type="monotone" 
-                                            name="PPI (생산자물가)" 
-                                            dataKey="ppi_yoy" 
-                                            stroke="#10b981" 
-                                            strokeWidth={3} 
-                                            dot={{ r: 2, fill: '#10b981', strokeWidth: 0 }} 
-                                            activeDot={{ r: 5, strokeWidth: 0 }}
-                                            filter="url(#glow-ppi-modal)"
-                                        />
-                                        <Line 
-                                            type="monotone" 
-                                            name="PCE (개인소비지출)" 
-                                            dataKey="pce_yoy" 
-                                            stroke="#ec4899" 
-                                            strokeWidth={3} 
-                                            dot={{ r: 2, fill: '#ec4899', strokeWidth: 0 }} 
-                                            activeDot={{ r: 5, strokeWidth: 0 }}
-                                            filter="url(#glow-pce-modal)"
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

@@ -179,6 +179,7 @@ export default function KospiExitAnalyzer() {
 
     // API State
     const [loading, setLoading] = useState(true);
+    const [selectedDate, setSelectedDate] = useState<string>("");
 
     // Fetch Real Data on Mount with LocalStorage Caching (0ms load + background update)
     useEffect(() => {
@@ -239,8 +240,10 @@ export default function KospiExitAnalyzer() {
 
         // 2. Fetch fresh data from API in background to update the cache
         const fetchData = async () => {
+            setLoading(true);
             try {
-                const res = await fetch(`${API_BASE}/api/v1/exit-signal`);
+                const url = selectedDate ? `${API_BASE}/api/v1/exit-signal?target_ym=${selectedDate}` : `${API_BASE}/api/v1/exit-signal`;
+                const res = await fetch(url);
                 if (res.ok) {
                     const data = await res.json();
                     
@@ -466,6 +469,8 @@ export default function KospiExitAnalyzer() {
                         label={riskData.label} 
                         breakdown={riskData.breakdown} 
                         analysisText={getExitAnalysisText()}
+                        selectedDate={selectedDate}
+                        onDateChange={setSelectedDate}
                     />
                 </div>
 

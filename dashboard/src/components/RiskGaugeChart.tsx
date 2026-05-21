@@ -16,6 +16,8 @@ interface RiskGaugeChartProps {
         hy_spread?: { value: number; score: number; label: string };
     };
     analysisText?: string;
+    selectedDate?: string;
+    onDateChange?: (date: string) => void;
 }
 
 export default function RiskGaugeChart({
@@ -24,9 +26,16 @@ export default function RiskGaugeChart({
     level,
     label,
     breakdown,
-    analysisText
+    analysisText,
+    selectedDate,
+    onDateChange
 }: RiskGaugeChartProps) {
     const [animatedScore, setAnimatedScore] = useState(0);
+
+    // Compute min and max dates for the 10-year date picker constraint
+    const now = new Date();
+    const maxDate = now.toISOString().slice(0, 7);
+    const minDate = new Date(now.getFullYear() - 10, now.getMonth(), 1).toISOString().slice(0, 7);
 
     // Bouncy spring animation effect on score change
     useEffect(() => {
@@ -109,17 +118,30 @@ export default function RiskGaugeChart({
                     <div>
                         <h3 className="text-white text-[13px] font-extrabold flex items-center gap-1.5">
                             종합 위험지수
-                            <span className="text-[9px] text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full border border-white/5 font-semibold font-mono">Exit Compass</span>
+                            <span className="text-[9px] text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full border border-white/5 font-semibold font-mono hidden sm:inline-block">Exit Compass</span>
                         </h3>
-                        <p className="text-[10px] text-gray-400 font-medium">실시간 다차원 매크로 감정 연산</p>
+                        <p className="text-[10px] text-gray-400 font-medium hidden sm:block">실시간 다차원 매크로 감정 연산</p>
                     </div>
                 </div>
+                {onDateChange && (
+                    <div className="flex items-center gap-1.5">
+                        <label className="text-[10px] text-gray-400 font-medium hidden sm:block">조회 기준:</label>
+                        <input 
+                            type="month" 
+                            className="bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-indigo-500 transition-colors"
+                            value={selectedDate || ''}
+                            onChange={(e) => onDateChange(e.target.value)}
+                            min={minDate}
+                            max={maxDate}
+                        />
+                    </div>
+                )}
             </div>
 
-            <div className="flex flex-col lg:flex-row items-start lg:justify-around gap-2 lg:gap-4 relative z-10 mt-0">
+            <div className="flex flex-col lg:flex-row items-stretch lg:justify-between gap-4 relative z-10 mt-1 flex-1">
                 {/* Visual Gauge Column */}
-                <div className="relative w-[200px] h-[115px] flex items-center justify-center select-none mt-1">
-                    <svg className="w-full h-full overflow-visible" viewBox="0 0 100 55">
+                <div className="relative flex-1 min-w-[280px] flex items-center justify-center select-none -ml-4 pl-4 min-h-[160px]">
+                    <svg className="w-full max-w-[360px] overflow-visible" viewBox="0 0 100 55">
                         <defs>
                             {/* Track Gradients */}
                             <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -219,11 +241,11 @@ export default function RiskGaugeChart({
                 </div>
 
                 {/* Score Breakdown Column */}
-                <div className="flex-1 w-full lg:max-w-[320px] flex flex-col gap-0.5 bg-black/35 p-1.5 rounded-xl border border-white/5 backdrop-blur-md">
-                    <span className="text-[9px] text-gray-400 font-bold tracking-wider uppercase mb-0">지표별 위험 기여도</span>
+                <div className="flex-1 w-full lg:max-w-[360px] flex flex-col justify-between bg-black/35 p-2.5 rounded-xl border border-white/5 backdrop-blur-md">
+                    <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase mb-1.5">지표별 위험 기여도</span>
                     
                     {breakdown ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-1.5 text-[11px] font-medium font-mono text-gray-300">
+                        <div className="flex flex-col justify-between flex-1 gap-1.5 text-[11px] font-medium font-mono text-gray-300">
                             {Object.entries(breakdown).map(([key, item]: [string, any]) => {
                                 const barColor = item.score >= 3 ? '#ef4444' : (item.score >= 2 ? '#f97316' : (item.score >= 1 ? '#eab308' : '#10b981'));
                                 return (
