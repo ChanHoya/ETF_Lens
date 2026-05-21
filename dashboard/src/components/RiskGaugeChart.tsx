@@ -94,31 +94,31 @@ export default function RiskGaugeChart({
     const angle = -90 + ratio * 180;
 
     return (
-        <div className={`w-full bg-gradient-to-br ${config.bgGradient} backdrop-blur-xl border ${config.borderGlow} rounded-3xl p-4 md:p-4.5 shadow-2xl transition-all duration-500 flex flex-col relative overflow-hidden group hover:shadow-[0_15px_40px_rgba(0,0,0,0.4)]`}>
+        <div className={`w-full bg-gradient-to-br ${config.bgGradient} backdrop-blur-xl border ${config.borderGlow} rounded-3xl p-3 md:p-3 shadow-2xl transition-all duration-500 flex flex-col relative overflow-hidden group hover:shadow-[0_15px_40px_rgba(0,0,0,0.4)]`}>
             {/* Background glowing sphere */}
             <div 
                 className="absolute -top-24 -left-24 w-48 h-48 rounded-full blur-[80px] pointer-events-none transition-all duration-700 opacity-60 group-hover:scale-125"
                 style={{ backgroundColor: config.color }}
             />
 
-            <div className="flex justify-between items-center mb-3 relative z-10">
+            <div className="flex justify-between items-center mb-1.5 relative z-10">
                 <div className="flex items-center gap-2">
-                    <span className="p-2 rounded-xl bg-white/5 border border-white/10 shrink-0">
+                    <span className="p-1.5 rounded-xl bg-white/5 border border-white/10 shrink-0">
                         {config.icon}
                     </span>
                     <div>
-                        <h3 className="text-white text-base font-extrabold flex items-center gap-1.5">
+                        <h3 className="text-white text-[13px] font-extrabold flex items-center gap-1.5">
                             종합 위험지수
-                            <span className="text-[10px] text-gray-400 bg-white/5 px-2 py-0.5 rounded-full border border-white/5 font-semibold font-mono">Exit Compass</span>
+                            <span className="text-[9px] text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full border border-white/5 font-semibold font-mono">Exit Compass</span>
                         </h3>
-                        <p className="text-[11px] text-gray-400 font-medium">실시간 다차원 매크로 감정 연산</p>
+                        <p className="text-[10px] text-gray-400 font-medium">실시간 다차원 매크로 감정 연산</p>
                     </div>
                 </div>
             </div>
 
-            <div className="flex flex-col lg:flex-row items-center lg:justify-around gap-3 lg:gap-5 relative z-10 mt-0.5">
+            <div className="flex flex-col lg:flex-row items-start lg:justify-around gap-2 lg:gap-4 relative z-10 mt-0">
                 {/* Visual Gauge Column */}
-                <div className="relative w-[240px] h-[135px] flex items-center justify-center select-none">
+                <div className="relative w-[200px] h-[115px] flex items-center justify-center select-none mt-1">
                     <svg className="w-full h-full overflow-visible" viewBox="0 0 100 55">
                         <defs>
                             {/* Track Gradients */}
@@ -219,8 +219,8 @@ export default function RiskGaugeChart({
                 </div>
 
                 {/* Score Breakdown Column */}
-                <div className="flex-1 w-full lg:max-w-[320px] flex flex-col gap-1 bg-black/35 p-2 rounded-2xl border border-white/5 backdrop-blur-md">
-                    <span className="text-[9px] text-gray-400 font-bold tracking-wider uppercase mb-0.5">지표별 위험 기여도</span>
+                <div className="flex-1 w-full lg:max-w-[320px] flex flex-col gap-0.5 bg-black/35 p-1.5 rounded-xl border border-white/5 backdrop-blur-md">
+                    <span className="text-[9px] text-gray-400 font-bold tracking-wider uppercase mb-0">지표별 위험 기여도</span>
                     
                     {breakdown ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-1.5 text-[11px] font-medium font-mono text-gray-300">

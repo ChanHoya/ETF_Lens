@@ -472,7 +472,7 @@ export default function KospiExitAnalyzer() {
                 {/* Bento Card 2: Dollar Index / Exchange Rate */}
                 <div 
                     onClick={(e) => openPopup('dollar', e)} 
-                    className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-3xl p-4 flex flex-col justify-between hover:bg-white/[0.05] hover:scale-[1.01] hover:shadow-2xl transition-all duration-300 relative overflow-hidden group min-h-[250px]"
+                    className="cursor-pointer bg-white/[0.02] border border-white/10 rounded-3xl p-4 flex flex-col justify-between hover:bg-white/[0.05] hover:scale-[1.01] hover:shadow-2xl transition-all duration-300 relative overflow-hidden group h-full"
                 >
                     <div className="flex justify-between items-center mb-3">
                         <div className="flex items-center gap-2">

@@ -130,7 +130,10 @@ export default function DiscoverTab() {
                 <KospiExitAnalyzer />
 
                 {/* Section Title: US Economic Indicators */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2 mb-2 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md w-full">
+                <div 
+                    id="us-economy-title"
+                    className={`flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2 mb-2 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-md w-full transition-all duration-300 ${activeModal === 'inflation' ? 'relative z-[110] shadow-2xl' : ''}`}
+                >
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
                             <Activity className="w-6 h-6 text-white" />
@@ -145,7 +148,7 @@ export default function DiscoverTab() {
                 </div>
 
                 {/* US Macroecon Indicators (Premium Wide Recharts Card) */}
-                <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 lg:p-6 backdrop-blur-md shadow-xl flex flex-col min-h-[500px]">
+                <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 lg:p-6 backdrop-blur-md shadow-xl flex flex-col">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                         <div className="flex flex-col gap-1">
                             <h3 className="text-lg font-bold text-white/90 flex items-center gap-2">
@@ -168,9 +171,17 @@ export default function DiscoverTab() {
                     </div>
 
                     {/* Stats Dashboard Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
                         {/* CPI Card */}
-                        <div onClick={() => setActiveModal('inflation')} className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-white/10 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:border-[#3b82f6]/40 transition-all duration-300">
+                        <div 
+                            onClick={() => {
+                                setActiveModal('inflation');
+                                setTimeout(() => {
+                                    document.getElementById('us-economy-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }, 10);
+                            }} 
+                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-white/10 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:border-[#3b82f6]/40 transition-all duration-300"
+                        >
                             <div className="absolute top-0 left-0 w-1 h-full bg-[#3b82f6]" />
                             <div className="flex justify-between items-start">
                                 <div>
@@ -203,7 +214,15 @@ export default function DiscoverTab() {
                         </div>
 
                         {/* PPI Card */}
-                        <div onClick={() => setActiveModal('inflation')} className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-white/10 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:border-[#10b981]/40 transition-all duration-300">
+                        <div 
+                            onClick={() => {
+                                setActiveModal('inflation');
+                                setTimeout(() => {
+                                    document.getElementById('us-economy-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }, 10);
+                            }} 
+                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-white/10 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:border-[#10b981]/40 transition-all duration-300"
+                        >
                             <div className="absolute top-0 left-0 w-1 h-full bg-[#10b981]" />
                             <div className="flex justify-between items-start">
                                 <div>
@@ -236,7 +255,15 @@ export default function DiscoverTab() {
                         </div>
 
                         {/* PCE Card */}
-                        <div onClick={() => setActiveModal('inflation')} className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-white/10 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:border-[#ec4899]/40 transition-all duration-300">
+                        <div 
+                            onClick={() => {
+                                setActiveModal('inflation');
+                                setTimeout(() => {
+                                    document.getElementById('us-economy-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }, 10);
+                            }} 
+                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-white/10 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:border-[#ec4899]/40 transition-all duration-300"
+                        >
                             <div className="absolute top-0 left-0 w-1 h-full bg-[#ec4899]" />
                             <div className="flex justify-between items-start">
                                 <div>
@@ -286,7 +313,7 @@ export default function DiscoverTab() {
 
             </div>
             {activeModal === 'inflation' && (
-                <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/80 backdrop-blur-sm p-4 pt-[140px] animate-in fade-in duration-300" onClick={() => setActiveModal(null)}>
+                <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/80 backdrop-blur-sm p-4 pt-[96px] animate-in fade-in duration-300" onClick={() => setActiveModal(null)}>
                     <div 
                         className="bg-[#0d0d12] border border-white/10 rounded-3xl w-full max-w-4xl p-6 shadow-[0_10px_50px_rgba(0,0,0,0.8)] relative animate-in zoom-in-95 duration-300 overflow-y-auto"
                         style={{ maxHeight: 'calc(100vh - 160px)' }}
