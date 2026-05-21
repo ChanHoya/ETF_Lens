@@ -823,7 +823,7 @@ export function T10y2yModalContent() {
                         <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                             <XAxis dataKey="month" stroke="#71717a" fontSize={10} tickMargin={8} />
-                            <YAxis domain={['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
+                            <YAxis domain={[(dataMin: number) => Math.min(dataMin, -0.6), (dataMax: number) => Math.max(dataMax, 0.6)]} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
                             <RechartsTooltip
                                 contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                                 content={({ active, payload, label }) => {
@@ -900,6 +900,7 @@ export function HySpreadModalContent() {
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentStatus, setCurrentStatus] = useState<any>(null);
+    const [hyScore, setHyScore] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchHy = async () => {
@@ -912,6 +913,9 @@ export function HySpreadModalContent() {
                     }
                     if (json.current_status) {
                         setCurrentStatus(json.current_status);
+                    }
+                    if (json.risk && json.risk.breakdown && json.risk.breakdown.hy_spread) {
+                        setHyScore(json.risk.breakdown.hy_spread.score);
                     }
                 }
             } catch (err) {
@@ -926,9 +930,49 @@ export function HySpreadModalContent() {
     if (loading) return <div className="flex h-full items-center justify-center text-gray-500 font-medium py-20 font-medium">Loading data...</div>;
 
     const currentVal = currentStatus ? currentStatus.hy_spread : (data.length > 0 ? data[data.length - 1].val : 3.0);
+    
+    const effectiveScore = hyScore !== null ? hyScore : (currentVal >= 6.5 ? 3 : currentVal >= 5.0 ? 2 : currentVal >= 3.5 ? 1 : 0);
+    const statusMap: Record<number, { label: string; sub: string; borderColor: string; bgColor: string; textColor: string }> = {
+        3: {
+            label: '⚠️ 위험 (3점) — 신용 경색과 자금 마비',
+            sub: '하이일드 스프레드가 6.5%를 넘어선 심각한 위기 상황입니다. 주식 시장 투매 국면의 대표적인 신호입니다.',
+            borderColor: 'border-rose-500/50', bgColor: 'bg-rose-900/20', textColor: 'text-rose-400',
+        },
+        2: {
+            label: '🟠 경계 (2점) — 부도 우려 가시화',
+            sub: '5.0% 이상으로 한계 기업들의 부도 우려가 커지며 리스크 오프 심리가 시장을 누릅니다.',
+            borderColor: 'border-orange-500/50', bgColor: 'bg-orange-900/20', textColor: 'text-orange-400',
+        },
+        1: {
+            label: '🟡 주의 (1점) — 자금 여건 수축',
+            sub: '3.5% 이상으로 자금 여건이 점차 수축하기 시작하며, 잠재적 크레딧 리스크 경고음이 울립니다.',
+            borderColor: 'border-yellow-500/50', bgColor: 'bg-yellow-900/20', textColor: 'text-yellow-400',
+        },
+        0: {
+            label: '🟢 안정 (0점) — 원활한 자금 조달',
+            sub: '3.5% 미만으로 신용 위험이 낮고 자금 조달 환경이 매우 원활하여 자산 성장이 지지됩니다.',
+            borderColor: 'border-emerald-500/50', bgColor: 'bg-emerald-900/20', textColor: 'text-emerald-400',
+        },
+    };
+    const statusInfo = statusMap[effectiveScore] || statusMap[0];
 
     return (
         <div className="flex flex-col w-full gap-4">
+            {/* 현재 상태 판정 배너 */}
+            <div className={`flex items-start gap-3 p-4 rounded-xl border ${statusInfo.borderColor} ${statusInfo.bgColor}`}>
+                <div className="flex flex-col flex-1 min-w-0">
+                    <span className={`font-extrabold text-sm ${statusInfo.textColor}`}>{statusInfo.label}</span>
+                    <span className="text-[11px] text-gray-400 mt-1 leading-snug">{statusInfo.sub}</span>
+                </div>
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                    <span className="text-[10px] text-gray-500">현재 스프레드</span>
+                    <span className={`text-2xl font-black font-mono ${statusInfo.textColor}`}>{currentVal.toFixed(2)}%</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${statusInfo.borderColor} ${statusInfo.textColor} bg-black/20`}>
+                        위험도 {effectiveScore}점 / 3점
+                    </span>
+                </div>
+            </div>
+
             <div className="bg-black/20 rounded-xl p-1 md:p-3 border border-white/5 flex flex-col">
                 <div className="flex justify-between items-center mb-2 shrink-0">
                     <div className="flex flex-col">
@@ -939,17 +983,13 @@ export function HySpreadModalContent() {
                             출처: FRED (BAMLH0A0HYM2)
                         </span>
                     </div>
-                    <div className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 shrink-0 flex flex-col items-end">
-                        <span className="text-[10px] text-gray-400 font-medium">현재 스프레드</span>
-                        <span className="text-xl font-black text-white font-mono">{currentVal.toFixed(2)}%</span>
-                    </div>
                 </div>
                 <div className="w-full mt-2" style={{ height: '260px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                             <XAxis dataKey="month" stroke="#71717a" fontSize={10} tickMargin={8} />
-                            <YAxis domain={['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
+                            <YAxis domain={[(dataMin: number) => Math.min(dataMin, 3.0), (dataMax: number) => Math.max(dataMax, 7.0)]} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
                             <RechartsTooltip
                                 contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                                 content={({ active, payload, label }) => {
