@@ -286,9 +286,10 @@ export default function DiscoverTab() {
 
             </div>
             {activeModal === 'inflation' && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-300" onClick={() => setActiveModal(null)}>
+                <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/80 backdrop-blur-sm p-4 pt-[140px] animate-in fade-in duration-300" onClick={() => setActiveModal(null)}>
                     <div 
-                        className="bg-[#0d0d12] border border-white/10 rounded-3xl w-full max-w-4xl p-6 shadow-[0_10px_50px_rgba(0,0,0,0.8)] relative animate-in zoom-in-95 duration-300"
+                        className="bg-[#0d0d12] border border-white/10 rounded-3xl w-full max-w-4xl p-6 shadow-[0_10px_50px_rgba(0,0,0,0.8)] relative animate-in zoom-in-95 duration-300 overflow-y-auto"
+                        style={{ maxHeight: 'calc(100vh - 160px)' }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <button 
