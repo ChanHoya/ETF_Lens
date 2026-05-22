@@ -5,6 +5,7 @@ import { Search, Info, TrendingUp, ShieldCheck, Zap, Activity, AlertCircle, Perc
 import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip as RechartsTooltip } from 'recharts';
 import TaxSimulator from '@/components/TaxSimulator';
 import MacroRotation from '@/components/MacroRotation';
+import FxFinder from '@/components/FxFinder';
 
 export default function DiscoverPage() {
     const [evaluations, setEvaluations] = useState<any[]>([]);
@@ -395,6 +396,9 @@ export default function DiscoverPage() {
 
                     {/* Add Tax Simulator Here */}
                     <TaxSimulator />
+
+                    {/* Add FX Finder Here */}
+                    <FxFinder />
                 </div>
             </main>
         </div>

@@ -6,7 +6,7 @@
  
 Base: Exit Strategy Monitoring (KOSPI)
 ✅ Current: Sprint 5 — 글로벌 매크로 스트레스 테스트 및 환율/절세 최적화 시뮬레이터 개발
-➡️ Next: S5-2 원/달러 환율 연동 환헤지 vs 환노출 비교 분석
+➡️ Next: S5-3 ISA 및 연금저축/IRP 과세이연 및 절세 혜택 시뮬레이터
  
 ## Current Sprint
  
@@ -19,8 +19,8 @@ Base: Exit Strategy Monitoring (KOSPI)
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
 | S5-1 | 포트폴리오 역사적 위기 스트레스 테스터 엔진 및 API 연동 | ✅ done | COVID-19, 리먼 등 과거 위기 시나리오 대입 시 포트폴리오 예상 MDD/VaR 분석 백엔드 개발 완료 |
-| S5-2 | 원/달러 환율 연동 환헤지 vs 환노출 비교 분석 | ⬜ planned | 환헤지(H)와 환노출 ETF 간 환율 변동별 실질 누적 성과 시뮬레이션 및 차트 연동 |
-| S5-3 | ISA 및 연금저축/IRP 과세이연 및 절세 혜택 시뮬레이터 | ⬜ planned | 절세 계좌별 비과세/과세이연 혜택 및 세후 최종 복리 수령액 비교 계산 도구 개발 |
+| S5-2 | 원/달러 환율 연동 환헤지 vs 환노출 비교 분석 | ✅ done | 환헤지(H)와 환노출 ETF 간 환율 변동별 실질 누적 성과 시뮬레이션 및 차트 연동 완료 |
+| S5-3 | ISA 및 연금저축/IRP 과세이연 및 절세 혜택 시뮬레이터 | [/] in progress | 절세 계좌별 비과세/과세이연 혜택 및 세후 최종 복리 수령액 비교 계산 도구 개발 |
 | S4-1 | ETF 구성 종목 중복도 분석 및 포트폴리오 중복 진단 도구 개발 | ✅ done | KIS 포트폴리오의 ETF 실질 구성 종목 중복 노출율과 분산 투자 효과를 퀀트 연산하는 백엔드 엔진 및 API 엔드포인트 구현 완료 |
 | S4-2 | AI 기반 리밸런싱 주문 시나리오 백테스트 시뮬레이터 | ✅ done | 과거 Exit Signal 위험 감지에 따라 안전 자산으로 대피하고 회복 시 복귀하는 동적 자산배분 퀀트 연산 및 Recharts/로그 단말기 UI 구현 완료 |
 | S4-3 | 미국 주요 매크로 인플레이션 지표 (CPI, PPI, PCE YoY) Recharts 및 SWR 캐시 연동 고도화 | ✅ done | TradingEconomics/Investing.com 아이프레임을 제거하고 DB 캐싱 데이터 및 SWR 로컬 캐시 기반 Recharts 네온 라인 차트로 완벽 리팩토링 완료 |

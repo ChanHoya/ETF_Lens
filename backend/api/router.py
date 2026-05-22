@@ -346,6 +346,34 @@ async def portfolio_stress_test(req: StressTestRequest, db: AsyncSession = Depen
         return {"status": "error", "message": str(e)}
 
 
+@router.get("/etf/currency-pairs", tags=["currency"])
+async def get_currency_pairs(db: AsyncSession = Depends(get_db)):
+    """
+    마스터 DB에서 환헤지(H) ETF와 이에 상응하는 환노출 ETF 페어 목록을 자동 매핑하여 반환합니다.
+    """
+    try:
+        from core.currency_analyzer import get_currency_hedged_pairs
+        pairs = await get_currency_hedged_pairs(db)
+        return pairs
+    except Exception as e:
+        logger.error(f"Error fetching currency pairs: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@router.get("/etf/currency-compare", tags=["currency"])
+async def compare_currency_hedged_etfs(h_code: str, u_code: str, db: AsyncSession = Depends(get_db)):
+    """
+    환헤지(H) ETF와 환노출 ETF 한 쌍의 1년 주가/환율 추이 및 미래 환율 변동 시나리오별 예상 성과 비교를 분석합니다.
+    """
+    try:
+        from core.currency_analyzer import analyze_fx_impact
+        analysis = await analyze_fx_impact(db, h_code, u_code)
+        return analysis
+    except Exception as e:
+        logger.error(f"Error comparing currency ETFs: {e}")
+        return {"status": "error", "message": str(e)}
+
+
 class CompareRequest(BaseModel):
     etf_codes: List[str]
     skip_holdings: bool = False
