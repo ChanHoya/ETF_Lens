@@ -122,4 +122,11 @@
 - **원인**: Next.js 설정에서 TypeScript 타입 검증 및 린트 검사가 생략(`Skipping validation of types`)되도록 구성되어 있을 경우, `useState`나 `useEffect` 같은 API를 import 없이 사용했음에도 컴파일 타임에 잡히지 않고 배포본에 그대로 포함됨.
 - **해결**: UI 컴포넌트나 페이지 수정 시 `import React, { useState, useEffect } from 'react';`와 같은 필수 임포트 구문이 유실되었는지 수동으로 꼼꼼히 확인하고, 빌드 로그의 경고나 런타임 콘솔 오류를 적극 모니터링함.
 
+## DB & Migrations
+
+### PostgreSQL 'UndefinedColumnError' (기존 테이블 존재 시 신규 컬럼 누락)
+- **증상**: 배포(PostgreSQL) 환경 기동 후 특정 신규 컬럼 조회 API(/evaluate 등) 호출 시 `asyncpg.exceptions.UndefinedColumnError` 발생.
+- **원인**: SQLAlchemy `Base.metadata.create_all`은 기존 테이블이 존재할 경우 `ALTER TABLE`을 실행하지 않고 패스함. 로컬 SQLite 마이그레이션 스크립트만 실행할 경우, 배포용 PostgreSQL DB의 기존 테이블 스키마가 업데이트되지 않아 컬럼 누락으로 인한 쿼리 에러 발생.
+- **해결**: `main.py` lifespan startup 내에 PostgreSQL DB에 대해 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` DDL 쿼리를 직접 수행하는 방어 로직을 추가하여 누락 컬럼을 보완함.
+
 
