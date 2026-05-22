@@ -240,101 +240,111 @@ export default function KospiExitAnalyzer() {
 
         // 2. Fetch fresh data from API in background to update the cache
         const fetchData = async () => {
-            setLoading(true);
+            // 전체 로딩 상태는 초기 진입(전체 조회) 시에만 적용
+            if (!selectedDate) {
+                setLoading(true);
+            }
             try {
                 const url = selectedDate ? `${API_BASE}/api/v1/exit-signal?target_ym=${selectedDate}` : `${API_BASE}/api/v1/exit-signal`;
                 const res = await fetch(url);
                 if (res.ok) {
                     const data = await res.json();
                     
-                    // Cache the main endpoint data
-                    localStorage.setItem('kospi_exit_main_data', JSON.stringify(data));
+                    if (!selectedDate) {
+                        // Cache the main endpoint data
+                        localStorage.setItem('kospi_exit_main_data', JSON.stringify(data));
 
-                    // Update main states
-                    setBaseDollar(data.indicators.dollar);
-                    setBasePer(data.indicators.per);
-                    setBaseCli(data.indicators.cli);
-                    setDollarIndex(data.current_status.dollar);
-                    setDollarKrw(data.current_status.krw);
-                    setForwardPer(data.current_status.per);
-                    setOecdCliValue(data.current_status.cli);
-                    setOecdCliDownMonths(data.current_status.cli_down_months);
+                        // Update main states
+                        setBaseDollar(data.indicators.dollar);
+                        setBasePer(data.indicators.per);
+                        setBaseCli(data.indicators.cli);
+                        setDollarIndex(data.current_status.dollar);
+                        setDollarKrw(data.current_status.krw);
+                        setForwardPer(data.current_status.per);
+                        setOecdCliValue(data.current_status.cli);
+                        setOecdCliDownMonths(data.current_status.cli_down_months);
+
+                        if (data.indicators.sentiment) {
+                            setBaseSentiment(data.indicators.sentiment);
+                            setVixValue(data.current_status.vix);
+                            setFgiValue(data.current_status.fgi);
+                            if (data.current_status.vkospi_proxy !== undefined) {
+                                setVkospiValue(data.current_status.vkospi_proxy);
+                            }
+                        }
+
+                        if (data.indicators.t10y2y) {
+                            setBaseT10y2y(data.indicators.t10y2y);
+                            if (data.current_status.t10y2y !== undefined) setT10y2yValue(data.current_status.t10y2y);
+                        }
+                        if (data.indicators.hy_spread) {
+                            setBaseHySpread(data.indicators.hy_spread);
+                            if (data.current_status.hy_spread !== undefined) setHySpreadValue(data.current_status.hy_spread);
+                        }
+                    }
+
+                    // Always update RiskGauge Data
                     setExitScore(data.risk?.score || data.current_score || 0);
-
                     if (data.risk) {
                         setRiskData(data.risk);
                     }
 
-                    if (data.indicators.sentiment) {
-                        setBaseSentiment(data.indicators.sentiment);
-                        setVixValue(data.current_status.vix);
-                        setFgiValue(data.current_status.fgi);
-                        if (data.current_status.vkospi_proxy !== undefined) {
-                            setVkospiValue(data.current_status.vkospi_proxy);
-                        }
-                    }
+                    // Fetch other detail endpoints in parallel ONLY for initial load
+                    if (!selectedDate) {
+                        try {
+                            const cliRes = await fetch(`${API_BASE}/api/v1/exit-signal/cli`);
+                            if (cliRes.ok) {
+                                const cliDataRaw = await cliRes.json();
+                                if (cliDataRaw.length > 0) {
+                                    const recent12 = cliDataRaw.slice(-12).map((item: any) => ({
+                                        month: item.date.substring(5, 7) + '월',
+                                        kor_cli: item.kor_cli,
+                                        usa_cli: item.usa_cli,
+                                        oecd_cli: item.oecd_cli
+                                    }));
+                                    setBaseCli(recent12);
+                                    localStorage.setItem('kospi_exit_cli_data', JSON.stringify(recent12));
 
-                    if (data.indicators.t10y2y) {
-                        setBaseT10y2y(data.indicators.t10y2y);
-                        if (data.current_status.t10y2y !== undefined) setT10y2yValue(data.current_status.t10y2y);
-                    }
-                    if (data.indicators.hy_spread) {
-                        setBaseHySpread(data.indicators.hy_spread);
-                        if (data.current_status.hy_spread !== undefined) setHySpreadValue(data.current_status.hy_spread);
-                    }
+                                    const lastItem = cliDataRaw[cliDataRaw.length - 1];
+                                    setOecdCliValue(lastItem.kor_cli);
 
-                    // Fetch other detail endpoints in parallel
-                    try {
-                        const cliRes = await fetch(`${API_BASE}/api/v1/exit-signal/cli`);
-                        if (cliRes.ok) {
-                            const cliDataRaw = await cliRes.json();
-                            if (cliDataRaw.length > 0) {
-                                const recent12 = cliDataRaw.slice(-12).map((item: any) => ({
-                                    month: item.date.substring(5, 7) + '월',
-                                    kor_cli: item.kor_cli,
-                                    usa_cli: item.usa_cli,
-                                    oecd_cli: item.oecd_cli
-                                }));
-                                setBaseCli(recent12);
-                                localStorage.setItem('kospi_exit_cli_data', JSON.stringify(recent12));
-
-                                const lastItem = cliDataRaw[cliDataRaw.length - 1];
-                                setOecdCliValue(lastItem.kor_cli);
-
-                                let downMonths = 0;
-                                for (let i = cliDataRaw.length - 1; i > 0; i--) {
-                                    if (cliDataRaw[i].kor_cli < cliDataRaw[i - 1].kor_cli) {
-                                        downMonths++;
-                                    } else {
-                                        break;
+                                    let downMonths = 0;
+                                    for (let i = cliDataRaw.length - 1; i > 0; i--) {
+                                        if (cliDataRaw[i].kor_cli < cliDataRaw[i - 1].kor_cli) {
+                                            downMonths++;
+                                        } else {
+                                            break;
+                                        }
                                     }
+                                    setOecdCliDownMonths(downMonths);
                                 }
-                                setOecdCliDownMonths(downMonths);
                             }
-                        }
 
-                        const [macroRes, perRes] = await Promise.all([
-                            fetch(`${API_BASE}/api/v1/exit-signal/macro?period=1Y`),
-                            fetch(`${API_BASE}/api/v1/exit-signal/per?period=1Y`)
-                        ]);
-                        if (macroRes.ok) {
-                            const macro1Y = await macroRes.json();
-                            setBaseDollar(macro1Y);
-                            localStorage.setItem('kospi_exit_macro_data', JSON.stringify(macro1Y));
+                            const [macroRes, perRes] = await Promise.all([
+                                fetch(`${API_BASE}/api/v1/exit-signal/macro?period=1Y`),
+                                fetch(`${API_BASE}/api/v1/exit-signal/per?period=1Y`)
+                            ]);
+                            if (macroRes.ok) {
+                                const macro1Y = await macroRes.json();
+                                setBaseDollar(macro1Y);
+                                localStorage.setItem('kospi_exit_macro_data', JSON.stringify(macro1Y));
+                            }
+                            if (perRes.ok) {
+                                const per1Y = await perRes.json();
+                                setBasePer(per1Y);
+                                localStorage.setItem('kospi_exit_per_data', JSON.stringify(per1Y));
+                            }
+                        } catch (cliErr) {
+                            console.error("Failed to fetch CLI/Macro/PER background data:", cliErr);
                         }
-                        if (perRes.ok) {
-                            const per1Y = await perRes.json();
-                            setBasePer(per1Y);
-                            localStorage.setItem('kospi_exit_per_data', JSON.stringify(per1Y));
-                        }
-                    } catch (cliErr) {
-                        console.error("Failed to fetch CLI/Macro/PER background data:", cliErr);
                     }
                 }
             } catch (err) {
                 console.error("Failed to fetch Exit Signal background data:", err);
             } finally {
-                setLoading(false);
+                if (!selectedDate) {
+                    setLoading(false);
+                }
             }
         };
         fetchData();
