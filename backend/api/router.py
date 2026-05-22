@@ -322,6 +322,30 @@ async def get_evaluated_etfs(db: AsyncSession = Depends(get_db)):
         return {"status": "error", "message": str(e)}
 
 
+class StressTestItem(BaseModel):
+    code: str
+    weight: float
+
+
+class StressTestRequest(BaseModel):
+    portfolio: List[StressTestItem]
+
+
+@router.post("/portfolio/stress-test", tags=["portfolio"])
+async def portfolio_stress_test(req: StressTestRequest, db: AsyncSession = Depends(get_db)):
+    """
+    포트폴리오의 비중 정보를 전달받아 역사적 위기 시나리오별 예상 수익률, MDD, VaR을 퀀트 분석하여 반환합니다.
+    """
+    try:
+        from core.stress_tester import run_stress_test
+        items = [{"code": item.code, "weight": item.weight} for item in req.portfolio]
+        results = await run_stress_test(db, items)
+        return results
+    except Exception as e:
+        logger.error(f"Error executing stress test: {e}")
+        return {"status": "error", "message": str(e)}
+
+
 class CompareRequest(BaseModel):
     etf_codes: List[str]
     skip_holdings: bool = False
