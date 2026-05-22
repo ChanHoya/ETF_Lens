@@ -140,8 +140,8 @@ export default function RiskGaugeChart({
 
             <div className="flex flex-col lg:flex-row items-stretch lg:justify-between gap-4 relative z-10 mt-1 flex-1">
                 {/* Visual Gauge Column */}
-                <div className="relative flex-1 min-w-[280px] flex items-center justify-center select-none -ml-4 pl-4 min-h-[160px]">
-                    <svg className="w-full max-w-[360px] overflow-visible" viewBox="0 0 100 55">
+                <div className="relative flex-1 min-w-[280px] flex items-end justify-center select-none -ml-4 pl-4 pb-4">
+                    <svg className="w-full max-w-[360px]" viewBox="0 0 100 55">
                         <defs>
                             {/* Track Gradients */}
                             <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -183,29 +183,28 @@ export default function RiskGaugeChart({
                         <circle cx="50" cy="50" r="4.5" fill="#12121e" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
                         <circle cx="50" cy="50" r="2" fill={config.color} style={{ filter: 'url(#neonGlow)' }} />
 
-                        {/* Premium needle (with bouncy transition) */}
-                        <g 
-                            transform={`rotate(${angle}, 50, 50)`}
-                            style={{ 
+                        {/* Premium needle (with bouncy transition using zero-origin wrapper) */}
+                        <g transform="translate(50, 50)">
+                            <g style={{ 
                                 transition: 'transform 1.2s cubic-bezier(0.19, 1, 0.22, 1)',
-                                transformOrigin: '50px 50px'
-                            }}
-                        >
-                            {/* Needle body */}
-                            <line 
-                                x1="50" y1="50" 
-                                x2="50" y2="14" 
-                                stroke={config.color} 
-                                strokeWidth="2" 
-                                strokeLinecap="round" 
-                                style={{ filter: 'url(#neonGlow)' }}
-                            />
-                            {/* Needle point arrow head */}
-                            <polygon 
-                                points="50,11 48,15 52,15" 
-                                fill={config.color}
-                                style={{ filter: 'url(#neonGlow)' }}
-                            />
+                                transform: `rotate(${angle}deg)`
+                            }}>
+                                {/* Needle body */}
+                                <line 
+                                    x1="0" y1="0" 
+                                    x2="0" y2="-36" 
+                                    stroke={config.color} 
+                                    strokeWidth="2" 
+                                    strokeLinecap="round" 
+                                    style={{ filter: 'url(#neonGlow)' }}
+                                />
+                                {/* Needle point arrow head */}
+                                <polygon 
+                                    points="0,-39 -2,-35 2,-35" 
+                                    fill={config.color}
+                                    style={{ filter: 'url(#neonGlow)' }}
+                                />
+                            </g>
                         </g>
 
                         {/* Scale ticks */}
@@ -229,7 +228,7 @@ export default function RiskGaugeChart({
                     </svg>
 
                     {/* Numeric overlay inside the gauge */}
-                    <div className="absolute bottom-3 flex flex-col items-center">
+                    <div className="absolute bottom-10 flex flex-col items-center">
                         <span className="text-3xl font-black text-white font-mono leading-none tracking-tight">
                             {score}
                             <span className="text-gray-500 text-xs font-normal font-sans ml-0.5">/{maxScore}점</span>

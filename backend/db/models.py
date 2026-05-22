@@ -207,3 +207,27 @@ class USMacroIndicatorLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class MarketMacroLog(Base):
+    """월별/일별 거시경제 주요 지표 통합 로그 (DX, KRW, KOSPI PER, CLI, T10Y2Y, HY Spread)"""
+    __tablename__ = "market_macro_log"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    date = Column(String, index=True, nullable=False)   # YYYY-MM-DD
+    dollar_index = Column(Float, nullable=True)
+    krw = Column(Float, nullable=True)
+    kospi_per = Column(Float, nullable=True)
+    cli = Column(Float, nullable=True)
+    t10y2y = Column(Float, nullable=True)
+    hy_spread = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class ExitSignalCache(Base):
+    """API JSON 응답 전체 캐싱 (target_ym 기준)"""
+    __tablename__ = "exit_signal_cache"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    target_ym = Column(String, index=True, unique=True, nullable=False)  # "YYYY-MM" or "CURRENT"
+    data_json = Column(String, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+

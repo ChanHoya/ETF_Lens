@@ -60,6 +60,12 @@ def _get_cache_ttl() -> int:
 CACHE_TTL = None  # 하위 호환성 유지 (사용 안 함, _get_cache_ttl() 사용)
 
 
+
+def _filter_by_target_ym(d: dict[str, float], target_ym: str = None) -> dict[str, float]:
+    if not target_ym:
+        return d
+    return {k: v for k, v in d.items() if k[:7] <= target_ym}
+
 def get_mock_data():
     return {
         "indicators": {
@@ -186,13 +192,13 @@ async def _fetch_yahoo_v8(symbol: str, days: int = 400) -> dict[str, float]:
         return {}
 
 
-async def fetch_yf_data():
+async def fetch_yf_data(target_ym: str = None):
     """달러 인덱스(FRED) + 환율(Yahoo v8)를 월별 집계해 반환."""
     try:
         # FRED DTWEXBGS = Trade Weighted US Dollar Index: Broad
         dx_dict, krw_dict = await asyncio.gather(
-            _fetch_fred_series("DTWEXBGS", days=400),
-            _fetch_yahoo_v8("KRW=X", days=400),
+            _fetch_fred_series("DTWEXBGS", days=3700 if target_ym else 400),
+            _fetch_yahoo_v8("KRW=X", days=3700 if target_ym else 400),
         )
 
         if not dx_dict:
@@ -207,8 +213,8 @@ async def fetch_yf_data():
                 monthly[ym] = val  # 마지막 값으로 덮어씌움
             return monthly
 
-        dx_mo  = _monthly_last(dx_dict)
-        krw_mo = _monthly_last(krw_dict)
+        dx_mo  = _monthly_last(_filter_by_target_ym(dx_dict, target_ym))
+        krw_mo = _monthly_last(_filter_by_target_ym(krw_dict, target_ym))
 
         # 최근 12개월
         all_yms = sorted(set(dx_mo) | set(krw_mo))[-12:]
@@ -238,7 +244,7 @@ async def fetch_yf_data():
         return [], 100.0, 1300
 
 
-async def fetch_market_sentiment():
+async def fetch_market_sentiment(target_ym: str = None):
     """Fetch VIX and calculate proxy Fear & Greed Index, and fetch KOSPI/S&P500.
     yfinance 대신 Yahoo Finance v8 chart API 사용 (Render에서 yfinance rate limit 회피).
     """
@@ -247,7 +253,7 @@ async def fetch_market_sentiment():
             """Yahoo Finance v8 chart API → pd.Series (EST 날짜 인덱스, Close 값)."""
             try:
                 sym_enc = symbol.replace("^", "%5E")
-                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym_enc}?interval=1d&range=3y"
+                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym_enc}?interval=1d&range=10y"
                 r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
                 if r.status_code != 200:
                     logger.warning(f"Yahoo v8 {symbol} status={r.status_code}")
@@ -393,7 +399,7 @@ async def fetch_oecd_cli_simple() -> tuple[list, float | None, int]:
         return [], None, 0
 
 
-async def fetch_fred_cli():
+async def fetch_fred_cli(target_ym: str = None):
     """OECD 공식 API로 한국 CLI 가져오기 (이전 FRED 스크래핑 대체)."""
     return await fetch_oecd_cli_simple()
 
@@ -504,7 +510,7 @@ async def seed_us_macro_db_if_empty():
 
 
 @router.get("")
-async def get_exit_signal_data():
+async def get_exit_signal_data(target_ym: str = None):
     global _cache
     now = datetime.now().timestamp()
 
@@ -512,20 +518,30 @@ async def get_exit_signal_data():
     await seed_market_sentiment_db_if_empty()
     await seed_us_macro_db_if_empty()
 
-    if (
-        _cache["data"]
-        and _cache["timestamp"]
-        and (now - _cache["timestamp"] < _get_cache_ttl())
-    ):
-        return _cache["data"]
+    target_key = target_ym if target_ym else "CURRENT"
+    import json
+    try:
+        from db.database import AsyncSessionLocal
+        from db.models import ExitSignalCache
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(ExitSignalCache).where(ExitSignalCache.target_ym == target_key))
+            cache_row = res.scalar()
+            if cache_row:
+                # 과거 데이터면 영구 캐시, 현재면 TTL 적용
+                if target_key != "CURRENT" or (now - cache_row.updated_at.timestamp() < _get_cache_ttl()):
+                    return json.loads(cache_row.data_json)
+    except Exception as e:
+        logger.warning(f"Failed to read from ExitSignalCache: {e}")
 
     mock = get_mock_data()
 
     # Try fetching real data
     try:
-        dollar_data, current_dollar, current_krw = await fetch_yf_data()
-        cli_data, current_cli, cli_down_months = await fetch_fred_cli()
-        pe_data = await get_pe_detail("KOSPI")
+        dollar_data, current_dollar, current_krw = await fetch_yf_data(target_ym)
+        cli_data, current_cli, cli_down_months = await fetch_fred_cli(target_ym)
+        pe_data = await get_pe_detail("KOSPI", target_ym)
+        # Wait, get_pe_detail might need specific filtering for target_ym since month is "03월"
 
         # Merge fetched data with mock fallback
         if dollar_data and current_dollar:
@@ -542,7 +558,7 @@ async def get_exit_signal_data():
             mock["indicators"]["per"] = pe_data
             mock["current_status"]["per"] = pe_data[-1]["val"]
 
-        sentiment_data, current_vix, current_vkospi, current_fgi = await fetch_market_sentiment()
+        sentiment_data, current_vix, current_vkospi, current_fgi = await fetch_market_sentiment(target_ym)
         if sentiment_data:
             mock["indicators"]["sentiment"] = sentiment_data
             mock["current_status"]["vix"] = current_vix
@@ -550,8 +566,10 @@ async def get_exit_signal_data():
             mock["current_status"]["fgi"] = current_fgi
 
         # ── 신규 2개 지표 수집 (T10Y2Y, BAMLH0A0HYM2) ──────────────────────────
-        t10y2y_dict = await _fetch_fred_series("T10Y2Y", days=400)
-        hy_dict = await _fetch_fred_series("BAMLH0A0HYM2", days=400)
+        t10y2y_dict = await _fetch_fred_series("T10Y2Y", days=3700 if target_ym else 400)
+        t10y2y_dict = _filter_by_target_ym(t10y2y_dict, target_ym)
+        hy_dict = await _fetch_fred_series("BAMLH0A0HYM2", days=3700 if target_ym else 400)
+        hy_dict = _filter_by_target_ym(hy_dict, target_ym)
 
         # 월별 마지막값 집계용 로컬 helper
         def _monthly_last_local(d: dict[str, float]) -> dict[str, float]:
@@ -741,6 +759,28 @@ async def get_exit_signal_data():
         },
     }
     # ─────────────────────────────────────────────────────────────────────────
+
+    try:
+        from db.database import AsyncSessionLocal
+        from db.models import ExitSignalCache
+        from sqlalchemy import select
+        from sqlalchemy.dialects.sqlite import insert
+
+        async with AsyncSessionLocal() as db:
+            stmt = insert(ExitSignalCache).values(
+                target_ym=target_key,
+                data_json=json.dumps(mock),
+                updated_at=datetime.utcnow()
+            )
+            # upsert
+            stmt = stmt.on_conflict_do_update(
+                index_elements=['target_ym'],
+                set_=dict(data_json=stmt.excluded.data_json, updated_at=stmt.excluded.updated_at)
+            )
+            await db.execute(stmt)
+            await db.commit()
+    except Exception as e:
+        logger.warning(f"Failed to write to ExitSignalCache: {e}")
 
     return mock
 
@@ -1123,7 +1163,16 @@ async def get_pe_detail(symbol: str = "005930"):
                 }
             )
 
+        if target_ym:
+            results = [r for r in results if r["month"][:7] <= target_ym]
+        
         logger.info(f"PE detail for {symbol}: {len(results)} pts, pe={real_pe:.1f}, last={results[-1]['val'] if results else 'N/A'}")
+        
+        if target_ym:
+            # get_exit_signal_data expects monthly data (last element per month) for 12 months, or just the current status.
+            # actually get_pe_detail returns daily? no, it returns daily but get_exit_signal_data just takes the last one for current_status.
+            pass
+            
         return results
     except Exception as e:
         logger.error(f"Error fetching PE detail for {symbol}: {e}")

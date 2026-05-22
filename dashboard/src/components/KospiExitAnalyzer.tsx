@@ -338,7 +338,7 @@ export default function KospiExitAnalyzer() {
             }
         };
         fetchData();
-    }, []);
+    }, [selectedDate]);
 
     const chartDollar = baseDollar;
     const chartPer = basePer;
