@@ -62,16 +62,21 @@ async def lifespan(app: FastAPI):
         except Exception as _e:
             print(f"[Startup] shares column migration skipped: {_e}")
 
-        # ── 3. ETF 성과 컬럼 마이그레이션 (SQLite 전용 스크립트) ─────────────────
+        # ── 3. ETF 성과 및 랭킹 비용 컬럼 마이그레이션 (SQLite 전용 스크립트) ───────
         if _is_sqlite:
             try:
                 from migrate_add_perf_columns import migrate as _migrate_perf
                 _migrate_perf()
             except Exception as _e:
                 print(f"[Startup] ETF perf column migration skipped: {_e}")
+            try:
+                from migrate_add_ranking_columns import migrate as _migrate_ranking
+                _migrate_ranking()
+            except Exception as _e:
+                print(f"[Startup] ETF ranking column migration skipped: {_e}")
         else:
-            # PostgreSQL: 성과 컬럼은 models.py / create_all 로 이미 생성됨
-            print("[Startup] PostgreSQL: perf columns managed by create_all, skipping SQLite migration script.")
+            # PostgreSQL: 성과 및 랭킹 컬럼은 models.py / create_all 로 이미 생성됨
+            print("[Startup] PostgreSQL: perf and ranking columns managed by create_all, skipping SQLite migration script.")
 
         # ── 4. 버전 기록 ────────────────────────────────────────────────────────
         try:

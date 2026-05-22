@@ -9,3 +9,4 @@ backend/venv/
 backend/__pycache__/
 *.pyc
 backend/pw-browsers/
+.vercel

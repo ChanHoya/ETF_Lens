@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, Info, TrendingUp, ShieldCheck, Zap, Activity, AlertCircle } from 'lucide-react';
+import { Search, Info, TrendingUp, ShieldCheck, Zap, Activity, AlertCircle, Percent } from 'lucide-react';
 import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip as RechartsTooltip } from 'recharts';
 import TaxSimulator from '@/components/TaxSimulator';
 import MacroRotation from '@/components/MacroRotation';
@@ -10,6 +10,8 @@ export default function DiscoverPage() {
     const [evaluations, setEvaluations] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedEtf, setSelectedEtf] = useState<any | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortCriteria, setSortCriteria] = useState<'total' | 'liquidity' | 'cost'>('total');
 
     useEffect(() => {
         const fetchEvaluations = async () => {
@@ -166,6 +168,69 @@ export default function DiscoverPage() {
                                     </div>
                                 ))}
                             </div>
+
+                            {/* Bento Grid: 실질 비용 명세 & 추적 안정성 지표 */}
+                            <div className="mt-6 pt-6 border-t border-white/10 space-y-5">
+                                {/* 실질 비용 명세 Bento Card */}
+                                <div className="bg-black/35 border border-white/5 rounded-2xl p-4 relative overflow-hidden group">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                                    <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                        <Percent className="w-3.5 h-3.5" />
+                                        실질 비용 명세 (총보수 + 거래비용)
+                                    </h4>
+                                    <div className="space-y-3 relative z-10">
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-gray-400">기본 운용보수</span>
+                                            <span className="text-gray-200 font-mono">{(selectedEtf.base_fee || 0).toFixed(4)}%</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-gray-400">기타 비용 (TER 차액)</span>
+                                            <span className="text-gray-200 font-mono">{(selectedEtf.other_fee || 0).toFixed(4)}%</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-gray-400">매매중개수수료율 (거래비용)</span>
+                                            <span className="text-gray-200 font-mono">{(selectedEtf.transaction_fee || 0).toFixed(4)}%</span>
+                                        </div>
+                                        
+                                        {/* Cumulative Visual Fee Progress Bar */}
+                                        <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden flex">
+                                            <div className="h-full bg-blue-500" style={{ width: `${Math.max(1, (((selectedEtf.base_fee || 0) / (selectedEtf.real_total_cost || 0.1)) * 100))}%` }}></div>
+                                            <div className="h-full bg-cyan-500" style={{ width: `${Math.max(1, (((selectedEtf.other_fee || 0) / (selectedEtf.real_total_cost || 0.1)) * 100))}%` }}></div>
+                                            <div className="h-full bg-emerald-500" style={{ width: `${Math.max(1, (((selectedEtf.transaction_fee || 0) / (selectedEtf.real_total_cost || 0.1)) * 100))}%` }}></div>
+                                        </div>
+
+                                        <div className="pt-2 flex justify-between items-center border-t border-white/5">
+                                            <span className="text-xs font-bold text-gray-300">실질 총비용 (TER + 거래)</span>
+                                            <span className="text-sm font-black text-emerald-400 font-mono">{(selectedEtf.real_total_cost || 0).toFixed(4)}%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 추적 안정성 지표 Bento Card */}
+                                <div className="bg-black/35 border border-white/5 rounded-2xl p-4 relative overflow-hidden group">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-rose-500/5 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                                    <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                        <Activity className="w-3.5 h-3.5" />
+                                        추적 안정성 및 괴리 진단
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-4 relative z-10">
+                                        <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 flex flex-col">
+                                            <span className="text-[10px] text-gray-500 uppercase font-bold">추적 오차율 (TE)</span>
+                                            <span className="text-base font-black text-amber-300 font-mono mt-1">{(selectedEtf.tracking_error || 0).toFixed(3)}%</span>
+                                            <span className="text-[9px] text-gray-500 mt-1">
+                                                {selectedEtf.tracking_error < 0.2 ? '🟢 우수 (안정)' : selectedEtf.tracking_error < 0.6 ? '🟡 보통' : '🔴 주의 (오차큼)'}
+                                            </span>
+                                        </div>
+                                        <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 flex flex-col">
+                                            <span className="text-[10px] text-gray-500 uppercase font-bold">평균 괴리율</span>
+                                            <span className="text-base font-black text-rose-300 font-mono mt-1">{(selectedEtf.disparity_rate || 0).toFixed(3)}%</span>
+                                            <span className="text-[9px] text-gray-500 mt-1">
+                                                {selectedEtf.disparity_rate < 0.1 ? '🟢 우수 (안정)' : selectedEtf.disparity_rate < 0.3 ? '🟡 보통' : '🔴 주의 (괴리큼)'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     ) : (
                         <div className="bg-[#121217]/50 border border-white/5 rounded-3xl p-6 h-[600px] flex items-center justify-center backdrop-blur-md">
@@ -195,72 +260,130 @@ export default function DiscoverPage() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                             <input
                                 type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="ETF 종목명 또는 코드 검색..."
                                 className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all text-white placeholder-gray-600 block"
                             />
                         </div>
                         <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
-                            <button className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-white/10 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors text-white">종합점수 순</button>
-                            <button className="px-4 py-2 bg-black/40 hover:bg-white/5 border border-white/5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors text-gray-400">유동성 우수</button>
-                            <button className="px-4 py-2 bg-black/40 hover:bg-white/5 border border-white/5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors text-gray-400">저비용 패시브</button>
+                            <button
+                                onClick={() => setSortCriteria('total')}
+                                className={`px-4 py-2 border rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                                    sortCriteria === 'total'
+                                        ? 'bg-white/10 hover:bg-white/15 border-white/10 text-white'
+                                        : 'bg-black/40 hover:bg-white/5 border-white/5 text-gray-400'
+                                }`}
+                            >
+                                종합점수 순
+                            </button>
+                            <button
+                                onClick={() => setSortCriteria('liquidity')}
+                                className={`px-4 py-2 border rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                                    sortCriteria === 'liquidity'
+                                        ? 'bg-white/10 hover:bg-white/15 border-white/10 text-white'
+                                        : 'bg-black/40 hover:bg-white/5 border-white/5 text-gray-400'
+                                }`}
+                            >
+                                유동성 우수
+                            </button>
+                            <button
+                                onClick={() => setSortCriteria('cost')}
+                                className={`px-4 py-2 border rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                                    sortCriteria === 'cost'
+                                        ? 'bg-white/10 hover:bg-white/15 border-white/10 text-white'
+                                        : 'bg-black/40 hover:bg-white/5 border-white/5 text-gray-400'
+                                }`}
+                            >
+                                저비용 패시브
+                            </button>
                         </div>
                     </div>
 
                     {/* ListView */}
                     <div className="bg-[#121217]/60 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-md shadow-xl flex-1 flex flex-col">
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse whitespace-nowrap min-w-[700px]">
+                            <table className="w-full text-left border-collapse whitespace-nowrap min-w-[800px]">
                                 <thead>
                                     <tr className="bg-black/30 border-b border-white/10 text-xs font-medium text-gray-400 uppercase tracking-wider">
                                         <th className="py-4 px-6 w-12 text-center">Rank</th>
-                                        <th className="py-4 px-4 w-[300px]">ETF 종목명 (코드)</th>
+                                        <th className="py-4 px-4 w-[250px]">ETF 종목명 (코드)</th>
                                         <th className="py-4 px-4 text-center">종합 등급</th>
+                                        <th className="py-4 px-4 text-center">실질 총비용 (TER+거래)</th>
+                                        <th className="py-4 px-4 text-center">추적/괴리 오차</th>
                                         <th className="py-4 px-4 text-center">총점</th>
                                         <th className="py-4 px-4 text-right">순자산총액(AUM)</th>
                                         <th className="py-4 px-6 text-right">운용사</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5 text-sm">
-                                    {evaluations.map((etf, idx) => {
-                                        const isSelected = selectedEtf?.code === etf.code;
-                                        return (
-                                            <tr
-                                                key={etf.code}
-                                                onClick={() => setSelectedEtf(etf)}
-                                                className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-500/10' : 'hover:bg-white/[0.03]'}`}
-                                            >
-                                                <td className="py-4 px-6 text-center">
-                                                    <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${idx < 3 ? 'bg-amber-400/20 text-amber-400' : 'text-gray-500'}`}>
-                                                        {idx + 1}
-                                                    </span>
-                                                </td>
-                                                <td className="py-4 px-4">
-                                                    <div className="flex flex-col">
-                                                        <span className={`font-bold truncate max-w-[280px] ${isSelected ? 'text-indigo-300' : 'text-gray-200'}`}>{etf.name}</span>
-                                                        <span className="text-xs text-gray-500 font-mono mt-0.5">{etf.code}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="py-4 px-4 text-center">
-                                                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold ${getRatingColor(etf.scores.rating)}`}>
-                                                        {getRatingIcon(etf.scores.rating)}
-                                                        {etf.scores.rating}
-                                                    </div>
-                                                </td>
-                                                <td className="py-4 px-4 text-center">
-                                                    <span className="font-mono font-bold text-gray-300">{Math.round(etf.scores.total)}</span>
-                                                </td>
-                                                <td className="py-4 px-4 text-right text-gray-400">
-                                                    {etf.aum || '-'}
-                                                </td>
-                                                <td className="py-4 px-6 text-right text-xs text-gray-500">
-                                                    {etf.issuer || '-'}
-                                                </td>
-                                            </tr>
-                                        )
-                                    })}
+                                    {evaluations
+                                        .filter((etf) => {
+                                            const q = searchTerm.toLowerCase().trim();
+                                            if (!q) return true;
+                                            return etf.name.toLowerCase().includes(q) || etf.code.includes(q);
+                                        })
+                                        .sort((a, b) => {
+                                            if (sortCriteria === 'total') {
+                                                return (b.scores.total || 0) - (a.scores.total || 0);
+                                            } else if (sortCriteria === 'liquidity') {
+                                                return (b.scores.liquidity || 0) - (a.scores.liquidity || 0);
+                                            } else if (sortCriteria === 'cost') {
+                                                return (a.real_total_cost || 0) - (b.real_total_cost || 0);
+                                            }
+                                            return 0;
+                                        })
+                                        .map((etf, idx) => {
+                                            const isSelected = selectedEtf?.code === etf.code;
+                                            return (
+                                                <tr
+                                                    key={etf.code}
+                                                    onClick={() => setSelectedEtf(etf)}
+                                                    className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-500/10' : 'hover:bg-white/[0.03]'}`}
+                                                >
+                                                    <td className="py-4 px-6 text-center">
+                                                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${idx < 3 ? 'bg-amber-400/20 text-amber-400' : 'text-gray-500'}`}>
+                                                            {idx + 1}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-4 px-4">
+                                                        <div className="flex flex-col">
+                                                            <span className={`font-bold truncate max-w-[230px] ${isSelected ? 'text-indigo-300' : 'text-gray-200'}`}>{etf.name}</span>
+                                                            <span className="text-xs text-gray-500 font-mono mt-0.5">{etf.code}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-4 px-4 text-center">
+                                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold ${getRatingColor(etf.scores.rating)}`}>
+                                                            {getRatingIcon(etf.scores.rating)}
+                                                            {etf.scores.rating}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-4 px-4 text-center">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-mono font-bold text-emerald-400">{(etf.real_total_cost || 0).toFixed(3)}%</span>
+                                                            <span className="text-[10px] text-gray-500 font-mono">
+                                                                (TER {(etf.tot_fee || 0).toFixed(2)} + 거래 {(etf.transaction_fee || 0).toFixed(2)})
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-4 px-4 text-center text-gray-300 font-mono text-xs">
+                                                        {(etf.tracking_error || 0).toFixed(2)}% / {(etf.disparity_rate || 0).toFixed(2)}%
+                                                    </td>
+                                                    <td className="py-4 px-4 text-center">
+                                                        <span className="font-mono font-bold text-gray-300">{Math.round(etf.scores.total)}</span>
+                                                    </td>
+                                                    <td className="py-4 px-4 text-right text-gray-400">
+                                                        {etf.aum || '-'}
+                                                    </td>
+                                                    <td className="py-4 px-6 text-right text-xs text-gray-500">
+                                                        {etf.issuer || '-'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     {evaluations.length === 0 && !isLoading && (
                                         <tr>
-                                            <td colSpan={6} className="py-12 text-center text-gray-500">
+                                            <td colSpan={8} className="py-12 text-center text-gray-500">
                                                 평가된 ETF 데이터가 없습니다. DB Sync를 확인하세요.
                                             </td>
                                         </tr>

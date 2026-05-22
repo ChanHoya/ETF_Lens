@@ -285,12 +285,23 @@ async def get_evaluated_etfs(db: AsyncSession = Depends(get_db)):
 
         response = []
         for eval_obj, master_obj in result.all():
+            tot = master_obj.tot_fee or 0.0
+            trans = master_obj.transaction_fee or 0.0
+            real_total_cost = round(tot + trans, 4)
+
             response.append(
                 {
                     "code": master_obj.code,
                     "name": master_obj.name,
                     "issuer": master_obj.issuer,
                     "aum": master_obj.aum,
+                    "base_fee": master_obj.base_fee or 0.0,
+                    "tot_fee": tot,
+                    "other_fee": master_obj.other_fee or 0.0,
+                    "transaction_fee": trans,
+                    "real_total_cost": real_total_cost,
+                    "tracking_error": master_obj.tracking_error or 0.0,
+                    "disparity_rate": master_obj.disparity_rate or 0.0,
                     "scores": {
                         "liquidity": eval_obj.liquidity_score,
                         "cost": eval_obj.cost_score,

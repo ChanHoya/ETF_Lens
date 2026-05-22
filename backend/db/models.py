@@ -31,8 +31,12 @@ class ETFMaster(Base):
     price = Column(Float)
     base_fee = Column(Float)  # e.g 0.15
     tot_fee = Column(Float)  # e.g 0.22 (TER)
+    other_fee = Column(Float, default=0.0, nullable=True)  # e.g. 0.07 (기타비용 비율)
+    transaction_fee = Column(Float, default=0.0, nullable=True)  # e.g. 0.03 (매매중개수수료율)
+    tracking_error = Column(Float, default=0.0, nullable=True)  # e.g. 0.05 (추적오차율 %)
+    disparity_rate = Column(Float, default=0.0, nullable=True)  # e.g. 0.02 (괴리율 %)
     aum = Column(String)  # String because it's stored as e.g. "1,200억"
-
+    
     # Pre-calculated Basic Info caching as JSON String
     basic_info_json = Column(Text)
     last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
