@@ -75,8 +75,26 @@ async def lifespan(app: FastAPI):
             except Exception as _e:
                 print(f"[Startup] ETF ranking column migration skipped: {_e}")
         else:
-            # PostgreSQL: 성과 및 랭킹 컬럼은 models.py / create_all 로 이미 생성됨
-            print("[Startup] PostgreSQL: perf and ranking columns managed by create_all, skipping SQLite migration script.")
+            # PostgreSQL: 기존 테이블이 있을 경우 ALTER TABLE DDL을 직접 수행하여 누락 컬럼 보완
+            try:
+                async with engine.begin() as conn:
+                    # 성과 지표 컬럼 추가 (migrate_add_perf_columns 대응)
+                    await conn.execute(text("ALTER TABLE etf_master ADD COLUMN IF NOT EXISTS return_1m DOUBLE PRECISION DEFAULT 0.0"))
+                    await conn.execute(text("ALTER TABLE etf_master ADD COLUMN IF NOT EXISTS return_3m DOUBLE PRECISION DEFAULT 0.0"))
+                    await conn.execute(text("ALTER TABLE etf_master ADD COLUMN IF NOT EXISTS return_6m DOUBLE PRECISION DEFAULT 0.0"))
+                    await conn.execute(text("ALTER TABLE etf_master ADD COLUMN IF NOT EXISTS return_1y DOUBLE PRECISION DEFAULT 0.0"))
+                    await conn.execute(text("ALTER TABLE etf_master ADD COLUMN IF NOT EXISTS volatility DOUBLE PRECISION DEFAULT 0.0"))
+                    await conn.execute(text("ALTER TABLE etf_master ADD COLUMN IF NOT EXISTS sharpe DOUBLE PRECISION DEFAULT 0.0"))
+                    await conn.execute(text("ALTER TABLE etf_master ADD COLUMN IF NOT EXISTS perf_updated_at TIMESTAMP WITHOUT TIME ZONE"))
+                    
+                    # 랭킹/실질 비용 컬럼 추가 (migrate_add_ranking_columns 대응)
+                    await conn.execute(text("ALTER TABLE etf_master ADD COLUMN IF NOT EXISTS other_fee DOUBLE PRECISION DEFAULT 0.0"))
+                    await conn.execute(text("ALTER TABLE etf_master ADD COLUMN IF NOT EXISTS transaction_fee DOUBLE PRECISION DEFAULT 0.0"))
+                    await conn.execute(text("ALTER TABLE etf_master ADD COLUMN IF NOT EXISTS tracking_error DOUBLE PRECISION DEFAULT 0.0"))
+                    await conn.execute(text("ALTER TABLE etf_master ADD COLUMN IF NOT EXISTS disparity_rate DOUBLE PRECISION DEFAULT 0.0"))
+                    print("[Startup] Successfully executed PostgreSQL ALTER TABLE check/migrations for etf_master columns.")
+            except Exception as _e:
+                print(f"[Startup] PostgreSQL etf_master column migration failed: {_e}")
 
         # ── 4. 버전 기록 ────────────────────────────────────────────────────────
         try:
