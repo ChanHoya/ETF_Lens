@@ -159,7 +159,7 @@ export default function FxFinder() {
                         </span>
                         
                         <div className="space-y-2">
-                            {analysisData.scenarios.map((sc: any, idx: int) => {
+                            {analysisData.scenarios.map((sc: any, idx: number) => {
                                 const isUnhedgedBetter = sc.advantage_unhedged > 0;
                                 return (
                                     <div key={idx} className="flex justify-between items-center bg-white/[0.02] border border-white/5 hover:border-white/10 rounded-xl p-3 text-xs transition-colors">

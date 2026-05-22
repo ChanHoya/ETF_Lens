@@ -37,6 +37,7 @@
 | S4-4: ETF 실질 비용 및 추적오차 종합 진단 랭킹 보드 | ✅ done | backend/core/etf_evaluator.py, dashboard/src/app/discover/page.tsx | TER 및 거래수수료를 합산한 실질 비용 연산 및 오차 벌점제 적용 랭킹 보드 구축 완료 |
 | S5-1: AI 기반 포트폴리오 스트레스 테스터 | ✅ done | backend/core/stress_tester.py, backend/api/router.py | 역사적 위기 시나리오를 대입하여 포트폴리오 예상 MDD/VaR 분석 백엔드 엔진 구축 완료 |
 | S5-2: 원/달러 환율 시뮬레이터 및 환헤지 vs 환노출 비교 분석기 | ✅ done | backend/core/currency_analyzer.py, dashboard/src/components/FxFinder.tsx | 환헤지(H)와 환노출 ETF 간 원/달러 환율 변동 추이 연동 및 시나리오별 성과 비교 시뮬레이터 차트 연동 완료 |
+| S5-3: ISA 및 연금저축/IRP 과세이연 및 절세 혜택 시뮬레이터 | ✅ done | dashboard/src/components/TaxOptimizer.tsx | 절세 계좌별 비과세/과세이연 혜택 및 세후 최종 복리 수령액 비교 계산 도구 개발 완료 |
 ## Status Legend
 
 - ✅ **done** — 기능 완전 구현, 운영 중

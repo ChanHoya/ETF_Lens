@@ -6,6 +6,7 @@ import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, Pola
 import TaxSimulator from '@/components/TaxSimulator';
 import MacroRotation from '@/components/MacroRotation';
 import FxFinder from '@/components/FxFinder';
+import TaxOptimizer from '@/components/TaxOptimizer';
 
 export default function DiscoverPage() {
     const [evaluations, setEvaluations] = useState<any[]>([]);
@@ -399,6 +400,9 @@ export default function DiscoverPage() {
 
                     {/* Add FX Finder Here */}
                     <FxFinder />
+
+                    {/* Add Tax Optimizer Here */}
+                    <TaxOptimizer />
                 </div>
             </main>
         </div>
