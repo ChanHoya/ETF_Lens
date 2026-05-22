@@ -115,4 +115,11 @@
 - **원인**: KIS API 속도 초과 등으로 백엔드 응답이 100초 이상 걸릴 때 Render의 무료 티어 로드밸런서가 504 Gateway Timeout을 내려줌. 이 타임아웃 에러 페이지에는 CORS 허용 헤더가 누락되어 브라우저가 응답을 차단하고 `Failed to fetch` 에러를 던짐.
 - **해결**: KIS API Rate Limit(EGW00133)을 만났을 때 즉시 다음 API 키를 시도하도록 루프를 개선(`return None` 대신 `continue` 적용)하여 백엔드 연동 응답 시간을 타임아웃 이내로 단축함.
 
+## Next.js & Frontend Build
+
+### 'Skipping validation of types' 설정 하에 React Import 누락으로 인한 런타임 ReferenceError
+- **증상**: Next.js 빌드는 오류 없이 성공하는데, 브라우저에서 해당 페이지 로드 시 `ReferenceError: useState is not defined` 등의 크래시 발생.
+- **원인**: Next.js 설정에서 TypeScript 타입 검증 및 린트 검사가 생략(`Skipping validation of types`)되도록 구성되어 있을 경우, `useState`나 `useEffect` 같은 API를 import 없이 사용했음에도 컴파일 타임에 잡히지 않고 배포본에 그대로 포함됨.
+- **해결**: UI 컴포넌트나 페이지 수정 시 `import React, { useState, useEffect } from 'react';`와 같은 필수 임포트 구문이 유실되었는지 수동으로 꼼꼼히 확인하고, 빌드 로그의 경고나 런타임 콘솔 오류를 적극 모니터링함.
+
 
