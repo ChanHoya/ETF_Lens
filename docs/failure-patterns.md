@@ -136,5 +136,12 @@
 - **원인**: 모든 자산이 동시에 존재해야 하는 공통 기준일(`keys.every(k => d[k] != null)`)을 구하는 연산 방식은 한/미 양국 시장의 휴장일/공휴일 불일치 및 늦게 상장된 ETF가 결합될 때 기준일을 전혀 탐색하지 못해 `undefined`로 떨어지게 됨.
 - **해결**: 모든 자산이 동시에 존재하는 공통 기준일을 고집하기보다, **각 자산별로 최초 유효한 데이터(First Valid Price)를 개별 탐색하여 고유의 baseValue를 구축하고 각각 정규화**를 수행하는 알고리즘으로 전환하여 시계열 누락을 원천 예방함.
 
+## Korean Hangul String Mismatch (NFD vs NFC)
+
+### macOS/Browser Decomposed Hangul (NFD) Match Failure in Backend
+- **증상**: 특정 ETF 클릭 시, 해당 ETF와 구성종목이 차트에 노출되지 않고 기본 화면(또는 빈 화면)이 유지됨.
+- **원인**: macOS 환경이나 특정 브라우저에서 복사/입력된 한글 문자열이 자소 분리 형태인 NFD(Normalization Form Decomposed) 형태로 전송됨. 백엔드 코드의 매핑 딕셔너리 키는 표준 NFC(Normalization Form Composed)로 저장되어 있어 `tickers.get(etf)` 호출 시 `None`을 반환하며 매칭 실패.
+- **해결**: 백엔드 라우터 진입 시 `unicodedata.normalize('NFC', etf)`를 활용하여 입력값의 자소를 즉시 합성(NFC)한 후 딕셔너리 매핑 및 비교 처리를 수행해 자소 분리 불일치 버그를 원천 예방함.
+
 
 
