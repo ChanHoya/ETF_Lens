@@ -129,4 +129,12 @@
 - **원인**: SQLAlchemy `Base.metadata.create_all`은 기존 테이블이 존재할 경우 `ALTER TABLE`을 실행하지 않고 패스함. 로컬 SQLite 마이그레이션 스크립트만 실행할 경우, 배포용 PostgreSQL DB의 기존 테이블 스키마가 업데이트되지 않아 컬럼 누락으로 인한 쿼리 에러 발생.
 - **해결**: `main.py` lifespan startup 내에 PostgreSQL DB에 대해 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` DDL 쿼리를 직접 수행하는 방어 로직을 추가하여 누락 컬럼을 보완함.
 
+## Quantitative Analysis & Returns Merging (추가)
+
+### 한/미 거래일 시차 및 신규/기상장 혼합 시 공통 기준일 탐색 실패
+- **증상**: 대형 해외 ETF 구성종목이나 신규 지수를 차트에 추가 시 특정 선이 아예 렌더링되지 않거나, 전체 차트가 `chartData = []`로 텅 비는 버그 발생.
+- **원인**: 모든 자산이 동시에 존재해야 하는 공통 기준일(`keys.every(k => d[k] != null)`)을 구하는 연산 방식은 한/미 양국 시장의 휴장일/공휴일 불일치 및 늦게 상장된 ETF가 결합될 때 기준일을 전혀 탐색하지 못해 `undefined`로 떨어지게 됨.
+- **해결**: 모든 자산이 동시에 존재하는 공통 기준일을 고집하기보다, **각 자산별로 최초 유효한 데이터(First Valid Price)를 개별 탐색하여 고유의 baseValue를 구축하고 각각 정규화**를 수행하는 알고리즘으로 전환하여 시계열 누락을 원천 예방함.
+
+
 
