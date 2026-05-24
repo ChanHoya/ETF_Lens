@@ -5,7 +5,7 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 5 — 글로벌 매크로 스트레스 테스트, 환율/절세 시뮬레이터, 우주 및 바이오 ETF 구성종목 변동 그래프/개별 주식 팝업 연동 완료
+✅ Current: Sprint 5 — 글로벌 매크로 스트레스 테스트, 환율/절세 시뮬레이터, 우주 및 바이오 ETF 구성종목 변동 그래프/개별 주식 팝업 연동 및 특정 ETF 선택 시 테이블/차트 구성종목 10종 필터링 고도화 완료
 ➡️ Next: 다음 스프린트 계획 수립 예정
  
 ## Current Sprint
