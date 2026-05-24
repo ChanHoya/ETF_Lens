@@ -185,7 +185,9 @@ export default function TaxOptimizer() {
                         <div className="flex justify-between text-xs flex-wrap gap-1">
                             <span className="text-gray-400 flex items-center gap-1">
                                 배당/과세수익 비중
-                                <HelpCircle className="w-3 h-3 text-gray-500" title="수익 중 연 15.4% 과세대상 배당소득이나 국내상장 해외주식형 ETF 매매차익의 비중" />
+                                <span title="수익 중 연 15.4% 과세대상 배당소득이나 국내상장 해외주식형 ETF 매매차익의 비중">
+                                    <HelpCircle className="w-3 h-3 text-gray-500" />
+                                </span>
                             </span>
                             <span className="text-white font-bold">{dividendPortion}%</span>
                         </div>

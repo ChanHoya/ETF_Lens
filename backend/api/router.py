@@ -2227,6 +2227,9 @@ async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_d
     Returns split/dividend-adjusted close prices for 4 space assets,
     optionally including top holdings of a selected space ETF for comparison.
     """
+    import unicodedata
+    if etf:
+        etf = unicodedata.normalize('NFC', etf)
     import yfinance as yf
     import pandas as pd
     import asyncio
@@ -2667,6 +2670,9 @@ async def get_bio_chart_data(etf: str = None, db: AsyncSession = Depends(get_db)
     Returns close prices for 5 Korean Bio ETFs,
     optionally including top holdings of a selected Bio ETF for comparison.
     """
+    import unicodedata
+    if etf:
+        etf = unicodedata.normalize('NFC', etf)
     import yfinance as yf
     import pandas as pd
     import asyncio

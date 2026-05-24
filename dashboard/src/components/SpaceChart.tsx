@@ -231,6 +231,15 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
         "US-Space"
     ];
 
+    // Filter and sort holdings table data if an ETF is selected
+    const displayHoldingsKeys = selectedEtf ? [selectedEtf] : holdingsKeys;
+    const displayHoldingsData = selectedEtf
+        ? holdingsData
+              .filter((row) => row[selectedEtf] !== undefined && row[selectedEtf] > 0)
+              .sort((a, b) => (b[selectedEtf] || 0) - (a[selectedEtf] || 0))
+              .slice(0, 10)
+        : holdingsData;
+
     return (
         <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
@@ -388,18 +397,22 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                     <th className="px-4 py-3 text-xs font-bold text-gray-300 border-b border-white/10">
                                         구성종목명
                                     </th>
-                                    {holdingsKeys.map((k, idx) => (
-                                        <th key={k} className="px-3 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10">
-                                            <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
-                                                <span style={{ color: colors[idx % colors.length] }}>●</span>
-                                                {k}
-                                            </div>
-                                        </th>
-                                    ))}
+                                    {displayHoldingsKeys.map((k, idx) => {
+                                        const originalIdx = holdingsKeys.indexOf(k);
+                                        const dotColor = colors[originalIdx >= 0 ? originalIdx : idx % colors.length];
+                                        return (
+                                            <th key={k} className="px-3 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10">
+                                                <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                                                    <span style={{ color: dotColor }}>●</span>
+                                                    {k}
+                                                </div>
+                                            </th>
+                                        );
+                                    })}
                                 </tr>
                             </thead>
                             <tbody>
-                                {holdingsData.map((row) => (
+                                {displayHoldingsData.map((row) => (
                                     <tr 
                                         key={row.constituent} 
                                         className="hover:bg-white/5 transition-colors"
@@ -421,7 +434,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                                 <span className="text-gray-200">{row.constituent}</span>
                                             )}
                                         </td>
-                                        {holdingsKeys.map((k) => {
+                                        {displayHoldingsKeys.map((k) => {
                                             const val = row[k];
                                             const isZero = !val || val === 0;
                                             if (isZero) {
