@@ -121,23 +121,18 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
             return;
         }
 
-        // ─── 공통 기준일 계산 ───────────────────────────────────────────
-        // 모든 티커에 유효한 데이터가 있는 첫 번째 날짜를 공통 base=100 기준일로 사용.
-        const commonBaseRow = filtered.find(d => keys.every(k => d[k] != null && d[k] > 0));
-        if (!commonBaseRow) {
-            setChartData([]);
-            return;
-        }
-
+        // ─── 개별 자산 기준일 가격(Base Value) 계산 ────────────────────────
+        // 각 종목별로 유효한 가격 데이터가 처음으로 나타나는 시점을 기준(100)으로 삼습니다.
+        // 이는 한국/미국 시장의 공휴일/휴장일 불일치 및 상장일 격차 문제를 완벽히 방어합니다.
         const baseValues: any = {};
         keys.forEach(k => {
-            baseValues[k] = commonBaseRow[k];
+            const firstValid = filtered.find(d => d[k] != null && d[k] > 0);
+            if (firstValid) {
+                baseValues[k] = firstValid[k];
+            }
         });
 
-        // 공통 기준일 이후 데이터만 사용
-        const alignedData = filtered.filter(d => d.date >= commonBaseRow.date);
-
-        const normalizedData = alignedData.map(d => {
+        const normalizedData = filtered.map(d => {
             const row: any = { date: d.date.replace(/-/g, '/').substring(2) };
             keys.forEach(k => {
                 if (d[k] != null && baseValues[k]) {
