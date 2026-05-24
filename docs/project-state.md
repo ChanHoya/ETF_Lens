@@ -5,7 +5,7 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 5 — 글로벌 매크로 스트레스 테스트 및 환율/절세 최적화 시뮬레이터 개발 완료 (포트폴리오 스트레스 테스터, FxFinder, TaxOptimizer 구축 완료)
+✅ Current: Sprint 5 — 글로벌 매크로 스트레스 테스트, 환율/절세 시뮬레이터 및 우주 ETF 구성종목 변동 그래프/개별 주식 팝업 연동 완료
 ➡️ Next: 다음 스프린트 계획 수립 예정
  
 ## Current Sprint
@@ -18,6 +18,7 @@ Base: Exit Strategy Monitoring (KOSPI)
  
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
+| S5-4 | 우주 ETF 구성종목 변동 그래프 및 개별 주식 팝업 연동 | ✅ done | 4대 우주 ETF 클릭 시 상위 구성종목 주가 점선 오버레이 렌더링 및 개별 종목 클릭 시 미국 주식 전용 모달 연동 완료 |
 | S5-1 | 포트폴리오 역사적 위기 스트레스 테스터 엔진 및 API 연동 | ✅ done | COVID-19, 리먼 등 과거 위기 시나리오 대입 시 포트폴리오 예상 MDD/VaR 분석 백엔드 개발 완료 |
 | S5-2 | 원/달러 환율 연동 환헤지 vs 환노출 비교 분석 | ✅ done | 환헤지(H)와 환노출 ETF 간 환율 변동별 실질 누적 성과 시뮬레이션 및 차트 연동 완료 |
 | S5-3 | ISA 및 연금저축/IRP 과세이연 및 절세 혜택 시뮬레이터 | ✅ done | 절세 계좌별 비과세/과세이연 혜택 및 세후 최종 복리 수령액 비교 계산 도구 개발 완료 |

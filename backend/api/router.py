@@ -2132,9 +2132,10 @@ async def get_semi_chart_data():
 
 
 @router.get("/space-chart")
-async def get_space_chart_data(db: AsyncSession = Depends(get_db)):
+async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_db)):
     """
-    Returns split/dividend-adjusted close prices for 4 space assets.
+    Returns split/dividend-adjusted close prices for 4 space assets,
+    optionally including top holdings of a selected space ETF for comparison.
     """
     import yfinance as yf
     import pandas as pd
@@ -2150,8 +2151,87 @@ async def get_space_chart_data(db: AsyncSession = Depends(get_db)):
         "US-Space (ARKX)": "ARKX",
     }
 
+    # If an ETF is selected, dynamic add its top holdings to comparison
+    if etf:
+        constituent_ticker_map = {
+            "Rocket Lab (로켓랩)": "RKLB",
+            "EchoStar (에코스타)": "SATS",
+            "AST SpaceMobile (스페이스모바일)": "ASTS",
+            "Intuitive Machines (인튜이티브 머신스)": "LUNR",
+            "Redwire (레드와이어)": "RDW",
+            "Planet Labs (플래닛랩스)": "PL",
+            "L3Harris Technologies": "LHX",
+            "Advanced Micro Devices": "AMD",
+            "Teradyne": "TER",
+            "Boeing (보잉)": "BA",
+            "Globalstar (글로벌스타)": "GSAT",
+            "Kratos Defense": "KTOS",
+            "Deere & Company (디어앤컴퍼니)": "DE",
+            "Archer Aviation": "ACHR",
+            "MDA Space (MDA 스페이스)": "MDALF",
+        }
+        
+        # Space ETF Holdings Fallbacks (Aligned with get_space_holdings)
+        space_holdings_fallbacks = {
+            "KODEX 미국우주항공": [
+                {"ticker": "Rocket Lab (로켓랩)", "weight": 24.5},
+                {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 19.8},
+                {"ticker": "EchoStar (에코스타)", "weight": 14.5},
+                {"ticker": "Planet Labs (플래닛랩스)", "weight": 8.5},
+                {"ticker": "Intuitive Machines (인튜이티브 머신스)", "weight": 6.8},
+                {"ticker": "L3Harris Technologies", "weight": 4.5},
+                {"ticker": "Advanced Micro Devices", "weight": 3.8},
+                {"ticker": "Boeing (보잉)", "weight": 3.5},
+                {"ticker": "Redwire (레드와이어)", "weight": 3.2},
+                {"ticker": "Kratos Defense", "weight": 2.8},
+            ],
+            "ACE 미국우주테크액티브": [
+                {"ticker": "Rocket Lab (로켓랩)", "weight": 26.5},
+                {"ticker": "EchoStar (에코스타)", "weight": 21.5},
+                {"ticker": "Redwire (레드와이어)", "weight": 4.4},
+                {"ticker": "Intuitive Machines (인튜이티브 머신스)", "weight": 4.3},
+                {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 3.9},
+                {"ticker": "MDA Space (MDA 스페이스)", "weight": 4.1},
+                {"ticker": "L3Harris Technologies", "weight": 3.5},
+                {"ticker": "Teradyne", "weight": 3.2},
+                {"ticker": "Advanced Micro Devices", "weight": 2.5},
+                {"ticker": "Boeing (보잉)", "weight": 2.0},
+            ],
+            "Tiger 미국우주테크": [
+                {"ticker": "Rocket Lab (로켓랩)", "weight": 27.3},
+                {"ticker": "Intuitive Machines (인튜이티브 머신스)", "weight": 20.9},
+                {"ticker": "Redwire (레드와이어)", "weight": 14.7},
+                {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 9.8},
+                {"ticker": "Planet Labs (플래닛랩스)", "weight": 7.4},
+                {"ticker": "EchoStar (에코스타)", "weight": 5.8},
+                {"ticker": "Globalstar (글로벌스타)", "weight": 6.3},
+            ],
+            "SOL 미국우주항공TOP10": [
+                {"ticker": "Rocket Lab (로켓랩)", "weight": 23.0},
+                {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 20.8},
+                {"ticker": "EchoStar (에코스타)", "weight": 15.9},
+                {"ticker": "Planet Labs (플래닛랩스)", "weight": 9.0},
+                {"ticker": "Intuitive Machines (인튜이티브 머신스)", "weight": 7.5},
+                {"ticker": "Redwire (레드와이어)", "weight": 6.2},
+                {"ticker": "L3Harris Technologies", "weight": 4.8},
+                {"ticker": "Teradyne", "weight": 4.0},
+                {"ticker": "Advanced Micro Devices", "weight": 3.2},
+                {"ticker": "Globalstar (글로벌스타)", "weight": 2.5},
+            ],
+        }
+        
+        # Extract top 5 holdings
+        holdings = space_holdings_fallbacks.get(etf, [])
+        top_holdings = sorted(holdings, key=lambda x: x.get("weight", 0), reverse=True)[:5]
+        
+        for h in top_holdings:
+            name = h["ticker"]
+            symbol = constituent_ticker_map.get(name)
+            if symbol:
+                tickers[name] = symbol
+
     # 스마트 캐시 TTL (kst 날짜 기반)
-    space_cache_key = "space_chart_v5"
+    space_cache_key = f"space_chart_v5_{etf}" if etf else "space_chart_v5"
     from datetime import timezone, timedelta as _td
     _kst = timezone(_td(hours=9))
     _kst_now = datetime.now(_kst)

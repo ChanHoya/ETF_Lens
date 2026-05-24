@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Activity } from 'lucide-react';
+import { Activity, ArrowUpRight } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
@@ -43,6 +43,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
     const [keys, setKeys] = useState<string[]>([]);
     const [originalData, setOriginalData] = useState<any[]>([]);
+    const [selectedEtf, setSelectedEtf] = useState<string | null>(null);
     
     // Holdings comparison state
     const [holdingsData, setHoldingsData] = useState<any[]>([]);
@@ -75,7 +76,10 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const res = await fetch(`${API_BASE}/api/v1/analyze/space-chart`);
+                const url = selectedEtf
+                    ? `${API_BASE}/api/v1/analyze/space-chart?etf=${encodeURIComponent(selectedEtf)}`
+                    : `${API_BASE}/api/v1/analyze/space-chart`;
+                const res = await fetch(url);
                 if (!res.ok) throw new Error('API fetch error');
                 const data = await res.json();
                 
@@ -93,7 +97,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
             }
         };
         fetchData();
-    }, []);
+    }, [selectedEtf]);
 
     useEffect(() => {
         if (!originalData || originalData.length === 0) return;
@@ -215,9 +219,26 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
         );
     };
 
+    const etfsToSelect = [
+        "KODEX 미국우주항공",
+        "ACE 미국우주테크액티브",
+        "Tiger 미국우주테크",
+        "SOL 미국우주항공TOP10"
+    ];
+
+    const baseEtfKeys = [
+        "KODEX 미국우주항공",
+        "ACE 미국우주테크액티브",
+        "Tiger 미국우주테크",
+        "SOL 미국우주항공TOP10",
+        "US-Space (ARKX)",
+        "US-Space(ARKX)",
+        "US-Space"
+    ];
+
     return (
         <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                     <Activity className="w-5 h-5 text-indigo-400" />
                     우주섹터 주요 종목 현황
@@ -238,6 +259,41 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                 </div>
             </div>
 
+            {/* ETF Selector Chips for Constituent Overlay */}
+            <div className="flex flex-wrap gap-2 items-center mb-4 bg-black/30 p-2.5 rounded-2xl border border-white/5">
+                <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center">
+                    🔍 구성종목 주가 비교:
+                </span>
+                {etfsToSelect.map((etfName, idx) => {
+                    const isSelected = selectedEtf === etfName;
+                    const themeColor = colors[idx % colors.length];
+                    return (
+                        <button
+                            key={etfName}
+                            onClick={() => setSelectedEtf(isSelected ? null : etfName)}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border ${
+                                isSelected
+                                    ? `bg-indigo-600/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]`
+                                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'
+                            }`}
+                            style={{
+                                borderColor: isSelected ? themeColor : 'rgba(255,255,255,0.06)'
+                            }}
+                        >
+                            {etfName} {isSelected && '✓'}
+                        </button>
+                    );
+                })}
+                {selectedEtf && (
+                    <button
+                        onClick={() => setSelectedEtf(null)}
+                        className="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-auto hover:underline transition-all"
+                    >
+                        비교 초기화 (X)
+                    </button>
+                )}
+            </div>
+ 
             <div className="w-full h-[400px]">
                 {isLoading ? (
                     <ChartLoadingPlaceholder height={400} message="우주 ETF 데이터 로딩중" />
@@ -266,28 +322,38 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                             />
                             <RechartsTooltip content={<CustomTooltip />} />
                             <Legend
+                                onClick={(o) => {
+                                    const clickedKey = o.dataKey as string;
+                                    if (etfsToSelect.includes(clickedKey)) {
+                                        setSelectedEtf(prev => prev === clickedKey ? null : clickedKey);
+                                    }
+                                }}
                                 onMouseEnter={handleLegendMouseEnter}
                                 onMouseLeave={handleLegendMouseLeave}
-                                wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }}
+                                wrapperStyle={{ paddingTop: '10px', fontSize: '12px', cursor: 'pointer' }}
                                 iconType="circle"
                             />
-                            {keys.map((k, idx) => (
-                                <Line
-                                    key={k}
-                                    type="monotone"
-                                    dataKey={k}
-                                    stroke={colors[idx % colors.length]}
-                                    strokeWidth={hoveredLine === k ? 4 : hoveredLine ? 1 : 2}
-                                    dot={false}
-                                    activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
-                                    name={k}
-                                    connectNulls={true}
-                                    style={{
-                                        opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8,
-                                        transition: 'all 0.3s ease'
-                                    }}
-                                />
-                            ))}
+                            {keys.map((k, idx) => {
+                                const isConstituent = !baseEtfKeys.includes(k);
+                                return (
+                                    <Line
+                                        key={k}
+                                        type="monotone"
+                                        dataKey={k}
+                                        stroke={colors[idx % colors.length]}
+                                        strokeWidth={hoveredLine === k ? (isConstituent ? 3 : 4) : hoveredLine ? 1 : (isConstituent ? 1.5 : 2)}
+                                        strokeDasharray={isConstituent ? "4 4" : undefined}
+                                        dot={false}
+                                        activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
+                                        name={k}
+                                        connectNulls={true}
+                                        style={{
+                                            opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8,
+                                            transition: 'all 0.3s ease'
+                                        }}
+                                    />
+                                );
+                            })}
                         </LineChart>
                     </ResponsiveContainer>
                 )}
@@ -350,9 +416,11 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                                         const ticker = getTickerFromConstituent(row.constituent);
                                                         onOpenDetail(ticker);
                                                     }}
-                                                    className="text-gray-200 hover:text-indigo-400 hover:underline transition-all duration-200 text-left font-bold"
+                                                    className="text-gray-200 hover:text-indigo-400 transition-all duration-200 text-left font-bold inline-flex items-center gap-1 group/btn"
+                                                    title={`${row.constituent} 상세 주식 정보 조회`}
                                                 >
-                                                    {row.constituent}
+                                                    <span className="group-hover/btn:underline">{row.constituent}</span>
+                                                    <ArrowUpRight className="w-3.5 h-3.5 text-gray-400 group-hover/btn:text-indigo-400 transition-colors" />
                                                 </button>
                                             ) : (
                                                 <span className="text-gray-200">{row.constituent}</span>
