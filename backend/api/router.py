@@ -2310,9 +2310,16 @@ async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_d
             ],
         }
         
-        # Extract top 5 holdings
+        # Keep ONLY the selected ETF in tickers
+        selected_code = tickers.get(etf)
+        if selected_code:
+            tickers = {etf: selected_code}
+        else:
+            tickers = {}
+
+        # Extract top 10 holdings
         holdings = space_holdings_fallbacks.get(etf, [])
-        top_holdings = sorted(holdings, key=lambda x: x.get("weight", 0), reverse=True)[:5]
+        top_holdings = sorted(holdings, key=lambda x: x.get("weight", 0), reverse=True)[:10]
         
         for h in top_holdings:
             name = h["ticker"]
@@ -2757,9 +2764,16 @@ async def get_bio_chart_data(etf: str = None, db: AsyncSession = Depends(get_db)
     }
 
     if etf:
-        # Extract top 5 holdings
+        # Keep ONLY the selected ETF in tickers
+        selected_code = tickers.get(etf)
+        if selected_code:
+            tickers = {etf: selected_code}
+        else:
+            tickers = {}
+
+        # Extract top 10 holdings
         holdings = bio_holdings_fallbacks.get(etf, [])
-        top_holdings = sorted(holdings, key=lambda x: x.get("weight", 0), reverse=True)[:5]
+        top_holdings = sorted(holdings, key=lambda x: x.get("weight", 0), reverse=True)[:10]
         for h in top_holdings:
             name = h["ticker"]
             symbol = constituent_ticker_map.get(name)
