@@ -792,10 +792,20 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
     const INDIVIDUAL_STOCKS = ['RKLB', 'SATS', 'ASTS', 'LUNR', 'RDW', 'PL', 'LHX', 'AMD', 'TER', 'BA', 'GSAT', 'KTOS', 'DE', 'ACHR', 'MDALF'];
     const isStock = INDIVIDUAL_STOCKS.includes(selectedDetailEtf.etf_code?.toUpperCase()) || (selectedDetailEtf.basic_info?.['운용사'] === '-' && selectedDetailEtf.etf_code !== 'ARKX');
 
+    const isKoreanStock = /^\d{6}$/.test(selectedDetailEtf.etf_code);
+    const kosdaqStocks = ['196170', '141080', '028300', '000250', '068760', '064550', '237690', '358570', '086520', '298380'];
+    const isKosdaqStock = isKoreanStock && kosdaqStocks.includes(selectedDetailEtf.etf_code);
+
     let benchmarkName = 'KOSPI';
     let benchKey = 'KOSPI';
 
-    if (isStock) {
+    if (isKosdaqStock) {
+      benchmarkName = 'KOSDAQ';
+      benchKey = 'KOSDAQ';
+    } else if (isKoreanStock) {
+      benchmarkName = 'KOSPI';
+      benchKey = 'KOSPI';
+    } else if (isStock) {
       benchmarkName = 'NASDAQ';
       benchKey = 'NASDAQ';
     } else if (isNasdaq) {

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Activity, Globe, Zap, Layers } from 'lucide-react';
 import SemiChart from '@/components/SemiChart';
 import SpaceChart from '@/components/SpaceChart';
+import BioChart from '@/components/BioChart';
 import SectorComparisonChart from '@/components/SectorComparisonChart';
 import SectorStatusGrid from '@/components/SectorStatusGrid';
 import SectorCorrelationHeatmap from '@/components/SectorCorrelationHeatmap';
@@ -89,6 +90,17 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                             <h3 className="text-xl font-extrabold text-white">우주 특화 분석</h3>
                         </div>
                         <SpaceChart onOpenDetail={onOpenDetail} />
+                    </div>
+                )}
+
+                {/* BioChart: Bio Indices (Detailed View) */}
+                {region !== 'US' && selectedSector === '바이오' && (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2.5 px-2 mt-4">
+                            <Zap className="w-5 h-5 text-emerald-400" />
+                            <h3 className="text-xl font-extrabold text-white">바이오 특화 분석</h3>
+                        </div>
+                        <BioChart onOpenDetail={onOpenDetail} />
                     </div>
                 )}
 

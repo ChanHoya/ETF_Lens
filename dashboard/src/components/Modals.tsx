@@ -257,6 +257,11 @@ export default function Modals({
         return INDIVIDUAL_STOCKS.has(codeUpper) || (selectedDetailEtf.basic_info?.['운용사'] === '-' && selectedDetailEtf.etf_code !== 'ARKX');
     }, [selectedDetailEtf, INDIVIDUAL_STOCKS]);
 
+    const isKoreanStock = React.useMemo(() => {
+        if (!selectedDetailEtf) return false;
+        return /^\d{6}$/.test(selectedDetailEtf.etf_code);
+    }, [selectedDetailEtf]);
+
     // ── 기능 1: 검색 드롭다운 다중 선택 state ─────────────────────────────
     // { [groupId]: Set<etfCode> }
     const [searchSelected, setSearchSelected] = React.useState<{ [groupId: string]: Set<string> }>({});
@@ -834,7 +839,7 @@ export default function Modals({
                                                     }} />
                                                     <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                                                     <Line type="monotone" dataKey="rel_yield" name={detailChartData.benchmarkName} stroke="#3b82f6" strokeWidth={2} dot={false} />
-                                                    {isStock && (
+                                                    {isStock && !isKoreanStock && (
                                                         <Line type="monotone" dataKey="space_yield" name="미국 우주섹터(ARKX)" stroke="#f59e0b" strokeWidth={1.8} strokeDasharray="3 3" dot={false} />
                                                     )}
                                                     <Line type="monotone" dataKey="stock_yield" name={selectedDetailEtf.etf_name} stroke="#ef4444" strokeWidth={2} dot={false} />
