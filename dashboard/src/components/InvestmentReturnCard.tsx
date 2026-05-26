@@ -158,7 +158,7 @@ export default function InvestmentReturnCard({ totalEvalAmount, cashBalance }: P
 
                 {/* (3) 수익금 / 수익률 */}
                 <div className="flex-1 flex flex-col items-center md:items-end text-center md:text-right border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-8 w-full md:w-auto">
-                    <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">최종 매매기준 수익</p>
+                    <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">누적 총 수익</p>
                     <div className={`flex flex-col items-center md:items-end ${returnRate === null ? "text-gray-400" : isPos ? "text-rose-400" : "text-blue-400"}`}>
                         <div className="text-2xl md:text-4xl font-extrabold tracking-tight flex items-center gap-1">
                             {returnRate !== null ? `${isPos ? "+" : ""}${returnRate.toFixed(2)}%` : "-- %"}
