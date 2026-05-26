@@ -550,6 +550,9 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                             </th>
                                         );
                                     })}
+                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10 whitespace-nowrap">
+                                        현재가 / 전일대비
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -622,6 +625,34 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                                 </td>
                                             );
                                         })}
+                                        {/* 현재가 / 전일대비 가격 열 */}
+                                        <td className="px-4 py-2.5 text-center text-xs border-b border-white/5 whitespace-nowrap font-mono align-middle">
+                                            {row.price !== undefined && row.price !== null ? (
+                                                <div className="flex flex-col gap-0.5 justify-center items-center">
+                                                    <span className="text-gray-200 font-bold">
+                                                        ${row.price.toFixed(2)}
+                                                    </span>
+                                                    {row.change_pct !== undefined && row.change_pct !== null ? (
+                                                        <span 
+                                                            className="text-[10px] font-bold"
+                                                            style={{ 
+                                                                color: row.change_pct > 0 
+                                                                    ? '#60a5fa' 
+                                                                    : row.change_pct < 0 
+                                                                        ? '#f87171' 
+                                                                        : '#94a3b8' 
+                                                                }}
+                                                        >
+                                                            {row.change_pct > 0 ? '+' : ''}{row.change_pct.toFixed(2)}%
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-gray-500">-</span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-500 font-bold">-</span>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

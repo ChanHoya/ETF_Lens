@@ -417,7 +417,9 @@ def smart_sample_dates(sorted_dates: list[str]) -> list[str]:
 import time
 
 _bench_cache = {}
+_space_quotes_cache = {}
 CACHE_TTL = 600  # 10 minutes – enough to avoid hammering the API while keeping data fresh
+SPACE_QUOTES_TTL = 300  # 5 minutes
 
 
 def get_bench_cached(key):
@@ -432,12 +434,61 @@ def set_bench_cached(key, val):
     _bench_cache[key] = (val, time.time())
 
 
+async def _fetch_stock_quote(ticker: str) -> dict:
+    import requests
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    
+    def _sync_fetch():
+        try:
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=5d"
+            headers = {"User-Agent": "Mozilla/5.0"}
+            r = requests.get(url, headers=headers, timeout=5, verify=False)
+            if r.status_code != 200:
+                logger.warning(f"Error fetching space quote for {ticker}: status code {r.status_code}")
+                return {"price": None, "change_pct": None}
+            
+            data = r.json()
+            result = data.get("chart", {}).get("result", [])
+            if not result:
+                return {"price": None, "change_pct": None}
+            
+            meta = result[0].get("meta", {})
+            price = meta.get("regularMarketPrice")
+            prev_close = meta.get("chartPreviousClose")
+            
+            # If regularMarketPrice or chartPreviousClose is missing, fall back to timestamp and close values
+            if price is None or prev_close is None:
+                indicators = result[0].get("indicators", {}).get("quote", [{}])[0]
+                closes = [c for c in indicators.get("close", []) if c is not None]
+                if len(closes) >= 2:
+                    price = closes[-1]
+                    prev_close = closes[-2]
+                elif len(closes) == 1:
+                    price = closes[0]
+            
+            if price is not None and prev_close is not None and prev_close != 0:
+                change_pct = ((price - prev_close) / prev_close) * 100
+                return {"price": round(price, 2), "change_pct": round(change_pct, 2)}
+            elif price is not None:
+                return {"price": round(price, 2), "change_pct": 0.0}
+            
+            return {"price": None, "change_pct": None}
+        except Exception as e:
+            logger.error(f"Failed to fetch space quote for {ticker}: {e}")
+            return {"price": None, "change_pct": None}
+
+    return await asyncio.to_thread(_sync_fetch)
+
+
+
 @router.get("/flush-cache")
 async def flush_cache():
     """캐시 전체 초기화 - Render 서버 데이터 강제 갱신용"""
-    count = len(_bench_cache)
+    count = len(_bench_cache) + len(_space_quotes_cache)
     _bench_cache.clear()
-    return {"cleared": count, "message": f"{count}개 캐시 항목 삭제 완료. 다음 요청 시 fresh 데이터를 가져옵니다."}
+    _space_quotes_cache.clear()
+    return {"cleared": count, "message": f"캐시 항목 삭제 완료. 다음 요청 시 fresh 데이터를 가져옵니다."}
 
 
 @router.post("/sync-etf-master")
@@ -2758,11 +2809,70 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
         reverse=True,
     )
 
+    # ── yfinance quotes integration ──
+    constituent_ticker_map = {
+        "Rocket Lab (로켓랩)": "RKLB",
+        "AST SpaceMobile (스페이스모바일)": "ASTS",
+        "EchoStar (에코스타)": "SATS",
+        "Planet Labs (플래닛랩스)": "PL",
+        "Intuitive Machines (인튜이티브 머신스)": "LUNR",
+        "L3Harris Technologies": "LHX",
+        "Advanced Micro Devices": "AMD",
+        "Boeing (보잉)": "BA",
+        "Redwire (레드와이어)": "RDW",
+        "Kratos Defense": "KTOS",
+        "MDA Space (MDA 스페이스)": "MDA.TO",
+        "Teradyne": "TER",
+        "Globalstar (글로벌스타)": "GSAT",
+        "Deere & Company (디어앤컴퍼니)": "DE",
+        "Viasat": "VSAT",
+        "Archer Aviation": "ACHR",
+    }
+
+    top_15_rows = table_rows[:15]
+    
+    # 5-minute caching mechanism for quote data
+    global _space_quotes_cache
+    now = time.time()
+    cached_quotes = None
+    if "quotes" in _space_quotes_cache:
+        val, ts = _space_quotes_cache["quotes"]
+        if now - ts < SPACE_QUOTES_TTL:
+            cached_quotes = val
+            
+    if cached_quotes is None:
+        # Collect tickers to fetch
+        tickers_to_fetch = {}
+        for r in top_15_rows:
+            constituent = r["constituent"]
+            ticker = constituent_ticker_map.get(constituent)
+            if ticker:
+                tickers_to_fetch[constituent] = ticker
+                
+        # Fetch quotes in parallel
+        constituents = list(tickers_to_fetch.keys())
+        tasks = [_fetch_stock_quote(tickers_to_fetch[c]) for c in constituents]
+        quote_results = await asyncio.gather(*tasks)
+        
+        cached_quotes = {}
+        for c, q in zip(constituents, quote_results):
+            cached_quotes[c] = q
+            
+        _space_quotes_cache["quotes"] = (cached_quotes, now)
+
+    # Inject quotes into top 15 rows
+    for r in top_15_rows:
+        constituent = r["constituent"]
+        quote = cached_quotes.get(constituent, {"price": None, "change_pct": None})
+        r["price"] = quote.get("price")
+        r["change_pct"] = quote.get("change_pct")
+
     # Return top 15 holdings to avoid clutter
     return {
         "keys": list(tickers.keys()),
-        "table_data": table_rows[:15]
+        "table_data": top_15_rows
     }
+
 
 
 @router.get("/bio-chart")

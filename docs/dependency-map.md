@@ -65,3 +65,4 @@ When modifying a module:
 
 | Date | Module | Change | Affected Modules | Status |
 |------|--------|--------|------------------|--------|
+| 2026-05-26 | Space ETF Analysis | Added price and change_pct fields to /space-holdings response | SpaceChart | Updated |
