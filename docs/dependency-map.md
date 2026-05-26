@@ -19,6 +19,7 @@ A living document of module relationships. Update whenever modules are added or 
 | AI Rebalance Simulator | Presentation | Dynamic risk-triggered asset rebalancing simulation engine | my_assets, api/backtest | MyDashboard | Antigravity |
 | US Macro Indicators | Presentation | US macro inflation indicator time-series charting & caching | db/models, api/exit_signal | MyDashboard | Antigravity |
 | AI Chat Assistant | Presentation | Personal portfolio-based AI chat bot & prefill widgets | api/chat, ChatBot | MyDashboard, MyAssetsView | Antigravity |
+| Space ETF Analysis | Presentation | Space sector ETF performance charts, custom legends, and toggled constituent comparison tables | api/router, SpaceChart | SectorAnalysisTab | Antigravity |
 <!-- Add new modules above this line -->
 
 

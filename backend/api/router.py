@@ -2242,6 +2242,11 @@ async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_d
         "Tiger 미국우주테크": "0183J0.KS",
         "SOL 미국우주항공TOP10": "0181L0.KS",
         "US-Space (ARKX)": "ARKX",
+        "US-Space (UFO)": "UFO",
+        "US-Space (MARS)": "MARS",
+        "US-Space (NASA)": "NASA",
+        "US-Space (ORBX)": "ORBX",
+        "US-Space (WARP)": "WARP",
     }
 
     # If an ETF is selected, dynamic add its top holdings to comparison
@@ -2311,6 +2316,55 @@ async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_d
                 {"ticker": "Advanced Micro Devices", "weight": 3.2},
                 {"ticker": "Globalstar (글로벌스타)", "weight": 2.5},
             ],
+            "US-Space (ARKX)": [
+                {"ticker": "Rocket Lab (로켓랩)", "weight": 10.6},
+                {"ticker": "Advanced Micro Devices", "weight": 7.3},
+                {"ticker": "L3Harris Technologies", "weight": 7.1},
+                {"ticker": "Teradyne", "weight": 6.5},
+                {"ticker": "Deere & Company (디어앤컴퍼니)", "weight": 5.5},
+                {"ticker": "Kratos Defense", "weight": 5.0},
+                {"ticker": "Archer Aviation", "weight": 4.5},
+                {"ticker": "Boeing (보잉)", "weight": 4.0},
+                {"ticker": "Redwire (레드와이어)", "weight": 3.5},
+                {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 3.0},
+            ],
+            "US-Space (UFO)": [
+                {"ticker": "Rocket Lab (로켓랩)", "weight": 8.5},
+                {"ticker": "EchoStar (에코스타)", "weight": 7.2},
+                {"ticker": "L3Harris Technologies", "weight": 6.8},
+                {"ticker": "Boeing (보잉)", "weight": 5.4},
+                {"ticker": "Deere & Company (디어앤컴퍼니)", "weight": 4.8},
+                {"ticker": "Advanced Micro Devices", "weight": 4.2},
+                {"ticker": "Kratos Defense", "weight": 3.5},
+            ],
+            "US-Space (MARS)": [
+                {"ticker": "Rocket Lab (로켓랩)", "weight": 9.2},
+                {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 8.4},
+                {"ticker": "Advanced Micro Devices", "weight": 6.5},
+                {"ticker": "Teradyne", "weight": 5.8},
+                {"ticker": "Boeing (보잉)", "weight": 4.5},
+            ],
+            "US-Space (NASA)": [
+                {"ticker": "Rocket Lab (로켓랩)", "weight": 7.5},
+                {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 6.8},
+                {"ticker": "EchoStar (에코스타)", "weight": 6.0},
+                {"ticker": "Intuitive Machines (인튜이티브 머신스)", "weight": 5.5},
+                {"ticker": "Planet Labs (플래닛랩스)", "weight": 4.8},
+            ],
+            "US-Space (ORBX)": [
+                {"ticker": "Rocket Lab (로켓랩)", "weight": 11.2},
+                {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 9.5},
+                {"ticker": "Redwire (레드와이어)", "weight": 7.2},
+                {"ticker": "Kratos Defense", "weight": 5.4},
+                {"ticker": "Boeing (보잉)", "weight": 4.1},
+            ],
+            "US-Space (WARP)": [
+                {"ticker": "Rocket Lab (로켓랩)", "weight": 10.5},
+                {"ticker": "EchoStar (에코스타)", "weight": 8.2},
+                {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 7.8},
+                {"ticker": "Intuitive Machines (인튜이티브 머신스)", "weight": 6.4},
+                {"ticker": "Redwire (레드와이어)", "weight": 5.2},
+            ]
         }
         
         # Keep ONLY the selected ETF in tickers
@@ -2358,6 +2412,11 @@ async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_d
         "0183J0.KS": "0183J0",
         "0181L0.KS": "0181L0",
         "ARKX": "ARKX",
+        "UFO": "UFO",
+        "MARS": "MARS",
+        "NASA": "NASA",
+        "ORBX": "ORBX",
+        "WARP": "WARP",
     }
 
     def _fetch_one(t_code: str) -> pd.Series:
@@ -2523,6 +2582,11 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
         "Tiger 미국우주테크": "0183J0",
         "SOL 미국우주항공TOP10": "0181L0",
         "US-Space (ARKX)": "ARKX",
+        "US-Space (UFO)": "UFO",
+        "US-Space (MARS)": "MARS",
+        "US-Space (NASA)": "NASA",
+        "US-Space (ORBX)": "ORBX",
+        "US-Space (WARP)": "WARP",
     }
 
     # Real-world fallback data in case DB has no holdings for these newly listed space ETFs or ARKX
@@ -2586,6 +2650,43 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
             {"ticker": "Boeing (보잉)", "weight": 4.0},
             {"ticker": "Redwire (레드와이어)", "weight": 3.5},
             {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 3.0},
+        ],
+        "US-Space (UFO)": [
+            {"ticker": "Rocket Lab (로켓랩)", "weight": 8.5},
+            {"ticker": "EchoStar (에코스타)", "weight": 7.2},
+            {"ticker": "L3Harris Technologies", "weight": 6.8},
+            {"ticker": "Boeing (보잉)", "weight": 5.4},
+            {"ticker": "Deere & Company (디어앤컴퍼니)", "weight": 4.8},
+            {"ticker": "Advanced Micro Devices", "weight": 4.2},
+            {"ticker": "Kratos Defense", "weight": 3.5},
+        ],
+        "US-Space (MARS)": [
+            {"ticker": "Rocket Lab (로켓랩)", "weight": 9.2},
+            {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 8.4},
+            {"ticker": "Advanced Micro Devices", "weight": 6.5},
+            {"ticker": "Teradyne", "weight": 5.8},
+            {"ticker": "Boeing (보잉)", "weight": 4.5},
+        ],
+        "US-Space (NASA)": [
+            {"ticker": "Rocket Lab (로켓랩)", "weight": 7.5},
+            {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 6.8},
+            {"ticker": "EchoStar (에코스타)", "weight": 6.0},
+            {"ticker": "Intuitive Machines (인튜이티브 머신스)", "weight": 5.5},
+            {"ticker": "Planet Labs (플래닛랩스)", "weight": 4.8},
+        ],
+        "US-Space (ORBX)": [
+            {"ticker": "Rocket Lab (로켓랩)", "weight": 11.2},
+            {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 9.5},
+            {"ticker": "Redwire (레드와이어)", "weight": 7.2},
+            {"ticker": "Kratos Defense", "weight": 5.4},
+            {"ticker": "Boeing (보잉)", "weight": 4.1},
+        ],
+        "US-Space (WARP)": [
+            {"ticker": "Rocket Lab (로켓랩)", "weight": 10.5},
+            {"ticker": "EchoStar (에코스타)", "weight": 8.2},
+            {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 7.8},
+            {"ticker": "Intuitive Machines (인튜이티브 머신스)", "weight": 6.4},
+            {"ticker": "Redwire (레드와이어)", "weight": 5.2},
         ]
     }
 

@@ -44,6 +44,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
     const [keys, setKeys] = useState<string[]>([]);
     const [originalData, setOriginalData] = useState<any[]>([]);
     const [selectedEtf, setSelectedEtf] = useState<string | null>(null);
+    const [marketTab, setMarketTab] = useState<'KR' | 'US'>('KR');
     
     // Holdings comparison state
     const [holdingsData, setHoldingsData] = useState<any[]>([]);
@@ -154,7 +155,11 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
     };
 
     const periodOptions = ['1M', '3M', '6M', '1Y', '3Y', '10Y'];
-    const colors = ['#f59e0b', '#ec4899', '#3b82f6', '#10b981', '#8b5cf6', '#06b6d4'];
+    const colors = [
+        '#f59e0b', '#ec4899', '#3b82f6', '#10b981', '#8b5cf6', 
+        '#06b6d4', '#a855f7', '#6366f1', '#14b8a6', '#f43f5e', 
+        '#e11d48', '#0ea5e9'
+    ];
 
     // ── 커스텀 툴팁: 전일 대비 증감율 표시 ──────────────────────────────
     const CustomTooltip = ({ active, payload, label }: any) => {
@@ -218,7 +223,13 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
         "KODEX 미국우주항공",
         "ACE 미국우주테크액티브",
         "Tiger 미국우주테크",
-        "SOL 미국우주항공TOP10"
+        "SOL 미국우주항공TOP10",
+        "US-Space (ARKX)",
+        "US-Space (UFO)",
+        "US-Space (MARS)",
+        "US-Space (NASA)",
+        "US-Space (ORBX)",
+        "US-Space (WARP)"
     ];
 
     const baseEtfKeys = [
@@ -228,17 +239,118 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
         "SOL 미국우주항공TOP10",
         "US-Space (ARKX)",
         "US-Space(ARKX)",
-        "US-Space"
+        "US-Space",
+        "US-Space (UFO)",
+        "US-Space (MARS)",
+        "US-Space (NASA)",
+        "US-Space (ORBX)",
+        "US-Space (WARP)"
+    ];
+
+    const krEtfs = ["KODEX 미국우주항공", "ACE 미국우주테크액티브", "Tiger 미국우주테크", "SOL 미국우주항공TOP10"];
+    const usEtfs = [
+        "US-Space (ARKX)",
+        "US-Space (UFO)",
+        "US-Space (MARS)",
+        "US-Space (NASA)",
+        "US-Space (ORBX)",
+        "US-Space (WARP)"
     ];
 
     // Filter and sort holdings table data if an ETF is selected
-    const displayHoldingsKeys = selectedEtf ? [selectedEtf] : holdingsKeys;
+    const activeTabEtfs = marketTab === 'KR' ? krEtfs : usEtfs;
+    const displayHoldingsKeys = selectedEtf
+        ? [selectedEtf]
+        : holdingsKeys.filter((k) => activeTabEtfs.includes(k));
+
     const displayHoldingsData = selectedEtf
         ? holdingsData
               .filter((row) => row[selectedEtf] !== undefined && row[selectedEtf] > 0)
               .sort((a, b) => (b[selectedEtf] || 0) - (a[selectedEtf] || 0))
               .slice(0, 10)
-        : holdingsData;
+        : holdingsData
+              .filter((row) => displayHoldingsKeys.some((k) => row[k] !== undefined && row[k] > 0))
+              .sort((a, b) => {
+                  const sumA = displayHoldingsKeys.reduce((sum, k) => sum + (a[k] || 0), 0);
+                  const sumB = displayHoldingsKeys.reduce((sum, k) => sum + (b[k] || 0), 0);
+                  return sumB - sumA;
+              })
+              .slice(0, 15);
+
+    // Custom Legend Renderer: Korean ETFs on top row, US ETFs on bottom row
+    const renderCustomLegend = (props: any) => {
+        const { payload } = props;
+        if (!payload) return null;
+
+        const koreanItems = payload.filter((entry: any) => krEtfs.includes(entry.value));
+        const usItems = payload.filter((entry: any) => usEtfs.includes(entry.value));
+        const constituentItems = payload.filter((entry: any) => !krEtfs.includes(entry.value) && !usEtfs.includes(entry.value));
+
+        return (
+            <div className="flex flex-col gap-2 mt-4 text-xs font-semibold select-none">
+                {koreanItems.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 justify-center">
+                        <span className="text-[10px] font-bold text-gray-500 mr-1 uppercase tracking-wider">KR ETFs:</span>
+                        {koreanItems.map((entry: any, index: number) => {
+                            const isSelected = selectedEtf === entry.value;
+                            return (
+                                <button
+                                    key={`kr-${index}`}
+                                    onMouseEnter={() => setHoveredLine(entry.value)}
+                                    onMouseLeave={() => setHoveredLine(null)}
+                                    onClick={() => setSelectedEtf(prev => prev === entry.value ? null : entry.value)}
+                                    className={`flex items-center gap-1.5 transition-all hover:text-white ${
+                                        isSelected ? 'text-white font-bold scale-105' : 'text-gray-400'
+                                    }`}
+                                >
+                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                                    <span>{entry.value}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+                {usItems.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 justify-center mt-0.5">
+                        <span className="text-[10px] font-bold text-gray-500 mr-1 uppercase tracking-wider">US ETFs:</span>
+                        {usItems.map((entry: any, index: number) => {
+                            const isSelected = selectedEtf === entry.value;
+                            return (
+                                <button
+                                    key={`us-${index}`}
+                                    onMouseEnter={() => setHoveredLine(entry.value)}
+                                    onMouseLeave={() => setHoveredLine(null)}
+                                    onClick={() => setSelectedEtf(prev => prev === entry.value ? null : entry.value)}
+                                    className={`flex items-center gap-1.5 transition-all hover:text-white ${
+                                        isSelected ? 'text-white font-bold scale-105' : 'text-gray-400'
+                                    }`}
+                                >
+                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                                    <span>{entry.value}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+                {constituentItems.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 justify-center mt-2 border-t border-white/5 pt-2">
+                        <span className="text-[9px] font-bold text-gray-500 mr-1 uppercase tracking-wider">Holdings:</span>
+                        {constituentItems.map((entry: any, index: number) => (
+                            <div
+                                key={`holding-${index}`}
+                                onMouseEnter={() => setHoveredLine(entry.value)}
+                                onMouseLeave={() => setHoveredLine(null)}
+                                className="flex items-center gap-1 text-[10px] text-gray-400 font-mono"
+                            >
+                                <span className="w-2 h-0.5" style={{ backgroundColor: entry.color }} />
+                                <span>{entry.value}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0">
@@ -268,7 +380,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                 <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center">
                     🔍 구성종목 주가 비교:
                 </span>
-                {etfsToSelect.map((etfName, idx) => {
+                {etfsToSelect.filter(e => activeTabEtfs.includes(e) || selectedEtf === e).map((etfName, idx) => {
                     const isSelected = selectedEtf === etfName;
                     const themeColor = colors[idx % colors.length];
                     return (
@@ -326,16 +438,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                             />
                             <RechartsTooltip content={<CustomTooltip />} />
                             <Legend
-                                onClick={(o) => {
-                                    const clickedKey = o.dataKey as string;
-                                    if (etfsToSelect.includes(clickedKey)) {
-                                        setSelectedEtf(prev => prev === clickedKey ? null : clickedKey);
-                                    }
-                                }}
-                                onMouseEnter={handleLegendMouseEnter}
-                                onMouseLeave={handleLegendMouseLeave}
-                                wrapperStyle={{ paddingTop: '10px', fontSize: '12px', cursor: 'pointer' }}
-                                iconType="circle"
+                                content={renderCustomLegend}
                             />
                             {keys.map((k, idx) => {
                                 const isConstituent = !baseEtfKeys.includes(k);
@@ -370,15 +473,45 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
             <div className="w-full border-t border-white/10 my-5"></div>
 
             {/* Holdings Table Section */}
-            <div className="flex flex-col gap-3">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-1">
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-3">
                     <h4 className="text-base font-bold text-white flex items-center gap-2">
                         <Activity className="w-4 h-4 text-emerald-400" />
                         우주섹터 주요 ETF 구성종목 및 비중 비교 (%)
                     </h4>
-                    <span className="text-[10px] sm:text-xs text-gray-400 font-bold font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5">
-                        NASDAQ 26.5.15 기준
-                    </span>
+                    
+                    {/* KR/US Market Toggle Button */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
+                            <button
+                                onClick={() => {
+                                    setMarketTab('KR');
+                                    setSelectedEtf(null); // 탭 전환 시 개별선택 초기화
+                                }}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR'
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                }`}
+                            >
+                                국내 상장 ETF
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setMarketTab('US');
+                                    setSelectedEtf(null); // 탭 전환 시 개별선택 초기화
+                                }}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'US'
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                }`}
+                            >
+                                미국 상장 ETF
+                            </button>
+                        </div>
+                        <span className="text-[10px] sm:text-xs text-gray-400 font-bold font-mono bg-white/5 px-2 py-1.5 rounded border border-white/5">
+                            NASDAQ 26.5.15 기준
+                        </span>
+                    </div>
                 </div>
                 
                 {isHoldingsLoading ? (
