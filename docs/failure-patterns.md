@@ -144,8 +144,16 @@
 - **해결**: 백엔드 라우터 진입 시 `unicodedata.normalize('NFC', etf)`를 활용하여 입력값의 자소를 즉시 합성(NFC)한 후 딕셔너리 매핑 및 비교 처리를 수행해 자소 분리 불일치 버그를 원천 예방함.
 
 ## Timezone & Data Gaps
-
+ 
 ### 해외 자산 시차에 따른 당일 데이터 누락 및 등락률 NaN% 연산 오류
 - **증상**: KST 낮 시간대에 미국 섹터 변동률 카드가 `USA NaN%`로 렌더링됨.
 - **원인**: 미국 증시 개장 전(KST 낮 시간대)에는 미국 지수/ETF의 당일 가격 데이터가 백엔드 응답 데이터의 가장 마지막 인덱스에 존재하지 않아 `undefined`나 `null`로 채워짐. 이 상태에서 단순 마지막 두 인덱스(배열의 `len - 1`과 `len - 2`번째 값)를 추출하여 전일 대비 변동률을 연산하려다 `NaN%`가 발생함.
 - **해결**: 데이터 배열의 단순 끝 인덱스를 조회하지 않고, 각 자산(key)별로 값이 존재하고 0보다 큰 유효 데이터 포인트(`validPoints`)만 걸러낸 뒤, 해당 필터링된 배열의 마지막 두 시점(`validPoints[validPoints.length - 1]`과 `validPoints[validPoints.length - 2]`)을 역추적(Back-traversal)하여 안전하게 등락률을 연산하도록 교체함.
+
+## Network & SSL
+
+### yfinance v8 API SSL 인증서 검증 오류
+- **증상**: Yahoo Finance v8 API 등을 `requests`로 쿼리 시 `SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain...'))` 에러 발생.
+- **원인**: 사내/개발 환경 내부 프록시 망이나 샌드박스에서 자체 서명된 인증서 체인을 끼워넣어 SSL 인증서 검증이 실패함.
+- **해결**: `requests.get(..., verify=False)` 설정을 부여해 SSL 검증을 명시적으로 우회하고, 이로 인한 경고 메시지 범람을 방지하기 위해 `urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)`를 적용함.
+
