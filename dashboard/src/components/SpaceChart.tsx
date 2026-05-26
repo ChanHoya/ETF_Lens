@@ -359,19 +359,50 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                     <Activity className="w-5 h-5 text-indigo-400" />
                     우주섹터 주요 종목 현황
                 </h3>
-                <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
-                    {periodOptions.map(p => (
+                <div className="flex items-center gap-2.5">
+                    {/* Market Toggle Button */}
+                    <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner animate-fade-in">
                         <button
-                            key={p}
-                            onClick={() => setPeriod(p)}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${period === p
+                            onClick={() => {
+                                setMarketTab('KR');
+                                setSelectedEtf(null); // 탭 전환 시 개별선택 초기화
+                            }}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR'
                                 ? 'bg-indigo-600 text-white shadow-md'
                                 : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
                             }`}
                         >
-                            {p}
+                            국내상장 ETF
                         </button>
-                    ))}
+                        <button
+                            onClick={() => {
+                                setMarketTab('US');
+                                setSelectedEtf(null); // 탭 전환 시 개별선택 초기화
+                            }}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'US'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                            }`}
+                        >
+                            미국상장 ETF
+                        </button>
+                    </div>
+
+                    {/* Period Selector */}
+                    <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
+                        {periodOptions.map(p => (
+                            <button
+                                key={p}
+                                onClick={() => setPeriod(p)}
+                                className={`px-2.5 py-1.5 text-xs font-bold rounded-md transition-all ${period === p
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                }`}
+                            >
+                                {p}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -442,6 +473,12 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                             />
                             {keys.map((k, idx) => {
                                 const isConstituent = !baseEtfKeys.includes(k);
+
+                                // If in general comparison mode (no selectedEtf), filter out base ETFs that don't belong to the active tab
+                                if (!selectedEtf && !isConstituent && !activeTabEtfs.includes(k)) {
+                                    return null;
+                                }
+
                                 return (
                                     <Line
                                         key={k}
@@ -480,38 +517,9 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                         우주섹터 주요 ETF 구성종목 및 비중 비교 (%)
                     </h4>
                     
-                    {/* KR/US Market Toggle Button */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
-                            <button
-                                onClick={() => {
-                                    setMarketTab('KR');
-                                    setSelectedEtf(null); // 탭 전환 시 개별선택 초기화
-                                }}
-                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR'
-                                    ? 'bg-indigo-600 text-white shadow-md'
-                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                                }`}
-                            >
-                                국내 상장 ETF
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setMarketTab('US');
-                                    setSelectedEtf(null); // 탭 전환 시 개별선택 초기화
-                                }}
-                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'US'
-                                    ? 'bg-indigo-600 text-white shadow-md'
-                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                                }`}
-                            >
-                                미국 상장 ETF
-                            </button>
-                        </div>
-                        <span className="text-[10px] sm:text-xs text-gray-400 font-bold font-mono bg-white/5 px-2 py-1.5 rounded border border-white/5">
-                            NASDAQ 26.5.15 기준
-                        </span>
-                    </div>
+                    <span className="text-[10px] sm:text-xs text-gray-400 font-bold font-mono bg-white/5 px-2 py-1.5 rounded border border-white/5">
+                        NASDAQ 26.5.15 기준
+                    </span>
                 </div>
                 
                 {isHoldingsLoading ? (

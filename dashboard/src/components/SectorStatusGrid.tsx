@@ -59,9 +59,22 @@ export default function SectorStatusGrid({
                 const rawSectors: SectorStatus[] = data.keys
                     .filter((k: string) => !k.includes('KOSPI') && !k.includes('S&P'))
                     .map((k: string) => {
-                        const curVal = latest[k];
-                        const prevVal = prev[k];
-                        const change_pct = ((curVal - prevVal) / prevVal) * 100;
+                        // Find the last two valid price points for this specific ticker
+                        const validPoints = data.line_chart_data.filter(
+                            (d: any) => d[k] !== undefined && d[k] !== null && d[k] > 0
+                        );
+                        
+                        let curVal = 0;
+                        let prevVal = 0;
+                        let change_pct = 0;
+                        
+                        if (validPoints.length >= 2) {
+                            curVal = validPoints[validPoints.length - 1][k];
+                            prevVal = validPoints[validPoints.length - 2][k];
+                            change_pct = ((curVal - prevVal) / prevVal) * 100;
+                        } else if (validPoints.length === 1) {
+                            curVal = validPoints[0][k];
+                        }
                         
                         const baseNameRaw = k.replace('K-', '').replace('US-', '');
                         const meta = SECTOR_METADATA[baseNameRaw] || {};
