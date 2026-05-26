@@ -142,7 +142,7 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
                 {/* 채팅 패널 — 뷰포트 상단 70px 기준으로 고정 */}
                 <div className="fixed top-[70px] inset-x-0 z-[200] flex justify-center px-4 md:px-8 pointer-events-none">
                     <div
-                        className="w-full max-w-[720px] min-h-[300px] max-h-[80vh] bg-[#12121A] border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto"
+                        className="w-full max-w-[960px] min-h-[300px] max-h-[80vh] bg-[#12121A] border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
