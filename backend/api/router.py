@@ -455,17 +455,21 @@ async def _fetch_stock_quote(ticker: str) -> dict:
             
             meta = result[0].get("meta", {})
             price = meta.get("regularMarketPrice")
-            prev_close = meta.get("chartPreviousClose")
             
-            # If regularMarketPrice or chartPreviousClose is missing, fall back to timestamp and close values
-            if price is None or prev_close is None:
-                indicators = result[0].get("indicators", {}).get("quote", [{}])[0]
-                closes = [c for c in indicators.get("close", []) if c is not None]
-                if len(closes) >= 2:
+            indicators = result[0].get("indicators", {}).get("quote", [{}])[0]
+            closes = [c for c in indicators.get("close", []) if c is not None]
+            
+            prev_close = None
+            if len(closes) >= 2:
+                prev_close = closes[-2]
+                if price is None:
                     price = closes[-1]
-                    prev_close = closes[-2]
-                elif len(closes) == 1:
+            elif len(closes) == 1:
+                if price is None:
                     price = closes[0]
+            
+            if prev_close is None:
+                prev_close = meta.get("chartPreviousClose") or meta.get("previousClose")
             
             if price is not None and prev_close is not None and prev_close != 0:
                 change_pct = ((price - prev_close) / prev_close) * 100
