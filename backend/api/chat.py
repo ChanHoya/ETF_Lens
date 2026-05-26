@@ -214,18 +214,69 @@ async def chat_with_etf_assistant(request: ChatRequest):
                 f"- 예수금(현금): {int(summary.get('cash_balance', 0)):,}원",
             ]
             
-            holdings_lines = ["[사용자 보유 종목 목록]"]
-            for idx, h in enumerate(holdings, 1):
-                h_name = h.get("name", "Unknown")
-                h_code = h.get("code", "")
-                h_qty = h.get("qty", 0)
-                h_eval = int(h.get("eval_amount", 0))
-                h_pl = int(h.get("profit_loss", 0))
-                h_rt = h.get("return_rate", 0)
-                h_asset = h.get("category_asset", "기타")
-                h_region = h.get("category_region", "기타")
+            # Group holdings by code to aggregate across multiple accounts
+            aggregated_holdings = {}
+            for h in holdings:
+                code = h.get("code") or h.get("name") or "Unknown"
+                if code not in aggregated_holdings:
+                    aggregated_holdings[code] = {
+                        "name": h.get("name", "Unknown"),
+                        "code": h.get("code", ""),
+                        "qty": 0,
+                        "eval_amount": 0,
+                        "profit_loss": 0,
+                        "return_rates": [],
+                        "category_asset": h.get("category_asset", "기타"),
+                        "category_region": h.get("category_region", "기타"),
+                        "accounts": []
+                    }
+                
+                ah = aggregated_holdings[code]
+                try:
+                    ah["qty"] += int(h.get("qty", 0))
+                except (ValueError, TypeError):
+                    pass
+                try:
+                    ah["eval_amount"] += int(h.get("eval_amount", 0))
+                except (ValueError, TypeError):
+                    pass
+                try:
+                    ah["profit_loss"] += int(h.get("profit_loss", 0))
+                except (ValueError, TypeError):
+                    pass
+                
+                if "return_rate" in h:
+                    try:
+                        ah["return_rates"].append((float(h["return_rate"]), int(h.get("eval_amount", 0))))
+                    except (ValueError, TypeError):
+                        pass
+                
+                acc = h.get("account_no")
+                if acc and acc not in ah["accounts"]:
+                    ah["accounts"].append(acc)
+
+            # Build final lines
+            holdings_lines = ["[사용자 보유 종목 목록 (여러 계좌의 보유 수량이 합산되어 제공됩니다)]"]
+            for idx, (code, ah) in enumerate(aggregated_holdings.items(), 1):
+                h_name = ah["name"]
+                h_code = ah["code"]
+                h_qty = ah["qty"]
+                h_eval = ah["eval_amount"]
+                h_pl = ah["profit_loss"]
+                
+                # Compute weighted return rate
+                total_eval_for_rt = sum(val[1] for val in ah["return_rates"])
+                if total_eval_for_rt > 0:
+                    h_rt = round(sum(val[0] * val[1] for val in ah["return_rates"]) / total_eval_for_rt, 2)
+                else:
+                    h_rt = 0.0
+                
+                h_asset = ah["category_asset"]
+                h_region = ah["category_region"]
+                acc_str = ", ".join(ah["accounts"])
+                
                 holdings_lines.append(
-                    f"{idx}. {h_name} ({h_code}) | 보유수량: {h_qty}주 | 평가금액: {h_eval:,}원 | 손익: {h_pl:,}원 ({h_rt}%) | 자산구분: {h_asset} | 지역: {h_region}"
+                    f"{idx}. {h_name} ({h_code}) | 총 보유수량: {h_qty}주 | 총 평가금액: {h_eval:,}원 | 총 손익: {h_pl:,}원 ({h_rt}%) | 자산구분: {h_asset} | 지역: {h_region} | 보유계좌: [{acc_str}]"
                 )
             
             portfolio_context = "\n".join(summary_lines) + "\n\n" + "\n".join(holdings_lines)
