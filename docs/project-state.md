@@ -5,7 +5,7 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 5 — 글로벌 매크로 스트레스 테스트, 환율/절세 시뮬레이터, 우주 및 바이오 ETF 구성종목 변동 그래프/개별 주식 팝업 연동 및 특정 ETF 선택 시 테이블/차트 구성종목 10종 필터링 고도화 완료
+✅ Current: Sprint 5 — 글로벌 매크로 스트레스 테스트, 환율/절세 시뮬레이터, 우주 및 바이오 ETF 구성종목 변동 그래프/개별 주식 팝업 연동, 특정 ETF 선택 시 테이블/차트 구성종목 10종 필터링 고도화 및 My 탭 내 보유 자산 정보 기반 AI Assistant 서비스 연동/바로가기 위젯 추가 완료
 ➡️ Next: 다음 스프린트 계획 수립 예정
  
 ## Current Sprint
@@ -18,6 +18,7 @@ Base: Exit Strategy Monitoring (KOSPI)
  
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
+| S5-6 | My 탭 내 보유 자산 정보 기반 AI Assistant 서비스 연동 및 바로가기 위젯 추가 | ✅ done | 보유 자산 정보를 sessionStorage를 통해 AI 챗봇과 실시간 공유하고 My 탭 대시보드 내 퀵 질문 벤토 카드 연동 완료 |
 | S5-5 | 바이오 섹터 특화 분석 개발 | ✅ done | 5대 바이오 ETF 및 구성종목 비교 그래프/테이블 개발 및 개별 주식 팝업 연동 완료 |
 | S5-4 | 우주 ETF 구성종목 변동 그래프 및 개별 주식 팝업 연동 | ✅ done | 4대 우주 ETF 클릭 시 상위 구성종목 주가 점선 오버레이 렌더링 및 개별 종목 클릭 시 미국 주식 전용 모달 연동 완료 |
 | S5-1 | 포트폴리오 역사적 위기 스트레스 테스터 엔진 및 API 연동 | ✅ done | COVID-19, 리먼 등 과거 위기 시나리오 대입 시 포트폴리오 예상 MDD/VaR 분석 백엔드 개발 완료 |

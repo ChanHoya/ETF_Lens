@@ -46,6 +46,17 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
         scrollToBottom();
     }, [messages, isLoading]);
 
+    useEffect(() => {
+        const handleOpenAiChat = (e: any) => {
+            setIsOpen(true);
+            if (e.detail && e.detail.message) {
+                setInput(e.detail.message);
+            }
+        };
+        window.addEventListener('open-ai-chat', handleOpenAiChat);
+        return () => window.removeEventListener('open-ai-chat', handleOpenAiChat);
+    }, [setIsOpen]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim() || isLoading) return;
@@ -59,11 +70,27 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
         setMessages(newMessages);
         setIsLoading(true);
 
+        // Retrieve portfolio data from sessionStorage
+        let portfolioData = null;
+        if (typeof window !== "undefined") {
+            try {
+                const stored = sessionStorage.getItem("kis_portfolio_data");
+                if (stored) {
+                    portfolioData = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.warn("Failed to parse portfolio data from sessionStorage:", e);
+            }
+        }
+
         try {
             const response = await fetch(`${API_BASE}/api/v1/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: userMessage })
+                body: JSON.stringify({ 
+                    message: userMessage,
+                    portfolio_data: portfolioData
+                })
             });
 
             if (!response.ok) {

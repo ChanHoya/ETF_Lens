@@ -24,6 +24,12 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
     const [selectedAccount, setSelectedAccount] = useState<any>(null);
     const [backtestTab, setBacktestTab] = useState<'static' | 'dynamic'>('dynamic');
 
+    const askAi = (question: string) => {
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent('open-ai-chat', { detail: { message: question } }));
+        }
+    };
+
     if (!data || !data.kis_raw) return null;
 
     const { kis_raw } = data;
@@ -75,6 +81,45 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                     cashBalance={cashBalance}
                     totalAsset={totalAsset}
                 />
+            </section>
+
+            {/* AI Portfolio Assistant Section */}
+            <section className="flex flex-col gap-4">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
+                    AI Portfolio Assistant
+                </h2>
+                <div className="w-full bg-[#12121A]/60 border border-white/10 rounded-3xl p-5 backdrop-blur-md shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-5">
+                    <div className="flex flex-col gap-1.5 text-left max-w-xl">
+                        <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Gemini AI</span>
+                            <h3 className="text-base font-bold text-white">내 포트폴리오 맞춤형 AI 비서</h3>
+                        </div>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            연동된 KIS 계좌 자산 및 실시간 보유 종목 정보를 바탕으로 질문에 정확하게 답변해 드립니다. 아래의 퀵 질문을 클릭하거나 우측 상단 AI Assistant 버튼을 눌러 자유롭게 대화해 보세요.
+                        </p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto flex-wrap">
+                        <button
+                            onClick={() => askAi("내 포트폴리오 중에서 우주섹터 관련 종목 전체 현재 평가금액 알려줘")}
+                            className="px-3.5 py-2.5 bg-white/[0.03] hover:bg-indigo-500/10 border border-white/10 hover:border-indigo-500/30 rounded-xl text-xs font-semibold text-gray-300 hover:text-indigo-300 transition-all text-left flex items-center gap-1.5 shadow-inner"
+                        >
+                            🚀 우주섹터 평가금액은?
+                        </button>
+                        <button
+                            onClick={() => askAi("내 포트폴리오 중에서 바이오섹터 관련 종목의 평가금액과 총 비중은 어떻게 돼?")}
+                            className="px-3.5 py-2.5 bg-white/[0.03] hover:bg-emerald-500/10 border border-white/10 hover:border-emerald-500/30 rounded-xl text-xs font-semibold text-gray-300 hover:text-emerald-300 transition-all text-left flex items-center gap-1.5 shadow-inner"
+                        >
+                            🧬 바이오섹터 평가금액/비중은?
+                        </button>
+                        <button
+                            onClick={() => askAi("내 KIS 포트폴리오 자산 배분을 분석하고 리밸런싱 개선 방향을 조언해줘")}
+                            className="px-3.5 py-2.5 bg-white/[0.03] hover:bg-purple-500/10 border border-white/10 hover:border-purple-500/30 rounded-xl text-xs font-semibold text-gray-300 hover:text-purple-300 transition-all text-left flex items-center gap-1.5 shadow-inner"
+                        >
+                            📊 리밸런싱 조언 필요해
+                        </button>
+                    </div>
+                </div>
             </section>
 
             {/* Section 3: 계좌내역 (Account Status) */}

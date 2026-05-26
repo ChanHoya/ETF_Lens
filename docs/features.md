@@ -40,6 +40,8 @@
 | S5-3: ISA 및 연금저축/IRP 과세이연 및 절세 혜택 시뮬레이터 | ✅ done | dashboard/src/components/TaxOptimizer.tsx | 절세 계좌별 비과세/과세이연 혜택 및 세후 최종 복리 수령액 비교 계산 도구 개발 완료 |
 | S5-4: 우주 ETF 구성종목 변동 그래프 및 개별 주식 팝업 연동 | ✅ done | backend/api/router.py, SpaceChart.tsx, MainApp.tsx, Modals.tsx | 4대 우주 ETF 클릭 시 상위 구성종목 주가를 점선 오버레이 렌더링하고 구성종목 클릭 시 개별 미국 주식 전용 모달 팝업 연동 완료 |
 | S5-5: 바이오 ETF 구성종목 변동 그래프 및 개별 주식 팝업 연동 | ✅ done | backend/api/router.py, BioChart.tsx, MainApp.tsx, Modals.tsx, SectorAnalysisTab.tsx | 5대 바이오 ETF 클릭 시 상위 구성종목 주가를 점선 오버레이 렌더링하고 구성종목 클릭 시 개별 국내 주식 전용 모달 팝업 연동 완료 |
+| S5-6: My 탭 내 보유 자산 정보 기반 AI Assistant 서비스 연동 및 바로가기 위젯 추가 | ✅ done | backend/api/chat.py, ChatBot.tsx, MyAssetsView.tsx, MyDashboard.tsx | 실시간 보유 종목/자산 데이터를 sessionStorage로 ChatBot에 전달하여 사용자 맞춤형 분석 제공 및 Bento Grid 퀵 질문 위젯 배치 완료 |
+
 ## Status Legend
 
 - ✅ **done** — 기능 완전 구현, 운영 중

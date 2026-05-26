@@ -121,6 +121,21 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
         return () => window.removeEventListener('refresh-portfolio', handleRefresh);
     }, [fetchPortfolioData]);
 
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const activeData = isSimulatedMode ? simulatedData : kisData;
+            if (activeData) {
+                try {
+                    sessionStorage.setItem("kis_portfolio_data", JSON.stringify(activeData));
+                } catch (e) {
+                    console.warn("sessionStorage 저장 실패:", e);
+                }
+            } else {
+                sessionStorage.removeItem("kis_portfolio_data");
+            }
+        }
+    }, [isSimulatedMode, kisData, simulatedData]);
+
     const handleAuthSuccess = () => fetchPortfolioData(false);
     const handleLogout = () => {
         localStorage.removeItem("etf_lens_pin");
@@ -128,6 +143,9 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
         setKisData(null);
         setTradesData(null);
         setLastFetchedAt(null);
+        if (typeof window !== "undefined") {
+            sessionStorage.removeItem("kis_portfolio_data");
+        }
     };
 
     const lastFetchLabel = lastFetchedAt
