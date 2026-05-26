@@ -57,6 +57,8 @@ interface StockCell {
     group: string;
     pct: number;       // 전체 대비 %
     groupPct: number;  // 그룹 내 %
+    invested: number;  // 매수금액
+    profit: number;    // 수익금액
 }
 
 interface TooltipState {
@@ -86,7 +88,17 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
     GROUP_ORDER.forEach(g => { groupMap[g] = []; });
 
     if (cashBalance > 0) {
-        groupMap['현금'].push({ name: '예수금·CMA', code: '', value: cashBalance, returnRate: 0, group: '현금', pct: 0, groupPct: 0 });
+        groupMap['현금'].push({ 
+            name: '예수금·CMA', 
+            code: '', 
+            value: cashBalance, 
+            returnRate: 0, 
+            group: '현금', 
+            pct: 0, 
+            groupPct: 0,
+            invested: cashBalance,
+            profit: 0
+        });
     }
 
     // 종목 병합 로직 (계좌 통합)
@@ -122,15 +134,23 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
             returnRate: return_rate, 
             group: g, 
             pct: 0, 
-            groupPct: 0 
+            groupPct: 0,
+            invested: m.invested,
+            profit: m.profit_loss
         });
     });
 
     // 정렬 + 비중 계산
     const activeGroups = GROUP_ORDER.filter(g => groupMap[g].length > 0);
     const groupTotals: Record<string, number> = {};
+    const groupInvested: Record<string, number> = {};
+    const groupProfit: Record<string, number> = {};
+
     activeGroups.forEach(g => {
         groupTotals[g] = groupMap[g].reduce((s, c) => s + c.value, 0);
+        groupInvested[g] = groupMap[g].reduce((s, c) => s + c.invested, 0);
+        groupProfit[g] = groupMap[g].reduce((s, c) => s + c.profit, 0);
+
         groupMap[g].sort((a, b) => b.value - a.value);
         groupMap[g].forEach(cell => {
             cell.pct = totalAsset > 0 ? (cell.value / totalAsset) * 100 : 0;
@@ -149,23 +169,40 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
                 {activeGroups.map(g => {
                     const cfg = GROUP_CONFIG[g];
                     const total = groupTotals[g];
+                    const invested = groupInvested[g];
+                    const profit = groupProfit[g];
+                    
                     const pct = grandTotal > 0 ? (total / grandTotal * 100).toFixed(1) : '0';
                     const isHov = hoveredGroup === g;
+                    
+                    // 수익금액 텍스트 컬러 지정: +면 파랑, -면 빨강 (요구사항)
+                    const profitColor = profit > 0 ? '#60a5fa' : profit < 0 ? '#f87171' : '#e2e8f0';
+                    const profitSign = profit > 0 ? '+' : '';
+
                     return (
                         <div
                             key={g}
                             onMouseEnter={() => setHoveredGroup(g)}
                             onMouseLeave={() => setHoveredGroup(null)}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-150 cursor-default text-[13px]"
+                            className="flex flex-col gap-1.5 px-3 py-2 rounded-xl border transition-all duration-150 cursor-default min-w-[145px]"
                             style={{
                                 borderColor: isHov ? cfg.accentColor : `${cfg.accentColor}40`,
                                 backgroundColor: isHov ? `${cfg.accentColor}15` : 'rgba(255,255,255,0.01)',
                             }}
                         >
-                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.accentColor }} />
-                            <span className="text-gray-300 font-bold">{cfg.label}</span>
-                            <span className="text-indigo-400/80 font-mono text-[11px] font-bold">{pct}%</span>
-                            <span className="text-gray-400 font-mono text-[11px]">{fmtM(total)}</span>
+                            {/* 1행: 구분명 및 비중, 평가액 */}
+                            <div className="flex items-center gap-1.5 text-[12px] md:text-[13px]">
+                                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.accentColor }} />
+                                <span className="text-gray-200 font-extrabold">{cfg.label}</span>
+                                <span className="text-indigo-300 font-mono text-[10.5px] font-black ml-auto">{pct}%</span>
+                                <span className="text-gray-400 font-mono text-[10.5px] font-bold">{fmtM(total)}</span>
+                            </div>
+                            {/* 2행: 매수금액 / 수익금액 */}
+                            <div className="flex items-center text-[10.5px] text-gray-500 font-bold border-t border-white/5 pt-1.5 font-mono gap-1">
+                                <span>매수 {fmtM(invested)}</span>
+                                <span className="text-white/10">/</span>
+                                <span style={{ color: profitColor }}>수익 {profitSign}{fmtM(profit)}</span>
+                            </div>
                         </div>
                     );
                 })}
@@ -265,7 +302,7 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
                                                                 className="text-white font-semibold truncate w-full text-center"
                                                                 style={{ fontSize: colWidth > 15 ? 12 : 10 }}
                                                             >
-                                                                {cell.name}
+                                                                 {cell.name}
                                                             </p>
                                                             <p
                                                                 className="font-bold tabular-nums mt-0.5"
@@ -326,34 +363,40 @@ export default function PortfolioTreemap({ holdings, cashBalance, totalAsset }: 
             </div>
 
             {/* 툴팁 (fixed) */}
-            {tooltip?.visible && (
-                <div
-                    className="fixed z-[9999] pointer-events-none"
-                    style={{
-                        left: tooltip.x,
-                        top: tooltip.y - 8,
-                        transform: 'translate(-50%, -100%)',
-                    }}
-                >
-                    <div className="bg-[#0c0c18]/98 border border-white/15 rounded-xl px-4 py-3 shadow-2xl text-sm min-w-[210px] backdrop-blur-xl">
-                        <p className="text-white font-bold mb-2 leading-snug">{tooltip.cell.name}</p>
-                        <div className="space-y-1">
-                            {[
-                                { label: '그룹',     value: GROUP_CONFIG[tooltip.cell.group]?.label ?? tooltip.cell.group, color: GROUP_CONFIG[tooltip.cell.group]?.accentColor },
-                                { label: '평가금액', value: `${fmt(tooltip.cell.value)}원`,   color: '#e2e8f0' },
-                                { label: '전체 비중', value: `${tooltip.cell.pct.toFixed(2)}%`, color: '#a5b4fc' },
-                                { label: '그룹 내 비중', value: `${tooltip.cell.groupPct.toFixed(2)}%`, color: '#94a3b8' },
-                                { label: '수익률',   value: fmtPct(tooltip.cell.returnRate), color: getReturnText(tooltip.cell.returnRate) },
-                            ].map(row => (
-                                <div key={row.label} className="flex justify-between gap-6 text-xs">
-                                    <span className="text-gray-500">{row.label}</span>
-                                    <span className="font-semibold" style={{ color: row.color }}>{row.value}</span>
-                                </div>
-                            ))}
+            {tooltip?.visible && (() => {
+                const getCustomReturnColor = (val: number) => val > 0 ? '#60a5fa' : val < 0 ? '#f87171' : '#e2e8f0';
+                return (
+                    <div
+                        className="fixed z-[9999] pointer-events-none"
+                        style={{
+                            left: tooltip.x,
+                            top: tooltip.y - 8,
+                            transform: 'translate(-50%, -100%)',
+                        }}
+                    >
+                        <div className="bg-[#0c0c18]/98 border border-white/15 rounded-xl px-4 py-3 shadow-2xl text-sm min-w-[210px] backdrop-blur-xl">
+                            <p className="text-white font-bold mb-2 leading-snug">{tooltip.cell.name}</p>
+                            <div className="space-y-1">
+                                {[
+                                    { label: '그룹',     value: GROUP_CONFIG[tooltip.cell.group]?.label ?? tooltip.cell.group, color: GROUP_CONFIG[tooltip.cell.group]?.accentColor },
+                                    { label: '매수금액', value: `${fmt(tooltip.cell.invested)}원`, color: '#e2e8f0' },
+                                    { label: '평가금액', value: `${fmt(tooltip.cell.value)}원`,   color: '#e2e8f0' },
+                                    { label: '수익금액', value: `${tooltip.cell.profit > 0 ? '+' : ''}${fmt(tooltip.cell.profit)}원`, color: getCustomReturnColor(tooltip.cell.profit) },
+                                    { label: '수익률',   value: fmtPct(tooltip.cell.returnRate), color: getCustomReturnColor(tooltip.cell.returnRate) },
+                                    { label: '전체 비중', value: `${tooltip.cell.pct.toFixed(2)}%`, color: '#a5b4fc' },
+                                    { label: '그룹 내 비중', value: `${tooltip.cell.groupPct.toFixed(2)}%`, color: '#94a3b8' },
+                                ].map(row => (
+                                    <div key={row.label} className="flex justify-between gap-6 text-xs">
+                                        <span className="text-gray-500">{row.label}</span>
+                                        <span className="font-semibold" style={{ color: row.color }}>{row.value}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
+
         </div>
     );
 }

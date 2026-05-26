@@ -60,7 +60,7 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                         <span className="w-1.5 h-6 bg-rose-500 rounded-full"></span>
                         포트폴리오 현황
                     </h2>
-                    <div className="flex items-baseline gap-6">
+                    <div className="flex items-baseline gap-6 flex-wrap md:flex-nowrap">
                         <div className="flex items-baseline gap-2">
                             <span className="text-sm text-gray-400">최종 매매기준 수익</span>
                             <span className={`text-2xl font-bold ${totalProfitLoss > 0 ? 'text-rose-400' : totalProfitLoss < 0 ? 'text-blue-400' : 'text-gray-200'}`}>
@@ -70,8 +70,14 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                                 ({totalReturnRate.toFixed(2)}%)
                             </span>
                         </div>
-                        <div className="text-sm text-gray-500">
-                            전체 자산 <span className="text-gray-200 font-bold">{formatNumber(totalAsset)}원</span>
+                        <div className="text-sm text-gray-500 flex items-center gap-3.5 flex-wrap">
+                            <span>
+                                매수금액 <span className="text-gray-300 font-semibold">{formatNumber(totalAsset - totalProfitLoss)}원</span>
+                            </span>
+                            <span className="text-white/20">|</span>
+                            <span>
+                                평가금액(전체자산) <span className="text-gray-200 font-bold">{formatNumber(totalAsset)}원</span>
+                            </span>
                         </div>
                     </div>
                 </div>
