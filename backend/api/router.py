@@ -1032,15 +1032,41 @@ async def fetch_etf_hybrid(
         if is_us_space:
             download_symbol = clean_code_upper
             is_korean = False
+            us_space_etfs = {"ARKX", "UFO", "MARS", "NASA", "ORBX", "WARP"}
+            
+            # Default fallback setup
             if clean_code_upper == "ARKX":
                 etf_name = "US-Space (ARKX)"
                 product_desc = "1좌당 순자산가치의 변동률을 기초지수의 변동률과 유사하도록 투자신탁재산을 운용하는 것을 목표로 합니다.\nARKX는 해당 기초지수 구성종목을 바탕으로 포트폴리오를 구축하여 시장 대비 안정적인 수익을 추구합니다."
-                holdings = fallbacks["ARKX"]
+                fallback_holdings = fallbacks.get("ARKX", [])
             else:
-                meta = us_space_constituents[clean_code_upper]
-                etf_name = meta["name"]
-                product_desc = meta["desc"]
-                holdings = []
+                if clean_code_upper in us_space_etfs:
+                    etf_name = f"US-Space ({clean_code_upper})"
+                    product_desc = f"{clean_code_upper} ETF는 우주 관련 글로벌 우수 리더 기업들을 편입한 미국 상장 우주 테마 ETF 상품입니다."
+                    fallback_holdings = fallbacks.get(f"US-Space ({clean_code_upper})", [])
+                else:
+                    meta = us_space_constituents[clean_code_upper]
+                    etf_name = meta["name"]
+                    product_desc = meta["desc"]
+                    fallback_holdings = []
+
+            holdings = []
+            if clean_code_upper in us_space_etfs:
+                # Try fetching via yfinance dynamic holdings first
+                try:
+                    import yfinance as yf
+                    ticker_yf = yf.Ticker(clean_code_upper)
+                    th = ticker_yf.funds_data.top_holdings
+                    if th is not None and not th.empty:
+                        for sym, row in th.iterrows():
+                            pct = float(row.get("Holding Percent", 0.0)) * 100
+                            name = row.get("Name", sym)
+                            holdings.append({"ticker": f"{name} ({sym})", "weight": pct})
+                except Exception as e:
+                    logger.warning(f"[{clean_code_upper}] yfinance dynamic holdings fetch failed: {e}")
+            
+            if not holdings:
+                holdings = fallback_holdings
         else:
             # Korean Bio Constituent
             meta = kr_bio_constituents[clean_code_upper]
@@ -1131,12 +1157,20 @@ async def fetch_etf_hybrid(
                 select(ETFHoldings).where(ETFHoldings.code == code)
             )
             for h in h_res.scalars().all():
-                holdings.append({"ticker": h.ticker, "weight": h.weight})
+                holdings.append({
+                    "ticker": h.ticker,
+                    "weight": h.weight,
+                    "shares": h.shares
+                })
 
-        # Fallback space holdings if empty
-        if not holdings and not skip_holdings:
-            if code in fallbacks:
-                holdings = fallbacks[code]
+        # Fallback space holdings if empty OR if all weights are 0.0 (overseas/synthetic ETFs)
+        if not skip_holdings:
+            if not holdings:
+                if code in fallbacks:
+                    holdings = fallbacks[code]
+            elif all(h.get("weight", 0.0) == 0.0 for h in holdings):
+                if code in fallbacks:
+                    holdings = fallbacks[code]
 
         # Fetch prices (날짜 중복 제거: 날짜별 MAX id 기준)
         dates = []
@@ -1332,10 +1366,15 @@ async def fetch_etf_hybrid(
         except Exception:
             pass
 
-        # Fallback space holdings if empty
-        if result and not result.get("holdings") and not skip_holdings:
-            if code in fallbacks:
-                result["holdings"] = fallbacks[code]
+        # Fallback space holdings if empty OR if all weights are 0.0 (overseas/synthetic ETFs)
+        if result and not skip_holdings:
+            holdings_list = result.get("holdings", [])
+            if not holdings_list:
+                if code in fallbacks:
+                    result["holdings"] = fallbacks[code]
+            elif all(h.get("weight", 0.0) == 0.0 for h in holdings_list):
+                if code in fallbacks:
+                    result["holdings"] = fallbacks[code]
         
         # Ensure historical_data has fallback navs & disparity_rates
         if result and "historical_data" in result:

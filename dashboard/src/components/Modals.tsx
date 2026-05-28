@@ -948,93 +948,128 @@ export default function Modals({
                             )}
 
                             {/* 5. 구성항목 */}
-                            {!isStock && (
-                                <div>
-                                    <div className="flex justify-between items-end mb-3 border-b-2 border-slate-700 pb-2">
-                                        <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">CU당 구성종목 <span className="text-white font-medium text-sm ml-2">[Top 10]</span></h3>
-                                    </div>
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                        <div className="border border-slate-700 rounded-xl overflow-hidden">
-                                            <table className="w-full text-right text-sm">
-                                                <thead className="bg-slate-900/80 text-gray-400">
-                                                    <tr>
-                                                        <th className="p-3 text-left border-b border-slate-700 font-medium pl-5">구성종목명</th>
-                                                        <th className="p-3 border-b border-slate-700 font-medium">주식수(계약수)</th>
-                                                        <th className="p-3 border-b border-slate-700 font-medium pr-5">구성비중(%)</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {selectedDetailEtf.holdings?.length > 0 ? (
-                                                        selectedDetailEtf.holdings.slice(0, 10).map((h: any, i: number) => (
-                                                            <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20">
-                                                                <td className="p-2.5 text-left text-gray-200 pl-5">{h.ticker}</td>
-                                                                <td className="p-2.5 text-gray-400">{h.shares ? h.shares.toLocaleString() : Math.round(h.weight * 50).toLocaleString()}</td>
-                                                                <td className="p-2.5 font-bold text-indigo-300 pr-5">{h.weight > 0 ? h.weight.toFixed(2) : '-'}</td>
-                                                            </tr>
-                                                        ))
-                                                    ) : (
-                                                        <tr>
-                                                            <td colSpan={3} className="p-8 text-center text-gray-500">
-                                                                미국 ETF 등 구성종목 데이터가 아직 제공되지 않았습니다.<br /><br />
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setNaverEtfCode(selectedDetailEtf.etf_code);
-                                                                    }}
-                                                                    className="px-4 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 rounded-lg text-sm font-bold hover:bg-indigo-500 hover:text-white transition-all shadow-md"
-                                                                >
-                                                                    네이버 정보 검색
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </tbody>
-                                            </table>
+                            {!isStock && (() => {
+                                const holdings = selectedDetailEtf.holdings || [];
+                                const hasWeight = holdings.some((h: any) => h.weight > 0);
+                                const hasShares = holdings.some((h: any) => h.shares > 0);
+                                
+                                let processedHoldings = [...holdings];
+                                let isSharesChart = false;
+
+                                if (!hasWeight && hasShares) {
+                                    const totalShares = holdings.reduce((sum: number, h: any) => sum + (h.shares || 0), 0);
+                                    if (totalShares > 0) {
+                                        processedHoldings = holdings.map((h: any) => ({
+                                            ...h,
+                                            calculatedWeight: ((h.shares || 0) / totalShares) * 100
+                                        }));
+                                        isSharesChart = true;
+                                    }
+                                }
+
+                                return (
+                                    <div>
+                                        <div className="flex justify-between items-end mb-3 border-b-2 border-slate-700 pb-2">
+                                            <h3 className="text-base md:text-lg font-bold text-blue-400 tracking-wide">CU당 구성종목 <span className="text-white font-medium text-sm ml-2">[Top 10]</span></h3>
                                         </div>
-                                        <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col items-center justify-center">
-                                            <h4 className="text-xs text-gray-500 font-bold mb-0 w-full text-left">비중 Top 10 차트</h4>
-                                            <div className="flex-1 w-full min-h-[300px]">
-                                                {selectedDetailEtf.holdings?.length > 0 && selectedDetailEtf.holdings.some((h: any) => h.weight > 0) ? (
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        <PieChart>
-                                                            <Pie
-                                                                data={selectedDetailEtf.holdings.slice(0, 10)}
-                                                                cx="50%"
-                                                                cy="50%"
-                                                                labelLine={true}
-                                                                label={(props: any) => (
-                                                                    <text
-                                                                        x={props.x} y={props.y} fill="#cbd5e1"
-                                                                        fontSize={10} textAnchor={props.textAnchor}
-                                                                        dominantBaseline={props.dominantBaseline}
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                            <div className="border border-slate-700 rounded-xl overflow-hidden flex flex-col justify-between">
+                                                <table className="w-full text-right text-sm">
+                                                    <thead className="bg-slate-900/80 text-gray-400">
+                                                        <tr>
+                                                            <th className="p-3 text-left border-b border-slate-700 font-medium pl-5">구성종목명</th>
+                                                            <th className="p-3 border-b border-slate-700 font-medium">주식수(계약수)</th>
+                                                            <th className="p-3 border-b border-slate-700 font-medium pr-5">구성비중(%)</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {processedHoldings.length > 0 ? (
+                                                            processedHoldings.slice(0, 10).map((h: any, i: number) => (
+                                                                <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20">
+                                                                    <td className="p-2.5 text-left text-gray-200 pl-5">{h.ticker}</td>
+                                                                    <td className="p-2.5 text-gray-400">{h.shares ? h.shares.toLocaleString() : (h.weight > 0 ? Math.round(h.weight * 50).toLocaleString() : '0')}</td>
+                                                                    <td className="p-2.5 font-bold text-indigo-300 pr-5">
+                                                                        {h.weight > 0 
+                                                                            ? h.weight.toFixed(2) 
+                                                                            : (h.calculatedWeight 
+                                                                                ? `${h.calculatedWeight.toFixed(2)}` 
+                                                                                : '-'
+                                                                            )
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+                                                            ))
+                                                        ) : (
+                                                            <tr>
+                                                                <td colSpan={3} className="p-8 text-center text-gray-500">
+                                                                    미국 ETF 등 구성종목 데이터가 아직 제공되지 않았습니다.<br /><br />
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setNaverEtfCode(selectedDetailEtf.etf_code);
+                                                                        }}
+                                                                        className="px-4 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 rounded-lg text-sm font-bold hover:bg-indigo-500 hover:text-white transition-all shadow-md"
                                                                     >
-                                                                        {props.payload.ticker} ({props.value.toFixed(1)}%)
-                                                                    </text>
-                                                                )}
-                                                                outerRadius={90}
-                                                                fill="#8884d8"
-                                                                dataKey="weight"
-                                                                stroke="rgba(0,0,0,0.5)"
-                                                                strokeWidth={2}
-                                                            >
-                                                                {selectedDetailEtf.holdings.slice(0, 10).map((entry: any, index: number) => {
-                                                                    const pieColors = ['#2563eb', '#dc2626', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f43f5e', '#64748b'];
-                                                                    return <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />;
-                                                                })}
-                                                            </Pie>
-                                                            <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} itemStyle={{ color: '#e2e8f0' }} />
-                                                        </PieChart>
-                                                    </ResponsiveContainer>
-                                                ) : (
-                                                    <div className="flex items-center justify-center h-full text-gray-500 text-sm px-6 text-center">
-                                                        해외/합성 ETF는 비중 데이터가 제공되지 않아 차트를 그릴 수 없습니다.
+                                                                        네이버 정보 검색
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                                {isSharesChart && (
+                                                    <div className="p-3 text-[11px] text-amber-400/80 bg-amber-500/5 border-t border-slate-800/60 text-center">
+                                                        * 구성비중이 공시되지 않아, 주식수(계약수) 비율 기준으로 단순 환산한 비율을 보여줍니다.
                                                     </div>
                                                 )}
                                             </div>
+                                            <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col items-center justify-center">
+                                                <h4 className="text-xs text-gray-500 font-bold mb-0 w-full text-left">
+                                                    {isSharesChart ? "주식수(계약수) 비율 Top 10 차트" : "비중 Top 10 차트"}
+                                                </h4>
+                                                <div className="flex-1 w-full min-h-[300px]">
+                                                    {processedHoldings.length > 0 && (hasWeight || isSharesChart) ? (
+                                                        <ResponsiveContainer width="100%" height="100%">
+                                                            <PieChart>
+                                                                <Pie
+                                                                    data={processedHoldings.slice(0, 10)}
+                                                                    cx="50%"
+                                                                    cy="50%"
+                                                                    labelLine={true}
+                                                                    label={(props: any) => (
+                                                                        <text
+                                                                            x={props.x} y={props.y} fill="#cbd5e1"
+                                                                            fontSize={10} textAnchor={props.textAnchor}
+                                                                            dominantBaseline={props.dominantBaseline}
+                                                                        >
+                                                                            {props.payload.ticker} ({(isSharesChart ? props.payload.calculatedWeight : props.value).toFixed(1)}%)
+                                                                        </text>
+                                                                    )}
+                                                                    outerRadius={90}
+                                                                    fill="#8884d8"
+                                                                    dataKey={isSharesChart ? "calculatedWeight" : "weight"}
+                                                                    stroke="rgba(0,0,0,0.5)"
+                                                                    strokeWidth={2}
+                                                                >
+                                                                    {processedHoldings.slice(0, 10).map((entry: any, index: number) => {
+                                                                        const pieColors = ['#2563eb', '#dc2626', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f43f5e', '#64748b'];
+                                                                        return <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />;
+                                                                    })}
+                                                                </Pie>
+                                                                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} itemStyle={{ color: '#e2e8f0' }} />
+                                                            </PieChart>
+                                                        </ResponsiveContainer>
+                                                    ) : (
+                                                        <div className="flex items-center justify-center h-full text-gray-500 text-sm px-6 text-center">
+                                                            해외/합성 ETF는 비중 데이터가 제공되지 않아 차트를 그릴 수 없습니다.
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                );
+                            })()}
 
                             {/* 6. 거래량/거래대금 */}
                             <div>
