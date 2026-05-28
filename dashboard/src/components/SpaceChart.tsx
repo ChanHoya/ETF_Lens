@@ -598,30 +598,48 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                                         {k}
                                                     </div>
                                                     {estChangePct !== null && (
-                                                        <div className="flex flex-col items-center mt-1">
-                                                            {estPrice !== null && (
-                                                                <span className="text-[11px] font-bold text-gray-200">
-                                                                    {new Intl.NumberFormat('ko-KR').format(Math.floor(estPrice))}원
+                                                        <div className="flex flex-col items-center mt-1 text-[11.5px] font-sans">
+                                                            <div className="flex items-center gap-1.5 font-bold text-gray-200">
+                                                                <span>익일예상 :</span>
+                                                                {estPrice !== null ? (
+                                                                    <span>
+                                                                        {new Intl.NumberFormat('ko-KR').format(Math.floor(estPrice))}원
+                                                                    </span>
+                                                                ) : (
+                                                                    <span>-원</span>
+                                                                )}
+                                                                <span 
+                                                                    style={{
+                                                                        color: estChangePct > 0 
+                                                                            ? '#60a5fa' 
+                                                                            : estChangePct < 0 
+                                                                                ? '#f87171' 
+                                                                                : '#94a3b8'
+                                                                    }}
+                                                                >
+                                                                    ({estChangePct > 0 ? '+' : ''}{estChangePct.toFixed(2)}%)
                                                                 </span>
+                                                            </div>
+                                                            {dispInfo && dispInfo.disparity_rate !== undefined && (
+                                                                <div 
+                                                                    className="text-[10px] text-gray-400 mt-0.5 font-medium"
+                                                                    title={`실시간 NAV: ${new Intl.NumberFormat('ko-KR').format(Math.floor(dispInfo.nav))}원`}
+                                                                >
+                                                                    괴리율:{' '}
+                                                                    <span 
+                                                                        style={{
+                                                                            color: dispInfo.disparity_rate > 0 
+                                                                                ? '#60a5fa' 
+                                                                                : dispInfo.disparity_rate < 0 
+                                                                                    ? '#f87171' 
+                                                                                    : '#94a3b8'
+                                                                        }}
+                                                                        className="font-semibold"
+                                                                    >
+                                                                        {dispInfo.disparity_rate > 0 ? '+' : ''}{dispInfo.disparity_rate.toFixed(3)}%
+                                                                    </span>
+                                                                </div>
                                                             )}
-                                                            <span 
-                                                                className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-black/40 mt-0.5 border"
-                                                                style={{
-                                                                    color: estChangePct > 0 
-                                                                        ? '#60a5fa' 
-                                                                        : estChangePct < 0 
-                                                                            ? '#f87171' 
-                                                                            : '#94a3b8',
-                                                                    borderColor: estChangePct > 0 
-                                                                        ? 'rgba(96,165,250,0.2)' 
-                                                                        : estChangePct < 0 
-                                                                            ? 'rgba(248,113,113,0.2)' 
-                                                                            : 'rgba(255,255,255,0.05)'
-                                                                }}
-                                                                title={`가중평균 예상 등락률 (총 비중 ${weightSum.toFixed(1)}% 반영됨)`}
-                                                            >
-                                                                {estChangePct > 0 ? '+' : ''}{estChangePct.toFixed(2)}%
-                                                            </span>
                                                         </div>
                                                     )}
                                                 </div>
