@@ -709,6 +709,8 @@ async def get_peer_analysis(request: Request, db: AsyncSession = Depends(get_db)
         peers_raw = holding_peers.get(code, [(code, name)])
         item = _analyze_cached(code, name, float(h.get("eval_amount", 0)), peers_raw)
         item["account_no"] = h.get("account_no", "")
+        item["disparity_rate"] = h.get("disparity_rate")
+        item["nav"] = h.get("nav")
         items.append(item)
 
     items.sort(key=lambda x: x.get("eval_amount", 0), reverse=True)

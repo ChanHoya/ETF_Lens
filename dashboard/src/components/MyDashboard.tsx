@@ -20,10 +20,35 @@ type MyDashboardProps = {
     onAnalyzePeers?: (items: any[]) => void;
 };
 
+const isOverseasEtf = (name: string): boolean => {
+    const nameL = name.toLowerCase().replace(/\s+/g, '');
+    const overseasKeywords = [
+        "미국", "글로벌", "해외", "차이나", "일본", "나스닥", "nasdaq", "s&p", "soxx", "필라델피아", 
+        "인도", "유로", "베트남", "골드", "금현물", "world", "china", "japan", "india", "euro", 
+        "vietnam", "taiwan", "대만", "유럽", "남미", "아시아", "국제", "독일", "심천", "상해", "홍콩"
+    ];
+    return overseasKeywords.some(keyword => nameL.includes(keyword));
+};
+
+const getDisparityStatus = (name: string, rate: number): 'normal' | 'warning' | 'risk' => {
+    const isOverseas = isOverseasEtf(name);
+    const absRate = Math.abs(rate);
+    if (isOverseas) {
+        if (absRate < 2.0) return 'normal';
+        if (absRate <= 6.0) return 'warning';
+        return 'risk';
+    } else {
+        if (absRate < 1.0) return 'normal';
+        if (absRate <= 3.0) return 'warning';
+        return 'risk';
+    }
+};
+
 export default function MyDashboard({ data, tradesData, isRefreshing = false, onOpenDetail, onAnalyzePeers }: MyDashboardProps) {
     const [selectedAccount, setSelectedAccount] = useState<any>(null);
     const [backtestTab, setBacktestTab] = useState<'static' | 'dynamic'>('dynamic');
     const [showAllDisparity, setShowAllDisparity] = useState(false);
+    const [disparityTab, setDisparityTab] = useState<'warn_risk' | 'risk' | 'warning' | 'normal' | 'all'>('warn_risk');
 
     const askAi = (question: string) => {
         if (typeof window !== "undefined") {
@@ -59,86 +84,201 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                 const allDisparityHoldings = holdings.filter((h: any) => h.disparity_rate !== undefined && h.disparity_rate !== null);
                 if (allDisparityHoldings.length === 0) return null;
                 
-                const criticalDisparityHoldings = allDisparityHoldings.filter((h: any) => Math.abs(h.disparity_rate) >= 1.0);
-                const displayDisparityHoldings = showAllDisparity ? allDisparityHoldings : criticalDisparityHoldings;
-                
+                // Group and deduplicate holdings for disparity calculation/display
+                const mergedHoldingsMap: { [code: string]: any } = {};
+                allDisparityHoldings.forEach((h: any) => {
+                    const code = h.code;
+                    if (!mergedHoldingsMap[code]) {
+                        mergedHoldingsMap[code] = {
+                            ...h,
+                            qty: Number(h.qty),
+                            eval_amount: Number(h.eval_amount),
+                            accounts: [h.account_no]
+                        };
+                    } else {
+                        mergedHoldingsMap[code].qty += Number(h.qty);
+                        mergedHoldingsMap[code].eval_amount += Number(h.eval_amount);
+                        if (!mergedHoldingsMap[code].accounts.includes(h.account_no)) {
+                            mergedHoldingsMap[code].accounts.push(h.account_no);
+                        }
+                    }
+                });
+
+                const mergedDisparityList = Object.values(mergedHoldingsMap).map((item: any) => {
+                    const status = getDisparityStatus(item.name, item.disparity_rate);
+                    return {
+                        ...item,
+                        status
+                    };
+                });
+
+                const countWarnRisk = mergedDisparityList.filter(h => h.status === 'warning' || h.status === 'risk').length;
+                const countRisk = mergedDisparityList.filter(h => h.status === 'risk').length;
+                const countWarning = mergedDisparityList.filter(h => h.status === 'warning').length;
+                const countNormal = mergedDisparityList.filter(h => h.status === 'normal').length;
+                const countAll = mergedDisparityList.length;
+
+                const displayDisparityHoldings = mergedDisparityList.filter((h) => {
+                    if (disparityTab === 'warn_risk') return h.status === 'warning' || h.status === 'risk';
+                    if (disparityTab === 'risk') return h.status === 'risk';
+                    if (disparityTab === 'warning') return h.status === 'warning';
+                    if (disparityTab === 'normal') return h.status === 'normal';
+                    return true; // 'all'
+                });
+
+                const cardBorderClass = (status: 'normal' | 'warning' | 'risk') => {
+                    if (status === 'risk') return 'border-red-500/40 shadow-red-950/20';
+                    if (status === 'warning') return 'border-amber-500/30 shadow-amber-950/10';
+                    return 'border-white/5 hover:border-white/10';
+                };
+
+                const badgeStyle = (status: 'normal' | 'warning' | 'risk', disparityRate: number) => {
+                    const isPremium = disparityRate > 0;
+                    const rateText = `${isPremium ? '+' : ''}${disparityRate.toFixed(3)}%`;
+                    if (status === 'risk') {
+                        return {
+                            classes: "bg-red-500/20 text-[#f87171] border border-red-500/30",
+                            label: `위험 (Red Zone) ${rateText}`
+                        };
+                    } else if (status === 'warning') {
+                        return {
+                            classes: "bg-amber-500/20 text-[#fbbf24] border border-amber-500/30",
+                            label: `주의 (Yellow Zone) ${rateText}`
+                        };
+                    } else {
+                        return {
+                            classes: "bg-emerald-500/10 text-[#34d399] border border-emerald-500/30",
+                            label: `정상 (Safe Zone) ${rateText}`
+                        };
+                    }
+                };
+
+                const warningMsg = (status: 'normal' | 'warning' | 'risk', disparityRate: number) => {
+                    const isPremium = disparityRate > 0;
+                    if (status === 'risk') {
+                        return `🚨 [위험] 유동성공급자(LP) 의무 기준(국내 3%, 해외 6%)을 완전히 초과한 완전한 비정상 구간입니다. 매매 시 수 퍼센트의 웃돈 지불 또는 헐값 매도 리스크가 존재하므로 매매를 전면 피하십시오.`;
+                    } else if (status === 'warning') {
+                        return `⚠️ [주의] 괴리율 의무 공시 구간에 진입했습니다. 시장가 주문을 피하고, 반드시 지정가 주문으로 신중히 거래하세요. ${isPremium ? '현재 매수 시 NAV 대비 비싸게 매수하게 됩니다.' : '현재 매도 시 NAV 대비 헐값에 매도하게 됩니다.'}`;
+                    } else {
+                        return `✓ [정상] 괴리율이 안정 범위(국내 1% 미만, 해외 2% 미만) 내에서 유동성 공급이 원활하게 작동 중입니다.`;
+                    }
+                };
+
                 return (
                     <section className="flex flex-col gap-4">
-                        <div className="flex justify-between items-baseline flex-wrap gap-2">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-wrap">
                             <h2 className="text-xl font-bold flex items-center gap-2 text-rose-400">
-                                <span className={`w-1.5 h-6 bg-rose-500 rounded-full ${criticalDisparityHoldings.length > 0 ? 'animate-pulse' : ''}`}></span>
+                                <span className={`w-1.5 h-6 bg-rose-500 rounded-full ${countWarnRisk > 0 ? 'animate-pulse' : ''}`}></span>
                                 실시간 괴리율 경보 (Disparity Alert)
                             </h2>
-                            {allDisparityHoldings.length > 0 && (
+                            <div className="flex bg-black/40 rounded-xl p-1 border border-white/5 shadow-inner self-start gap-1 flex-wrap">
                                 <button
-                                    onClick={() => setShowAllDisparity(!showAllDisparity)}
-                                    className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-gray-300 hover:text-white transition-all shadow-inner"
+                                    onClick={() => setDisparityTab('warn_risk')}
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                                        disparityTab === 'warn_risk'
+                                            ? 'bg-rose-600 text-white shadow-md'
+                                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                    }`}
                                 >
-                                    {showAllDisparity ? '경보 종목만 보기' : `전체보기 (${allDisparityHoldings.length}개 종목)`}
+                                    주의/위험 ({countWarnRisk})
                                 </button>
-                            )}
+                                <button
+                                    onClick={() => setDisparityTab('risk')}
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                                        disparityTab === 'risk'
+                                            ? 'bg-red-600/30 border border-red-500/30 text-red-400 font-semibold'
+                                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                    }`}
+                                >
+                                    위험 ({countRisk})
+                                </button>
+                                <button
+                                    onClick={() => setDisparityTab('warning')}
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                                        disparityTab === 'warning'
+                                            ? 'bg-amber-600/30 border border-amber-500/30 text-amber-300 font-semibold'
+                                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                    }`}
+                                >
+                                    주의 ({countWarning})
+                                </button>
+                                <button
+                                    onClick={() => setDisparityTab('normal')}
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                                        disparityTab === 'normal'
+                                            ? 'bg-emerald-600/20 border border-emerald-500/20 text-emerald-400'
+                                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                    }`}
+                                >
+                                    정상 ({countNormal})
+                                </button>
+                                <button
+                                    onClick={() => setDisparityTab('all')}
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                                        disparityTab === 'all'
+                                            ? 'bg-white/10 text-white shadow-sm'
+                                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                    }`}
+                                >
+                                    전체 ({countAll})
+                                </button>
+                            </div>
                         </div>
                         
                         {displayDisparityHoldings.length === 0 ? (
                             <div className="bg-[#12121A]/60 border border-white/10 rounded-2xl p-6 text-center text-xs text-gray-400">
-                                🔒 현재 괴리율 임계치(±1.0%)를 초과한 고위험 보유 자산이 없습니다. 
-                                <button 
-                                    onClick={() => setShowAllDisparity(true)}
-                                    className="text-indigo-400 hover:text-indigo-300 ml-1.5 font-bold hover:underline"
-                                >
-                                    보유자산 괴리율 전체보기
-                                </button>
+                                🔒 선택하신 필터 영역({disparityTab === 'warn_risk' ? '주의/위험' : disparityTab === 'risk' ? '위험' : disparityTab === 'warning' ? '주의' : disparityTab === 'normal' ? '정상' : '전체'})에 해당하는 종목이 없습니다.
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {displayDisparityHoldings.map((h: any, idx: number) => {
-                                    const isPremium = h.disparity_rate > 0;
-                                    const isCritical = Math.abs(h.disparity_rate) >= 1.0;
+                                    const badge = badgeStyle(h.status, h.disparity_rate);
+                                    const isOverseas = isOverseasEtf(h.name);
+                                    
                                     return (
                                         <div 
                                             key={idx} 
-                                            className={`bg-[#12121A]/80 border rounded-2xl p-5 backdrop-blur-md flex flex-col gap-3 shadow-lg transition-all duration-300 ${
-                                                isCritical 
-                                                    ? 'border-rose-500/30 shadow-rose-950/20' 
-                                                    : 'border-white/5 hover:border-white/10'
-                                            }`}
+                                            className={`bg-[#12121A]/80 border rounded-2xl p-5 backdrop-blur-md flex flex-col gap-3 shadow-lg transition-all duration-300 ${cardBorderClass(h.status)}`}
                                         >
-                                            <div className="flex justify-between items-start">
+                                            <div className="flex justify-between items-start flex-wrap gap-2">
                                                 <div>
                                                     <h3 className="font-bold text-white text-sm flex items-center gap-2">
                                                         {h.name}
                                                         <span className="text-xs text-gray-500 font-mono">{h.code}</span>
                                                     </h3>
-                                                    <p className="text-[10px] text-gray-400 mt-1">계좌: {h.account_no}</p>
+                                                    <div className="flex gap-2 items-center mt-1.5">
+                                                        <span className="text-[10px] text-gray-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                                                            {isOverseas ? '해외 자산' : '국내 자산'}
+                                                        </span>
+                                                        <span className="text-[10px] text-gray-400">
+                                                            계좌: {h.accounts.join(' / ')}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                                                    isPremium 
-                                                        ? 'bg-blue-500/10 text-[#60a5fa] border border-[#60a5fa]/30' 
-                                                        : 'bg-red-500/10 text-[#f87171] border border-[#f87171]/30'
-                                                }`}>
-                                                    {isPremium ? '할증' : '할인'} ({h.disparity_rate > 0 ? '+' : ''}{h.disparity_rate.toFixed(3)}%)
+                                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${badge.classes}`}>
+                                                    {badge.label}
                                                 </span>
                                             </div>
-                                            <div className="grid grid-cols-3 gap-2 bg-black/30 rounded-xl p-3 text-center text-xs">
+                                            <div className="grid grid-cols-4 gap-1 bg-black/30 rounded-xl p-3 text-center text-[11px]">
                                                 <div>
-                                                    <p className="text-gray-500 text-[10px] mb-0.5">현재가</p>
+                                                    <p className="text-gray-500 text-[9px] mb-0.5">현재가</p>
                                                     <p className="font-semibold text-gray-200">{formatNumber(h.current_price)}원</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-gray-500 text-[10px] mb-0.5">NAV</p>
+                                                    <p className="text-gray-500 text-[9px] mb-0.5">NAV</p>
                                                     <p className="font-semibold text-gray-200">{h.nav ? `${formatNumber(h.nav)}원` : '-'}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-gray-500 text-[10px] mb-0.5">보유수량</p>
+                                                    <p className="text-gray-500 text-[9px] mb-0.5">총 보유수량</p>
                                                     <p className="font-semibold text-gray-200">{h.qty}주</p>
                                                 </div>
+                                                <div>
+                                                    <p className="text-gray-500 text-[9px] mb-0.5">평가금액</p>
+                                                    <p className="font-semibold text-gray-200">{formatNumber(h.eval_amount)}원</p>
+                                                </div>
                                             </div>
-                                            <p className="text-[10px] text-gray-400 leading-normal">
-                                                {isCritical ? (
-                                                    <span>⚠️ 괴리율이 정상 범위를 벗어났습니다. {isPremium ? '현재 매수 시 NAV 대비 비싸게 매수하게 됩니다.' : '현재 매도 시 NAV 대비 헐값에 매도하게 됩니다.'} 시장가 주문을 피하고 지정가를 사용하세요.</span>
-                                                ) : (
-                                                    <span className="text-gray-400">✓ 괴리율이 정상 범위(±1.0% 이내)에 있습니다. 안정적인 거래가 가능합니다.</span>
-                                                )}
+                                            <p className="text-[10.5px] text-gray-400 leading-normal">
+                                                {warningMsg(h.status, h.disparity_rate)}
                                             </p>
                                         </div>
                                     );

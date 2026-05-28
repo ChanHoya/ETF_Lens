@@ -22,6 +22,34 @@ const fmtPp = (v: number | null): string => {
     return `${v >= 0 ? "+" : ""}${v.toFixed(2)}%p`;
 };
 
+const isOverseasEtf = (name: string): boolean => {
+    const nameL = name.toLowerCase().replace(/\s+/g, '');
+    const overseasKeywords = [
+        "미국", "글로벌", "해외", "차이나", "일본", "나스닥", "nasdaq", "s&p", "soxx", "필라델피아", 
+        "인도", "유로", "베트남", "골드", "금현물", "world", "china", "japan", "india", "euro", 
+        "vietnam", "taiwan", "대만", "유럽", "남미", "아시아", "국제", "독일", "심천", "상해", "홍콩"
+    ];
+    return overseasKeywords.some(keyword => nameL.includes(keyword));
+};
+
+const getDisparityLabel = (name: string, rate: number | null | undefined): { label: string; color: string } => {
+    if (rate === null || rate === undefined) return { label: "–", color: "text-gray-500" };
+    const isOverseas = isOverseasEtf(name);
+    const absRate = Math.abs(rate);
+    const sign = rate > 0 ? "+" : "";
+    const rateText = `(${sign}${rate.toFixed(3)}%)`;
+    
+    if (isOverseas) {
+        if (absRate < 2.0) return { label: `정상 ${rateText}`, color: "text-[#34d399]" };
+        if (absRate <= 6.0) return { label: `주의 ${rateText}`, color: "text-[#fbbf24] font-semibold" };
+        return { label: `위험 ${rateText}`, color: "text-[#f87171] font-bold animate-pulse" };
+    } else {
+        if (absRate < 1.0) return { label: `정상 ${rateText}`, color: "text-[#34d399]" };
+        if (absRate <= 3.0) return { label: `주의 ${rateText}`, color: "text-[#fbbf24] font-semibold" };
+        return { label: `위험 ${rateText}`, color: "text-[#f87171] font-bold animate-pulse" };
+    }
+};
+
 // ─── 수익률 색상 ──────────────────────────────────────────────────────────────
 function pctColor(v: number | null): string {
     if (v === null || v === undefined) return "text-gray-500";
@@ -169,6 +197,14 @@ function HoldingCard({ item, totalPortfolio, onOpenDetail, onAnalyzePeers }: { i
                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                     <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min(item.weight_pct ?? 0, 100)}%` }} />
                 </div>
+            </div>
+
+            {/* 괴리율 수준값 */}
+            <div className="px-4 pb-3 flex justify-between items-center text-[10.5px] text-gray-500">
+                <span className="flex items-center gap-1">📊 괴리율 수준값</span>
+                <span className={`font-semibold ${getDisparityLabel(item.name, item.disparity_rate).color}`}>
+                    {getDisparityLabel(item.name, item.disparity_rate).label}
+                </span>
             </div>
 
             {/* 수익률 + 순위 영역 */}
