@@ -23,6 +23,7 @@ type MyDashboardProps = {
 export default function MyDashboard({ data, tradesData, isRefreshing = false, onOpenDetail, onAnalyzePeers }: MyDashboardProps) {
     const [selectedAccount, setSelectedAccount] = useState<any>(null);
     const [backtestTab, setBacktestTab] = useState<'static' | 'dynamic'>('dynamic');
+    const [showAllDisparity, setShowAllDisparity] = useState(false);
 
     const askAi = (question: string) => {
         if (typeof window !== "undefined") {
@@ -55,53 +56,95 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
 
             {/* 실시간 괴리율 경보 Bento Card */}
             {(() => {
-                const highDisparityHoldings = holdings.filter((h: any) => h.disparity_rate !== undefined && h.disparity_rate !== null && Math.abs(h.disparity_rate) >= 0.0);
-                if (highDisparityHoldings.length === 0) return null;
+                const allDisparityHoldings = holdings.filter((h: any) => h.disparity_rate !== undefined && h.disparity_rate !== null);
+                if (allDisparityHoldings.length === 0) return null;
+                
+                const criticalDisparityHoldings = allDisparityHoldings.filter((h: any) => Math.abs(h.disparity_rate) >= 1.0);
+                const displayDisparityHoldings = showAllDisparity ? allDisparityHoldings : criticalDisparityHoldings;
                 
                 return (
                     <section className="flex flex-col gap-4">
-                        <h2 className="text-xl font-bold flex items-center gap-2 text-rose-400">
-                            <span className="w-1.5 h-6 bg-rose-500 rounded-full animate-pulse"></span>
-                            실시간 괴리율 경보 (Disparity Alert)
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {highDisparityHoldings.map((h: any, idx: number) => {
-                                const isPremium = h.disparity_rate > 0;
-                                return (
-                                    <div key={idx} className="bg-[#12121A]/80 border border-rose-500/30 rounded-2xl p-5 backdrop-blur-md flex flex-col gap-3 shadow-lg shadow-rose-950/20">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                                                    {h.name}
-                                                    <span className="text-xs text-gray-500 font-mono">{h.code}</span>
-                                                </h3>
-                                                <p className="text-[10px] text-gray-400 mt-1">계좌: {h.account_no}</p>
-                                            </div>
-                                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${isPremium ? 'bg-blue-500/10 text-[#60a5fa] border border-[#60a5fa]/30' : 'bg-red-500/10 text-[#f87171] border border-[#f87171]/30'}`}>
-                                                {isPremium ? '할증' : '할인'} ({h.disparity_rate > 0 ? '+' : ''}{h.disparity_rate.toFixed(3)}%)
-                                            </span>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-2 bg-black/30 rounded-xl p-3 text-center text-xs">
-                                            <div>
-                                                <p className="text-gray-500 text-[10px] mb-0.5">현재가</p>
-                                                <p className="font-semibold text-gray-200">{formatNumber(h.current_price)}원</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-gray-500 text-[10px] mb-0.5">NAV</p>
-                                                <p className="font-semibold text-gray-200">{h.nav ? `${formatNumber(h.nav)}원` : '-'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-gray-500 text-[10px] mb-0.5">보유수량</p>
-                                                <p className="font-semibold text-gray-200">{h.qty}주</p>
-                                            </div>
-                                        </div>
-                                        <p className="text-[10px] text-gray-400 leading-normal">
-                                            ⚠️ 괴리율이 정상 범위를 벗어났습니다. {isPremium ? '현재 매수 시 NAV 대비 비싸게 매수하게 됩니다.' : '현재 매도 시 NAV 대비 헐값에 매도하게 됩니다.'} {h.qty > 0 && isPremium ? '추가 매수를 자제하고 괴리율 안정을 기다리세요.' : '시장가 주문을 피하고 지정가를 사용하세요.'}
-                                        </p>
-                                    </div>
-                                );
-                            })}
+                        <div className="flex justify-between items-baseline flex-wrap gap-2">
+                            <h2 className="text-xl font-bold flex items-center gap-2 text-rose-400">
+                                <span className={`w-1.5 h-6 bg-rose-500 rounded-full ${criticalDisparityHoldings.length > 0 ? 'animate-pulse' : ''}`}></span>
+                                실시간 괴리율 경보 (Disparity Alert)
+                            </h2>
+                            {allDisparityHoldings.length > 0 && (
+                                <button
+                                    onClick={() => setShowAllDisparity(!showAllDisparity)}
+                                    className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-gray-300 hover:text-white transition-all shadow-inner"
+                                >
+                                    {showAllDisparity ? '경보 종목만 보기' : `전체보기 (${allDisparityHoldings.length}개 종목)`}
+                                </button>
+                            )}
                         </div>
+                        
+                        {displayDisparityHoldings.length === 0 ? (
+                            <div className="bg-[#12121A]/60 border border-white/10 rounded-2xl p-6 text-center text-xs text-gray-400">
+                                🔒 현재 괴리율 임계치(±1.0%)를 초과한 고위험 보유 자산이 없습니다. 
+                                <button 
+                                    onClick={() => setShowAllDisparity(true)}
+                                    className="text-indigo-400 hover:text-indigo-300 ml-1.5 font-bold hover:underline"
+                                >
+                                    보유자산 괴리율 전체보기
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {displayDisparityHoldings.map((h: any, idx: number) => {
+                                    const isPremium = h.disparity_rate > 0;
+                                    const isCritical = Math.abs(h.disparity_rate) >= 1.0;
+                                    return (
+                                        <div 
+                                            key={idx} 
+                                            className={`bg-[#12121A]/80 border rounded-2xl p-5 backdrop-blur-md flex flex-col gap-3 shadow-lg transition-all duration-300 ${
+                                                isCritical 
+                                                    ? 'border-rose-500/30 shadow-rose-950/20' 
+                                                    : 'border-white/5 hover:border-white/10'
+                                            }`}
+                                        >
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                                                        {h.name}
+                                                        <span className="text-xs text-gray-500 font-mono">{h.code}</span>
+                                                    </h3>
+                                                    <p className="text-[10px] text-gray-400 mt-1">계좌: {h.account_no}</p>
+                                                </div>
+                                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                                                    isPremium 
+                                                        ? 'bg-blue-500/10 text-[#60a5fa] border border-[#60a5fa]/30' 
+                                                        : 'bg-red-500/10 text-[#f87171] border border-[#f87171]/30'
+                                                }`}>
+                                                    {isPremium ? '할증' : '할인'} ({h.disparity_rate > 0 ? '+' : ''}{h.disparity_rate.toFixed(3)}%)
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 bg-black/30 rounded-xl p-3 text-center text-xs">
+                                                <div>
+                                                    <p className="text-gray-500 text-[10px] mb-0.5">현재가</p>
+                                                    <p className="font-semibold text-gray-200">{formatNumber(h.current_price)}원</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-500 text-[10px] mb-0.5">NAV</p>
+                                                    <p className="font-semibold text-gray-200">{h.nav ? `${formatNumber(h.nav)}원` : '-'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-500 text-[10px] mb-0.5">보유수량</p>
+                                                    <p className="font-semibold text-gray-200">{h.qty}주</p>
+                                                </div>
+                                            </div>
+                                            <p className="text-[10px] text-gray-400 leading-normal">
+                                                {isCritical ? (
+                                                    <span>⚠️ 괴리율이 정상 범위를 벗어났습니다. {isPremium ? '현재 매수 시 NAV 대비 비싸게 매수하게 됩니다.' : '현재 매도 시 NAV 대비 헐값에 매도하게 됩니다.'} 시장가 주문을 피하고 지정가를 사용하세요.</span>
+                                                ) : (
+                                                    <span className="text-gray-400">✓ 괴리율이 정상 범위(±1.0% 이내)에 있습니다. 안정적인 거래가 가능합니다.</span>
+                                                )}
+                                            </p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </section>
                 );
             })()}
