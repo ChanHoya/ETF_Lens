@@ -571,6 +571,25 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                         const dotColor = colors[originalIdx >= 0 ? originalIdx : idx % colors.length];
                                         const etfCode = etfNameToCodeMap[k];
                                         const dispInfo = etfCode ? disparityData[etfCode] : null;
+                                        
+                                        // Calculate weight-averaged change percentage
+                                        let weightSum = 0;
+                                        let weightedChangeSum = 0;
+                                        holdingsData.forEach(row => {
+                                            const weight = row[k];
+                                            const change = row.change_pct; // Constituent daily change %
+                                            if (weight !== undefined && weight !== null && weight > 0 && change !== undefined && change !== null) {
+                                                weightSum += weight;
+                                                weightedChangeSum += (change * weight);
+                                            }
+                                        });
+                                        const estChangePct = weightSum > 0 ? (weightedChangeSum / weightSum) : null;
+                                        
+                                        // Calculate estimated Korean ETF price
+                                        const estPrice = (dispInfo && dispInfo.price && estChangePct !== null)
+                                            ? dispInfo.price * (1 + estChangePct / 100)
+                                            : null;
+
                                         return (
                                             <th key={k} className="px-3 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10">
                                                 <div className="flex flex-col items-center justify-center gap-1 whitespace-nowrap">
@@ -578,25 +597,32 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                                         <span style={{ color: dotColor }}>●</span>
                                                         {k}
                                                     </div>
-                                                    {dispInfo && (
-                                                        <span 
-                                                            className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-black/40 mt-1 border"
-                                                            style={{
-                                                                color: dispInfo.disparity_rate > 0 
-                                                                    ? '#60a5fa' 
-                                                                    : dispInfo.disparity_rate < 0 
-                                                                        ? '#f87171' 
-                                                                        : '#94a3b8',
-                                                                borderColor: dispInfo.disparity_rate > 0 
-                                                                    ? 'rgba(96,165,250,0.2)' 
-                                                                    : dispInfo.disparity_rate < 0 
-                                                                        ? 'rgba(248,113,113,0.2)' 
-                                                                        : 'rgba(255,255,255,0.05)'
-                                                            }}
-                                                            title={`실시간 NAV: ${new Intl.NumberFormat('ko-KR').format(Math.floor(dispInfo.nav))}원`}
-                                                        >
-                                                            {dispInfo.disparity_rate > 0 ? '+' : ''}{dispInfo.disparity_rate.toFixed(3)}%
-                                                        </span>
+                                                    {estChangePct !== null && (
+                                                        <div className="flex flex-col items-center mt-1">
+                                                            {estPrice !== null && (
+                                                                <span className="text-[11px] font-bold text-gray-200">
+                                                                    {new Intl.NumberFormat('ko-KR').format(Math.floor(estPrice))}원
+                                                                </span>
+                                                            )}
+                                                            <span 
+                                                                className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-black/40 mt-0.5 border"
+                                                                style={{
+                                                                    color: estChangePct > 0 
+                                                                        ? '#60a5fa' 
+                                                                        : estChangePct < 0 
+                                                                            ? '#f87171' 
+                                                                            : '#94a3b8',
+                                                                    borderColor: estChangePct > 0 
+                                                                        ? 'rgba(96,165,250,0.2)' 
+                                                                        : estChangePct < 0 
+                                                                            ? 'rgba(248,113,113,0.2)' 
+                                                                            : 'rgba(255,255,255,0.05)'
+                                                                }}
+                                                                title={`가중평균 예상 등락률 (총 비중 ${weightSum.toFixed(1)}% 반영됨)`}
+                                                            >
+                                                                {estChangePct > 0 ? '+' : ''}{estChangePct.toFixed(2)}%
+                                                            </span>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </th>

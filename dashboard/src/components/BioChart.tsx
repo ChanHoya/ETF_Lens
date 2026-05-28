@@ -420,35 +420,11 @@ export default function BioChart({ onOpenDetail }: BioChartProps) {
                                     {displayHoldingsKeys.map((k, idx) => {
                                         const originalIdx = holdingsKeys.indexOf(k);
                                         const dotColor = colors[originalIdx >= 0 ? originalIdx : idx % colors.length];
-                                        const etfCode = etfNameToCodeMap[k];
-                                        const dispInfo = etfCode ? disparityData[etfCode] : null;
                                         return (
                                             <th key={k} className="px-3 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10">
-                                                <div className="flex flex-col items-center justify-center gap-1 whitespace-nowrap">
-                                                    <div className="flex items-center justify-center gap-1.5">
-                                                        <span style={{ color: dotColor }}>●</span>
-                                                        {k}
-                                                    </div>
-                                                    {dispInfo && (
-                                                        <span 
-                                                            className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-black/40 mt-1 border"
-                                                            style={{
-                                                                color: dispInfo.disparity_rate > 0 
-                                                                    ? '#60a5fa' 
-                                                                    : dispInfo.disparity_rate < 0 
-                                                                        ? '#f87171' 
-                                                                        : '#94a3b8',
-                                                                borderColor: dispInfo.disparity_rate > 0 
-                                                                    ? 'rgba(96,165,250,0.2)' 
-                                                                    : dispInfo.disparity_rate < 0 
-                                                                        ? 'rgba(248,113,113,0.2)' 
-                                                                        : 'rgba(255,255,255,0.05)'
-                                                            }}
-                                                            title={`실시간 NAV: ${new Intl.NumberFormat('ko-KR').format(Math.floor(dispInfo.nav))}원`}
-                                                        >
-                                                            {dispInfo.disparity_rate > 0 ? '+' : ''}{dispInfo.disparity_rate.toFixed(3)}%
-                                                        </span>
-                                                    )}
+                                                <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                                                    <span style={{ color: dotColor }}>●</span>
+                                                    {k}
                                                 </div>
                                             </th>
                                         );
