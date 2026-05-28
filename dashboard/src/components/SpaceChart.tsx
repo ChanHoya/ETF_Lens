@@ -42,6 +42,40 @@ const etfNameToCodeMap: { [key: string]: string } = {
     "SOL 미국우주항공TOP10": "495470",
 };
 
+const checkIsUsMarketOpenClient = (): boolean => {
+    try {
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/New_York',
+            hour12: false,
+            weekday: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        const parts = formatter.formatToParts(new Date());
+        let weekday = '';
+        let hour = 0;
+        let minute = 0;
+        for (const part of parts) {
+            if (part.type === 'weekday') weekday = part.value;
+            if (part.type === 'hour') hour = parseInt(part.value, 10);
+            if (part.type === 'minute') minute = parseInt(part.value, 10);
+        }
+        
+        if (weekday === 'Sat' || weekday === 'Sun') {
+            return false;
+        }
+        
+        const minutesSinceMidnight = hour * 60 + minute;
+        const marketOpenMinutes = 9 * 60 + 30; // 09:30
+        const marketCloseMinutes = 16 * 60;   // 16:00
+        
+        return minutesSinceMidnight >= marketOpenMinutes && minutesSinceMidnight <= marketCloseMinutes;
+    } catch (e) {
+        console.error('Failed to check US market open on client:', e);
+        return false;
+    }
+};
+
 export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
     const [period, setPeriod] = useState('1Y');
     const [chartData, setChartData] = useState<any[]>([]);
@@ -58,6 +92,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
     const [holdingsKeys, setHoldingsKeys] = useState<string[]>([]);
     const [isHoldingsLoading, setIsHoldingsLoading] = useState(true);
     const [holdingsUpdatedAt, setHoldingsUpdatedAt] = useState<string>('');
+    const [isMarketOpen, setIsMarketOpen] = useState<boolean>(() => checkIsUsMarketOpenClient());
     const [disparityData, setDisparityData] = useState<{ [key: string]: any }>({});
 
     useEffect(() => {
@@ -91,6 +126,9 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                     }
                     if (data.updated_at) {
                         setHoldingsUpdatedAt(data.updated_at);
+                    }
+                    if (data.is_market_open !== undefined) {
+                        setIsMarketOpen(data.is_market_open);
                     }
                 }
             } catch (err) {
@@ -547,7 +585,9 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                     </h4>
                     
                     <span className="text-[10px] sm:text-xs text-gray-400 font-bold font-mono bg-white/5 px-2 py-1.5 rounded border border-white/5">
-                        {holdingsUpdatedAt ? `실시간 시세: ${holdingsUpdatedAt} KST 기준` : 'NASDAQ 실시간 기준'}
+                        {isMarketOpen 
+                            ? (holdingsUpdatedAt ? `${holdingsUpdatedAt} KST 기준` : 'KST 기준') 
+                            : 'NASDAQ 종가기준'}
                     </span>
                 </div>
                 

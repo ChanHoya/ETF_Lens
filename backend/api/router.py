@@ -3042,10 +3042,30 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
     dt_kst = datetime.fromtimestamp(cache_ts, tz=timezone(timedelta(hours=9)))
     updated_at_str = dt_kst.strftime("%y.%m.%d %H:%M")
 
+    is_market_open = False
+    try:
+        import zoneinfo
+        tz_ny = zoneinfo.ZoneInfo("America/New_York")
+        now_ny = datetime.now(tz_ny)
+        if now_ny.weekday() < 5:  # Monday to Friday
+            market_start = now_ny.replace(hour=9, minute=30, second=0, microsecond=0)
+            market_end = now_ny.replace(hour=16, minute=0, second=0, microsecond=0)
+            if market_start <= now_ny <= market_end:
+                is_market_open = True
+    except Exception as e:
+        logger.warning(f"Failed to check US market open in space-holdings: {e}")
+        # Fallback check using UTC time
+        utc_now = datetime.now(timezone.utc)
+        if utc_now.weekday() < 5:
+            hour_val = utc_now.hour + utc_now.minute / 60.0
+            if 13.5 <= hour_val <= 21.0:
+                is_market_open = True
+
     return {
         "keys": list(tickers.keys()),
         "table_data": top_15_rows,
-        "updated_at": updated_at_str
+        "updated_at": updated_at_str,
+        "is_market_open": is_market_open
     }
 
 
