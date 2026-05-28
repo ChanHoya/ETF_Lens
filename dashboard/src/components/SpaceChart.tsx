@@ -57,6 +57,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
     const [holdingsData, setHoldingsData] = useState<any[]>([]);
     const [holdingsKeys, setHoldingsKeys] = useState<string[]>([]);
     const [isHoldingsLoading, setIsHoldingsLoading] = useState(true);
+    const [holdingsUpdatedAt, setHoldingsUpdatedAt] = useState<string>('');
     const [disparityData, setDisparityData] = useState<{ [key: string]: any }>({});
 
     useEffect(() => {
@@ -87,6 +88,9 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                     setHoldingsData(data.table_data);
                     if (data.keys) {
                         setHoldingsKeys(data.keys);
+                    }
+                    if (data.updated_at) {
+                        setHoldingsUpdatedAt(data.updated_at);
                     }
                 }
             } catch (err) {
@@ -543,7 +547,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                     </h4>
                     
                     <span className="text-[10px] sm:text-xs text-gray-400 font-bold font-mono bg-white/5 px-2 py-1.5 rounded border border-white/5">
-                        NASDAQ 26.5.15 기준
+                        {holdingsUpdatedAt ? `실시간 시세: ${holdingsUpdatedAt} KST 기준` : 'NASDAQ 실시간 기준'}
                     </span>
                 </div>
                 

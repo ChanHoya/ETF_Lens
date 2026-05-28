@@ -3037,9 +3037,15 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
         r["change_pct"] = quote.get("change_pct")
 
     # Return top 15 holdings to avoid clutter
+    from datetime import datetime, timezone, timedelta
+    cache_ts = _space_quotes_cache["quotes"][1] if "quotes" in _space_quotes_cache else time.time()
+    dt_kst = datetime.fromtimestamp(cache_ts, tz=timezone(timedelta(hours=9)))
+    updated_at_str = dt_kst.strftime("%y.%m.%d %H:%M")
+
     return {
         "keys": list(tickers.keys()),
-        "table_data": top_15_rows
+        "table_data": top_15_rows,
+        "updated_at": updated_at_str
     }
 
 
