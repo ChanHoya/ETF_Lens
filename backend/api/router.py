@@ -1161,25 +1161,29 @@ async def fetch_etf_hybrid(
             
             # 실제 NAV & 괴리율 데이터 수집 및 캐싱 (KRX 상장 종목 전용, len == 6)
             has_empty_nav = any(p.nav is None for p in price_rows) if price_rows else False
-            if len(code) == 6 and has_empty_nav and len(price_rows) > 0:
+            # nav_map은 gap-fill 이후에도 재사용하기 위해 외부 변수로 선언
+            _wisereport_nav_map: dict = {}
+            if len(code) == 6 and (has_empty_nav or True) and len(price_rows) > 0:
+                # NOTE: has_empty_nav=True 조건이 아니어도 gap-fill 날짜 NAV 채우기 위해 항상 조회
+                # 단, API 호출 비용을 줄이기 위해 캐시 전략은 추후 개선 가능
                 try:
                     import urllib.request
                     import ssl
-                    import json
+                    import json as _json_mod
                     url = f"https://navercomp.wisereport.co.kr/v2/ETF/GetNAVData.aspx?cmp_cd={code}"
                     ctx = ssl._create_unverified_context()
                     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
                     res_str = await asyncio.to_thread(
                         lambda: urllib.request.urlopen(req, timeout=5, context=ctx).read().decode('utf-8', errors='ignore')
                     )
-                    nav_data = json.loads(res_str)
+                    nav_data = _json_mod.loads(res_str)
                     grid_data = nav_data.get("grid_data", [])
-                    nav_map = {row["TRD_DT"]: (row["NAV"], row["DIFF_RATE"]) for row in grid_data}
+                    _wisereport_nav_map = {row["TRD_DT"]: (row["NAV"], row["DIFF_RATE"]) for row in grid_data}
                     
                     # DB 레코드 업데이트 및 세션 커밋
                     for p in price_rows:
-                        if p.date in nav_map:
-                            nav, diff = nav_map[p.date]
+                        if p.date in _wisereport_nav_map:
+                            nav, diff = _wisereport_nav_map[p.date]
                             p.nav = nav
                             p.disparity_rate = diff
                     await db.commit()
@@ -1211,23 +1215,46 @@ async def fetch_etf_hybrid(
                 last_db_date = datetime.strptime(last_db_date_str, "%Y-%m-%d").date()
                 today_date = now_kst.date()
 
-                # 중간 이빨 빠진 영업일이 있다면 fdr로 보충
+                # 중간 이빨 빠진 영업일이 있다면 fdr로 보충 후 DB에 영구 저장
                 if (today_date - last_db_date).days > 1:
                     try:
                         import asyncio
                         import FinanceDataReader as fdr
+                        from db.models import ETFDailyPrice as _ETFDailyPrice
                         start_str = (last_db_date + timedelta(days=1)).strftime("%Y-%m-%d")
                         recent_df = await asyncio.to_thread(fdr.DataReader, code, start_str)
                         if recent_df is not None and not recent_df.empty:
                             for idx, row in recent_df.iterrows():
                                 dt_str = str(idx.date())
-                                if dt_str > last_db_date_str and dt_str <= today_kst:
+                                # 오늘 당일은 live price로 처리하므로 제외
+                                if dt_str > last_db_date_str and dt_str < today_kst:
                                     if dt_str not in dates:
+                                        cl_val = float(row.get("Close", 0) or 0)
+                                        # Wisereport nav_map에서 NAV 조회 (있으면 우선 사용)
+                                        if dt_str in _wisereport_nav_map:
+                                            _nav_val, _diff_val = _wisereport_nav_map[dt_str]
+                                        else:
+                                            _nav_val, _diff_val = None, None
+                                        # DB에 영구 저장 (중복 방지)
+                                        try:
+                                            new_row = _ETFDailyPrice(
+                                                code=code,
+                                                date=dt_str,
+                                                close=cl_val,
+                                                nav=_nav_val,
+                                                disparity_rate=_diff_val,
+                                            )
+                                            db.add(new_row)
+                                            await db.flush()
+                                        except Exception:
+                                            await db.rollback()
+                                            _nav_val, _diff_val = None, None
                                         dates.append(dt_str)
-                                        prices.append(row["Close"])
-                                        # FDR은 NAV가 없으므로 close와 0.0 복사
-                                        navs.append(row["Close"])
-                                        disparity_rates.append(0.0)
+                                        prices.append(cl_val)
+                                        navs.append(_nav_val if _nav_val is not None else cl_val)
+                                        disparity_rates.append(_diff_val if _diff_val is not None else 0.0)
+                            await db.commit()
+                            logger.info(f"[hybrid] {code} gap-fill DB 저장 완료 (최근 {len(dates)-len(price_rows)}일)")
                     except Exception as e:
                         logger.warning(f"[hybrid] {code} gap fill failed: {e}")
             else:
