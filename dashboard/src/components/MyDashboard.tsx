@@ -55,7 +55,7 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
 
             {/* 실시간 괴리율 경보 Bento Card */}
             {(() => {
-                const highDisparityHoldings = holdings.filter((h: any) => h.disparity_rate !== undefined && h.disparity_rate !== null && Math.abs(h.disparity_rate) >= 1.0);
+                const highDisparityHoldings = holdings.filter((h: any) => h.disparity_rate !== undefined && h.disparity_rate !== null && Math.abs(h.disparity_rate) >= 0.0);
                 if (highDisparityHoldings.length === 0) return null;
                 
                 return (
