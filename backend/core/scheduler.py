@@ -397,6 +397,104 @@ async def check_exit_signal_and_alert() -> None:
         print(f"[ExitSignalAlert] Failed to run exit signal check and notification: {e}")
 
 
+async def check_etf_disparity_and_alert() -> None:
+    """
+    모니터링 대상 ETF(보유 종목 + 우주/바이오 주요 ETF)의 실시간 괴리율을 체크하고,
+    괴리율 절대값이 1.0% 이상인 경우 텔레그램 알림을 전송합니다.
+    """
+    from core.disparity_analyzer import fetch_etf_disparity_list
+    from core.notifier import send_telegram_message
+    from api.my_assets import get_my_portfolio
+    from db.database import AsyncSessionLocal
+    import pytz
+    
+    print("[DisparityAlert] Checking ETF disparity rates...")
+    
+    # 1. 모니터링 대상 ETF 코드 모으기
+    # 기본 모니터링 대상 (우주 & 바이오 핵심 ETF)
+    monitored_codes = {
+        "0167Z0": "KODEX 미국우주항공",
+        "0180V0": "ACE 미국우주테크액티브",
+        "0183J0": "TIGER 미국우주테크",
+        "0181L0": "SOL 미국우주항공TOP10",
+        "462900": "KoAct 바이오헬스케어액티브",
+        "463050": "TIME K바이오액티브",
+        "244580": "KODEX 바이오",
+        "143860": "TIGER 헬스케어",
+        "364970": "TIGER 바이오TOP10"
+    }
+    
+    # 보유 종목 추가
+    try:
+        async with AsyncSessionLocal() as db:
+            portfolio = await get_my_portfolio(request=None, db=db)
+            holdings = portfolio.get("kis_raw", {}).get("holdings", [])
+            for h in holdings:
+                code = h.get("code")
+                name = h.get("name")
+                if code and len(code) == 6 and code.isdigit():
+                    monitored_codes[code] = name
+    except Exception as e:
+        print(f"[DisparityAlert] Failed to fetch portfolio holdings: {e}")
+        
+    # 2. 실시간 괴리율 전체 목록 가져오기
+    try:
+        disparity_map = await fetch_etf_disparity_list()
+    except Exception as e:
+        print(f"[DisparityAlert] Failed to fetch disparity list: {e}")
+        return
+        
+    # 3. 임계치 초과 종목 판별 (|disparity_rate| >= 1.0%)
+    alert_items = []
+    for code, name in monitored_codes.items():
+        etf_info = disparity_map.get(code)
+        if not etf_info:
+            continue
+        
+        disparity_rate = etf_info.get("disparity_rate", 0.0)
+        if abs(disparity_rate) >= 1.0:
+            alert_items.append({
+                "code": code,
+                "name": name,
+                "price": etf_info.get("price"),
+                "nav": etf_info.get("nav"),
+                "disparity_rate": disparity_rate
+            })
+            
+    if not alert_items:
+        print("[DisparityAlert] No ETFs exceeded the disparity threshold (1.0%).")
+        return
+        
+    # 4. 텔레그램 메시지 발송
+    now_kst = datetime.now(pytz.timezone('Asia/Seoul'))
+    time_str = now_kst.strftime("%Y-%m-%d %H:%M")
+    
+    is_open = now_kst.hour == 9
+    timing_label = "장초반 (09:10)" if is_open else "장마감 (15:15)"
+    
+    header = f"🚨 <b>[ETF 실시간 괴리율 경보 - {timing_label}]</b>\n"
+    header += f"조회 시점: {time_str} KST\n\n"
+    header += f"괴리율 임계치(±1.0%)를 초과한 종목이 감지되었습니다. 매매 시 주의하시기 바랍니다.\n\n"
+    
+    body = ""
+    for item in alert_items:
+        rate = item["disparity_rate"]
+        status_badge = f"🔴 <b>할인 (Discount {rate:.3f}%)</b>" if rate < 0 else f"🔵 <b>할증 (Premium +{rate:.3f}%)</b>"
+        body += (
+            f"▪️ <b>{item['name']}</b> ({item['code']})\n"
+            f"  - 현재가: <code>{int(item['price']):,}원</code> | NAV: <code>{int(item['nav']):,}원</code>\n"
+            f"  - 상태: {status_badge}\n\n"
+        )
+        
+    footer = f"💡 <i>괴리율이 큰 상태에서 시장가 주문을 넣을 경우 불리한 가격에 체결될 수 있으므로, 지정가 주문을 활용하거나 괴리율 안정화 후 매매하는 것을 권장합니다.</i>"
+    
+    success, _ = await send_telegram_message(header + body + footer, category="exit_signal")
+    if success:
+        print(f"[DisparityAlert] Sent disparity alert for {len(alert_items)} items.")
+    else:
+        print("[DisparityAlert] Failed to send Telegram alert.")
+
+
 def setup_scheduler():
     from scheduler.etf_price_sync import sync_etf_prices_yfinance
     from core.etf_performance import update_all_etf_performance_job
@@ -430,6 +528,10 @@ def setup_scheduler():
         await update_app_version("[macro]")
         trigger_replication_background()
 
+    async def _job_disparity():
+        await check_etf_disparity_and_alert()
+        trigger_replication_background()
+
     # 07:00 - 경량 ETF 마스터 목록 upsert
     scheduler.add_job(_job_master, "cron", hour=7, minute=0, id="daily_etf_master_sync")
 
@@ -444,6 +546,10 @@ def setup_scheduler():
 
     # 매월 1일 08:00 - 미국 매크로 지표 동기화
     scheduler.add_job(_job_macro, "cron", day=1, hour=8, minute=0, id="monthly_us_macro_sync")
+
+    # 월-금 09:10 (Market Open) 및 15:15 (Market Close) 실행
+    scheduler.add_job(_job_disparity, "cron", day_of_week="mon-fri", hour=9, minute=10, id="market_open_disparity_check")
+    scheduler.add_job(_job_disparity, "cron", day_of_week="mon-fri", hour=15, minute=15, id="market_close_disparity_check")
 
     scheduler.start()
     print("DB and Email Scheduler started.")

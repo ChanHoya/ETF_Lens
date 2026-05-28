@@ -2623,6 +2623,39 @@ async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_d
     return result
 
 
+@router.get("/etf/disparity")
+async def get_etf_disparity_metrics(codes: str = None):
+    """
+    Fetches real-time ETF disparity metrics (Premium/Discount).
+    Optionally filters by comma-separated 'codes' query parameter.
+    """
+    from core.disparity_analyzer import fetch_etf_disparity_list
+    data_map = await fetch_etf_disparity_list()
+    
+    if not codes:
+        return data_map
+        
+    code_list = [c.strip() for c in codes.split(",") if c.strip()]
+    
+    # Map space-specific ticker codes to Naver API standard index codes
+    space_map = {
+        "488050": "0167Z0",
+        "484930": "0180V0",
+        "488100": "0183J0",
+        "495470": "0181L0",
+    }
+    
+    filtered_data = {}
+    for code in code_list:
+        clean_code = code[:-3] if (code.endswith(".KS") or code.endswith(".KQ")) else code
+        mapped_code = space_map.get(clean_code, clean_code)
+        if mapped_code in data_map:
+            # We key the output by the requested code to make it easy for frontend matching
+            filtered_data[code] = data_map[mapped_code]
+            
+    return filtered_data
+
+
 @router.get("/space-holdings")
 async def get_space_holdings(db: AsyncSession = Depends(get_db)):
     """

@@ -434,7 +434,48 @@ async def get_my_portfolio(
                 for r in valid_results
             ]
     
-            # 5. Enrich data with etf_master data
+            # 5. Enrich data with etf_master data & disparity rate
+            try:
+                from core.disparity_analyzer import fetch_etf_disparity_list
+                disparity_map = await fetch_etf_disparity_list()
+                
+                total_etf_eval = 0.0
+                weighted_disparity_sum = 0.0
+                
+                for h in all_holdings:
+                    code = h.get("code")
+                    if code:
+                        clean_code = code[:-3] if (code.endswith(".KS") or code.endswith(".KQ")) else code
+                        space_map = {
+                            "488050": "0167Z0",
+                            "484930": "0180V0",
+                            "488100": "0183J0",
+                            "495470": "0181L0",
+                        }
+                        mapped_code = space_map.get(clean_code, clean_code)
+                        
+                        etf_info = disparity_map.get(mapped_code)
+                        if etf_info:
+                            h["nav"] = etf_info.get("nav")
+                            h["disparity_rate"] = etf_info.get("disparity_rate")
+                            
+                            eval_amount = float(h.get("eval_amount", 0.0))
+                            disparity_rate = float(etf_info.get("disparity_rate", 0.0))
+                            
+                            total_etf_eval += eval_amount
+                            weighted_disparity_sum += (disparity_rate * eval_amount)
+                        else:
+                            h["nav"] = None
+                            h["disparity_rate"] = None
+                
+                if total_etf_eval > 0:
+                    aggregated_summary["weighted_disparity_rate"] = round(weighted_disparity_sum / total_etf_eval, 3)
+                else:
+                    aggregated_summary["weighted_disparity_rate"] = 0.0
+            except Exception as e:
+                logger.error(f"Error enriching portfolio with disparity rate: {e}")
+                aggregated_summary["weighted_disparity_rate"] = 0.0
+    
             analyzed_data = await analyze_portfolio(all_holdings, db)
     
             result_payload = {

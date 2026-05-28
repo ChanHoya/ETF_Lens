@@ -20,6 +20,7 @@ A living document of module relationships. Update whenever modules are added or 
 | US Macro Indicators | Presentation | US macro inflation indicator time-series charting & caching | db/models, api/exit_signal | MyDashboard | Antigravity |
 | AI Chat Assistant | Presentation | Personal portfolio-based AI chat bot & prefill widgets | api/chat, ChatBot | MyDashboard, MyAssetsView | Antigravity |
 | Space ETF Analysis | Presentation | Space sector ETF performance charts, custom legends, and toggled constituent comparison tables | api/router, SpaceChart | SectorAnalysisTab | Antigravity |
+| ETF Disparity Monitoring | Presentation | Real-time Indicative NAV disparity rate analyzer and alert scheduling | core/disparity_analyzer, core/notifier, api/router | MyDashboard, SpaceChart, BioChart, scheduler | Antigravity |
 <!-- Add new modules above this line -->
 
 
@@ -66,3 +67,4 @@ When modifying a module:
 | Date | Module | Change | Affected Modules | Status |
 |------|--------|--------|------------------|--------|
 | 2026-05-26 | Space ETF Analysis | Added price and change_pct fields to /space-holdings response | SpaceChart | Updated |
+| 2026-05-28 | ETF Disparity Monitoring | Created /analyze/etf/disparity API & enriched portfolio response | MyDashboard, SpaceChart, BioChart, scheduler | Updated |
