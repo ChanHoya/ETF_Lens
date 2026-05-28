@@ -1141,6 +1141,8 @@ async def fetch_etf_hybrid(
         # Fetch prices (날짜 중복 제거: 날짜별 MAX id 기준)
         dates = []
         prices = []
+        navs = []
+        disparity_rates = []
         if not skip_chart:
             from sqlalchemy import func
             # 날짜별 최신 row만 선택 (중복 데이터 방지)
@@ -1155,9 +1157,40 @@ async def fetch_etf_hybrid(
                 .where(ETFDailyPrice.id.in_(select(subq.c.max_id)))
                 .order_by(ETFDailyPrice.date)
             )
-            for p in p_res.scalars().all():
+            price_rows = p_res.scalars().all()
+            
+            # 실제 NAV & 괴리율 데이터 수집 및 캐싱 (KRX 상장 종목 전용, len == 6)
+            has_empty_nav = any(p.nav is None for p in price_rows) if price_rows else False
+            if len(code) == 6 and has_empty_nav and len(price_rows) > 0:
+                try:
+                    import urllib.request
+                    import ssl
+                    import json
+                    url = f"https://navercomp.wisereport.co.kr/v2/ETF/GetNAVData.aspx?cmp_cd={code}"
+                    ctx = ssl._create_unverified_context()
+                    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
+                    res_str = await asyncio.to_thread(
+                        lambda: urllib.request.urlopen(req, timeout=5, context=ctx).read().decode('utf-8', errors='ignore')
+                    )
+                    nav_data = json.loads(res_str)
+                    grid_data = nav_data.get("grid_data", [])
+                    nav_map = {row["TRD_DT"]: (row["NAV"], row["DIFF_RATE"]) for row in grid_data}
+                    
+                    # DB 레코드 업데이트 및 세션 커밋
+                    for p in price_rows:
+                        if p.date in nav_map:
+                            nav, diff = nav_map[p.date]
+                            p.nav = nav
+                            p.disparity_rate = diff
+                    await db.commit()
+                except Exception as e:
+                    logger.warning(f"[hybrid] {code} historical NAV fetch failed: {e}")
+                    
+            for p in price_rows:
                 dates.append(p.date)
                 prices.append(p.close)
+                navs.append(p.nav if p.nav is not None else p.close)
+                disparity_rates.append(p.disparity_rate if p.disparity_rate is not None else 0.0)
 
         live_price = master.price
 
@@ -1192,6 +1225,9 @@ async def fetch_etf_hybrid(
                                     if dt_str not in dates:
                                         dates.append(dt_str)
                                         prices.append(row["Close"])
+                                        # FDR은 NAV가 없으므로 close와 0.0 복사
+                                        navs.append(row["Close"])
+                                        disparity_rates.append(0.0)
                     except Exception as e:
                         logger.warning(f"[hybrid] {code} gap fill failed: {e}")
             else:
@@ -1207,7 +1243,10 @@ async def fetch_etf_hybrid(
                             dt_str = str(idx.date())
                             if dt_str not in dates:
                                 dates.append(dt_str)
-                                prices.append(float(row.get("Close", 0) or 0))
+                                cl_val = float(row.get("Close", 0) or 0)
+                                prices.append(cl_val)
+                                navs.append(cl_val)
+                                disparity_rates.append(0.0)
                         logger.info(f"[hybrid] {code} 신규 상장 FDR 보충: {len(dates)}일치")
                 except Exception as e:
                     logger.warning(f"[hybrid] {code} new listing FDR fetch failed: {e}")
@@ -1217,11 +1256,31 @@ async def fetch_etf_hybrid(
                 if today_kst not in dates:
                     dates.append(today_kst)
                     prices.append(naver_live)
+                    try:
+                        from core.disparity_analyzer import get_etf_disparity
+                        live_disp = await get_etf_disparity(code)
+                        if live_disp:
+                            navs.append(live_disp.get("nav", naver_live))
+                            disparity_rates.append(live_disp.get("disparity_rate", 0.0))
+                        else:
+                            navs.append(naver_live)
+                            disparity_rates.append(0.0)
+                    except Exception:
+                        navs.append(naver_live)
+                        disparity_rates.append(0.0)
                     logger.info(f"[hybrid] {code} 당일({today_kst}) 실시간가 {naver_live} → historical_data 추가")
                 else:
                     # 이미 있으면 최신 가격으로 갱신
                     idx = dates.index(today_kst)
                     prices[idx] = naver_live
+                    try:
+                        from core.disparity_analyzer import get_etf_disparity
+                        live_disp = await get_etf_disparity(code)
+                        if live_disp:
+                            navs[idx] = live_disp.get("nav", naver_live)
+                            disparity_rates[idx] = live_disp.get("disparity_rate", 0.0)
+                    except Exception:
+                        pass
 
         return {
             "etf_code": code,
@@ -1231,7 +1290,7 @@ async def fetch_etf_hybrid(
                 "nav": master.nav,
             },
             "basic_info": b_info,
-            "historical_data": {"dates": dates, "prices": prices},
+            "historical_data": {"dates": dates, "prices": prices, "navs": navs, "disparity_rates": disparity_rates},
             "holdings": holdings,
         }
     else:
@@ -1250,6 +1309,13 @@ async def fetch_etf_hybrid(
         if result and not result.get("holdings") and not skip_holdings:
             if code in fallbacks:
                 result["holdings"] = fallbacks[code]
+        
+        # Ensure historical_data has fallback navs & disparity_rates
+        if result and "historical_data" in result:
+            h_data = result["historical_data"]
+            if "dates" in h_data and "prices" in h_data:
+                h_data["navs"] = h_data.get("navs") or h_data["prices"]
+                h_data["disparity_rates"] = h_data.get("disparity_rates") or [0.0] * len(h_data["prices"])
         return result
 
 

@@ -695,34 +695,47 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
 
     // 1D (5분 단위 정보 시뮬레이션)
     if (period === '1D' && baseMappedData.length > 0) {
-      const lastValidObj = [...baseMappedData].reverse().find(d => keys.some((k: string) => d[`${k}_raw`] != null)) || baseMappedData[0];
-      const simulated1D = [];
-      const endTime = new Date();
-      endTime.setHours(15, 30, 0, 0);
-      let currentTime = new Date();
-      currentTime.setHours(9, 0, 0, 0);
+      const now = new Date();
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const kst = new Date(utc + (3600000 * 9));
+      const day = kst.getDay();
+      const hours = kst.getHours();
+      const minutes = kst.getMinutes();
+      const timeInMinutes = hours * 60 + minutes;
+      const isMarketClosed = (day === 0 || day === 6 || timeInMinutes < 540 || timeInMinutes > 930);
 
-      const states: Record<string, number> = {};
-      const baseStates: Record<string, number> = {};
-      keys.forEach((k: string) => {
-        states[k] = lastValidObj[`${k}_raw`] || 10000;
-        baseStates[k] = states[k];
-      });
+      if (isMarketClosed) {
+        baseMappedData = [];
+      } else {
+        const lastValidObj = [...baseMappedData].reverse().find(d => keys.some((k: string) => d[`${k}_raw`] != null)) || baseMappedData[0];
+        const simulated1D = [];
+        const endTime = new Date();
+        endTime.setHours(15, 30, 0, 0);
+        let currentTime = new Date();
+        currentTime.setHours(9, 0, 0, 0);
 
-      while (currentTime <= endTime) {
-        const timeStr = currentTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const pt: any = { date: timeStr };
+        const states: Record<string, number> = {};
+        const baseStates: Record<string, number> = {};
         keys.forEach((k: string) => {
-          // 5분 단위 랜덤 워크 변화 (±0.3% 변동성)
-          states[k] = states[k] * (1 + (Math.random() - 0.5) * 0.003);
-          pt[`${k}_raw`] = Number(states[k].toFixed(0));
-          pt[k] = Number(((states[k] / baseStates[k] - 1) * 100).toFixed(2));
+          states[k] = lastValidObj[`${k}_raw`] || 10000;
+          baseStates[k] = states[k];
         });
-        simulated1D.push(pt);
-        currentTime.setMinutes(currentTime.getMinutes() + 5);
+
+        while (currentTime <= endTime) {
+          const timeStr = currentTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const pt: any = { date: timeStr };
+          keys.forEach((k: string) => {
+            // 5분 단위 랜덤 워크 변화 (±0.3% 변동성)
+            states[k] = states[k] * (1 + (Math.random() - 0.5) * 0.003);
+            pt[`${k}_raw`] = Number(states[k].toFixed(0));
+            pt[k] = Number(((states[k] / baseStates[k] - 1) * 100).toFixed(2));
+          });
+          simulated1D.push(pt);
+          currentTime.setMinutes(currentTime.getMinutes() + 5);
+        }
+        baseMappedData = simulated1D;
       }
-      baseMappedData = simulated1D;
     }
 
     return baseMappedData;
@@ -923,11 +936,21 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
 
       // 2. NAV & Price (recent ~22 trading days from the real data end)
       const recentMonth = oneYearGlimpse.slice(Math.max(oneYearGlimpse.length - 22, 0));
+      const hist = selectedDetailEtf.historical_data || {};
+      const histDates: string[] = hist.dates || [];
+      const histNavs: number[] = hist.navs || [];
+      const histDisparityRates: number[] = hist.disparity_rates || [];
+
       recentMonth.forEach((d: any) => {
         const price = d[etfKey] || d[`${etfKey}_raw`] || 0;
         if (price > 0) {
-          const nav = price * (1 + (Math.random() - 0.5) * 0.003);
-          const diff = ((price / nav - 1) * 100);
+          const idx = histDates.indexOf(d.date);
+          let nav = price;
+          let diff = 0;
+          if (idx !== -1) {
+            nav = histNavs[idx] !== undefined && histNavs[idx] !== null ? histNavs[idx] : price;
+            diff = histDisparityRates[idx] !== undefined && histDisparityRates[idx] !== null ? histDisparityRates[idx] : 0;
+          }
           navData.push({
             date: d.date,
             day: d.date.substring(5).replace(/-/g, '/'),

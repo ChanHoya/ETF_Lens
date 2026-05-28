@@ -62,6 +62,27 @@ async def lifespan(app: FastAPI):
         except Exception as _e:
             print(f"[Startup] shares column migration skipped: {_e}")
 
+        # ── 2.5. etf_daily_prices nav/disparity_rate 컬럼 추가 (PostgreSQL/SQLite 호환) ──
+        try:
+            async with engine.begin() as conn:
+                if _is_sqlite:
+                    try:
+                        await conn.execute(text("ALTER TABLE etf_daily_prices ADD COLUMN nav FLOAT"))
+                        print("Successfully added 'nav' column to etf_daily_prices (SQLite)")
+                    except Exception:
+                        pass
+                    try:
+                        await conn.execute(text("ALTER TABLE etf_daily_prices ADD COLUMN disparity_rate FLOAT"))
+                        print("Successfully added 'disparity_rate' column to etf_daily_prices (SQLite)")
+                    except Exception:
+                        pass
+                else:
+                    await conn.execute(text("ALTER TABLE etf_daily_prices ADD COLUMN IF NOT EXISTS nav DOUBLE PRECISION"))
+                    await conn.execute(text("ALTER TABLE etf_daily_prices ADD COLUMN IF NOT EXISTS disparity_rate DOUBLE PRECISION"))
+                    print("Successfully executed PostgreSQL ALTER TABLE check/migrations for etf_daily_prices columns.")
+        except Exception as _e:
+            print(f"[Startup] etf_daily_prices columns migration skipped: {_e}")
+
         # ── 3. ETF 성과 및 랭킹 비용 컬럼 마이그레이션 (SQLite 전용 스크립트) ───────
         if _is_sqlite:
             try:

@@ -53,36 +53,6 @@ const createETFEntry = (etf: any, id: number) => {
         isLoadingMetrics: true
     };
 };
-const generateMockChartData = (period: string) => {
-    const data = [];
-    let ccBase = 100;
-    let bmBase = 100;
-    const days = period === '1M' ? 30 : period === '3M' ? 90 : period === 'YTD' ? 120 : 365;
-
-    for (let i = days; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-
-        // Random walk, BM is more volatile, CC is less volatile but drags over time (opportunity cost)
-        const dayVolatility = Math.random() * 2 - 0.9;
-        bmBase = bmBase * (1 + dayVolatility / 100);
-
-        // CC captures less upside, more downside limit
-        let ccVolatility = dayVolatility;
-        if (dayVolatility > 0) ccVolatility = dayVolatility * 0.4; // Upside capped
-        // Distribute monthly (approx every 30 days)
-        if (i % 30 === 0) ccVolatility += 1.0; // Dividend reinvestment bump
-
-        ccBase = ccBase * (1 + ccVolatility / 100);
-
-        data.push({
-            date: d.toISOString().split('T')[0].substring(5).replace('-', '/'),
-            ccTotalReturn: Number((ccBase - 100).toFixed(2)),
-            bmTotalReturn: Number((bmBase - 100).toFixed(2))
-        });
-    }
-    return data;
-};
 
 export default function CoveredCallTab({
     initialEtfs = [],

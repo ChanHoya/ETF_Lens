@@ -257,13 +257,24 @@ export function useEtfData(slots: { search: string, code: string }[], period: st
                 const firstValidPrice = filteredChart.find((d: any) => d[etfKey] != null);
                 const basePrice = firstValidPrice ? firstValidPrice[etfKey] : null;
 
+                const hist = selectedDetailEtf?.historical_data || {};
+                const histDates: string[] = hist.dates || [];
+                const histNavs: number[] = hist.navs || [];
+
                 filteredChart.forEach((d: any, idx: number) => {
                     const currentPrice = d[etfKey] != null ? Number(d[etfKey]) : null;
                     const pr = d[benchKey] != null && baseBench ? Number(((d[benchKey] / baseBench - 1) * 100).toFixed(2)) : 0;
                     const etfPr = currentPrice && basePrice ? Number(((currentPrice / basePrice - 1) * 100).toFixed(2)) : 0;
 
-                    const randomNavNoise = currentPrice ? currentPrice * (1 + (Math.random() - 0.5) * 0.005) : null;
-                    navData.push({ date: d.date, nav: randomNavNoise ? Number(randomNavNoise.toFixed(0)) : null, price: currentPrice, rel_yield: pr, etf_yield: etfPr });
+                    let navVal = currentPrice;
+                    if (currentPrice) {
+                        const hIdx = histDates.indexOf(d.date);
+                        if (hIdx !== -1 && histNavs[hIdx] !== undefined && histNavs[hIdx] !== null) {
+                            navVal = histNavs[hIdx];
+                        }
+                    }
+
+                    navData.push({ date: d.date, nav: navVal ? Math.round(navVal) : null, price: currentPrice, rel_yield: pr, etf_yield: etfPr });
 
                     const baseVol = 100000 + Math.random() * 500000;
                     const spikeMultiplier = Math.random() > 0.9 ? 3 : 1;

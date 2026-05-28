@@ -93,6 +93,8 @@ class ETFDailyPrice(Base):
     code = Column(String, ForeignKey("etf_master.code"), index=True)
     date = Column(String, index=True)  # Format 'YYYY-MM-DD'
     close = Column(Float)
+    nav = Column(Float, nullable=True)
+    disparity_rate = Column(Float, nullable=True)
 
     etf = relationship("ETFMaster", back_populates="prices")
 

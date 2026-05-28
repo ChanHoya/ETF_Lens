@@ -101,6 +101,24 @@ export default function CompareChart({
     isLoadingChart, hoveredEtfName, setHoveredEtfName, setSelectedDetailEtf
 }: CompareChartProps) {
 
+    const checkIsMarketClosed = () => {
+        const now = new Date();
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const kst = new Date(utc + (3600000 * 9));
+        
+        const day = kst.getDay();
+        if (day === 0 || day === 6) return true;
+        
+        const hours = kst.getHours();
+        const minutes = kst.getMinutes();
+        const timeInMinutes = hours * 60 + minutes;
+        
+        if (timeInMinutes < 540 || timeInMinutes > 930) return true;
+        return false;
+    };
+
+    const isMarketClosed = checkIsMarketClosed();
+
     const glowColors = ["#818cf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#60a5fa", "#f472b6", "#a3e635", "#f97316", "#14b8a6"];
     const [hoveredBench, setHoveredBench] = useState<string | null>(null);
 
@@ -263,6 +281,15 @@ export default function CompareChart({
                                 {includedKeys.length > 0 ? (
                                     <>
                                         <div className="h-[400px] w-full relative z-10">
+                                            {period === '1D' && isMarketClosed && (
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-md rounded-2xl z-20 border border-white/10 shadow-[inner_0_4px_24px_rgba(0,0,0,0.8)]">
+                                                    <svg className="w-12 h-12 text-indigo-400 mb-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+                                                    </svg>
+                                                    <p className="text-base font-bold text-gray-200">현재 국내 주식 시장이 마감되었습니다</p>
+                                                    <p className="text-xs text-gray-500 mt-1">장중 1D 실시간 차트는 영업일 09:00 ~ 15:30에 제공됩니다.</p>
+                                                </div>
+                                            )}
                                             <ResponsiveContainer width="100%" height="100%">
                                             <LineChart data={simulatedChartData} margin={{ top: 5, right: 5, left: 10, bottom: 5 }}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
@@ -353,6 +380,15 @@ export default function CompareChart({
                                 </div>
 
                                 <div className="h-[400px] w-full relative z-10">
+                                    {period === '1D' && isMarketClosed && (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-md rounded-2xl z-20 border border-white/10 shadow-[inner_0_4px_24px_rgba(0,0,0,0.8)]">
+                                            <svg className="w-12 h-12 text-indigo-400 mb-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+                                            </svg>
+                                            <p className="text-base font-bold text-gray-200">현재 국내 주식 시장이 마감되었습니다</p>
+                                            <p className="text-xs text-gray-500 mt-1">장중 1D 실시간 차트는 영업일 09:00 ~ 15:30에 제공됩니다.</p>
+                                        </div>
+                                    )}
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart data={returnChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
