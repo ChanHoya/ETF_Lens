@@ -396,6 +396,49 @@ async def get_dynamic_peers(cat: dict | None, db: AsyncSession) -> list[tuple[st
     try:
         from sqlalchemy import select, or_
         from db.models import ETFMaster
+
+        # 우주항공·우주테크 카테고리인 경우, 요청한 7대 핵심 우주/글로벌 우주항공 ETF 강제 포함
+        if cat["group"] == "우주항공·우주테크":
+            core_space = [
+                ("0183J0", "TIGER 미국우주테크"),
+                ("0180V0", "ACE 미국우주테크액티브"),
+                ("0181L0", "SOL 미국우주항공TOP10"),
+                ("0167Z0", "KODEX 미국우주항공"),
+                ("0131V0", "1Q 미국우주항공테크"),
+                ("440910", "WON 미국우주항공방산"),
+                ("478150", "TIME 글로벌우주테크&방산액티브"),
+            ]
+            
+            # DB에서 추가적인 우주 관련 ETF 조회
+            query = select(ETFMaster.code, ETFMaster.name, ETFMaster.aum)
+            conditions = [ETFMaster.name.ilike(f"%{kw}%") for kw in cat["keywords"]]
+            if conditions:
+                query = query.where(or_(*conditions))
+            result = await db.execute(query)
+            rows = result.all()
+
+            def parse_aum(aum_str):
+                if not aum_str:
+                    return 0.0
+                s = str(aum_str).replace(",", "").replace("억", "")
+                try:
+                    return float(s)
+                except Exception:
+                    return 0.0
+
+            sorted_rows = sorted(rows, key=lambda x: parse_aum(x.aum), reverse=True)
+            
+            seen_codes = {c[0] for c in core_space}
+            result_list = list(core_space)
+            for r in sorted_rows:
+                if len(result_list) >= 10:
+                    break
+                if r.code and r.code not in seen_codes:
+                    result_list.append((r.code, r.name))
+                    seen_codes.add(r.code)
+            return result_list
+
+        # 기본 로직: AUM 기준 상위 10개 동종 ETF 조회
         query = select(ETFMaster.code, ETFMaster.name, ETFMaster.aum)
         conditions = [ETFMaster.name.ilike(f"%{kw}%") for kw in cat["keywords"]]
         if conditions:
@@ -437,6 +480,16 @@ def _analyze_one(
     peers_raw: list[tuple[str, str]] | None = None,
 ) -> dict:
     """단일 종목 전체 분석 (동기 — ThreadPoolExecutor에서 실행 가능)."""
+    code = code.strip()
+    if code.endswith(".KS") or code.endswith(".KQ"):
+        code = code[:-3]
+    space_map = {
+        "488050": "0167Z0",
+        "484930": "0180V0",
+        "488100": "0183J0",
+        "495470": "0181L0",
+    }
+    code = space_map.get(code, code)
     cat = _match_category(name)
 
     base: dict[str, Any] = {
@@ -548,7 +601,7 @@ async def get_peer_analysis(request: Request, db: AsyncSession = Depends(get_db)
     # KRX 국내 ETF/종목 필터: 6자리 코드 (숫자 또는 숫자+알파벳 모두 포함)
     # 예: 396500(숫자), 0093A0(알파벳 포함) 모두 국내 종목
     # 영문 티커(예: TSLA, AAPL)와 구분: 6자리이고 첫 글자가 숫자인 코드
-    domestic = [
+    domestic_raw = [
         h for h in all_h
         if (
             h.get("code", "") and
@@ -556,6 +609,22 @@ async def get_peer_analysis(request: Request, db: AsyncSession = Depends(get_db)
             h.get("code", "")[0].isdigit()  # 첫 글자가 숫자 → KRX 코드
         )
     ]
+
+    # space_map 적용하여 KIS 보유 코드와 DB/피어 코드 일치
+    space_map = {
+        "488050": "0167Z0",
+        "484930": "0180V0",
+        "488100": "0183J0",
+        "495470": "0181L0",
+    }
+    domestic = []
+    for h in domestic_raw:
+        h_copy = dict(h)
+        raw_code = h_copy.get("code", "")
+        clean_code = raw_code[:-3] if (raw_code.endswith(".KS") or raw_code.endswith(".KQ")) else raw_code
+        if clean_code in space_map:
+            h_copy["code"] = space_map[clean_code]
+        domestic.append(h_copy)
     if not domestic:
         return {"status": "success", "count": 0, "items": [], "cached": False}
 

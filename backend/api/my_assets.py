@@ -830,8 +830,24 @@ async def get_holdings_signals(request: Request, db: AsyncSession = Depends(get_
     # 보유 종목 조회
     portfolio = await get_my_portfolio(request=request, db=db)
     all_h = portfolio.get("kis_raw", {}).get("holdings", [])
-    domestic = [h for h in all_h
-                if h.get("code", "").isdigit() and len(h.get("code", "")) == 6]
+    domestic_raw = [h for h in all_h
+                if h.get("code", "") and len(h.get("code", "")) == 6 and h.get("code", "")[0].isdigit()]
+
+    # space_map 적용하여 KIS 보유 코드와 DB/피어 코드 일치
+    space_map = {
+        "488050": "0167Z0",
+        "484930": "0180V0",
+        "488100": "0183J0",
+        "495470": "0181L0",
+    }
+    domestic = []
+    for h in domestic_raw:
+        h_copy = dict(h)
+        raw_code = h_copy.get("code", "")
+        clean_code = raw_code[:-3] if (raw_code.endswith(".KS") or raw_code.endswith(".KQ")) else raw_code
+        if clean_code in space_map:
+            h_copy["code"] = space_map[clean_code]
+        domestic.append(h_copy)
 
     now_ts = time.time()
     results = []
