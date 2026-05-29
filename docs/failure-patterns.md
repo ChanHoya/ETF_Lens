@@ -157,3 +157,11 @@
 - **원인**: 사내/개발 환경 내부 프록시 망이나 샌드박스에서 자체 서명된 인증서 체인을 끼워넣어 SSL 인증서 검증이 실패함.
 - **해결**: `requests.get(..., verify=False)` 설정을 부여해 SSL 검증을 명시적으로 우회하고, 이로 인한 경고 메시지 범람을 방지하기 위해 `urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)`를 적용함.
 
+## KIS/KRX Tickers & Alphanumeric Codes
+
+### KIS/KRX 6-Digit Ticker vs WiseReport Alphanumeric Ticker Mismatch
+- **증상**: TIGER 미국우주테크 등의 ETF를 보유 중이나, 동종 ETF 경쟁력 분석 카드에서 비교군 내 랭킹이 누락되거나, 내 보유 자산으로 매칭(★ 별표 표시)되지 않고 중복 노출되는 현상.
+- **원인**: KIS API는 종목코드로 단축코드(예: `488100` TIGER 미국우주테크)를 반환하지만, WiseReport 크롤링 또는 외부 벤치마크/NAV 계산용 코드로는 alphanumeric 코드(예: `0183J0`)를 사용하여 두 코드가 상호 불일치함. 또한 alphanumeric 코드는 `.isdigit()` 검사 통과를 못하고 필터링 과정에서 아예 제거됨.
+- **해결**: `space_map` 변환 레이어를 추가하여 holdings code가 올바르게 WiseReport 표준 코드로 변환되도록 일원화하고, 국내 종목 필터 조건을 `.isdigit()`에서 `code and len(code) == 6 and code[0].isdigit()`로 완화함.
+
+
