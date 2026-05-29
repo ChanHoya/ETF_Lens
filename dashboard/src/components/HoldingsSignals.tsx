@@ -105,9 +105,14 @@ function PercentileBar({ rank, total, label }: { rank: number | null; total: num
 
 // ─── 피어 미니 차트 (가로 바 차트) ───────────────────────────────────────────
 function PeerBarChart({ peers, period, onOpenDetail }: { peers: any[]; period: "1m" | "3m"; onOpenDetail?: (code: string) => void }) {
+    if (!peers || !Array.isArray(peers)) {
+        return <p className="text-gray-500 text-xs text-center py-2">비교 가능한 데이터가 없습니다.</p>;
+    }
     const key = period === "1m" ? "return_1m" : "return_3m";
-    const valid = peers.filter(p => p[key] !== null && p[key] !== undefined);
-    if (valid.length === 0) return null;
+    const valid = peers.filter(p => p && p[key] !== null && p[key] !== undefined);
+    if (valid.length === 0) {
+        return <p className="text-gray-500 text-xs text-center py-2">비교 가능한 데이터가 없습니다.</p>;
+    }
 
     const sorted = [...valid].sort((a, b) => b[key] - a[key]);
     const max = Math.max(...sorted.map(p => Math.abs(p[key])), 0.1);
@@ -269,23 +274,40 @@ function HoldingCard({ item, totalPortfolio, onOpenDetail, onAnalyzePeers }: { i
                         <div className="flex flex-col gap-2">
                             <div className="flex justify-between items-center">
                                 <div className="flex gap-2">
-                                    {(["1m", "3m"] as const).map(p => (
-                                        <button
-                                            key={p}
-                                            onClick={() => setPeerPeriod(p)}
-                                            className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all ${peerPeriod === p ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300" : "border-white/10 text-gray-500 hover:text-gray-300"}`}
-                                        >
-                                            {p === "1m" ? "1개월" : "3개월"}
-                                        </button>
-                                    ))}
+                                    {(["1m", "3m"] as const).map(p => {
+                                        const peersList = p === "1m" ? item.peers_sorted_1m : item.peers_sorted_3m;
+                                        const key = p === "1m" ? "return_1m" : "return_3m";
+                                        const hasData = Array.isArray(peersList) && peersList.some((peer: any) => peer && peer[key] !== null && peer[key] !== undefined);
+                                        return (
+                                            <button
+                                                key={p}
+                                                disabled={!hasData}
+                                                onClick={() => {
+                                                    if (hasData) {
+                                                        setPeerPeriod(p);
+                                                    }
+                                                }}
+                                                className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all ${
+                                                    !hasData 
+                                                        ? "border-white/5 text-gray-700 cursor-not-allowed opacity-30" 
+                                                        : peerPeriod === p 
+                                                            ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300" 
+                                                            : "border-white/10 text-gray-500 hover:text-gray-300"
+                                                }`}
+                                            >
+                                                {p === "1m" ? "1개월" : "3개월"}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                                 <button 
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         if (onAnalyzePeers) {
                                             const peers = peerPeriod === "1m" ? item.peers_sorted_1m : item.peers_sorted_3m;
-                                            const peerItems = peers
-                                                                .filter((p: any) => p.code !== item.code)
+                                            const validPeers = Array.isArray(peers) ? peers : [];
+                                            const peerItems = validPeers
+                                                                .filter((p: any) => p && p.code !== item.code)
                                                                 .map((p: any) => ({code: p.code, name: p.name}));
                                             onAnalyzePeers([{code: item.code, name: item.name}, ...peerItems]);
                                         }
