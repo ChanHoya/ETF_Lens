@@ -250,6 +250,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                 </p>
                 {payload.map((entry: any) => {
                     const val: number = entry.value;
+                    if (val === undefined || val === null || isNaN(val)) return null;
                     const prevVal: number | null = prevRow?.[entry.dataKey] ?? null;
                     const dailyPct = prevVal != null && prevVal > 0
                         ? (((val - prevVal) / prevVal) * 100).toFixed(2)

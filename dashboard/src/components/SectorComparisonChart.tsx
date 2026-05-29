@@ -176,6 +176,7 @@ export default function SectorComparisonChart({ region, selectedSector = null }:
                 <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                     {payload.sort((a:any, b:any) => b.value - a.value).map((entry: any) => {
                         const val: number = entry.value;
+                        if (val === undefined || val === null || isNaN(val)) return null;
                         const prevVal: number | null = prevRow?.[entry.dataKey] ?? null;
                         const dailyPct = prevVal != null && prevVal > 0
                             ? (((val - prevVal) / prevVal) * 100).toFixed(2)
