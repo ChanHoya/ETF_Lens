@@ -55,6 +55,7 @@
 - **증상**: 브라우저 로드 시 Vercel 오류 페이지 노출 또는 "Failed to fetch" 반복
 - **원인**: 백엔드 응답이 `null`이거나 `NaN`인 데이터를 처리하지 않고 렌더링 시도
 - **해결**: 모든 수치 데이터에 `isNaN()` 및 `null` 체크 방어 로직 적용, 투자 원금과 같이 유실되면 안 되는 핵심 입력 데이터는 `localStorage`를 1순위 저장소(fallback)로 활용하여 오프라인 환경에서도 작동하게 함
+- **추가 사례(2026-05-29)**: 최근 상장된 ETF 등 가격 데이터가 부족한 기간(3개월 등) 선택 시 툴팁(CustomTooltip) 내 undefined 값에 대해 `.toFixed(1)` 호출로 인한 크래시. 모든 CustomTooltip map 루프 초입에 undefined/null/NaN 예외 필터링 추가.
 
 ## Finance Data APIs
 
