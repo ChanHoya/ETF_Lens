@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import AccountDetailModal from './AccountDetailModal';
 import HoldingsSignals from './HoldingsSignals';
-import RecentTrades from './RecentTrades';
 import PortfolioBacktester from './PortfolioBacktester';
 import AIRebalanceSimulator from './AIRebalanceSimulator';
 import RiskAlertBanner from './RiskAlertBanner';
@@ -411,9 +410,6 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                 </div>
             </section>
 
-            {/* 당일 체결 내역 */}
-            <RecentTrades tradesData={tradesData} />
-
             {/* 포트폴리오 백테스터 & AI 리밸런싱 시뮬레이터 통합 탭 */}
             <div className="flex flex-col gap-4 mt-2">
                 <div className="flex items-center justify-between border-b border-white/10 pb-2">
@@ -451,77 +447,6 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                     <PortfolioBacktester holdings={holdings} />
                 )}
             </div>
-
-            {/* Section 5: 당일 체결내역 */}
-            <section className="flex flex-col gap-4">
-                <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-bold flex items-center gap-2">
-                        <span className="w-1.5 h-6 bg-amber-500 rounded-full"></span>
-                        당일 체결내역
-                        {tradesData?.count > 0 && (
-                            <span className="text-sm font-normal text-amber-400 ml-1">({tradesData.count}건)</span>
-                        )}
-                    </h2>
-                    {isRefreshing && (
-                        <span className="text-xs text-indigo-400 animate-pulse">조회중...</span>
-                    )}
-                </div>
-
-                <div className="bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-md overflow-hidden">
-                    {!tradesData || tradesData.count === 0 ? (
-                        <div className="p-10 flex flex-col items-center justify-center gap-2 text-gray-500">
-                            <span className="text-2xl">📋</span>
-                            <p className="text-sm">오늘 체결된 주문이 없습니다.</p>
-                            <p className="text-xs text-gray-600">장 중에 주문이 체결되면 여기에 표시됩니다.</p>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
-                                <thead>
-                                    <tr className="bg-black/20 text-xs font-medium text-gray-400 border-b border-white/10">
-                                        <th className="p-3 text-center">시각</th>
-                                        <th className="p-3 text-center">구분</th>
-                                        <th className="p-3 text-left">종목</th>
-                                        <th className="p-3 text-right">수량</th>
-                                        <th className="p-3 text-right">체결단가</th>
-                                        <th className="p-3 text-right">체결금액</th>
-                                        <th className="p-3 text-center">계좌</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/5">
-                                    {tradesData.trades.map((t: any, i: number) => {
-                                        const isBuy = t.side_code === "02";
-                                        return (
-                                            <tr key={i} className="hover:bg-white/[0.02] transition-colors">
-                                                <td className="p-3 text-center text-gray-400 font-mono text-xs">{t.time}</td>
-                                                <td className="p-3 text-center">
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                                                        isBuy
-                                                            ? "bg-rose-500/20 text-rose-400"
-                                                            : "bg-blue-500/20 text-blue-400"
-                                                    }`}>
-                                                        {t.side}
-                                                    </span>
-                                                </td>
-                                                <td className="p-3 text-white font-medium">
-                                                    {t.name}
-                                                    <span className="text-gray-500 text-xs ml-1.5">{t.code}</span>
-                                                </td>
-                                                <td className="p-3 text-right text-gray-200">{formatNumber(t.qty)}주</td>
-                                                <td className="p-3 text-right text-gray-200">{formatNumber(t.price)}원</td>
-                                                <td className="p-3 text-right font-bold text-gray-100">
-                                                    {formatNumber(t.amount)}원
-                                                </td>
-                                                <td className="p-3 text-center text-gray-500 font-mono text-xs">{t.account_no}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-            </section>
 
             {/* Section 6: 보유 ETF 전략 시그널 */}
             <HoldingsSignals isAuthorized={true} onOpenDetail={onOpenDetail} onAnalyzePeers={onAnalyzePeers} />
