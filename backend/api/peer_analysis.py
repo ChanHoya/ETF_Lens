@@ -41,6 +41,11 @@ _KIS_CTX: dict = {}
 # ── 카테고리 정의 ──────────────────────────────────────────────────────────────
 CATEGORY_PEERS: list[dict] = [
     {
+        "keywords": ["우주항공", "우주테크", "우주", "space"],
+        "group": "우주항공·우주테크",
+        "benchmark": "^IXIC",
+    },
+    {
         "keywords": ["반도체top10", "반도체 top10", "반도체top", "반도체탑10", "반도체탑", "반도체"],
         "group": "반도체",
         "benchmark": "^KS11",
@@ -66,7 +71,7 @@ CATEGORY_PEERS: list[dict] = [
         "benchmark": "^GSPC",
     },
     {
-        "keywords": ["나스닥", "nasdaq", "미국필라", "미국테크", "미국빅테크", "미국우주", "필라델피아반도체", "양자", "양자컴퓨팅"],
+        "keywords": ["나스닥", "nasdaq", "미국필라", "미국테크", "미국빅테크", "필라델피아반도체", "양자", "양자컴퓨팅"],
         "group": "나스닥·빅테크",
         "benchmark": "^IXIC",
     },
@@ -91,8 +96,8 @@ CATEGORY_PEERS: list[dict] = [
         "benchmark": "^KS11",
     },
     {
-        "keywords": ["방산", "우주항공", "방위산업"],
-        "group": "방산·우주항공",
+        "keywords": ["방산", "방위산업"],
+        "group": "방위산업·방산",
         "benchmark": "^KS11",
     },
     {
