@@ -1032,7 +1032,7 @@ async def fetch_etf_hybrid(
         if is_us_space:
             download_symbol = clean_code_upper
             is_korean = False
-            us_space_etfs = {"ARKX", "UFO", "MARS", "NASA", "ORBX", "WARP"}
+            us_space_etfs = {"ARKX", "UFO", "XOVR", "NASA", "ORBX", "WARP"}
             
             # Default fallback setup
             if clean_code_upper == "ARKX":
@@ -2430,7 +2430,7 @@ async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_d
         "SOL 미국우주항공TOP10": "0181L0.KS",
         "US-Space (ARKX)": "ARKX",
         "US-Space (UFO)": "UFO",
-        "US-Space (MARS)": "MARS",
+        "US-Space (XOVR)": "XOVR",
         "US-Space (NASA)": "NASA",
         "US-Space (ORBX)": "ORBX",
         "US-Space (WARP)": "WARP",
@@ -2524,12 +2524,17 @@ async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_d
                 {"ticker": "Advanced Micro Devices", "weight": 4.2},
                 {"ticker": "Kratos Defense", "weight": 3.5},
             ],
-            "US-Space (MARS)": [
-                {"ticker": "Rocket Lab (로켓랩)", "weight": 9.2},
-                {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 8.4},
-                {"ticker": "Advanced Micro Devices", "weight": 6.5},
-                {"ticker": "Teradyne", "weight": 5.8},
-                {"ticker": "Boeing (보잉)", "weight": 4.5},
+            "US-Space (XOVR)": [
+                {"ticker": "SpaceX (via SPV)", "weight": 15.2},
+                {"ticker": "NVIDIA Corp", "weight": 8.5},
+                {"ticker": "Alphabet Inc", "weight": 7.4},
+                {"ticker": "Meta Platforms", "weight": 6.8},
+                {"ticker": "Astera Labs", "weight": 5.5},
+                {"ticker": "Rocket Lab (로켓랩)", "weight": 4.8},
+                {"ticker": "AppLovin", "weight": 4.2},
+                {"ticker": "Veeva Systems", "weight": 3.8},
+                {"ticker": "Robinhood", "weight": 3.5},
+                {"ticker": "Natera", "weight": 3.0},
             ],
             "US-Space (NASA)": [
                 {"ticker": "Rocket Lab (로켓랩)", "weight": 7.5},
@@ -2600,7 +2605,7 @@ async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_d
         "0181L0.KS": "0181L0",
         "ARKX": "ARKX",
         "UFO": "UFO",
-        "MARS": "MARS",
+        "XOVR": "XOVR",
         "NASA": "NASA",
         "ORBX": "ORBX",
         "WARP": "WARP",
@@ -2803,7 +2808,7 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
         "SOL 미국우주항공TOP10": "0181L0",
         "US-Space (ARKX)": "ARKX",
         "US-Space (UFO)": "UFO",
-        "US-Space (MARS)": "MARS",
+        "US-Space (XOVR)": "XOVR",
         "US-Space (NASA)": "NASA",
         "US-Space (ORBX)": "ORBX",
         "US-Space (WARP)": "WARP",
@@ -2880,12 +2885,17 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
             {"ticker": "Advanced Micro Devices", "weight": 4.2},
             {"ticker": "Kratos Defense", "weight": 3.5},
         ],
-        "US-Space (MARS)": [
-            {"ticker": "Rocket Lab (로켓랩)", "weight": 9.2},
-            {"ticker": "AST SpaceMobile (스페이스모바일)", "weight": 8.4},
-            {"ticker": "Advanced Micro Devices", "weight": 6.5},
-            {"ticker": "Teradyne", "weight": 5.8},
-            {"ticker": "Boeing (보잉)", "weight": 4.5},
+        "US-Space (XOVR)": [
+            {"ticker": "SpaceX (via SPV)", "weight": 15.2},
+            {"ticker": "NVIDIA Corp", "weight": 8.5},
+            {"ticker": "Alphabet Inc", "weight": 7.4},
+            {"ticker": "Meta Platforms", "weight": 6.8},
+            {"ticker": "Astera Labs", "weight": 5.5},
+            {"ticker": "Rocket Lab (로켓랩)", "weight": 4.8},
+            {"ticker": "AppLovin", "weight": 4.2},
+            {"ticker": "Veeva Systems", "weight": 3.8},
+            {"ticker": "Robinhood", "weight": 3.5},
+            {"ticker": "Natera", "weight": 3.0},
         ],
         "US-Space (NASA)": [
             {"ticker": "Rocket Lab (로켓랩)", "weight": 7.5},

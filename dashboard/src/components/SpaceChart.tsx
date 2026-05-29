@@ -293,7 +293,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
         "SOL 미국우주항공TOP10",
         "US-Space (ARKX)",
         "US-Space (UFO)",
-        "US-Space (MARS)",
+        "US-Space (XOVR)",
         "US-Space (NASA)",
         "US-Space (ORBX)",
         "US-Space (WARP)"
@@ -308,7 +308,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
         "US-Space(ARKX)",
         "US-Space",
         "US-Space (UFO)",
-        "US-Space (MARS)",
+        "US-Space (XOVR)",
         "US-Space (NASA)",
         "US-Space (ORBX)",
         "US-Space (WARP)"
@@ -318,7 +318,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
     const usEtfs = [
         "US-Space (ARKX)",
         "US-Space (UFO)",
-        "US-Space (MARS)",
+        "US-Space (XOVR)",
         "US-Space (NASA)",
         "US-Space (ORBX)",
         "US-Space (WARP)"
