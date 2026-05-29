@@ -46,6 +46,7 @@
 | S5-9: 우주섹터 구성종목 가격/전일대비증감율 실시간 연동 | ✅ done | backend/api/router.py, SpaceChart.tsx | 우주섹터 주요 ETF 구성종목 테이블 우측에 실시간 현재가 및 변동률(yfinance quotes) 병렬 수집 및 5분 캐시 연동 완료 |
 | S5-10: ETF 괴리율(NAV Gap) 실시간 모니터링 및 텔레그램 알림 시스템 구축 | ✅ done | disparity_analyzer.py, router.py, my_assets.py, scheduler.py, MyDashboard.tsx, SpaceChart.tsx, BioChart.tsx | 실시간 괴리율 계산, 사용자 보유 자산 가중 괴리율 주입, 09:10/15:15 KST 스케줄러 및 텔레그램 경보 알림, 대시보드 Bento 경보 카드 및 섹터 구성종목 헤더 배지 연동 완료 |
 | S5-12: ETF 구성종목(CU) 데이터 보완 및 yfinance 연동 | ✅ done | backend/api/router.py, Modals.tsx, SpaceChart.tsx | 미국 ETF 최신 구성종목 dynamic 연동 및 국내 상장 해외/합성 ETF의 주식수 기반 비율 차트 시각화, 우주섹터 구성종목 테이블 우측 상단 기준일자 정보 실시간 수집 시각(KST)으로 동적 연동 완료 |
+| S5-13: 실시간 괴리율 경보 5단계 등급 개편 | ✅ done | MyDashboard.tsx, HoldingsSignals.tsx | 괴리율 마이너스 영역 '매수 검토/관망', 플러스 영역 '매도 관망/검토' 5단계 투자지침형 체계 개편 |
 
 
 
