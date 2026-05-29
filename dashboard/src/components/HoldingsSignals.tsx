@@ -40,13 +40,23 @@ const getDisparityLabel = (name: string, rate: number | null | undefined): { lab
     const rateText = `(${sign}${rate.toFixed(3)}%)`;
     
     if (isOverseas) {
-        if (absRate < 2.0) return { label: `정상 ${rateText}`, color: "text-[#34d399]" };
-        if (absRate <= 6.0) return { label: `주의 ${rateText}`, color: "text-[#fbbf24] font-semibold" };
-        return { label: `위험 ${rateText}`, color: "text-[#f87171] font-bold animate-pulse" };
+        if (absRate < 2.0) return { label: `안정 ${rateText}`, color: "text-emerald-400" };
+        if (rate < 0) {
+            if (absRate <= 6.0) return { label: `매수 관망 ${rateText}`, color: "text-sky-400 font-semibold" };
+            return { label: `매수 검토 ${rateText}`, color: "text-[#22d3ee] font-bold" };
+        } else {
+            if (absRate <= 6.0) return { label: `매도 관망 ${rateText}`, color: "text-amber-400 font-semibold" };
+            return { label: `매도 검토 ${rateText}`, color: "text-rose-400 font-bold animate-pulse" };
+        }
     } else {
-        if (absRate < 1.0) return { label: `정상 ${rateText}`, color: "text-[#34d399]" };
-        if (absRate <= 3.0) return { label: `주의 ${rateText}`, color: "text-[#fbbf24] font-semibold" };
-        return { label: `위험 ${rateText}`, color: "text-[#f87171] font-bold animate-pulse" };
+        if (absRate < 1.0) return { label: `안정 ${rateText}`, color: "text-emerald-400" };
+        if (rate < 0) {
+            if (absRate <= 3.0) return { label: `매수 관망 ${rateText}`, color: "text-sky-400 font-semibold" };
+            return { label: `매수 검토 ${rateText}`, color: "text-[#22d3ee] font-bold" };
+        } else {
+            if (absRate <= 3.0) return { label: `매도 관망 ${rateText}`, color: "text-amber-400 font-semibold" };
+            return { label: `매도 검토 ${rateText}`, color: "text-rose-400 font-bold animate-pulse" };
+        }
     }
 };
 

@@ -43,6 +43,61 @@ const getDisparityStatus = (name: string, rate: number): 'normal' | 'warning' | 
     }
 };
 
+interface DisparityLevelInfo {
+    label: string;
+    classes: string;
+    borderClass: string;
+    msg: string;
+}
+
+const getDisparityLevelInfo = (name: string, rate: number): DisparityLevelInfo => {
+    const status = getDisparityStatus(name, rate);
+    const absRate = Math.abs(rate);
+
+    if (status === 'normal') {
+        return {
+            label: `안정 (Safe Zone) ${rate > 0 ? '+' : ''}${rate.toFixed(3)}%`,
+            classes: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+            borderClass: 'border-white/10 hover:border-emerald-500/20',
+            msg: '괴리율이 정상 범위 내에서 안정적으로 거래되고 있어 가격 신뢰도가 높습니다.'
+        };
+    }
+
+    if (rate < 0) {
+        if (status === 'risk') {
+            return {
+                label: `매수 검토 (Discount) ${rate.toFixed(3)}%`,
+                classes: 'bg-cyan-500/20 text-[#22d3ee] border border-cyan-500/30',
+                borderClass: 'border-cyan-500/40 shadow-cyan-950/20',
+                msg: 'NAV 대비 현저히 저렴하게 구매할 수 있는 유리한 매수 진입 구간입니다 (지정가 분할 매수 적극 검토).'
+            };
+        } else { // warning
+            return {
+                label: `매수 관망 (Mild Discount) ${rate.toFixed(3)}%`,
+                classes: 'bg-sky-500/10 text-sky-400 border border-sky-500/20',
+                borderClass: 'border-sky-500/20 shadow-sky-950/10',
+                msg: 'NAV 대비 소폭 할인 거래 중인 구간입니다 (매매 동향 관망하며 지정가 분할 매수 고려).'
+            };
+        }
+    } else {
+        if (status === 'risk') {
+            return {
+                label: `매도 검토 (Premium) +${rate.toFixed(3)}%`,
+                classes: 'bg-rose-500/20 text-[#f43f5e] border border-rose-500/30',
+                borderClass: 'border-rose-500/40 shadow-rose-950/20',
+                msg: 'NAV 대비 매우 비싸게 거래되는 위험 구간이므로 신규 매수를 금지하고 보유 물량 매도를 신중히 검토하세요.'
+            };
+        } else { // warning
+            return {
+                label: `매도 관망 (Mild Premium) +${rate.toFixed(3)}%`,
+                classes: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+                borderClass: 'border-amber-500/20 shadow-amber-950/10',
+                msg: 'NAV 대비 소폭 할증 거래 중입니다. 매수는 일시적으로 보류하며 관망을 유지하세요.'
+            };
+        }
+    }
+};
+
 export default function MyDashboard({ data, tradesData, isRefreshing = false, onOpenDetail, onAnalyzePeers }: MyDashboardProps) {
     const [selectedAccount, setSelectedAccount] = useState<any>(null);
     const [backtestTab, setBacktestTab] = useState<'static' | 'dynamic'>('dynamic');
@@ -125,42 +180,20 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                     return true; // 'all'
                 });
 
-                const cardBorderClass = (status: 'normal' | 'warning' | 'risk') => {
-                    if (status === 'risk') return 'border-red-500/40 shadow-red-950/20';
-                    if (status === 'warning') return 'border-amber-500/30 shadow-amber-950/10';
-                    return 'border-white/5 hover:border-white/10';
+                const cardBorderClass = (name: string, rate: number) => {
+                    return getDisparityLevelInfo(name, rate).borderClass;
                 };
 
-                const badgeStyle = (status: 'normal' | 'warning' | 'risk', disparityRate: number) => {
-                    const isPremium = disparityRate > 0;
-                    const rateText = `${isPremium ? '+' : ''}${disparityRate.toFixed(3)}%`;
-                    if (status === 'risk') {
-                        return {
-                            classes: "bg-red-500/20 text-[#f87171] border border-red-500/30",
-                            label: `위험 (Red Zone) ${rateText}`
-                        };
-                    } else if (status === 'warning') {
-                        return {
-                            classes: "bg-amber-500/20 text-[#fbbf24] border border-amber-500/30",
-                            label: `주의 (Yellow Zone) ${rateText}`
-                        };
-                    } else {
-                        return {
-                            classes: "bg-emerald-500/10 text-[#34d399] border border-emerald-500/30",
-                            label: `정상 (Safe Zone) ${rateText}`
-                        };
-                    }
+                const badgeStyle = (name: string, rate: number) => {
+                    const info = getDisparityLevelInfo(name, rate);
+                    return {
+                        classes: info.classes,
+                        label: info.label
+                    };
                 };
 
-                const warningMsg = (status: 'normal' | 'warning' | 'risk', disparityRate: number) => {
-                    const isPremium = disparityRate > 0;
-                    if (status === 'risk') {
-                        return `🚨 [위험] 유동성공급자(LP) 의무 기준(국내 3%, 해외 6%)을 완전히 초과한 완전한 비정상 구간입니다. 매매 시 수 퍼센트의 웃돈 지불 또는 헐값 매도 리스크가 존재하므로 매매를 전면 피하십시오.`;
-                    } else if (status === 'warning') {
-                        return `⚠️ [주의] 괴리율 의무 공시 구간에 진입했습니다. 시장가 주문을 피하고, 반드시 지정가 주문으로 신중히 거래하세요. ${isPremium ? '현재 매수 시 NAV 대비 비싸게 매수하게 됩니다.' : '현재 매도 시 NAV 대비 헐값에 매도하게 됩니다.'}`;
-                    } else {
-                        return `✓ [정상] 괴리율이 안정 범위(국내 1% 미만, 해외 2% 미만) 내에서 유동성 공급이 원활하게 작동 중입니다.`;
-                    }
+                const warningMsg = (name: string, rate: number) => {
+                    return getDisparityLevelInfo(name, rate).msg;
                 };
 
                 return (
@@ -231,13 +264,13 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {displayDisparityHoldings.map((h: any, idx: number) => {
-                                    const badge = badgeStyle(h.status, h.disparity_rate);
+                                    const badge = badgeStyle(h.name, h.disparity_rate);
                                     const isOverseas = isOverseasEtf(h.name);
                                     
                                     return (
                                         <div 
                                             key={idx} 
-                                            className={`bg-[#12121A]/80 border rounded-2xl p-5 backdrop-blur-md flex flex-col gap-3 shadow-lg transition-all duration-300 ${cardBorderClass(h.status)}`}
+                                            className={`bg-[#12121A]/80 border rounded-2xl p-5 backdrop-blur-md flex flex-col gap-3 shadow-lg transition-all duration-300 ${cardBorderClass(h.name, h.disparity_rate)}`}
                                         >
                                             <div className="flex justify-between items-start flex-wrap gap-2">
                                                 <div>
@@ -277,7 +310,7 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                                                 </div>
                                             </div>
                                             <p className="text-[10.5px] text-gray-400 leading-normal">
-                                                {warningMsg(h.status, h.disparity_rate)}
+                                                {warningMsg(h.name, h.disparity_rate)}
                                             </p>
                                         </div>
                                     );
