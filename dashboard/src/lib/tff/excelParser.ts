@@ -207,25 +207,30 @@ function parseCumulativeSheet(rows: any[][]): TffCumulativeSummary {
 
         for(let i=0; i<30; i++) {
             if (rows[i]) {
-                const rowStr = String(rows[i][0] || '') + String(rows[i][1] || '') + String(rows[i][2] || '');
+                const cleanRowStr = rows[i].slice(0, 5)
+                    .map(v => String(v || '').replace(/\s/g, ''))
+                    .join('');
                 const fullRowStr = rows[i].join('');
+                const fullCleanStr = rows[i].map(v => String(v || '').replace(/\s/g, '')).join('').toUpperCase();
                 
-                if (rowStr.includes("기초평가액")) baseIdx = i;
-                if (rowStr.includes("순입출")) netInOutIdx = i;
-                if (rowStr.includes("기말평가")) endValueIdx = i;
-                if (rowStr.includes("투자수익금")) profitIdx = i;
+                if (cleanRowStr.includes("기초평가")) baseIdx = i;
+                if (cleanRowStr.includes("순입출")) netInOutIdx = i;
+                if (cleanRowStr.includes("기말평가")) endValueIdx = i;
+                if (cleanRowStr.includes("투자수익금") || cleanRowStr.includes("투자수익")) profitIdx = i;
                 
                 // '수익률(%)' or '총수익률' (KOSPI나 S&P가 아닌 순수 포트폴리오 수익률을 마지막으로 매칭)
-                if ((rowStr.includes("수익률") || rowStr.includes("수익율")) && 
-                    !fullRowStr.includes("시간평잔") && 
-                    !fullRowStr.toUpperCase().includes("KOSPI") && 
-                    !fullRowStr.toUpperCase().includes("S&P")) {
+                if ((cleanRowStr.includes("수익률") || cleanRowStr.includes("수익율")) && 
+                    !fullCleanStr.includes("시간평잔") && 
+                    !fullCleanStr.includes("KOSPI") && 
+                    !fullCleanStr.includes("코스피") && 
+                    !fullCleanStr.includes("S&P") && 
+                    !fullCleanStr.includes("SP500")) {
                     returnRateIdx = i;
                 }
                 
-                const isKospi = fullRowStr.toUpperCase().includes("KOSPI") || fullRowStr.includes("코스피");
-                const isSp500 = fullRowStr.toUpperCase().includes("S&P") || fullRowStr.toUpperCase().includes("SP500") || fullRowStr.includes("에스앤피");
-                const isTw = fullRowStr.replace(/\s/g,'').includes("시간평잔");
+                const isKospi = fullCleanStr.includes("KOSPI") || fullCleanStr.includes("코스피");
+                const isSp500 = fullCleanStr.includes("S&P") || fullCleanStr.includes("SP500") || fullCleanStr.includes("에스앤피");
+                const isTw = fullCleanStr.includes("시간평잔");
 
                 if (isKospi) {
                     if (isTw) kospiTwIdx = i;
@@ -291,7 +296,7 @@ function parseCumulativeSheet(rows: any[][]): TffCumulativeSummary {
                 }
 
                 // 총계 타입 갱신
-                if (cleanStr.includes('연간계') || cleanStr.includes('누적계') || cleanStr.includes('총누적')) {
+                if (cleanStr.includes('연간계') || cleanStr.includes('누적계') || cleanStr.includes('총누적') || cleanStr === '누적' || cleanStr.includes('누적')) {
                      isTotal = true;
                      totalLabel = rawStr.replace(/\r?\n/g, ' '); 
                 }
@@ -372,6 +377,29 @@ function parseCumulativeSheet(rows: any[][]): TffCumulativeSummary {
         // 폴백: 연간 파싱 에러로 total이 비어있다면, yearly의 마지막 값을 배정 
         if (!summary.totalData && summary.yearlyData.length > 0) {
             summary.totalData = summary.yearlyData[summary.yearlyData.length - 1]; 
+        }
+
+        // 최신 월의 데이터가 총 누적 데이터보다 기말평가액이 크거나 최신인 경우,
+        // 혹은 누적 데이터가 아예 파싱되지 않았거나 총계의 기말자산이 더 작은 경우
+        // monthlyData의 최신 월 정보로 totalData를 동적 생성/보정합니다.
+        if (summary.monthlyData.length > 0) {
+            const latestMonth = summary.monthlyData[summary.monthlyData.length - 1];
+            const cumulativeProfit = summary.monthlyData.reduce((sum, m) => sum + m.profitAmount, 0);
+            
+            if (!summary.totalData || summary.totalData.endValue < latestMonth.endValue) {
+                summary.totalData = {
+                    year: latestMonth.period.split('-')[0] + ' 누적',
+                    beginValue: summary.monthlyData[0].beginValue,
+                    netInOut: summary.monthlyData.reduce((sum, m) => sum + m.netInOut, 0),
+                    endValue: latestMonth.endValue,
+                    profitAmount: cumulativeProfit,
+                    returnRate: latestMonth.returnRate || 0,
+                    kospiRate: latestMonth.kospiRate || 0,
+                    sp500Rate: latestMonth.sp500Rate || 0,
+                    timeWeightedReturn: (latestMonth as any).timeWeightedReturn || latestMonth.returnRate || 0
+                };
+                console.log('[TffExcelParser] 총누적 데이터(totalData)가 최신 월 데이터로 업데이트 되었습니다:', summary.totalData);
+            }
         }
 
     } catch (e) {
@@ -518,8 +546,14 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
             if (!rowData || rowData.length === 0) continue;
 
             // 컬럼 B 근린에 있는 '구분' 값이 전체합계 거나 빈줄이면 break/skip
-            const nameVal = rowData[colMap.name || 14]; // O열 근처
-            if (nameVal && typeof nameVal === 'string' && nameVal.includes('전체 합계')) {
+            // Check if this row is the summary row (전체 합계) - handles merged cells where colMap.name might be empty
+            const isSummaryRow = rowData.slice(0, 5).some(cell => {
+                if (cell === undefined || cell === null) return false;
+                const cleanCell = String(cell).replace(/\s/g, '');
+                return cleanCell.includes('전체합계') || cleanCell === '합계';
+            });
+
+            if (isSummaryRow) {
                 // 요약정보 파싱
                 info.summary.totalBeginValue = parseNumber(rowData[colMap.begin]);
                 info.summary.totalBuyAmount = parseNumber(rowData[colMap.buy]);
@@ -533,11 +567,12 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
                 for(let sr=r+1; sr < Math.min(r+15, rows.length); sr++) {
                     if (!rows[sr]) continue;
                     
-                    const rowStr = rows[sr].map(v => String(v).replace(/\s/g, ''));
+                    const rowStr = rows[sr].map(v => String(v || '').replace(/\s/g, ''));
                     const cashIdx = rowStr.findIndex(v => cashKeywords.some(kw => v.includes(kw)));
                     if (cashIdx !== -1) {
                         let cashVal = 0;
-                        for (let col = cashIdx + 1; col < rows[sr].length; col++) {
+                        for (let col = 0; col < rows[sr].length; col++) {
+                            if (col === cashIdx) continue;
                             const val = parseOptionalNumber(rows[sr][col]);
                             if (val !== undefined && val !== 0) {
                                 if (Math.abs(val) <= 1.0) continue; // 비율 필터링
@@ -546,7 +581,10 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
                             }
                         }
                         if (cashVal > 0) {
-                            info.summary.cashBalance = cashVal;
+                            const cleanKw = rowStr[cashIdx];
+                            if (cleanKw.includes('현금') || cleanKw.includes('예수금') || cleanKw.includes('cash') || cleanKw.includes('잔고')) {
+                                info.summary.cashBalance = cashVal;
+                            }
                         }
                     }
                     
@@ -568,6 +606,7 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
                 break; // 홀딩스 끝
             }
 
+            const nameVal = rowData[colMap.name || 14]; // O열 근처
             if (!nameVal || typeof nameVal !== 'string') continue;
 
             info.holdings.push({
