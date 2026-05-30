@@ -2,6 +2,42 @@ import React, { useState } from 'react';
 import { TffAssetReturns } from '../../../lib/tff/types';
 import { Activity, Star } from 'lucide-react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell } from 'recharts';
+import krTickers from '../../../lib/tff/kr-tickers.json';
+
+function findTickerCode(name: string): string | undefined {
+    if (!name) return undefined;
+    const cleanName = name.replace(/\s/g, '').toLowerCase();
+    
+    // 1. Exact match after stripping whitespace and lowercase
+    for (const [key, val] of Object.entries(krTickers)) {
+        if (key.replace(/\s/g, '').toLowerCase() === cleanName) {
+            return val;
+        }
+    }
+    
+    // 2. Specific variants mapping
+    const variants: Record<string, string> = {
+        'ace주주환원가치액티브': '447430',
+        'ace주주환원가치주액티브': '447430',
+        'kodex26-12금융채(aa-이상)액티브': '0117L0',
+        'kodex26-12금융채액티브': '0117L0',
+        'kodex26-12회사채(aa-이상)액티브': '473290',
+        'kodex26-12회사채액티브': '473290',
+    };
+    if (variants[cleanName]) {
+        return variants[cleanName];
+    }
+    
+    // 3. Substring match (fallback)
+    for (const [key, val] of Object.entries(krTickers)) {
+        const cleanKey = key.replace(/\s/g, '').toLowerCase();
+        if (cleanName.includes(cleanKey) || cleanKey.includes(cleanName)) {
+            return val;
+        }
+    }
+    
+    return undefined;
+}
 
 interface Props {
   data: TffAssetReturns;
@@ -155,12 +191,13 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                       {/* 1. 일반 종목행들 */}
                       {tableAssets.map((asset, idx) => {
                           const isYellow = isYellowHighlighted(asset.name);
-                          const hasClick = onOpenDetail && asset.code;
+                          const code = asset.code || findTickerCode(asset.name);
+                          const hasClick = onOpenDetail && code;
                           return (
                               <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
                                   <td 
                                       onClick={() => {
-                                          if (hasClick) onOpenDetail(asset.code);
+                                          if (hasClick && code) onOpenDetail(code);
                                       }}
                                       className={`p-3 text-xs border-r border-white/5 ${isYellow ? 'bg-yellow-500/15 text-yellow-300 font-bold border-l-4 border-yellow-500/60 pl-2' : 'text-gray-300 pl-3'} ${hasClick ? 'cursor-pointer hover:text-sky-400 hover:underline transition-colors' : ''}`}
                                   >
@@ -334,14 +371,19 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                                     <div className="flex flex-row justify-between items-start gap-2 mb-1 pb-1 border-b border-white/5">
                                         <div className="flex flex-col gap-1.5 max-w-[65%]">
                                             <div className="flex flex-row items-center gap-1.5 flex-wrap">
-                                                {asset.code && <span className="bg-white/10 text-gray-400 px-1.5 py-0.5 rounded text-[10px] font-mono">{asset.code}</span>}
+                                                {(asset.code || findTickerCode(asset.name)) && (
+                                                    <span className="bg-white/10 text-gray-400 px-1.5 py-0.5 rounded text-[10px] font-mono">
+                                                        {asset.code || findTickerCode(asset.name)}
+                                                    </span>
+                                                )}
                                                 {badgeComponent}
                                             </div>
                                             <h4 
-                                              className={`text-sm md:text-base text-gray-200 font-bold leading-tight break-keep ${onOpenDetail && asset.code ? 'cursor-pointer hover:text-sky-400 hover:underline transition-colors' : ''}`}
+                                              className={`text-sm md:text-base text-gray-200 font-bold leading-tight break-keep ${onOpenDetail && (asset.code || findTickerCode(asset.name)) ? 'cursor-pointer hover:text-sky-400 hover:underline transition-colors' : ''}`}
                                               onClick={() => {
-                                                if (onOpenDetail && asset.code) {
-                                                  onOpenDetail(asset.code);
+                                                const code = asset.code || findTickerCode(asset.name);
+                                                if (onOpenDetail && code) {
+                                                  onOpenDetail(code);
                                                 }
                                               }}
                                             >

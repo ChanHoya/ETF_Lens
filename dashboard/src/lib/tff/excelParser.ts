@@ -5,6 +5,41 @@ import {
 } from './types';
 import krTickers from './kr-tickers.json';
 
+export function findTickerCode(name: string): string | undefined {
+    if (!name) return undefined;
+    const cleanName = name.replace(/\s/g, '').toLowerCase();
+    
+    // 1. Exact match after stripping whitespace and lowercase
+    for (const [key, val] of Object.entries(krTickers)) {
+        if (key.replace(/\s/g, '').toLowerCase() === cleanName) {
+            return val;
+        }
+    }
+    
+    // 2. Specific variants mapping
+    const variants: Record<string, string> = {
+        'ace주주환원가치액티브': '447430',
+        'ace주주환원가치주액티브': '447430',
+        'kodex26-12금융채(aa-이상)액티브': '0117L0',
+        'kodex26-12금융채액티브': '0117L0',
+        'kodex26-12회사채(aa-이상)액티브': '473290',
+        'kodex26-12회사채액티브': '473290',
+    };
+    if (variants[cleanName]) {
+        return variants[cleanName];
+    }
+    
+    // 3. Substring match (fallback)
+    for (const [key, val] of Object.entries(krTickers)) {
+        const cleanKey = key.replace(/\s/g, '').toLowerCase();
+        if (cleanName.includes(cleanKey) || cleanKey.includes(cleanName)) {
+            return val;
+        }
+    }
+    
+    return undefined;
+}
+
 // 문자열을 숫자로 안전하게 변환 (콤마 제거, 에러 방지)
 function parseNumber(val: any): number {
     if (typeof val === 'number') return val;
@@ -430,7 +465,7 @@ function parseAssetReturnSheet(rows: any[][]): TffAssetReturns {
                 // 지분손익 열(R열 근처)이 이미지에 보이므로 우측 영역 탐색
                 res.assets.push({
                     name: rowName,
-                    code: (krTickers as Record<string, string>)[rowName], // 매핑된 종목코드 (있는 경우)
+                    code: findTickerCode(rowName), // 매핑된 종목코드 (있는 경우)
                     months: monthsData,
                     cumulative: cumValue,
                     capitalPnlPercentage: capitalColIdx > -1 ? parseNumber(rows[r][capitalColIdx]) : 0
@@ -537,7 +572,7 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
 
             info.holdings.push({
                 name: nameVal,
-                code: (krTickers as Record<string, string>)[nameVal],
+                code: findTickerCode(nameVal),
                 beginValue: parseNumber(rowData[colMap.begin]),
                 buyAmount: parseNumber(rowData[colMap.buy]),
                 sellAmount: parseNumber(rowData[colMap.sell]),

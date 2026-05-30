@@ -3,6 +3,42 @@
 import React, { useState } from 'react';
 import { TffMonthInfo } from '../../../lib/tff/types';
 import { Wallet, PieChart, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, DollarSign, Calendar, Compass, Layers, Percent } from 'lucide-react';
+import krTickers from '../../../lib/tff/kr-tickers.json';
+
+function findTickerCode(name: string): string | undefined {
+    if (!name) return undefined;
+    const cleanName = name.replace(/\s/g, '').toLowerCase();
+    
+    // 1. Exact match after stripping whitespace and lowercase
+    for (const [key, val] of Object.entries(krTickers)) {
+        if (key.replace(/\s/g, '').toLowerCase() === cleanName) {
+            return val;
+        }
+    }
+    
+    // 2. Specific variants mapping
+    const variants: Record<string, string> = {
+        'ace주주환원가치액티브': '447430',
+        'ace주주환원가치주액티브': '447430',
+        'kodex26-12금융채(aa-이상)액티브': '0117L0',
+        'kodex26-12금융채액티브': '0117L0',
+        'kodex26-12회사채(aa-이상)액티브': '473290',
+        'kodex26-12회사채액티브': '473290',
+    };
+    if (variants[cleanName]) {
+        return variants[cleanName];
+    }
+    
+    // 3. Substring match (fallback)
+    for (const [key, val] of Object.entries(krTickers)) {
+        const cleanKey = key.replace(/\s/g, '').toLowerCase();
+        if (cleanName.includes(cleanKey) || cleanKey.includes(cleanName)) {
+            return val;
+        }
+    }
+    
+    return undefined;
+}
 
 interface Props {
   data: TffMonthInfo;
@@ -197,16 +233,18 @@ export default function MonthlyView({ data, onOpenDetail, titleRightElement }: P
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-black border ${badgeColor}`}>
                     {assetClass}
                   </span>
-                  {h.code && (
-                    <span className="text-[10px] text-gray-500 font-mono font-bold tracking-wider">{h.code}</span>
+                  {(h.code || findTickerCode(h.name)) && (
+                    <span className="text-[10px] text-gray-500 font-mono font-bold tracking-wider">
+                      {h.code || findTickerCode(h.name)}
+                    </span>
                   )}
                 </div>
 
                 {/* Asset Name */}
                 <div className="mb-4">
-                  {onOpenDetail && h.code ? (
+                  {onOpenDetail && (h.code || findTickerCode(h.name)) ? (
                     <button 
-                      onClick={() => onOpenDetail(h.code!)}
+                      onClick={() => onOpenDetail((h.code || findTickerCode(h.name))!)}
                       className="text-sm font-bold text-white hover:text-sky-400 transition-colors text-left focus:outline-none"
                     >
                       {h.name}
