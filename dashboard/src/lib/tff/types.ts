@@ -53,8 +53,18 @@ export interface TffAssetReturns {
         cumulative: number;
     };
     benchmarks: {
-        kospi: { months: { [month: string]: number }, cumulative: number };
-        sp500: { months: { [month: string]: number }, cumulative: number };
+        [key: string]: { months: { [month: string]: number }, cumulative: number } | undefined;
+        kospi?: { months: { [month: string]: number }, cumulative: number };
+        sp500?: { months: { [month: string]: number }, cumulative: number };
+        kosdaq?: { months: { [month: string]: number }, cumulative: number };
+        nasdaq?: { months: { [month: string]: number }, cumulative: number };
+        hangseng?: { months: { [month: string]: number }, cumulative: number };
+        krxBond?: { months: { [month: string]: number }, cumulative: number };
+        kisBond?: { months: { [month: string]: number }, cumulative: number };
+        bloombergBond?: { months: { [month: string]: number }, cumulative: number };
+        usTreasury?: { months: { [month: string]: number }, cumulative: number };
+        lbmaGold?: { months: { [month: string]: number }, cumulative: number };
+        krxGold?: { months: { [month: string]: number }, cumulative: number };
     }
 }
 

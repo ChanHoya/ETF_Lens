@@ -459,8 +459,46 @@ function parseAssetReturnSheet(rows: any[][]): TffAssetReturns {
             if (rowName.startsWith("Note") || rowName.includes("수익률은") || rowName.startsWith("1)") || rowName.startsWith("2)")) continue;
             
             const isTotal = rowName.includes("합계");
-            const isKospi = rowName.toUpperCase().includes("KOSPI") || rowName.includes("코스피");
+            
+            // Check if it's KOSPI index (but not KOSDAQ)
+            const isKospi = (rowName.toUpperCase().includes("KOSPI") || rowName.includes("코스피")) && 
+                            !rowName.toUpperCase().includes("KOSDAQ") && 
+                            !rowName.includes("코스닥");
+                            
+            // Check if it's KOSDAQ index
+            const isKosdaq = rowName.toUpperCase().includes("KOSDAQ") || rowName.includes("코스닥");
+            
+            // Check if it's S&P500 index
             const isSp500 = rowName.toUpperCase().includes("S&P") || rowName.toUpperCase().includes("SP500");
+            
+            // Check if it's NASDAQ index (not an ETF)
+            const isNasdaq = (rowName.toUpperCase().includes("NASDAQ") || rowName.toUpperCase().includes("나스닥")) && 
+                             !['KODEX', 'TIGER', 'ACE', 'SOL', 'PLUS'].some(provider => rowName.toUpperCase().includes(provider));
+
+            // Check if it's Hang Seng index (not an ETF)
+            const isHangseng = (rowName.includes("항셍") || rowName.toUpperCase().includes("HSI")) && 
+                               !['KODEX', 'TIGER', 'ACE', 'SOL', 'PLUS'].some(provider => rowName.toUpperCase().includes(provider));
+
+            // Check if it's KRX Bond Index
+            const isKrxBond = rowName.includes("KRX채권") || rowName.includes("KRX 채권");
+
+            // Check if it's KIS Bond Index
+            const isKisBond = rowName.includes("KIS종합채권") || rowName.includes("KIS 종합채권");
+
+            // Check if it's Bloomberg Bond Index
+            const isBloombergBond = rowName.toUpperCase().includes("BLOOMBERG") || rowName.includes("블룸버그") || rowName.includes("글로벌종합채권");
+
+            // Check if it's US Treasury 10Y Index
+            const isUsTreasury = rowName.includes("미국국채10년") || rowName.includes("미국 국채 10년") || rowName.toUpperCase().includes("US TREASURY 10Y") || rowName.toUpperCase().includes("U.S. TREASURY");
+
+            // Check if it's LBMA Gold Price
+            const isLbmaGold = rowName.toUpperCase().includes("LBMA");
+
+            // Check if it's KRX Gold Index (not an ETF)
+            const isKrxGold = (rowName.includes("KRX금현물") || rowName.includes("KRX 금현물") || rowName.includes("KRX금시장") || rowName.includes("KRX 금시장")) && 
+                              !['KODEX', 'TIGER', 'ACE', 'SOL', 'PLUS'].some(provider => rowName.toUpperCase().includes(provider));
+
+            const isBenchmark = isKospi || isKosdaq || isSp500 || isNasdaq || isHangseng || isKrxBond || isKisBond || isBloombergBond || isUsTreasury || isLbmaGold || isKrxGold;
 
             const monthsData: Record<string, number> = {};
             let hasValidData = false;
@@ -475,7 +513,7 @@ function parseAssetReturnSheet(rows: any[][]): TffAssetReturns {
             if (rawCumValue !== undefined) hasValidData = true;
             
             // 모든 값이 #N/A (비어있음)인 미보유 종목 제외
-            if (!hasValidData && !isTotal && !isKospi && !isSp500) continue;
+            if (!hasValidData && !isTotal && !isBenchmark) continue;
 
             const cumValue = rawCumValue !== undefined ? rawCumValue : 0;
 
@@ -483,11 +521,27 @@ function parseAssetReturnSheet(rows: any[][]): TffAssetReturns {
                 res.total.months = monthsData;
                 res.total.cumulative = cumValue;
             } else if (isKospi) {
-                res.benchmarks.kospi.months = monthsData;
-                res.benchmarks.kospi.cumulative = cumValue;
+                res.benchmarks.kospi = { months: monthsData, cumulative: cumValue };
             } else if (isSp500) {
-                res.benchmarks.sp500.months = monthsData;
-                res.benchmarks.sp500.cumulative = cumValue;
+                res.benchmarks.sp500 = { months: monthsData, cumulative: cumValue };
+            } else if (isKosdaq) {
+                res.benchmarks.kosdaq = { months: monthsData, cumulative: cumValue };
+            } else if (isNasdaq) {
+                res.benchmarks.nasdaq = { months: monthsData, cumulative: cumValue };
+            } else if (isHangseng) {
+                res.benchmarks.hangseng = { months: monthsData, cumulative: cumValue };
+            } else if (isKrxBond) {
+                res.benchmarks.krxBond = { months: monthsData, cumulative: cumValue };
+            } else if (isKisBond) {
+                res.benchmarks.kisBond = { months: monthsData, cumulative: cumValue };
+            } else if (isBloombergBond) {
+                res.benchmarks.bloombergBond = { months: monthsData, cumulative: cumValue };
+            } else if (isUsTreasury) {
+                res.benchmarks.usTreasury = { months: monthsData, cumulative: cumValue };
+            } else if (isLbmaGold) {
+                res.benchmarks.lbmaGold = { months: monthsData, cumulative: cumValue };
+            } else if (isKrxGold) {
+                res.benchmarks.krxGold = { months: monthsData, cumulative: cumValue };
             } else {
                 // 일반 종목 (현금 포함)
                 // 지분손익 열(R열 근처)이 이미지에 보이므로 우측 영역 탐색

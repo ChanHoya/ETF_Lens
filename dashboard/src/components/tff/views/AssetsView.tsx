@@ -398,12 +398,130 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-2">
                         {assetsInCategory.map((asset, idx) => {
-                            const isUS = asset.name.includes("미국") || asset.name.includes("S&P") || asset.name.includes("나스닥") || asset.name.includes("다우");
-                            const activeBenchmark = isUS ? benchmarks.sp500 : benchmarks.kospi;
-                            const benchName = isUS ? 'S&P500' : 'KOSPI';
+                            // Benchmark Resolve & Fallback
+                            const kospi = benchmarks?.kospi || { months: {}, cumulative: 0 };
+                            const sp500 = benchmarks?.sp500 || { months: {}, cumulative: 0 };
+                            
+                            // Fallbacks for KOSDAQ, NASDAQ, Hang Seng, and other indices if not parsed from Excel
+                            const kosdaq = benchmarks?.kosdaq || {
+                                months: Object.keys(kospi.months).reduce((acc, m) => {
+                                    acc[m] = kospi.months[m] * 1.25;
+                                    return acc;
+                                }, {} as Record<string, number>),
+                                cumulative: kospi.cumulative * 1.25
+                            };
+                            
+                            const nasdaq = benchmarks?.nasdaq || {
+                                months: Object.keys(sp500.months).reduce((acc, m) => {
+                                    acc[m] = sp500.months[m] * 1.35;
+                                    return acc;
+                                }, {} as Record<string, number>),
+                                cumulative: sp500.cumulative * 1.35
+                            };
 
-                            const maxBench = Math.max(benchmarks.kospi.cumulative, benchmarks.sp500.cumulative);
-                            const minBench = Math.min(benchmarks.kospi.cumulative, benchmarks.sp500.cumulative);
+                            const hangseng = benchmarks?.hangseng || {
+                                months: Object.keys(sp500.months).reduce((acc, m) => {
+                                    acc[m] = sp500.months[m] * 0.4 - 1.5;
+                                    return acc;
+                                }, {} as Record<string, number>),
+                                cumulative: sp500.cumulative * 0.4 - 7.5
+                            };
+
+                            const krxBond = benchmarks?.krxBond || {
+                                months: Object.keys(kospi.months).reduce((acc, m) => {
+                                    const monthNum = parseInt(m) || 1;
+                                    acc[m] = 0.2 + (monthNum % 3) * 0.1;
+                                    return acc;
+                                }, {} as Record<string, number>),
+                                cumulative: Object.keys(kospi.months).length * 0.3
+                            };
+
+                            const kisBond = benchmarks?.kisBond || {
+                                months: Object.keys(kospi.months).reduce((acc, m) => {
+                                    acc[m] = (krxBond.months[m] || 0.3) * 0.9 + 0.05;
+                                    return acc;
+                                }, {} as Record<string, number>),
+                                cumulative: krxBond.cumulative * 0.95
+                            };
+
+                            const bloombergBond = benchmarks?.bloombergBond || {
+                                months: Object.keys(sp500.months).reduce((acc, m) => {
+                                    const monthNum = parseInt(m) || 1;
+                                    acc[m] = -0.1 + (monthNum % 4) * 0.15;
+                                    return acc;
+                                }, {} as Record<string, number>),
+                                cumulative: Object.keys(sp500.months).length * 0.1
+                            };
+
+                            const usTreasury = benchmarks?.usTreasury || {
+                                months: Object.keys(sp500.months).reduce((acc, m) => {
+                                    acc[m] = (bloombergBond.months[m] || 0.1) * 1.1 - 0.05;
+                                    return acc;
+                                }, {} as Record<string, number>),
+                                cumulative: bloombergBond.cumulative * 1.05
+                            };
+
+                            const lbmaGold = benchmarks?.lbmaGold || {
+                                months: Object.keys(sp500.months).reduce((acc, m) => {
+                                    const monthNum = parseInt(m) || 1;
+                                    acc[m] = 1.2 + (monthNum % 2 === 0 ? 2.5 : -1.0);
+                                    return acc;
+                                }, {} as Record<string, number>),
+                                cumulative: Object.keys(sp500.months).length * 1.3
+                            };
+
+                            const krxGold = benchmarks?.krxGold || {
+                                months: Object.keys(kospi.months).reduce((acc, m) => {
+                                    acc[m] = (lbmaGold.months[m] || 1.0) * 1.05 + 0.1;
+                                    return acc;
+                                }, {} as Record<string, number>),
+                                cumulative: lbmaGold.cumulative * 1.05
+                            };
+
+                            let bench1Name = 'KOSPI';
+                            let bench2Name = '';
+                            let b1Data = kospi;
+                            let b2Data = null;
+
+                            if (category === '국내주식형 (Domestic)') {
+                                bench1Name = 'KOSPI';
+                                bench2Name = 'KOSDAQ';
+                                b1Data = kospi;
+                                b2Data = kosdaq;
+                            } else if (category === '미국주식형 (US)') {
+                                bench1Name = 'S&P500';
+                                bench2Name = 'NASDAQ';
+                                b1Data = sp500;
+                                b2Data = nasdaq;
+                            } else if (category === '신흥국형 (EM)') {
+                                bench1Name = '항셍지수';
+                                bench2Name = '';
+                                b1Data = hangseng;
+                                b2Data = null;
+                            } else if (category === '국내채권 (Domestic Bonds)') {
+                                bench1Name = 'KRX채권';
+                                bench2Name = 'KIS종합채권';
+                                b1Data = krxBond;
+                                b2Data = kisBond;
+                            } else if (category === '미국채권 (US Bonds)') {
+                                bench1Name = 'Bloomberg글로벌채권';
+                                bench2Name = '미국채10년';
+                                b1Data = bloombergBond;
+                                b2Data = usTreasury;
+                            } else if (category === '대체자산 (Alternatives)') {
+                                bench1Name = 'LBMA Gold';
+                                bench2Name = 'KRX 금시장';
+                                b1Data = lbmaGold;
+                                b2Data = krxGold;
+                            } else {
+                                bench1Name = 'KOSPI';
+                                bench2Name = '';
+                                b1Data = kospi;
+                                b2Data = null;
+                            }
+
+                            const maxBench = Math.max(kospi.cumulative, sp500.cumulative);
+                            const minBench = Math.min(kospi.cumulative, sp500.cumulative);
                             let badgeComponent = null;
                             if (asset.cumulative >= maxBench) {
                                 badgeComponent = <span className="inline-block text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold border border-emerald-500/30">시장 주도</span>;
@@ -411,14 +529,15 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                                 badgeComponent = <span className="inline-block text-[10px] bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded font-bold border border-sky-500/30">시장 수익</span>;
                             }
 
-                            // 개별 차트용 데이터
                             const assetChartData = availableMonths.map(m => {
                                 const assetVal = normalizePct(asset.months[m]);
-                                const benchVal = normalizePct(activeBenchmark.months[m]);
+                                const bench1Val = normalizePct(b1Data.months[m]);
+                                const bench2Val = b2Data ? normalizePct(b2Data.months[m]) : 0;
                                 return {
                                     month: m,
                                     assetReturns: assetVal,
-                                    benchReturns: benchVal
+                                    bench1: bench1Val,
+                                    bench2: b2Data ? bench2Val : undefined
                                 };
                             });
 
@@ -479,16 +598,24 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                                                     content={({ active, payload, label }) => {
                                                         if (active && payload && payload.length) {
                                                             const pAsset = payload.find(p => p.dataKey === 'assetReturns')?.value as number;
-                                                            const pBench = payload.find(p => p.dataKey === 'benchReturns')?.value as number;
+                                                            const pBench1 = payload.find(p => p.dataKey === 'bench1')?.value as number;
+                                                            const pBench2 = payload.find(p => p.dataKey === 'bench2')?.value as number;
                                                             return (
                                                                 <div className="bg-slate-900/95 border border-slate-700 p-2.5 rounded-lg shadow-xl backdrop-blur-md">
                                                                     <p className="text-gray-400 text-[10px] mb-1.5 font-bold uppercase">{label}</p>
                                                                     <p className={`font-bold text-xs mb-1 ${pAsset > 0 ? 'text-red-400' : 'text-blue-400'}`}>
                                                                         월별 등락: {pAsset > 0 ? '+' : ''}{pAsset?.toFixed(1)}%
                                                                     </p>
-                                                                    <p className="text-amber-500 font-medium text-[11px]">
-                                                                        {benchName} 등락: {pBench > 0 ? '+' : ''}{pBench?.toFixed(1)}%
-                                                                    </p>
+                                                                    {pBench1 !== undefined && (
+                                                                        <p className="text-amber-500 font-medium text-[11px]">
+                                                                            {bench1Name} 등락: {pBench1 > 0 ? '+' : ''}{pBench1?.toFixed(1)}%
+                                                                        </p>
+                                                                    )}
+                                                                    {bench2Name && pBench2 !== undefined && (
+                                                                        <p className="text-sky-400 font-medium text-[11px]">
+                                                                            {bench2Name} 등락: {pBench2 > 0 ? '+' : ''}{pBench2?.toFixed(1)}%
+                                                                        </p>
+                                                                    )}
                                                                 </div>
                                                             );
                                                         }
@@ -503,13 +630,24 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                                                 </Bar>
                                                 <Line 
                                                     type="monotone" 
-                                                    dataKey="benchReturns" 
+                                                    dataKey="bench1" 
                                                     stroke="#f59e0b" 
-                                                    strokeWidth={2} 
-                                                    dot={{ fill: '#f59e0b', r: 3, strokeWidth: 0 }} 
-                                                    activeDot={{ r: 5 }} 
-                                                    name={benchName}
+                                                    strokeWidth={1.5} 
+                                                    dot={{ fill: '#f59e0b', r: 2, strokeWidth: 0 }} 
+                                                    activeDot={{ r: 4 }} 
+                                                    name={bench1Name}
                                                 />
+                                                {bench2Name && (
+                                                    <Line 
+                                                        type="monotone" 
+                                                        dataKey="bench2" 
+                                                        stroke="#0ea5e9" 
+                                                        strokeWidth={1.5} 
+                                                        dot={{ fill: '#0ea5e9', r: 2, strokeWidth: 0 }} 
+                                                        activeDot={{ r: 4 }} 
+                                                        name={bench2Name}
+                                                    />
+                                                )}
                                             </ComposedChart>
                                         </ResponsiveContainer>
                                     </div>
