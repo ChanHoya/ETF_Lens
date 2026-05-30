@@ -173,18 +173,23 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
     return YELLOW_HIGHLIGHTED_NAMES.some(yn => yn.replace(/\s/g, '') === cleanName);
   };
 
-  const formatTableCell = (val?: number) => {
-    if (val === undefined || val === null || isNaN(val)) return '-';
+  const formatTableCell = (val?: number, isAsset: boolean = false) => {
+    if (val === undefined || val === null || isNaN(val) || (isAsset && val === 0)) return 'N/A';
     const normed = (Math.abs(val) < 2 && val !== 0) ? Math.round(val * 1000) / 10 : val;
+    if (isAsset && normed === 0) return 'N/A';
     if (normed === 0) return '0.0%';
     return `${normed > 0 ? '+' : ''}${normed.toFixed(1)}%`;
   };
 
-  const getTableCellStyle = (val?: number) => {
-    if (val === undefined || val === null || isNaN(val) || val === 0) {
+  const getTableCellStyle = (val?: number, isAsset: boolean = false) => {
+    if (val === undefined || val === null || isNaN(val) || (isAsset && val === 0)) {
         return 'text-gray-500 text-center';
     }
     const normed = (Math.abs(val) < 2 && val !== 0) ? Math.round(val * 1000) / 10 : val;
+    if (isAsset && normed === 0) {
+        return 'text-gray-500 text-center';
+    }
+    if (normed === 0) return 'text-gray-500 text-center';
     if (normed > 0) {
         return 'bg-emerald-950/40 text-emerald-400 font-semibold text-center border border-emerald-500/10';
     } else {
@@ -261,12 +266,12 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                                       {asset.name}
                                   </td>
                                   {availableMonths.map(m => (
-                                      <td key={m} className={`py-1 px-1 border-r border-white/5 ${getTableCellStyle(asset.months[m])}`}>
-                                          {formatTableCell(asset.months[m])}
+                                      <td key={m} className={`py-1 px-1 border-r border-white/5 ${getTableCellStyle(asset.months[m], true)}`}>
+                                          {formatTableCell(asset.months[m], true)}
                                       </td>
                                   ))}
-                                  <td className={`py-1 px-1 font-bold ${getTableCellStyle(asset.cumulative)}`}>
-                                      {formatTableCell(asset.cumulative)}
+                                  <td className={`py-1 px-1 font-bold ${getTableCellStyle(asset.cumulative, true)}`}>
+                                      {formatTableCell(asset.cumulative, true)}
                                   </td>
                               </tr>
                           );
@@ -421,24 +426,24 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
 
                             const hangseng = benchmarks?.hangseng || {
                                 months: Object.keys(sp500.months).reduce((acc, m) => {
-                                    acc[m] = sp500.months[m] * 0.4 - 1.5;
+                                    acc[m] = sp500.months[m] * 0.4 - 0.015;
                                     return acc;
                                 }, {} as Record<string, number>),
-                                cumulative: sp500.cumulative * 0.4 - 7.5
+                                cumulative: sp500.cumulative * 0.4 - 0.075
                             };
 
                             const krxBond = benchmarks?.krxBond || {
                                 months: Object.keys(kospi.months).reduce((acc, m) => {
                                     const monthNum = parseInt(m) || 1;
-                                    acc[m] = 0.2 + (monthNum % 3) * 0.1;
+                                    acc[m] = 0.002 + (monthNum % 3) * 0.001;
                                     return acc;
                                 }, {} as Record<string, number>),
-                                cumulative: Object.keys(kospi.months).length * 0.3
+                                cumulative: Object.keys(kospi.months).length * 0.003
                             };
 
                             const kisBond = benchmarks?.kisBond || {
                                 months: Object.keys(kospi.months).reduce((acc, m) => {
-                                    acc[m] = (krxBond.months[m] || 0.3) * 0.9 + 0.05;
+                                    acc[m] = (krxBond.months[m] || 0.003) * 0.9 + 0.0005;
                                     return acc;
                                 }, {} as Record<string, number>),
                                 cumulative: krxBond.cumulative * 0.95
@@ -447,15 +452,15 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                             const bloombergBond = benchmarks?.bloombergBond || {
                                 months: Object.keys(sp500.months).reduce((acc, m) => {
                                     const monthNum = parseInt(m) || 1;
-                                    acc[m] = -0.1 + (monthNum % 4) * 0.15;
+                                    acc[m] = -0.001 + (monthNum % 4) * 0.0015;
                                     return acc;
                                 }, {} as Record<string, number>),
-                                cumulative: Object.keys(sp500.months).length * 0.1
+                                cumulative: Object.keys(sp500.months).length * 0.001
                             };
 
                             const usTreasury = benchmarks?.usTreasury || {
                                 months: Object.keys(sp500.months).reduce((acc, m) => {
-                                    acc[m] = (bloombergBond.months[m] || 0.1) * 1.1 - 0.05;
+                                    acc[m] = (bloombergBond.months[m] || 0.001) * 1.1 - 0.0005;
                                     return acc;
                                 }, {} as Record<string, number>),
                                 cumulative: bloombergBond.cumulative * 1.05
@@ -464,15 +469,15 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                             const lbmaGold = benchmarks?.lbmaGold || {
                                 months: Object.keys(sp500.months).reduce((acc, m) => {
                                     const monthNum = parseInt(m) || 1;
-                                    acc[m] = 1.2 + (monthNum % 2 === 0 ? 2.5 : -1.0);
+                                    acc[m] = 0.012 + (monthNum % 2 === 0 ? 0.025 : -0.01);
                                     return acc;
                                 }, {} as Record<string, number>),
-                                cumulative: Object.keys(sp500.months).length * 1.3
+                                cumulative: Object.keys(sp500.months).length * 0.013
                             };
 
                             const krxGold = benchmarks?.krxGold || {
                                 months: Object.keys(kospi.months).reduce((acc, m) => {
-                                    acc[m] = (lbmaGold.months[m] || 1.0) * 1.05 + 0.1;
+                                    acc[m] = (lbmaGold.months[m] || 0.01) * 1.05 + 0.001;
                                     return acc;
                                 }, {} as Record<string, number>),
                                 cumulative: lbmaGold.cumulative * 1.05
@@ -535,7 +540,7 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                                 const bench2Val = b2Data ? normalizePct(b2Data.months[m]) : 0;
                                 return {
                                     month: m,
-                                    assetReturns: assetVal,
+                                    assetReturns: assetVal === 0 ? undefined : assetVal,
                                     bench1: bench1Val,
                                     bench2: b2Data ? bench2Val : undefined
                                 };
@@ -597,15 +602,24 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                                                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                                     content={({ active, payload, label }) => {
                                                         if (active && payload && payload.length) {
-                                                            const pAsset = payload.find(p => p.dataKey === 'assetReturns')?.value as number;
+                                                            const pAsset = payload.find(p => p.dataKey === 'assetReturns')?.value as number | undefined;
                                                             const pBench1 = payload.find(p => p.dataKey === 'bench1')?.value as number;
                                                             const pBench2 = payload.find(p => p.dataKey === 'bench2')?.value as number;
+                                                            
+                                                            const hasAssetVal = pAsset !== undefined && pAsset !== null && !isNaN(pAsset);
+                                                            
                                                             return (
                                                                 <div className="bg-slate-900/95 border border-slate-700 p-2.5 rounded-lg shadow-xl backdrop-blur-md">
                                                                     <p className="text-gray-400 text-[10px] mb-1.5 font-bold uppercase">{label}</p>
-                                                                    <p className={`font-bold text-xs mb-1 ${pAsset > 0 ? 'text-red-400' : 'text-blue-400'}`}>
-                                                                        월별 등락: {pAsset > 0 ? '+' : ''}{pAsset?.toFixed(1)}%
-                                                                    </p>
+                                                                    {hasAssetVal ? (
+                                                                        <p className={`font-bold text-xs mb-1 ${pAsset > 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                                                                            월별 등락: {pAsset > 0 ? '+' : ''}{pAsset.toFixed(1)}%
+                                                                        </p>
+                                                                    ) : (
+                                                                        <p className="font-bold text-xs mb-1 text-gray-500">
+                                                                            월별 등락: N/A
+                                                                        </p>
+                                                                    )}
                                                                     {pBench1 !== undefined && (
                                                                         <p className="text-amber-500 font-medium text-[11px]">
                                                                             {bench1Name} 등락: {pBench1 > 0 ? '+' : ''}{pBench1?.toFixed(1)}%
