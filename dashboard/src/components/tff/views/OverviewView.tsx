@@ -60,7 +60,16 @@ export default function OverviewView({ data }: Props) {
 
     // 1. Data Selection
     const totalData = data.cumulative?.totalData;
-    let latestInfo: TffMonthInfo | null = data.ytm;
+    let latestInfo: TffMonthInfo | null = null;
+
+    // Use the latest month's monthly sheet if it exists, to avoid using an outdated YTM sheet
+    const latestMonth = data.latestMonth;
+    if (latestMonth && latestMonth !== 'YTM' && data.monthlyMap[latestMonth]) {
+        latestInfo = data.monthlyMap[latestMonth];
+    } else {
+        latestInfo = data.ytm;
+    }
+
     if (!latestInfo && Object.keys(data.monthlyMap).length > 0) {
         const months = Object.keys(data.monthlyMap).sort((a, b) => parseInt(a) - parseInt(b));
         latestInfo = data.monthlyMap[months[months.length - 1]];
