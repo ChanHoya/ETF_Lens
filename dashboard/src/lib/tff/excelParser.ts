@@ -135,13 +135,19 @@ export function parseTffExcel(buffer: ArrayBuffer): { data: TffFundData, rawShee
 
     // OverviewView는 data.ytm 우선, 없으면 monthlyMap 최신 월을 사용
     // → 둘 다에 cashBalance를 주입해서 어느 쪽이 선택되어도 반영되도록
-    if (cashFromWeight > 0) {
+    const latestKey = parsedData.latestMonth;
+    const finalCash = Math.max(
+        cashFromWeight,
+        parsedData.ytm?.summary.cashBalance || 0,
+        (latestKey !== 'YTM' && parsedData.monthlyMap[latestKey]?.summary.cashBalance) || 0
+    );
+
+    if (finalCash > 0) {
         if (parsedData.ytm) {
-            parsedData.ytm.summary.cashBalance = cashFromWeight;
+            parsedData.ytm.summary.cashBalance = finalCash;
         }
-        const latestKey = parsedData.latestMonth;
         if (latestKey !== 'YTM' && parsedData.monthlyMap[latestKey]) {
-            parsedData.monthlyMap[latestKey].summary.cashBalance = cashFromWeight;
+            parsedData.monthlyMap[latestKey].summary.cashBalance = finalCash;
         }
     }
 
@@ -386,8 +392,8 @@ function parseAssetReturnSheet(rows: any[][]): TffAssetReturns {
             if (cellVal === undefined || cellVal === null || String(cellVal).trim() === '') continue;
             
             const rowName = String(cellVal).trim();
-            // Note, 항목 같은 설명 텍스트 스킵, 그리고 현금도 제외
-            if (rowName === "현금" || rowName.startsWith("Note") || rowName.includes("수익률은") || rowName.startsWith("1)") || rowName.startsWith("2)")) continue;
+            // Note, 항목 같은 설명 텍스트 스킵 (현금은 종목별수익율 요약표 구성을 위해 포함시킵니다)
+            if (rowName.startsWith("Note") || rowName.includes("수익률은") || rowName.startsWith("1)") || rowName.startsWith("2)")) continue;
             
             const isTotal = rowName.includes("합계");
             const isKospi = rowName.toUpperCase().includes("KOSPI") || rowName.includes("코스피");
@@ -420,7 +426,7 @@ function parseAssetReturnSheet(rows: any[][]): TffAssetReturns {
                 res.benchmarks.sp500.months = monthsData;
                 res.benchmarks.sp500.cumulative = cumValue;
             } else {
-                // 일반 종목
+                // 일반 종목 (현금 포함)
                 // 지분손익 열(R열 근처)이 이미지에 보이므로 우측 영역 탐색
                 res.assets.push({
                     name: rowName,
@@ -488,19 +494,40 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
                 info.summary.totalPnl = parseNumber(rowData[colMap.pnl]);
                 
                 // 이후 몇 줄 아래쪽에서 현금 잔고 캡쳐 (하드코딩 탐색)
-                for(let sr=r+1; sr < r+10; sr++) {
-                    if (rows[sr] && rows[sr].includes("현금잔고")) {
-                        // 우측 인덱스 어딘가에 값이 있음
-                        info.summary.cashBalance = parseNumber(rows[sr][rows[sr].indexOf("현금잔고")+1] || rows[sr].find(v=>typeof v==='number'));
+                const cashKeywords = ['현금', '예수금', 'Cash', '현금잔고', '종합잔고'];
+                for(let sr=r+1; sr < Math.min(r+15, rows.length); sr++) {
+                    if (!rows[sr]) continue;
+                    
+                    const rowStr = rows[sr].map(v => String(v).replace(/\s/g, ''));
+                    const cashIdx = rowStr.findIndex(v => cashKeywords.some(kw => v.includes(kw)));
+                    if (cashIdx !== -1) {
+                        let cashVal = 0;
+                        for (let col = cashIdx + 1; col < rows[sr].length; col++) {
+                            const val = parseOptionalNumber(rows[sr][col]);
+                            if (val !== undefined && val !== 0) {
+                                if (Math.abs(val) <= 1.0) continue; // 비율 필터링
+                                cashVal = val;
+                                break;
+                            }
+                        }
+                        if (cashVal > 0) {
+                            info.summary.cashBalance = cashVal;
+                        }
                     }
-                    if (rows[sr] && rows[sr].includes("이월잔고")) {
-                         // 바로 윗줄이나 해당줄에서 이월잔고, 입금, 출금, 종합잔고 매핑
-                         let tr = sr+1; // 보통 숫자값은 밑에 줄에 있음
-                         info.summary.carryoverBalance = parseNumber(rows[tr][rows[sr].indexOf("이월잔고")]);
-                         info.summary.deposit = parseNumber(rows[tr][rows[sr].indexOf("입금")]);
-                         info.summary.withdrawal = parseNumber(rows[tr][rows[sr].indexOf("출금")]);
-                         info.summary.totalBalance = parseNumber(rows[tr][rows[sr].indexOf("종합잔고")]);
-                         break;
+                    
+                    const carryoverIdx = rowStr.findIndex(v => v.includes("이월잔고"));
+                    const depositIdx = rowStr.findIndex(v => v.includes("입금"));
+                    const withdrawalIdx = rowStr.findIndex(v => v.includes("출금"));
+                    const totalIdx = rowStr.findIndex(v => v.includes("종합잔고") || v.includes("기말평가"));
+
+                    if (carryoverIdx !== -1 || depositIdx !== -1 || withdrawalIdx !== -1 || totalIdx !== -1) {
+                        let tr = sr+1; // 보통 숫자값은 밑에 줄에 있음
+                        if (rows[tr]) {
+                            if (carryoverIdx !== -1) info.summary.carryoverBalance = parseNumber(rows[tr][carryoverIdx]);
+                            if (depositIdx !== -1) info.summary.deposit = parseNumber(rows[tr][depositIdx]);
+                            if (withdrawalIdx !== -1) info.summary.withdrawal = parseNumber(rows[tr][withdrawalIdx]);
+                            if (totalIdx !== -1) info.summary.totalBalance = parseNumber(rows[tr][totalIdx]);
+                        }
                     }
                 }
                 break; // 홀딩스 끝
@@ -531,6 +558,15 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
             info.summary.totalPnl = info.holdings.reduce((sum, h) => sum + (h.investmentPnl || 0), 0);
         }
 
+        // holdings 내에 '현금' 또는 '예수금' 객체가 있을 경우 cashBalance로 맵핑 폴백
+        const cashHolding = info.holdings.find(h => {
+            const cleanName = h.name.replace(/\s/g, '');
+            return cleanName === '현금' || cleanName === '예수금' || cleanName === '현금잔고';
+        });
+        if (cashHolding && info.summary.cashBalance === 0) {
+            info.summary.cashBalance = cashHolding.endValue;
+        }
+
     } catch (e) {
          console.error(`${periodName} 시트 파싱 실패:`, e);
     }
@@ -538,66 +574,56 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
     return info;
 }
 
-// 투자비중 시트에서 '현금' 행의 기말평가금액을 추출합니다.
+// 투자비중 시트 또는 일반 시트 전반에서 '현금' 관련 행의 기말금액을 추출합니다.
 function parseCashFromWeightSheet(rows: any[][]): number {
     try {
-        console.log('[WeightSheet] 총 행 수:', rows.length);
-        for (let i = 0; i < Math.min(rows.length, 10); i++) {
-            if (rows[i]) console.log(`[WeightSheet] row[${i}]:`, JSON.stringify(rows[i].slice(0, 10)));
-        }
-
+        const cashKeywords = ['현금', '예수금', 'Cash', '현금잔고', '종합잔고'];
+        
+        // 1. 기말평가금액 열 위치 탐색
         let endValueColIdx = -1;
-        let nameColIdx = -1;
-        let headerRowIdx = -1;
-
-        const endValueKeywords = ['기말평가금액', '기말평가액', '기말금액', '평가금액'];
-        const nameKeywords = ['종목명', '자산명', '구분', '항목'];
-
+        const endValueKeywords = ['기말평가금액', '기말평가액', '기말금액', '평가금액', '종합잔고'];
         for (let i = 0; i < Math.min(rows.length, 15); i++) {
             const row = rows[i];
             if (!row) continue;
             let foundEnd = -1;
-            let foundName = -1;
             row.forEach((v: any, c: number) => {
                 if (typeof v !== 'string') return;
                 const clean = v.replace(/\s/g, '');
                 endValueKeywords.forEach(kw => { if (clean.includes(kw) && foundEnd === -1) foundEnd = c; });
-                nameKeywords.forEach(kw => { if (clean.includes(kw) && foundName === -1) foundName = c; });
             });
             if (foundEnd >= 0) {
                 endValueColIdx = foundEnd;
-                nameColIdx = foundName;
-                headerRowIdx = i;
-                console.log(`[WeightSheet] 헤더 발견 row[${i}]: endValueCol=${endValueColIdx} nameCol=${nameColIdx}`);
                 break;
             }
         }
 
-        if (headerRowIdx === -1 || endValueColIdx === -1) {
-            console.warn('[WeightSheet] 기말평가금액 헤더 미발견. 전체 시트명 확인 필요');
-            return 0;
-        }
-
-        const cashKeywords = ['현금', '예수금', 'Cash'];
-        for (let r = headerRowIdx + 1; r < rows.length; r++) {
+        // 2. 전체 행을 탐색하며 현금 행에서 기말금액(숫자) 추출
+        for (let r = 0; r < rows.length; r++) {
             const row = rows[r];
             if (!row) continue;
 
-            const checkCells = nameColIdx >= 0
-                ? [row[nameColIdx], row[nameColIdx + 1]].filter(Boolean)
-                : row.filter((v: any) => typeof v === 'string').slice(0, 5);
-
-            const isCashRow = checkCells.some((v: any) =>
-                typeof v === 'string' && cashKeywords.some(kw => v.trim().includes(kw))
+            const isCashRow = row.some((v: any) =>
+                typeof v === 'string' && cashKeywords.some(kw => v.replace(/\s/g, '').includes(kw))
             );
 
             if (isCashRow) {
-                const cashVal = parseNumber(row[endValueColIdx]);
-                console.log(`[WeightSheet] 현금 행 발견 row[${r}]:`, JSON.stringify(row.slice(0, endValueColIdx + 3)), '→ 기말평가금액:', cashVal);
-                return cashVal;
+                let cashVal = endValueColIdx >= 0 ? parseOptionalNumber(row[endValueColIdx]) : undefined;
+                if (cashVal === undefined || cashVal === 0) {
+                    for (let col = 0; col < row.length; col++) {
+                        const val = parseOptionalNumber(row[col]);
+                        if (val !== undefined && val !== 0) {
+                            if (Math.abs(val) <= 1.0) continue; // 백분율 우회
+                            cashVal = val;
+                            break;
+                        }
+                    }
+                }
+                if (cashVal !== undefined && cashVal !== 0) {
+                    console.log(`[WeightSheet] 현금 행 발견 row[${r}]:`, JSON.stringify(row), '→ 기말평가금액:', cashVal);
+                    return cashVal;
+                }
             }
         }
-        console.warn('[WeightSheet] 현금 행 미발견');
     } catch (e) {
         console.warn('[TffExcelParser] 투자비중 시트 현금 파싱 실패:', e);
     }

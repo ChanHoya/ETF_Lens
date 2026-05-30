@@ -93,8 +93,134 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
     return normed > 0 ? 'text-red-400 font-bold' : 'text-blue-400 font-bold';
   };
 
+  const tableAssets = assets.filter(a => {
+      const name = a.name.trim();
+      return !name.startsWith("Note") && !name.includes("수익률은") && !name.startsWith("1)") && !name.startsWith("2)");
+  });
+
+  const YELLOW_HIGHLIGHTED_NAMES = [
+    'KODEX 200', 
+    'KODEX 반도체', 
+    'PLUS 고배당주', 
+    'KODEX 미국AI테크TOP10', 
+    'KODEX 미국빅테크10배당포커스', 
+    'ACE 미국10년국채액티브', 
+    'KODEX 금융고배당TOP10'
+  ];
+
+  const isYellowHighlighted = (name: string) => {
+    const cleanName = name.replace(/\s/g, '');
+    return YELLOW_HIGHLIGHTED_NAMES.some(yn => yn.replace(/\s/g, '') === cleanName);
+  };
+
+  const formatTableCell = (val?: number) => {
+    if (val === undefined || val === null || isNaN(val)) return '-';
+    const normed = (Math.abs(val) < 2 && val !== 0) ? Math.round(val * 1000) / 10 : val;
+    if (normed === 0) return '0.0%';
+    return `${normed > 0 ? '+' : ''}${normed.toFixed(1)}%`;
+  };
+
+  const getTableCellStyle = (val?: number) => {
+    if (val === undefined || val === null || isNaN(val) || val === 0) {
+        return 'text-gray-500 text-center';
+    }
+    const normed = (Math.abs(val) < 2 && val !== 0) ? Math.round(val * 1000) / 10 : val;
+    if (normed > 0) {
+        return 'bg-emerald-950/40 text-emerald-400 font-semibold text-center border border-emerald-500/10';
+    } else {
+        return 'bg-rose-950/40 text-rose-400 font-semibold text-center border border-rose-500/10';
+    }
+  };
+
   return (
-    <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      
+      {/* 엑셀 종목별 수익률 테이블 */}
+      <div className="bg-[#12121A]/80 border border-white/10 rounded-2xl p-4 md:p-5 backdrop-blur-md shadow-lg">
+          <h4 className="text-sm font-bold text-gray-300 mb-3.5 flex items-center gap-2 border-l-2 border-emerald-500 pl-2">
+              📊 종목별 수익률 요약표 (Excel 원본 기준)
+          </h4>
+          <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
+                  <thead>
+                      <tr className="bg-black/40 text-gray-400 border-b border-white/10">
+                          <th className="p-3 font-semibold min-w-[200px] border-r border-white/5">종목명(상품명)</th>
+                          {availableMonths.map(m => (
+                              <th key={m} className="p-3 font-semibold text-center w-24 border-r border-white/5">{m}</th>
+                          ))}
+                          <th className="p-3 font-semibold text-center w-24">누적</th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 font-mono">
+                      {/* 1. 일반 종목행들 */}
+                      {tableAssets.map((asset, idx) => {
+                          const isYellow = isYellowHighlighted(asset.name);
+                          return (
+                              <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                                  <td className={`p-3 text-xs border-r border-white/5 ${isYellow ? 'bg-yellow-500/15 text-yellow-300 font-bold border-l-4 border-yellow-500/60 pl-2' : 'text-gray-300 pl-3'}`}>
+                                      {asset.name}
+                                  </td>
+                                  {availableMonths.map(m => (
+                                      <td key={m} className={`p-3 border-r border-white/5 ${getTableCellStyle(asset.months[m])}`}>
+                                          {formatTableCell(asset.months[m])}
+                                      </td>
+                                  ))}
+                                  <td className={`p-3 font-bold ${getTableCellStyle(asset.cumulative)}`}>
+                                      {formatTableCell(asset.cumulative)}
+                                  </td>
+                              </tr>
+                          );
+                      })}
+
+                      {/* 2. 합계 행 */}
+                      {total && (
+                          <tr className="bg-white/[0.04] font-black border-t border-b border-white/10">
+                              <td className="p-3 text-xs text-white font-black border-r border-white/5 pl-3">합계</td>
+                              {availableMonths.map(m => (
+                                  <td key={m} className={`p-3 border-r border-white/5 ${getTableCellStyle(total.months[m])}`}>
+                                      {formatTableCell(total.months[m])}
+                                  </td>
+                              ))}
+                              <td className={`p-3 font-black ${getTableCellStyle(total.cumulative)}`}>
+                                  {formatTableCell(total.cumulative)}
+                              </td>
+                          </tr>
+                      )}
+
+                      {/* 3. 코스피 행 */}
+                      {benchmarks?.kospi && (
+                          <tr className="bg-black/20 text-gray-400 font-medium">
+                              <td className="p-3 text-xs text-gray-400 border-r border-white/5 pl-3">코스피</td>
+                              {availableMonths.map(m => (
+                                  <td key={m} className={`p-3 border-r border-white/5 ${getTableCellStyle(benchmarks.kospi.months[m])}`}>
+                                      {formatTableCell(benchmarks.kospi.months[m])}
+                                  </td>
+                              ))}
+                              <td className={`p-3 font-bold ${getTableCellStyle(benchmarks.kospi.cumulative)}`}>
+                                  {formatTableCell(benchmarks.kospi.cumulative)}
+                              </td>
+                          </tr>
+                      )}
+
+                      {/* 4. S&P500 행 */}
+                      {benchmarks?.sp500 && (
+                          <tr className="bg-black/20 text-gray-400 font-medium">
+                              <td className="p-3 text-xs text-gray-400 border-r border-white/5 pl-3">S&P500</td>
+                              {availableMonths.map(m => (
+                                  <td key={m} className={`p-3 border-r border-white/5 ${getTableCellStyle(benchmarks.sp500.months[m])}`}>
+                                      {formatTableCell(benchmarks.sp500.months[m])}
+                                  </td>
+                              ))}
+                              <td className={`p-3 font-bold ${getTableCellStyle(benchmarks.sp500.cumulative)}`}>
+                                  {formatTableCell(benchmarks.sp500.cumulative)}
+                              </td>
+                          </tr>
+                      )}
+                  </tbody>
+              </table>
+          </div>
+      </div>
+
       <div className="flex flex-col gap-4 mb-2 mt-0">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
             <div>
