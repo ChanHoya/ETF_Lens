@@ -155,9 +155,15 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                       {/* 1. 일반 종목행들 */}
                       {tableAssets.map((asset, idx) => {
                           const isYellow = isYellowHighlighted(asset.name);
+                          const hasClick = onOpenDetail && asset.code;
                           return (
                               <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                                  <td className={`p-3 text-xs border-r border-white/5 ${isYellow ? 'bg-yellow-500/15 text-yellow-300 font-bold border-l-4 border-yellow-500/60 pl-2' : 'text-gray-300 pl-3'}`}>
+                                  <td 
+                                      onClick={() => {
+                                          if (hasClick) onOpenDetail(asset.code);
+                                      }}
+                                      className={`p-3 text-xs border-r border-white/5 ${isYellow ? 'bg-yellow-500/15 text-yellow-300 font-bold border-l-4 border-yellow-500/60 pl-2' : 'text-gray-300 pl-3'} ${hasClick ? 'cursor-pointer hover:text-sky-400 hover:underline transition-colors' : ''}`}
+                                  >
                                       {asset.name}
                                   </td>
                                   {availableMonths.map(m => (
