@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TffAssetReturns } from '../../../lib/tff/types';
-import { Activity, Star } from 'lucide-react';
+import { Activity, Star, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell } from 'recharts';
 import krTickers from '../../../lib/tff/kr-tickers.json';
 
@@ -48,6 +48,10 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
   const { assets, total, benchmarks } = data;
   const [sortBy, setSortBy] = useState<string>('cumulative');
   const [selectedType, setSelectedType] = useState<string>('전체');
+
+  // Table sorting states
+  const [tableSortKey, setTableSortKey] = useState<string>('cumulative');
+  const [tableSortDir, setTableSortDir] = useState<'asc' | 'desc'>('desc');
 
   const FILTER_TYPES = [
       { label: '전체', value: '전체' },
@@ -134,6 +138,26 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
       return !name.startsWith("Note") && !name.includes("수익률은") && !name.startsWith("1)") && !name.startsWith("2)");
   });
 
+  const handleTableSort = (key: string) => {
+      if (tableSortKey === key) {
+          setTableSortDir(prev => prev === 'desc' ? 'asc' : 'desc');
+      } else {
+          setTableSortKey(key);
+          setTableSortDir('desc');
+      }
+  };
+
+  const sortedTableAssets = [...tableAssets].sort((a, b) => {
+      let valA = tableSortKey === 'cumulative' ? (a.cumulative || 0) : (a.months[tableSortKey] || 0);
+      let valB = tableSortKey === 'cumulative' ? (b.cumulative || 0) : (b.months[tableSortKey] || 0);
+      
+      if (tableSortDir === 'desc') {
+          return valB - valA;
+      } else {
+          return valA - valB;
+      }
+  });
+
   const YELLOW_HIGHLIGHTED_NAMES = [
     'KODEX 200', 
     'KODEX 반도체', 
@@ -180,16 +204,49 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
               <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
                   <thead>
                       <tr className="bg-black/40 text-gray-400 border-b border-white/10">
-                          <th className="p-3 font-semibold min-w-[200px] border-r border-white/5">종목명(상품명)</th>
+                          <th className="py-1.5 px-2 md:px-3 font-semibold min-w-[200px] border-r border-white/5">종목명(상품명)</th>
                           {availableMonths.map(m => (
-                              <th key={m} className="p-3 font-semibold text-center w-24 border-r border-white/5">{m}</th>
+                              <th 
+                                  key={m} 
+                                  onClick={() => handleTableSort(m)}
+                                  className="py-1.5 px-1 font-semibold text-center w-24 border-r border-white/5 cursor-pointer hover:bg-white/5 select-none transition-colors"
+                              >
+                                  <div className="flex items-center justify-center gap-1.5">
+                                      <span>{m}</span>
+                                      {tableSortKey === m ? (
+                                          tableSortDir === 'desc' ? (
+                                              <ArrowDown className="w-3 h-3 text-sky-400" />
+                                          ) : (
+                                              <ArrowUp className="w-3 h-3 text-sky-400" />
+                                          )
+                                      ) : (
+                                          <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />
+                                      )}
+                                  </div>
+                              </th>
                           ))}
-                          <th className="p-3 font-semibold text-center w-24">누적</th>
+                          <th 
+                              onClick={() => handleTableSort('cumulative')}
+                              className="py-1.5 px-1 font-semibold text-center w-24 cursor-pointer hover:bg-white/5 select-none transition-colors"
+                          >
+                              <div className="flex items-center justify-center gap-1.5">
+                                  <span>누적</span>
+                                  {tableSortKey === 'cumulative' ? (
+                                      tableSortDir === 'desc' ? (
+                                          <ArrowDown className="w-3 h-3 text-sky-400" />
+                                      ) : (
+                                          <ArrowUp className="w-3 h-3 text-sky-400" />
+                                      )
+                                  ) : (
+                                      <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />
+                                  )}
+                              </div>
+                          </th>
                       </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 font-mono">
                       {/* 1. 일반 종목행들 */}
-                      {tableAssets.map((asset, idx) => {
+                      {sortedTableAssets.map((asset, idx) => {
                           const isYellow = isYellowHighlighted(asset.name);
                           const code = asset.code || findTickerCode(asset.name);
                           const hasClick = onOpenDetail && code;
@@ -199,16 +256,16 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                                       onClick={() => {
                                           if (hasClick && code) onOpenDetail(code);
                                       }}
-                                      className={`p-3 text-xs border-r border-white/5 ${isYellow ? 'bg-yellow-500/15 text-yellow-300 font-bold border-l-4 border-yellow-500/60 pl-2' : 'text-gray-300 pl-3'} ${hasClick ? 'cursor-pointer hover:text-sky-400 hover:underline transition-colors' : ''}`}
+                                      className={`py-1 px-2 md:px-3 text-xs border-r border-white/5 ${isYellow ? 'bg-yellow-500/15 text-yellow-300 font-bold border-l-4 border-yellow-500/60 pl-2' : 'text-gray-300 pl-3'} ${hasClick ? 'cursor-pointer hover:text-sky-400 hover:underline transition-colors' : ''}`}
                                   >
                                       {asset.name}
                                   </td>
                                   {availableMonths.map(m => (
-                                      <td key={m} className={`p-3 border-r border-white/5 ${getTableCellStyle(asset.months[m])}`}>
+                                      <td key={m} className={`py-1 px-1 border-r border-white/5 ${getTableCellStyle(asset.months[m])}`}>
                                           {formatTableCell(asset.months[m])}
                                       </td>
                                   ))}
-                                  <td className={`p-3 font-bold ${getTableCellStyle(asset.cumulative)}`}>
+                                  <td className={`py-1 px-1 font-bold ${getTableCellStyle(asset.cumulative)}`}>
                                       {formatTableCell(asset.cumulative)}
                                   </td>
                               </tr>
@@ -218,13 +275,13 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                       {/* 2. 합계 행 */}
                       {total && (
                           <tr className="bg-white/[0.04] font-black border-t border-b border-white/10">
-                              <td className="p-3 text-xs text-white font-black border-r border-white/5 pl-3">합계</td>
+                              <td className="py-1 px-2 md:px-3 text-xs text-white font-black border-r border-white/5 pl-3">합계</td>
                               {availableMonths.map(m => (
-                                  <td key={m} className={`p-3 border-r border-white/5 ${getTableCellStyle(total.months[m])}`}>
+                                  <td key={m} className={`py-1 px-1 border-r border-white/5 ${getTableCellStyle(total.months[m])}`}>
                                       {formatTableCell(total.months[m])}
                                   </td>
                               ))}
-                              <td className={`p-3 font-black ${getTableCellStyle(total.cumulative)}`}>
+                              <td className={`py-1 px-1 font-black ${getTableCellStyle(total.cumulative)}`}>
                                   {formatTableCell(total.cumulative)}
                               </td>
                           </tr>
@@ -233,13 +290,13 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                       {/* 3. 코스피 행 */}
                       {benchmarks?.kospi && (
                           <tr className="bg-black/20 text-gray-400 font-medium">
-                              <td className="p-3 text-xs text-gray-400 border-r border-white/5 pl-3">코스피</td>
+                              <td className="py-1 px-2 md:px-3 text-xs text-gray-400 border-r border-white/5 pl-3">코스피</td>
                               {availableMonths.map(m => (
-                                  <td key={m} className={`p-3 border-r border-white/5 ${getTableCellStyle(benchmarks.kospi.months[m])}`}>
+                                  <td key={m} className={`py-1 px-1 border-r border-white/5 ${getTableCellStyle(benchmarks.kospi.months[m])}`}>
                                       {formatTableCell(benchmarks.kospi.months[m])}
                                   </td>
                               ))}
-                              <td className={`p-3 font-bold ${getTableCellStyle(benchmarks.kospi.cumulative)}`}>
+                              <td className={`py-1 px-1 font-bold ${getTableCellStyle(benchmarks.kospi.cumulative)}`}>
                                   {formatTableCell(benchmarks.kospi.cumulative)}
                               </td>
                           </tr>
@@ -248,13 +305,13 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                       {/* 4. S&P500 행 */}
                       {benchmarks?.sp500 && (
                           <tr className="bg-black/20 text-gray-400 font-medium">
-                              <td className="p-3 text-xs text-gray-400 border-r border-white/5 pl-3">S&P500</td>
+                              <td className="py-1 px-2 md:px-3 text-xs text-gray-400 border-r border-white/5 pl-3">S&P500</td>
                               {availableMonths.map(m => (
-                                  <td key={m} className={`p-3 border-r border-white/5 ${getTableCellStyle(benchmarks.sp500.months[m])}`}>
+                                  <td key={m} className={`py-1 px-1 border-r border-white/5 ${getTableCellStyle(benchmarks.sp500.months[m])}`}>
                                       {formatTableCell(benchmarks.sp500.months[m])}
                                   </td>
                               ))}
-                              <td className={`p-3 font-bold ${getTableCellStyle(benchmarks.sp500.cumulative)}`}>
+                              <td className={`py-1 px-1 font-bold ${getTableCellStyle(benchmarks.sp500.cumulative)}`}>
                                   {formatTableCell(benchmarks.sp500.cumulative)}
                               </td>
                           </tr>
