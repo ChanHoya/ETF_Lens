@@ -176,9 +176,6 @@ export default function MonthlyView({ data, onOpenDetail, titleRightElement }: P
 
       {/* 월별 원본 데이터 종합 현황판 */}
       <div className="bg-[#12121A]/80 border border-white/10 rounded-2xl p-4 md:p-5 backdrop-blur-md shadow-lg animate-in fade-in duration-500">
-          <h4 className="text-sm font-bold text-gray-300 mb-3.5 flex items-center gap-2 border-l-2 border-sky-500 pl-2">
-              📊 {period}월 종합 현황판 (Excel 원본 기준)
-          </h4>
           <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
                   <thead>
