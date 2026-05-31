@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { API_BASE } from '@/lib/apiConfig';
 import {
     ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, ReferenceLine, Line, ComposedChart,
-    BarChart, Bar, Legend, Cell
+    BarChart, Bar, Legend
 } from 'recharts';
 import { Loader2, TrendingUp, AlertTriangle, Play, RefreshCw, Star, Shield, Target } from 'lucide-react';
 
@@ -206,11 +206,16 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
     /* ─── Derived chart data ─── */
     const scatterData = result?.scatter ?? [];
     const frontierData = result?.frontier ?? [];
-    const minSharpe = scatterData.length > 0 ? Math.min(...scatterData.map(p => p.sharpe)) : 0;
-    const maxSharpe = scatterData.length > 0 ? Math.max(...scatterData.map(p => p.sharpe)) : 1;
+    // reduce 방식: spread operator는 배열이 커질 때 콜 스택 오버플로우 위험이 있음
+    const minSharpe = scatterData.length > 0
+        ? scatterData.reduce((min, p) => p.sharpe < min ? p.sharpe : min, scatterData[0].sharpe)
+        : 0;
+    const maxSharpe = scatterData.length > 0
+        ? scatterData.reduce((max, p) => p.sharpe > max ? p.sharpe : max, scatterData[0].sharpe)
+        : 1;
 
-    // 비중 비교 바 차트 데이터
-    const weightBarData = result
+    // 비중 비교 바 차트 데이터 — useMemo로 result 변경 시에만 재계산
+    const weightBarData = useMemo(() => result
         ? Object.keys(result.tickers).map(code => ({
             name: result.tickers[code]?.name?.length > 10
                 ? result.tickers[code].name.slice(0, 9) + '…'
@@ -219,7 +224,7 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
             maxSharpe: parseFloat(((result.max_sharpe.weights[code] ?? 0) * 100).toFixed(1)),
             minVar: parseFloat(((result.min_var.weights[code] ?? 0) * 100).toFixed(1)),
         }))
-        : [];
+        : [], [result]);
 
     /* ─── Empty state ─── */
     if (!holdings || holdings.length === 0) {
@@ -266,7 +271,10 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
                                 max={10}
                                 step={0.1}
                                 value={riskFreeRate}
-                                onChange={e => setRiskFreeRate(parseFloat(e.target.value) || 0)}
+                                onChange={e => {
+                                    const v = parseFloat(e.target.value);
+                                    if (!isNaN(v)) setRiskFreeRate(v);
+                                }}
                                 className="w-14 bg-transparent text-white text-xs font-bold text-center outline-none"
                             />
                             <span className="text-gray-400 text-xs">%</span>
@@ -398,7 +406,6 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
                                     strokeWidth={2.5}
                                     dot={false}
                                     name="효율적 전선"
-                                    strokeDasharray="0"
                                 />
 
                                 {/* 현재 포트폴리오 마커 */}
@@ -527,21 +534,9 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
                                             return value;
                                         }}
                                     />
-                                    <Bar dataKey="current" name="current" fill="#f43f5e" fillOpacity={0.7} radius={[0, 4, 4, 0]}>
-                                        {weightBarData.map((entry, index) => (
-                                            <Cell key={`cur-${index}`} fill="#f43f5e" fillOpacity={0.65} />
-                                        ))}
-                                    </Bar>
-                                    <Bar dataKey="maxSharpe" name="maxSharpe" fill="#f59e0b" fillOpacity={0.7} radius={[0, 4, 4, 0]}>
-                                        {weightBarData.map((entry, index) => (
-                                            <Cell key={`ms-${index}`} fill="#f59e0b" fillOpacity={0.65} />
-                                        ))}
-                                    </Bar>
-                                    <Bar dataKey="minVar" name="minVar" fill="#0ea5e9" fillOpacity={0.7} radius={[0, 4, 4, 0]}>
-                                        {weightBarData.map((entry, index) => (
-                                            <Cell key={`mv-${index}`} fill="#0ea5e9" fillOpacity={0.55} />
-                                        ))}
-                                    </Bar>
+                                    <Bar dataKey="current" name="current" fill="#f43f5e" fillOpacity={0.65} radius={[0, 4, 4, 0]} />
+                                    <Bar dataKey="maxSharpe" name="maxSharpe" fill="#f59e0b" fillOpacity={0.65} radius={[0, 4, 4, 0]} />
+                                    <Bar dataKey="minVar" name="minVar" fill="#0ea5e9" fillOpacity={0.55} radius={[0, 4, 4, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
