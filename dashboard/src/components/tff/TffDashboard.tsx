@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { UploadCloud, Loader2, FileSpreadsheet, Trash2 } from 'lucide-react';
+import { UploadCloud, Loader2, FileSpreadsheet, Trash2, History, ArrowLeftRight, X } from 'lucide-react';
 import { TffFundData } from '../../lib/tff/types';
 import { parseTffExcel } from '../../lib/tff/excelParser';
+import { getTffRecords, saveTffRecord, deleteTffRecord, clearAllTffRecords, TffDbRecord } from '../../lib/tff/db';
 import CumulativeView from './views/CumulativeView';
 import AssetsView from './views/AssetsView';
 import PortfolioDetailView from './views/PortfolioDetailView';
@@ -26,21 +27,64 @@ export default function TffDashboard({ onOpenDetail }: Props) {
     const [selectedMonth, setSelectedMonth] = useState<string>(''); // For monthly view filter
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // 최초 로딩 시 로컬스토리지 복원
-    useEffect(() => {
-        const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                setFundData(parsed.fundData);
-                setRawLog(parsed.rawSheets);
-                if (parsed.fundData && parsed.fundData.latestMonth) {
-                    setSelectedMonth(parsed.fundData.latestMonth);
-                }
-            } catch (e) {
-                console.error("로컬 스토리지 파싱 오류", e);
-            }
+    // IndexedDB 히스토리 관련 상태
+    const [historyRecords, setHistoryRecords] = useState<TffDbRecord[]>([]);
+    const [showHistory, setShowHistory] = useState(false);
+    const [selectedCompareRecord, setSelectedCompareRecord] = useState<TffDbRecord | null>(null);
+
+    const formatMoney = (val: number) => new Intl.NumberFormat('ko-KR').format(Math.round(val));
+
+    // 히스토리 목록 불러오기
+    const loadHistory = async () => {
+        try {
+            const records = await getTffRecords();
+            setHistoryRecords(records);
+            return records;
+        } catch (err) {
+            console.error("IndexedDB 로드 오류", err);
+            return [];
         }
+    };
+
+    // 최초 로딩 시 복원 및 자동 로드
+    useEffect(() => {
+        const loadInitialData = async () => {
+            // 1. 로컬스토리지 시도
+            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+            let activeDataLoaded = false;
+
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    setFundData(parsed.fundData);
+                    setRawLog(parsed.rawSheets);
+                    if (parsed.fundData && parsed.fundData.latestMonth) {
+                        setSelectedMonth(parsed.fundData.latestMonth);
+                    }
+                    activeDataLoaded = true;
+                } catch (e) {
+                    console.error("로컬 스토리지 파싱 오류", e);
+                }
+            }
+
+            // 2. IndexedDB 히스토리 목록 로드
+            const records = await loadHistory();
+
+            // 3. 로컬스토리지에 활성 데이터가 없고 히스토리가 존재하는 경우, 가장 최근 버전 자동 복원
+            if (!activeDataLoaded && records.length > 0) {
+                const latest = records[0];
+                setFundData(latest.fundData);
+                setRawLog(latest.rawSheets);
+                if (latest.fundData && latest.fundData.latestMonth) {
+                    setSelectedMonth(latest.fundData.latestMonth);
+                }
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+                    fundData: latest.fundData,
+                    rawSheets: latest.rawSheets
+                }));
+            }
+        };
+        loadInitialData();
     }, []);
 
     const processFile = async (file: File) => {
@@ -58,6 +102,20 @@ export default function TffDashboard({ onOpenDetail }: Props) {
             // 로컬 스토리지에 캐싱
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ fundData: data, rawSheets }));
             
+            // IndexedDB 영속화 저장
+            const now = new Date();
+            const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            await saveTffRecord({
+                fileName: file.name,
+                parsedAt: formattedDate,
+                fundData: data,
+                rawSheets: rawSheets
+            });
+
+            // 히스토리 리로드
+            await loadHistory();
+
             setFundData(data);
             setRawLog(rawSheets);
             if (data.latestMonth) setSelectedMonth(data.latestMonth);
@@ -92,11 +150,145 @@ export default function TffDashboard({ onOpenDetail }: Props) {
     };
 
     const handleClearData = () => {
-        if (confirm('저장된 대시보드 데이터를 지우고 다시 업로드하시겠습니까?')) {
+        if (confirm('저장된 대시보드 데이터를 지우고 다시 업로드하시겠습니까?\n(로컬 스토리지 캐시만 지워지며 IndexedDB 히스토리는 유지됩니다.)')) {
             localStorage.removeItem(LOCAL_STORAGE_KEY);
             setFundData(null);
             setRawLog(null);
+            setSelectedCompareRecord(null);
         }
+    };
+
+    // 히스토리 단일 삭제
+    const handleDeleteHistoryItem = async (id: number) => {
+        if (confirm('이 히스토리 기록을 정말 삭제하시겠습니까?')) {
+            try {
+                await deleteTffRecord(id);
+                if (selectedCompareRecord?.id === id) {
+                    setSelectedCompareRecord(null);
+                }
+                await loadHistory();
+            } catch (err) {
+                console.error("기록 삭제 오류", err);
+                alert("기록 삭제에 실패했습니다.");
+            }
+        }
+    };
+
+    // 히스토리 전체 삭제
+    const handleClearAllHistory = async () => {
+        if (confirm('모든 히스토리 기록을 영구히 삭제하시겠습니까?\n(IndexedDB 데이터베이스가 완전히 비워지며 복구할 수 없습니다.)')) {
+            try {
+                await clearAllTffRecords();
+                setSelectedCompareRecord(null);
+                await loadHistory();
+            } catch (err) {
+                console.error("전체 삭제 오류", err);
+                alert("전체 삭제에 실패했습니다.");
+            }
+        }
+    };
+
+    // 히스토리에서 활성화(로드)
+    const handleLoadHistoryItem = (record: TffDbRecord) => {
+        if (confirm(`'${record.fileName}' 버전을 대시보드 활성 데이터로 불러오시겠습니까?`)) {
+            setFundData(record.fundData);
+            setRawLog(record.rawSheets);
+            if (record.fundData && record.fundData.latestMonth) {
+                setSelectedMonth(record.fundData.latestMonth);
+            }
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+                fundData: record.fundData,
+                rawSheets: record.rawSheets
+            }));
+            setSelectedCompareRecord(null);
+            setShowHistory(false);
+        }
+    };
+
+    // 비교하기 토글
+    const handleToggleCompare = (record: TffDbRecord, isCurrentlyActive: boolean) => {
+        if (isCurrentlyActive) return;
+        if (selectedCompareRecord?.id === record.id) {
+            setSelectedCompareRecord(null);
+        } else {
+            setSelectedCompareRecord(record);
+        }
+    };
+
+    // 비교 메트릭 렌더러
+    const renderCompareMetric = (
+        label: string,
+        baseData: TffFundData,
+        currentData: TffFundData,
+        metricType: 'totalAsset' | 'totalProfit' | 'totalReturnRate' | 'totalNetCash'
+    ) => {
+        const baseTotal = baseData.cumulative?.totalData;
+        const currentTotal = currentData.cumulative?.totalData;
+
+        if (!baseTotal || !currentTotal) {
+            return (
+                <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 text-xs text-gray-500">
+                    {label}: 데이터 없음
+                </div>
+            );
+        }
+
+        let baseVal = 0;
+        let currentVal = 0;
+        let isPercent = false;
+
+        switch (metricType) {
+            case 'totalAsset':
+                baseVal = baseTotal.endValue;
+                currentVal = currentTotal.endValue;
+                break;
+            case 'totalProfit':
+                baseVal = baseTotal.profitAmount;
+                currentVal = currentTotal.profitAmount;
+                break;
+            case 'totalReturnRate':
+                baseVal = baseTotal.timeWeightedReturn !== undefined ? baseTotal.timeWeightedReturn : baseTotal.returnRate;
+                currentVal = currentTotal.timeWeightedReturn !== undefined ? currentTotal.timeWeightedReturn : currentTotal.returnRate;
+                isPercent = true;
+                break;
+            case 'totalNetCash':
+                baseVal = baseTotal.netInOut;
+                currentVal = currentTotal.netInOut;
+                break;
+        }
+
+        const diff = currentVal - baseVal;
+        const isPositive = diff >= 0;
+
+        return (
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 space-y-1">
+                <span className="text-xs text-gray-400 font-medium">{label}</span>
+                <div className="flex items-baseline justify-between gap-1">
+                    {/* Base Value */}
+                    <div className="text-left">
+                        <span className="block text-[9px] text-gray-500 font-bold uppercase">기준</span>
+                        <div className="text-xs text-gray-300">
+                            {isPercent ? `${baseVal.toFixed(1)}%` : `${formatMoney(baseVal)}원`}
+                        </div>
+                    </div>
+
+                    {/* Arrow */}
+                    <span className="text-gray-600 text-xs px-1">→</span>
+
+                    {/* Current Value & Diff */}
+                    <div className="text-right">
+                        <span className="block text-[9px] text-gray-500 font-bold uppercase">현재</span>
+                        <div className="text-sm font-bold text-white">
+                            {isPercent ? `${currentVal.toFixed(1)}%` : `${formatMoney(currentVal)}원`}
+                        </div>
+                        <div className={`text-[10px] font-bold ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {isPositive ? '+' : ''}
+                            {isPercent ? `${diff.toFixed(1)}%` : `${formatMoney(diff)}원`}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -139,13 +331,22 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                 </button>
                             ))}
                         </div>
-                        <button 
-                            onClick={handleClearData}
-                            className="flex flex-row items-center gap-1.5 px-3 py-2 text-xs font-bold text-red-300 hover:text-red-200 bg-red-950/30 hover:bg-red-900/40 rounded-xl transition-colors border border-red-900/50 backdrop-blur-md shadow-sm"
-                            title="데이터 파일 삭제 및 초기화"
-                        >
-                            <Trash2 className="w-4 h-4" /> 지우기
-                        </button>
+                        <div className="flex flex-row items-center gap-2">
+                            <button 
+                                onClick={() => setShowHistory(true)}
+                                className="flex flex-row items-center gap-1.5 px-3 py-2 text-xs font-bold text-sky-300 hover:text-sky-200 bg-sky-950/30 hover:bg-sky-900/40 rounded-xl transition-colors border border-sky-900/50 backdrop-blur-md shadow-sm"
+                                title="업로드 히스토리 관리 및 비교"
+                            >
+                                <History className="w-4 h-4" /> 히스토리 ({historyRecords.length})
+                            </button>
+                            <button 
+                                onClick={handleClearData}
+                                className="flex flex-row items-center gap-1.5 px-3 py-2 text-xs font-bold text-red-300 hover:text-red-200 bg-red-950/30 hover:bg-red-900/40 rounded-xl transition-colors border border-red-900/50 backdrop-blur-md shadow-sm"
+                                title="데이터 파일 삭제 및 초기화"
+                            >
+                                <Trash2 className="w-4 h-4" /> 지우기
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -156,7 +357,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                 {!fundData && (
                     <div className="flex-1 flex flex-col items-center justify-center">
                         <div 
-                            className={`w-full max-w-lg p-10 mt-8 mb-8 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all cursor-pointer bg-white/5 backdrop-blur-sm
+                            className={`w-full max-w-lg p-10 mt-8 mb-4 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all cursor-pointer bg-white/5 backdrop-blur-sm
                             ${isDragging ? 'border-sky-400 bg-sky-900/20 scale-102 shadow-[0_0_40px_rgba(56,189,248,0.2)]' : 'border-gray-600 hover:border-gray-500 hover:bg-white/10'}
                             `}
                             onDragOver={handleDragOver}
@@ -191,6 +392,15 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                 </>
                             )}
                         </div>
+
+                        {historyRecords.length > 0 && (
+                            <button
+                                onClick={() => setShowHistory(true)}
+                                className="mb-8 flex flex-row items-center gap-2 px-5 py-2.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 font-bold text-sm rounded-2xl border border-sky-500/20 transition-all shadow-lg"
+                            >
+                                <History className="w-4 h-4" /> 히스토리에서 최근 데이터 불러오기 ({historyRecords.length})
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -256,6 +466,216 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                 )}
 
             </div>
+
+            {/* 히스토리 관리 및 비교 모달 */}
+            {showHistory && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="w-full max-w-4xl max-h-[85vh] bg-slate-950 border border-white/10 rounded-3xl overflow-hidden flex flex-col shadow-2xl relative">
+                        
+                        {/* 모달 헤더 */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+                            <div className="flex items-center gap-2">
+                                <History className="w-5 h-5 text-sky-400" />
+                                <h3 className="text-lg font-bold text-white">TFF 업로드 히스토리 관리</h3>
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    setShowHistory(false);
+                                    setSelectedCompareRecord(null);
+                                }}
+                                className="p-1 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* 모달 바디 */}
+                        <div className="flex-1 overflow-y-auto p-6 flex flex-col md:flex-row gap-6 custom-scrollbar">
+                            
+                            {/* 왼쪽 컬럼: 히스토리 기록 리스트 */}
+                            <div className="flex-1 flex flex-col gap-3 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-xs text-gray-400 font-bold">저장된 분석 버전 ({historyRecords.length})</span>
+                                    {historyRecords.length > 0 && (
+                                        <button 
+                                            onClick={handleClearAllHistory}
+                                            className="text-xs text-red-400 hover:text-red-300 transition-colors font-bold"
+                                        >
+                                            전체 삭제
+                                        </button>
+                                    )}
+                                </div>
+
+                                {historyRecords.length === 0 ? (
+                                    <div className="flex-1 flex flex-col items-center justify-center py-12 border border-dashed border-white/5 rounded-2xl bg-white/[0.01]">
+                                        <p className="text-gray-400 text-sm">저장된 히스토리가 없습니다.</p>
+                                        <p className="text-gray-500 text-xs mt-1">엑셀 파일을 업로드하면 자동으로 여기에 보관됩니다.</p>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
+                                        {historyRecords.map((record) => {
+                                            const isCurrentlyActive = fundData && 
+                                                record.fundData.latestMonth === fundData.latestMonth && 
+                                                record.fundData.cumulative?.totalData?.endValue === fundData.cumulative?.totalData?.endValue &&
+                                                record.fundData.cumulative?.totalData?.profitAmount === fundData.cumulative?.totalData?.profitAmount;
+
+                                            const isComparing = selectedCompareRecord?.id === record.id;
+
+                                            return (
+                                                <div 
+                                                    key={record.id}
+                                                    className={`p-3.5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white/[0.02]
+                                                    ${isCurrentlyActive ? 'border-emerald-500/30 bg-emerald-950/10' : isComparing ? 'border-sky-500/30 bg-sky-950/10' : 'border-white/5 hover:border-white/10 hover:bg-white/[0.04]'}
+                                                    `}
+                                                >
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-sm text-white truncate max-w-[220px]" title={record.fileName}>
+                                                                {record.fileName}
+                                                            </span>
+                                                            {isCurrentlyActive && (
+                                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                                    활성 버전
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 mt-1 text-[11px] text-gray-400">
+                                                            <span>분석시점: {record.parsedAt}</span>
+                                                            <span>•</span>
+                                                            <span className="text-sky-300 font-medium">최신 월: {record.fundData.latestMonth || 'N/A'}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 self-end md:self-auto">
+                                                        {/* 불러오기 버튼 */}
+                                                        {!isCurrentlyActive && (
+                                                            <button
+                                                                onClick={() => handleLoadHistoryItem(record)}
+                                                                className="px-2.5 py-1.5 text-xs font-bold text-gray-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-white/5"
+                                                            >
+                                                                불러오기
+                                                            </button>
+                                                        )}
+
+                                                        {/* 비교하기 버튼 */}
+                                                        {fundData && (
+                                                            <button
+                                                                onClick={() => handleToggleCompare(record, !!isCurrentlyActive)}
+                                                                className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition-colors border flex items-center gap-1
+                                                                ${isCurrentlyActive ? 'opacity-50 cursor-not-allowed bg-transparent border-white/5 text-gray-500' : isComparing ? 'bg-sky-500/20 border-sky-500/40 text-sky-300' : 'bg-slate-800 border-white/5 text-gray-300 hover:text-white hover:bg-slate-700'}
+                                                                `}
+                                                                disabled={!!isCurrentlyActive}
+                                                            >
+                                                                <ArrowLeftRight className="w-3.5 h-3.5" />
+                                                                {isComparing ? '비교 중' : '비교하기'}
+                                                            </button>
+                                                        )}
+
+                                                        {/* 삭제 버튼 */}
+                                                        <button
+                                                            onClick={() => handleDeleteHistoryItem(record.id)}
+                                                            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-colors border border-transparent hover:border-red-950"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 오른쪽 컬럼: 버전 비교 패널 */}
+                            <div className="w-full md:w-[350px] flex flex-col bg-black/40 border border-white/5 rounded-2xl p-4">
+                                <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-1.5">
+                                    <ArrowLeftRight className="w-4 h-4 text-sky-400" />
+                                    버전 비교 분석
+                                </h4>
+
+                                {selectedCompareRecord ? (
+                                    <div className="flex-1 flex flex-col justify-between gap-4">
+                                        <div className="space-y-4">
+                                            <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl text-xs space-y-1.5">
+                                                <div className="flex justify-between gap-2">
+                                                    <span className="text-gray-400">기준 파일:</span>
+                                                    <span className="font-semibold text-white truncate max-w-[150px]" title={selectedCompareRecord.fileName}>{selectedCompareRecord.fileName}</span>
+                                                </div>
+                                                <div className="flex justify-between gap-2">
+                                                    <span className="text-gray-400">비교 대상:</span>
+                                                    <span className="font-semibold text-emerald-400 truncate max-w-[150px]">현재 활성 버전</span>
+                                                </div>
+                                            </div>
+
+                                            {/* 메트릭 비교 목록 */}
+                                            <div className="space-y-3">
+                                                {renderCompareMetric(
+                                                    '총 포트폴리오 자산',
+                                                    selectedCompareRecord.fundData,
+                                                    fundData!,
+                                                    'totalAsset'
+                                                )}
+
+                                                {renderCompareMetric(
+                                                    '누적 손익금액',
+                                                    selectedCompareRecord.fundData,
+                                                    fundData!,
+                                                    'totalProfit'
+                                                )}
+
+                                                {renderCompareMetric(
+                                                    '누적 수익률',
+                                                    selectedCompareRecord.fundData,
+                                                    fundData!,
+                                                    'totalReturnRate'
+                                                )}
+
+                                                {renderCompareMetric(
+                                                    '누적 순 입금액',
+                                                    selectedCompareRecord.fundData,
+                                                    fundData!,
+                                                    'totalNetCash'
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-2 border-t border-white/5">
+                                            <button
+                                                onClick={() => setSelectedCompareRecord(null)}
+                                                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-gray-300 hover:text-white rounded-xl text-xs font-bold transition-all border border-white/5"
+                                            >
+                                                비교 취소
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
+                                        <ArrowLeftRight className="w-8 h-8 text-gray-600 mb-3 animate-pulse" />
+                                        <p className="text-xs text-gray-400 font-bold mb-1">비교할 히스토리 버전을 선택하세요</p>
+                                        <p className="text-[11px] text-gray-500 max-w-[220px]">
+                                            목록에서 과거 버전의 <strong className="text-sky-400 font-medium">['비교하기']</strong> 버튼을 클릭하면 활성 데이터 대비 지표별 차이를 직관적으로 분석할 수 있습니다.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                        </div>
+                        
+                        {/* 모달 푸터 */}
+                        <div className="px-6 py-4 border-t border-white/5 bg-black/20 flex justify-end">
+                            <button
+                                onClick={() => {
+                                    setShowHistory(false);
+                                    setSelectedCompareRecord(null);
+                                }}
+                                className="px-5 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-xl text-xs transition-colors"
+                            >
+                                닫기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

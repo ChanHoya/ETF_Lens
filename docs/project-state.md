@@ -20,7 +20,7 @@ Base: Exit Strategy Monitoring (KOSPI)
  
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
-| S6-1 | TFF 엑셀 업로드 데이터 IndexedDB 영속화 및 히스토리 비교 | ⬜ planned | 파일 데이터 및 파싱 JSON 로컬 IndexedDB에 반영 및 과거 분석 데이터 비교 조회 기능 구현 |
+| S6-1 | TFF 엑셀 업로드 데이터 IndexedDB 영속화 및 히스토리 비교 | ✅ stable | 파일 데이터 및 파싱 JSON 로컬 IndexedDB에 반영 및 과거 분석 데이터 비교 조회 기능 구현 완료 |
 | S6-2 | 포트폴리오 Efficient Frontier 최적화 백엔드 API | ⬜ planned | yfinance/pykrx 연동 기대수익률, 공분산 및 몬테카를로 포트폴리오 변동성 최적화 연산 모듈 구현 |
 | S6-3 | Efficient Frontier 시각화 및 최적 비중 연동 | ⬜ planned | Recharts 산점도 및 포트폴리오 최적 경계선 플로팅, 비중 레이더 차트 및 자산 재조정 가이드 연동 |
 | S6-4 | ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API | ⬜ planned | Seibro/네이버페이 기반 과거 분배금 단가 및 배당 지급일/주기 크롤링 API 연산 모듈 구현 |

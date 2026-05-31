@@ -48,6 +48,7 @@
 | S5-12: ETF 구성종목(CU) 데이터 보완 및 yfinance 연동 | ✅ done | backend/api/router.py, Modals.tsx, SpaceChart.tsx | 미국 ETF 최신 구성종목 dynamic 연동 및 국내 상장 해외/합성 ETF의 주식수 기반 비율 차트 시각화, 우주섹터 구성종목 테이블 우측 상단 기준일자 정보 실시간 수집 시각(KST)으로 동적 연동 완료 |
 | S5-13: 실시간 괴리율 경보 5단계 등급 개편 | ✅ done | MyDashboard.tsx, HoldingsSignals.tsx | 괴리율 마이너스 영역 '매수 검토/관망', 플러스 영역 '매도 관망/검토' 5단계 투자지침형 체계 개편 |
 | S5-14: TFF 종목별 수익률 엑셀 테이블 및 예수금 핫픽스 | ✅ done | YtmView.tsx, MonthlyView.tsx, excelParser.ts, types.ts | 종목별 수익률 탭 내 엑셀 레이아웃 그대로 반영된 요약표 추가, 현금(예수금) 파싱 알고리즘 최적화, YTM 탭 상단에 엑셀 원본 포맷의 종합 현황판 및 현금/평잔 종합현황 대시보드 추가 완료 |
+| S6-1: TFF 엑셀 업로드 IndexedDB 영속화 및 히스토리 비교 | ✅ done | TffDashboard.tsx, db.ts | 엑셀 데이터 파일/JSON IndexedDB 저장, 자동 복원, 버전 비교 및 히스토리 관리 패널 구현 완료 |
 
 
 
