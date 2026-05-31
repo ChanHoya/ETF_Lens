@@ -22,6 +22,7 @@ A living document of module relationships. Update whenever modules are added or 
 | Space ETF Analysis | Presentation | Space sector ETF performance charts, custom legends, and toggled constituent comparison tables | api/router, SpaceChart | SectorAnalysisTab | Antigravity |
 | ETF Disparity Monitoring | Presentation | Real-time Indicative NAV disparity rate analyzer and alert scheduling | core/disparity_analyzer, core/notifier, api/router | MyDashboard, SpaceChart, BioChart, scheduler | Antigravity |
 | TFF IndexedDB Persistence | Presentation | Local storage of TFF Excel parsed JSON and version history comparisons | db.ts | TffDashboard | Antigravity |
+| Efficient Frontier | Presentation | Portfolio Efficient Frontier MPT simulation & weight optimization | api/efficient_frontier | - | Antigravity |
 <!-- Add new modules above this line -->
 
 
