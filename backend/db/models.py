@@ -237,3 +237,14 @@ class ExitSignalCache(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class TffRecord(Base):
+    """Time Future Forum (TFF) Excel uploaded and parsed data history"""
+    __tablename__ = "tff_records"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    file_name = Column(String, nullable=False)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    fund_data_json = Column(Text, nullable=False)   # parsed TffFundData JSON
+    raw_sheets_json = Column(Text, nullable=False)  # rawSheets parsed JSON
+
+

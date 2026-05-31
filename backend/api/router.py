@@ -3526,4 +3526,142 @@ async def get_bio_holdings(db: AsyncSession = Depends(get_db)):
     }
 
 
+# ── TFF 중앙 공유형 대시보드 API ──────────────────────────────────────────────
+
+class TffUploadRequest(BaseModel):
+    admin_key: str
+    file_name: str
+    fund_data: dict
+    raw_sheets: dict
+
+class TffVerifyTokenRequest(BaseModel):
+    admin_key: str
+
+class TffDeleteRequest(BaseModel):
+    admin_key: str
+
+
+@router.post("/tff/upload")
+async def upload_tff_record(req: TffUploadRequest, db: AsyncSession = Depends(get_db)):
+    import os
+    from db.models import TffRecord
+    
+    admin_key = os.getenv("TFF_ADMIN_KEY", "tffmaster123!")
+    if req.admin_key != admin_key:
+        return {"status": "error", "message": "마스터 인증 키가 유효하지 않습니다."}
+        
+    try:
+        record = TffRecord(
+            file_name=req.file_name,
+            fund_data_json=json.dumps(req.fund_data),
+            raw_sheets_json=json.dumps(req.raw_sheets)
+        )
+        db.add(record)
+        await db.commit()
+        return {"status": "ok", "message": "성공적으로 공유 데이터베이스에 저장되었습니다.", "record_id": record.id}
+    except Exception as e:
+        logger.error(f"Error saving TFF upload record: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@router.get("/tff/latest")
+async def get_latest_tff_record(db: AsyncSession = Depends(get_db)):
+    from db.models import TffRecord
+    try:
+        stmt = select(TffRecord).order_by(TffRecord.id.desc())
+        result = await db.execute(stmt)
+        record = result.scalars().first()
+        if not record:
+            return {"status": "empty", "message": "저장된 TFF 펀드 현황 데이터가 없습니다."}
+            
+        return {
+            "status": "ok",
+            "id": record.id,
+            "file_name": record.file_name,
+            "uploaded_at": record.uploaded_at.isoformat() if record.uploaded_at else None,
+            "fund_data": json.loads(record.fund_data_json),
+            "raw_sheets": json.loads(record.raw_sheets_json)
+        }
+    except Exception as e:
+        logger.error(f"Error fetching latest TFF record: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@router.get("/tff/records")
+async def get_tff_records_list(db: AsyncSession = Depends(get_db)):
+    from db.models import TffRecord
+    try:
+        stmt = select(TffRecord.id, TffRecord.file_name, TffRecord.uploaded_at).order_by(TffRecord.id.desc())
+        result = await db.execute(stmt)
+        rows = result.all()
+        return [
+            {
+                "id": row.id,
+                "file_name": row.file_name,
+                "uploaded_at": row.uploaded_at.isoformat() if row.uploaded_at else None
+            }
+            for row in rows
+        ]
+    except Exception as e:
+        logger.error(f"Error listing TFF records: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@router.get("/tff/record/{record_id}")
+async def get_tff_record_by_id(record_id: int, db: AsyncSession = Depends(get_db)):
+    from db.models import TffRecord
+    try:
+        stmt = select(TffRecord).where(TffRecord.id == record_id)
+        result = await db.execute(stmt)
+        record = result.scalars().first()
+        if not record:
+            return {"status": "error", "message": "해당 버전을 찾을 수 없습니다."}
+            
+        return {
+            "status": "ok",
+            "id": record.id,
+            "file_name": record.file_name,
+            "uploaded_at": record.uploaded_at.isoformat() if record.uploaded_at else None,
+            "fund_data": json.loads(record.fund_data_json),
+            "raw_sheets": json.loads(record.raw_sheets_json)
+        }
+    except Exception as e:
+        logger.error(f"Error fetching TFF record by ID: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@router.post("/tff/record/{record_id}/delete")
+async def delete_tff_record_by_id(record_id: int, req: TffDeleteRequest, db: AsyncSession = Depends(get_db)):
+    import os
+    from db.models import TffRecord
+    
+    admin_key = os.getenv("TFF_ADMIN_KEY", "tffmaster123!")
+    if req.admin_key != admin_key:
+        return {"status": "error", "message": "마스터 인증 키가 유효하지 않습니다."}
+        
+    try:
+        stmt = select(TffRecord).where(TffRecord.id == record_id)
+        result = await db.execute(stmt)
+        record = result.scalars().first()
+        if not record:
+            return {"status": "error", "message": "해당 기록을 찾을 수 없습니다."}
+            
+        await db.delete(record)
+        await db.commit()
+        return {"status": "ok", "message": "해당 TFF 기록이 성공적으로 삭제되었습니다."}
+    except Exception as e:
+        logger.error(f"Error deleting TFF record: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@router.post("/tff/verify-token")
+async def verify_tff_admin_key(req: TffVerifyTokenRequest):
+    import os
+    admin_key = os.getenv("TFF_ADMIN_KEY", "tffmaster123!")
+    if req.admin_key == admin_key:
+        return {"status": "ok", "message": "마스터 권한 획득 성공"}
+    return {"status": "error", "message": "비밀번호가 일치하지 않습니다."}
+
+
+
 
