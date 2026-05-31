@@ -162,34 +162,15 @@ export default function MonthlyView({ data, onOpenDetail, titleRightElement }: P
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
       {/* View Header with Selector */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 shrink-0">
-            <Calendar className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-extrabold text-white">
-              {period} 월별 운용 현황
-            </h3>
-            {titleRightElement}
-          </div>
+      <div className="flex items-center gap-3 bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-md">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 shrink-0">
+          <Calendar className="w-5 h-5 text-white" />
         </div>
-        
-        {/* Class Filters */}
-        <div className="flex items-center flex-wrap gap-1.5">
-          {FILTER_TYPES.map(filter => (
-            <button
-              key={filter.value}
-              onClick={() => setSelectedType(filter.value)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                selectedType === filter.value 
-                  ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md' 
-                  : 'bg-[#1a1a23]/60 text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-white/5'
-              }`}
-            >
-              {filter.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-extrabold text-white">
+            {period} 월별 운용 현황
+          </h3>
+          {titleRightElement}
         </div>
       </div>
 
@@ -432,6 +413,26 @@ export default function MonthlyView({ data, onOpenDetail, titleRightElement }: P
             </span>
           </div>
           <p className="text-[10px] text-gray-500 mt-1">당월 자산 투입 대비 손익</p>
+        </div>
+      </div>
+
+      {/* Class Filters */}
+      <div className="flex items-center justify-between flex-wrap gap-3 bg-[#1a1a23]/30 p-3 rounded-2xl border border-white/5 backdrop-blur-sm">
+        <span className="text-xs font-bold text-gray-400 pl-1">보유 자산 분류</span>
+        <div className="flex items-center flex-wrap gap-1.5">
+          {FILTER_TYPES.map(filter => (
+            <button
+              key={filter.value}
+              onClick={() => setSelectedType(filter.value)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                selectedType === filter.value 
+                  ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md shadow-indigo-500/10' 
+                  : 'bg-[#1a1a23]/60 text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-white/5'
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
         </div>
       </div>
 
