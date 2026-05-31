@@ -583,7 +583,9 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
         hRow.forEach((val, c) => {
             if (typeof val === 'string') {
                 const clean = val.replace(/\s/g, '');
-                if (clean.includes('종목명') && colMap.name === undefined) colMap.name = c;
+                if (clean.includes('계좌') && colMap.account === undefined) colMap.account = c;
+                else if (clean.includes('상품유형') && colMap.type === undefined) colMap.type = c;
+                else if (clean.includes('종목명') && colMap.name === undefined) colMap.name = c;
                 else if (clean.includes('투자손익') && colMap.pnl === undefined) colMap.pnl = c;
                 else if (clean.includes('기초평가') && colMap.begin === undefined) colMap.begin = c;
                 else if (clean.includes('기말평가') && colMap.end === undefined) colMap.end = c;
@@ -656,6 +658,40 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
                             if (totalIdx !== -1) info.summary.totalBalance = parseNumber(rows[tr][totalIdx]);
                         }
                     }
+
+                    // 추가 수익 지표 추출 (총입금액수익, 시간평잔수익% 등)
+                    rows[sr].forEach((cell, c) => {
+                        if (typeof cell !== 'string') return;
+                        const cellStr = cell.replace(/\s/g, '');
+                        
+                        const findNextVal = () => {
+                            for (let nextCol = c + 1; nextCol < rows[sr].length; nextCol++) {
+                                const v = rows[sr][nextCol];
+                                if (v !== undefined && v !== null && v !== '') {
+                                    return v;
+                                }
+                            }
+                            return undefined;
+                        };
+                        
+                        if (cellStr.includes("총입금액수익%")) {
+                            const nextVal = findNextVal();
+                            const val = parseOptionalPercentage(nextVal);
+                            if (val !== undefined) info.summary.depositPnlRate = val;
+                        } else if (cellStr.includes("총입금액수익")) {
+                            const nextVal = findNextVal();
+                            const val = parseOptionalNumber(nextVal);
+                            if (val !== undefined) info.summary.depositPnl = val;
+                        } else if (cellStr.includes("시간평잔수익%")) {
+                            const nextVal = findNextVal();
+                            const val = parseOptionalPercentage(nextVal);
+                            if (val !== undefined) info.summary.timeWeightedReturnRate = val;
+                        } else if (cellStr.includes("시간평잔금액")) {
+                            const nextVal = findNextVal();
+                            const val = parseOptionalNumber(nextVal);
+                            if (val !== undefined) info.summary.timeWeightedBalance = val;
+                        }
+                    });
                 }
                 break; // 홀딩스 끝
             }
@@ -663,7 +699,12 @@ function parseMonthOrYtmSheet(rows: any[][], periodName: string): TffMonthInfo {
             const nameVal = rowData[colMap.name || 14]; // O열 근처
             if (!nameVal || typeof nameVal !== 'string') continue;
 
+            const accountVal = colMap.account !== undefined ? rowData[colMap.account] : rowData[0];
+            const typeVal = colMap.type !== undefined ? rowData[colMap.type] : rowData[1];
+
             info.holdings.push({
+                accountNumber: accountVal !== undefined ? String(accountVal).trim() : undefined,
+                productType: typeVal !== undefined ? String(typeVal).trim() : undefined,
                 name: nameVal,
                 code: findTickerCode(nameVal),
                 beginValue: parseNumber(rowData[colMap.begin]),

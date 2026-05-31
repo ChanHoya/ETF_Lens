@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { TffMonthInfo } from '../../../lib/tff/types';
-import { Wallet, PieChart, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, DollarSign, Award, Layers, Percent } from 'lucide-react';
+import { Wallet, PieChart, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, DollarSign, Award, Layers, Percent, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import krTickers from '../../../lib/tff/kr-tickers.json';
 
 function findTickerCode(name: string): string | undefined {
@@ -48,6 +48,10 @@ interface Props {
 export default function YtmView({ data, onOpenDetail }: Props) {
   const { holdings, summary } = data;
   const [selectedType, setSelectedType] = useState<string>('전체');
+
+  // Table sorting states
+  const [tableSortKey, setTableSortKey] = useState<string>('investmentPnl');
+  const [tableSortDir, setTableSortDir] = useState<'asc' | 'desc'>('desc');
 
   if (!holdings || holdings.length === 0) {
     return <div className="text-gray-400 py-12 text-center">YTM 데이터가 없습니다.</div>;
@@ -98,9 +102,337 @@ export default function YtmView({ data, onOpenDetail }: Props) {
     ? (totalPnl / (totalBegin + totalBuy - totalSell)) * 100 
     : 0;
 
+  // Table sorting logic
+  const handleTableSort = (key: string) => {
+    if (tableSortKey === key) {
+        setTableSortDir(prev => prev === 'desc' ? 'asc' : 'desc');
+    } else {
+        setTableSortKey(key);
+        setTableSortDir('desc');
+    }
+  };
+
+  const sortedHoldings = [...holdings].sort((a, b) => {
+    let valA: any = 0;
+    let valB: any = 0;
+    
+    if (tableSortKey === 'name') {
+      valA = a.name;
+      valB = b.name;
+    } else if (tableSortKey === 'capitalGain') {
+      valA = (a.investmentPnl || 0) - (a.dividend || 0);
+      valB = (b.investmentPnl || 0) - (b.dividend || 0);
+    } else if (tableSortKey === 'capitalReturnRate') {
+      const capA = (a.investmentPnl || 0) - (a.dividend || 0);
+      const capB = (b.investmentPnl || 0) - (b.dividend || 0);
+      valA = (a.beginValue + a.buyAmount > 0) ? (capA / (a.beginValue + a.buyAmount)) : 0;
+      valB = (b.beginValue + b.buyAmount > 0) ? (capB / (b.beginValue + b.buyAmount)) : 0;
+    } else {
+      valA = a[tableSortKey as keyof typeof a];
+      valB = b[tableSortKey as keyof typeof b];
+    }
+
+    if (valA === undefined || valA === null) valA = 0;
+    if (valB === undefined || valB === null) valB = 0;
+
+    if (typeof valA === 'string' && typeof valB === 'string') {
+      return tableSortDir === 'desc' 
+        ? valB.localeCompare(valA) 
+        : valA.localeCompare(valB);
+    }
+    
+    return tableSortDir === 'desc' 
+      ? (valB as number) - (valA as number) 
+      : (valA as number) - (valB as number);
+  });
+
+  const getPnlStyle = (val?: number) => {
+    if (val === undefined || val === null || val === 0) return 'text-gray-500 text-center';
+    return val > 0 
+      ? 'bg-emerald-950/40 text-emerald-400 font-semibold text-center border border-emerald-500/10' 
+      : 'bg-rose-950/40 text-rose-400 font-semibold text-center border border-rose-500/10';
+  };
+  
+  const formatPctCell = (val?: number) => {
+    if (val === undefined || val === null || isNaN(val) || val === 0) return '0.0%';
+    return `${val > 0 ? '+' : ''}${val.toFixed(1)}%`;
+  };
+
+  // Cash inclusive and time-weighted summary calculations
+  const cashBalance = summary.cashBalance || 0;
+  const carryoverBalance = summary.carryoverBalance || 0;
+  const deposit = summary.deposit || 0;
+  const withdrawal = summary.withdrawal || 0;
+  const totalBalance = summary.totalBalance || 0;
+  
+  const depositPnl = summary.depositPnl !== undefined 
+    ? summary.depositPnl 
+    : (totalBalance - carryoverBalance - deposit + withdrawal);
+    
+  const depositPnlRate = summary.depositPnlRate !== undefined 
+    ? summary.depositPnlRate 
+    : (carryoverBalance + deposit > 0 ? (depositPnl / (carryoverBalance + deposit)) * 100 : 0);
+
+  const timeWeightedReturnRate = summary.timeWeightedReturnRate;
+  const timeWeightedBalance = summary.timeWeightedBalance;
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
+
+      {/* YTM 원본 데이터 종합 현황판 */}
+      <div className="bg-[#12121A]/80 border border-white/10 rounded-2xl p-4 md:p-5 backdrop-blur-md shadow-lg">
+          <h4 className="text-sm font-bold text-gray-300 mb-3.5 flex items-center gap-2 border-l-2 border-amber-500 pl-2">
+              📊 YTM 종합 현황판 (Excel 원본 기준)
+          </h4>
+          <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
+                  <thead>
+                      <tr className="bg-black/40 text-gray-400 border-b border-white/10 text-[10px]">
+                          <th className="py-2 px-2 border-r border-white/5 text-center font-semibold">계좌번호</th>
+                          <th className="py-2 px-2 border-r border-white/5 text-center font-semibold">상품유형</th>
+                          <th 
+                              onClick={() => handleTableSort('name')}
+                              className="py-2 px-3 border-r border-white/5 font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
+                          >
+                              <div className="flex items-center gap-1">
+                                  <span>종목명(상품명)</span>
+                                  {tableSortKey === 'name' ? (
+                                      tableSortDir === 'desc' ? <ArrowDown className="w-3 h-3 text-amber-500" /> : <ArrowUp className="w-3 h-3 text-amber-500" />
+                                  ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />}
+                              </div>
+                          </th>
+                          <th 
+                              onClick={() => handleTableSort('beginValue')}
+                              className="py-2 px-2 border-r border-white/5 text-right font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
+                          >
+                              <div className="flex items-center justify-end gap-1">
+                                  <span>기초평가금액</span>
+                                  {tableSortKey === 'beginValue' ? (
+                                      tableSortDir === 'desc' ? <ArrowDown className="w-3 h-3 text-amber-500" /> : <ArrowUp className="w-3 h-3 text-amber-500" />
+                                  ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />}
+                              </div>
+                          </th>
+                          <th 
+                              onClick={() => handleTableSort('buyAmount')}
+                              className="py-2 px-2 border-r border-white/5 text-right font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
+                          >
+                              <div className="flex items-center justify-end gap-1">
+                                  <span>매수/입고</span>
+                                  {tableSortKey === 'buyAmount' ? (
+                                      tableSortDir === 'desc' ? <ArrowDown className="w-3 h-3 text-amber-500" /> : <ArrowUp className="w-3 h-3 text-amber-500" />
+                                  ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />}
+                              </div>
+                          </th>
+                          <th 
+                              onClick={() => handleTableSort('sellAmount')}
+                              className="py-2 px-2 border-r border-white/5 text-right font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
+                          >
+                              <div className="flex items-center justify-end gap-1">
+                                  <span>매도/출고</span>
+                                  {tableSortKey === 'sellAmount' ? (
+                                      tableSortDir === 'desc' ? <ArrowDown className="w-3 h-3 text-amber-500" /> : <ArrowUp className="w-3 h-3 text-amber-500" />
+                                  ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />}
+                              </div>
+                          </th>
+                          <th 
+                              onClick={() => handleTableSort('endValue')}
+                              className="py-2 px-2 border-r border-white/5 text-right font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
+                          >
+                              <div className="flex items-center justify-end gap-1">
+                                  <span>기말평가금액</span>
+                                  {tableSortKey === 'endValue' ? (
+                                      tableSortDir === 'desc' ? <ArrowDown className="w-3 h-3 text-amber-500" /> : <ArrowUp className="w-3 h-3 text-amber-500" />
+                                  ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />}
+                              </div>
+                          </th>
+                          <th 
+                              onClick={() => handleTableSort('dividend')}
+                              className="py-2 px-2 border-r border-white/5 text-right font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
+                          >
+                              <div className="flex items-center justify-end gap-1">
+                                  <span>배당/채권이자</span>
+                                  {tableSortKey === 'dividend' ? (
+                                      tableSortDir === 'desc' ? <ArrowDown className="w-3 h-3 text-amber-500" /> : <ArrowUp className="w-3 h-3 text-amber-500" />
+                                  ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />}
+                              </div>
+                          </th>
+                          <th 
+                              onClick={() => handleTableSort('creditInterest')}
+                              className="py-2 px-2 border-r border-white/5 text-right font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
+                          >
+                              <div className="flex items-center justify-end gap-1">
+                                  <span>신용이자</span>
+                                  {tableSortKey === 'creditInterest' ? (
+                                      tableSortDir === 'desc' ? <ArrowDown className="w-3 h-3 text-amber-500" /> : <ArrowUp className="w-3 h-3 text-amber-500" />
+                                  ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />}
+                              </div>
+                          </th>
+                          <th 
+                              onClick={() => handleTableSort('investmentPnl')}
+                              className="py-2 px-2 border-r border-white/5 text-right font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
+                          >
+                              <div className="flex items-center justify-end gap-1">
+                                  <span>투자손익</span>
+                                  {tableSortKey === 'investmentPnl' ? (
+                                      tableSortDir === 'desc' ? <ArrowDown className="w-3 h-3 text-amber-500" /> : <ArrowUp className="w-3 h-3 text-amber-500" />
+                                  ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />}
+                              </div>
+                          </th>
+                          <th 
+                              onClick={() => handleTableSort('capitalGain')}
+                              className="py-2 px-2 border-r border-white/5 text-right font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
+                          >
+                              <div className="flex items-center justify-end gap-1">
+                                  <span>자본손익</span>
+                                  {tableSortKey === 'capitalGain' ? (
+                                      tableSortDir === 'desc' ? <ArrowDown className="w-3 h-3 text-amber-500" /> : <ArrowUp className="w-3 h-3 text-amber-500" />
+                                  ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />}
+                              </div>
+                          </th>
+                          <th 
+                              onClick={() => handleTableSort('capitalReturnRate')}
+                              className="py-2 px-2 text-center font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
+                          >
+                              <div className="flex items-center justify-center gap-1">
+                                  <span>% 자본손익</span>
+                                  {tableSortKey === 'capitalReturnRate' ? (
+                                      tableSortDir === 'desc' ? <ArrowDown className="w-3 h-3 text-amber-500" /> : <ArrowUp className="w-3 h-3 text-amber-500" />
+                                  ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />}
+                              </div>
+                          </th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 font-mono text-gray-300">
+                      {sortedHoldings.map((h, idx) => {
+                          const capGain = (h.investmentPnl || 0) - (h.dividend || 0);
+                          const capRate = (h.beginValue + h.buyAmount > 0) ? (capGain / (h.beginValue + h.buyAmount)) * 100 : 0;
+                          const code = h.code || findTickerCode(h.name);
+                          const hasClick = onOpenDetail && code;
+
+                          return (
+                              <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                                  <td className="py-1 px-2 border-r border-white/5 text-gray-500 text-center font-semibold">{h.accountNumber || '-'}</td>
+                                  <td className="py-1 px-2 border-r border-white/5 text-gray-400 text-center">{h.productType || '-'}</td>
+                                  <td 
+                                      onClick={() => {
+                                          if (hasClick && code) onOpenDetail(code);
+                                      }}
+                                      className={`py-1 px-3 border-r border-white/5 font-sans font-bold text-gray-200 text-left ${hasClick ? 'cursor-pointer hover:text-amber-400 hover:underline transition-colors' : ''}`}
+                                  >
+                                      {h.name}
+                                  </td>
+                                  <td className="py-1 px-2 border-r border-white/5 text-right text-gray-400">{formatMoney(h.beginValue)}</td>
+                                  <td className="py-1 px-2 border-r border-white/5 text-right text-sky-400/90">{formatMoney(h.buyAmount)}</td>
+                                  <td className="py-1 px-2 border-r border-white/5 text-right text-purple-400/90">{formatMoney(h.sellAmount)}</td>
+                                  <td className="py-1 px-2 border-r border-white/5 text-right text-gray-200 font-bold">{formatMoney(h.endValue)}</td>
+                                  <td className="py-1 px-2 border-r border-white/5 text-right text-indigo-300">{formatMoney(h.dividend)}</td>
+                                  <td className="py-1 px-2 border-r border-white/5 text-right text-gray-500">{formatMoney(h.creditInterest)}</td>
+                                  <td className={`py-1 px-2 border-r border-white/5 text-right font-bold ${h.investmentPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                      {h.investmentPnl >= 0 ? '+' : ''}{formatMoney(h.investmentPnl)}
+                                  </td>
+                                  <td className={`py-1 px-2 border-r border-white/5 text-right ${capGain >= 0 ? 'text-emerald-400/90' : 'text-rose-400/90'}`}>
+                                      {capGain >= 0 ? '+' : ''}{formatMoney(capGain)}
+                                  </td>
+                                  <td className={`py-1 px-2 ${getPnlStyle(capRate)}`}>
+                                      {formatPctCell(capRate)}
+                                  </td>
+                              </tr>
+                          );
+                      })}
+
+                      {/* 전체 합계 행 */}
+                      <tr className="bg-white/[0.04] font-black border-t border-b border-white/10">
+                          <td className="py-2 px-2 border-r border-white/5 text-gray-400 text-center font-bold" colSpan={2}>합계</td>
+                          <td className="py-2 px-3 border-r border-white/5 font-sans text-white font-extrabold text-left">전체 합계</td>
+                          <td className="py-2 px-2 border-r border-white/5 text-right text-gray-300 font-bold">{formatMoney(summary.totalBeginValue)}</td>
+                          <td className="py-2 px-2 border-r border-white/5 text-right text-sky-400 font-bold">{formatMoney(summary.totalBuyAmount)}</td>
+                          <td className="py-2 px-2 border-r border-white/5 text-right text-purple-400 font-bold">{formatMoney(summary.totalSellAmount)}</td>
+                          <td className="py-2 px-2 border-r border-white/5 text-right text-white font-black">{formatMoney(summary.totalEndValue)}</td>
+                          <td className="py-2 px-2 border-r border-white/5 text-right text-indigo-300 font-bold">{formatMoney(summary.totalDividend)}</td>
+                          <td className="py-2 px-2 border-r border-white/5 text-right text-gray-500">
+                              {formatMoney(holdings.reduce((sum, h) => sum + (h.creditInterest || 0), 0))}
+                          </td>
+                          <td className={`py-2 px-2 border-r border-white/5 text-right font-black ${summary.totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {summary.totalPnl >= 0 ? '+' : ''}{formatMoney(summary.totalPnl)}
+                          </td>
+                          <td className={`py-2 px-2 border-r border-white/5 text-right font-bold ${(summary.totalPnl - summary.totalDividend) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {(summary.totalPnl - summary.totalDividend) >= 0 ? '+' : ''}{formatMoney(summary.totalPnl - summary.totalDividend)}
+                          </td>
+                          <td className={`py-2 px-2 font-black ${getPnlStyle((summary.totalBeginValue + summary.totalBuyAmount > 0) ? ((summary.totalPnl - summary.totalDividend) / (summary.totalBeginValue + summary.totalBuyAmount) * 100) : 0)}`}>
+                              {formatPctCell((summary.totalBeginValue + summary.totalBuyAmount > 0) ? ((summary.totalPnl - summary.totalDividend) / (summary.totalBeginValue + summary.totalBuyAmount) * 100) : 0)}
+                          </td>
+                      </tr>
+                  </tbody>
+              </table>
+          </div>
+      </div>
+
+      {/* 현금잔고 포함 종합 현황판 */}
+      <div className="bg-[#12121A]/80 border border-white/10 rounded-2xl p-4 md:p-5 backdrop-blur-md shadow-lg">
+          <h4 className="text-sm font-bold text-gray-300 mb-3.5 flex items-center gap-2 border-l-2 border-amber-500 pl-2">
+              💵 현금잔고 포함 종합 현황 (배당제외)
+          </h4>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* 왼쪽: 잔고 매칭 테이블 */}
+              <div className="lg:col-span-2 overflow-x-auto custom-scrollbar border border-white/5 rounded-xl bg-black/20">
+                  <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
+                      <thead>
+                          <tr className="bg-black/40 text-gray-400 border-b border-white/10">
+                              <th className="py-2 px-3 font-semibold text-center border-r border-white/5">현금잔고</th>
+                              <th className="py-2 px-3 font-semibold text-center border-r border-white/5">이월잔고</th>
+                              <th className="py-2 px-3 font-semibold text-center border-r border-white/5">입금</th>
+                              <th className="py-2 px-3 font-semibold text-center border-r border-white/5">출금</th>
+                              <th className="py-2 px-3 font-semibold text-center">종합잔고</th>
+                          </tr>
+                      </thead>
+                      <tbody className="font-mono text-center">
+                          <tr className="text-gray-200">
+                              <td className="py-2.5 px-3 border-r border-white/5 font-bold text-amber-400">{formatMoney(cashBalance)} 원</td>
+                              <td className="py-2.5 px-3 border-r border-white/5">{formatMoney(carryoverBalance)} 원</td>
+                              <td className="py-2.5 px-3 border-r border-white/5 text-emerald-400 font-semibold">+{formatMoney(deposit)} 원</td>
+                              <td className="py-2.5 px-3 border-r border-white/5 text-rose-400 font-semibold">-{formatMoney(withdrawal)} 원</td>
+                              <td className="py-2.5 px-3 font-black text-white">{formatMoney(totalBalance)} 원</td>
+                          </tr>
+                      </tbody>
+                  </table>
+              </div>
+
+              {/* 오른쪽: 평잔/수익률 매트릭스 */}
+              <div className="bg-black/30 rounded-xl p-3 border border-white/5 flex flex-col justify-between text-xs gap-2">
+                  <div className="grid grid-cols-2 gap-2.5">
+                      <div className="bg-[#1a1a23]/60 p-2 rounded-lg border border-white/5">
+                          <span className="text-[10px] text-gray-500 block">투자손익(현금포함)</span>
+                          <strong className={`font-bold font-mono ${depositPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {depositPnl >= 0 ? '+' : ''}{formatMoney(depositPnl)} 원
+                          </strong>
+                      </div>
+                      <div className="bg-[#1a1a23]/60 p-2 rounded-lg border border-white/5">
+                          <span className="text-[10px] text-gray-500 block">투자수익률</span>
+                          <strong className={`font-bold font-mono px-1 rounded ${depositPnl >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                              {depositPnlRate >= 0 ? '+' : ''}{depositPnlRate.toFixed(1)}%
+                          </strong>
+                      </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                      <div className="bg-[#1a1a23]/60 p-2 rounded-lg border border-white/5">
+                          <span className="text-[10px] text-gray-500 block">시간평잔금액</span>
+                          <strong className="text-gray-300 font-bold font-mono">
+                              {timeWeightedBalance !== undefined ? `${formatMoney(timeWeightedBalance)} 원` : '-'}
+                          </strong>
+                      </div>
+                      <div className="bg-[#1a1a23]/60 p-2 rounded-lg border border-white/5">
+                          <span className="text-[10px] text-gray-500 block">시간평잔수익률</span>
+                          <strong className="text-amber-400 font-black font-mono">
+                              {timeWeightedReturnRate !== undefined ? `${timeWeightedReturnRate.toFixed(1)}%` : '-'}
+                          </strong>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <div className="h-px bg-white/5 my-4" />
+
       {/* View Header */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-md">
         <div className="flex items-center gap-3">

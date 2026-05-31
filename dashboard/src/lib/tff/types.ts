@@ -30,6 +30,12 @@ export interface TffMonthlySummary {
     deposit: number; // 입금
     withdrawal: number; // 출금
     totalBalance: number; // 종합잔고
+    
+    // 원본 테이블 재현을 위한 추가 필드
+    depositPnl?: number;             // 총입금액수익 (투자손익)
+    depositPnlRate?: number;         // 총입금액수익%
+    timeWeightedReturnRate?: number; // 시간평잔수익%
+    timeWeightedBalance?: number;    // 시간평잔금액
 }
   
 export interface TffMonthInfo {
