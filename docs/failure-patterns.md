@@ -172,4 +172,21 @@
 - **원인**: Excel 파싱 후 유효한 등락 데이터는 소수점 비율 형태(예: `2.3%` -> `0.023`)로 관리됩니다. 그러나 가상 공식 내에 퍼센트 차이(예: `-1.5` 또는 `+0.2`)를 소수점 변환 없이 그대로 연산에 개입시킴으로써, 100배 부풀려진 오차가 발생하고 `normalizePct`에 의해 과도한 숫자로 표시되었습니다.
 - **해결**: 공식 내 모든 차이 및 스케일러 상수를 소수점 환산 비율(예: `-1.5` -> `-0.015`, `0.2` -> `0.002`, `1.2` -> `0.012` 등)로 고쳐서 계산을 수행하도록 개선하였습니다.
 
+## Recharts ComposedChart (S6-3 학습)
 
+### [FP-016] Math.min/max spread on large arrays → Call Stack Overflow
+- **증상**: `Math.min(...arr.map(p => p.sharpe))` 형태로 800~5000개 배열을 spread 시 Call Stack 오버플로우 가능성
+- **원인**: JavaScript spread 연산자는 배열 원소 전체를 함수 인자 스택에 push → 배열이 크면 `Maximum call stack size exceeded` 발생
+- **해결**: `arr.reduce((min, p) => p.v < min ? p.v : min, arr[0].v)` 방식으로 교체. 배열 크기에 무관하게 O(n) 순회로 안전
+
+### [FP-017] Bar > Cell 중복 fill 속성 → 불필요한 DOM 노드 생성
+- **증상**: `<Bar fill="#color">` + 내부 `{data.map(() => <Cell fill="#color" />)}` 동시 사용 시 Cell이 Bar의 fill을 override 하며 혼란 유발
+- **원인**: Cell은 Bar의 fill보다 높은 우선순위를 가지므로 동일 색상 중복 지정 시 data 길이만큼 불필요한 Virtual DOM 노드 생성됨
+- **해결**: 막대 색상이 모두 동일하면 `<Bar fill="..." />` 만 사용. 막대별 다른 색상이 필요할 때만 Cell 사용
+
+## React State Management (S6-3 학습)
+
+### [FP-018] NaN 가드 `|| 0` 패턴의 부작용
+- **증상**: `parseFloat(e.target.value) || 0` 에서 사용자가 입력창을 비울 때('' → NaN → `|| 0`) 즉시 0으로 세팅됨. 0도 유효한 값일 경우 UX 저하
+- **원인**: `||` 연산자는 falsy 값(NaN, 0, '')을 모두 우측 기본값으로 대체
+- **해결**: `const v = parseFloat(e.target.value); if (!isNaN(v)) setState(v);` — NaN일 때만 무시, 0은 유효한 입력으로 허용

@@ -5,8 +5,15 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 6 — S6-3 (Efficient Frontier 시각화 및 최적 비중 연동) 완료
+✅ Current: Sprint 6 — S6-3 (Efficient Frontier 시각화 및 최적 비중 연동) 완료 (2026-05-31)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
+
+> 세션 핸드오프 (2026-05-31):
+> - S6-1(TFF DB), S6-2(EF 백엔드), S6-3(EF 프론트엔드) 모두 stable
+> - EfficientFrontierPanel: My 탭 > 포트폴리오 시뮬레이션 > "포트폴리오 최적화" 탭 위치
+> - 다음 세션: S6-4 배당 스크래퍼 → S6-5 배당 캘린더 UI 순서로 진행
+> - FP-016/017/018 신규 패턴 등록 완료 (failure-patterns.md)
+
 
  
 ## Current Sprint
