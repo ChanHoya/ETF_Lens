@@ -283,7 +283,7 @@ export default function YtmView({ data, onOpenDetail }: Props) {
                               className="py-2 px-2 border-r border-white/5 text-right font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
                           >
                               <div className="flex items-center justify-end gap-1">
-                                  <span>자본손익</span>
+                                  <span>(기말+매도)-(기초+매수)</span>
                                   {tableSortKey === 'capitalGain' ? (
                                       tableSortDir === 'desc' ? <ArrowDown className="w-3 h-3 text-amber-500" /> : <ArrowUp className="w-3 h-3 text-amber-500" />
                                   ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />}
