@@ -1,47 +1,95 @@
-# ETF Lens 코드 리팩토링 완료 보고서
+# Walkthrough — Sprint 6 S6-3 세션 (2026-05-31)
 
-## 수행 내역
+## 이번 세션에서 완료한 작업
 
-### ✅ 1. Backend - 더미/스테일 파일 제거
-| 작업 | 파일/대상 |
-|------|---------|
-| 삭제 | `seed_dummy_etfs.py` (더미 ETF DB 시드 스크립트) |
-| 삭제 | `rewrite_chat.py`, `check_naver.py`, `code_runner.py`, `patch_harvester.py` (임시 스크립트) |
-| 삭제 | `database.db`, `etf_lens.db` (빈 DB 파일) |
-| 삭제 | `dump_64896732.json`, `dump_portfolio.json` (임시 데이터) |
-| `/tmp/` 이동 | `test_*.py` 60개+ → `/tmp/etf_lens_old_tests/` |
+### S6-3: Efficient Frontier 시각화 및 최적 비중 연동
+### 레이아웃 핫픽스: 종목분석(선택) 및 TFF_Fund 가로 크기(1400px) 통일
 
-### ✅ 2. `backend/api/chat.py` 전면 리팩토링
-- 미사용 import 7개 제거 (`text`, `BaseModel`, `get_db`, `AsyncSession`, `Depends`, 중복 `re`)
-- `load_dotenv()` 모듈 상단으로 이동 (절대경로로 `.env` 명시)
-- API 라우트에서 DB dependency 제거 (`db: AsyncSession = Depends(get_db)`)
-- 타입 힌트 추가, 코드 가독성 개선
+---
 
-### ✅ 3. Frontend 리팩토링
-| 작업 | 대상 |
+## 구현 내용
+
+### [NEW] EfficientFrontierPanel.tsx
+
+S6-2에서 완성된 `POST /api/v1/analyze/efficient-frontier` API를 소비하는 프론트엔드 컴포넌트.
+
+#### 구성 요소
+
+| 섹션 | 내용 |
 |------|------|
-| 삭제 | `page_backup2.tsx` |
-| 수정 | `CoveredCallTab.tsx` - `Math.random()` price/yield → `null` |
-| 리네이밍 | `detailMockData` → `detailChartData` (`page.tsx`, `Modals.tsx`, `useEtfData.ts`) |
+| 파라미터 컨트롤 | 조회 기간 탭(1Y/2Y/3Y) + 무위험 이자율 숫자 입력 |
+| 상태 관리 | isLoading / error / result 완전 분기 |
+| 산점도 | Recharts ComposedChart — 800포인트 MC 시뮬레이션, Sharpe 기준 slate→sky→amber 그라데이션 |
+| 효율전선 커브 | Line 오버레이 25포인트, 하늘색 실선 |
+| 포트폴리오 마커 | ReferenceLine 십자선: ⭐MaxSharpe/🔵MinVar/🔴현재 |
+| Bento 카드 3개 | 기대수익률/변동성/샤프지수 + 비중 TOP-3 바 |
+| 비중 비교 BarChart | 수직 grouped bar: 현재 vs MaxSharpe vs MinVar |
+| 인사이트 요약 | 현재 대비 개선 delta(수익률/변동성) 자동 계산 |
 
-> [!NOTE]
-> `KospiExitAnalyzer.tsx`의 mock fallback 초기 데이터는 API 응답 전 UI를 깨지지 않게 하는 UX 패턴으로 **의도적으로 유지**했습니다. API 성공 시 실데이터로 덮어쓰입니다.
->
-> `page.tsx`/`useEtfData.ts`의 `Math.random()` 호출들은 **포트폴리오 시뮬레이션** 기능(펀드 유입/배당 시뮬)의 일부로 실제 데이터 표시와 무관합니다. 유지합니다.
+### [MODIFY] MyDashboard.tsx
 
-## 서비스 검증 결과
+- 포트폴리오 시뮬레이션 탭 그룹에 **"포트폴리오 최적화"** 세 번째 탭 추가
+- `backtestTab` 타입에 `'efficient'` 추가
+- 탭 버튼 컨테이너 `flex-wrap` 추가 (모바일 대응)
 
-| 엔드포인트 | 상태 | 결과 |
-|------------|------|------|
-| `GET /health` | ✅ | `{"status":"ok"}` |
-| `GET /api/v1/analyze/etfs` | ✅ | 정상 KRX ETF 목록 반환 |
-| `GET /api/v1/exit-signal` | ✅ | `indicators`, `current_status` 정상 반환 |
-| `POST /api/v1/chat` | ✅ | 실시간 수익률 기반 AI 응답 정상 |
+---
 
-**챗봇 테스트 결과 예시:**
-```
-Q: 최근 1달 수익률 높은 커버드콜 3개 알려줘
-A: 1. TIGER 배당커버드콜액티브 (472150): 11.8%
-   2. KODEX 200타겟위클리커버드콜 (498400): 11.43%
-   3. TIGER 미국배당다우존스타겟커버드콜2호 (458760): 7.97%
-```
+## 코드 리뷰 수정 사항
+
+| # | 항목 | 수정 |
+|---|------|------|
+| BUG-1 | `Math.min/max(...spread)` 콜 스택 오버플로우 위험 | `reduce()` 방식으로 교체 |
+| BUG-2 | `weightBarData` 매 렌더마다 재계산 | `useMemo([result])` 적용 |
+| BUG-3 | `parseFloat || 0` NaN 가드 부작용 | `isNaN(v)` 가드로 개선 |
+| BUG-4 | `<Bar>` 내부 `<Cell>` 중복 fill 속성 | Cell 제거, Bar 직접 속성 사용 |
+| BUG-5 | `Line strokeDasharray="0"` no-op 속성 | 제거 |
+| CLEANUP | 미사용 `Cell` import | 제거 |
+
+---
+
+## 검증 결과
+
+| 항목 | 결과 |
+|------|------|
+| TypeScript 빌드 (구현 후) | ✅ Compiled successfully (6.0s) |
+| TypeScript 빌드 (리뷰 수정 후) | ✅ Compiled successfully (5.6s) |
+| 백엔드 단위 테스트 | ✅ 18/18 통과 (S6-2에서 확인) |
+
+---
+
+## 커밋 이력
+
+| SHA | 메시지 |
+|-----|--------|
+| `317be3e` | S6-3: Efficient Frontier 시각화 및 최적 비중 연동 프론트엔드 구현 |
+| `0b99b4a` | docs: S6-3 완료 상태 업데이트 및 프로젝트 스테이트 갱신 |
+| `dd3408d` | S6-3 리뷰 수정: EfficientFrontierPanel 5개 버그 픽스 |
+| `7936e93` | learn: S6-3 세션 마무리 — 핸드오프 노트 및 실패 패턴 FP-016/017/018 등록 |
+
+---
+
+## 신규 등록 실패 패턴
+
+- **FP-016**: `Math.min/max(...arr)` 대용량 배열 → `reduce()` 권장
+- **FP-017**: Recharts `<Bar>` 내 `<Cell>` 중복 사용 패턴
+- **FP-018**: `parseFloat || 0` NaN 가드 → `isNaN()` 가드 권장
+
+---
+
+## 레이아웃 핫픽스 (가로 크기 통일)
+
+- **배경**: "종목분석"(초기 종목선택) 및 "TFF_Fund" 탭의 가로 크기가 `1200px`로 작아, 다른 주요 탭(섹터분석, 시장동향, My 탭: `1400px`) 대비 시각적 통일성이 떨어짐.
+- **수정 내용**:
+  1. `MainApp.tsx` (종목분석 초기 종목선택 섹션): `max-w-[1200px]` -> `max-w-[1400px]`로 상향.
+  2. `TffDashboard.tsx` (TFF Fund 대시보드): 공통 헤더, 서브탭 네비게이션, 메인 콘텐츠 영역 모두 `max-w-[1200px]` -> `max-w-[1400px]`로 일괄 상향.
+- **결과**: 모든 탭의 메인 콘텐츠 및 헤더 영역 가로 크기가 `1400px`로 통일되어 일관된 네온 다크 테마 UI 정렬을 완성함.
+
+---
+
+## 다음 세션 시작 지점
+
+**S6-4: ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API**
+
+- Seibro / 네이버페이 기반 과거 분배금 단가 및 지급일/주기 크롤링
+- FastAPI 엔드포인트: `GET /api/v1/etf/{code}/dividend`
+- 월별 배당 Cashflow 데이터 구조 설계

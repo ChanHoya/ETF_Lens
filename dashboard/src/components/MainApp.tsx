@@ -1180,7 +1180,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
               <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-white drop-shadow-md">데이터 기반의 ETF 투자</h2>
               <p className="text-gray-400 text-sm md:text-base">최대 10개의 ETF를 선택하여 다각도로 성과와 포트폴리오를 비교 분석합니다.</p>
             </div>
-            <section className="w-full max-w-[95vw] xl:max-w-[1200px] bg-white/[0.03] backdrop-blur-3xl rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] px-5 py-6 md:px-8 md:py-8 border border-white/10 transition-all hover:border-white/20 duration-500">
+            <section className="w-full max-w-[95vw] xl:max-w-[1400px] bg-white/[0.03] backdrop-blur-3xl rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] px-5 py-6 md:px-8 md:py-8 border border-white/10 transition-all hover:border-white/20 duration-500">
               <div className="flex flex-col gap-4 mb-2.5 relative z-50 border-b border-white/10 pb-4">
                 {/* 🚀 Quick Filters (Brands & Themes Stacked Vertically) */}
                 <div className="flex flex-col gap-2 w-full">

@@ -371,7 +371,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
         <div className="flex-1 flex flex-col items-center w-full min-h-[60vh] relative z-10 animate-in fade-in duration-500 py-6">
             
             {/* 상단 공통 헤더 — 1행: 타이틀 + 제어 버튼들 */}
-            <div className="w-full max-w-[95vw] xl:max-w-[1200px] mb-3 relative z-20 flex flex-row items-center justify-between gap-3 flex-wrap">
+            <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-3 relative z-20 flex flex-row items-center justify-between gap-3 flex-wrap">
                 <div className="flex flex-col items-start px-2">
                     <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-1 text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400 drop-shadow-md">
                         TFF Fund Dashboard
@@ -463,7 +463,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
 
             {/* 헤더 2행: 탭 내비게이션 (데이터 있을 때만) */}
             {fundData && (
-                <div className="w-full max-w-[95vw] xl:max-w-[1200px] mb-4 relative z-20 px-0">
+                <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 relative z-20 px-0">
                     <div className="flex flex-row items-center bg-black/40 p-1.5 rounded-xl border border-white/5 overflow-x-auto custom-scrollbar whitespace-nowrap w-full">
                         {[
                             { id: 'overview', label: '포트폴리오 현황' },
@@ -486,7 +486,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
 
 
             {/* 메인 콘텐츠 영역 */}
-            <div className="w-full max-w-[95vw] xl:max-w-[1200px] border border-white/10 rounded-3xl bg-white/[0.02] backdrop-blur-md p-3 md:p-4 flex flex-col min-h-[40vh]">
+            <div className="w-full max-w-[95vw] xl:max-w-[1400px] border border-white/10 rounded-3xl bg-white/[0.02] backdrop-blur-md p-3 md:p-4 flex flex-col min-h-[40vh]">
                
                 {/* 1. 데이터가 없을 때 */}
                 {!fundData && (
