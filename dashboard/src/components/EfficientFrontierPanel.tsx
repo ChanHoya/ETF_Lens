@@ -7,7 +7,7 @@ import {
     ResponsiveContainer, ReferenceLine, Line, ComposedChart,
     BarChart, Bar, Legend
 } from 'recharts';
-import { Loader2, TrendingUp, AlertTriangle, Play, RefreshCw, Star, Shield, Target } from 'lucide-react';
+import { Loader2, TrendingUp, AlertTriangle, Play, RefreshCw, Star, Shield, Target, Info } from 'lucide-react';
 
 /* ─── Types ─── */
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -165,6 +165,7 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<EFResult | null>(null);
+    const [showInfoModal, setShowInfoModal] = useState<boolean>(false);
 
     const handleRun = useCallback(async () => {
         setIsLoading(true);
@@ -217,8 +218,8 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
     // 비중 비교 바 차트 데이터 — useMemo로 result 변경 시에만 재계산
     const weightBarData = useMemo(() => result
         ? Object.keys(result.tickers).map(code => ({
-            name: result.tickers[code]?.name?.length > 10
-                ? result.tickers[code].name.slice(0, 9) + '…'
+            name: result.tickers[code]?.name?.length > 16
+                ? result.tickers[code].name.slice(0, 15) + '…'
                 : result.tickers[code].name,
             current: parseFloat(((result.current.weights[code] ?? 0) * 100).toFixed(1)),
             maxSharpe: parseFloat(((result.max_sharpe.weights[code] ?? 0) * 100).toFixed(1)),
@@ -358,10 +359,17 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
 
                     {/* 1. 효율적 전선 산점도 */}
                     <div className="bg-[#12121A]/70 border border-white/10 rounded-2xl p-5 backdrop-blur-md">
-                        <div className="flex items-center gap-2 mb-4">
+                        <div className="flex items-center gap-2 mb-4 flex-wrap">
                             <span className="w-1 h-5 bg-sky-500 rounded-full" />
                             <h3 className="text-base font-bold text-white">효율적 전선 (Efficient Frontier)</h3>
                             <span className="text-[10px] text-gray-500 ml-1">· {lookbackYears}Y 과거 데이터 · 샤프기준 색상</span>
+                            <button
+                                onClick={() => setShowInfoModal(true)}
+                                className="ml-1 p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors flex items-center justify-center shrink-0"
+                                title="효율적 전선 활용 및 해석 방법"
+                            >
+                                <Info className="w-4 h-4 text-sky-400" />
+                            </button>
                         </div>
                         <ResponsiveContainer width="100%" height={360}>
                             <ComposedChart margin={{ top: 10, right: 30, bottom: 20, left: 10 }}>
@@ -497,7 +505,7 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
                                 <BarChart
                                     data={weightBarData}
                                     layout="vertical"
-                                    margin={{ top: 5, right: 40, left: 10, bottom: 5 }}
+                                    margin={{ top: 5, right: 40, left: 20, bottom: 5 }}
                                     barCategoryGap="25%"
                                     barGap={3}
                                 >
@@ -507,12 +515,12 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
                                         tickFormatter={v => `${v}%`}
                                         stroke="#374151"
                                         tick={{ fill: '#9ca3af', fontSize: 10 }}
-                                        domain={[0, 100]}
+                                        domain={[0, 'dataMax']}
                                     />
                                     <YAxis
                                         type="category"
                                         dataKey="name"
-                                        width={90}
+                                        width={150}
                                         stroke="#374151"
                                         tick={{ fill: '#d1d5db', fontSize: 10 }}
                                     />
@@ -573,6 +581,75 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
                         <p className="text-[10px] text-gray-600 mt-3">
                             * 과거 {lookbackYears}년 데이터 기반 추정치이며, 미래 수익률을 보장하지 않습니다. 몬테카를로 5,000회 시뮬레이션 결과입니다.
                         </p>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── 설명 팝업 모달 ─── */}
+            {showInfoModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div 
+                        className="bg-[#12121e] border border-white/10 rounded-3xl w-full max-w-2xl p-6 relative shadow-2xl flex flex-col gap-4 text-left animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center border-b border-white/10 pb-3">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                📊 효율적 전선(Efficient Frontier) 활용 및 해석 가이드
+                            </h3>
+                            <button 
+                                onClick={() => setShowInfoModal(false)}
+                                className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        
+                        <div className="text-sm text-gray-300 space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+                            <div>
+                                <h4 className="font-bold text-sky-400 mb-1">1. 효율적 전선이란?</h4>
+                                <p className="leading-relaxed">
+                                    현대 포트폴리오 이론(MPT)에 기반하여, <strong>주어진 위험 수준(연간 변동성)에서 달성할 수 있는 최선의 기대수익률</strong>을 제공하는 포트폴리오들의 집합을 곡선으로 연결한 선입니다. 곡선상의 포트폴리오는 자산 배분이 가장 효율적으로 완료된 상태를 의미합니다.
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <h4 className="font-bold text-amber-400 mb-1">2. 주요 핵심 포트폴리오</h4>
+                                <ul className="list-disc pl-5 space-y-1.5 leading-relaxed">
+                                    <li>
+                                        <strong className="text-amber-300">최대 샤프 포트폴리오 (Max Sharpe)</strong>: 
+                                        무위험 자산 대비 단위 위험당 초과수익률(샤프 지수)이 가장 높은 지점입니다. 역사적으로 <strong>위험 대비 가장 극대화된 효율성</strong>을 가진 포트폴리오 배치입니다.
+                                    </li>
+                                    <li>
+                                        <strong className="text-sky-300">최소 변동성 포트폴리오 (Min Variance)</strong>: 
+                                        포트폴리오의 기대 수익률 수준과 무관하게 <strong>전체 포트폴리오의 연간 변동성(위험)을 최소화</strong>하는 자산 비중입니다. 가장 방어적이고 보수적인 투자자에게 유용합니다.
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <div>
+                                <h4 className="font-bold text-emerald-400 mb-1">3. 차트 해석 및 활용 방법</h4>
+                                <ul className="list-disc pl-5 space-y-1.5 leading-relaxed">
+                                    <li>
+                                        <strong>점들의 의미</strong>: 수천 번의 몬테카를로 시뮬레이션으로 각 종목의 가중치를 무작위 생성해 얻은 수많은 가상 포트폴리오의 예상 성과 분포입니다.
+                                    </li>
+                                    <li>
+                                        <strong>현재 상태와 비교 (빨간 점선)</strong>: 현재 포트폴리오가 하늘색 효율적 전선 곡선보다 아래쪽에 멀리 떨어져 있다면, 현재 자산 배분의 비효율성이 크다는 뜻입니다. 즉, 동일한 위험 하에서 더 높은 수익률을 내거나, 동일한 수익률 하에서 위험을 훨씬 줄일 수 있는 여지가 있습니다.
+                                    </li>
+                                    <li>
+                                        <strong>비중 리밸런싱</strong>: 하단의 '최적 비중 비교' 그래프를 참조하여, 현재 비중을 최대 샤프 비중(수익/효율 극대화) 또는 최소 변동성 비중(안정 극대화)으로 조절하는 전략을 고려할 수 있습니다.
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div className="border-t border-white/5 pt-3 flex justify-end">
+                            <button
+                                onClick={() => setShowInfoModal(false)}
+                                className="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-xl transition-all"
+                            >
+                                확인
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
