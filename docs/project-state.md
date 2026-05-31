@@ -11,6 +11,7 @@ Base: Exit Strategy Monitoring (KOSPI)
 > 세션 핸드오프 (2026-05-31):
 > - S6-1(TFF DB), S6-2(EF 백엔드), S6-3(EF 프론트엔드) 모두 stable
 > - EfficientFrontierPanel: My 탭 > 포트폴리오 시뮬레이션 > "포트폴리오 최적화" 탭 위치
+> - 레이아웃 핫픽스: 종목분석(선택) 및 TFF_Fund 탭 가로 크기 1400px 통일 완료 (섹터분석/My 탭과 동일 크기)
 > - 다음 세션: S6-4 배당 스크래퍼 → S6-5 배당 캘린더 UI 순서로 진행
 > - FP-016/017/018 신규 패턴 등록 완료 (failure-patterns.md)
 
