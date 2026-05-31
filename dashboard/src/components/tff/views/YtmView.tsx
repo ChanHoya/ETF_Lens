@@ -188,11 +188,9 @@ export default function YtmView({ data, onOpenDetail }: Props) {
               <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
                   <thead>
                       <tr className="bg-black/40 text-gray-400 border-b border-white/10 text-[10px]">
-                          <th className="py-2 px-2 border-r border-white/5 text-center font-semibold">계좌번호</th>
-                          <th className="py-2 px-2 border-r border-white/5 text-center font-semibold">상품유형</th>
                           <th 
                               onClick={() => handleTableSort('name')}
-                              className="py-2 px-3 border-r border-white/5 font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
+                              className="py-2 px-2 border-r border-white/5 font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
                           >
                               <div className="flex items-center gap-1">
                                   <span>종목명(상품명)</span>
@@ -247,22 +245,11 @@ export default function YtmView({ data, onOpenDetail }: Props) {
                           </th>
                           <th 
                               onClick={() => handleTableSort('dividend')}
-                              className="py-2 px-2 border-r border-white/5 text-right font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
+                              className="py-2 px-1.5 border-r border-white/5 text-right font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
                           >
                               <div className="flex items-center justify-end gap-1">
                                   <span>배당/채권이자</span>
                                   {tableSortKey === 'dividend' ? (
-                                      tableSortDir === 'desc' ? <ArrowDown className="w-3 h-3 text-amber-500" /> : <ArrowUp className="w-3 h-3 text-amber-500" />
-                                  ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />}
-                              </div>
-                          </th>
-                          <th 
-                              onClick={() => handleTableSort('creditInterest')}
-                              className="py-2 px-2 border-r border-white/5 text-right font-semibold cursor-pointer hover:bg-white/5 select-none transition-colors"
-                          >
-                              <div className="flex items-center justify-end gap-1">
-                                  <span>신용이자</span>
-                                  {tableSortKey === 'creditInterest' ? (
                                       tableSortDir === 'desc' ? <ArrowDown className="w-3 h-3 text-amber-500" /> : <ArrowUp className="w-3 h-3 text-amber-500" />
                                   ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-500 opacity-50" />}
                               </div>
@@ -311,22 +298,19 @@ export default function YtmView({ data, onOpenDetail }: Props) {
 
                           return (
                               <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                                  <td className="py-1 px-2 border-r border-white/5 text-gray-500 text-center font-semibold">{h.accountNumber || '-'}</td>
-                                  <td className="py-1 px-2 border-r border-white/5 text-gray-400 text-center">{h.productType || '-'}</td>
                                   <td 
                                       onClick={() => {
                                           if (hasClick && code) onOpenDetail(code);
                                       }}
-                                      className={`py-1 px-3 border-r border-white/5 font-sans font-bold text-gray-200 text-left ${hasClick ? 'cursor-pointer hover:text-amber-400 hover:underline transition-colors' : ''}`}
+                                      className={`py-1 px-2 border-r border-white/5 font-sans font-bold text-gray-200 text-left ${hasClick ? 'cursor-pointer hover:text-amber-400 hover:underline transition-colors' : ''}`}
                                   >
                                       {h.name}
                                   </td>
-                                  <td className="py-1 px-2 border-r border-white/5 text-right text-gray-400">{formatMoney(h.beginValue)}</td>
-                                  <td className="py-1 px-2 border-r border-white/5 text-right text-sky-400/90">{formatMoney(h.buyAmount)}</td>
-                                  <td className="py-1 px-2 border-r border-white/5 text-right text-purple-400/90">{formatMoney(h.sellAmount)}</td>
-                                  <td className="py-1 px-2 border-r border-white/5 text-right text-gray-200 font-bold">{formatMoney(h.endValue)}</td>
-                                  <td className="py-1 px-2 border-r border-white/5 text-right text-indigo-300">{formatMoney(h.dividend)}</td>
-                                  <td className="py-1 px-2 border-r border-white/5 text-right text-gray-500">{formatMoney(h.creditInterest)}</td>
+                                  <td className="py-1 px-1.5 border-r border-white/5 text-right text-gray-400">{formatMoney(h.beginValue)}</td>
+                                  <td className="py-1 px-1.5 border-r border-white/5 text-right text-sky-400/90">{formatMoney(h.buyAmount)}</td>
+                                  <td className="py-1 px-1.5 border-r border-white/5 text-right text-purple-400/90">{formatMoney(h.sellAmount)}</td>
+                                  <td className="py-1 px-1.5 border-r border-white/5 text-right text-gray-200 font-bold">{formatMoney(h.endValue)}</td>
+                                  <td className="py-1 px-1.5 border-r border-white/5 text-right text-indigo-300">{formatMoney(h.dividend)}</td>
                                   <td className={`py-1 px-2 border-r border-white/5 text-right font-bold ${h.investmentPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                                       {h.investmentPnl >= 0 ? '+' : ''}{formatMoney(h.investmentPnl)}
                                   </td>
@@ -342,16 +326,12 @@ export default function YtmView({ data, onOpenDetail }: Props) {
 
                       {/* 전체 합계 행 */}
                       <tr className="bg-white/[0.04] font-black border-t border-b border-white/10">
-                          <td className="py-2 px-2 border-r border-white/5 text-gray-400 text-center font-bold" colSpan={2}>합계</td>
-                          <td className="py-2 px-3 border-r border-white/5 font-sans text-white font-extrabold text-left">전체 합계</td>
-                          <td className="py-2 px-2 border-r border-white/5 text-right text-gray-300 font-bold">{formatMoney(summary.totalBeginValue)}</td>
-                          <td className="py-2 px-2 border-r border-white/5 text-right text-sky-400 font-bold">{formatMoney(summary.totalBuyAmount)}</td>
-                          <td className="py-2 px-2 border-r border-white/5 text-right text-purple-400 font-bold">{formatMoney(summary.totalSellAmount)}</td>
-                          <td className="py-2 px-2 border-r border-white/5 text-right text-white font-black">{formatMoney(summary.totalEndValue)}</td>
-                          <td className="py-2 px-2 border-r border-white/5 text-right text-indigo-300 font-bold">{formatMoney(summary.totalDividend)}</td>
-                          <td className="py-2 px-2 border-r border-white/5 text-right text-gray-500">
-                              {formatMoney(holdings.reduce((sum, h) => sum + (h.creditInterest || 0), 0))}
-                          </td>
+                          <td className="py-2 px-2 border-r border-white/5 font-sans text-white font-extrabold text-left">전체 합계</td>
+                          <td className="py-2 px-1.5 border-r border-white/5 text-right text-gray-300 font-bold">{formatMoney(summary.totalBeginValue)}</td>
+                          <td className="py-2 px-1.5 border-r border-white/5 text-right text-sky-400 font-bold">{formatMoney(summary.totalBuyAmount)}</td>
+                          <td className="py-2 px-1.5 border-r border-white/5 text-right text-purple-400 font-bold">{formatMoney(summary.totalSellAmount)}</td>
+                          <td className="py-2 px-1.5 border-r border-white/5 text-right text-white font-black">{formatMoney(summary.totalEndValue)}</td>
+                          <td className="py-2 px-1.5 border-r border-white/5 text-right text-indigo-300 font-bold">{formatMoney(summary.totalDividend)}</td>
                           <td className={`py-2 px-2 border-r border-white/5 text-right font-black ${summary.totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                               {summary.totalPnl >= 0 ? '+' : ''}{formatMoney(summary.totalPnl)}
                           </td>
