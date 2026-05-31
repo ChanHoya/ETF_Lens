@@ -161,6 +161,38 @@ export default function MonthlyView({ data, onOpenDetail, titleRightElement }: P
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
+      {/* View Header with Selector */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 shrink-0">
+            <Calendar className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-extrabold text-white">
+              {period} 월별 운용 현황
+            </h3>
+            {titleRightElement}
+          </div>
+        </div>
+        
+        {/* Class Filters */}
+        <div className="flex items-center flex-wrap gap-1.5">
+          {FILTER_TYPES.map(filter => (
+            <button
+              key={filter.value}
+              onClick={() => setSelectedType(filter.value)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                selectedType === filter.value 
+                  ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md' 
+                  : 'bg-[#1a1a23]/60 text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-white/5'
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* 월별 원본 데이터 종합 현황판 */}
       <div className="bg-[#12121A]/80 border border-white/10 rounded-2xl p-4 md:p-5 backdrop-blur-md shadow-lg animate-in fade-in duration-500">
           <h4 className="text-sm font-bold text-gray-300 mb-3.5 flex items-center gap-2 border-l-2 border-sky-500 pl-2">
@@ -327,40 +359,6 @@ export default function MonthlyView({ data, onOpenDetail, titleRightElement }: P
                   </tbody>
               </table>
           </div>
-      </div>
-
-      <div className="h-px bg-white/5 my-4" />
-
-      {/* View Header with Selector */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 shrink-0">
-            <Calendar className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-extrabold text-white">
-              {period} 월별 운용 현황
-            </h3>
-            {titleRightElement}
-          </div>
-        </div>
-        
-        {/* Class Filters */}
-        <div className="flex items-center flex-wrap gap-1.5">
-          {FILTER_TYPES.map(filter => (
-            <button
-              key={filter.value}
-              onClick={() => setSelectedType(filter.value)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                selectedType === filter.value 
-                  ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md' 
-                  : 'bg-[#1a1a23]/60 text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-white/5'
-              }`}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Cashflow & Carryover Banner (Only for Total view) */}
