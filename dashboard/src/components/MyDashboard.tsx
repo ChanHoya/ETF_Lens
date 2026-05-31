@@ -4,11 +4,12 @@ import HoldingsSignals from './HoldingsSignals';
 import PortfolioBacktester from './PortfolioBacktester';
 import AIRebalanceSimulator from './AIRebalanceSimulator';
 import RiskAlertBanner from './RiskAlertBanner';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, TrendingUp } from 'lucide-react';
 import PortfolioTreemap from './PortfolioTreemap';
 import RebalanceProposal from './RebalanceProposal';
 import DbSyncControl from './DbSyncControl';
 import NotificationSettings from './NotificationSettings';
+import EfficientFrontierPanel from './EfficientFrontierPanel';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type MyDashboardProps = {
@@ -100,7 +101,7 @@ const getDisparityLevelInfo = (name: string, rate: number): DisparityLevelInfo =
 
 export default function MyDashboard({ data, tradesData, isRefreshing = false, onOpenDetail, onAnalyzePeers }: MyDashboardProps) {
     const [selectedAccount, setSelectedAccount] = useState<any>(null);
-    const [backtestTab, setBacktestTab] = useState<'static' | 'dynamic'>('dynamic');
+    const [backtestTab, setBacktestTab] = useState<'static' | 'dynamic' | 'efficient'>('dynamic');
     const [showAllDisparity, setShowAllDisparity] = useState(false);
     const [disparityTab, setDisparityTab] = useState<'warn_risk' | 'risk' | 'warning' | 'normal' | 'all'>('warn_risk');
 
@@ -445,12 +446,12 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
 
             {/* 포트폴리오 백테스터 & AI 리밸런싱 시뮬레이터 통합 탭 */}
             <div className="flex flex-col gap-4 mt-2">
-                <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2 flex-wrap gap-3">
                     <h2 className="text-xl font-bold flex items-center gap-2">
                         <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
                         포트폴리오 시뮬레이션
                     </h2>
-                    <div className="flex gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
+                    <div className="flex gap-1 bg-black/40 p-1 rounded-xl border border-white/5 flex-wrap">
                         <button
                             onClick={() => setBacktestTab('dynamic')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 flex items-center gap-1 ${
@@ -471,13 +472,27 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                         >
                             일반 백테스터
                         </button>
+                        <button
+                            onClick={() => setBacktestTab('efficient')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 flex items-center gap-1 ${
+                                backtestTab === 'efficient'
+                                ? 'bg-sky-600 text-white shadow-[0_0_10px_rgba(14,165,233,0.35)]'
+                                : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            <TrendingUp className="w-3.5 h-3.5" /> 포트폴리오 최적화
+                        </button>
                     </div>
                 </div>
 
-                {backtestTab === 'dynamic' ? (
+                {backtestTab === 'dynamic' && (
                     <AIRebalanceSimulator holdings={holdings} />
-                ) : (
+                )}
+                {backtestTab === 'static' && (
                     <PortfolioBacktester holdings={holdings} />
+                )}
+                {backtestTab === 'efficient' && (
+                    <EfficientFrontierPanel holdings={holdings} />
                 )}
             </div>
 
