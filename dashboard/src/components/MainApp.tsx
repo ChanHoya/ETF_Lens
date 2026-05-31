@@ -1173,10 +1173,9 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
 
       <div className="relative flex-1 flex flex-col w-full max-w-[95vw] xl:max-w-[1400px] mobile-content-area">
 
-        {/* ETF Input Section */}
         {activeTab === 'select' && (
-          <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10 min-h-[50vh] animate-in fade-in zoom-in-95 duration-500">
-            <div className="text-center mb-8">
+          <div className="flex-1 flex flex-col items-center justify-start pt-4 w-full relative z-10 min-h-0 animate-in fade-in zoom-in-95 duration-500">
+            <div className="text-center mb-4">
               <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-white drop-shadow-md">데이터 기반의 ETF 투자</h2>
               <p className="text-gray-400 text-sm md:text-base">최대 10개의 ETF를 선택하여 다각도로 성과와 포트폴리오를 비교 분석합니다.</p>
             </div>
@@ -1702,7 +1701,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
       {/* Copyright — PC only */}
       <div className="hidden md:flex mt-auto w-full text-center text-sm text-gray-500/80 font-medium items-center justify-center gap-3 pb-1">
         <span>Copyright &copy; Hoya 2026</span>
-        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260225_0719</span>
+        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260531_2310</span>
       </div>
 
       {/* 모바일 전용 하단 네비게이션 바 (md 이상에서는 숨김) */}

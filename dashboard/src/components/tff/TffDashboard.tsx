@@ -368,7 +368,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
     };
 
     return (
-        <div className="flex-1 flex flex-col items-center w-full min-h-[60vh] relative z-10 animate-in fade-in duration-500 py-6">
+        <div className="flex-1 flex flex-col items-center w-full min-h-[60vh] relative z-10 animate-in fade-in duration-500 pt-1 pb-6">
             
             {/* 상단 공통 헤더 — 1행: 타이틀 + 제어 버튼들 */}
             <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-3 relative z-20 flex flex-row items-center justify-between gap-3 flex-wrap">

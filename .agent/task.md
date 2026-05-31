@@ -27,3 +27,9 @@
   - [x] MainApp.tsx 종목선택 section max-w-[1200px] -> max-w-[1400px] 수정
   - [x] TffDashboard.tsx 헤더, 서브탭, 메인 컨텐츠 w-full max-w-[95vw] xl:max-w-[1200px] -> xl:max-w-[1400px] 수정
   - [x] npm run build 통과 확인
+- [x] 레이아웃 추가 튜닝:
+  - [x] 종목분석 초기화면 위치를 서브메뉴 바로 아래로 상향 조정
+  - [x] 제일 아래 버전 정보를 최종 수정 날짜(v.20260531_2310)로 업데이트
+  - [x] TFF_Fund 초기화면 제목창 위치 상향 조정
+  - [x] My 탭 제목창 위치 상향 조정 및 정보창 박스(InvestmentReturnCard) 세로 크기 축소
+  - [x] 실시간 괴리율 경보 종목별 카드 폰트 크기 50% 상향 및 시인성 개선

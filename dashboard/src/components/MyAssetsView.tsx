@@ -153,9 +153,9 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
         : null;
 
     return (
-        <div className="w-full xl:max-w-[1400px] mx-auto px-4 lg:px-6 flex flex-col items-center pt-4 pb-32 animate-in fade-in zoom-in-95 duration-500">
+        <div className="w-full xl:max-w-[1400px] mx-auto px-4 lg:px-6 flex flex-col items-center pt-1 pb-32 animate-in fade-in zoom-in-95 duration-500">
             {isAuthorized && (
-                <div className="w-full flex justify-between items-center mb-6 max-w-[95vw] xl:max-w-[1400px]">
+                <div className="w-full flex justify-between items-center mb-3 max-w-[95vw] xl:max-w-[1400px]">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-xl border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
                             <span className="text-xl">💰</span>

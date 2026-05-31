@@ -275,42 +275,42 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                                         >
                                             <div className="flex justify-between items-start flex-wrap gap-2">
                                                 <div>
-                                                    <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                                                    <h3 className="font-extrabold text-white text-lg flex items-center gap-2">
                                                         {h.name}
-                                                        <span className="text-xs text-gray-500 font-mono">{h.code}</span>
+                                                        <span className="text-sm text-gray-400 font-mono">{h.code}</span>
                                                     </h3>
                                                     <div className="flex gap-2 items-center mt-1.5">
-                                                        <span className="text-[10px] text-gray-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                                                        <span className="text-[13px] text-gray-300 bg-white/5 px-2 py-0.5 rounded border border-white/5 font-semibold">
                                                             {isOverseas ? '해외 자산' : '국내 자산'}
                                                         </span>
-                                                        <span className="text-[10px] text-gray-400">
+                                                        <span className="text-[13px] text-gray-300 font-medium">
                                                             계좌: {h.accounts.join(' / ')}
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${badge.classes}`}>
+                                                <span className={`px-3 py-1 rounded-full text-xs font-black ${badge.classes}`}>
                                                     {badge.label}
                                                 </span>
                                             </div>
-                                            <div className="grid grid-cols-4 gap-1 bg-black/30 rounded-xl p-3 text-center text-[11px]">
+                                            <div className="grid grid-cols-4 gap-1 bg-black/30 rounded-xl p-3 text-center text-sm">
                                                 <div>
-                                                    <p className="text-gray-500 text-[9px] mb-0.5">현재가</p>
-                                                    <p className="font-semibold text-gray-200">{formatNumber(h.current_price)}원</p>
+                                                    <p className="text-gray-400 text-[11px] mb-0.5">현재가</p>
+                                                    <p className="font-bold text-gray-100">{formatNumber(h.current_price)}원</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-gray-500 text-[9px] mb-0.5">NAV</p>
-                                                    <p className="font-semibold text-gray-200">{h.nav ? `${formatNumber(h.nav)}원` : '-'}</p>
+                                                    <p className="text-gray-400 text-[11px] mb-0.5">NAV</p>
+                                                    <p className="font-bold text-gray-100">{h.nav ? `${formatNumber(h.nav)}원` : '-'}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-gray-500 text-[9px] mb-0.5">총 보유수량</p>
-                                                    <p className="font-semibold text-gray-200">{h.qty}주</p>
+                                                    <p className="text-gray-400 text-[11px] mb-0.5">총 보유수량</p>
+                                                    <p className="font-bold text-gray-100">{h.qty}주</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-gray-500 text-[9px] mb-0.5">평가금액</p>
-                                                    <p className="font-semibold text-gray-200">{formatNumber(h.eval_amount)}원</p>
+                                                    <p className="text-gray-400 text-[11px] mb-0.5">평가금액</p>
+                                                    <p className="font-bold text-gray-100">{formatNumber(h.eval_amount)}원</p>
                                                 </div>
                                             </div>
-                                            <p className="text-[10.5px] text-gray-400 leading-normal">
+                                            <p className="text-[14px] text-gray-300 leading-relaxed">
                                                 {warningMsg(h.name, h.disparity_rate)}
                                             </p>
                                         </div>

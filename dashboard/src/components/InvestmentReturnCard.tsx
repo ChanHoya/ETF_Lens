@@ -134,10 +134,10 @@ export default function InvestmentReturnCard({ totalEvalAmount, cashBalance }: P
     return (
         <div className="w-full flex flex-col gap-6">
             {/* ── 1. 통합 요약 헤더 (3컬럼) ── */}
-            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-0 justify-between bg-white/[0.03] border border-white/5 rounded-[32px] p-6 md:p-8 backdrop-blur-md">
+            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-0 justify-between bg-white/[0.03] border border-white/5 rounded-[32px] py-4 px-6 md:py-4 md:px-8 backdrop-blur-md">
                 
                 {/* (1) 초기 투자금 */}
-                <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left border-b md:border-b-0 md:border-r border-white/10 pb-4 md:pb-0 md:pr-8 w-full md:w-auto">
+                <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left border-b md:border-b-0 md:border-r border-white/10 pb-2 md:pb-0 md:pr-8 w-full md:w-auto">
                     <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">초기 투자금</p>
                     <div className="flex items-baseline gap-1">
                         <p className="text-2xl md:text-4xl font-extrabold tracking-tight text-white">{fmtKRW(totalPrincipal)}</p>
@@ -157,7 +157,7 @@ export default function InvestmentReturnCard({ totalEvalAmount, cashBalance }: P
                 </div>
 
                 {/* (3) 수익금 / 수익률 */}
-                <div className="flex-1 flex flex-col items-center md:items-end text-center md:text-right border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-8 w-full md:w-auto">
+                <div className="flex-1 flex flex-col items-center md:items-end text-center md:text-right border-t md:border-t-0 md:border-l border-white/10 pt-2 md:pt-0 md:pl-8 w-full md:w-auto">
                     <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">누적 총 수익</p>
                     <div className={`flex flex-col items-center md:items-end ${returnRate === null ? "text-gray-400" : isPos ? "text-rose-400" : "text-blue-400"}`}>
                         <div className="text-2xl md:text-4xl font-extrabold tracking-tight flex items-center gap-1">
