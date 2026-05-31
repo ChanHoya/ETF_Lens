@@ -159,15 +159,15 @@ export default function MonthlyView({ data, onOpenDetail, titleRightElement }: P
     : 0;
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-3.5 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
       {/* View Header with Selector */}
-      <div className="flex items-center gap-3 bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-md">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 shrink-0">
-          <Calendar className="w-5 h-5 text-white" />
+      <div className="flex items-center gap-2.5 bg-black/20 py-2 px-3 rounded-xl border border-white/5 backdrop-blur-md">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 shrink-0">
+          <Calendar className="w-4 h-4 text-white" />
         </div>
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-extrabold text-white">
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm md:text-base font-extrabold text-white">
             {period} 월별 운용 현황
           </h3>
           {titleRightElement}

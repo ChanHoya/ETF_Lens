@@ -217,7 +217,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                             )}
 
                             {activeSubTab === 'monthly' && (
-                                <div className="space-y-4">
+                                <div className="space-y-4 -mt-1 md:-mt-2">
                                     {selectedMonth && fundData.monthlyMap[selectedMonth] ? (
                                         <MonthlyView 
                                             data={fundData.monthlyMap[selectedMonth]} 
