@@ -5,8 +5,8 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 6 — IndexedDB Persistence, Efficient Frontier, Dividend Calendar, & Custom Disparity Alerts
-➡️ Next: 다음 스프린트 계획 수립 예정
+✅ Current: Sprint 6 — S6-1 (IndexedDB 영속화 및 히스토리 비교) 완료
+➡️ Next: S6-2 포트폴리오 Efficient Frontier 최적화 백엔드 API 설계 및 구현 예정
 
 
  
