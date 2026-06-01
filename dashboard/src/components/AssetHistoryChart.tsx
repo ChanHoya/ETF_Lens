@@ -205,10 +205,6 @@ export default function AssetHistoryChart({ accounts }: Props) {
             ) : (() => {
                 const baseAsset = filteredData[0]?.total_asset ?? 0;
                 const baseReturn = filteredData[0]?.accumulated_return ?? 0;
-                const baseProfit = filteredData[0]?.accumulated_profit ?? 0;
-
-                // 시작 시점의 실질 원금 역산 (원금 = 자산 - 수익금)
-                const basePrincipal = baseProfit !== 0 ? (baseAsset - baseProfit) : (baseAsset / (1 + baseReturn / 100));
 
                 const returns = filteredData.map(d => d.accumulated_return);
                 const minRet = Math.min(...returns);
@@ -219,10 +215,16 @@ export default function AssetHistoryChart({ accounts }: Props) {
                 const adjustedMaxRet = maxRet + 5;
                 const rightDomain = [adjustedMinRet, adjustedMaxRet];
 
-                // 좌측 자산 도메인을 우측 수익률 변동률 비중과 정확하게 비례 동기화!
-                // 시작일 자산금액(baseAsset)이 정확하게 우측 baseReturn 지점과 같은 가로 수평선상에 정렬되도록 계산
-                const domainMinAsset = basePrincipal * (1 + adjustedMinRet / 100);
-                const domainMaxAsset = basePrincipal * (1 + adjustedMaxRet / 100);
+                const spanRight = adjustedMaxRet - adjustedMinRet;
+                const C = spanRight > 0 ? (baseReturn - adjustedMinRet) / spanRight : 0.5;
+
+                // 좌측 자산 도메인 계산: 우측 대비 1.4배의 Span을 갖게 하여,
+                // 시작일 자산금액(baseAsset)과 baseReturn이 정확히 일치하여 교차하면서도
+                // 자산 Area 선은 다소 완만하게 하단에 위치하고 수익률 Line은 위로 퍼지도록 분리합니다.
+                const scaleFactor = 1.4;
+                const spanLeft = baseAsset * (spanRight / 100) * scaleFactor;
+                const domainMinAsset = baseAsset - C * spanLeft;
+                const domainMaxAsset = domainMinAsset + spanLeft;
                 const leftDomain = [Math.max(0, domainMinAsset), domainMaxAsset];
 
                 return (
@@ -243,8 +245,8 @@ export default function AssetHistoryChart({ accounts }: Props) {
                             <ComposedChart data={filteredData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorTotalAsset" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
-                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
+                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.05} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
@@ -293,7 +295,7 @@ export default function AssetHistoryChart({ accounts }: Props) {
                                     type="monotone"
                                     dataKey="total_asset"
                                     stroke="#6366f1"
-                                    strokeWidth={2}
+                                    strokeWidth={2.5}
                                     fillOpacity={1}
                                     fill="url(#colorTotalAsset)"
                                 />

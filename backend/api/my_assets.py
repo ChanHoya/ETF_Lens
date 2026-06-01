@@ -1340,9 +1340,9 @@ async def get_asset_history(
     res = await db.execute(stmt)
     snapshots = res.scalars().all()
 
-    # DB에 충분한 스냅샷(조회 요청 일수의 70% 이상)이 쌓여있다면 KIS API 추가 쿼리 없이 즉시 리턴
+    # DB에 충분한 스냅샷(최소 10개 이상)이 쌓여있다면 KIS API 추가 쿼리 없이 즉시 리턴
     # 단, 오늘자 최신 자산 정보만 포트폴리오 캐시에서 가져와 마지막 포인트로 덧붙임
-    min_snapshots_threshold = int(days * 0.7)
+    min_snapshots_threshold = 10
     if len(snapshots) >= min_snapshots_threshold:
         KST = timezone(timedelta(hours=9))
         today = datetime.now(KST)
@@ -1667,12 +1667,13 @@ async def get_asset_history(
     running_total = current_total
     running_eval = current_eval
     running_cash = current_cash
+    running_principal = principal_val
 
     reconstructed_data = []
 
     # 오늘 데이터 먼저 삽입
-    today_profit = running_total - principal_val if principal_val > 0 else 0.0
-    today_return = (today_profit / principal_val * 100) if principal_val > 0 else 0.0
+    today_profit = running_total - running_principal if running_principal > 0 else 0.0
+    today_return = (today_profit / running_principal * 100) if running_principal > 0 else 0.0
 
     reconstructed_data.append({
         "date": date_list[-1],
@@ -1690,6 +1691,11 @@ async def get_asset_history(
 
         # d_curr 일에 발생한 입출금 흐름
         flow = net_flows.get(d_curr, 0.0)
+
+        # 원금 역산: d_curr 일의 입출금 흐름을 차감하여 d_prev 일의 원금을 구함
+        running_principal = running_principal - flow
+        if running_principal < 1.0:
+            running_principal = 1.0
 
         # d_curr 일의 지수 변동률
         market_ret = bench_returns.get(d_curr, 0.0)
@@ -1709,8 +1715,8 @@ async def get_asset_history(
         running_eval = prev_eval
         running_cash = prev_cash
 
-        profit = running_total - principal_val if principal_val > 0 else 0.0
-        ret_rate = (profit / principal_val * 100) if principal_val > 0 else 0.0
+        profit = running_total - running_principal if running_principal > 0 else 0.0
+        ret_rate = (profit / running_principal * 100) if running_principal > 0 else 0.0
 
         reconstructed_data.append({
             "date": d_prev,
