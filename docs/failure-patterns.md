@@ -190,3 +190,8 @@
 - **증상**: `parseFloat(e.target.value) || 0` 에서 사용자가 입력창을 비울 때('' → NaN → `|| 0`) 즉시 0으로 세팅됨. 0도 유효한 값일 경우 UX 저하
 - **원인**: `||` 연산자는 falsy 값(NaN, 0, '')을 모두 우측 기본값으로 대체
 - **해결**: `const v = parseFloat(e.target.value); if (!isNaN(v)) setState(v);` — NaN일 때만 무시, 0은 유효한 입력으로 허용
+
+### [FP-019] KIS API 다계좌 일별 거래내역 순회 시 EGW00133 속도 초과
+- **증상**: 과거 이력 복원을 위해 `/asset-history` 등을 호출할 때 다계좌의 입출금 내역을 연속 쿼리하면 `msg_cd = EGW00133` 속도 초과 오류가 리턴되며 데이터가 누락됨
+- **원인**: KIS OpenAPI의 초당 1건 호출(1 TPS) 제약을 고려하지 않고, 여러 계좌의 거래 내역을 빠른 속도로 비동기 순회 쿼리함
+- **해결**: 각 계좌별 거래내역 API 요청 사이에 `await asyncio.sleep(0.5)` 이상의 안정적인 지연(Rate Limit padding)을 주어 Rate Limit 발생을 원천 차단함
