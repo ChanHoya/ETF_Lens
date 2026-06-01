@@ -11,6 +11,7 @@ interface HistoryItem {
     cash_balance: number;
     accumulated_profit: number;
     accumulated_return: number;
+    period_return?: number; // 기간 시작점 대비 수익률 (프론트 계산)
 }
 
 interface Props {
@@ -90,7 +91,10 @@ export default function AssetHistoryChart({ accounts }: Props) {
     const CustomTooltip = ({ active, payload }: any) => {
         if (active && payload && payload.length) {
             const data = payload[0].payload as HistoryItem;
-            const isPos = data.accumulated_return >= 0;
+            const pr = data.period_return ?? 0;
+            const ar = data.accumulated_return;
+            const isPrPos = pr >= 0;
+            const isArPos = ar >= 0;
             return (
                 <div className="bg-[#0f111a]/95 border border-white/10 p-4 rounded-2xl shadow-2xl backdrop-blur-xl text-xs space-y-2">
                     <p className="text-gray-400 font-bold border-b border-white/5 pb-1">{data.date}</p>
@@ -107,9 +111,15 @@ export default function AssetHistoryChart({ accounts }: Props) {
                         <span className="text-emerald-300 font-bold">{fmtKRW(data.cash_balance)}원</span>
                     </div>
                     <div className="flex justify-between gap-6 border-t border-white/5 pt-1.5">
-                        <span className="text-gray-400">누적 수익률:</span>
-                        <span className={`font-black ${isPos ? "text-rose-400" : "text-blue-400"}`}>
-                            {isPos ? "+" : ""}{data.accumulated_return.toFixed(2)}% ({isPos ? "+" : ""}{fmtShort(data.accumulated_profit)}원)
+                        <span className="text-gray-400">기간 수익률:</span>
+                        <span className={`font-black ${isPrPos ? "text-rose-400" : "text-blue-400"}`}>
+                            {isPrPos ? "+" : ""}{pr.toFixed(2)}%
+                        </span>
+                    </div>
+                    <div className="flex justify-between gap-6">
+                        <span className="text-gray-500 text-[10px]">누적 수익률 (참고):</span>
+                        <span className={`text-[10px] font-bold ${isArPos ? "text-rose-300/70" : "text-blue-300/70"}`}>
+                            {isArPos ? "+" : ""}{ar.toFixed(2)}% ({isArPos ? "+" : ""}{fmtShort(data.accumulated_profit)}원)
                         </span>
                     </div>
                 </div>
@@ -204,15 +214,21 @@ export default function AssetHistoryChart({ accounts }: Props) {
                 </div>
             ) : (() => {
                 const baseAsset = filteredData[0]?.total_asset ?? 0;
-                const baseReturn = filteredData[0]?.accumulated_return ?? 0;
 
-                const returns = filteredData.map(d => d.accumulated_return);
-                const minRet = Math.min(...returns);
-                const maxRet = Math.max(...returns);
+                // 기간 기준 수익률: 해당 기간 첫 포인트 자산 대비 % 변화
+                // (항상 0%에서 시작, 입출금 영향 없이 순수 성장률 표시)
+                const displayData = filteredData.map(d => ({
+                    ...d,
+                    period_return: baseAsset > 0 ? (d.total_asset / baseAsset - 1) * 100 : 0
+                }));
 
-                // 우측 수익률 도메인 (상하 최소 5% 여유)
-                const adjustedMinRet = minRet - 5;
-                const adjustedMaxRet = maxRet + 5;
+                const periodReturns = displayData.map(d => d.period_return);
+                const minRet = Math.min(...periodReturns);
+                const maxRet = Math.max(...periodReturns);
+
+                // 우측 수익률 도메인 (상하 최소 3% 여유)
+                const adjustedMinRet = Math.min(minRet - 3, -1); // 항상 0% 기준선 아래 약간 공간
+                const adjustedMaxRet = maxRet + 3;
 
                 // ── 좌측(자산) 도메인: 실제 데이터 min/max 기준, 상하 10% 패딩
                 const assets = filteredData.map(d => d.total_asset);
@@ -232,17 +248,17 @@ export default function AssetHistoryChart({ accounts }: Props) {
                         {/* 커스텀 차트 범례 */}
                         <div className="absolute top-0 left-10 z-10 flex items-center gap-3.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/5 text-[10px] font-bold">
                             <div className="flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-[#6366f1] inline-block" />
+                                <span className="w-2 h-2 rounded-full bg-[#818cf8] inline-block" />
                                 <span className="text-gray-400">총 자산액</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-[#f43f5e] inline-block" />
-                                <span className="text-gray-400">누적 수익률</span>
+                                <span className="text-gray-400">기간 수익률</span>
                             </div>
                         </div>
 
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={filteredData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
+                            <ComposedChart data={displayData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorTotalAsset" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%"  stopColor="#818cf8" stopOpacity={0.75} />
@@ -250,15 +266,15 @@ export default function AssetHistoryChart({ accounts }: Props) {
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                                {/* 시작일 수익률 기준선 (우측 축) */}
+                                {/* 0% 기준선 (우측 축) */}
                                 <ReferenceLine
                                     yAxisId="right"
-                                    y={baseReturn}
+                                    y={0}
                                     stroke="rgba(244,63,94,0.35)"
                                     strokeWidth={1}
                                     strokeDasharray="4 3"
                                 />
-                                {/* 시작일 자산 기준선 (좌측 축) */}
+                                {/* 기간 시작일 자산 기준선 (좌측 축) */}
                                 <ReferenceLine
                                     yAxisId="left"
                                     y={baseAsset}
@@ -311,7 +327,7 @@ export default function AssetHistoryChart({ accounts }: Props) {
                                 <Line
                                     yAxisId="right"
                                     type="monotone"
-                                    dataKey="accumulated_return"
+                                    dataKey="period_return"
                                     stroke="#f43f5e"
                                     strokeWidth={2.5}
                                     dot={false}
