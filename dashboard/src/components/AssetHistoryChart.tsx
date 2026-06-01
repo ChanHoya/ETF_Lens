@@ -213,29 +213,19 @@ export default function AssetHistoryChart({ accounts }: Props) {
                 // 우측 수익률 도메인 (상하 최소 5% 여유)
                 const adjustedMinRet = minRet - 5;
                 const adjustedMaxRet = maxRet + 5;
-                const rightDomain = [adjustedMinRet, adjustedMaxRet];
 
-                const spanRight = adjustedMaxRet - adjustedMinRet;
-                // C: 우측 축 내에서 시작점(baseReturn)의 상대적 높이 비율 (0=하단, 1=상단)
-                const C = spanRight > 0 ? (baseReturn - adjustedMinRet) / spanRight : 0.5;
-
-                // 좌측 자산 도메인: 실제 데이터 범위(min~max) 기준으로 계산
+                // ── 좌측(자산) 도메인: 실제 데이터 min/max 기준, 상하 10% 패딩
                 const assets = filteredData.map(d => d.total_asset);
                 const minAsset = Math.min(...assets);
                 const maxAsset = Math.max(...assets);
-                const assetRange = maxAsset - minAsset;
-                // 상하 15% 패딩 (최소 전체 자산의 2%)
-                const assetPad = Math.max(assetRange * 0.15, maxAsset * 0.02);
+                const assetPad = Math.max((maxAsset - minAsset) * 0.1, maxAsset * 0.02);
+                const leftDomain: [number, number] = [
+                    Math.max(0, minAsset - assetPad),
+                    maxAsset + assetPad
+                ];
 
-                // 시작점(baseAsset)이 우측 축 baseReturn과 같은 높이 C에 위치하도록
-                // 도메인 Span을 역산: baseAsset 위/아래 데이터가 모두 클리핑 없이 들어와야 함
-                const spanFromTop = C < 0.99 ? (maxAsset + assetPad - baseAsset) / (1 - C) : assetRange * 2;
-                const spanFromBottom = C > 0.01 ? (baseAsset - minAsset + assetPad) / C : assetRange * 2;
-                const leftSpan = Math.max(spanFromTop, spanFromBottom);
-
-                const domainMinAsset = baseAsset - C * leftSpan;
-                const domainMaxAsset = domainMinAsset + leftSpan;
-                const leftDomain: [number, number] = [Math.max(0, domainMinAsset), domainMaxAsset];
+                // ── 우측(수익률) 도메인: 실제 데이터 min/max 기준, 상하 5% 패딩
+                const rightDomain: [number, number] = [adjustedMinRet, adjustedMaxRet];
 
                 return (
                     <div className="w-full h-[300px] relative">
@@ -255,17 +245,26 @@ export default function AssetHistoryChart({ accounts }: Props) {
                             <ComposedChart data={filteredData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorTotalAsset" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
-                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.05} />
+                                        <stop offset="5%"  stopColor="#818cf8" stopOpacity={0.75} />
+                                        <stop offset="95%" stopColor="#818cf8" stopOpacity={0.08} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                                {/* 시작일 수익률 기준선 (우측 축) */}
                                 <ReferenceLine
                                     yAxisId="right"
                                     y={baseReturn}
-                                    stroke="rgba(255,255,255,0.2)"
+                                    stroke="rgba(244,63,94,0.35)"
                                     strokeWidth={1}
-                                    strokeDasharray="3 3"
+                                    strokeDasharray="4 3"
+                                />
+                                {/* 시작일 자산 기준선 (좌측 축) */}
+                                <ReferenceLine
+                                    yAxisId="left"
+                                    y={baseAsset}
+                                    stroke="rgba(129,140,248,0.35)"
+                                    strokeWidth={1}
+                                    strokeDasharray="4 3"
                                 />
                                 <XAxis
                                     dataKey="date"
@@ -304,7 +303,7 @@ export default function AssetHistoryChart({ accounts }: Props) {
                                     yAxisId="left"
                                     type="monotone"
                                     dataKey="total_asset"
-                                    stroke="#6366f1"
+                                    stroke="#818cf8"
                                     strokeWidth={2.5}
                                     fillOpacity={1}
                                     fill="url(#colorTotalAsset)"
