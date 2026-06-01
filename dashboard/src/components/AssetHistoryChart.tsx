@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, ReferenceLine } from "recharts";
 import { API_BASE } from "@/lib/apiConfig";
 import { Loader2, TrendingUp, HelpCircle } from "lucide-react";
 
@@ -107,9 +107,9 @@ export default function AssetHistoryChart({ accounts }: Props) {
                         <span className="text-emerald-300 font-bold">{fmtKRW(data.cash_balance)}원</span>
                     </div>
                     <div className="flex justify-between gap-6 border-t border-white/5 pt-1.5">
-                        <span className="text-gray-400">누적 수익:</span>
+                        <span className="text-gray-400">누적 수익률:</span>
                         <span className={`font-black ${isPos ? "text-rose-400" : "text-blue-400"}`}>
-                            {isPos ? "+" : ""}{fmtShort(data.accumulated_profit)}원 ({isPos ? "+" : ""}{data.accumulated_return.toFixed(2)}%)
+                            {isPos ? "+" : ""}{data.accumulated_return.toFixed(2)}% ({isPos ? "+" : ""}{fmtShort(data.accumulated_profit)}원)
                         </span>
                     </div>
                 </div>
@@ -203,9 +203,21 @@ export default function AssetHistoryChart({ accounts }: Props) {
                     선택한 기간 동안의 자산 데이터가 없습니다.
                 </div>
             ) : (
-                <div className="w-full h-[300px]">
+                <div className="w-full h-[300px] relative">
+                    {/* 커스텀 차트 범례 */}
+                    <div className="absolute top-0 left-10 z-10 flex items-center gap-3.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/5 text-[10px] font-bold">
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-[#6366f1] inline-block" />
+                            <span className="text-gray-400">총 자산액</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-[#f43f5e] inline-block" />
+                            <span className="text-gray-400">누적 수익률</span>
+                        </div>
+                    </div>
+
                     <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <ComposedChart data={filteredData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorTotalAsset" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
@@ -213,6 +225,13 @@ export default function AssetHistoryChart({ accounts }: Props) {
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                            <ReferenceLine
+                                yAxisId="right"
+                                y={0}
+                                stroke="rgba(255,255,255,0.15)"
+                                strokeWidth={1}
+                                strokeDasharray="3 3"
+                            />
                             <XAxis
                                 dataKey="date"
                                 stroke="rgba(255,255,255,0.2)"
@@ -234,6 +253,10 @@ export default function AssetHistoryChart({ accounts }: Props) {
                                 fontSize={10}
                                 tickLine={false}
                                 tickFormatter={(val) => fmtShort(val)}
+                                domain={[
+                                    (dataMin: number) => Math.max(0, dataMin * 0.95),
+                                    (dataMax: number) => dataMax * 1.05
+                                ]}
                             />
                             <YAxis
                                 yAxisId="right"
@@ -242,6 +265,10 @@ export default function AssetHistoryChart({ accounts }: Props) {
                                 fontSize={10}
                                 tickLine={false}
                                 tickFormatter={(val) => `${val >= 0 ? "+" : ""}${val.toFixed(0)}%`}
+                                domain={[
+                                    (dataMin: number) => Math.min(dataMin - 5, -5),
+                                    (dataMax: number) => dataMax + 5
+                                ]}
                             />
                             <Tooltip content={<CustomTooltip />} />
                             <Area
