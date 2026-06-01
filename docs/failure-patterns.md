@@ -195,3 +195,15 @@
 - **증상**: 과거 이력 복원을 위해 `/asset-history` 등을 호출할 때 다계좌의 입출금 내역을 연속 쿼리하면 `msg_cd = EGW00133` 속도 초과 오류가 리턴되며 데이터가 누락됨
 - **원인**: KIS OpenAPI의 초당 1건 호출(1 TPS) 제약을 고려하지 않고, 여러 계좌의 거래 내역을 빠른 속도로 비동기 순회 쿼리함
 - **해결**: 각 계좌별 거래내역 API 요청 사이에 `await asyncio.sleep(0.5)` 이상의 안정적인 지연(Rate Limit padding)을 주어 Rate Limit 발생을 원천 차단함
+
+## API & Parameter Scoping (S6-7 추가 학습)
+
+### [FP-020] 개별 연동계좌 원금 매핑 실패로 인한 0% 수익률 일직선 현상
+- **증상**: 통합계좌 뷰에서는 수익률 곡선이 정상 노출되나, 개별 연동계좌 필터 선택 시 누적 수익률이 `0%` 일직선으로 그려짐.
+- **원인**: 수동 원금 데이터가 프론트엔드 입력 시 `entry_...` 형태로 저장되어 계좌번호와 1:1 매칭되는 원금이 없어서 `principal_val = 0.0`으로 평가됨.
+- **해결**: 개별 계좌에 지정된 수동 원금이 없을 경우, 전체 수동 원금 총합을 현재 각 계좌의 자산 규모 비중으로 안분(Pro-rata)하여 임시 원금(`principal_val`)을 자동 할당해 주는 Fallback 로직을 적용함.
+
+### [FP-021] KIS 토큰 미발급 환경에서 `get_asset_history` API의 `reconstruct_days` UnboundLocalError
+- **증상**: KIS API 연동 에러 상황(또는 로컬 오프라인 환경)에서 `get_asset_history` API 호출 시 백엔드 500 내부 서버 에러 발생.
+- **원인**: `reconstruct_days = min(days, 365)` 변수 선언이 KIS 토큰이 성공적으로 확보된 `if active_token:` 블록 내부에 기입되어 있어, 토큰을 발급받지 못하고 Fallback을 탈 때 외부 참조로 인한 `UnboundLocalError` 유발.
+- **해결**: `reconstruct_days` 선언부를 KIS 토큰 추출 조건문 위(KST 설정 근처)로 상향 조정하여 항상 정의된 상태를 보장함.
