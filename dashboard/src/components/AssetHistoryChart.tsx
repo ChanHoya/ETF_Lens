@@ -202,96 +202,115 @@ export default function AssetHistoryChart({ accounts }: Props) {
                 <div className="w-full h-[280px] flex items-center justify-center text-xs text-gray-500 text-center">
                     선택한 기간 동안의 자산 데이터가 없습니다.
                 </div>
-            ) : (
-                <div className="w-full h-[300px] relative">
-                    {/* 커스텀 차트 범례 */}
-                    <div className="absolute top-0 left-10 z-10 flex items-center gap-3.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/5 text-[10px] font-bold">
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-[#6366f1] inline-block" />
-                            <span className="text-gray-400">총 자산액</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-[#f43f5e] inline-block" />
-                            <span className="text-gray-400">누적 수익률</span>
-                        </div>
-                    </div>
+            ) : (() => {
+                const baseAsset = filteredData[0]?.total_asset ?? 0;
+                const baseReturn = filteredData[0]?.accumulated_return ?? 0;
 
-                    <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={filteredData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
-                            <defs>
-                                <linearGradient id="colorTotalAsset" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
-                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                            <ReferenceLine
-                                yAxisId="right"
-                                y={0}
-                                stroke="rgba(255,255,255,0.15)"
-                                strokeWidth={1}
-                                strokeDasharray="3 3"
-                            />
-                            <XAxis
-                                dataKey="date"
-                                stroke="rgba(255,255,255,0.2)"
-                                fontSize={10}
-                                tickLine={false}
-                                interval="preserveStartEnd"
-                                minTickGap={45}
-                                tickFormatter={(val) => {
-                                    if (!val || val.length < 10) return val;
-                                    if (period === "ALL" || period === "1Y") {
-                                        return val.substring(2, 7); // "YY-MM" 포맷 (예: 25-06)
-                                    }
-                                    return val.substring(5); // "MM-DD" 포맷 (예: 06-01)
-                                }}
-                            />
-                            <YAxis
-                                yAxisId="left"
-                                stroke="rgba(255,255,255,0.2)"
-                                fontSize={10}
-                                tickLine={false}
-                                tickFormatter={(val) => fmtShort(val)}
-                                domain={[
-                                    (dataMin: number) => Math.max(0, dataMin * 0.95),
-                                    (dataMax: number) => dataMax * 1.05
-                                ]}
-                            />
-                            <YAxis
-                                yAxisId="right"
-                                orientation="right"
-                                stroke="rgba(255,255,255,0.2)"
-                                fontSize={10}
-                                tickLine={false}
-                                tickFormatter={(val) => `${val >= 0 ? "+" : ""}${val.toFixed(0)}%`}
-                                domain={[
-                                    (dataMin: number) => Math.min(dataMin - 5, -5),
-                                    (dataMax: number) => dataMax + 5
-                                ]}
-                            />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Area
-                                yAxisId="left"
-                                type="monotone"
-                                dataKey="total_asset"
-                                stroke="#6366f1"
-                                strokeWidth={2}
-                                fillOpacity={1}
-                                fill="url(#colorTotalAsset)"
-                            />
-                            <Line
-                                yAxisId="right"
-                                type="monotone"
-                                dataKey="accumulated_return"
-                                stroke="#f43f5e"
-                                strokeWidth={2.5}
-                                dot={false}
-                            />
-                        </ComposedChart>
-                    </ResponsiveContainer>
-                </div>
-            )}
+                const chartData = filteredData.map(item => ({
+                    ...item,
+                    accumulated_return_normalized: item.accumulated_return - baseReturn
+                }));
+
+                const normReturns = chartData.map(d => d.accumulated_return_normalized);
+                const minRet = Math.min(...normReturns);
+                const maxRet = Math.max(...normReturns);
+
+                // 우측 수익률 도메인 (상하 최소 5% 여유 및 시작점 0% 포함하도록 구성)
+                const adjustedMinRet = Math.min(minRet - 5, -5);
+                const adjustedMaxRet = Math.max(maxRet + 5, 5);
+                const rightDomain = [adjustedMinRet, adjustedMaxRet];
+
+                // 좌측 자산 도메인을 우측 수익률 변동률 비중과 정확하게 비례 동기화!
+                // 시작일 자산금액(baseAsset)이 정확하게 우측 0% 지점과 같은 가로 수평선상에 정렬되도록 계산
+                const domainMinAsset = baseAsset * (1 + adjustedMinRet / 100);
+                const domainMaxAsset = baseAsset * (1 + adjustedMaxRet / 100);
+                const leftDomain = [Math.max(0, domainMinAsset), domainMaxAsset];
+
+                return (
+                    <div className="w-full h-[300px] relative">
+                        {/* 커스텀 차트 범례 */}
+                        <div className="absolute top-0 left-10 z-10 flex items-center gap-3.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/5 text-[10px] font-bold">
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-[#6366f1] inline-block" />
+                                <span className="text-gray-400">총 자산액</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-[#f43f5e] inline-block" />
+                                <span className="text-gray-400">누적 수익률</span>
+                            </div>
+                        </div>
+
+                        <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={chartData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="colorTotalAsset" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
+                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                                <ReferenceLine
+                                    yAxisId="right"
+                                    y={0}
+                                    stroke="rgba(255,255,255,0.15)"
+                                    strokeWidth={1}
+                                    strokeDasharray="3 3"
+                                />
+                                <XAxis
+                                    dataKey="date"
+                                    stroke="rgba(255,255,255,0.2)"
+                                    fontSize={10}
+                                    tickLine={false}
+                                    interval="preserveStartEnd"
+                                    minTickGap={45}
+                                    tickFormatter={(val) => {
+                                        if (!val || val.length < 10) return val;
+                                        if (period === "ALL" || period === "1Y") {
+                                            return val.substring(2, 7); // "YY-MM" 포맷 (예: 25-06)
+                                        }
+                                        return val.substring(5); // "MM-DD" 포맷 (예: 06-01)
+                                    }}
+                                />
+                                <YAxis
+                                    yAxisId="left"
+                                    stroke="rgba(255,255,255,0.2)"
+                                    fontSize={10}
+                                    tickLine={false}
+                                    tickFormatter={(val) => fmtShort(val)}
+                                    domain={leftDomain}
+                                />
+                                <YAxis
+                                    yAxisId="right"
+                                    orientation="right"
+                                    stroke="rgba(255,255,255,0.2)"
+                                    fontSize={10}
+                                    tickLine={false}
+                                    tickFormatter={(val) => `${val >= 0 ? "+" : ""}${val.toFixed(0)}%`}
+                                    domain={rightDomain}
+                                />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Area
+                                    yAxisId="left"
+                                    type="monotone"
+                                    dataKey="total_asset"
+                                    stroke="#6366f1"
+                                    strokeWidth={2}
+                                    fillOpacity={1}
+                                    fill="url(#colorTotalAsset)"
+                                />
+                                <Line
+                                    yAxisId="right"
+                                    type="monotone"
+                                    dataKey="accumulated_return_normalized"
+                                    stroke="#f43f5e"
+                                    strokeWidth={2.5}
+                                    dot={false}
+                                />
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

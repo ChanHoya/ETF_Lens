@@ -1340,26 +1340,86 @@ async def get_asset_history(
     res = await db.execute(stmt)
     snapshots = res.scalars().all()
 
-    # 만약 적재된 데이터가 충분하고 복원 옵션이 꺼져있으면 그대로 반환
-    min_snapshots_threshold = 300 if days >= 365 else 10
-    if len(snapshots) >= min_snapshots_threshold and not use_reconstruction:
+    # DB에 충분한 스냅샷(조회 요청 일수의 70% 이상)이 쌓여있다면 KIS API 추가 쿼리 없이 즉시 리턴
+    # 단, 오늘자 최신 자산 정보만 포트폴리오 캐시에서 가져와 마지막 포인트로 덧붙임
+    min_snapshots_threshold = int(days * 0.7)
+    if len(snapshots) >= min_snapshots_threshold:
         KST = timezone(timedelta(hours=9))
         today = datetime.now(KST)
         cutoff_date = (today - timedelta(days=days)).strftime("%Y-%m-%d")
         filtered_snapshots = [s for s in snapshots if s.date >= cutoff_date]
+        
+        today_str = today.strftime("%Y-%m-%d")
+        has_today = any(s.date == today_str for s in filtered_snapshots)
+        
+        history_list = [
+            {
+                "date": s.date,
+                "total_asset": s.total_asset,
+                "eval_amount": s.eval_amount,
+                "cash_balance": s.cash_balance,
+                "accumulated_profit": s.accumulated_profit,
+                "accumulated_return": s.accumulated_return
+            } for s in filtered_snapshots
+        ]
+        
+        if not has_today:
+            try:
+                # 5분 캐시된 포트폴리오에서 실시간 총자산 데이터 가져오기
+                portfolio = await get_my_portfolio(request=request, db=db)
+                if portfolio:
+                    kis_raw = portfolio.get("kis_raw", {})
+                    summary = kis_raw.get("summary", {})
+                    if account_no == "ALL":
+                        cur_total = float(summary.get("total_asset", 0.0))
+                        cur_eval = float(summary.get("total_eval_amount", 0.0))
+                        cur_cash = float(summary.get("cash_balance", 0.0))
+                    else:
+                        acc_list = kis_raw.get("accounts", [])
+                        matched = [a for a in acc_list if a["account_no"] == account_no]
+                        if matched:
+                            cur_total = float(matched[0].get("total_asset", 0.0))
+                            cur_cash = float(matched[0].get("cash_balance", 0.0))
+                            cur_eval = cur_total - cur_cash
+                        else:
+                            cur_total = cur_eval = cur_cash = 0.0
+                            
+                    if cur_total > 0.0:
+                        # 원금 계산
+                        stmt_pr = select(UserPrincipal).where(UserPrincipal.account_no == account_no)
+                        res_pr = await db.execute(stmt_pr)
+                        pr_obj = res_pr.scalars().first()
+                        p_val = pr_obj.principal if pr_obj else 0.0
+                        
+                        if p_val == 0.0:
+                            stmt_prs = select(UserPrincipal)
+                            res_prs = await db.execute(stmt_prs)
+                            total_principal = sum(p.principal for p in res_prs.scalars().all())
+                            if account_no == "ALL":
+                                p_val = total_principal
+                            else:
+                                all_tot = float(summary.get("total_asset", 0.0))
+                                if total_principal > 0.0 and all_tot > 0.0:
+                                    p_val = total_principal * (cur_total / all_tot)
+                        
+                        prof = cur_total - p_val if p_val > 0 else 0.0
+                        ret = (prof / p_val * 100) if p_val > 0 else 0.0
+                        
+                        history_list.append({
+                            "date": today_str,
+                            "total_asset": round(cur_total, 2),
+                            "eval_amount": round(cur_eval, 2),
+                            "cash_balance": round(cur_cash, 2),
+                            "accumulated_profit": round(prof, 2),
+                            "accumulated_return": round(ret, 2)
+                        })
+            except Exception as e:
+                logger.error(f"[Asset History Cache fallback] Error appending today's data: {e}")
+                
         return {
             "status": "success",
-            "source": "database",
-            "history": [
-                {
-                    "date": s.date,
-                    "total_asset": s.total_asset,
-                    "eval_amount": s.eval_amount,
-                    "cash_balance": s.cash_balance,
-                    "accumulated_profit": s.accumulated_profit,
-                    "accumulated_return": s.accumulated_return
-                } for s in filtered_snapshots
-            ]
+            "source": "database_cached",
+            "history": history_list
         }
 
     # 2. 역산 복원 로직 시작 (데이터가 부족하거나 use_reconstruction=True인 경우)
@@ -1685,6 +1745,45 @@ async def get_asset_history(
         if key >= cutoff_date
     ]
     final_history.sort(key=lambda x: x["date"])
+
+    # 복원된 과거 데이터를 DB에 영구 적재하여, 다음 조회 시 즉시 로딩되도록 캐싱
+    try:
+        from db.models import UserAssetSnapshot
+        today_str = today.strftime("%Y-%m-%d")
+        for item in reconstructed_data:
+            d_str = item["date"]
+            if d_str == today_str:
+                continue # 오늘 실시간 데이터는 캐시 적재 제외 (매번 실시간 갱신)
+            
+            # 동일 날짜, 동일 계좌 스냅샷 존재 여부 확인 후 Upsert
+            stmt_check = select(UserAssetSnapshot).where(
+                UserAssetSnapshot.account_no == account_no,
+                UserAssetSnapshot.date == d_str
+            )
+            res_check = await db.execute(stmt_check)
+            existing_snap = res_check.scalars().first()
+            
+            if existing_snap:
+                existing_snap.total_asset = item["total_asset"]
+                existing_snap.eval_amount = item["eval_amount"]
+                existing_snap.cash_balance = item["cash_balance"]
+                existing_snap.accumulated_profit = item["accumulated_profit"]
+                existing_snap.accumulated_return = item["accumulated_return"]
+            else:
+                db.add(UserAssetSnapshot(
+                    date=d_str,
+                    account_no=account_no,
+                    total_asset=item["total_asset"],
+                    eval_amount=item["eval_amount"],
+                    cash_balance=item["cash_balance"],
+                    accumulated_profit=item["accumulated_profit"],
+                    accumulated_return=item["accumulated_return"]
+                ))
+        await db.commit()
+        logger.info(f"[Reconstruct Cache] Bulk upserted historical points to DB for {account_no}")
+    except Exception as save_err:
+        logger.error(f"[Reconstruct Cache] Failed to cache historical data to DB: {save_err}")
+        await db.rollback()
 
     return {
         "status": "success",
