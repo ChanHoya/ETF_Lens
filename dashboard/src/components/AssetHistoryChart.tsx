@@ -216,16 +216,26 @@ export default function AssetHistoryChart({ accounts }: Props) {
                 const rightDomain = [adjustedMinRet, adjustedMaxRet];
 
                 const spanRight = adjustedMaxRet - adjustedMinRet;
+                // C: 우측 축 내에서 시작점(baseReturn)의 상대적 높이 비율 (0=하단, 1=상단)
                 const C = spanRight > 0 ? (baseReturn - adjustedMinRet) / spanRight : 0.5;
 
-                // 좌측 자산 도메인 계산: 우측 대비 1.4배의 Span을 갖게 하여,
-                // 시작일 자산금액(baseAsset)과 baseReturn이 정확히 일치하여 교차하면서도
-                // 자산 Area 선은 다소 완만하게 하단에 위치하고 수익률 Line은 위로 퍼지도록 분리합니다.
-                const scaleFactor = 1.4;
-                const spanLeft = baseAsset * (spanRight / 100) * scaleFactor;
-                const domainMinAsset = baseAsset - C * spanLeft;
-                const domainMaxAsset = domainMinAsset + spanLeft;
-                const leftDomain = [Math.max(0, domainMinAsset), domainMaxAsset];
+                // 좌측 자산 도메인: 실제 데이터 범위(min~max) 기준으로 계산
+                const assets = filteredData.map(d => d.total_asset);
+                const minAsset = Math.min(...assets);
+                const maxAsset = Math.max(...assets);
+                const assetRange = maxAsset - minAsset;
+                // 상하 15% 패딩 (최소 전체 자산의 2%)
+                const assetPad = Math.max(assetRange * 0.15, maxAsset * 0.02);
+
+                // 시작점(baseAsset)이 우측 축 baseReturn과 같은 높이 C에 위치하도록
+                // 도메인 Span을 역산: baseAsset 위/아래 데이터가 모두 클리핑 없이 들어와야 함
+                const spanFromTop = C < 0.99 ? (maxAsset + assetPad - baseAsset) / (1 - C) : assetRange * 2;
+                const spanFromBottom = C > 0.01 ? (baseAsset - minAsset + assetPad) / C : assetRange * 2;
+                const leftSpan = Math.max(spanFromTop, spanFromBottom);
+
+                const domainMinAsset = baseAsset - C * leftSpan;
+                const domainMaxAsset = domainMinAsset + leftSpan;
+                const leftDomain: [number, number] = [Math.max(0, domainMinAsset), domainMaxAsset];
 
                 return (
                     <div className="w-full h-[300px] relative">
