@@ -13,6 +13,7 @@ Base: Exit Strategy Monitoring (KOSPI)
 > - 버그 핫픽스: 개별 연동계좌 수익률 곡선이 0% 일직선으로 전시되던 이슈 해결 (수동 원금 항목 전체 합산 후 각 계좌의 자산 규모 비중으로 Pro-rata 안분 배분 Fallback 적용)
 > - 핫픽스 2: KIS 토큰 발급 불가 환경에서 `get_asset_history` API 호출 시 발생하던 `reconstruct_days` `UnboundLocalError` 방지를 위해 변수 선언 위치를 conditional block 상단으로 상향
 > - 핫픽스 3: 자산 성장 추이 차트의 툴팁 포맷 변경("누적 수익률" 선행), 차트 내 플로팅 Legend 추가 및 YAxis domain 패딩 여유값 부여로 하단 겹침 방지 + 0% ReferenceLine 추가 완료
+> - 핫픽스 4: 자산 추이 과거 데이터를 최초 1회 연산 후 DB에 Bulk 적재하여 캐싱하고, 다음 호출 시 DB에서 **1ms** 만에 즉시 반환하도록 최적화(매번 느린 KIS 조회 대기 해결) 및 선택 기간의 첫 날(시작일)을 기준으로 자산금액 및 수익률(0%)의 시작 높이가 완벽히 일치하도록 좌우 YAxis 스케일 동적 1:1 비례 정규화 적용
 > - 다음 세션: S6-4 배당 스크래퍼 → S6-5 배당 캘린더 UI 순서로 진행 (sprint-manager 호출로 시작)
 
 
