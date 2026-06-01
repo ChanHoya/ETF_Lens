@@ -205,25 +205,24 @@ export default function AssetHistoryChart({ accounts }: Props) {
             ) : (() => {
                 const baseAsset = filteredData[0]?.total_asset ?? 0;
                 const baseReturn = filteredData[0]?.accumulated_return ?? 0;
+                const baseProfit = filteredData[0]?.accumulated_profit ?? 0;
 
-                const chartData = filteredData.map(item => ({
-                    ...item,
-                    accumulated_return_normalized: item.accumulated_return - baseReturn
-                }));
+                // 시작 시점의 실질 원금 역산 (원금 = 자산 - 수익금)
+                const basePrincipal = baseProfit !== 0 ? (baseAsset - baseProfit) : (baseAsset / (1 + baseReturn / 100));
 
-                const normReturns = chartData.map(d => d.accumulated_return_normalized);
-                const minRet = Math.min(...normReturns);
-                const maxRet = Math.max(...normReturns);
+                const returns = filteredData.map(d => d.accumulated_return);
+                const minRet = Math.min(...returns);
+                const maxRet = Math.max(...returns);
 
-                // 우측 수익률 도메인 (상하 최소 5% 여유 및 시작점 0% 포함하도록 구성)
-                const adjustedMinRet = Math.min(minRet - 5, -5);
-                const adjustedMaxRet = Math.max(maxRet + 5, 5);
+                // 우측 수익률 도메인 (상하 최소 5% 여유)
+                const adjustedMinRet = minRet - 5;
+                const adjustedMaxRet = maxRet + 5;
                 const rightDomain = [adjustedMinRet, adjustedMaxRet];
 
                 // 좌측 자산 도메인을 우측 수익률 변동률 비중과 정확하게 비례 동기화!
-                // 시작일 자산금액(baseAsset)이 정확하게 우측 0% 지점과 같은 가로 수평선상에 정렬되도록 계산
-                const domainMinAsset = baseAsset * (1 + adjustedMinRet / 100);
-                const domainMaxAsset = baseAsset * (1 + adjustedMaxRet / 100);
+                // 시작일 자산금액(baseAsset)이 정확하게 우측 baseReturn 지점과 같은 가로 수평선상에 정렬되도록 계산
+                const domainMinAsset = basePrincipal * (1 + adjustedMinRet / 100);
+                const domainMaxAsset = basePrincipal * (1 + adjustedMaxRet / 100);
                 const leftDomain = [Math.max(0, domainMinAsset), domainMaxAsset];
 
                 return (
@@ -241,7 +240,7 @@ export default function AssetHistoryChart({ accounts }: Props) {
                         </div>
 
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={chartData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
+                            <ComposedChart data={filteredData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorTotalAsset" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
@@ -251,8 +250,8 @@ export default function AssetHistoryChart({ accounts }: Props) {
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
                                 <ReferenceLine
                                     yAxisId="right"
-                                    y={0}
-                                    stroke="rgba(255,255,255,0.15)"
+                                    y={baseReturn}
+                                    stroke="rgba(255,255,255,0.2)"
                                     strokeWidth={1}
                                     strokeDasharray="3 3"
                                 />
@@ -301,7 +300,7 @@ export default function AssetHistoryChart({ accounts }: Props) {
                                 <Line
                                     yAxisId="right"
                                     type="monotone"
-                                    dataKey="accumulated_return_normalized"
+                                    dataKey="accumulated_return"
                                     stroke="#f43f5e"
                                     strokeWidth={2.5}
                                     dot={false}
