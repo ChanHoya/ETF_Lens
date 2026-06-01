@@ -5,7 +5,7 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 6 — S6-3 (Efficient Frontier 시각화 및 최적 비중 연동) 완료 (2026-05-31)
+✅ Current: Sprint 6 — S6-7 (계좌별 자산 증감(추이) 시각화 및 분석) 완료 (2026-06-01)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-05-31):
@@ -33,6 +33,7 @@ Base: Exit Strategy Monitoring (KOSPI)
 | S6-4 | ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API | ⬜ planned | Seibro/네이버페이 기반 과거 분배금 단가 및 배당 지급일/주기 크롤링 API 연산 모듈 구현 |
 | S6-5 | 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드 | ⬜ planned | 월별 배당금 캘린더 달력 뷰, 연간 누적 Cashflow 바 차트 및 총 예상 배당 수익률 카드 연동 |
 | S6-6 | 괴리율 개인화 알림 설정 및 알림 채널 확장 | ⬜ planned | Disparity 임계치 설정 Slider UI 및 Slack/Discord 웹훅 발송 즉시 테스트 연동 |
+| S6-7 | 계좌별 자산 증감(추이) 시각화 및 분석 | ✅ stable | KIS 일별 계좌 자산 DB 적재 및 거래내역 기반 90일 역산 복원 차트 시각화 완료 |
 ## Module Registry
  
 | Module | Layer | Status | Key Files |
@@ -48,6 +49,7 @@ Base: Exit Strategy Monitoring (KOSPI)
 | Macro Compass | Backend | ✅ stable | api/macro_compass.py |
 | Exit Signal | Backend | ✅ stable | api/exit_signal.py |
 | TFF Cards | Frontend | ✅ stable | src/components/tff/views/YtmView.tsx, MonthlyView.tsx |
+| Asset History Tracking | Hybrid | ✅ stable | api/my_assets.py (asset-history), AssetHistoryChart.tsx |
 
 ## Technical Decisions
 

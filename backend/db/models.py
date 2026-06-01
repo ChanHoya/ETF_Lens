@@ -248,3 +248,19 @@ class TffRecord(Base):
     raw_sheets_json = Column(Text, nullable=False)  # rawSheets parsed JSON
 
 
+class UserAssetSnapshot(Base):
+    """사용자의 일별 자산 총액 및 수익 현황 스냅샷 (자산 추이 분석용)"""
+    __tablename__ = "user_asset_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    date = Column(String, index=True, nullable=False)        # YYYY-MM-DD
+    account_no = Column(String, index=True, nullable=False)  # 'ALL' 또는 개별 계좌번호
+    total_asset = Column(Float, nullable=False)              # 총자산 (평가금 + 예수금)
+    eval_amount = Column(Float, nullable=False)              # 주식 평가금액
+    cash_balance = Column(Float, nullable=False)             # 예수금 잔고
+    accumulated_profit = Column(Float, nullable=True)        # 누적 수익금 (원금 기준 계산)
+    accumulated_return = Column(Float, nullable=True)        # 누적 수익률 (%)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+

@@ -23,6 +23,7 @@ A living document of module relationships. Update whenever modules are added or 
 | ETF Disparity Monitoring | Presentation | Real-time Indicative NAV disparity rate analyzer and alert scheduling | core/disparity_analyzer, core/notifier, api/router | MyDashboard, SpaceChart, BioChart, scheduler | Antigravity |
 | TFF IndexedDB Persistence | Presentation | Local storage of TFF Excel parsed JSON and version history comparisons | db.ts | TffDashboard | Antigravity |
 | Efficient Frontier | Presentation | Portfolio Efficient Frontier MPT simulation & weight optimization | api/efficient_frontier | - | Antigravity |
+| Asset History Tracking | Presentation | User portfolio asset snapshots and historical performance trend charting | my_assets, db/models, AssetHistoryChart | MyAssetsView | Antigravity |
 <!-- Add new modules above this line -->
 
 
@@ -70,3 +71,4 @@ When modifying a module:
 |------|--------|--------|------------------|--------|
 | 2026-05-26 | Space ETF Analysis | Added price and change_pct fields to /space-holdings response | SpaceChart | Updated |
 | 2026-05-28 | ETF Disparity Monitoring | Created /analyze/etf/disparity API & enriched portfolio response | MyDashboard, SpaceChart, BioChart, scheduler | Updated |
+| 2026-06-01 | Asset History Tracking | Added GET /asset-history API & daily snapshot recording to /portfolio | MyAssetsView | Updated |

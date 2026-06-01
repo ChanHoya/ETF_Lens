@@ -50,6 +50,8 @@
 | S5-14: TFF 종목별 수익률 엑셀 테이블 및 예수금 핫픽스 | ✅ done | YtmView.tsx, MonthlyView.tsx, excelParser.ts, types.ts | 종목별 수익률 탭 내 엑셀 레이아웃 그대로 반영된 요약표 추가, 현금(예수금) 파싱 알고리즘 최적화, YTM 탭 상단에 엑셀 원본 포맷의 종합 현황판 및 현금/평잔 종합현황 대시보드 추가 완료 |
 | S6-1: TFF 엑셀 업로드 PostgreSQL 저장 및 중앙 공유형 대시보드 | ✅ done | TffDashboard.tsx, router.py, models.py | PostgreSQL DB 데이터 저장, 마스터 패스코드 인증 및 뷰어/마스터 권한 제어 격리 구현 완료 |
 | S6-2: 포트폴리오 Efficient Frontier 최적화 백엔드 API | ✅ done | backend/api/efficient_frontier.py, backend/tests/test_efficient_frontier.py | MPT 기반 기대수익률/변동성/공분산 연산, 몬테카를로 시뮬레이션 및 Numeric Binning 곡선 산출 API 구현 완료 |
+| S6-3: Efficient Frontier 시각화 및 최적 비중 연동 | ✅ done | dashboard/src/components/EfficientFrontierPanel.tsx, MyDashboard.tsx | Recharts ComposedChart 산점도 및 효율전선 커브, 최적 비중 비교 바 차트 시각화 완료 |
+| S6-7: 계좌별 자산 증감(추이) 시각화 및 분석 | ✅ done | backend/api/my_assets.py, dashboard/src/components/AssetHistoryChart.tsx, MyAssetsView.tsx | KIS 일별 계좌 스냅샷 DB 자동 적재 및 거래내역 기반 90일 역산/복원 차트 시각화 완료 |
 
 
 

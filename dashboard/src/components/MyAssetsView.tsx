@@ -6,6 +6,7 @@ import InvestmentReturnCard from "@/components/InvestmentReturnCard";
 import { Loader2, RefreshCw } from "lucide-react";
 import { API_BASE } from "@/lib/apiConfig";
 import RiskBanner from "@/components/RiskBanner";
+import AssetHistoryChart from "@/components/AssetHistoryChart";
 
 export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenDetail?: (code: string) => void, onAnalyzePeers?: (items: any[]) => void }) {
     const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
@@ -251,6 +252,13 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
                             cashBalance={(isSimulatedMode ? simulatedData : kisData)?.kis_raw?.summary?.cash_balance ?? 0}
                         />
                     </div>
+                    {!isSimulatedMode && (
+                        <div className="w-full">
+                            <AssetHistoryChart 
+                                accounts={(kisData)?.kis_raw?.accounts ?? []} 
+                            />
+                        </div>
+                    )}
                     <MyDashboard data={isSimulatedMode ? simulatedData : kisData} tradesData={tradesData} isRefreshing={isRefreshing} onOpenDetail={onOpenDetail} onAnalyzePeers={onAnalyzePeers} />
                 </div>
             )}

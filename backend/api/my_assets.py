@@ -477,6 +477,110 @@ async def get_my_portfolio(
                 aggregated_summary["weighted_disparity_rate"] = 0.0
     
             analyzed_data = await analyze_portfolio(all_holdings, db)
+            
+            # 5.5. Save Asset Snapshot to DB (자산 추이 수집)
+            try:
+                from db.models import UserAssetSnapshot, UserPrincipal
+                from sqlalchemy import select
+                from datetime import datetime, timezone, timedelta
+                
+                KST = timezone(timedelta(hours=9))
+                today_str = datetime.now(KST).strftime("%Y-%m-%d")
+                
+                # 개별 계좌 스냅샷 Upsert
+                for r in valid_results:
+                    acc_no = r["account_no"]
+                    summary = r["summary"]
+                    
+                    # 해당 계좌의 원금 가져오기
+                    stmt_pr = select(UserPrincipal).where(UserPrincipal.account_no == acc_no)
+                    res_pr = await db.execute(stmt_pr)
+                    principal_obj = res_pr.scalars().first()
+                    principal_val = principal_obj.principal if principal_obj else 0.0
+                    
+                    cur_total = float(summary["total_asset"])
+                    cur_eval = float(summary["total_eval_amount"])
+                    cur_cash = float(summary["cash_balance"])
+                    
+                    acc_profit = cur_total - principal_val if principal_val > 0 else 0.0
+                    acc_return = (acc_profit / principal_val * 100) if principal_val > 0 else 0.0
+                    
+                    # 기존 스냅샷 존재 여부 확인 (동일 날짜, 동일 계좌)
+                    stmt_snap = select(UserAssetSnapshot).where(
+                        UserAssetSnapshot.date == today_str,
+                        UserAssetSnapshot.account_no == acc_no
+                    )
+                    res_snap = await db.execute(stmt_snap)
+                    snap_obj = res_snap.scalars().first()
+                    
+                    if snap_obj:
+                        snap_obj.total_asset = cur_total
+                        snap_obj.eval_amount = cur_eval
+                        snap_obj.cash_balance = cur_cash
+                        snap_obj.accumulated_profit = acc_profit
+                        snap_obj.accumulated_return = acc_return
+                    else:
+                        new_snap = UserAssetSnapshot(
+                            date=today_str,
+                            account_no=acc_no,
+                            total_asset=cur_total,
+                            eval_amount=cur_eval,
+                            cash_balance=cur_cash,
+                            accumulated_profit=acc_profit,
+                            accumulated_return=acc_return
+                        )
+                        db.add(new_snap)
+                
+                # 'ALL' (통합) 자산 스냅샷 Upsert
+                # 'ALL' 원금 조회
+                stmt_all_pr = select(UserPrincipal).where(UserPrincipal.account_no == "ALL")
+                res_all_pr = await db.execute(stmt_all_pr)
+                all_pr_obj = res_all_pr.scalars().first()
+                
+                if all_pr_obj:
+                    all_principal = all_pr_obj.principal
+                else:
+                    stmt_all_prs = select(UserPrincipal)
+                    res_all_prs = await db.execute(stmt_all_prs)
+                    all_principal = sum(p.principal for p in res_all_prs.scalars().all())
+                
+                tot_asset = float(aggregated_summary["total_asset"])
+                tot_eval = float(aggregated_summary["total_eval_amount"])
+                tot_cash = float(aggregated_summary["cash_balance"])
+                
+                all_profit = tot_asset - all_principal if all_principal > 0 else 0.0
+                all_return = (all_profit / all_principal * 100) if all_principal > 0 else 0.0
+                
+                stmt_all_snap = select(UserAssetSnapshot).where(
+                    UserAssetSnapshot.date == today_str,
+                    UserAssetSnapshot.account_no == "ALL"
+                )
+                res_all_snap = await db.execute(stmt_all_snap)
+                all_snap_obj = res_all_snap.scalars().first()
+                
+                if all_snap_obj:
+                    all_snap_obj.total_asset = tot_asset
+                    all_snap_obj.eval_amount = tot_eval
+                    all_snap_obj.cash_balance = tot_cash
+                    all_snap_obj.accumulated_profit = all_profit
+                    all_snap_obj.accumulated_return = all_return
+                else:
+                    new_all_snap = UserAssetSnapshot(
+                        date=today_str,
+                        account_no="ALL",
+                        total_asset=tot_asset,
+                        eval_amount=tot_eval,
+                        cash_balance=tot_cash,
+                        accumulated_profit=all_profit,
+                        accumulated_return=all_return
+                    )
+                    db.add(new_all_snap)
+                
+                await db.commit()
+                logger.info(f"User asset snapshots updated for date {today_str}")
+            except Exception as snap_err:
+                logger.error(f"Failed to save user asset snapshot: {snap_err}")
+                await db.rollback()
     
             result_payload = {
                 "status": "success",
@@ -1200,5 +1304,290 @@ async def get_portfolio_overlap(request: Request, db: AsyncSession = Depends(get
     analyzer = ETFOverlapAnalyzer(holdings_with_cash, db)
     result = await analyzer.analyze()
     return result
+
+
+@router.get("/asset-history")
+async def get_asset_history(
+    request: Request,
+    account_no: Optional[str] = "ALL",
+    use_reconstruction: Optional[bool] = False,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    사용자의 과거 자산 평가액 및 누적 수익 추이 목록을 반환합니다.
+    DB에 적재된 실측 데이터와 KIS 거래내역을 조합한 하이브리드 시계열을 만듭니다.
+    """
+    from db.models import UserAssetSnapshot, BenchmarkPrice, UserPrincipal
+    from sqlalchemy import select
+    from datetime import datetime, timezone, timedelta
+    import httpx
+    import asyncio
+
+    # 1. DB 적재 데이터 조회
+    stmt = select(UserAssetSnapshot).where(UserAssetSnapshot.account_no == account_no).order_by(UserAssetSnapshot.date.asc())
+    res = await db.execute(stmt)
+    snapshots = res.scalars().all()
+
+    # 만약 적재된 데이터가 충분하고 복원 옵션이 꺼져있으면 그대로 반환
+    if len(snapshots) >= 10 and not use_reconstruction:
+        return {
+            "status": "success",
+            "source": "database",
+            "history": [
+                {
+                    "date": s.date,
+                    "total_asset": s.total_asset,
+                    "eval_amount": s.eval_amount,
+                    "cash_balance": s.cash_balance,
+                    "accumulated_profit": s.accumulated_profit,
+                    "accumulated_return": s.accumulated_return
+                } for s in snapshots
+            ]
+        }
+
+    # 2. 역산 복원 로직 시작 (데이터가 부족하거나 use_reconstruction=True인 경우)
+    try:
+        portfolio = await get_my_portfolio(request=request, db=db)
+    except Exception as e:
+        logger.error(f"Error fetching current portfolio for reconstruction: {e}")
+        portfolio = None
+
+    if not portfolio:
+        # DB에 적재된 극소수 데이터라도 리턴
+        return {
+            "status": "success",
+            "source": "database_fallback",
+            "history": [
+                {
+                    "date": s.date,
+                    "total_asset": s.total_asset,
+                    "eval_amount": s.eval_amount,
+                    "cash_balance": s.cash_balance,
+                    "accumulated_profit": s.accumulated_profit,
+                    "accumulated_return": s.accumulated_return
+                } for s in snapshots
+            ]
+        }
+
+    kis_raw = portfolio.get("kis_raw", {})
+    summary = kis_raw.get("summary", {})
+
+    # 현재 자산 상태
+    if account_no == "ALL":
+        current_total = float(summary.get("total_asset", 0.0))
+        current_eval = float(summary.get("total_eval_amount", 0.0))
+        current_cash = float(summary.get("cash_balance", 0.0))
+    else:
+        # 개별 계좌 검색
+        acc_list = kis_raw.get("accounts", [])
+        matched = [a for a in acc_list if a["account_no"] == account_no]
+        if matched:
+            current_total = float(matched[0].get("total_asset", 0.0))
+            current_cash = float(matched[0].get("cash_balance", 0.0))
+            current_eval = current_total - current_cash
+        else:
+            current_total = float(summary.get("total_asset", 0.0))
+            current_eval = float(summary.get("total_eval_amount", 0.0))
+            current_cash = float(summary.get("cash_balance", 0.0))
+
+    # 원금 구하기
+    stmt_pr = select(UserPrincipal).where(UserPrincipal.account_no == account_no)
+    res_pr = await db.execute(stmt_pr)
+    pr_obj = res_pr.scalars().first()
+    principal_val = pr_obj.principal if pr_obj else 0.0
+
+    if principal_val == 0.0 and account_no == "ALL":
+        stmt_prs = select(UserPrincipal)
+        res_prs = await db.execute(stmt_prs)
+        principal_val = sum(p.principal for p in res_prs.scalars().all())
+
+    # KST 기준 날짜
+    KST = timezone(timedelta(hours=9))
+    today = datetime.now(KST)
+
+    net_flows = {}  # format: { "YYYY-MM-DD": float }
+
+    # KIS 연동 계좌 및 API 키 로딩
+    accounts_raw = [v.strip() for k, v in os.environ.items() if k.startswith("KIS_ACC") and v.strip()]
+    keypairs = []
+    for k, v in os.environ.items():
+        if k.startswith("KIS_APP_KEY") and v:
+            suffix = k.replace("KIS_APP_KEY", "")
+            secret = os.environ.get(f"KIS_APP_SECRET{suffix}", "")
+            if secret:
+                keypairs.append({"app_key": v.strip(), "app_secret": secret.strip()})
+
+    if accounts_raw and keypairs:
+        # 토큰 확보
+        active_token = None
+        active_kp = None
+        import time as _time
+        for kp in keypairs:
+            cached = TOKEN_CACHE.get(kp["app_key"])
+            if cached and cached["expires_at"] > _time.time():
+                active_token = cached["access_token"]
+                active_kp = kp
+                break
+
+        if active_token:
+            kis_url = os.environ.get("KIS_URL_BASE", "https://openapi.koreainvestment.com:9443")
+            is_mock = "vts" in kis_url
+            tr_id = "VTTC8508R" if is_mock else "TTTC8508R"
+
+            # 최근 90일로 한정하여 속도 및 신뢰도 향상
+            start_dt = (today - timedelta(days=90)).strftime("%Y%m%d")
+            end_dt = today.strftime("%Y%m%d")
+
+            async with httpx.AsyncClient(timeout=15) as cl:
+                for acc_raw in accounts_raw:
+                    digits = "".join(filter(str.isdigit, acc_raw))
+                    if len(digits) < 8:
+                        continue
+                    cano = digits[:8]
+                    acnt = digits[8:] or "01"
+                    formatted_acc = f"{cano}-{acnt}"
+
+                    if account_no != "ALL" and account_no != formatted_acc:
+                        continue
+
+                    headers = {
+                        "content-type": "application/json; charset=utf-8",
+                        "authorization": f"Bearer {active_token}",
+                        "appkey": active_kp["app_key"],
+                        "appsecret": active_kp["app_secret"],
+                        "tr_id": tr_id,
+                        "custtype": "P",
+                    }
+                    cf_params = {
+                        "CANO": cano,
+                        "ACNT_PRDT_CD": acnt,
+                        "INQR_STRT_DT": start_dt,
+                        "INQR_END_DT": end_dt,
+                        "RVSE_CNCL_DVSN_CD": "0",
+                        "PRDT_TYPE_CD": "",
+                        "CTX_AREA_FK100": "",
+                        "CTX_AREA_NK100": "",
+                    }
+                    try:
+                        cf_url = f"{kis_url}/uapi/domestic-stock/v1/trading/inquire-transaction-history"
+                        cf_res = await cl.get(cf_url, headers=headers, params=cf_params)
+                        if cf_res.status_code == 200:
+                            cf_data = cf_res.json()
+                            if cf_data.get("rt_cd") == "0":
+                                for item in cf_data.get("output1", []):
+                                    trad_dt = item.get("trad_dt", "")
+                                    if len(trad_dt) == 8:
+                                        date_key = f"{trad_dt[:4]}-{trad_dt[4:6]}-{trad_dt[6:]}"
+                                        in_amt = float(item.get("dpst_amt", 0) or 0)
+                                        out_amt = float(item.get("wdrl_amt", 0) or 0)
+                                        net_flow = in_amt - out_amt
+                                        net_flows[date_key] = net_flows.get(date_key, 0.0) + net_flow
+                        await asyncio.sleep(0.5)
+                    except Exception as e:
+                        logger.error(f"[Snapshot reconstruct] error for {formatted_acc}: {e}")
+
+    # 시장 지수 변동률 로딩 (BenchmarkPrice에서 symbol="KS11" (KOSPI) 최근 90일치 조회)
+    date_90_ago = (today - timedelta(days=90)).strftime("%Y-%m-%d")
+    stmt_bench = select(BenchmarkPrice).where(
+        BenchmarkPrice.symbol == "KS11",
+        BenchmarkPrice.date >= date_90_ago
+    ).order_by(BenchmarkPrice.date.asc())
+    res_bench = await db.execute(stmt_bench)
+    bench_list = res_bench.scalars().all()
+
+    bench_returns = {}
+    for i in range(1, len(bench_list)):
+        prev_close = bench_list[i-1].close
+        curr_close = bench_list[i].close
+        date_str = bench_list[i].date
+        if prev_close > 0:
+            bench_returns[date_str] = (curr_close - prev_close) / prev_close
+
+    # 90일치 일자 목록 생성
+    date_list = []
+    for d in range(90):
+        target_date = today - timedelta(days=d)
+        date_list.append(target_date.strftime("%Y-%m-%d"))
+    # 과거→최신 순 정렬
+    date_list.reverse()
+
+    running_total = current_total
+    running_eval = current_eval
+    running_cash = current_cash
+
+    reconstructed_data = []
+
+    # 오늘 데이터 먼저 삽입
+    today_profit = running_total - principal_val if principal_val > 0 else 0.0
+    today_return = (today_profit / principal_val * 100) if principal_val > 0 else 0.0
+
+    reconstructed_data.append({
+        "date": date_list[-1],
+        "total_asset": round(running_total, 2),
+        "eval_amount": round(running_eval, 2),
+        "cash_balance": round(running_cash, 2),
+        "accumulated_profit": round(today_profit, 2),
+        "accumulated_return": round(today_return, 2)
+    })
+
+    # 뒤에서 두 번째 날부터 과거로 거슬러 올라감
+    for idx in range(len(date_list) - 2, -1, -1):
+        d_curr = date_list[idx + 1]
+        d_prev = date_list[idx]
+
+        # d_curr 일에 발생한 입출금 흐름
+        flow = net_flows.get(d_curr, 0.0)
+
+        # d_curr 일의 지수 변동률
+        market_ret = bench_returns.get(d_curr, 0.0)
+        market_factor = 1.0 + market_ret if market_ret > -0.9 else 1.0
+
+        prev_eval = running_eval / market_factor
+        prev_cash = running_cash - flow
+
+        if prev_eval < 0:
+            prev_eval = 0.0
+        if prev_cash < 0:
+            prev_cash = 0.0
+
+        prev_total = prev_eval + prev_cash
+
+        running_total = prev_total
+        running_eval = prev_eval
+        running_cash = prev_cash
+
+        profit = running_total - principal_val if principal_val > 0 else 0.0
+        ret_rate = (profit / principal_val * 100) if principal_val > 0 else 0.0
+
+        reconstructed_data.append({
+            "date": d_prev,
+            "total_asset": round(running_total, 2),
+            "eval_amount": round(running_eval, 2),
+            "cash_balance": round(running_cash, 2),
+            "accumulated_profit": round(profit, 2),
+            "accumulated_return": round(ret_rate, 2)
+        })
+
+    # 결과 데이터를 다시 과거→최신(오름차순)으로 정렬
+    reconstructed_data.reverse()
+
+    # DB 실측 데이터가 있으면 덮어씌움
+    snap_map = {s.date: s for s in snapshots}
+    for item in reconstructed_data:
+        date_k = item["date"]
+        if date_k in snap_map:
+            db_snap = snap_map[date_k]
+            item["total_asset"] = db_snap.total_asset
+            item["eval_amount"] = db_snap.eval_amount
+            item["cash_balance"] = db_snap.cash_balance
+            item["accumulated_profit"] = db_snap.accumulated_profit
+            item["accumulated_return"] = db_snap.accumulated_return
+
+    return {
+        "status": "success",
+        "source": "reconstructed",
+        "history": reconstructed_data
+    }
+
 
 
