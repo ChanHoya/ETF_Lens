@@ -498,6 +498,17 @@ async def get_my_portfolio(
                     principal_obj = res_pr.scalars().first()
                     principal_val = principal_obj.principal if principal_obj else 0.0
                     
+                    # 만약 계좌에 매핑된 수동 원금이 없으면 전체 원금의 자산 비중 비례(Pro-rata) Fallback 적용
+                    if principal_val == 0.0:
+                        stmt_prs = select(UserPrincipal)
+                        res_prs = await db.execute(stmt_prs)
+                        total_principal = sum(p.principal for p in res_prs.scalars().all())
+                        
+                        all_total_asset = float(aggregated_summary.get("total_asset", 0.0))
+                        cur_total = float(summary["total_asset"])
+                        if total_principal > 0.0 and all_total_asset > 0.0:
+                            principal_val = total_principal * (cur_total / all_total_asset)
+                    
                     cur_total = float(summary["total_asset"])
                     cur_eval = float(summary["total_eval_amount"])
                     cur_cash = float(summary["cash_balance"])
@@ -1402,10 +1413,32 @@ async def get_asset_history(
     pr_obj = res_pr.scalars().first()
     principal_val = pr_obj.principal if pr_obj else 0.0
 
-    if principal_val == 0.0 and account_no == "ALL":
+    if principal_val == 0.0:
+        # 수동 원금 전체 합산
         stmt_prs = select(UserPrincipal)
         res_prs = await db.execute(stmt_prs)
-        principal_val = sum(p.principal for p in res_prs.scalars().all())
+        total_principal = sum(p.principal for p in res_prs.scalars().all())
+        
+        if account_no == "ALL":
+            principal_val = total_principal
+        else:
+            # 개별 계좌에 지정된 원금이 없으면 비중 비례(Pro-rata) 안분 Fallback 적용
+            if total_principal > 0.0 and portfolio:
+                kis_raw = portfolio.get("kis_raw", {})
+                summary = kis_raw.get("summary", {})
+                all_total_asset = float(summary.get("total_asset", 0.0))
+                
+                acc_list = kis_raw.get("accounts", [])
+                matched = [a for a in acc_list if a["account_no"] == account_no]
+                account_total_asset = 0.0
+                if matched:
+                    account_total_asset = float(matched[0].get("total_asset", 0.0))
+                
+                if all_total_asset > 0.0:
+                    principal_val = total_principal * (account_total_asset / all_total_asset)
+
+    # KIS API 거래내역 조회는 최대 365일로 한정
+    reconstruct_days = min(days, 365)
 
     # KST 기준 날짜
     KST = timezone(timedelta(hours=9))
@@ -1439,9 +1472,6 @@ async def get_asset_history(
             kis_url = os.environ.get("KIS_URL_BASE", "https://openapi.koreainvestment.com:9443")
             is_mock = "vts" in kis_url
             tr_id = "VTTC8508R" if is_mock else "TTTC8508R"
-
-            # KIS API 거래내역 조회는 최대 365일로 한정
-            reconstruct_days = min(days, 365)
 
             # 90일 단위로 구간 분할 (최대 365일)
             intervals = []

@@ -8,12 +8,11 @@ Base: Exit Strategy Monitoring (KOSPI)
 ✅ Current: Sprint 6 — S6-7 (계좌별 자산 증감(추이) 시각화 및 분석) 완료 (2026-06-01)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
-> 세션 핸드오프 (2026-05-31):
-> - S6-1(TFF DB), S6-2(EF 백엔드), S6-3(EF 프론트엔드) 모두 stable
-> - EfficientFrontierPanel: My 탭 > 포트폴리오 시뮬레이션 > "포트폴리오 최적화" 탭 위치
-> - 레이아웃 핫픽스: 종목분석(선택) 및 TFF_Fund 탭 가로 크기 1400px 통일 완료 (섹터분석/My 탭과 동일 크기)
-> - 다음 세션: S6-4 배당 스크래퍼 → S6-5 배당 캘린더 UI 순서로 진행
-> - FP-016/017/018 신규 패턴 등록 완료 (failure-patterns.md)
+> 세션 핸드오프 (2026-06-01):
+> - S6-1 ~ S6-3, S6-7 모두 stable 및 완료
+> - 버그 핫픽스: 개별 연동계좌 수익률 곡선이 0% 일직선으로 전시되던 이슈 해결 (수동 원금 항목 전체 합산 후 각 계좌의 자산 규모 비중으로 Pro-rata 안분 배분 Fallback 적용)
+> - 핫픽스 2: KIS 토큰 발급 불가 환경에서 `get_asset_history` API 호출 시 발생하던 `reconstruct_days` `UnboundLocalError` 방지를 위해 변수 선언 위치를 conditional block 상단으로 상향
+> - 다음 세션: S6-4 배당 스크래퍼 → S6-5 배당 캘린더 UI 순서로 진행 (sprint-manager 호출로 시작)
 
 
  
