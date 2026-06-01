@@ -1311,6 +1311,7 @@ async def get_asset_history(
     request: Request,
     account_no: Optional[str] = "ALL",
     use_reconstruction: Optional[bool] = False,
+    days: Optional[int] = 1825,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -1329,7 +1330,12 @@ async def get_asset_history(
     snapshots = res.scalars().all()
 
     # 만약 적재된 데이터가 충분하고 복원 옵션이 꺼져있으면 그대로 반환
-    if len(snapshots) >= 10 and not use_reconstruction:
+    min_snapshots_threshold = 300 if days >= 365 else 10
+    if len(snapshots) >= min_snapshots_threshold and not use_reconstruction:
+        KST = timezone(timedelta(hours=9))
+        today = datetime.now(KST)
+        cutoff_date = (today - timedelta(days=days)).strftime("%Y-%m-%d")
+        filtered_snapshots = [s for s in snapshots if s.date >= cutoff_date]
         return {
             "status": "success",
             "source": "database",
@@ -1341,7 +1347,7 @@ async def get_asset_history(
                     "cash_balance": s.cash_balance,
                     "accumulated_profit": s.accumulated_profit,
                     "accumulated_return": s.accumulated_return
-                } for s in snapshots
+                } for s in filtered_snapshots
             ]
         }
 
@@ -1434,9 +1440,20 @@ async def get_asset_history(
             is_mock = "vts" in kis_url
             tr_id = "VTTC8508R" if is_mock else "TTTC8508R"
 
-            # 최근 90일로 한정하여 속도 및 신뢰도 향상
-            start_dt = (today - timedelta(days=90)).strftime("%Y%m%d")
-            end_dt = today.strftime("%Y%m%d")
+            # KIS API 거래내역 조회는 최대 365일로 한정
+            reconstruct_days = min(days, 365)
+
+            # 90일 단위로 구간 분할 (최대 365일)
+            intervals = []
+            num_intervals = (reconstruct_days + 89) // 90
+            for idx in range(num_intervals):
+                end_offset = idx * 90
+                start_offset = (idx + 1) * 90
+                if start_offset > reconstruct_days:
+                    start_offset = reconstruct_days
+                s_dt = (today - timedelta(days=start_offset)).strftime("%Y%m%d")
+                e_dt = (today - timedelta(days=end_offset)).strftime("%Y%m%d")
+                intervals.append((s_dt, e_dt))
 
             async with httpx.AsyncClient(timeout=15) as cl:
                 for acc_raw in accounts_raw:
@@ -1450,47 +1467,50 @@ async def get_asset_history(
                     if account_no != "ALL" and account_no != formatted_acc:
                         continue
 
-                    headers = {
-                        "content-type": "application/json; charset=utf-8",
-                        "authorization": f"Bearer {active_token}",
-                        "appkey": active_kp["app_key"],
-                        "appsecret": active_kp["app_secret"],
-                        "tr_id": tr_id,
-                        "custtype": "P",
-                    }
-                    cf_params = {
-                        "CANO": cano,
-                        "ACNT_PRDT_CD": acnt,
-                        "INQR_STRT_DT": start_dt,
-                        "INQR_END_DT": end_dt,
-                        "RVSE_CNCL_DVSN_CD": "0",
-                        "PRDT_TYPE_CD": "",
-                        "CTX_AREA_FK100": "",
-                        "CTX_AREA_NK100": "",
-                    }
-                    try:
-                        cf_url = f"{kis_url}/uapi/domestic-stock/v1/trading/inquire-transaction-history"
-                        cf_res = await cl.get(cf_url, headers=headers, params=cf_params)
-                        if cf_res.status_code == 200:
-                            cf_data = cf_res.json()
-                            if cf_data.get("rt_cd") == "0":
-                                for item in cf_data.get("output1", []):
-                                    trad_dt = item.get("trad_dt", "")
-                                    if len(trad_dt) == 8:
-                                        date_key = f"{trad_dt[:4]}-{trad_dt[4:6]}-{trad_dt[6:]}"
-                                        in_amt = float(item.get("dpst_amt", 0) or 0)
-                                        out_amt = float(item.get("wdrl_amt", 0) or 0)
-                                        net_flow = in_amt - out_amt
-                                        net_flows[date_key] = net_flows.get(date_key, 0.0) + net_flow
-                        await asyncio.sleep(0.5)
-                    except Exception as e:
-                        logger.error(f"[Snapshot reconstruct] error for {formatted_acc}: {e}")
+                    # 4개 구간 순회 쿼리
+                    for s_dt, e_dt in intervals:
+                        headers = {
+                            "content-type": "application/json; charset=utf-8",
+                            "authorization": f"Bearer {active_token}",
+                            "appkey": active_kp["app_key"],
+                            "appsecret": active_kp["app_secret"],
+                            "tr_id": tr_id,
+                            "custtype": "P",
+                        }
+                        cf_params = {
+                            "CANO": cano,
+                            "ACNT_PRDT_CD": acnt,
+                            "INQR_STRT_DT": s_dt,
+                            "INQR_END_DT": e_dt,
+                            "RVSE_CNCL_DVSN_CD": "0",
+                            "PRDT_TYPE_CD": "",
+                            "CTX_AREA_FK100": "",
+                            "CTX_AREA_NK100": "",
+                        }
+                        try:
+                            cf_url = f"{kis_url}/uapi/domestic-stock/v1/trading/inquire-transaction-history"
+                            cf_res = await cl.get(cf_url, headers=headers, params=cf_params)
+                            if cf_res.status_code == 200:
+                                cf_data = cf_res.json()
+                                if cf_data.get("rt_cd") == "0":
+                                    for item in cf_data.get("output1", []):
+                                        trad_dt = item.get("trad_dt", "")
+                                        if len(trad_dt) == 8:
+                                            date_key = f"{trad_dt[:4]}-{trad_dt[4:6]}-{trad_dt[6:]}"
+                                            in_amt = float(item.get("dpst_amt", 0) or 0)
+                                            out_amt = float(item.get("wdrl_amt", 0) or 0)
+                                            net_flow = in_amt - out_amt
+                                            net_flows[date_key] = net_flows.get(date_key, 0.0) + net_flow
+                            # EGW00133 속도 초과 방지 딜레이
+                            await asyncio.sleep(0.5)
+                        except Exception as e:
+                            logger.error(f"[Snapshot reconstruct] error for {formatted_acc} in range {s_dt}-{e_dt}: {e}")
 
-    # 시장 지수 변동률 로딩 (BenchmarkPrice에서 symbol="KS11" (KOSPI) 최근 90일치 조회)
-    date_90_ago = (today - timedelta(days=95)).strftime("%Y-%m-%d")
+    # 시장 지수 변동률 로딩 (BenchmarkPrice에서 symbol="KS11" (KOSPI) 최근 조회일 수만큼 조회)
+    date_limit_str = (today - timedelta(days=reconstruct_days + 5)).strftime("%Y-%m-%d")
     stmt_bench = select(BenchmarkPrice).where(
         BenchmarkPrice.symbol == "KS11",
-        BenchmarkPrice.date >= date_90_ago
+        BenchmarkPrice.date >= date_limit_str
     ).order_by(BenchmarkPrice.date.asc())
     res_bench = await db.execute(stmt_bench)
     bench_list = res_bench.scalars().all()
@@ -1521,8 +1541,7 @@ async def get_asset_history(
             import pandas as pd
             df_kospi = await fetch_yahoo_finance("^KS11", 1)
             if df_kospi is not None and not df_kospi.empty:
-                # 90일 이내 필터링
-                date_limit = pd.to_datetime(date_90_ago)
+                date_limit = pd.to_datetime(date_limit_str)
                 df_kospi_filtered = df_kospi[df_kospi.index >= date_limit]
                 if not df_kospi_filtered.empty:
                     df_kospi_filtered = df_kospi_filtered.sort_index()
@@ -1538,24 +1557,21 @@ async def get_asset_history(
         except Exception as yf_err:
             logger.error(f"[Reconstruct] Yahoo Finance fallback failed: {yf_err}")
 
-    # Fallback 2: Yahoo API마저 실패할 경우 가상 변동성(의사 결정 난수 생성기) 적용해 미려한 곡선 보장
+    # Fallback 2: Yahoo API마저 실패할 경우 가상 변동성 적용
     if not bench_returns:
         logger.warning("[Reconstruct] All benchmark sources failed. Generating mock random returns for visualization...")
         import random
-        # 시드 고정하여 새로고침 시에도 동일한 미려한 차트 흐름 유지
         random.seed(42)
-        for d in range(120):
+        for d in range(reconstruct_days + 10):
             target_date = today - timedelta(days=d)
             date_str = target_date.strftime("%Y-%m-%d")
-            # 일별 -1.2% ~ +1.2% 범위의 등락 모사
             bench_returns[date_str] = random.uniform(-0.012, 0.012)
 
-    # 90일치 일자 목록 생성
+    # 복원 대상 일자 목록 생성
     date_list = []
-    for d in range(90):
+    for d in range(reconstruct_days):
         target_date = today - timedelta(days=d)
         date_list.append(target_date.strftime("%Y-%m-%d"))
-    # 과거→최신 순 정렬
     date_list.reverse()
 
     running_total = current_total
@@ -1618,22 +1634,32 @@ async def get_asset_history(
     # 결과 데이터를 다시 과거→최신(오름차순)으로 정렬
     reconstructed_data.reverse()
 
-    # DB 실측 데이터가 있으면 덮어씌움
-    snap_map = {s.date: s for s in snapshots}
-    for item in reconstructed_data:
-        date_k = item["date"]
-        if date_k in snap_map:
-            db_snap = snap_map[date_k]
-            item["total_asset"] = db_snap.total_asset
-            item["eval_amount"] = db_snap.eval_amount
-            item["cash_balance"] = db_snap.cash_balance
-            item["accumulated_profit"] = db_snap.accumulated_profit
-            item["accumulated_return"] = db_snap.accumulated_return
+    # 하이브리드 병합 처리: reconstructed_data + DB snapshots
+    final_data_map = {item["date"]: item for item in reconstructed_data}
+
+    # DB에 적재된 모든 실측 스냅샷 반영 (중복은 DB 스냅샷이 우선 덮어씀, 365일 이전 데이터도 추가됨)
+    for s in snapshots:
+        final_data_map[s.date] = {
+            "date": s.date,
+            "total_asset": s.total_asset,
+            "eval_amount": s.eval_amount,
+            "cash_balance": s.cash_balance,
+            "accumulated_profit": s.accumulated_profit,
+            "accumulated_return": s.accumulated_return
+        }
+
+    # 최종 결과 필터링 (최근 `days`일 이내)
+    cutoff_date = (today - timedelta(days=days)).strftime("%Y-%m-%d")
+    final_history = [
+        val for key, val in final_data_map.items()
+        if key >= cutoff_date
+    ]
+    final_history.sort(key=lambda x: x["date"])
 
     return {
         "status": "success",
-        "source": "reconstructed",
-        "history": reconstructed_data
+        "source": "reconstructed_hybrid",
+        "history": final_history
     }
 
 

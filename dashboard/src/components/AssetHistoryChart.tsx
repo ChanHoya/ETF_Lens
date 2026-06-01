@@ -46,7 +46,7 @@ export default function AssetHistoryChart({ accounts }: Props) {
             const res = await fetch(
                 `${API_BASE}/api/v1/my/asset-history?account_no=${encodeURIComponent(
                     selectedAccount
-                )}&use_reconstruction=${useReconstruction}`
+                )}&use_reconstruction=${useReconstruction}&days=1825`
             );
             if (!res.ok) throw new Error("자산 추이 데이터를 불러오지 못했습니다.");
             const data = await res.json();
@@ -76,6 +76,7 @@ export default function AssetHistoryChart({ accounts }: Props) {
         if (period === "1W") limitDate.setDate(now.getDate() - 7);
         else if (period === "1M") limitDate.setMonth(now.getMonth() - 1);
         else if (period === "3M") limitDate.setMonth(now.getMonth() - 3);
+        else if (period === "1Y") limitDate.setFullYear(now.getFullYear() - 1);
         else limitDate = new Date("1970-01-01"); // ALL
 
         const filtered = historyData.filter((item) => {
@@ -150,7 +151,7 @@ export default function AssetHistoryChart({ accounts }: Props) {
 
                     {/* 기간 필터 */}
                     <div className="flex bg-white/5 rounded-xl p-0.5 border border-white/5">
-                        {["1W", "1M", "3M", "ALL"].map((p) => (
+                        {["1W", "1M", "3M", "1Y", "ALL"].map((p) => (
                             <button
                                 key={p}
                                 onClick={() => setPeriod(p)}
@@ -217,7 +218,15 @@ export default function AssetHistoryChart({ accounts }: Props) {
                                 stroke="rgba(255,255,255,0.2)"
                                 fontSize={10}
                                 tickLine={false}
-                                tickFormatter={(val) => val.substring(5)}
+                                interval="preserveStartEnd"
+                                minTickGap={45}
+                                tickFormatter={(val) => {
+                                    if (!val || val.length < 10) return val;
+                                    if (period === "ALL" || period === "1Y") {
+                                        return val.substring(2, 7); // "YY-MM" 포맷 (예: 25-06)
+                                    }
+                                    return val.substring(5); // "MM-DD" 포맷 (예: 06-01)
+                                }}
                             />
                             <YAxis
                                 yAxisId="left"
