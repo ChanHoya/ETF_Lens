@@ -76,6 +76,38 @@ const checkIsUsMarketOpenClient = (): boolean => {
     }
 };
 
+const isBeforeKrMarketOpen = (): boolean => {
+    try {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Seoul',
+            hour12: false,
+            weekday: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        const parts = formatter.formatToParts(now);
+        let weekday = '';
+        let hour = 0;
+        let minute = 0;
+        for (const part of parts) {
+            if (part.type === 'weekday') weekday = part.value;
+            if (part.type === 'hour') hour = parseInt(part.value, 10);
+            if (part.type === 'minute') minute = parseInt(part.value, 10);
+        }
+        
+        const isWeekend = weekday === 'Sat' || weekday === 'Sun';
+        if (isWeekend) return true;
+        
+        const minutesSinceMidnight = hour * 60 + minute;
+        // Market starts at 09:00 KST (540 minutes)
+        return minutesSinceMidnight < 540;
+    } catch (e) {
+        console.error('Failed to check KR market status:', e);
+        return false;
+    }
+};
+
 export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
     const [period, setPeriod] = useState('1Y');
     const [chartData, setChartData] = useState<any[]>([]);
@@ -630,22 +662,30 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                         });
                                         const estChangePct = weightSum > 0 ? (weightedChangeSum / weightSum) : null;
                                         
-                                        // Calculate estimated Korean ETF price
-                                        const estPrice = (dispInfo && dispInfo.price && estChangePct !== null)
-                                            ? dispInfo.price * (1 + estChangePct / 100)
+                                        // Calculate estimated Korean ETF price: prev_close (yesterday close KST) * (1 + estChangePct/100)
+                                        const estPrice = (dispInfo && dispInfo.prev_close && estChangePct !== null)
+                                            ? dispInfo.prev_close * (1 + estChangePct / 100)
+                                            : null;
+
+                                        const isBeforeOpen = isBeforeKrMarketOpen();
+                                        const actualPrice = dispInfo ? dispInfo.price : null;
+                                        const actualChangeRate = dispInfo ? dispInfo.change_rate : null;
+                                        const diffRate = (actualPrice !== null && estPrice !== null && estPrice > 0)
+                                            ? ((actualPrice - estPrice) / estPrice) * 100
                                             : null;
 
                                         return (
                                             <th key={k} className="px-3 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10">
-                                                <div className="flex flex-col items-center justify-center gap-1 whitespace-nowrap">
+                                                <div className="flex flex-col items-center justify-center gap-1.5 whitespace-nowrap">
                                                     <div className="flex items-center justify-center gap-1.5">
                                                         <span style={{ color: dotColor }}>●</span>
                                                         {k}
                                                     </div>
                                                     {estChangePct !== null && (
-                                                        <div className="flex flex-col items-center mt-1 text-[11.5px] font-sans">
-                                                            <div className="flex items-center gap-1.5 font-bold text-gray-200">
-                                                                <span>익일예상 :</span>
+                                                        <div className="flex flex-col items-center mt-1 text-[11px] font-sans space-y-0.5 leading-normal">
+                                                            {/* 예상가격 */}
+                                                            <div className="flex items-center gap-1 font-bold text-gray-200">
+                                                                <span className="text-gray-400">예상가격:</span>
                                                                 {estPrice !== null ? (
                                                                     <span>
                                                                         {new Intl.NumberFormat('ko-KR').format(Math.floor(estPrice))}원
@@ -665,26 +705,52 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                                                     ({estChangePct > 0 ? '+' : ''}{estChangePct.toFixed(2)}%)
                                                                 </span>
                                                             </div>
-                                                            {dispInfo && dispInfo.disparity_rate !== undefined && (
-                                                                <div 
-                                                                    className="text-[10px] text-gray-400 mt-0.5 font-medium"
-                                                                    title={`실시간 NAV: ${new Intl.NumberFormat('ko-KR').format(Math.floor(dispInfo.nav))}원`}
-                                                                >
-                                                                    괴리율:{' '}
+
+                                                            {/* 실제가격 */}
+                                                            <div className="flex items-center gap-1 font-bold text-gray-200">
+                                                                <span className="text-gray-400">실제가격:</span>
+                                                                {!isBeforeOpen && actualPrice !== null ? (
+                                                                    <>
+                                                                        <span>{new Intl.NumberFormat('ko-KR').format(Math.floor(actualPrice))}원</span>
+                                                                        {actualChangeRate !== null && (
+                                                                            <span 
+                                                                                style={{
+                                                                                    color: actualChangeRate > 0 
+                                                                                        ? '#60a5fa' 
+                                                                                        : actualChangeRate < 0 
+                                                                                            ? '#f87171' 
+                                                                                            : '#94a3b8'
+                                                                                }}
+                                                                            >
+                                                                                ({actualChangeRate > 0 ? '+' : ''}{actualChangeRate.toFixed(2)}%)
+                                                                            </span>
+                                                                        )}
+                                                                    </>
+                                                                ) : (
+                                                                    <span className="text-gray-500 font-medium">-</span>
+                                                                )}
+                                                            </div>
+
+                                                            {/* 괴리율 */}
+                                                            <div className="text-[10px] text-gray-400 font-medium">
+                                                                괴리율:{' '}
+                                                                {!isBeforeOpen && diffRate !== null ? (
                                                                     <span 
                                                                         style={{
-                                                                            color: dispInfo.disparity_rate > 0 
+                                                                            color: diffRate > 0 
                                                                                 ? '#60a5fa' 
-                                                                                : dispInfo.disparity_rate < 0 
+                                                                                : diffRate < 0 
                                                                                     ? '#f87171' 
                                                                                     : '#94a3b8'
                                                                         }}
                                                                         className="font-semibold"
                                                                     >
-                                                                        {dispInfo.disparity_rate > 0 ? '+' : ''}{dispInfo.disparity_rate.toFixed(3)}%
+                                                                        {diffRate > 0 ? '+' : ''}{diffRate.toFixed(3)}%
                                                                     </span>
-                                                                </div>
-                                                            )}
+                                                                ) : (
+                                                                    <span className="text-gray-500 font-semibold">-</span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>

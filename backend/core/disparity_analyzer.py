@@ -53,12 +53,19 @@ async def fetch_etf_disparity_list() -> dict:
                     else:
                         disparity_rate = 0.0
                         
+                    change_val = float(item.get("changeVal", 0.0) or 0.0)
+                    change_rate = float(item.get("changeRate", 0.0) or 0.0)
+                    prev_close = price - change_val
+
                     mapped_disparity[code] = {
                         "code": code,
                         "name": name,
                         "price": price,
                         "nav": nav,
-                        "disparity_rate": round(disparity_rate, 3)
+                        "disparity_rate": round(disparity_rate, 3),
+                        "change_val": change_val,
+                        "change_rate": change_rate,
+                        "prev_close": prev_close
                     }
                 except Exception as ex:
                     logger.warning(f"Error parsing ETF disparity values for {code}: {ex}")
