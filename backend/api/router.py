@@ -3111,7 +3111,7 @@ async def get_energy_chart_data(etf: str = None, db: AsyncSession = Depends(get_
 
     if etf:
         constituent_ticker_map = {
-            "HD현대일렉트릭": "043200.KS",
+            "HD현대일렉트릭": "267260.KS",
             "LS일렉트릭": "010120.KS",
             "효성중공업": "298040.KS",
             "LS": "006260.KS",
@@ -3554,7 +3554,7 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
     )
 
     constituent_ticker_map = {
-        "HD현대일렉트릭": "043200.KS",
+        "HD현대일렉트릭": "267260.KS",
         "LS일렉트릭": "010120.KS",
         "효성중공업": "298040.KS",
         "LS": "006260.KS",

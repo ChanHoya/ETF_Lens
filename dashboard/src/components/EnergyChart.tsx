@@ -11,7 +11,7 @@ interface EnergyChartProps {
 }
 
 const constituentTickerMap: { [key: string]: string } = {
-    "HD현대일렉트릭": "043200",
+    "HD현대일렉트릭": "267260",
     "LS일렉트릭": "010120",
     "효성중공업": "298040",
     "LS": "006260",
@@ -645,17 +645,30 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                             }
                                         });
                                         const estChangePct = weightSum > 0 ? (weightedChangeSum / weightSum) : null;
-                                        
-                                        const estPrice = (dispInfo && dispInfo.prev_close && estChangePct !== null)
-                                            ? dispInfo.prev_close * (1 + estChangePct / 100)
-                                            : null;
-
+                                        const isKrEtf = krEtfs.includes(k);
                                         const isBeforeOpen = isBeforeKrMarketOpen();
                                         const actualPrice = dispInfo ? dispInfo.price : null;
                                         const actualChangeRate = dispInfo ? dispInfo.change_rate : null;
-                                        const diffRate = (actualPrice !== null && estPrice !== null && estPrice > 0)
-                                            ? ((actualPrice - estPrice) / estPrice) * 100
-                                            : null;
+
+                                        const estPrice = isKrEtf
+                                            ? (isBeforeOpen ? null : actualPrice)
+                                            : ((dispInfo && dispInfo.prev_close && estChangePct !== null)
+                                                ? dispInfo.prev_close * (1 + estChangePct / 100)
+                                                : null);
+                                                
+                                        const displayEstChangePct = isKrEtf
+                                            ? (isBeforeOpen ? null : actualChangeRate)
+                                            : estChangePct;
+                                            
+                                        const diffRate = isKrEtf
+                                            ? (isBeforeOpen ? null : 0)
+                                            : ((actualPrice !== null && estPrice !== null && estPrice > 0)
+                                                ? ((actualPrice - estPrice) / estPrice) * 100
+                                                : null);
+
+                                        const showInfo = isKrEtf 
+                                            ? (isBeforeOpen ? true : (actualPrice !== null)) 
+                                            : (estChangePct !== null);
 
                                         return (
                                             <th key={k} className="px-3 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10">
@@ -664,7 +677,7 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                                         <span style={{ color: dotColor }}>●</span>
                                                         {k}
                                                     </div>
-                                                    {estChangePct !== null && (
+                                                    {showInfo && (
                                                         <div className="flex flex-col items-center mt-1 text-[11px] font-sans space-y-0.5 leading-normal">
                                                             {/* 예상가격 */}
                                                             <div className="flex items-center gap-1 font-bold text-gray-200">
@@ -676,17 +689,19 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                                                 ) : (
                                                                     <span>-원</span>
                                                                 )}
-                                                                <span 
-                                                                    style={{
-                                                                        color: estChangePct > 0 
-                                                                            ? '#60a5fa' 
-                                                                            : estChangePct < 0 
-                                                                                ? '#f87171' 
-                                                                                : '#94a3b8'
-                                                                    }}
-                                                                >
-                                                                    ({estChangePct > 0 ? '+' : ''}{estChangePct.toFixed(2)}%)
-                                                                </span>
+                                                                {displayEstChangePct !== null && (
+                                                                    <span 
+                                                                        style={{
+                                                                            color: displayEstChangePct > 0 
+                                                                                ? '#60a5fa' 
+                                                                                : displayEstChangePct < 0 
+                                                                                    ? '#f87171' 
+                                                                                    : '#94a3b8'
+                                                                        }}
+                                                                    >
+                                                                        ({displayEstChangePct > 0 ? '+' : ''}{displayEstChangePct.toFixed(2)}%)
+                                                                    </span>
+                                                                )}
                                                             </div>
 
                                                             {/* 실제가격 */}
