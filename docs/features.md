@@ -52,7 +52,7 @@
 | S6-2: 포트폴리오 Efficient Frontier 최적화 백엔드 API | ✅ done | backend/api/efficient_frontier.py, backend/tests/test_efficient_frontier.py | MPT 기반 기대수익률/변동성/공분산 연산, 몬테카를로 시뮬레이션 및 Numeric Binning 곡선 산출 API 구현 완료 |
 | S6-3: Efficient Frontier 시각화 및 최적 비중 연동 | ✅ done | dashboard/src/components/EfficientFrontierPanel.tsx, MyDashboard.tsx | Recharts ComposedChart 산점도 및 효율전선 커브, 최적 비중 비교 바 차트 시각화 완료 |
 | S6-7: 계좌별 자산 증감(추이) 시각화 및 분석 | ✅ done | backend/api/my_assets.py, dashboard/src/components/AssetHistoryChart.tsx, MyAssetsView.tsx | KIS 일별 계좌 스냅샷 DB 자동 적재 및 거래내역 기반 90일 역산/복원 차트 시각화 완료 |
-| S6-8: 전력/에너지 섹터 주요 종목 현황 및 구성종목 비중 비교 | ✅ done | EnergyChart.tsx, router.py (energy-chart, energy-holdings), SectorAnalysisTab.tsx | 국내/미국 전력/에너지 주요 ETF 8종의 가격 추이 비교 차트 및 상위 구성종목 비중 비교 테이블 연동 완료 |
+| S6-8: 전력/에너지 섹터 주요 종목 현황 및 구성종목 비중 비교 | ✅ done | EnergyChart.tsx, router.py (energy-chart, energy-holdings), SectorAnalysisTab.tsx | 국내주식/해외주식/해외상장 3분할 탭 개편, GRID 등 미국 상장 6종 추가 및 달러화(USD) 분기 표기 최적화 완료 |
 | S6-8-Add: 바이오 & 전력 섹터 전문가 리포트 통합 | ✅ done | BioChart.tsx, EnergyChart.tsx | Gemini 공유 링크 핵심 분석 요약(거시경제 피벗, M&A, ETF 비교, 자산배분 모델 등) 3탭 Bento 카드 통합 완료 |
 | S6-9: 차기 주도주 발굴 및 퀀트 스크리너 | ✅ done | backend/api/next_leader.py, NextLeaderScreener.tsx, SectorAnalysisTab.tsx | 양극화 지수, M7 CAPEX, 반도체 이격 신호등 및 10대 테마 퀀트 스크리너 구축 완료 |
 

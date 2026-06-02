@@ -37,6 +37,11 @@ const constituentTickerMap: { [key: string]: string } = {
     "ABB Ltd": "ABBNY",
     "Vulcan Materials": "VMC",
     "Caterpillar Inc": "CAT",
+    "Cameco": "CCJ",
+    "BWX Technologies": "BWXT",
+    "Oklo": "OKLO",
+    "NuScale Power": "SMR",
+    "CSX Corporation": "CSX",
 };
 
 const getTickerFromConstituent = (name: string): string => {
@@ -55,6 +60,12 @@ const etfNameToCodeMap: { [key: string]: string } = {
     "RISE 미국AI전력인프라액티브": "0176E0",
     "SOL 미국AI전력인프라": "486450",
     "TIGER 글로벌AI전력인프라액티브": "491010",
+    "GRID": "GRID",
+    "NLR": "NLR",
+    "XLU": "XLU",
+    "UTG": "UTG",
+    "POWR": "POWR",
+    "PAVE": "PAVE",
 };
 
 const checkIsUsMarketOpenClient = (): boolean => {
@@ -132,7 +143,7 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
     const [keys, setKeys] = useState<string[]>([]);
     const [originalData, setOriginalData] = useState<any[]>([]);
     const [selectedEtf, setSelectedEtf] = useState<string | null>(null);
-    const [marketTab, setMarketTab] = useState<'KR' | 'US'>('KR');
+    const [marketTab, setMarketTab] = useState<'KR' | 'KR_US' | 'US'>('KR');
     
     // Holdings comparison state
     const [holdingsData, setHoldingsData] = useState<any[]>([]);
@@ -146,7 +157,7 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
     useEffect(() => {
         const fetchDisparity = async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/v1/analyze/etf/disparity?codes=487240,491820,0101N0,0117V0,487230,0176E0,486450,491010`);
+                const res = await fetch(`${API_BASE}/api/v1/analyze/etf/disparity?codes=487240,491820,0101N0,0117V0,487230,0176E0,486450,491010,GRID,NLR,XLU,UTG,POWR,PAVE`);
                 if (res.ok) {
                     const data = await res.json();
                     setDisparityData(data);
@@ -273,20 +284,19 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
     ];
 
     const krEtfs = ["KODEX AI전력핵심설비", "HANARO 전력설비투자", "RISE AI전력인프라", "TIGER 코리아AI전력기기TOP3플러스"];
-    const usEtfs = [
+    const krUsEtfs = [
         "KODEX 미국AI전력핵심인프라",
         "RISE 미국AI전력인프라액티브",
         "SOL 미국AI전력인프라",
         "TIGER 글로벌AI전력인프라액티브"
     ];
+    const usEtfs = ["GRID", "NLR", "XLU", "UTG", "POWR", "PAVE"];
 
-    const etfsToSelect = [...krEtfs, ...usEtfs];
+    const etfsToSelect = [...krEtfs, ...krUsEtfs, ...usEtfs];
     const baseEtfKeys = [
         ...krEtfs,
-        ...usEtfs,
-        "US-Power (GRID)",
-        "US-Power (PAVE)",
-        "US-Power (XLU)"
+        ...krUsEtfs,
+        ...usEtfs
     ];
 
     const CustomTooltip = ({ active, payload, label }: any) => {
@@ -347,7 +357,12 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
         );
     };
 
-    const activeTabEtfs = marketTab === 'KR' ? krEtfs : usEtfs;
+    const activeTabEtfs = 
+        marketTab === 'KR' 
+            ? krEtfs 
+            : marketTab === 'KR_US' 
+                ? krUsEtfs 
+                : usEtfs;
     const displayHoldingsKeys = selectedEtf
         ? [selectedEtf]
         : holdingsKeys.filter((k) => activeTabEtfs.includes(k));
@@ -371,14 +386,19 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
         if (!payload) return null;
 
         const koreanItems = payload.filter((entry: any) => krEtfs.includes(entry.value));
+        const krUsItems = payload.filter((entry: any) => krUsEtfs.includes(entry.value));
         const usItems = payload.filter((entry: any) => usEtfs.includes(entry.value));
-        const constituentItems = payload.filter((entry: any) => !krEtfs.includes(entry.value) && !usEtfs.includes(entry.value));
+        const constituentItems = payload.filter((entry: any) => 
+            !krEtfs.includes(entry.value) && 
+            !krUsEtfs.includes(entry.value) && 
+            !usEtfs.includes(entry.value)
+        );
 
         return (
             <div className="flex flex-col gap-2 mt-4 text-xs font-semibold select-none">
                 {koreanItems.length > 0 && (
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 justify-center">
-                        <span className="text-[10px] font-bold text-gray-500 mr-1 uppercase tracking-wider">KR Power:</span>
+                        <span className="text-[10px] font-bold text-gray-500 mr-1 uppercase tracking-wider">국내상장(국내주식):</span>
                         {koreanItems.map((entry: any, index: number) => {
                             const isSelected = selectedEtf === entry.value;
                             return (
@@ -398,9 +418,31 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                         })}
                     </div>
                 )}
+                {krUsItems.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 justify-center mt-0.5">
+                        <span className="text-[10px] font-bold text-gray-500 mr-1 uppercase tracking-wider">국내상장(해외주식):</span>
+                        {krUsItems.map((entry: any, index: number) => {
+                            const isSelected = selectedEtf === entry.value;
+                            return (
+                                <button
+                                    key={`krus-${index}`}
+                                    onMouseEnter={() => setHoveredLine(entry.value)}
+                                    onMouseLeave={() => setHoveredLine(null)}
+                                    onClick={() => setSelectedEtf(prev => prev === entry.value ? null : entry.value)}
+                                    className={`flex items-center gap-1.5 transition-all hover:text-white ${
+                                        isSelected ? 'text-white font-bold scale-105' : 'text-gray-400'
+                                    }`}
+                                >
+                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                                    <span>{entry.value}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
                 {usItems.length > 0 && (
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 justify-center mt-0.5">
-                        <span className="text-[10px] font-bold text-gray-500 mr-1 uppercase tracking-wider">US Power:</span>
+                        <span className="text-[10px] font-bold text-gray-500 mr-1 uppercase tracking-wider">해외상장 ETF:</span>
                         {usItems.map((entry: any, index: number) => {
                             const isSelected = selectedEtf === entry.value;
                             return (
@@ -422,14 +464,13 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                 )}
                 {constituentItems.length > 0 && (
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 justify-center mt-2 border-t border-white/5 pt-2">
-                        <span className="text-[9px] font-bold text-gray-500 mr-1 uppercase tracking-wider">Holdings:</span>
+                        <span className="text-[9px] font-bold text-gray-500 mr-1 uppercase tracking-wider">편입종목:</span>
                         {constituentItems.map((entry: any, index: number) => (
                             <div
                                 key={`holding-${index}`}
                                 onMouseEnter={() => setHoveredLine(entry.value)}
-                                transition-colors="true"
                                 onMouseLeave={() => setHoveredLine(null)}
-                                className="flex items-center gap-1 text-[10px] text-gray-400 font-mono"
+                                className="flex items-center gap-1 text-[10px] text-gray-400 font-mono transition-colors"
                             >
                                 <span className="w-2 h-0.5" style={{ backgroundColor: entry.color }} />
                                 <span>{entry.value}</span>
@@ -461,7 +502,19 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                 : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
                             }`}
                         >
-                            국내상장 ETF
+                            국내상장 ETF(국내주식)
+                        </button>
+                        <button
+                            onClick={() => {
+                                setMarketTab('KR_US');
+                                setSelectedEtf(null);
+                            }}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR_US'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                            }`}
+                        >
+                            국내상장 ETF(해외주식)
                         </button>
                         <button
                             onClick={() => {
@@ -646,30 +699,36 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                             }
                                         });
                                         const estChangePct = weightSum > 0 ? (weightedChangeSum / weightSum) : null;
-                                        const isKrEtf = krEtfs.includes(k);
+                                        
+                                        const isKrListed = krEtfs.includes(k) || krUsEtfs.includes(k);
+                                        const isUsListed = usEtfs.includes(k);
                                         const isBeforeOpen = isBeforeKrMarketOpen();
                                         const actualPrice = dispInfo ? dispInfo.price : null;
                                         const actualChangeRate = dispInfo ? dispInfo.change_rate : null;
 
-                                        const estPrice = isKrEtf
+                                        const estPrice = isKrListed
                                             ? (isBeforeOpen ? null : actualPrice)
                                             : ((dispInfo && dispInfo.prev_close && estChangePct !== null)
                                                 ? dispInfo.prev_close * (1 + estChangePct / 100)
                                                 : null);
                                                 
-                                        const displayEstChangePct = isKrEtf
+                                        const displayEstChangePct = isKrListed
                                             ? (isBeforeOpen ? null : actualChangeRate)
                                             : estChangePct;
                                             
-                                        const diffRate = isKrEtf
+                                        const diffRate = isKrListed
                                             ? (isBeforeOpen ? null : 0)
                                             : ((actualPrice !== null && estPrice !== null && estPrice > 0)
                                                 ? ((actualPrice - estPrice) / estPrice) * 100
                                                 : null);
 
-                                        const showInfo = isKrEtf 
+                                        const showInfo = isKrListed 
                                             ? (isBeforeOpen ? true : (actualPrice !== null)) 
                                             : (estChangePct !== null);
+
+                                        const shouldShowActualPrice = isKrListed 
+                                            ? (!isBeforeOpen && actualPrice !== null) 
+                                            : (actualPrice !== null);
 
                                         return (
                                             <th key={k} className="px-3 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10">
@@ -685,10 +744,13 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                                                 <span className="text-gray-400">예상가격:</span>
                                                                 {estPrice !== null ? (
                                                                     <span>
-                                                                        {new Intl.NumberFormat('ko-KR').format(Math.floor(estPrice))}원
+                                                                        {isUsListed
+                                                                            ? `$${estPrice.toFixed(2)}`
+                                                                            : `${new Intl.NumberFormat('ko-KR').format(Math.floor(estPrice))}원`
+                                                                        }
                                                                     </span>
                                                                 ) : (
-                                                                    <span>-원</span>
+                                                                    <span>{isUsListed ? '-$' : '-원'}</span>
                                                                 )}
                                                                 {displayEstChangePct !== null && (
                                                                     <span 
@@ -708,9 +770,14 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                                             {/* 실제가격 */}
                                                             <div className="flex items-center gap-1 font-bold text-gray-200">
                                                                 <span className="text-gray-400">실제가격:</span>
-                                                                {!isBeforeOpen && actualPrice !== null ? (
+                                                                {shouldShowActualPrice ? (
                                                                     <>
-                                                                        <span>{new Intl.NumberFormat('ko-KR').format(Math.floor(actualPrice))}원</span>
+                                                                        <span>
+                                                                            {isUsListed
+                                                                                ? `$${actualPrice!.toFixed(2)}`
+                                                                                : `${new Intl.NumberFormat('ko-KR').format(Math.floor(actualPrice!))}원`
+                                                                            }
+                                                                        </span>
                                                                         {actualChangeRate !== null && (
                                                                             <span 
                                                                                 style={{
@@ -733,7 +800,7 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                                             {/* 괴리율 */}
                                                             <div className="text-[10px] text-gray-400 font-medium">
                                                                  괴리율:{' '}
-                                                                 {!isBeforeOpen && diffRate !== null ? (
+                                                                 {(isKrListed ? !isBeforeOpen : true) && diffRate !== null ? (
                                                                      <span 
                                                                          style={{
                                                                              color: diffRate > 0 
@@ -786,10 +853,13 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                             {row.price !== undefined && row.price !== null ? (
                                                 <div className="flex flex-col gap-0.5 justify-center items-center">
                                                     <span className="text-gray-200 font-bold">
-                                                        {row.constituent in constituentTickerMap && constituentTickerMap[row.constituent].length > 4
-                                                            ? `${new Intl.NumberFormat('ko-KR').format(Math.floor(row.price))}원`
-                                                            : `$${row.price.toFixed(2)}`
-                                                        }
+                                                        {(() => {
+                                                            const ticker = constituentTickerMap[row.constituent];
+                                                            const isKrStock = ticker && /^\d+$/.test(ticker);
+                                                            return isKrStock
+                                                                ? `${new Intl.NumberFormat('ko-KR').format(Math.floor(row.price))}원`
+                                                                : `$${row.price.toFixed(2)}`;
+                                                        })()}
                                                     </span>
                                                     {row.change_pct !== undefined && row.change_pct !== null ? (
                                                         <span 

@@ -2789,6 +2789,21 @@ async def get_etf_disparity_metrics(codes: str = None):
         if mapped_code in data_map:
             # We key the output by the requested code to make it easy for frontend matching
             filtered_data[code] = data_map[mapped_code]
+        elif mapped_code in ["GRID", "NLR", "XLU", "UTG", "POWR", "PAVE"]:
+            quote = await _fetch_stock_quote(mapped_code)
+            if quote and quote.get("price") is not None:
+                price = quote.get("price")
+                change_rate = quote.get("change_pct", 0.0)
+                filtered_data[code] = {
+                    "code": mapped_code,
+                    "name": mapped_code,
+                    "price": price,
+                    "nav": price,
+                    "disparity_rate": 0.0,
+                    "change_val": 0.0,
+                    "change_rate": change_rate,
+                    "prev_close": price / (1 + change_rate/100) if change_rate else price
+                }
             
     return filtered_data
 
@@ -3104,9 +3119,12 @@ async def get_energy_chart_data(etf: str = None, db: AsyncSession = Depends(get_
         "RISE 미국AI전력인프라액티브": "0176E0.KS",
         "SOL 미국AI전력인프라": "486450.KS",
         "TIGER 글로벌AI전력인프라액티브": "491010.KS",
-        "US-Power (GRID)": "GRID",
-        "US-Power (PAVE)": "PAVE",
-        "US-Power (XLU)": "XLU",
+        "GRID": "GRID",
+        "NLR": "NLR",
+        "XLU": "XLU",
+        "UTG": "UTG",
+        "POWR": "POWR",
+        "PAVE": "PAVE",
     }
 
     if etf:
@@ -3132,6 +3150,16 @@ async def get_energy_chart_data(etf: str = None, db: AsyncSession = Depends(get_
             "Powell Industries": "POWL",
             "NRG Energy": "NRG",
             "Duke Energy": "DUK",
+            "Cameco": "CCJ",
+            "BWX Technologies": "BWXT",
+            "Oklo": "OKLO",
+            "NuScale Power": "SMR",
+            "CSX Corporation": "CSX",
+            "Hubbell Inc": "HUBB",
+            "Schneider Electric": "SBGSF",
+            "ABB Ltd": "ABBNY",
+            "Vulcan Materials": "VMC",
+            "Caterpillar Inc": "CAT",
         }
         
         energy_holdings_fallbacks = {
@@ -3226,6 +3254,40 @@ async def get_energy_chart_data(etf: str = None, db: AsyncSession = Depends(get_
                 {"ticker": "Quanta Services", "weight": 7.0},
                 {"ticker": "LS일렉트릭", "weight": 5.5},
                 {"ticker": "효성중공업", "weight": 5.0},
+            ],
+            "GRID": [
+                {"ticker": "ABB Ltd", "weight": 8.49},
+                {"ticker": "Eaton Corporation", "weight": 7.89},
+                {"ticker": "Schneider Electric", "weight": 7.13},
+                {"ticker": "Quanta Services", "weight": 4.68},
+            ],
+            "NLR": [
+                {"ticker": "Constellation Energy", "weight": 8.17},
+                {"ticker": "Cameco", "weight": 7.86},
+                {"ticker": "BWX Technologies", "weight": 6.48},
+                {"ticker": "Oklo", "weight": 5.17},
+                {"ticker": "NuScale Power", "weight": 4.14},
+            ],
+            "XLU": [
+                {"ticker": "NextEra Energy", "weight": 13.15},
+                {"ticker": "Southern Company", "weight": 7.37},
+                {"ticker": "Duke Energy", "weight": 6.97},
+            ],
+            "UTG": [
+                {"ticker": "NextEra Energy", "weight": 8.5},
+                {"ticker": "Southern Company", "weight": 6.2},
+                {"ticker": "Duke Energy", "weight": 5.8},
+            ],
+            "POWR": [
+                {"ticker": "Eaton Corporation", "weight": 9.5},
+                {"ticker": "GE Vernova", "weight": 8.2},
+                {"ticker": "Quanta Services", "weight": 7.8},
+                {"ticker": "Hubbell Inc", "weight": 6.0},
+            ],
+            "PAVE": [
+                {"ticker": "Quanta Services", "weight": 4.27},
+                {"ticker": "CSX Corporation", "weight": 3.5},
+                {"ticker": "Eaton Corporation", "weight": 3.3},
             ]
         }
         
@@ -3273,8 +3335,11 @@ async def get_energy_chart_data(etf: str = None, db: AsyncSession = Depends(get_
         "486450.KS": "486450",
         "491010.KS": "491010",
         "GRID": "GRID",
-        "PAVE": "PAVE",
+        "NLR": "NLR",
         "XLU": "XLU",
+        "UTG": "UTG",
+        "POWR": "POWR",
+        "PAVE": "PAVE",
     }
 
     def _fetch_one(t_code: str) -> pd.Series:
@@ -3411,9 +3476,12 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
         "RISE 미국AI전력인프라액티브": "0176E0",
         "SOL 미국AI전력인프라": "486450",
         "TIGER 글로벌AI전력인프라액티브": "491010",
-        "US-Power (GRID)": "GRID",
-        "US-Power (PAVE)": "PAVE",
-        "US-Power (XLU)": "XLU",
+        "GRID": "GRID",
+        "NLR": "NLR",
+        "XLU": "XLU",
+        "UTG": "UTG",
+        "POWR": "POWR",
+        "PAVE": "PAVE",
     }
 
     fallbacks = {
@@ -3510,24 +3578,39 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
             {"ticker": "LS일렉트릭", "weight": 5.5},
             {"ticker": "효성중공업", "weight": 5.0},
         ],
-        "US-Power (GRID)": [
-            {"ticker": "Eaton Corporation", "weight": 8.5},
+        "GRID": [
+            {"ticker": "ABB Ltd", "weight": 8.49},
+            {"ticker": "Eaton Corporation", "weight": 7.89},
+            {"ticker": "Schneider Electric", "weight": 7.13},
+            {"ticker": "Quanta Services", "weight": 4.68},
+        ],
+        "NLR": [
+            {"ticker": "Constellation Energy", "weight": 8.17},
+            {"ticker": "Cameco", "weight": 7.86},
+            {"ticker": "BWX Technologies", "weight": 6.48},
+            {"ticker": "Oklo", "weight": 5.17},
+            {"ticker": "NuScale Power", "weight": 4.14},
+        ],
+        "XLU": [
+            {"ticker": "NextEra Energy", "weight": 13.15},
+            {"ticker": "Southern Company", "weight": 7.37},
+            {"ticker": "Duke Energy", "weight": 6.97},
+        ],
+        "UTG": [
+            {"ticker": "NextEra Energy", "weight": 8.5},
+            {"ticker": "Southern Company", "weight": 6.2},
+            {"ticker": "Duke Energy", "weight": 5.8},
+        ],
+        "POWR": [
+            {"ticker": "Eaton Corporation", "weight": 9.5},
+            {"ticker": "GE Vernova", "weight": 8.2},
             {"ticker": "Quanta Services", "weight": 7.8},
-            {"ticker": "Hubbell Inc", "weight": 6.5},
-            {"ticker": "Schneider Electric", "weight": 6.0},
-            {"ticker": "ABB Ltd", "weight": 5.8},
+            {"ticker": "Hubbell Inc", "weight": 6.0},
         ],
-        "US-Power (PAVE)": [
-            {"ticker": "Eaton Corporation", "weight": 6.8},
-            {"ticker": "Quanta Services", "weight": 5.5},
-            {"ticker": "Vulcan Materials", "weight": 4.8},
-            {"ticker": "Caterpillar Inc", "weight": 4.5},
-        ],
-        "US-Power (XLU)": [
-            {"ticker": "NextEra Energy", "weight": 14.2},
-            {"ticker": "Southern Company", "weight": 8.5},
-            {"ticker": "Duke Energy", "weight": 7.8},
-            {"ticker": "Constellation Energy", "weight": 6.5},
+        "PAVE": [
+            {"ticker": "Quanta Services", "weight": 4.27},
+            {"ticker": "CSX Corporation", "weight": 3.5},
+            {"ticker": "Eaton Corporation", "weight": 3.3},
         ]
     }
 
@@ -3581,6 +3664,11 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
         "ABB Ltd": "ABBNY",
         "Vulcan Materials": "VMC",
         "Caterpillar Inc": "CAT",
+        "Cameco": "CCJ",
+        "BWX Technologies": "BWXT",
+        "Oklo": "OKLO",
+        "NuScale Power": "SMR",
+        "CSX Corporation": "CSX",
     }
 
     top_15_rows = table_rows[:15]
