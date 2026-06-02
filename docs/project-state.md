@@ -11,6 +11,7 @@ Base: Exit Strategy Monitoring (KOSPI)
 > 세션 핸드오프 (2026-06-02):
 > - S6-1 ~ S6-3, S6-7, S6-8 모두 stable 및 완료
 > - 전력/에너지 섹터 고도화 (S6-8): 국내(KODEX AI전력핵심설비 등 4종) 및 미국(KODEX 미국AI전력핵심인프라 등 4종) ETF 8종의 가격 비교 차트 및 실시간 구성종목 비중, 예상/실제가격, 괴리율 테이블을 SectorAnalysisTab.tsx에 통합 및 연동 완료
+> - 추가 기능 연동 (Gemini Share Links): 바이오 및 전력/에너지 분석 페이지 하단에 Gemini 공유 링크의 핵심 전문 분석 내용을 3탭 Bento 카드 인터페이스로 정리하여 사용자에게 연동 완료
 > - 버그 핫픽스: 개별 연동계좌 수익률 곡선이 0% 일직선으로 전시되던 이슈 해결 (수동 원금 항목 전체 합산 후 각 계좌의 자산 규모 비중으로 Pro-rata 안분 배분 Fallback 적용)
 > - 핫픽스 2: KIS 토큰 발급 불가 환경에서 `get_asset_history` API 호출 시 발생하던 `reconstruct_days` `UnboundLocalError` 방지를 위해 변수 선언 위치를 conditional block 상단으로 상향
 > - 핫픽스 3: 자산 성장 추이 차트의 툴팁 포맷 변경("누적 수익률" 선행), 차트 내 플로팅 Legend 추가 및 YAxis domain 패딩 여유값 부여로 하단 겹침 방지 + 0% ReferenceLine 추가 완료

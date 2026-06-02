@@ -53,6 +53,7 @@
 | S6-3: Efficient Frontier 시각화 및 최적 비중 연동 | ✅ done | dashboard/src/components/EfficientFrontierPanel.tsx, MyDashboard.tsx | Recharts ComposedChart 산점도 및 효율전선 커브, 최적 비중 비교 바 차트 시각화 완료 |
 | S6-7: 계좌별 자산 증감(추이) 시각화 및 분석 | ✅ done | backend/api/my_assets.py, dashboard/src/components/AssetHistoryChart.tsx, MyAssetsView.tsx | KIS 일별 계좌 스냅샷 DB 자동 적재 및 거래내역 기반 90일 역산/복원 차트 시각화 완료 |
 | S6-8: 전력/에너지 섹터 주요 종목 현황 및 구성종목 비중 비교 | ✅ done | EnergyChart.tsx, router.py (energy-chart, energy-holdings), SectorAnalysisTab.tsx | 국내/미국 전력/에너지 주요 ETF 8종의 가격 추이 비교 차트 및 상위 구성종목 비중 비교 테이블 연동 완료 |
+| S6-8-Add: 바이오 & 전력 섹터 전문가 리포트 통합 | ✅ done | BioChart.tsx, EnergyChart.tsx | Gemini 공유 링크 핵심 분석 요약(거시경제 피벗, M&A, ETF 비교, 자산배분 모델 등) 3탭 Bento 카드 통합 완료 |
 
 
 
