@@ -18,6 +18,7 @@ from api.db_sync import router as db_sync_router
 from api.order_router import router as order_router
 from api.notification_settings import router as notification_settings_router
 from api.efficient_frontier import router as efficient_frontier_router
+from api.next_leader import router as next_leader_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -183,6 +184,7 @@ app.include_router(db_sync_router, prefix="/api/v1/sync")
 app.include_router(order_router, prefix="/api/v1/order")
 app.include_router(notification_settings_router)
 app.include_router(efficient_frontier_router, prefix="/api/v1/analyze")
+app.include_router(next_leader_router, prefix="/api/v1/analyze")
 
 
 @app.get("/health")

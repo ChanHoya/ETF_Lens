@@ -9,6 +9,7 @@ import EnergyChart from '@/components/EnergyChart';
 import SectorComparisonChart from '@/components/SectorComparisonChart';
 import SectorStatusGrid from '@/components/SectorStatusGrid';
 import SectorCorrelationHeatmap from '@/components/SectorCorrelationHeatmap';
+import NextLeaderScreener from '@/components/NextLeaderScreener';
 
 interface SectorAnalysisTabProps {
     onOpenDetail?: (code: string) => void;
@@ -17,6 +18,7 @@ interface SectorAnalysisTabProps {
 export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabProps) {
     const [region, setRegion] = useState<'KR' | 'US' | 'ALL'>('ALL');
     const [selectedSector, setSelectedSector] = useState<string | null>(null);
+    const [subTab, setSubTab] = useState<'rotation' | 'screener'>('rotation');
 
     return (
         <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-500 bg-[#121217]/80 p-4 lg:p-6 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
@@ -36,90 +38,125 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                         </div>
                     </div>
 
-                    <div className="flex bg-[#1a1a23] p-1 rounded-xl border border-white/10 self-start md:self-center">
-                        {(['ALL', 'KR', 'US'] as const).map((r) => (
-                            <button
-                                key={r}
-                                onClick={() => {
-                                    setRegion(r);
-                                    setSelectedSector(null); // Reset sector selection on region change
-                                }}
-                                className={`px-4 py-2 text-sm font-bold rounded-lg transition-all flex items-center gap-2 ${
-                                    region === r 
-                                    ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg' 
-                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                                }`}
-                            >
-                                {r === 'ALL' && <Globe className="w-4 h-4" />}
-                                {r === 'KR' && <span className="text-[10px] bg-white/10 px-1 rounded">KR</span>}
-                                {r === 'US' && <span className="text-[10px] bg-white/10 px-1 rounded">US</span>}
-                                {r === 'ALL' ? '통합' : r === 'KR' ? '국내' : '미국'}
-                            </button>
-                        ))}
-                    </div>
+                    {subTab === 'rotation' && (
+                        <div className="flex bg-[#1a1a23] p-1 rounded-xl border border-white/10 self-start md:self-center">
+                            {(['ALL', 'KR', 'US'] as const).map((r) => (
+                                <button
+                                    key={r}
+                                    onClick={() => {
+                                        setRegion(r);
+                                        setSelectedSector(null); // Reset sector selection on region change
+                                    }}
+                                    className={`px-4 py-2 text-sm font-bold rounded-lg transition-all flex items-center gap-2 ${
+                                        region === r 
+                                        ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg' 
+                                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                    }`}
+                                >
+                                    {r === 'ALL' && <Globe className="w-4 h-4" />}
+                                    {r === 'KR' && <span className="text-[10px] bg-white/10 px-1 rounded">KR</span>}
+                                    {r === 'US' && <span className="text-[10px] bg-white/10 px-1 rounded">US</span>}
+                                    {r === 'ALL' ? '통합' : r === 'KR' ? '국내' : '미국'}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
-                {/* Sector Performance Overview Grid */}
-                <SectorStatusGrid 
-                    region={region} 
-                    selectedSector={selectedSector}
-                    onSelectSector={setSelectedSector}
-                />
-
-                {/* Major Sector Comparison Chart */}
-                <SectorComparisonChart 
-                    region={region} 
-                    selectedSector={selectedSector}
-                />
-
-                {/* SemiChart: Semiconductor Indices (Detailed View) */}
-                {region !== 'US' && selectedSector === '반도체' && (
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2.5 px-2 mt-4">
-                            <Zap className="w-5 h-5 text-amber-400" />
-                            <h3 className="text-xl font-extrabold text-white">반도체 특화 분석</h3>
-                        </div>
-                        <SemiChart />
-                    </div>
-                )}
-
-                {/* SpaceChart: Space Indices (Detailed View) */}
-                {region !== 'US' && selectedSector === '우주' && (
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2.5 px-2 mt-4">
-                            <Zap className="w-5 h-5 text-cyan-400" />
-                            <h3 className="text-xl font-extrabold text-white">우주 특화 분석</h3>
-                        </div>
-                        <SpaceChart onOpenDetail={onOpenDetail} />
-                    </div>
-                )}
-
-                {/* BioChart: Bio Indices (Detailed View) */}
-                {region !== 'US' && selectedSector === '바이오' && (
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2.5 px-2 mt-4">
-                            <Zap className="w-5 h-5 text-emerald-400" />
-                            <h3 className="text-xl font-extrabold text-white">바이오 특화 분석</h3>
-                        </div>
-                        <BioChart onOpenDetail={onOpenDetail} />
-                    </div>
-                )}
-
-                {/* EnergyChart: Energy/Power Indices (Detailed View) */}
-                {region !== 'US' && selectedSector === '에너지' && (
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2.5 px-2 mt-4">
-                            <Zap className="w-5 h-5 text-amber-500" />
-                            <h3 className="text-xl font-extrabold text-white">전력/에너지 특화 분석</h3>
-                        </div>
-                        <EnergyChart onOpenDetail={onOpenDetail} />
-                    </div>
-                )}
-
-                {/* Sector Correlation Heatmap */}
-                <div className="space-y-3">
-                    <SectorCorrelationHeatmap />
+                {/* Sub-Tabs: Sector Rotation vs Next Leading Sectors */}
+                <div className="flex border-b border-white/10 w-full gap-2">
+                    <button
+                        onClick={() => setSubTab('rotation')}
+                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${
+                            subTab === 'rotation'
+                            ? 'border-indigo-500 text-indigo-400 font-extrabold'
+                            : 'border-transparent text-gray-400 hover:text-gray-200'
+                        }`}
+                    >
+                        <Layers className="w-4 h-4" />
+                        섹터 순환매 동향
+                    </button>
+                    <button
+                        onClick={() => setSubTab('screener')}
+                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${
+                            subTab === 'screener'
+                            ? 'border-indigo-500 text-indigo-400 font-extrabold'
+                            : 'border-transparent text-gray-400 hover:text-gray-200'
+                        }`}
+                    >
+                        <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
+                        차기 주도주 발굴 (퀀트 스크리너)
+                    </button>
                 </div>
+
+                {/* Tab Contents */}
+                {subTab === 'screener' ? (
+                    <NextLeaderScreener onOpenDetail={onOpenDetail} />
+                ) : (
+                    <>
+                        {/* Sector Performance Overview Grid */}
+                        <SectorStatusGrid 
+                            region={region} 
+                            selectedSector={selectedSector}
+                            onSelectSector={setSelectedSector}
+                        />
+
+                        {/* Major Sector Comparison Chart */}
+                        <SectorComparisonChart 
+                            region={region} 
+                            selectedSector={selectedSector}
+                        />
+
+                        {/* SemiChart: Semiconductor Indices (Detailed View) */}
+                        {region !== 'US' && selectedSector === '반도체' && (
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2.5 px-2 mt-4">
+                                    <Zap className="w-5 h-5 text-amber-400" />
+                                    <h3 className="text-xl font-extrabold text-white">반도체 특화 분석</h3>
+                                </div>
+                                <SemiChart />
+                            </div>
+                        )}
+
+                        {/* SpaceChart: Space Indices (Detailed View) */}
+                        {region !== 'US' && selectedSector === '우주' && (
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2.5 px-2 mt-4">
+                                    <Zap className="w-5 h-5 text-cyan-400" />
+                                    <h3 className="text-xl font-extrabold text-white">우주 특화 분석</h3>
+                                </div>
+                                <SpaceChart onOpenDetail={onOpenDetail} />
+                            </div>
+                        )}
+
+                        {/* BioChart: Bio Indices (Detailed View) */}
+                        {region !== 'US' && selectedSector === '바이오' && (
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2.5 px-2 mt-4">
+                                    <Zap className="w-5 h-5 text-emerald-400" />
+                                    <h3 className="text-xl font-extrabold text-white">바이오 특화 분석</h3>
+                                </div>
+                                <BioChart onOpenDetail={onOpenDetail} />
+                            </div>
+                        )}
+
+                        {/* EnergyChart: Energy/Power Indices (Detailed View) */}
+                        {region !== 'US' && selectedSector === '에너지' && (
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2.5 px-2 mt-4">
+                                    <Zap className="w-5 h-5 text-amber-500" />
+                                    <h3 className="text-xl font-extrabold text-white">전력/에너지 특화 분석</h3>
+                                </div>
+                                <EnergyChart onOpenDetail={onOpenDetail} />
+                            </div>
+                        )}
+
+                        {/* Sector Correlation Heatmap */}
+                        <div className="space-y-3">
+                            <SectorCorrelationHeatmap />
+                        </div>
+                    </>
+                )}
 
             </div>
         </div>

@@ -24,6 +24,7 @@ A living document of module relationships. Update whenever modules are added or 
 | TFF IndexedDB Persistence | Presentation | Local storage of TFF Excel parsed JSON and version history comparisons | db.ts | TffDashboard | Antigravity |
 | Efficient Frontier | Presentation | Portfolio Efficient Frontier MPT simulation & weight optimization | api/efficient_frontier | - | Antigravity |
 | Asset History Tracking | Presentation | User portfolio asset snapshots and historical performance trend charting | my_assets, db/models, AssetHistoryChart | MyAssetsView | Antigravity |
+| Next Leading Sector Screener | Presentation | K-Market polarization index, M7 CAPEX bar charts, and quant-sifted top candidates of 10 major themes | backend/api/next_leader.py, NextLeaderScreener | SectorAnalysisTab | Antigravity |
 <!-- Add new modules above this line -->
 
 
