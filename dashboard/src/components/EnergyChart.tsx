@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Activity, ArrowUpRight } from 'lucide-react';
+import { Activity, ArrowUpRight, Sparkles, TrendingUp, BookOpen, PieChart, BarChart3, AlertTriangle } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
@@ -141,6 +141,7 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
     const [holdingsUpdatedAt, setHoldingsUpdatedAt] = useState<string>('');
     const [isMarketOpen, setIsMarketOpen] = useState<boolean>(() => checkIsUsMarketOpenClient());
     const [disparityData, setDisparityData] = useState<{ [key: string]: any }>({});
+    const [activeInsightTab, setActiveInsightTab] = useState<'macro' | 'etfs' | 'strategy'>('macro');
 
     useEffect(() => {
         const fetchDisparity = async () => {
@@ -859,6 +860,177 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                )}
+            </div>
+
+            {/* Divider */}
+            <div className="w-full border-t border-white/10 my-6"></div>
+
+            {/* Expert Insight Section */}
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                    <h4 className="text-base font-extrabold text-white flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                        AI 패러다임 쉬프트와 글로벌 전력·에너지 인프라 전략
+                    </h4>
+                    <span className="text-[10px] text-amber-500/80 font-bold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                        Gemini Expert Report
+                    </span>
+                </div>
+
+                {/* Tab Menu */}
+                <div className="flex flex-wrap bg-[#1a1a23]/60 p-1 rounded-xl border border-white/5 gap-1 self-start">
+                    {[
+                        { id: 'macro', label: '1. 매크로 & AI 전력 트렌드', icon: TrendingUp },
+                        { id: 'etfs', label: '2. 국내외 핵심 ETF 분석', icon: BookOpen },
+                        { id: 'strategy', label: '3. 자산배분 모델 & 가이드', icon: PieChart }
+                    ].map((tab) => {
+                        const Icon = tab.icon;
+                        const isSelected = activeInsightTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveInsightTab(tab.id as any)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                                    isSelected
+                                        ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md'
+                                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                }`}
+                            >
+                                <Icon className="w-3.5 h-3.5" />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Tab Contents */}
+                {activeInsightTab === 'macro' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-1">
+                        {/* Card 1: AI Power Shift */}
+                        <div className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">
+                            <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                                <TrendingUp className="w-4 h-4" />
+                                <span>AI 데이터센터 수요 폭발</span>
+                            </div>
+                            <p className="text-xs text-gray-300 leading-relaxed">
+                                AI 데이터센터 가동 전력은 일반 대비 최대 수십 배에 달합니다. 2025~28년 미국 데이터센터 전력 대응 증설 요구량은 연평균 13.7GW(미국 전체 증가분의 약 70%)에 달해 인프라 투자가 강제되는 주요 변수입니다.
+                            </p>
+                        </div>
+                        {/* Card 2: 노후화 */}
+                        <div className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">
+                            <div className="flex items-center gap-2 text-red-400 font-bold text-sm">
+                                <AlertTriangle className="w-4 h-4" />
+                                <span>송배전망 낙후 & 병목 현상</span>
+                            </div>
+                            <p className="text-xs text-gray-300 leading-relaxed">
+                                미국 송배전 시설 평균 차령 40년 초과 및 유럽 전력 부하로 정전 사고 급증 등 글로벌 계통망의 병목현상이 매우 심각합니다. 향후 10년간 글로벌 현대화 사이클에 약 1.5조 달러의 누적 투자가 투입될 전망입니다.
+                            </p>
+                        </div>
+                        {/* Card 3: 정책 지원 */}
+                        <div className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">
+                            <div className="flex items-center gap-2 text-blue-400 font-bold text-sm">
+                                <BarChart3 className="w-4 h-4" />
+                                <span>정책적 강력 행정명령</span>
+                            </div>
+                            <p className="text-xs text-gray-300 leading-relaxed">
+                                트럼프 행정부는 노후 발전소 폐쇄 제한 및 에너지부 비상 권한 부여 등을 담은 강력한 행정명령을 통해 국가 전략 과제로서 미국 내 전력망 현대화 및 연방 차원의 인프라 구축을 강력히 유도하고 있습니다.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {activeInsightTab === 'etfs' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
+                        {/* KR ETFs */}
+                        <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-3">
+                            <h5 className="text-sm font-bold text-amber-400 border-b border-white/5 pb-2">국내 상장 핵심 ETF</h5>
+                            <div className="flex flex-col gap-2.5 text-xs text-gray-300">
+                                <div>
+                                    <span className="font-bold text-white">KODEX AI전력핵심설비 (487240 | AUM ~1조원):</span>
+                                    <p className="mt-0.5 text-gray-400">송배전 변압기 빅3(LS일렉트릭, 효성중공업, HD현대일렉트릭)에 50% 이상을 배분하여 높은 자본차익(1년 +402.61%)을 기록한 업계 최고 유동성 펀드입니다.</p>
+                                </div>
+                                <div>
+                                    <span className="font-bold text-white">TIGER 코리아AI전력기기TOP3플러스 (0117V0 | AUM 2,200억대):</span>
+                                    <p className="mt-0.5 text-gray-400">변압기 3대 대장주에 75% 비중을 몰아 할당하고 기자재 부품주 7개에 분산해 성장을 극대화하는 적극 투자자 맞춤형 초압축 상품입니다.</p>
+                                </div>
+                                <div>
+                                    <span className="font-bold text-white">HANARO 전력설비투자 (491820) & RISE AI전력인프라 (0101N0):</span>
+                                    <p className="mt-0.5 text-gray-400">전선/광케이블 원자재 생태계까지 폭넓게 확보하여 단일 편중을 보완하는 HANARO와 운용보수 0.0%로 연금 계좌 장기 적립에 최적인 RISE 등이 있습니다.</p>
+                                </div>
+                                <div>
+                                    <span className="font-bold text-white">HANARO 원자력iSelect (434730 | AUM 9,600억대):</span>
+                                    <p className="mt-0.5 text-gray-400">두산에너빌리티, 현대건설 등 K-원전 건설 및 SMR(소형 모듈 원자로) 밸류체인을 묶어 3년 누적 643.14% 수익률을 증명했습니다.</p>
+                                </div>
+                            </div>
+                        </div>
+                        {/* US ETFs */}
+                        <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-3">
+                            <h5 className="text-sm font-bold text-orange-400 border-b border-white/5 pb-2">해외 상장 핵심 ETF</h5>
+                            <div className="flex flex-col gap-2.5 text-xs text-gray-300">
+                                <div>
+                                    <span className="font-bold text-white">GRID (Smart Grid | AUM $11.3B | 보수 0.56%):</span>
+                                    <p className="mt-0.5 text-gray-400">ABB, Eaton, Schneider 등 스마트그리드, ESS 및 글로벌 배전 엔지니어링 거인들에 분산 투자해 개별 국가 규제 리스크를 분산합니다.</p>
+                                </div>
+                                <div>
+                                    <span className="font-bold text-white">NLR (Uranium & Nuclear | AUM $5.1B):</span>
+                                    <p className="mt-0.5 text-gray-400">우라늄 채굴부터 원전 운영 유틸리티, 오클로/뉴스케일 등 차세대 SMR 기업을 커버하며 높은 배당(연 2.4%)을 제공하는 매력적인 연금 중축 자산입니다.</p>
+                                </div>
+                                <div>
+                                    <span className="font-bold text-white">XLU (Utilities | AUM $24.1B) & UTG (Utility CEF):</span>
+                                    <p className="mt-0.5 text-gray-400">수수료 0.08%로 넥스트에라 등 미국의 독점 공공 유틸리티에 투자해 연 2.7% 배당을 주는 XLU와 18.5% 레버리지로 연 5.65% 고율 월배당을 주는 UTG가 우수한 배당 인컴 수단입니다.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeInsightTab === 'strategy' && (
+                    <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-4 mt-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h5 className="text-xs font-bold text-amber-400 mb-2 flex items-center gap-1">
+                                    <PieChart className="w-3.5 h-3.5" />
+                                    투자 성향별 자산배분 모델 (주식-채권)
+                                </h5>
+                                <div className="text-xs text-gray-300 space-y-2 leading-relaxed font-sans">
+                                    <div>
+                                        <span className="font-bold text-white">성장추구형 (주70:채30):</span>
+                                        <span className="text-gray-400"> KODEX/TIGER AI전력기기 30% + GRID 20% + NLR 20% | 미국 장기채 20% + 회사채 10%</span>
+                                    </div>
+                                    <div>
+                                        <span className="font-bold text-white">중립코어형 (주60:채40):</span>
+                                        <span className="text-gray-400"> GRID 20% + XLU 20% + 원자력 10% + 전력설비 10% | 미국 중기채 25% + 은행채 15%</span>
+                                    </div>
+                                    <div>
+                                        <span className="font-bold text-white">배당인컴형 (주50:채50):</span>
+                                        <span className="text-gray-400"> UTG 25% + XLU 15% + NLR 10% | 미국 장기채 커버드콜 25% + 만기매칭형 은행채 25%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h5 className="text-xs font-bold text-amber-400 mb-2 flex items-center gap-1">
+                                    <TrendingUp className="w-3.5 h-3.5" />
+                                    정량 밸류에이션 및 기술적 진입/청산 가이드
+                                </h5>
+                                <div className="text-xs text-gray-300 space-y-2 leading-relaxed">
+                                    <div>
+                                        <span className="font-bold text-white">기본적 매수 타점:</span>
+                                        <p className="mt-0.5 text-gray-400">성장형 전력기기(TIGER, GRID 등) 가중평균 12개월 Forward P/E가 25배 이하로 안정될 때 진입. XLU는 Forward P/E 18배 이하 시 신호.</p>
+                                    </div>
+                                    <div>
+                                        <span className="font-bold text-white">기술적 분할 타점:</span>
+                                        <p className="mt-0.5 text-gray-400">주가가 50일 또는 200일 SMA 지지선 부근으로 일시 조정되고 RSI-14 지표가 40 이하로 냉각될 때 분할 매수. 주가가 200일 SMA 대비 +20% 이상 괴리되거나 RSI 70 초과 시 30~50% 분할 청산.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="border-t border-white/5 pt-3">
+                            <p className="text-[10px] text-gray-500 leading-relaxed">
+                                * 금리 인하 사이클 도래는 자본집약적 전력 산업의 이자 비용을 경감해 직접적인 마진 개선 촉매로 작용합니다. 다만 변압기 과열 주가 국면의 하방 충격을 완화하기 위해 채권 자산을 안전판으로 구축하고 적립식 분산 투자를 추천합니다.
+                            </p>
+                        </div>
                     </div>
                 )}
             </div>
