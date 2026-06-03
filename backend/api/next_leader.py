@@ -552,3 +552,170 @@ async def get_next_leader_screener(request: Request, db: AsyncSession = Depends(
 
     _LEADER_CACHE[cache_key] = {"data": response, "ts": now}
     return response
+
+
+# ── Endpoint 4: 섹터별 주가 흐름 격자 (Sector Flow Grid) ──────────────────────────
+@router.get("/sector-flow")
+async def get_sector_flow(market: str = "ALL"):
+    """
+    KOSPI, KOSDAQ, S&P 500, NASDAQ의 주요 섹터별 1년 주가 흐름 데이터를 수집하고 연산합니다.
+    """
+    now = time.time()
+    market_key = market.upper().strip()
+    cache_key = f"sector_flow_{market_key}"
+    
+    if cache_key in _LEADER_CACHE and (now - _LEADER_CACHE[cache_key]["ts"] < _CACHE_TTL):
+        return _LEADER_CACHE[cache_key]["data"]
+
+    # 1. Ticker Configuration (Verified list)
+    sector_config = {
+        "KOSPI": {
+            "IT": "139260.KS",
+            "바이오/헬스": "227540.KS",
+            "에너지화학": "139220.KS",
+            "금융": "139270.KS",
+            "중공업": "139240.KS",
+            "경기소비재": "139290.KS",
+            "생활소비재": "139250.KS",
+            "철강소재": "139230.KS",
+            "건설": "139280.KS"
+        },
+        "KOSDAQ": {
+            "IT/하드웨어": "300640.KS",
+            "바이오테크": "261070.KS",
+            "2차전지": "452440.KS"
+        },
+        "S&P 500": {
+            "Technology": "XLK",
+            "Financials": "XLF",
+            "Health Care": "XLV",
+            "Consumer Discretionary": "XLY",
+            "Consumer Staples": "XLP",
+            "Energy": "XLE",
+            "Industrials": "XLI",
+            "Materials": "XLB",
+            "Utilities": "XLU",
+            "Real Estate": "XLRE",
+            "Communication Services": "XLC"
+        },
+        "NASDAQ": {
+            "Technology / Computer": "^IXCO",
+            "Biotech": "^NBI",
+            "Financials": "^IXF",
+            "Telecommunications": "^IXTC",
+            "Health Care": "^IXHC",
+            "Retail": "FTXD",
+            "Food & Beverage": "FTXG",
+            "Oil & Gas": "FTXN",
+            "Transportation": "FTXR"
+        }
+    }
+
+    # Filter markets based on parameter
+    markets_to_fetch = {}
+    if market_key == "ALL":
+        markets_to_fetch = sector_config
+    elif market_key in sector_config:
+        markets_to_fetch = {market_key: sector_config[market_key]}
+    else:
+        markets_to_fetch = sector_config
+
+    loop = asyncio.get_running_loop()
+    
+    # 2. Fetch data in parallel
+    tasks = []
+    flat_tickers = []
+    for mkt, sectors in markets_to_fetch.items():
+        for sname, ticker in sectors.items():
+            flat_tickers.append((mkt, sname, ticker))
+            tasks.append(loop.run_in_executor(None, _fetch_yahoo_v8_history, ticker, 370))
+
+    fetched_histories = await asyncio.gather(*tasks)
+
+    # 3. Downsampler helper
+    def downsample_series(series: list, target_points: int = 60) -> list:
+        if len(series) <= target_points:
+            return series
+        step = len(series) / target_points
+        sampled = []
+        for i in range(target_points):
+            idx = int(i * step)
+            if idx < len(series):
+                sampled.append(series[idx])
+        if series and series[-1] not in sampled:
+            sampled.append(series[-1])
+        return sampled
+
+    # 4. Process each sector
+    response_data = {}
+    for (mkt, sname, ticker), hist in zip(flat_tickers, fetched_histories):
+        if mkt not in response_data:
+            response_data[mkt] = []
+            
+        if not hist or len(hist) < 2:
+            # Try FDR for KR fallback
+            if ".KS" in ticker:
+                fdr_code = ticker.replace(".KS", "")
+                try:
+                    import FinanceDataReader as fdr
+                    end_date = datetime.now()
+                    start_date = end_date - timedelta(days=365)
+                    def _fetch_fdr():
+                        df = fdr.DataReader(fdr_code, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
+                        if not df.empty and "Close" in df.columns:
+                            df = df.dropna()
+                            return [{"date": idx.strftime("%Y-%m-%d"), "close": float(close)} 
+                                    for idx, close in zip(df.index, df["Close"])]
+                        return []
+                    hist = await loop.run_in_executor(None, _fetch_fdr)
+                except Exception as e:
+                    logger.warning(f"FDR fallback failed for {ticker}: {e}")
+
+        if not hist or len(hist) < 2:
+            logger.warning(f"No history available for sector {sname} ({ticker}) in market {mkt}")
+            continue
+
+        # Downsample to 60 points
+        sampled_hist = downsample_series(hist, 60)
+
+        # Normalize relative to the first date
+        base_val = sampled_hist[0]["close"]
+        normalized_history = []
+        for item in sampled_hist:
+            normalized_history.append({
+                "date": item["date"],
+                "value": round(item["close"], 2),
+                "pct": round(((item["close"] - base_val) / base_val) * 100, 2)
+            })
+
+        # Calculate slope/trend via simple linear regression
+        xs = list(range(len(sampled_hist)))
+        ys = [item["close"] for item in sampled_hist]
+        
+        mean_x = sum(xs) / len(xs)
+        mean_y = sum(ys) / len(ys)
+        num = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys))
+        den = sum((x - mean_x) ** 2 for x in xs)
+        slope = num / den if den != 0 else 0.0
+
+        trend = "up" if slope >= 0 else "down"
+        tot_return = ((ys[-1] - ys[0]) / ys[0]) * 100
+
+        response_data[mkt].append({
+            "name": sname,
+            "ticker": ticker,
+            "total_return_pct": round(tot_return, 2),
+            "trend": trend,
+            "start_date": sampled_hist[0]["date"],
+            "end_date": sampled_hist[-1]["date"],
+            "history": normalized_history
+        })
+
+    response = {
+        "status": "success",
+        "markets": response_data
+    }
+    
+    _LEADER_CACHE[cache_key] = {"data": response, "ts": now}
+    return response
+

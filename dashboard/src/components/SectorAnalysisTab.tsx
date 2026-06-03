@@ -10,6 +10,7 @@ import SectorComparisonChart from '@/components/SectorComparisonChart';
 import SectorStatusGrid from '@/components/SectorStatusGrid';
 import SectorCorrelationHeatmap from '@/components/SectorCorrelationHeatmap';
 import NextLeaderScreener from '@/components/NextLeaderScreener';
+import SectorFlowGrid from '@/components/SectorFlowGrid';
 
 interface SectorAnalysisTabProps {
     onOpenDetail?: (code: string) => void;
@@ -18,7 +19,7 @@ interface SectorAnalysisTabProps {
 export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabProps) {
     const [region, setRegion] = useState<'KR' | 'US' | 'ALL'>('ALL');
     const [selectedSector, setSelectedSector] = useState<string | null>(null);
-    const [subTab, setSubTab] = useState<'rotation' | 'screener'>('rotation');
+    const [subTab, setSubTab] = useState<'rotation' | 'screener' | 'flow'>('rotation');
 
     return (
         <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-500 bg-[#121217]/80 p-4 lg:p-6 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
@@ -87,11 +88,24 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                         <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
                         차기 주도주 발굴 (퀀트 스크리너)
                     </button>
+                    <button
+                        onClick={() => setSubTab('flow')}
+                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${
+                            subTab === 'flow'
+                            ? 'border-indigo-500 text-indigo-400 font-extrabold'
+                            : 'border-transparent text-gray-400 hover:text-gray-200'
+                        }`}
+                    >
+                        <Activity className="w-4 h-4 text-cyan-400" />
+                        섹터별 주가 흐름
+                    </button>
                 </div>
 
                 {/* Tab Contents */}
                 {subTab === 'screener' ? (
                     <NextLeaderScreener onOpenDetail={onOpenDetail} />
+                ) : subTab === 'flow' ? (
+                    <SectorFlowGrid onOpenDetail={onOpenDetail} />
                 ) : (
                     <>
                         {/* Sector Performance Overview Grid */}

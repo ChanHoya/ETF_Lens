@@ -117,3 +117,37 @@ def test_get_next_leader_screener(mock_harvester_class, mock_naver, mock_yahoo):
         assert "technical_score" in stock
         assert "per" in stock
         assert "roe" in stock
+
+
+@patch("api.next_leader._fetch_yahoo_v8_history", side_effect=mock_fetch_yahoo_v8_history)
+def test_get_sector_flow(mock_yahoo):
+    response = client.get("/api/v1/analyze/sector-flow?market=ALL")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "markets" in data
+    
+    # Check that KOSPI, KOSDAQ, S&P 500, and NASDAQ are present in the response
+    markets = data["markets"]
+    assert "KOSPI" in markets
+    assert "KOSDAQ" in markets
+    assert "S&P 500" in markets
+    assert "NASDAQ" in markets
+    
+    # Verify the structure of a sector entry
+    kospi_it = next((s for s in markets["KOSPI"] if s["name"] == "IT"), None)
+    assert kospi_it is not None
+    assert kospi_it["ticker"] == "139260.KS"
+    assert "total_return_pct" in kospi_it
+    assert "trend" in kospi_it
+    assert "start_date" in kospi_it
+    assert "end_date" in kospi_it
+    assert "history" in kospi_it
+    assert len(kospi_it["history"]) > 0
+    
+    # Check that individual history entries contain date, value, and pct
+    hist_entry = kospi_it["history"][0]
+    assert "date" in hist_entry
+    assert "value" in hist_entry
+    assert "pct" in hist_entry
+
