@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-    AreaChart, 
+    ComposedChart, 
     Area, 
     Line,
     XAxis, 
@@ -248,7 +248,7 @@ export default function SectorFlowGrid({
                                 {/* Recharts Sparkline Area */}
                                 <div className="h-[140px] w-full mt-4 z-10 relative">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart 
+                                        <ComposedChart 
                                             data={item.history} 
                                             margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
                                         >
@@ -357,7 +357,7 @@ export default function SectorFlowGrid({
                                                 dot={false} 
                                                 strokeDasharray="3 3"
                                             />
-                                        </AreaChart>
+                                        </ComposedChart>
                                     </ResponsiveContainer>
                                 </div>
 
