@@ -11,7 +11,7 @@ Base: Exit Strategy Monitoring (KOSPI)
 > 세션 핸드오프 (2026-06-04):
 > - S6-1 ~ S6-3, S6-7 ~ S6-10 모두 stable 및 완료
 > - 차기 주도주 발굴 및 퀀트 스크리너 (S6-9) 완료: 10대 대안 섹터 퀀트 랭킹 스크리너 API & UI 연동 완료
-> - 4대 시장 섹터별 주가 흐름 격자 (S6-10) 완료: KOSPI, KOSDAQ, S&P 500, NASDAQ의 주요 1년 주가 흐름 미니 차트 및 트렌드 화살표 오버레이 격자 통합 완료 (SWR localStorage 캐싱 도입)
+> - 4대 시장 섹터별 주가 흐름 격자 (S6-10) 완료: KOSPI, KOSDAQ, S&P 500, NASDAQ의 주요 1년 주가 흐름 미니 차트 및 5/20/60일 이동평균선(점선) 격자 통합 완료 (SWR localStorage 캐싱 도입)
 > - 다음 세션: 원래 계획되었던 S6-4 배당 스크래퍼 → S6-5 배당 캘린더 UI 순서로 복귀하여 진행 (sprint-manager 호출로 시작)
 
  

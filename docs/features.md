@@ -55,7 +55,7 @@
 | S6-8: 전력/에너지 섹터 주요 종목 현황 및 구성종목 비중 비교 | ✅ done | EnergyChart.tsx, router.py (energy-chart, energy-holdings), SectorAnalysisTab.tsx | 국내주식/해외주식/해외상장 3분할 탭 개편, GRID 등 미국 상장 6종 추가 및 달러화(USD) 분기 표기 최적화 완료 |
 | S6-8-Add: 바이오 & 전력 섹터 전문가 리포트 통합 | ✅ done | BioChart.tsx, EnergyChart.tsx | Gemini 공유 링크 핵심 분석 요약(거시경제 피벗, M&A, ETF 비교, 자산배분 모델 등) 3탭 Bento 카드 통합 완료 |
 | S6-9: 차기 주도주 발굴 및 퀀트 스크리너 | ✅ done | backend/api/next_leader.py, NextLeaderScreener.tsx, SectorAnalysisTab.tsx | 양극화 지수, M7 CAPEX, 반도체 이격 신호등 및 10대 테마 퀀트 스크리너 구축 완료 |
-| S6-10: 섹터별 주가 흐름 격자 (Sector Flow Grid) | ✅ done | next_leader.py, SectorFlowGrid.tsx, SectorAnalysisTab.tsx | KOSPI, KOSDAQ, S&P 500, NASDAQ의 주요 섹터별 1년 주가 흐름을 미니 AreaChart 및 absolute SVG 트렌드 화살표 오버레이 격자로 시각화 완료 |
+| S6-10: 섹터별 주가 흐름 격자 (Sector Flow Grid) | ✅ done | next_leader.py, SectorFlowGrid.tsx, SectorAnalysisTab.tsx | KOSPI, KOSDAQ, S&P 500, NASDAQ의 주요 섹터별 1년 주가 흐름을 미니 AreaChart 및 5/20/60일 이동평균선(점선) 격자로 시각화 완료 |
 
 
 
