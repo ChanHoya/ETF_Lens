@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     AreaChart, 
     Area, 
+    Line,
     XAxis, 
     YAxis, 
     ReferenceLine, 
@@ -17,6 +18,12 @@ interface SectorHistoryItem {
     date: string;
     value: number;
     pct: number;
+    ma5?: number;
+    ma20?: number;
+    ma60?: number;
+    ma5_pct?: number;
+    ma20_pct?: number;
+    ma60_pct?: number;
 }
 
 interface SectorFlowItem {
@@ -281,7 +288,7 @@ export default function SectorFlowGrid({
                                                     if (active && payload && payload.length) {
                                                         const data = payload[0].payload;
                                                         return (
-                                                            <div className="bg-[#121217]/95 border border-white/10 p-2.5 rounded-lg shadow-xl text-xs space-y-1 font-bold">
+                                                            <div className="bg-[#121217]/95 border border-white/10 p-2.5 rounded-lg shadow-xl text-xs space-y-1.5 font-bold animate-in fade-in duration-100">
                                                                 <p className="text-gray-400">{data.date}</p>
                                                                 <div className="flex justify-between gap-4">
                                                                     <span className="text-white">주가:</span>
@@ -293,6 +300,24 @@ export default function SectorFlowGrid({
                                                                         {data.pct >= 0 ? '+' : ''}{data.pct}%
                                                                     </span>
                                                                 </div>
+                                                                {data.ma5 !== undefined && (
+                                                                    <div className="flex justify-between gap-4 border-t border-white/5 pt-1.5 mt-1 text-[10px]">
+                                                                        <span className="text-[#f59e0b]">5일선:</span>
+                                                                        <span className="text-gray-300">{formatPrice(data.ma5, activeMarket)} ({data.ma5_pct >= 0 ? '+' : ''}{data.ma5_pct}%)</span>
+                                                                    </div>
+                                                                )}
+                                                                {data.ma20 !== undefined && (
+                                                                    <div className="flex justify-between gap-4 text-[10px]">
+                                                                        <span className="text-[#8b5cf6]">20일선:</span>
+                                                                        <span className="text-gray-300">{formatPrice(data.ma20, activeMarket)} ({data.ma20_pct >= 0 ? '+' : ''}{data.ma20_pct}%)</span>
+                                                                    </div>
+                                                                )}
+                                                                {data.ma60 !== undefined && (
+                                                                    <div className="flex justify-between gap-4 text-[10px]">
+                                                                        <span className="text-[#06b6d4]">60일선:</span>
+                                                                        <span className="text-gray-300">{formatPrice(data.ma60, activeMarket)} ({data.ma60_pct >= 0 ? '+' : ''}{data.ma60_pct}%)</span>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         );
                                                     }
@@ -308,23 +333,32 @@ export default function SectorFlowGrid({
                                                 fillOpacity={1} 
                                                 fill={`url(#${gradientId})`} 
                                             />
+                                            <Line 
+                                                type="monotone" 
+                                                dataKey="ma5_pct" 
+                                                stroke="#f59e0b" 
+                                                strokeWidth={1.2} 
+                                                dot={false} 
+                                                strokeDasharray="3 3"
+                                            />
+                                            <Line 
+                                                type="monotone" 
+                                                dataKey="ma20_pct" 
+                                                stroke="#8b5cf6" 
+                                                strokeWidth={1.2} 
+                                                dot={false} 
+                                                strokeDasharray="3 3"
+                                            />
+                                            <Line 
+                                                type="monotone" 
+                                                dataKey="ma60_pct" 
+                                                stroke="#06b6d4" 
+                                                strokeWidth={1.2} 
+                                                dot={false} 
+                                                strokeDasharray="3 3"
+                                            />
                                         </AreaChart>
                                     </ResponsiveContainer>
-                                </div>
-
-                                {/* Absolute SVG Trend Arrow Overlay */}
-                                <div className="absolute right-6 bottom-11 pointer-events-none opacity-30 group-hover:opacity-50 transition-opacity duration-300">
-                                    {item.trend === 'up' ? (
-                                        <svg className="w-16 h-16 text-emerald-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                            <line x1="5" y1="19" x2="19" y2="5" />
-                                            <polyline points="12 5 19 5 19 12" />
-                                        </svg>
-                                    ) : (
-                                        <svg className="w-16 h-16 text-rose-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                            <line x1="5" y1="5" x2="19" y2="19" />
-                                            <polyline points="12 19 19 19 19 12" />
-                                        </svg>
-                                    )}
                                 </div>
 
                                 {/* Bottom Info Labels for Start and End dates */}

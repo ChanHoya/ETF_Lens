@@ -675,6 +675,21 @@ async def get_sector_flow(market: str = "ALL"):
             logger.warning(f"No history available for sector {sname} ({ticker}) in market {mkt}")
             continue
 
+        # Calculate Moving Averages (5, 20, 60) on the full daily history
+        closes = [item["close"] for item in hist]
+        base_val = hist[0]["close"]
+        for i, item in enumerate(hist):
+            ma5 = sum(closes[max(0, i-4):i+1]) / (i - max(0, i-4) + 1)
+            ma20 = sum(closes[max(0, i-19):i+1]) / (i - max(0, i-19) + 1)
+            ma60 = sum(closes[max(0, i-59):i+1]) / (i - max(0, i-59) + 1)
+            
+            item["ma5"] = round(ma5, 2)
+            item["ma20"] = round(ma20, 2)
+            item["ma60"] = round(ma60, 2)
+            item["ma5_pct"] = round(((ma5 - base_val) / base_val) * 100, 2)
+            item["ma20_pct"] = round(((ma20 - base_val) / base_val) * 100, 2)
+            item["ma60_pct"] = round(((ma60 - base_val) / base_val) * 100, 2)
+
         # Downsample to 60 points
         sampled_hist = downsample_series(hist, 60)
 
@@ -685,7 +700,13 @@ async def get_sector_flow(market: str = "ALL"):
             normalized_history.append({
                 "date": item["date"],
                 "value": round(item["close"], 2),
-                "pct": round(((item["close"] - base_val) / base_val) * 100, 2)
+                "pct": round(((item["close"] - base_val) / base_val) * 100, 2),
+                "ma5_pct": item.get("ma5_pct", 0.0),
+                "ma20_pct": item.get("ma20_pct", 0.0),
+                "ma60_pct": item.get("ma60_pct", 0.0),
+                "ma5": item.get("ma5", 0.0),
+                "ma20": item.get("ma20", 0.0),
+                "ma60": item.get("ma60", 0.0)
             })
 
         # Calculate slope/trend via simple linear regression
