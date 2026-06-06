@@ -74,6 +74,14 @@ async def sync_etf_prices_yfinance() -> int:
             tickers_krx = list(rows)
         logger.info(f"[ETF Price Sync] DB fallback: {len(tickers_krx)}개 코드")
 
+    # 4순위/필터: 모니터링/포트폴리오 대상 active ETF들만 동기화 하도록 필터링 (OOM 방지)
+    from core.active_etfs import get_active_etf_codes
+    active_codes = await get_active_etf_codes()
+    if tickers_krx:
+        tickers_krx = [t for t in tickers_krx if t in active_codes]
+    else:
+        tickers_krx = list(active_codes)
+
     if not tickers_krx:
         logger.error("[ETF Price Sync] ETF 목록을 가져올 수 없습니다. 중단.")
         return 0

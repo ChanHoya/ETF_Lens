@@ -227,8 +227,13 @@ async def sync_etf_batch():
             except Exception as e:
                 print(f"Error processing DB sync for {code}: {e}")
 
-    codes_to_sync = harvester.etf_list[["Symbol", "Name"]].to_dict("records")
-    # In prod we sync all
+    from core.active_etfs import get_active_etf_codes
+    active_codes = await get_active_etf_codes()
+    print(f"[sync_etf_batch] Active codes to sync: {len(active_codes)} - {active_codes}")
+
+    filtered_list = harvester.etf_list[harvester.etf_list["Symbol"].isin(active_codes)]
+    codes_to_sync = filtered_list[["Symbol", "Name"]].to_dict("records")
+    
     tasks = [process_code(c["Symbol"], c["Name"], "Unknown") for c in codes_to_sync]
     await asyncio.gather(*tasks)
 

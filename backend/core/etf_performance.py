@@ -75,8 +75,11 @@ async def update_all_etf_performance(db: AsyncSession) -> int:
     스케줄러(매일 19:00)에서 호출.
     """
     from db.models import ETFMaster
+    from core.active_etfs import get_active_etf_codes
 
-    codes = (await db.execute(select(ETFMaster.code))).scalars().all()
+    active_codes = await get_active_etf_codes()
+    all_codes = (await db.execute(select(ETFMaster.code))).scalars().all()
+    codes = [c for c in all_codes if c in active_codes]
     updated = 0
     skipped = 0
 
