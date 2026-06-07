@@ -156,7 +156,7 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
     useEffect(() => {
         const fetchDisparity = async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/v1/analyze/etf/disparity?codes=396500,469150,471990,455850,0195R0,0195S0,0193W0,0193T0,381180,497570,SMH,SOXQ`);
+                const res = await fetch(`${API_BASE}/api/v1/analyze/etf/disparity?codes=396500,469150,471990,455850,0195R0,0195S0,0193W0,0193T0,381180,497570,SMH,SOXQ`, { cache: 'no-store' });
                 if (res.ok) {
                     const data = await res.json();
                     setDisparityData(data);
@@ -174,7 +174,7 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
         const fetchHoldings = async () => {
             setIsHoldingsLoading(true);
             try {
-                const res = await fetch(`${API_BASE}/api/v1/analyze/semi-holdings`);
+                const res = await fetch(`${API_BASE}/api/v1/analyze/semi-holdings`, { cache: 'no-store' });
                 if (!res.ok) throw new Error('API fetch error');
                 const data = await res.json();
                 if (data.table_data) {
@@ -205,7 +205,7 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
                 const url = selectedEtf
                     ? `${API_BASE}/api/v1/analyze/semi-chart?etf=${encodeURIComponent(selectedEtf)}`
                     : `${API_BASE}/api/v1/analyze/semi-chart`;
-                const res = await fetch(url);
+                const res = await fetch(url, { cache: 'no-store' });
                 if (!res.ok) throw new Error('API fetch error');
                 const data = await res.json();
                 
