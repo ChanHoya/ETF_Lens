@@ -128,7 +128,7 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                                     <Zap className="w-5 h-5 text-amber-400" />
                                     <h3 className="text-xl font-extrabold text-white">반도체 특화 분석</h3>
                                 </div>
-                                <SemiChart />
+                                <SemiChart onOpenDetail={onOpenDetail} />
                             </div>
                         )}
 

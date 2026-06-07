@@ -27,6 +27,7 @@ A living document of module relationships. Update whenever modules are added or 
 | Next Leading Sector Screener | Presentation | K-Market polarization index, M7 CAPEX bar charts, and quant-sifted top candidates of 10 major themes | backend/api/next_leader.py, NextLeaderScreener | SectorAnalysisTab | Antigravity |
 | Sector Flow Grid | Presentation | Sparkline line charts with 5/20/60-day moving average (dashed lines) overlays showing 1-year sector returns | backend/api/next_leader.py, SectorFlowGrid | SectorAnalysisTab | Antigravity |
 | Energy ETF Analysis | Presentation | Energy sector ETF performance charts, custom legends, and toggled constituent comparison tables | api/router, EnergyChart | SectorAnalysisTab | Antigravity |
+| Semiconductor ETF Analysis | Presentation | Semiconductor sector ETF performance charts, custom legends, and toggled constituent comparison tables | api/router, SemiChart | SectorAnalysisTab | Antigravity |
 <!-- Add new modules above this line -->
 
 
