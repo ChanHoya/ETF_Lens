@@ -5,12 +5,12 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 6 — S6-11 (반도체 ETF 구성종목 변동 그래프 및 전문가 리포트 개편) 완료 (2026-06-08)
+✅ Current: Sprint 6 — S6-11 완료 및 마켓 센티먼트(VIX/FGI) 지표 무한 로딩 버그 핫픽스 완료 (2026-06-10)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
-> 세션 핸드오프 (2026-06-08):
+> 세션 핸드오프 (2026-06-10):
 > - S6-1 ~ S6-3, S6-7 ~ S6-11 모두 stable 및 완료
-> - 반도체 섹터 분석 업그레이드 (S6-11) 완료 및 CORS(대체 개발 포트 3001-3003) 허용 & no-store 브라우저 캐시 우회 핫픽스 적용 완료 (Next.js 빌드 및 22개 백엔드 유닛 테스트 검증 통과)
+> - 시장동향 탭 VIX & VKOSPI 및 Fear & Greed Index 무한 로딩 버그 해결 (get_pe_detail 함수 인자 시그니처 target_ym 누락으로 인한 TypeError 해결, 캐시 리빌드 검증 완료)
 > - 다음 세션: 원래 계획되었던 S6-4 배당 스크래퍼 진행
 
  
