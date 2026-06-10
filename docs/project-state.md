@@ -5,12 +5,14 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 6 — S6-11 완료 및 마켓 센티먼트(VIX/FGI) 지표 무한 로딩 버그 핫픽스 완료 (2026-06-10)
+✅ Current: Sprint 6 — S6-11 완료, 마켓 센티먼트 및 미국 장단기 금리차 무한 로딩 핫픽스, 매크로 지표 발표일 불일치 개선 완료 (2026-06-11)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
-> 세션 핸드오프 (2026-06-10):
+> 세션 핸드오프 (2026-06-11):
 > - S6-1 ~ S6-3, S6-7 ~ S6-11 모두 stable 및 완료
-> - 시장동향 탭 VIX & VKOSPI 및 Fear & Greed Index 무한 로딩 버그 해결 (get_pe_detail 함수 인자 시그니처 target_ym 누락으로 인한 TypeError 해결, 캐시 리빌드 검증 완료)
+> - 시장동향 탭 VIX & VKOSPI 및 Fear & Greed Index 무한 로딩 버그 해결 (get_pe_detail 함수 인자 시그니처 target_ym 누락으로 인한 TypeError 해결)
+> - 미 장단기 금리차(10Y-2Y) 및 하이일드 스프레드 무한 로딩 해결 (FRED User-Agent 차단 방지 헤더 탑재 및 통신 장애 대비 mock fallback 개편)
+> - 미국 3대 인플레이션 지표(CPI, PPI, PCE) 발표일 격차로 인한 N/A 현상 해결 (DiscoverTab.tsx에서 각 지표별 가장 최신의 non-null 데이터를 개별 추적해 렌더링)
 > - 다음 세션: 원래 계획되었던 S6-4 배당 스크래퍼 진행
 
  
