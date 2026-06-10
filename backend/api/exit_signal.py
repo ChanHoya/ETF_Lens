@@ -1020,7 +1020,7 @@ async def get_cli_detail():
 
 
 @router.get("/pe")
-async def get_pe_detail(symbol: str = "005930"):
+async def get_pe_detail(symbol: str = "005930", target_ym: str = None):
     """
     Returns proxy P/E historical data for a given Korean stock symbol.
     Data source priority:
