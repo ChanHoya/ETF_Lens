@@ -111,6 +111,34 @@ def get_mock_data():
                 {"month": "01월", "val": 100.8},
                 {"month": "02월", "val": 100.4},
             ],
+            "t10y2y": [
+                {"month": "03월", "val": -0.22},
+                {"month": "04월", "val": -0.25},
+                {"month": "05월", "val": -0.28},
+                {"month": "06월", "val": -0.32},
+                {"month": "07월", "val": -0.18},
+                {"month": "08월", "val": -0.15},
+                {"month": "09월", "val": -0.12},
+                {"month": "10월", "val": -0.08},
+                {"month": "11월", "val": -0.03},
+                {"month": "12월", "val": 0.05},
+                {"month": "01월", "val": 0.12},
+                {"month": "02월", "val": 0.15},
+            ],
+            "hy_spread": [
+                {"month": "03월", "val": 3.12},
+                {"month": "04월", "val": 3.25},
+                {"month": "05월", "val": 3.42},
+                {"month": "06월", "val": 3.55},
+                {"month": "07월", "val": 3.32},
+                {"month": "08월", "val": 3.21},
+                {"month": "09월", "val": 3.15},
+                {"month": "10월", "val": 3.08},
+                {"month": "11월", "val": 2.98},
+                {"month": "12월", "val": 3.02},
+                {"month": "01월", "val": 3.10},
+                {"month": "02월", "val": 3.15},
+            ],
         },
         "current_status": {
             "dollar": 97.77,
@@ -118,6 +146,8 @@ def get_mock_data():
             "per": 12.4,
             "cli": 100.4,
             "cli_down_months": 2,
+            "t10y2y": 0.15,
+            "hy_spread": 3.15,
         },
     }
 
@@ -127,8 +157,11 @@ async def _fetch_fred_series(fred_id: str, days: int = 400) -> dict[str, float]:
     try:
         end_str = _kst_now().strftime("%Y-%m-%d")  # KST 기준 오늘
         url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={fred_id}&vintage_date={end_str}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
         resp = await asyncio.to_thread(
-            lambda: __import__("requests").get(url, timeout=15)
+            lambda: __import__("requests").get(url, headers=headers, timeout=15)
         )
         if resp.status_code != 200:
             logger.warning(f"FRED {fred_id} status={resp.status_code}")
@@ -589,15 +622,17 @@ async def get_exit_signal_data(target_ym: str = None):
         all_yms_hy = sorted(hy_mo.keys())[-12:]
         hy_data = [{"month": f"{int(ym[5:7]):02d}월", "val": round(hy_mo[ym], 2)} for ym in all_yms_hy]
 
-        mock["indicators"]["t10y2y"] = t10y2y_data
-        mock["indicators"]["hy_spread"] = hy_data
+        if t10y2y_data:
+            mock["indicators"]["t10y2y"] = t10y2y_data
+        if hy_data:
+            mock["indicators"]["hy_spread"] = hy_data
 
         # 현재값 및 과거 180일 역전 여부 산출
-        current_t10y2y = 1.0
         t10y2y_was_inverted = False
         if t10y2y_dict:
             sorted_dates = sorted(t10y2y_dict.keys())
             current_t10y2y = t10y2y_dict[sorted_dates[-1]]
+            mock["current_status"]["t10y2y"] = round(current_t10y2y, 2)
             # 최근 180일 역전 감지 (0.0 미만이 아니라 -0.1 기준 검사)
             for d in sorted_dates:
                 cutoff_180 = datetime.now() - timedelta(days=180)
@@ -605,14 +640,13 @@ async def get_exit_signal_data(target_ym: str = None):
                     if t10y2y_dict[d] < -0.1:
                         t10y2y_was_inverted = True
                         break
+        else:
+            t10y2y_was_inverted = True
 
-        current_hy = 3.0
         if hy_dict:
             sorted_dates_hy = sorted(hy_dict.keys())
             current_hy = hy_dict[sorted_dates_hy[-1]]
-
-        mock["current_status"]["t10y2y"] = round(current_t10y2y, 2)
-        mock["current_status"]["hy_spread"] = round(current_hy, 2)
+            mock["current_status"]["hy_spread"] = round(current_hy, 2)
         # ───────────────────────────────────────────────────────────────────────
 
         # DB에 오늘의 sentiment 기록 저장 (중복 방지)

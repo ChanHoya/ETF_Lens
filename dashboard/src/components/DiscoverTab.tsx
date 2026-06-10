@@ -73,14 +73,43 @@ export default function DiscoverTab() {
     const prevItem = hasData && macroData.length > 1 ? macroData[macroData.length - 2] : null;
 
     const getChangeInfo = (key: 'cpi_yoy' | 'ppi_yoy' | 'pce_yoy') => {
-        if (!latestItem || !prevItem || latestItem[key] === null || prevItem[key] === null) {
-            return { val: 0, change: 0, text: '-', isUp: false };
+        if (!macroData || macroData.length === 0) {
+            return { val: null, change: 0, text: '-', isUp: false, date: '', prevVal: null };
         }
-        const val = latestItem[key];
-        const change = val - prevItem[key];
+        
+        // Find latest non-null value
+        let latestIdx = -1;
+        for (let i = macroData.length - 1; i >= 0; i--) {
+            if (macroData[i][key] !== null && macroData[i][key] !== undefined) {
+                latestIdx = i;
+                break;
+            }
+        }
+        if (latestIdx === -1) {
+            return { val: null, change: 0, text: '-', isUp: false, date: '', prevVal: null };
+        }
+
+        const val = macroData[latestIdx][key];
+        const date = macroData[latestIdx].date;
+
+        // Find previous non-null value
+        let prevIdx = -1;
+        for (let i = latestIdx - 1; i >= 0; i--) {
+            if (macroData[i][key] !== null && macroData[i][key] !== undefined) {
+                prevIdx = i;
+                break;
+            }
+        }
+
+        if (prevIdx === -1) {
+            return { val, change: 0, text: '-', isUp: false, date, prevVal: null };
+        }
+
+        const prevVal = macroData[prevIdx][key];
+        const change = val - prevVal;
         const isUp = change > 0;
         const text = change === 0 ? "보합" : `${isUp ? '▲' : '▼'} ${Math.abs(change).toFixed(1)}%p`;
-        return { val, change, text, isUp };
+        return { val, change, text, isUp, date, prevVal };
     };
 
     const cpiInfo = getChangeInfo('cpi_yoy');
@@ -368,7 +397,7 @@ export default function DiscoverTab() {
                                 <div>
                                     <span className="text-xs font-semibold text-gray-400">소비자물가지수 (CPI YoY)</span>
                                     <h4 className="text-2xl font-black text-white mt-1 font-mono tracking-tight group-hover:text-[#3b82f6] transition-colors duration-300">
-                                        {cpiInfo.val ? `${cpiInfo.val.toFixed(1)}%` : 'N/A'}
+                                        {cpiInfo.val !== null ? `${cpiInfo.val.toFixed(1)}%` : 'N/A'}
                                     </h4>
                                 </div>
                                 <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -389,8 +418,8 @@ export default function DiscoverTab() {
                                 </ResponsiveContainer>
                             </div>
                             <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2">
-                                <span className="text-[10px] text-gray-500">이전 달: {prevItem?.cpi_yoy?.toFixed(1) || 'N/A'}%</span>
-                                <span className="text-[10px] text-gray-500 font-mono">{latestItem?.date || ''} 기준</span>
+                                <span className="text-[10px] text-gray-500">이전 달: {cpiInfo.prevVal !== null ? `${cpiInfo.prevVal.toFixed(1)}%` : 'N/A'}</span>
+                                <span className="text-[10px] text-gray-500 font-mono">{cpiInfo.date || ''} 기준</span>
                             </div>
                         </div>
 
@@ -409,7 +438,7 @@ export default function DiscoverTab() {
                                 <div>
                                     <span className="text-xs font-semibold text-gray-400">생산자물가지수 (PPI YoY)</span>
                                     <h4 className="text-2xl font-black text-white mt-1 font-mono tracking-tight group-hover:text-[#10b981] transition-colors duration-300">
-                                        {ppiInfo.val ? `${ppiInfo.val.toFixed(1)}%` : 'N/A'}
+                                        {ppiInfo.val !== null ? `${ppiInfo.val.toFixed(1)}%` : 'N/A'}
                                     </h4>
                                 </div>
                                 <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -430,8 +459,8 @@ export default function DiscoverTab() {
                                 </ResponsiveContainer>
                             </div>
                             <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2">
-                                <span className="text-[10px] text-gray-500">이전 달: {prevItem?.ppi_yoy?.toFixed(1) || 'N/A'}%</span>
-                                <span className="text-[10px] text-gray-500 font-mono">{latestItem?.date || ''} 기준</span>
+                                <span className="text-[10px] text-gray-500">이전 달: {ppiInfo.prevVal !== null ? `${ppiInfo.prevVal.toFixed(1)}%` : 'N/A'}</span>
+                                <span className="text-[10px] text-gray-500 font-mono">{ppiInfo.date || ''} 기준</span>
                             </div>
                         </div>
 
@@ -450,7 +479,7 @@ export default function DiscoverTab() {
                                 <div>
                                     <span className="text-xs font-semibold text-gray-400">개인소비지출 (PCE YoY)</span>
                                     <h4 className="text-2xl font-black text-white mt-1 font-mono tracking-tight group-hover:text-[#ec4899] transition-colors duration-300">
-                                        {pceInfo.val ? `${pceInfo.val.toFixed(1)}%` : 'N/A'}
+                                        {pceInfo.val !== null ? `${pceInfo.val.toFixed(1)}%` : 'N/A'}
                                     </h4>
                                 </div>
                                 <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -471,8 +500,8 @@ export default function DiscoverTab() {
                                 </ResponsiveContainer>
                             </div>
                             <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2">
-                                <span className="text-[10px] text-gray-500">이전 달: {prevItem?.pce_yoy?.toFixed(1) || 'N/A'}%</span>
-                                <span className="text-[10px] text-gray-500 font-mono">{latestItem?.date || ''} 기준</span>
+                                <span className="text-[10px] text-gray-500">이전 달: {pceInfo.prevVal !== null ? `${pceInfo.prevVal.toFixed(1)}%` : 'N/A'}</span>
+                                <span className="text-[10px] text-gray-500 font-mono">{pceInfo.date || ''} 기준</span>
                             </div>
                         </div>
                     </div>
