@@ -1,20 +1,19 @@
 # Project State — ETF Lens
 
 > **Keep this file under 200 lines.**
-
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 6 — S6-11 완료, 마켓 센티먼트 및 미국 장단기 금리차 무한 로딩 핫픽스, 매크로 지표 발표일 불일치 개선 완료 (2026-06-11)
+✅ Current: Sprint 6 — S6-12 완료, 우주섹터 전문가 리포트 카드 추가 및 상관관계 매트릭스 가로/세로 하이라이트 구현 완료 (2026-06-12)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
-> 세션 핸드오프 (2026-06-11):
-> - S6-1 ~ S6-3, S6-7 ~ S6-11 모두 stable 및 완료
-> - 시장동향 탭 VIX & VKOSPI 및 Fear & Greed Index 무한 로딩 버그 해결 (get_pe_detail 함수 인자 시그니처 target_ym 누락으로 인한 TypeError 해결)
-> - 미 장단기 금리차(10Y-2Y) 및 하이일드 스프레드 무한 로딩 해결 (FRED User-Agent 차단 방지 헤더 탑재 및 통신 장애 대비 mock fallback 개편)
-> - 미국 3대 인플레이션 지표(CPI, PPI, PCE) 발표일 격차로 인한 N/A 현상 해결 (DiscoverTab.tsx에서 각 지표별 가장 최신의 non-null 데이터를 개별 추적해 렌더링)
-> - 다음 세션: 원래 계획되었던 S6-4 배당 스크래퍼 진행
-
+> 세션 핸드오프 (2026-06-12):
+> - S6-1 ~ S6-3, S6-7 ~ S6-12 모두 stable 및 완료
+> - 우주항공 섹터 하단에 '반도체/바이오/전력'과 동일한 트렌드/핵심ETF/자산분배 전문가 리포트 3개 탭 패널 추가 완료 (SpaceChart.tsx)
+> - 상관관계 매트릭스에서 selectedSector Props를 연계하여, 선택된 섹터(예: 우주)의 행(Row) 및 열(Column) 전체가 그리드 상에서 가로/세로로 길게 이어진 하이라이트 박스(ring-2 ring-indigo-500/50)로 강조되도록 시각효과 고도화 완료 (SectorCorrelationHeatmap.tsx)
+> - 활성화된 행과 열의 교차점에는 더욱 뚜렷한 하늘색 링(ring-cyan-400) 오버레이 효과 추가
+> - 다음 세션: S6-4 배당 스크래퍼 진행
+ 
  
 ## Current Sprint
  
@@ -37,6 +36,7 @@ Base: Exit Strategy Monitoring (KOSPI)
 | S6-9 | 차기 주도주 발굴 및 10대 대안 섹터 퀀트 스크리너 | ✅ stable | 양극화 지수, M7 CAPEX, 반도체 이격 신호등 및 10대 테마 퀀트 스크리너 구현 완료 |
 | S6-10 | 주요 4대 시장 섹터별 주가 흐름 격자 (Sector Flow Grid) | ✅ stable | KOSPI, KOSDAQ, S&P 500, NASDAQ 대표 32종 ETF/지수의 1년 누적수익률 라인 차트 및 absolute SVG 화살표 오버레이 격자판 구현 완료 |
 | S6-11 | 반도체 ETF 구성종목 변동 그래프 및 전문가 리포트 개편 | ✅ stable | 12종 반도체 ETF 3대 탭 스위칭, 구성종목 점선 차트 오버레이, 괴리율 및 실시간 프리마켓 예상가 연동 테이블, 3대 탭 Gemini Expert Report 통합 완료 |
+| S6-12 | 우주항공 섹터 전문가 리포트 및 상관관계 매트릭스 하이라이트 | ✅ stable | SpaceChart 전문가 리포트 3개 탭 추가 및 상관관계 분석 매트릭스 내 가로/세로 하이라이트 박스 고도화 완료 |
 ## Module Registry
  
 | Module | Layer | Status | Key Files |
