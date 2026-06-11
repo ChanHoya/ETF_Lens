@@ -4,14 +4,14 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 6 — S6-12 완료, 우주섹터 전문가 리포트 카드 추가 및 상관관계 매트릭스 가로/세로 하이라이트 구현 완료 (2026-06-12)
+✅ Current: Sprint 6 — S6-13 완료, 섹터분석 순서/명칭 변경 및 조선/반도체소부장 대체 완료 (2026-06-12)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-06-12):
-> - S6-1 ~ S6-3, S6-7 ~ S6-12 모두 stable 및 완료
-> - 우주항공 섹터 하단에 '반도체/바이오/전력'과 동일한 트렌드/핵심ETF/자산분배 전문가 리포트 3개 탭 패널 추가 완료 (SpaceChart.tsx)
-> - 상관관계 매트릭스에서 selectedSector Props를 연계하여, 선택된 섹터(예: 우주)의 행(Row) 및 열(Column) 전체가 그리드 상에서 가로/세로로 길게 이어진 하이라이트 박스(ring-2 ring-indigo-500/50)로 강조되도록 시각효과 고도화 완료 (SectorCorrelationHeatmap.tsx)
-> - 활성화된 행과 열의 교차점에는 더욱 뚜렷한 하늘색 링(ring-cyan-400) 오버레이 효과 추가
+> - S6-1 ~ S6-3, S6-7 ~ S6-13 모두 stable 및 완료
+> - 금융/방산 섹터를 제외하고 반도체소부장/조선 섹터로 각각 교체 완료 (KODEX 조선 392600.KS, SOL AI반도체소부장 455850.KS 등 틱커 대체 매핑)
+> - 에너지 섹터 명칭을 AI전력으로 개명 완료
+> - 대시보드 그리드 정렬 순서를 사용자 명세대로 재정렬 완료 (반도체 > 반도체소부장 > 우주 > AI전력 > 조선 > 바이오 > 2차전지)
 > - 다음 세션: S6-4 배당 스크래퍼 진행
  
  
@@ -37,6 +37,7 @@ Base: Exit Strategy Monitoring (KOSPI)
 | S6-10 | 주요 4대 시장 섹터별 주가 흐름 격자 (Sector Flow Grid) | ✅ stable | KOSPI, KOSDAQ, S&P 500, NASDAQ 대표 32종 ETF/지수의 1년 누적수익률 라인 차트 및 absolute SVG 화살표 오버레이 격자판 구현 완료 |
 | S6-11 | 반도체 ETF 구성종목 변동 그래프 및 전문가 리포트 개편 | ✅ stable | 12종 반도체 ETF 3대 탭 스위칭, 구성종목 점선 차트 오버레이, 괴리율 및 실시간 프리마켓 예상가 연동 테이블, 3대 탭 Gemini Expert Report 통합 완료 |
 | S6-12 | 우주항공 섹터 전문가 리포트 및 상관관계 매트릭스 하이라이트 | ✅ stable | SpaceChart 전문가 리포트 3개 탭 추가 및 상관관계 분석 매트릭스 내 가로/세로 하이라이트 박스 고도화 완료 |
+| S6-13 | 섹터분석 정렬 순서/명칭 갱신 및 조선/소부장 대체 | ✅ stable | 대시보드 섹터 재배치 및 AI전력 개명, 조선/반도체소부장 틱커 대체 매핑 완료 |
 ## Module Registry
  
 | Module | Layer | Status | Key Files |
