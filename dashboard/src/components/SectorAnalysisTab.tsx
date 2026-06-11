@@ -167,7 +167,7 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
 
                         {/* Sector Correlation Heatmap */}
                         <div className="space-y-3">
-                            <SectorCorrelationHeatmap />
+                            <SectorCorrelationHeatmap selectedSector={selectedSector} />
                         </div>
                     </>
                 )}

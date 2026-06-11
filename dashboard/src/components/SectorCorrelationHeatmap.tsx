@@ -15,7 +15,22 @@ interface CorrelationResponse {
     data: CorrelationPoint[];
 }
 
-export default function SectorCorrelationHeatmap() {
+interface SectorCorrelationHeatmapProps {
+    selectedSector?: string | null;
+}
+
+export default function SectorCorrelationHeatmap({ selectedSector }: SectorCorrelationHeatmapProps) {
+    const sectorToKeysMap: Record<string, string[]> = {
+        '반도체': ['K-반도체', 'US-Semi'],
+        '2차전지': ['K-2차전지', 'US-Battery'],
+        '바이오': ['K-바이오', 'US-Bio'],
+        '금융': ['K-금융', 'US-Finance'],
+        '방산': ['K-방산', 'US-Defense'],
+        '우주': ['K-우주', 'US-Space'],
+        '에너지': ['K-에너지', 'US-Energy']
+    };
+    const activeKeys = selectedSector ? (sectorToKeysMap[selectedSector] || []) : [];
+
     const [period, setPeriod] = useState<'180d' | '360d'>('180d');
     const [filterRegion, setFilterRegion] = useState<'ALL' | 'KR' | 'US'>('ALL');
     const [corrData, setCorrData] = useState<CorrelationResponse | null>(null);
@@ -180,66 +195,102 @@ export default function SectorCorrelationHeatmap() {
                             {/* Empty space for row labels */}
                             <div className="w-24 shrink-0" />
                             <div className="flex w-full justify-between">
-                                {filteredKeys.map(k => (
-                                    <div 
-                                        key={k} 
-                                        className={`w-full text-center text-[10px] font-black py-2 truncate transition-colors ${
-                                            hoveredCell?.x === k ? 'text-indigo-400 font-black' : 'text-gray-400'
-                                        }`}
-                                        title={k}
-                                    >
-                                        <span className={`text-[8px] mr-0.5 px-0.5 rounded ${k.startsWith('K-') ? 'bg-blue-500/20 text-blue-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                                            {k.startsWith('K-') ? 'K' : 'U'}
-                                        </span>
-                                        {cleanLabel(k)}
-                                    </div>
-                                ))}
+                                {filteredKeys.map(k => {
+                                    const isKeyActive = activeKeys.includes(k);
+                                    return (
+                                        <div 
+                                            key={k} 
+                                            className={`w-full text-center text-[10px] font-black py-2 truncate transition-all duration-200 ${
+                                                hoveredCell?.x === k 
+                                                    ? 'text-indigo-400 font-black' 
+                                                    : isKeyActive 
+                                                        ? 'text-cyan-400 font-extrabold scale-110' 
+                                                        : 'text-gray-400'
+                                            }`}
+                                            title={k}
+                                        >
+                                            <span className={`text-[8px] mr-0.5 px-0.5 rounded ${
+                                                isKeyActive
+                                                    ? 'bg-cyan-500/30 text-cyan-300 ring-1 ring-cyan-400/50'
+                                                    : k.startsWith('K-') 
+                                                        ? 'bg-blue-500/20 text-blue-400' 
+                                                        : 'bg-amber-500/20 text-amber-400'
+                                            }`}>
+                                                {k.startsWith('K-') ? 'K' : 'U'}
+                                            </span>
+                                            {cleanLabel(k)}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
                         {/* Rows */}
                         <div className="space-y-1">
-                            {filteredKeys.map(yKey => (
-                                <div key={yKey} className="flex items-center">
-                                    
-                                    {/* Row Header Label */}
-                                    <div 
-                                        className={`w-24 text-right pr-3 text-[10px] font-black truncate transition-colors shrink-0 ${
-                                            hoveredCell?.y === yKey ? 'text-indigo-400' : 'text-gray-400'
-                                        }`}
-                                    >
-                                        <span className={`text-[8px] mr-1 px-0.5 rounded ${yKey.startsWith('K-') ? 'bg-blue-500/20 text-blue-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                                            {yKey.startsWith('K-') ? 'KR' : 'US'}
-                                        </span>
-                                        {cleanLabel(yKey)}
-                                    </div>
+                            {filteredKeys.map(yKey => {
+                                const isRowActive = activeKeys.includes(yKey);
+                                return (
+                                    <div key={yKey} className="flex items-center">
+                                        
+                                        {/* Row Header Label */}
+                                        <div 
+                                            className={`w-24 text-right pr-3 text-[10px] font-black truncate transition-all duration-200 shrink-0 ${
+                                                hoveredCell?.y === yKey 
+                                                    ? 'text-indigo-400' 
+                                                    : isRowActive 
+                                                        ? 'text-cyan-400 font-extrabold scale-105' 
+                                                        : 'text-gray-400'
+                                            }`}
+                                        >
+                                            <span className={`text-[8px] mr-1 px-0.5 rounded ${
+                                                isRowActive
+                                                    ? 'bg-cyan-500/30 text-cyan-300 ring-1 ring-cyan-400/50'
+                                                    : yKey.startsWith('K-') 
+                                                        ? 'bg-blue-500/20 text-blue-400' 
+                                                        : 'bg-amber-500/20 text-amber-400'
+                                            }`}>
+                                                {yKey.startsWith('K-') ? 'KR' : 'US'}
+                                            </span>
+                                            {cleanLabel(yKey)}
+                                        </div>
 
-                                    {/* Cell Grid */}
-                                    <div className="flex w-full gap-1 justify-between">
-                                            {filteredKeys.map(xKey => {
-                                                const val = matrixMap[xKey]?.[yKey] ?? 0;
-                                                const { style: cellStyle, className: textClass } = getCellStyles(val);
-                                                const isHovered = hoveredCell?.x === xKey && hoveredCell?.y === yKey;
- 
-                                                return (
-                                                    <div
-                                                        key={xKey}
-                                                        onMouseEnter={() => setHoveredCell({ x: xKey, y: yKey, val })}
-                                                        onMouseLeave={() => setHoveredCell(null)}
-                                                        style={cellStyle}
-                                                        className={`w-full aspect-square flex items-center justify-center rounded-lg text-[11px] transition-all cursor-crosshair duration-100 ${textClass} ${
-                                                            isHovered 
-                                                            ? 'ring-2 ring-white scale-110 z-10 shadow-lg shadow-indigo-500/50' 
-                                                            : 'hover:scale-105'
-                                                        }`}
-                                                    >
-                                                        {val.toFixed(2)}
-                                                    </div>
-                                                );
-                                            })}
+                                        {/* Cell Grid */}
+                                        <div className="flex w-full gap-1 justify-between">
+                                                {filteredKeys.map(xKey => {
+                                                    const val = matrixMap[xKey]?.[yKey] ?? 0;
+                                                    const { style: cellStyle, className: textClass } = getCellStyles(val);
+                                                    const isHovered = hoveredCell?.x === xKey && hoveredCell?.y === yKey;
+                                                    const isSelectedX = activeKeys.includes(xKey);
+                                                    const isSelectedY = activeKeys.includes(yKey);
+                                                    const isCrossPoint = isSelectedX && isSelectedY;
+
+                                                    let highlightClass = '';
+                                                    if (isHovered) {
+                                                        highlightClass = 'ring-2 ring-white scale-110 z-30 shadow-lg shadow-indigo-500/50';
+                                                    } else if (isCrossPoint) {
+                                                        highlightClass = 'ring-2 ring-cyan-400 scale-105 z-20 shadow-[0_0_12px_rgba(34,211,238,0.4)]';
+                                                    } else if (isSelectedX || isSelectedY) {
+                                                        highlightClass = 'ring-2 ring-indigo-500/50 scale-[1.03] z-10';
+                                                    } else {
+                                                        highlightClass = 'hover:scale-105';
+                                                    }
+
+                                                    return (
+                                                        <div
+                                                            key={xKey}
+                                                            onMouseEnter={() => setHoveredCell({ x: xKey, y: yKey, val })}
+                                                            onMouseLeave={() => setHoveredCell(null)}
+                                                            style={cellStyle}
+                                                            className={`w-full aspect-square flex items-center justify-center rounded-lg text-[11px] transition-all cursor-crosshair duration-100 ${textClass} ${highlightClass}`}
+                                                        >
+                                                            {val.toFixed(2)}
+                                                        </div>
+                                                    );
+                                                })}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
