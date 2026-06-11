@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Rocket, Zap, FlaskConical, Shield, Landmark, Cpu, Battery, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { Rocket, Zap, FlaskConical, Cpu, Battery, TrendingUp, TrendingDown, Activity, Ship, Layers } from 'lucide-react';
 import { API_BASE } from '../lib/apiConfig';
 
 interface SectorStatus {
@@ -24,18 +24,20 @@ interface SectorGroup {
 const SECTOR_METADATA: any = {
     '반도체': { icon: <Cpu />, color: 'from-blue-500 to-cyan-500' },
     'Semi': { icon: <Cpu />, color: 'from-blue-500 to-cyan-500', alias: '반도체' },
-    '2차전지': { icon: <Battery />, color: 'from-emerald-500 to-teal-500' },
-    'Battery': { icon: <Battery />, color: 'from-emerald-500 to-teal-500', alias: '2차전지' },
-    '바이오': { icon: <FlaskConical />, color: 'from-fuchsia-500 to-pink-500' },
-    'Bio': { icon: <FlaskConical />, color: 'from-fuchsia-500 to-pink-500', alias: '바이오' },
-    '금융': { icon: <Landmark />, color: 'from-amber-500 to-orange-500' },
-    'Finance': { icon: <Landmark />, color: 'from-amber-500 to-orange-500', alias: '금융' },
-    '방산': { icon: <Shield />, color: 'from-slate-500 to-gray-500' },
-    'Defense': { icon: <Shield />, color: 'from-slate-500 to-gray-500', alias: '방산' },
+    '반도체소부장': { icon: <Layers />, color: 'from-indigo-500 to-blue-600' },
+    'SemiParts': { icon: <Layers />, color: 'from-indigo-500 to-blue-600', alias: '반도체소부장' },
     '우주': { icon: <Rocket />, color: 'from-indigo-500 to-purple-500' },
     'Space': { icon: <Rocket />, color: 'from-indigo-500 to-purple-500', alias: '우주' },
-    '에너지': { icon: <Zap />, color: 'from-rose-500 to-orange-500' },
-    'Energy': { icon: <Zap />, color: 'from-rose-500 to-orange-500', alias: '에너지' }
+    'AI전력': { icon: <Zap />, color: 'from-rose-500 to-orange-500' },
+    'AI-Power': { icon: <Zap />, color: 'from-rose-500 to-orange-500', alias: 'AI전력' },
+    '에너지': { icon: <Zap />, color: 'from-rose-500 to-orange-500', alias: 'AI전력' },
+    'Energy': { icon: <Zap />, color: 'from-rose-500 to-orange-500', alias: 'AI전력' },
+    '조선': { icon: <Ship />, color: 'from-slate-500 to-gray-500' },
+    'Shipbuilding': { icon: <Ship />, color: 'from-slate-500 to-gray-500', alias: '조선' },
+    '바이오': { icon: <FlaskConical />, color: 'from-fuchsia-500 to-pink-500' },
+    'Bio': { icon: <FlaskConical />, color: 'from-fuchsia-500 to-pink-500', alias: '바이오' },
+    '2차전지': { icon: <Battery />, color: 'from-emerald-500 to-teal-500' },
+    'Battery': { icon: <Battery />, color: 'from-emerald-500 to-teal-500', alias: '2차전지' }
 };
 
 export default function SectorStatusGrid({ 
@@ -103,7 +105,7 @@ export default function SectorStatusGrid({
                 });
                 
                 // Sort by average absolute change or just fixed order
-                const order = ['반도체', '2차전지', '바이오', '금융', '방산', '우주', '에너지'];
+                const order = ['반도체', '반도체소부장', '우주', 'AI전력', '조선', '바이오', '2차전지'];
                 const sortedGroups = Object.values(groupMap).sort((a, b) => {
                     return order.indexOf(a.baseName) - order.indexOf(b.baseName);
                 });

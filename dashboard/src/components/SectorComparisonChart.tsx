@@ -25,12 +25,12 @@ export default function SectorComparisonChart({ region, selectedSector = null }:
         
         const mapping: Record<string, string[]> = {
             '반도체': ['K-반도체', 'US-Semi'],
-            '2차전지': ['K-2차전지', 'US-Battery'],
-            '바이오': ['K-바이오', 'US-Bio'],
-            '금융': ['K-금융', 'US-Finance'],
-            '방산': ['K-방산', 'US-Defense'],
+            '반도체소부장': ['K-반도체소부장', 'US-SemiParts'],
             '우주': ['K-우주', 'US-Space'],
-            '에너지': ['K-에너지', 'US-Energy']
+            'AI전력': ['K-AI전력', 'US-AI전력'],
+            '조선': ['K-조선', 'US-Shipbuilding'],
+            '바이오': ['K-바이오', 'US-Bio'],
+            '2차전지': ['K-2차전지', 'US-Battery']
         };
         
         return (mapping[selectedSector] || []).filter(k => keys.includes(k));

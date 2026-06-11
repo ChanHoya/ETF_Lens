@@ -1979,22 +1979,22 @@ async def get_sector_comparison_data(region: str = "ALL"):
     # 1. Define Ticker Universe
     kr_tickers = {
         "K-반도체": "091160.KS",
-        "K-2차전지": "133690.KS",
-        "K-바이오": "244580.KS",
-        "K-금융": "091170.KS",
-        "K-방산": "449450.KS",
+        "K-반도체소부장": "455850.KS",
         "K-우주": "441680.KS",
-        "K-에너지": "139250.KS",
+        "K-AI전력": "139250.KS",
+        "K-조선": "392600.KS",
+        "K-바이오": "244580.KS",
+        "K-2차전지": "133690.KS",
         "KOSPI 200": "069500.KS",
     }
     us_tickers = {
         "US-Semi": "SMH",
-        "US-Battery": "LIT",
-        "US-Bio": "XLV",
-        "US-Finance": "XLF",
-        "US-Defense": "ITA",
+        "US-SemiParts": "SOXX",
         "US-Space": "ARKX",
-        "US-Energy": "XLE",
+        "US-AI전력": "XLE",
+        "US-Shipbuilding": "BOAT",
+        "US-Bio": "XLV",
+        "US-Battery": "LIT",
         "S&P 500": "SPY",
     }
 
@@ -2132,21 +2132,21 @@ async def get_sector_correlation(period: str = "180d"):
 
     kr_tickers = {
         "K-반도체": "091160.KS",
-        "K-2차전지": "133690.KS",
-        "K-바이오": "244580.KS",
-        "K-금융": "091170.KS",
-        "K-방산": "449450.KS",
+        "K-반도체소부장": "455850.KS",
         "K-우주": "441680.KS",
-        "K-에너지": "139250.KS",
+        "K-AI전력": "139250.KS",
+        "K-조선": "392600.KS",
+        "K-바이오": "244580.KS",
+        "K-2차전지": "133690.KS",
     }
     us_tickers = {
         "US-Semi": "SMH",
-        "US-Battery": "LIT",
-        "US-Bio": "XLV",
-        "US-Finance": "XLF",
-        "US-Defense": "ITA",
+        "US-SemiParts": "SOXX",
         "US-Space": "ARKX",
-        "US-Energy": "XLE",
+        "US-AI전력": "XLE",
+        "US-Shipbuilding": "BOAT",
+        "US-Bio": "XLV",
+        "US-Battery": "LIT",
     }
     tickers = {**kr_tickers, **us_tickers}
 
