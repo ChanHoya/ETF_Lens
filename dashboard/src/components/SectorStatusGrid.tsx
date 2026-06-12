@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Rocket, Zap, FlaskConical, Cpu, Battery, TrendingUp, TrendingDown, Activity, Ship, Layers } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 
 interface SectorStatus {
@@ -19,6 +20,7 @@ interface SectorGroup {
     baseName: string;
     kr?: SectorStatus;
     us?: SectorStatus;
+    trendData?: { date: string; kr?: number; us?: number }[];
 }
 
 const SECTOR_METADATA: any = {
@@ -57,6 +59,13 @@ export default function SectorStatusGrid({
             if (data.line_chart_data && data.line_chart_data.length >= 2) {
                 const latest = data.line_chart_data[data.line_chart_data.length - 1];
                 const prev = data.line_chart_data[data.line_chart_data.length - 2];
+                
+                // Calculate 1 year ago start date string
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                const startDateStr = oneYearAgo.toISOString().split('T')[0];
+                
+                const filteredRows = data.line_chart_data.filter((d: any) => d.date >= startDateStr);
                 
                 const rawSectors: SectorStatus[] = data.keys
                     .filter((k: string) => !k.includes('KOSPI') && !k.includes('S&P'))
@@ -102,6 +111,46 @@ export default function SectorStatusGrid({
                     }
                     if (s.region === 'KR') groupMap[s.baseName].kr = s;
                     else groupMap[s.baseName].us = s;
+                });
+                
+                // Process trendline data for sparkline
+                const sectorKeysMap: Record<string, { kr: string, us: string }> = {
+                    '반도체': { kr: 'K-반도체', us: 'US-Semi' },
+                    '반도체소부장': { kr: 'K-반도체소부장', us: 'US-SemiParts' },
+                    '우주': { kr: 'K-우주', us: 'US-Space' },
+                    'AI전력': { kr: 'K-AI전력', us: 'US-AI전력' },
+                    '조선': { kr: 'K-조선', us: 'US-Shipbuilding' },
+                    '바이오': { kr: 'K-바이오', us: 'US-Bio' },
+                    '2차전지': { kr: 'K-2차전지', us: 'US-Battery' }
+                };
+
+                Object.keys(groupMap).forEach(baseName => {
+                    const keys = sectorKeysMap[baseName];
+                    if (!keys) return;
+                    
+                    const kr_key = keys.kr;
+                    const us_key = keys.us;
+                    
+                    const firstKrRow = filteredRows.find((d: any) => d[kr_key] != null && d[kr_key] > 0);
+                    const firstUsRow = filteredRows.find((d: any) => d[us_key] != null && d[us_key] > 0);
+                    
+                    const kr_base = firstKrRow ? firstKrRow[kr_key] : null;
+                    const us_base = firstUsRow ? firstUsRow[us_key] : null;
+                    
+                    if (kr_base || us_base) {
+                        const trendData = filteredRows.map((d: any) => {
+                            const point: any = { date: d.date };
+                            if (kr_base && d[kr_key] != null && d[kr_key] > 0) {
+                                point.kr = Number(((d[kr_key] / kr_base) * 100).toFixed(2));
+                            }
+                            if (us_base && d[us_key] != null && d[us_key] > 0) {
+                                point.us = Number(((d[us_key] / us_base) * 100).toFixed(2));
+                            }
+                            return point;
+                        }).filter((d: any) => d.kr !== undefined || d.us !== undefined);
+                        
+                        groupMap[baseName].trendData = trendData;
+                    }
                 });
                 
                 // Sort by average absolute change or just fixed order
@@ -192,27 +241,55 @@ export default function SectorStatusGrid({
 
                         {/* KR Card (Top) */}
                         {group.kr && (
-                            <div className={`flex flex-col p-2.5 rounded-xl transition-all ${isActive ? 'bg-white/5' : 'bg-black/20 group-hover:bg-white/5'}`}>
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-[11px] md:text-xs font-black text-blue-400">KOREA</span>
-                                    <span className={`text-xs md:text-sm font-black ${group.kr.change_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            <div className={`flex flex-col p-2 rounded-xl transition-all ${isActive ? 'bg-white/5' : 'bg-black/20 group-hover:bg-white/5'}`}>
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[10px] md:text-[11px] font-black text-blue-400">KOREA</span>
+                                    <span className={`text-[11px] md:text-xs font-black ${group.kr.change_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                                         {group.kr.change_pct >= 0 ? '+' : ''}{group.kr.change_pct.toFixed(2)}%
                                     </span>
                                 </div>
-                                <div className="text-[11px] md:text-xs text-gray-400 truncate font-bold">{group.kr.name}</div>
+                                <div className="text-[10px] md:text-[11px] text-gray-400 truncate font-bold">{group.kr.name}</div>
                             </div>
                         )}
 
                         {/* US Card (Bottom) */}
                         {group.us && (
-                            <div className={`flex flex-col p-2.5 rounded-xl transition-all ${isActive ? 'bg-white/5' : 'bg-black/20 group-hover:bg-white/5'}`}>
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-[11px] md:text-xs font-black text-amber-400">USA</span>
-                                    <span className={`text-xs md:text-sm font-black ${group.us.change_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            <div className={`flex flex-col p-2 rounded-xl transition-all ${isActive ? 'bg-white/5' : 'bg-black/20 group-hover:bg-white/5'}`}>
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[10px] md:text-[11px] font-black text-amber-400">USA</span>
+                                    <span className={`text-[11px] md:text-xs font-black ${group.us.change_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                                         {group.us.change_pct >= 0 ? '+' : ''}{group.us.change_pct.toFixed(2)}%
                                     </span>
                                 </div>
-                                <div className="text-[11px] md:text-xs text-gray-400 truncate font-bold">{group.us.name}</div>
+                                <div className="text-[10px] md:text-[11px] text-gray-400 truncate font-bold">{group.us.name}</div>
+                            </div>
+                        )}
+
+                        {/* Simple Sparkline Chart (Trendline) */}
+                        {group.trendData && group.trendData.length > 0 && (
+                            <div className="h-10 mt-1 px-1 bg-black/10 rounded-xl overflow-hidden flex items-center justify-center relative select-none">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={group.trendData} margin={{ top: 4, bottom: 4, left: 4, right: 4 }}>
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="kr" 
+                                            stroke="#60a5fa" // blue-400
+                                            strokeWidth={1.5} 
+                                            dot={false}
+                                            activeDot={false}
+                                            connectNulls={true}
+                                        />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="us" 
+                                            stroke="#fbbf24" // amber-400
+                                            strokeWidth={1.5} 
+                                            dot={false}
+                                            activeDot={false}
+                                            connectNulls={true}
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
                             </div>
                         )}
                         

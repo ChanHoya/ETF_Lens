@@ -6,7 +6,6 @@ import SemiChart from '@/components/SemiChart';
 import SpaceChart from '@/components/SpaceChart';
 import BioChart from '@/components/BioChart';
 import EnergyChart from '@/components/EnergyChart';
-import SectorComparisonChart from '@/components/SectorComparisonChart';
 import SectorStatusGrid from '@/components/SectorStatusGrid';
 import SectorCorrelationHeatmap from '@/components/SectorCorrelationHeatmap';
 import NextLeaderScreener from '@/components/NextLeaderScreener';
@@ -115,11 +114,7 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                             onSelectSector={setSelectedSector}
                         />
 
-                        {/* Major Sector Comparison Chart */}
-                        <SectorComparisonChart 
-                            region={region} 
-                            selectedSector={selectedSector}
-                        />
+
 
                         {/* SemiChart: Semiconductor Indices (Detailed View) */}
                         {region !== 'US' && selectedSector === '반도체' && (
