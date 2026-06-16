@@ -366,11 +366,11 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
 
     const displayHoldingsData = selectedEtf
         ? holdingsData
-              .filter((row) => row[selectedEtf] !== undefined && row[selectedEtf] > 0)
+              .filter((row) => row[selectedEtf] !== undefined && (row[selectedEtf] > 0 || row[selectedEtf] === null))
               .sort((a, b) => (b[selectedEtf] || 0) - (a[selectedEtf] || 0))
               .slice(0, 10)
         : holdingsData
-              .filter((row) => displayHoldingsKeys.some((k) => row[k] !== undefined && row[k] > 0))
+              .filter((row) => displayHoldingsKeys.some((k) => row[k] !== undefined && (row[k] > 0 || row[k] === null)))
               .sort((a, b) => {
                   const sumA = displayHoldingsKeys.reduce((sum, k) => sum + (a[k] || 0), 0);
                   const sumB = displayHoldingsKeys.reduce((sum, k) => sum + (b[k] || 0), 0);
@@ -813,6 +813,13 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                         </td>
                                         {displayHoldingsKeys.map((k) => {
                                             const val = row[k];
+                                            if (val === null) {
+                                                return (
+                                                    <td key={k} className="px-3 py-2.5 text-center text-xs font-semibold border-b border-white/5 font-mono">
+                                                        <span className="text-gray-500 text-[10px] border border-gray-600 rounded px-1 py-0.5">비상장</span>
+                                                    </td>
+                                                );
+                                            }
                                             const isZero = !val || val === 0;
                                             if (isZero) {
                                                 return (

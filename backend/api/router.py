@@ -3432,7 +3432,16 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
         for h, mv in valid
     ]
     result.sort(key=lambda x: x["weight"], reverse=True)
-    logger.info(f"[live_holdings] {code}: table_b {len(result)}개 비중 계산 완료")
+
+    # 비상장 종목(SpaceX 등 ticker 매핑 없음)을 리스트 말미에 추가
+    private_items = [
+        {"ticker": h["ticker"], "weight": None, "is_private": True}
+        for h in shares_only
+        if not h.get("_sym")
+    ]
+    result.extend(private_items)
+
+    logger.info(f"[live_holdings] {code}: table_b {len(result) - len(private_items)}개 비중 계산, {len(private_items)}개 비상장")
 
     _bench_cache[cache_key] = (result, time.time())
     return result
@@ -3618,22 +3627,51 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
                 norm_name = "Deere & Company (디어앤컴퍼니)"
             elif "mda" in lower_name:
                 norm_name = "MDA Space (MDA 스페이스)"
+            elif "space exploration" in lower_name or "spacex" in lower_name:
+                norm_name = "SpaceX (비상장)"
+            elif "firefly" in lower_name:
+                norm_name = "Firefly Aerospace (비상장)"
+            elif "hawkeye" in lower_name:
+                norm_name = "Hawkeye 360 (비상장)"
+            elif "york space" in lower_name:
+                norm_name = "York Space Systems (비상장)"
+            elif "karman" in lower_name:
+                norm_name = "Karman Holdings"
+            elif "satellogic" in lower_name:
+                norm_name = "Satellogic"
+            elif "spire" in lower_name:
+                norm_name = "Spire Global"
+            elif "voyager tech" in lower_name:
+                norm_name = "Voyager Technologies (비상장)"
 
             if norm_name not in matrix:
                 matrix[norm_name] = {}
-            matrix[norm_name][etf_name] = round(h["weight"], 2)
+            weight_val = h.get("weight")
+            if weight_val is None:
+                matrix[norm_name][etf_name] = None  # 비상장: JSON null
+            else:
+                matrix[norm_name][etf_name] = round(weight_val, 2)
 
     table_rows = []
     for constituent, weights in matrix.items():
         row = {"constituent": constituent}
+        is_private_row = False
         for etf_name in tickers.keys():
-            row[etf_name] = weights.get(etf_name, 0.0)
+            if etf_name in weights:
+                w = weights[etf_name]
+                row[etf_name] = w  # None(비상장) or float(정상 비중)
+                if w is None:
+                    is_private_row = True
+            else:
+                row[etf_name] = 0.0  # 미보유 ETF → "-"
+        if is_private_row:
+            row["is_private"] = True
         table_rows.append(row)
 
-    # Sort by total weight across all ETFs descending
+    # Sort by total weight across all ETFs descending (None → 0으로 취급)
     table_rows = sorted(
         table_rows,
-        key=lambda x: sum(x.get(etf_name, 0.0) for etf_name in tickers.keys()),
+        key=lambda x: sum(x.get(etf_name) or 0.0 for etf_name in tickers.keys()),
         reverse=True,
     )
 
