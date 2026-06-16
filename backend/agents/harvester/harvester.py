@@ -24,6 +24,96 @@ load_dotenv(env_path)
 _CACHE = {}
 CACHE_TTL = 300  # 5 minutes caching
 
+# 해외 ETF 구성종목명 → Yahoo Finance ticker 매핑 (우주/방산 섹터)
+_OVERSEAS_TICKER_MAP = {
+    "intuitive machines": "LUNR",
+    "rocket lab": "RKLB",
+    "planet labs": "PL",
+    "ast spacemobile": "ASTS",
+    "ast space": "ASTS",
+    "redwire": "RDW",
+    "echostar": "SATS",
+    "kratos defense": "KTOS",
+    "karman holdings": "KRMN",
+    "satellogic": "SATL",
+    "spire global": "SPIR",
+    "mda space": "MDA.TO",
+    "globalstar": "GSAT",
+    "viasat": "VSAT",
+    "iridium": "IRDM",
+    "voyager technologies": "VOYG",
+    "l3harris": "LHX",
+    "boeing": "BA",
+    "teradyne": "TER",
+    "advanced micro devices": "AMD",
+    "deere": "DE",
+    "archer aviation": "ACHR",
+}
+
+
+async def _calc_weights_from_shares(holdings_with_shares: list[dict]) -> list[dict]:
+    """
+    주식수(shares)만 있는 해외 ETF 구성종목의 비중을 Yahoo Finance v8 API로 계산합니다.
+    - 상장 종목: shares × 현재가 기준으로 비중 산출
+    - 비상장/OTC 종목: weight=0 처리
+    """
+    # ticker 매핑
+    for h in holdings_with_shares:
+        name_lower = h["ticker"].lower()
+        h["_sym"] = None
+        for key, sym in _OVERSEAS_TICKER_MAP.items():
+            if key in name_lower:
+                h["_sym"] = sym
+                break
+
+    tickers_needed = list({h["_sym"] for h in holdings_with_shares if h.get("_sym")})
+    prices: dict[str, float] = {}
+
+    async def _fetch_one(sym: str):
+        try:
+            resp = await asyncio.to_thread(
+                lambda s=sym: __import__("requests").get(
+                    f"https://query1.finance.yahoo.com/v8/finance/chart/{s}?interval=1d&range=5d",
+                    headers={"User-Agent": "Mozilla/5.0"},
+                    timeout=8,
+                ).json()
+            )
+            result = resp.get("chart", {}).get("result", [])
+            if result:
+                closes = result[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+                closes = [c for c in closes if c is not None]
+                if closes:
+                    prices[sym] = closes[-1]
+        except Exception:
+            pass
+
+    await asyncio.gather(*[_fetch_one(s) for s in tickers_needed])
+
+    valid = [
+        (h, h["shares"] * prices[h["_sym"]])
+        for h in holdings_with_shares
+        if h.get("_sym") and h["_sym"] in prices and h.get("shares", 0) > 0
+    ]
+
+    if not valid:
+        return holdings_with_shares  # 가격 조회 실패 시 원본(weight=0) 그대로 반환
+
+    total = sum(mv for _, mv in valid)
+    if total == 0:
+        return holdings_with_shares
+
+    result = []
+    for h, mv in valid:
+        result.append({
+            "ticker": h["ticker"],
+            "weight": round(mv / total * 100, 2),
+            "shares": h.get("shares"),
+        })
+
+    result.sort(key=lambda x: x["weight"], reverse=True)
+    print(f"[_calc_weights_from_shares] {len(result)}개 종목 비중 계산 완료 (총 가치 ${total:,.0f})")
+    return result
+
 
 def get_cached(key):
     if key in _CACHE:
@@ -438,25 +528,21 @@ class ETFHarvester:
                             except ValueError:
                                 pass
                 elif table_b:
+                    shares_only = []
                     for tr in table_b.find_all("tr"):
                         tds = tr.find_all("td")
-                        if len(tds) >= 3:
+                        if len(tds) >= 2:
                             name = tds[0].text.strip()
                             shares_text = tds[1].text.strip().replace(",", "")
-
-                            if name and shares_text and shares_text != "-":
+                            if name and shares_text and shares_text not in ("-", ""):
                                 try:
-                                    shares = int(shares_text)
-                                    # For overseas ETFs, we append weight=0 but include "shares"
-                                    holdings.append(
-                                        {
-                                            "ticker": name,
-                                            "weight": 0.0,
-                                            "shares": shares,
-                                        }
-                                    )
+                                    shares_only.append({"ticker": name, "weight": 0.0, "shares": int(shares_text)})
                                 except ValueError:
                                     pass
+                    if shares_only:
+                        # 주식수 × 현재가로 비중 계산 시도
+                        holdings = await _calc_weights_from_shares(shares_only)
+
                 if holdings:
                     print(
                         f"[{code}] Naver HTML fallback successful. Found {len(holdings)} holdings."

@@ -2734,9 +2734,35 @@ async def get_semi_holdings(db: AsyncSession = Depends(get_db)):
         ],
     }
 
+    from db.models import ETFHoldings
+    from sqlalchemy import select as _select
+
     matrix = {}
     for etf_name, code in tickers.items():
-        holdings = fallbacks.get(etf_name, [])
+        # 1순위: DB 조회 (KRX 코드만 — SMH/SOXQ 같은 US ticker 제외)
+        db_holdings = []
+        if code and code[0].isdigit():
+            try:
+                db_res = await db.execute(
+                    _select(ETFHoldings).where(ETFHoldings.code == code)
+                )
+                rows = db_res.scalars().all()
+                for r in rows:
+                    if r.ticker and r.weight > 0:
+                        db_holdings.append({"ticker": r.ticker, "weight": r.weight})
+            except Exception as e:
+                logger.warning(f"[semi_holdings] DB query failed for {code}: {e}")
+
+        if db_holdings:
+            holdings = db_holdings
+        elif code and code[0].isdigit():
+            # 2순위: Naver 라이브 계산
+            live = await _fetch_holdings_with_weight_calc(code)
+            holdings = live if live else fallbacks.get(etf_name, [])
+        else:
+            # US ETF (SMH, SOXQ 등): 하드코딩 유지
+            holdings = fallbacks.get(etf_name, [])
+
         for h in holdings:
             t_name = h["ticker"]
             if t_name not in matrix:
@@ -3243,6 +3269,175 @@ async def get_etf_disparity_metrics(codes: str = None):
     return filtered_data
 
 
+async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
+    """
+    Naver HTML에서 ETF 구성종목을 가져옵니다.
+    - table_a (국내 ETF): 비중이 직접 표시되어 있어 그대로 사용
+    - table_b (해외 ETF): 주식수만 있으므로 Yahoo Finance v8 현재가로 비중 계산
+    결과는 _bench_cache에 1시간 캐싱. DB fallback 직전에 호출.
+    """
+    cache_key = f"live_holdings_{code}"
+    if cache_key in _bench_cache:
+        val, ts = _bench_cache[cache_key]
+        if time.time() - ts < 3600:
+            return val
+
+    import urllib.request, ssl
+    from bs4 import BeautifulSoup
+
+    ctx = ssl._create_unverified_context()
+    url = f"https://finance.naver.com/item/main.naver?code={code}"
+    req_obj = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        html = await asyncio.to_thread(
+            lambda: urllib.request.urlopen(req_obj, context=ctx, timeout=10).read()
+        )
+    except Exception as e:
+        logger.warning(f"[live_holdings] {code} Naver fetch failed: {e}")
+        return []
+
+    soup = BeautifulSoup(html, "html.parser")
+    t_a = soup.find("table", class_="tb_type1_a")
+    t_b = soup.find("table", class_="tb_type1_b")
+
+    # ── Case 1: 국내 ETF (비중 직접 표시) ──────────────────────────────────
+    if t_a:
+        result = []
+        for tr in t_a.find_all("tr"):
+            tds = tr.find_all("td")
+            if len(tds) >= 3:
+                name = tds[0].get_text(strip=True)
+                weight_text = tds[2].get_text(strip=True).replace("%", "").replace(",", "")
+                if name and weight_text and weight_text not in ("-", ""):
+                    try:
+                        weight = float(weight_text)
+                        if weight > 0:
+                            result.append({"ticker": name, "weight": weight})
+                    except ValueError:
+                        pass
+        if result:
+            result.sort(key=lambda x: x["weight"], reverse=True)
+            logger.info(f"[live_holdings] {code}: table_a {len(result)}개 비중 직접 수집")
+            _bench_cache[cache_key] = (result, time.time())
+            return result
+
+    # ── Case 2: 해외 ETF (주식수 × 현재가로 비중 계산) ─────────────────────
+    if not t_b:
+        return []
+
+    shares_only = []
+    for tr in t_b.find_all("tr"):
+        tds = tr.find_all("td")
+        if len(tds) >= 2:
+            name = tds[0].get_text(strip=True)
+            shares_text = tds[1].get_text(strip=True).replace(",", "")
+            if name and shares_text and shares_text not in ("-", ""):
+                try:
+                    shares_only.append({"ticker": name, "weight": 0.0, "shares": int(shares_text)})
+                except ValueError:
+                    pass
+
+    if not shares_only:
+        return []
+
+    _TICKER_MAP = {
+        "intuitive machines": "LUNR",
+        "rocket lab": "RKLB",
+        "planet labs": "PL",
+        "ast spacemobile": "ASTS",
+        "ast space": "ASTS",
+        "redwire": "RDW",
+        "echostar": "SATS",
+        "kratos defense": "KTOS",
+        "karman holdings": "KRMN",
+        "satellogic": "SATL",
+        "spire global": "SPIR",
+        "mda space": "MDA.TO",
+        "globalstar": "GSAT",
+        "viasat": "VSAT",
+        "iridium": "IRDM",
+        "voyager technologies": "VOYG",
+        "l3harris": "LHX",
+        "boeing": "BA",
+        "teradyne": "TER",
+        "advanced micro devices": "AMD",
+        "deere": "DE",
+        "archer aviation": "ACHR",
+        # 에너지 섹터 해외 종목
+        "solaris energy": "SEI",
+        "ge vernova": "GEV",
+        "eaton": "ETN",
+        "constellation energy": "CEG",
+        "vistra": "VST",
+        "nextera": "NEE",
+        "vertiv": "VRT",
+        "quanta services": "PWR",
+        "southern company": "SO",
+        "powell industries": "POWL",
+        "nrg energy": "NRG",
+        "duke energy": "DUK",
+        "nvidia": "NVDA",
+        "broadcom": "AVGO",
+        "taiwan semiconductor": "TSM",
+        "tsmc": "TSM",
+    }
+
+    for h in shares_only:
+        name_lower = h["ticker"].lower()
+        h["_sym"] = None
+        for key, sym in _TICKER_MAP.items():
+            if key in name_lower:
+                h["_sym"] = sym
+                break
+
+    tickers_needed = list({h["_sym"] for h in shares_only if h.get("_sym")})
+    prices: dict = {}
+
+    import requests as _req
+
+    async def _fetch_price(sym: str):
+        try:
+            resp = await asyncio.to_thread(
+                lambda s=sym: _req.get(
+                    f"https://query1.finance.yahoo.com/v8/finance/chart/{s}?interval=1d&range=5d",
+                    headers={"User-Agent": "Mozilla/5.0"},
+                    timeout=8,
+                ).json()
+            )
+            r = resp.get("chart", {}).get("result", [])
+            if r:
+                closes = r[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+                closes = [c for c in closes if c is not None]
+                if closes:
+                    prices[sym] = closes[-1]
+        except Exception:
+            pass
+
+    await asyncio.gather(*[_fetch_price(s) for s in tickers_needed])
+
+    valid = [
+        (h, h["shares"] * prices[h["_sym"]])
+        for h in shares_only
+        if h.get("_sym") and h["_sym"] in prices and h.get("shares", 0) > 0
+    ]
+    if not valid:
+        return []
+
+    total = sum(mv for _, mv in valid)
+    if total == 0:
+        return []
+
+    result = [
+        {"ticker": h["ticker"], "weight": round(mv / total * 100, 2)}
+        for h, mv in valid
+    ]
+    result.sort(key=lambda x: x["weight"], reverse=True)
+    logger.info(f"[live_holdings] {code}: table_b {len(result)}개 비중 계산 완료")
+
+    _bench_cache[cache_key] = (result, time.time())
+    return result
+
+
 @router.get("/space-holdings")
 async def get_space_holdings(db: AsyncSession = Depends(get_db)):
     """
@@ -3384,7 +3579,11 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
         except Exception as e:
             logger.warning(f"Error querying holdings for {code}: {e}")
 
-        holdings = db_holdings if db_holdings else fallbacks[etf_name]
+        if db_holdings:
+            holdings = db_holdings
+        else:
+            live = await _fetch_holdings_with_weight_calc(code)
+            holdings = live if live else fallbacks.get(etf_name, [])
 
         for h in holdings:
             t_name = h["ticker"]
@@ -4049,9 +4248,34 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
         ]
     }
 
+    from db.models import ETFHoldings
+    from sqlalchemy import select as _select
+
     matrix = {}
     for etf_name, code in tickers.items():
-        holdings = fallbacks.get(etf_name, [])
+        # 1순위: DB 조회
+        db_holdings = []
+        if code and code[0].isdigit():  # KRX 코드만 DB 조회 (SMH/SOXQ 등 US ticker 제외)
+            try:
+                db_res = await db.execute(
+                    _select(ETFHoldings).where(ETFHoldings.code == code)
+                )
+                rows = db_res.scalars().all()
+                for r in rows:
+                    if r.ticker and r.weight > 0:
+                        db_holdings.append({"ticker": r.ticker, "weight": r.weight})
+            except Exception as e:
+                logger.warning(f"[semi_holdings] DB query failed for {code}: {e}")
+
+        if db_holdings:
+            holdings = db_holdings
+        elif code and code[0].isdigit():
+            # 2순위: Naver 라이브 계산
+            live = await _fetch_holdings_with_weight_calc(code)
+            holdings = live if live else fallbacks.get(etf_name, [])
+        else:
+            holdings = fallbacks.get(etf_name, [])
+
         for h in holdings:
             t_name = h["ticker"]
             if t_name not in matrix:
