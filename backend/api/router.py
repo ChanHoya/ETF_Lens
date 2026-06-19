@@ -418,8 +418,10 @@ import time
 
 _bench_cache = {}
 _space_quotes_cache = {}
+_price_cache: dict = {}  # sym -> (price, timestamp) — 섹터 간 가격 공유, 레이트리밋 방지
 CACHE_TTL = 600  # 10 minutes – enough to avoid hammering the API while keeping data fresh
 SPACE_QUOTES_TTL = 300  # 5 minutes
+PRICE_CACHE_TTL = 3600  # 1 hour
 
 
 def get_bench_cached(key):
@@ -3516,8 +3518,17 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
                 h["_sym"] = sym
                 break
 
-    tickers_needed = list({h["_sym"] for h in shares_only if h.get("_sym")})
+    # 모듈 레벨 가격 캐시에서 먼저 로드 (섹터 간 공유 → Yahoo 중복 요청 방지)
+    tickers_needed = []
     prices: dict = {}
+    now_ts = time.time()
+    for h in shares_only:
+        if h.get("_sym"):
+            sym = h["_sym"]
+            if sym in _price_cache and now_ts - _price_cache[sym][1] < PRICE_CACHE_TTL:
+                prices[sym] = _price_cache[sym][0]
+            elif sym not in tickers_needed:
+                tickers_needed.append(sym)
 
     import requests as _req
 
@@ -3536,7 +3547,6 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
             r = resp.get("chart", {}).get("result", [])
             if r:
                 meta = r[0].get("meta", {})
-                # regularMarketPrice 우선, 없으면 closes 배열 마지막값
                 price = meta.get("regularMarketPrice")
                 if price is None:
                     closes = r[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
@@ -3544,11 +3554,13 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
                     price = closes[-1] if closes else None
                 if price:
                     prices[sym] = price
+                    _price_cache[sym] = (price, time.time())  # 모듈 레벨 캐시에 저장
                     logger.debug(f"[price] {sym}={price}")
         except Exception as e:
             logger.warning(f"[price_fetch_fail] {sym}: {e}")
 
-    await asyncio.gather(*[_fetch_price(s) for s in tickers_needed])
+    if tickers_needed:
+        await asyncio.gather(*[_fetch_price(s) for s in tickers_needed])
 
     valid = [
         (h, h["shares"] * prices[h["_sym"]])
@@ -3568,15 +3580,17 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
     ]
     result.sort(key=lambda x: x["weight"], reverse=True)
 
-    # 비상장 종목 또는 가격 조회 실패 종목을 리스트 말미에 추가
+    # is_private: ticker 매핑 없는 진짜 비상장만 True (가격조회 실패는 False)
     private_items = [
-        {"ticker": h["ticker"], "weight": None, "is_private": True}
+        {"ticker": h["ticker"], "weight": None, "is_private": not bool(h.get("_sym"))}
         for h in shares_only
         if not h.get("_sym") or h["_sym"] not in prices
     ]
     result.extend(private_items)
 
-    logger.info(f"[live_holdings] {code}: table_b {len(result) - len(private_items)}개 비중 계산, {len(private_items)}개 비상장")
+    truly_private = sum(1 for p in private_items if p["is_private"])
+    price_failed = len(private_items) - truly_private
+    logger.info(f"[live_holdings] {code}: {len(valid)}개 비중계산, {truly_private}개 비상장, {price_failed}개 가격조회실패")
 
     _bench_cache[cache_key] = (result, time.time())
     return result
@@ -3777,11 +3791,16 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
             elif "voyager tech" in lower_name:
                 norm_name = "Voyager Technologies (비상장)"
 
+            weight_val = h.get("weight")
+            is_private = h.get("is_private", False)
+
+            if weight_val is None and not is_private:
+                continue  # 가격조회 실패(상장종목)는 표시하지 않음
+
             if norm_name not in matrix:
                 matrix[norm_name] = {}
-            weight_val = h.get("weight")
             if weight_val is None:
-                matrix[norm_name][etf_name] = None  # 비상장: JSON null
+                matrix[norm_name][etf_name] = None  # 진짜 비상장: JSON null
             else:
                 matrix[norm_name][etf_name] = round(weight_val, 2)
 
