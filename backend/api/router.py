@@ -3789,7 +3789,31 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
             elif "spire" in lower_name:
                 norm_name = "Spire Global"
             elif "voyager tech" in lower_name:
-                norm_name = "Voyager Technologies (비상장)"
+                norm_name = "Voyager Technologies"  # VOYG - secondary market
+            elif "viasat" in lower_name:
+                norm_name = "Viasat Inc"
+            elif "iridium" in lower_name:
+                norm_name = "Iridium Communications"
+            elif "howmet" in lower_name:
+                norm_name = "Howmet Aerospace"
+            elif "northrop grumman" in lower_name:
+                norm_name = "Northrop Grumman"
+            elif "lockheed" in lower_name:
+                norm_name = "Lockheed Martin"
+            elif "transdigm" in lower_name:
+                norm_name = "TransDigm Group"
+            elif "elbit" in lower_name:
+                norm_name = "Elbit Systems"
+            elif "carpenter technology" in lower_name:
+                norm_name = "Carpenter Technology"
+            elif "blacksky" in lower_name:
+                norm_name = "BlackSky Technology"
+            elif "telesat" in lower_name:
+                norm_name = "Telesat"
+            elif "alphabet" in lower_name:
+                norm_name = "Alphabet (Google)"
+            elif "general aerospace" in lower_name:
+                norm_name = "General Aerospace"
 
             weight_val = h.get("weight")
             is_private = h.get("is_private", False)
@@ -3829,6 +3853,7 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
 
     # ── yfinance quotes integration ──
     constituent_ticker_map = {
+        # 기존 종목
         "Rocket Lab (로켓랩)": "RKLB",
         "AST SpaceMobile (스페이스모바일)": "ASTS",
         "EchoStar (에코스타)": "SATS",
@@ -3843,8 +3868,25 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
         "Teradyne": "TER",
         "Globalstar (글로벌스타)": "GSAT",
         "Deere & Company (디어앤컴퍼니)": "DE",
-        "Viasat": "VSAT",
         "Archer Aviation": "ACHR",
+        # 신규 추가 (한국 우주ETF WiseReport 기준)
+        "SpaceX": "SPCX",
+        "York Space Systems": "YSS",
+        "Satellogic": "SATL",
+        "Spire Global": "SPIR",
+        "Karman Holdings": "KRMN",
+        "Viasat Inc": "VSAT",
+        "Iridium Communications": "IRDM",
+        "Voyager Technologies": "VOYG",
+        "Howmet Aerospace": "HWM",
+        "Northrop Grumman": "NOC",
+        "Lockheed Martin": "LMT",
+        "TransDigm Group": "TDG",
+        "Elbit Systems": "ESLT",
+        "Carpenter Technology": "CRS",
+        "BlackSky Technology": "BKSY",
+        "Telesat": "TSAT",
+        "Alphabet (Google)": "GOOGL",
     }
 
     # 비상장 종목은 weight=0으로 정렬 후 하위로 밀려나므로, 별도 분리 후 항상 포함

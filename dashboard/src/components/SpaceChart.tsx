@@ -11,6 +11,7 @@ interface SpaceChartProps {
 }
 
 const constituentTickerMap: { [key: string]: string } = {
+    // 기존 종목
     "Rocket Lab (로켓랩)": "RKLB",
     "EchoStar (에코스타)": "SATS",
     "AST SpaceMobile (스페이스모바일)": "ASTS",
@@ -25,7 +26,25 @@ const constituentTickerMap: { [key: string]: string } = {
     "Kratos Defense": "KTOS",
     "Deere & Company (디어앤컴퍼니)": "DE",
     "Archer Aviation": "ACHR",
-    "MDA Space (MDA 스페이스)": "MDALF",
+    "MDA Space (MDA 스페이스)": "MDA.TO",
+    // 신규 추가
+    "SpaceX": "SPCX",
+    "York Space Systems": "YSS",
+    "Satellogic": "SATL",
+    "Spire Global": "SPIR",
+    "Karman Holdings": "KRMN",
+    "Viasat Inc": "VSAT",
+    "Iridium Communications": "IRDM",
+    "Voyager Technologies": "VOYG",
+    "Howmet Aerospace": "HWM",
+    "Northrop Grumman": "NOC",
+    "Lockheed Martin": "LMT",
+    "TransDigm Group": "TDG",
+    "Elbit Systems": "ESLT",
+    "Carpenter Technology": "CRS",
+    "BlackSky Technology": "BKSY",
+    "Telesat": "TSAT",
+    "Alphabet (Google)": "GOOGL",
 };
 
 const getTickerFromConstituent = (name: string): string => {
