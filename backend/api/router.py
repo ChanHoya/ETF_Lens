@@ -2753,12 +2753,10 @@ async def get_semi_holdings(db: AsyncSession = Depends(get_db)):
             except Exception as e:
                 logger.warning(f"[semi_holdings] DB query failed for {code}: {e}")
 
-        if db_holdings:
-            holdings = db_holdings
-        elif code and code[0].isdigit():
-            # 2순위: Naver 라이브 계산
+        if code and code[0].isdigit():
+            # 1순위: Naver 라이브 (캐시 1시간, 항상 최신 데이터)
             live = await _fetch_holdings_with_weight_calc(code)
-            holdings = live if live else fallbacks.get(etf_name, [])
+            holdings = live if live else (db_holdings if db_holdings else fallbacks.get(etf_name, []))
         else:
             # US ETF (SMH, SOXQ 등): 하드코딩 유지
             holdings = fallbacks.get(etf_name, [])
@@ -3686,11 +3684,9 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
         except Exception as e:
             logger.warning(f"Error querying holdings for {code}: {e}")
 
-        if db_holdings:
-            holdings = db_holdings
-        else:
-            live = await _fetch_holdings_with_weight_calc(code)
-            holdings = live if live else fallbacks.get(etf_name, [])
+        # 1순위: Naver 라이브 (캐시 1시간, SPCX 등 최신 매핑 반영)
+        live = await _fetch_holdings_with_weight_calc(code)
+        holdings = live if live else (db_holdings if db_holdings else fallbacks.get(etf_name, []))
 
         for h in holdings:
             t_name = h["ticker"]
@@ -4406,12 +4402,10 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
             except Exception as e:
                 logger.warning(f"[semi_holdings] DB query failed for {code}: {e}")
 
-        if db_holdings:
-            holdings = db_holdings
-        elif code and code[0].isdigit():
-            # 2순위: Naver 라이브 계산
+        if code and code[0].isdigit():
+            # 1순위: Naver 라이브 (캐시 1시간, 항상 최신 데이터)
             live = await _fetch_holdings_with_weight_calc(code)
-            holdings = live if live else fallbacks.get(etf_name, [])
+            holdings = live if live else (db_holdings if db_holdings else fallbacks.get(etf_name, []))
         else:
             holdings = fallbacks.get(etf_name, [])
 
@@ -4976,12 +4970,9 @@ async def get_bio_holdings(db: AsyncSession = Depends(get_db)):
         except Exception as e:
             logger.warning(f"Error querying holdings for {code}: {e}")
 
-        if db_holdings:
-            holdings = db_holdings
-        else:
-            # 2순위: Naver 라이브 (table_a 직접 비중)
-            live = await _fetch_holdings_with_weight_calc(code)
-            holdings = live if live else fallbacks.get(etf_name, [])
+        # 1순위: Naver 라이브 (캐시 1시간, table_a 직접 비중)
+        live = await _fetch_holdings_with_weight_calc(code)
+        holdings = live if live else (db_holdings if db_holdings else fallbacks.get(etf_name, []))
 
         for h in holdings:
             if h.get("weight") is None:
