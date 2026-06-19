@@ -3787,7 +3787,7 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
     # 비상장 종목은 weight=0으로 정렬 후 하위로 밀려나므로, 별도 분리 후 항상 포함
     public_rows = [r for r in table_rows if not r.get("is_private")]
     private_rows = [r for r in table_rows if r.get("is_private")]
-    top_15_rows = public_rows[:15] + private_rows
+    top_15_rows = public_rows + private_rows  # 전체 반환 (프론트에서 스크롤로 표시)
 
     # 5-minute caching mechanism for quote data
     global _space_quotes_cache
@@ -4531,8 +4531,8 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
         "Solaris Energy": "SEI",
     }
 
-    top_15_rows = table_rows[:15]
-    
+    top_15_rows = table_rows  # 전체 반환 (프론트에서 스크롤로 표시)
+
     # Fetch quotes in parallel
     import time
     now = time.time()

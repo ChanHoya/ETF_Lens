@@ -371,7 +371,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                 .sort((a, b) => (b[selectedEtf] || 0) - (a[selectedEtf] || 0));
             const pub = filtered.filter((r) => !r.is_private);
             const priv = filtered.filter((r) => r.is_private);
-            return [...pub.slice(0, 10), ...priv];
+            return [...pub, ...priv];
         } else {
             const filtered = holdingsData
                 .filter((row) => displayHoldingsKeys.some((k) => row[k] !== undefined && (row[k] > 0 || row[k] === null)))
@@ -382,7 +382,7 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                 });
             const pub = filtered.filter((r) => !r.is_private);
             const priv = filtered.filter((r) => r.is_private);
-            return [...pub.slice(0, 15), ...priv];
+            return [...pub, ...priv];
         }
     })();
 
@@ -642,9 +642,9 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                         구성종목 데이터를 불러오지 못했습니다.
                     </div>
                 ) : (
-                    <div className="overflow-x-auto w-full rounded-2xl border border-white/10 bg-black/30 shadow-inner">
+                    <div className="overflow-x-auto overflow-y-auto max-h-[600px] w-full rounded-2xl border border-white/10 bg-black/30 shadow-inner">
                         <table className="w-full text-left border-collapse">
-                            <thead>
+                            <thead className="sticky top-0 z-10">
                                 <tr className="bg-white/5">
                                     <th className="px-4 py-3 text-xs font-bold text-gray-300 border-b border-white/10">
                                         구성종목명

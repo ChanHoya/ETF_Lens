@@ -371,15 +371,13 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
         ? holdingsData
               .filter((row) => row[selectedEtf] !== undefined && row[selectedEtf] > 0)
               .sort((a, b) => (b[selectedEtf] || 0) - (a[selectedEtf] || 0))
-              .slice(0, 10)
         : holdingsData
               .filter((row) => displayHoldingsKeys.some((k) => row[k] !== undefined && row[k] > 0))
               .sort((a, b) => {
                   const sumA = displayHoldingsKeys.reduce((sum, k) => sum + (a[k] || 0), 0);
                   const sumB = displayHoldingsKeys.reduce((sum, k) => sum + (b[k] || 0), 0);
                   return sumB - sumA;
-              })
-              .slice(0, 15);
+              });
 
     const renderCustomLegend = (props: any) => {
         const { payload } = props;
@@ -672,9 +670,9 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                         구성종목 데이터를 불러오지 못했습니다.
                     </div>
                 ) : (
-                    <div className="overflow-x-auto w-full rounded-2xl border border-white/10 bg-black/30 shadow-inner">
+                    <div className="overflow-x-auto overflow-y-auto max-h-[600px] w-full rounded-2xl border border-white/10 bg-black/30 shadow-inner">
                         <table className="w-full text-left border-collapse">
-                            <thead>
+                            <thead className="sticky top-0 z-10">
                                 <tr className="bg-white/5">
                                     <th className="px-4 py-3 text-xs font-bold text-gray-300 border-b border-white/10">
                                         구성종목명
