@@ -3027,6 +3027,130 @@ async def get_semi_holdings(db: AsyncSession = Depends(get_db)):
     }
 
 
+# ---------------------------------------------------------------------------
+# Semi Q-Cycle Screener
+# ---------------------------------------------------------------------------
+
+_semi_screener_cache: dict = {}
+_SEMI_SCREENER_TTL = 3600 * 12  # 12시간 캐시
+
+_SEMI_SCREENER_COMPANIES = [
+    # Global WFE Leaders
+    {"name": "ASML",             "ticker": "ASML",      "market": "US", "group": "글로벌 WFE"},
+    {"name": "Applied Materials", "ticker": "AMAT",     "market": "US", "group": "글로벌 WFE"},
+    {"name": "Lam Research",     "ticker": "LRCX",      "market": "US", "group": "글로벌 WFE"},
+    {"name": "KLA Corp",         "ticker": "KLAC",      "market": "US", "group": "글로벌 WFE"},
+    {"name": "Tokyo Electron",   "ticker": "TOELY",     "market": "US", "group": "글로벌 WFE"},
+    {"name": "Teradyne",         "ticker": "TER",       "market": "US", "group": "글로벌 WFE"},
+    # KR 독점 해자
+    {"name": "한미반도체",        "ticker": "042700.KS", "market": "KR", "group": "독점 해자"},
+    {"name": "HPSP",             "ticker": "403870.KQ", "market": "KR", "group": "독점 해자"},
+    # KR 사이클 턴어라운드
+    {"name": "유진테크",          "ticker": "084370.KS", "market": "KR", "group": "사이클 턴어라운드"},
+    {"name": "원익IPS",           "ticker": "240810.KS", "market": "KR", "group": "사이클 턴어라운드"},
+    {"name": "테스",              "ticker": "095610.KS", "market": "KR", "group": "사이클 턴어라운드"},
+    # KR 기타 소부장
+    {"name": "이오테크닉스",      "ticker": "039030.KS", "market": "KR", "group": "기타"},
+    {"name": "주성엔지니어링",    "ticker": "036930.KS", "market": "KR", "group": "기타"},
+    {"name": "피에스케이",        "ticker": "319660.KS", "market": "KR", "group": "기타"},
+]
+
+
+async def _fetch_financial_data(ticker: str) -> dict:
+    """yfinance로 TTM OPM + Trailing PER 조회.
+    - US 종목: info.operatingMargins + info.trailingPE
+    - KR 종목: income_stmt에서 OPM 계산 (yfinance.info에 재무 미제공)
+    """
+    def _sync():
+        try:
+            import yfinance as yf
+            stock = yf.Ticker(ticker)
+            info = stock.info
+
+            # 1) TTM OPM: info 우선, 없으면 income_stmt로 계산
+            opm = info.get("operatingMargins")
+            if opm is None:
+                try:
+                    inc = stock.income_stmt
+                    if inc is not None and not inc.empty:
+                        col = inc.columns[0]
+                        op_inc = None
+                        rev = None
+                        for lbl in ["Operating Income", "Ebit"]:
+                            if lbl in inc.index:
+                                op_inc = inc.loc[lbl, col]
+                                break
+                        for lbl in ["Total Revenue", "Net Revenue"]:
+                            if lbl in inc.index:
+                                rev = inc.loc[lbl, col]
+                                break
+                        if op_inc is not None and rev and float(rev) > 0:
+                            opm = float(op_inc) / float(rev)
+                except Exception as e_inc:
+                    logger.debug(f"[semi_fd] {ticker} income_stmt 실패: {e_inc}")
+
+            if opm is not None:
+                opm = round(float(opm) * 100, 1)
+
+            # 2) Trailing PER
+            per = info.get("trailingPE") or info.get("forwardPE")
+            if per is None:
+                # EPS + 현재가로 계산
+                eps = info.get("trailingEps")
+                price = info.get("currentPrice") or info.get("regularMarketPrice")
+                if eps and eps > 0 and price:
+                    per = price / eps
+
+            if per is not None:
+                per = round(float(per), 1)
+                if per <= 0 or per > 500:
+                    per = None
+
+            return {"opm": opm, "per": per}
+        except Exception as e:
+            logger.warning(f"[semi_fd] {ticker} 조회 실패: {e}")
+            return {"opm": None, "per": None}
+    return await asyncio.to_thread(_sync)
+
+
+@router.get("/semi-screener")
+async def get_semi_screener():
+    """반도체 소부장 Q-Cycle 퀀트 스크리너: TTM OPM vs Trailing PER."""
+    now = time.time()
+    cache_key = "semi_screener"
+    if cache_key in _semi_screener_cache:
+        ts, val = _semi_screener_cache[cache_key]
+        if now - ts < _SEMI_SCREENER_TTL:
+            return {
+                "data": val,
+                "updated_at": datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M"),
+                "cached": True,
+            }
+
+    results = await asyncio.gather(
+        *[_fetch_financial_data(c["ticker"]) for c in _SEMI_SCREENER_COMPANIES]
+    )
+
+    data = [
+        {
+            "name": company["name"],
+            "ticker": company["ticker"],
+            "market": company["market"],
+            "group": company["group"],
+            "opm": fd["opm"],
+            "per": fd["per"],
+        }
+        for company, fd in zip(_SEMI_SCREENER_COMPANIES, results)
+    ]
+
+    _semi_screener_cache[cache_key] = (now, data)
+    return {
+        "data": data,
+        "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "cached": False,
+    }
+
+
 @router.get("/space-chart")
 async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_db)):
     """
