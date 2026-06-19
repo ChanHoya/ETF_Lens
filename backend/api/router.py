@@ -2764,10 +2764,46 @@ async def get_semi_holdings(db: AsyncSession = Depends(get_db)):
             holdings = fallbacks.get(etf_name, [])
 
         for h in holdings:
+            w = h.get("weight")
+            if w is None:
+                continue  # 비상장/가격미확인 종목 스킵 (반도체는 모두 상장)
             t_name = h["ticker"]
-            if t_name not in matrix:
-                matrix[t_name] = {}
-            matrix[t_name][etf_name] = round(h["weight"], 2)
+            norm = t_name.strip()
+            lower = norm.lower()
+            # 해외 반도체 종목 이름 정규화 (Naver 표기 → 통일 표기)
+            if "nvidia" in lower:
+                norm = "NVIDIA"
+            elif "broadcom" in lower:
+                norm = "Broadcom"
+            elif "taiwan semiconductor" in lower or "tsmc" in lower:
+                norm = "TSMC"
+            elif "advanced micro" in lower or ("amd" == lower):
+                norm = "AMD"
+            elif "intel" in lower:
+                norm = "Intel"
+            elif "marvell" in lower:
+                norm = "Marvell Technology"
+            elif "globalfoundries" in lower:
+                norm = "GlobalFoundries"
+            elif "microchip technology" in lower:
+                norm = "Microchip Technology"
+            elif "qualcomm" in lower:
+                norm = "Qualcomm"
+            elif "kla" in lower:
+                norm = "KLA"
+            elif "on semiconductor" in lower:
+                norm = "ON Semiconductor"
+            elif "lam research" in lower:
+                norm = "Lam Research"
+            elif "arm holdings" in lower:
+                norm = "ARM Holdings"
+            elif "applied materials" in lower:
+                norm = "Applied Materials"
+            elif "asml" in lower:
+                norm = "ASML"
+            if norm not in matrix:
+                matrix[norm] = {}
+            matrix[norm][etf_name] = round(w, 2)
 
     table_rows = []
     for constituent, weights in matrix.items():
@@ -2810,12 +2846,19 @@ async def get_semi_holdings(db: AsyncSession = Depends(get_db)):
         "Micron": "MU",
         "Applied Materials": "AMAT",
         "Lam Research": "LRCX",
-        "KLA Corp": "KLAC",
-        "Arm Holdings": "ARM",
+        "KLA": "KLAC",
+        "ARM Holdings": "ARM",
         "Texas Instruments": "TXN",
         "Analog Devices": "ADI",
-        "Microchip": "MCHP",
+        "Microchip Technology": "MCHP",
         "NXP Semiconductors": "NXPI",
+        "Marvell Technology": "MRVL",
+        "GlobalFoundries": "GFS",
+        "ON Semiconductor": "ON",
+        "Monolithic Power": "MPWR",
+        "Entegris": "ENTG",
+        "Synopsys": "SNPS",
+        "Cadence": "CDNS",
     }
 
     top_20_rows = table_rows[:20]
@@ -3341,6 +3384,7 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
         return []
 
     _TICKER_MAP = {
+        # ── 우주 섹터 ──────────────────────────────────────────────────────────
         "intuitive machines": "LUNR",
         "rocket lab": "RKLB",
         "planet labs": "PL",
@@ -3360,10 +3404,36 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
         "l3harris": "LHX",
         "boeing": "BA",
         "teradyne": "TER",
-        "advanced micro devices": "AMD",
         "deere": "DE",
         "archer aviation": "ACHR",
-        # 에너지 섹터 해외 종목
+        # ── 반도체 섹터 (TIGER 미국필라델피아반도체, AI반도체 등) ────────────────
+        "nvidia": "NVDA",
+        "broadcom": "AVGO",
+        "taiwan semiconductor": "TSM",
+        "tsmc": "TSM",
+        "advanced micro devices": "AMD",
+        "intel": "INTC",
+        "marvell technology": "MRVL",
+        "marvell": "MRVL",
+        "globalfoundries": "GFS",
+        "microchip technology": "MCHP",
+        "qualcomm": "QCOM",
+        "kla corp": "KLAC",
+        "kla ": "KLAC",
+        "on semiconductor": "ON",
+        "lam research": "LRCX",
+        "arm holdings": "ARM",
+        "applied materials": "AMAT",
+        "micron": "MU",
+        "texas instruments": "TXN",
+        "analog devices": "ADI",
+        "monolithic power": "MPWR",
+        "entegris": "ENTG",
+        "synopsys": "SNPS",
+        "cadence": "CDNS",
+        "asml": "ASML",
+        "skyworks": "SWKS",
+        # ── 에너지/전력 섹터 ─────────────────────────────────────────────────────
         "solaris energy": "SEI",
         "ge vernova": "GEV",
         "eaton": "ETN",
@@ -3376,10 +3446,26 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
         "powell industries": "POWL",
         "nrg energy": "NRG",
         "duke energy": "DUK",
-        "nvidia": "NVDA",
-        "broadcom": "AVGO",
-        "taiwan semiconductor": "TSM",
-        "tsmc": "TSM",
+        "cameco": "CCJ",
+        "bloom energy": "BE",
+        "nvent electric": "NVT",
+        "credo technology": "CRDO",
+        "modine": "MOD",
+        "generac": "GNRC",
+        "nokia": "NOK",
+        "siemens energy": "SMEGF",
+        "tdk": "TTDKY",
+        "fujikura": "FJKCY",
+        "global x uranium": "URA",
+        "hubbell": "HUBB",
+        "schneider electric": "SBGSF",
+        "abb ltd": "ABBNY",
+        "vulcan materials": "VMC",
+        "caterpillar": "CAT",
+        "bwx technologies": "BWXT",
+        "oklo": "OKLO",
+        "nuscale": "SMR",
+        "csx": "CSX",
     }
 
     for h in shares_only:
@@ -3695,8 +3781,11 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
         "Archer Aviation": "ACHR",
     }
 
-    top_15_rows = table_rows[:15]
-    
+    # 비상장 종목은 weight=0으로 정렬 후 하위로 밀려나므로, 별도 분리 후 항상 포함
+    public_rows = [r for r in table_rows if not r.get("is_private")]
+    private_rows = [r for r in table_rows if r.get("is_private")]
+    top_15_rows = public_rows[:15] + private_rows
+
     # 5-minute caching mechanism for quote data
     global _space_quotes_cache
     now = time.time()
@@ -4315,10 +4404,70 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
             holdings = fallbacks.get(etf_name, [])
 
         for h in holdings:
+            w = h.get("weight")
+            if w is None:
+                continue  # 비상장/가격미확인 종목 스킵
             t_name = h["ticker"]
-            if t_name not in matrix:
-                matrix[t_name] = {}
-            matrix[t_name][etf_name] = round(h["weight"], 2)
+            norm = t_name.strip()
+            lower = norm.lower()
+            # 해외 에너지 종목 이름 정규화 (Naver 표기 → 통일 표기)
+            if "ge vernova" in lower:
+                norm = "GE Vernova"
+            elif "eaton" in lower:
+                norm = "Eaton Corporation"
+            elif "constellation energy" in lower:
+                norm = "Constellation Energy"
+            elif "vistra" in lower:
+                norm = "Vistra"
+            elif "nextera" in lower:
+                norm = "NextEra Energy"
+            elif "vertiv" in lower:
+                norm = "Vertiv Holdings"
+            elif "quanta services" in lower:
+                norm = "Quanta Services"
+            elif "southern company" in lower:
+                norm = "Southern Company"
+            elif "powell industries" in lower:
+                norm = "Powell Industries"
+            elif "nrg energy" in lower:
+                norm = "NRG Energy"
+            elif "duke energy" in lower:
+                norm = "Duke Energy"
+            elif "solaris energy" in lower:
+                norm = "Solaris Energy"
+            elif "cameco" in lower:
+                norm = "Cameco"
+            elif "bloom energy" in lower:
+                norm = "Bloom Energy"
+            elif "nvent electric" in lower:
+                norm = "nVent Electric"
+            elif "credo technology" in lower:
+                norm = "Credo Technology"
+            elif "modine" in lower:
+                norm = "Modine Manufacturing"
+            elif "generac" in lower:
+                norm = "Generac Holdings"
+            elif "nokia" in lower:
+                norm = "Nokia"
+            elif "siemens energy" in lower:
+                norm = "Siemens Energy"
+            elif "tdk" in lower:
+                norm = "TDK"
+            elif "fujikura" in lower:
+                norm = "Fujikura"
+            elif "global x uranium" in lower:
+                norm = "Global X Uranium ETF"
+            elif "hubbell" in lower:
+                norm = "Hubbell"
+            elif "schneider electric" in lower:
+                norm = "Schneider Electric"
+            elif "abb" in lower:
+                norm = "ABB"
+            elif "cameco" in lower:
+                norm = "Cameco"
+            if norm not in matrix:
+                matrix[norm] = {}
+            matrix[norm][etf_name] = round(w, 2)
 
     table_rows = []
     for constituent, weights in matrix.items():
@@ -4356,16 +4505,27 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
         "Powell Industries": "POWL",
         "NRG Energy": "NRG",
         "Duke Energy": "DUK",
-        "Hubbell Inc": "HUBB",
+        "Hubbell": "HUBB",
         "Schneider Electric": "SBGSF",
-        "ABB Ltd": "ABBNY",
+        "ABB": "ABBNY",
         "Vulcan Materials": "VMC",
-        "Caterpillar Inc": "CAT",
+        "Caterpillar": "CAT",
         "Cameco": "CCJ",
         "BWX Technologies": "BWXT",
         "Oklo": "OKLO",
         "NuScale Power": "SMR",
         "CSX Corporation": "CSX",
+        "Bloom Energy": "BE",
+        "nVent Electric": "NVT",
+        "Credo Technology": "CRDO",
+        "Modine Manufacturing": "MOD",
+        "Generac Holdings": "GNRC",
+        "Nokia": "NOK",
+        "Siemens Energy": "SMEGF",
+        "TDK": "TTDKY",
+        "Fujikura": "FJKCY",
+        "Global X Uranium ETF": "URA",
+        "Solaris Energy": "SEI",
     }
 
     top_15_rows = table_rows[:15]
@@ -4804,9 +4964,16 @@ async def get_bio_holdings(db: AsyncSession = Depends(get_db)):
         except Exception as e:
             logger.warning(f"Error querying holdings for {code}: {e}")
 
-        holdings = db_holdings if db_holdings else fallbacks[etf_name]
+        if db_holdings:
+            holdings = db_holdings
+        else:
+            # 2순위: Naver 라이브 (table_a 직접 비중)
+            live = await _fetch_holdings_with_weight_calc(code)
+            holdings = live if live else fallbacks.get(etf_name, [])
 
         for h in holdings:
+            if h.get("weight") is None:
+                continue  # 바이오는 모두 상장 종목이므로 None은 스킵
             t_name = h["ticker"]
             norm_name = t_name.strip()
             lower_name = norm_name.lower()
