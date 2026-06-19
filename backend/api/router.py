@@ -3363,20 +3363,41 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
             return result
 
     # ── Case 2: 해외 ETF (주식수 × 현재가로 비중 계산) ─────────────────────
-    if not t_b:
-        return []
-
+    # WiseReport CU_data JSON 우선 (Naver HTML table_b보다 완전한 데이터 - SpaceX 포함)
+    import re as _re, json as _json
     shares_only = []
-    for tr in t_b.find_all("tr"):
-        tds = tr.find_all("td")
-        if len(tds) >= 2:
-            name = tds[0].get_text(strip=True)
-            shares_text = tds[1].get_text(strip=True).replace(",", "")
-            if name and shares_text and shares_text not in ("-", ""):
-                try:
-                    shares_only.append({"ticker": name, "weight": 0.0, "shares": int(shares_text)})
-                except ValueError:
-                    pass
+    try:
+        wr_url = f"https://navercomp.wisereport.co.kr/v2/ETF/index.aspx?cmp_cd={code}"
+        wr_html = await asyncio.to_thread(
+            lambda: urllib.request.urlopen(
+                urllib.request.Request(wr_url, headers={"User-Agent": "Mozilla/5.0"}),
+                context=ctx, timeout=10
+            ).read().decode("utf-8", errors="ignore")
+        )
+        m = _re.search(r"var\s+CU_data\s*=\s*(\{.*?\});", wr_html, _re.DOTALL)
+        if m:
+            grid = _json.loads(m.group(1)).get("grid_data", [])
+            for item in grid:
+                name = item.get("STK_NM_KOR", "").strip()
+                cnt = item.get("AGMT_STK_CNT")
+                if name and cnt is not None:
+                    shares_only.append({"ticker": name, "weight": 0.0, "shares": float(cnt)})
+            logger.info(f"[live_holdings] {code}: WiseReport {len(shares_only)}개 종목 수집")
+    except Exception as e:
+        logger.warning(f"[live_holdings] {code}: WiseReport failed: {e}")
+
+    # WiseReport 실패 시 Naver table_b fallback
+    if not shares_only and t_b:
+        for tr in t_b.find_all("tr"):
+            tds = tr.find_all("td")
+            if len(tds) >= 2:
+                name = tds[0].get_text(strip=True)
+                shares_text = tds[1].get_text(strip=True).replace(",", "")
+                if name and shares_text and shares_text not in ("-", ""):
+                    try:
+                        shares_only.append({"ticker": name, "weight": 0.0, "shares": int(shares_text)})
+                    except ValueError:
+                        pass
 
     if not shares_only:
         return []
