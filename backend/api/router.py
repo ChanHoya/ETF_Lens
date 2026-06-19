@@ -3489,18 +3489,27 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
             resp = await asyncio.to_thread(
                 lambda s=sym: _req.get(
                     f"https://query1.finance.yahoo.com/v8/finance/chart/{s}?interval=1d&range=5d",
-                    headers={"User-Agent": "Mozilla/5.0"},
-                    timeout=8,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        "Accept": "application/json",
+                    },
+                    timeout=10,
                 ).json()
             )
             r = resp.get("chart", {}).get("result", [])
             if r:
-                closes = r[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
-                closes = [c for c in closes if c is not None]
-                if closes:
-                    prices[sym] = closes[-1]
-        except Exception:
-            pass
+                meta = r[0].get("meta", {})
+                # regularMarketPrice 우선, 없으면 closes 배열 마지막값
+                price = meta.get("regularMarketPrice")
+                if price is None:
+                    closes = r[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+                    closes = [c for c in closes if c is not None]
+                    price = closes[-1] if closes else None
+                if price:
+                    prices[sym] = price
+                    logger.debug(f"[price] {sym}={price}")
+        except Exception as e:
+            logger.warning(f"[price_fetch_fail] {sym}: {e}")
 
     await asyncio.gather(*[_fetch_price(s) for s in tickers_needed])
 
@@ -3522,11 +3531,11 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
     ]
     result.sort(key=lambda x: x["weight"], reverse=True)
 
-    # 비상장 종목(SpaceX 등 ticker 매핑 없음)을 리스트 말미에 추가
+    # 비상장 종목 또는 가격 조회 실패 종목을 리스트 말미에 추가
     private_items = [
         {"ticker": h["ticker"], "weight": None, "is_private": True}
         for h in shares_only
-        if not h.get("_sym")
+        if not h.get("_sym") or h["_sym"] not in prices
     ]
     result.extend(private_items)
 

@@ -673,7 +673,7 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                     <div className="overflow-x-auto overflow-y-auto max-h-[600px] w-full rounded-2xl border border-white/10 bg-black/30 shadow-inner">
                         <table className="w-full text-left border-collapse">
                             <thead className="sticky top-0 z-10">
-                                <tr className="bg-white/5">
+                                <tr className="bg-[#141420]">
                                     <th className="px-4 py-3 text-xs font-bold text-gray-300 border-b border-white/10">
                                         구성종목명
                                     </th>
