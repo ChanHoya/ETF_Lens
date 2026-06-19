@@ -364,19 +364,27 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
         ? [selectedEtf]
         : holdingsKeys.filter((k) => activeTabEtfs.includes(k));
 
-    const displayHoldingsData = selectedEtf
-        ? holdingsData
-              .filter((row) => row[selectedEtf] !== undefined && (row[selectedEtf] > 0 || row[selectedEtf] === null))
-              .sort((a, b) => (b[selectedEtf] || 0) - (a[selectedEtf] || 0))
-              .slice(0, 10)
-        : holdingsData
-              .filter((row) => displayHoldingsKeys.some((k) => row[k] !== undefined && (row[k] > 0 || row[k] === null)))
-              .sort((a, b) => {
-                  const sumA = displayHoldingsKeys.reduce((sum, k) => sum + (a[k] || 0), 0);
-                  const sumB = displayHoldingsKeys.reduce((sum, k) => sum + (b[k] || 0), 0);
-                  return sumB - sumA;
-              })
-              .slice(0, 15);
+    const displayHoldingsData = (() => {
+        if (selectedEtf) {
+            const filtered = holdingsData
+                .filter((row) => row[selectedEtf] !== undefined && (row[selectedEtf] > 0 || row[selectedEtf] === null))
+                .sort((a, b) => (b[selectedEtf] || 0) - (a[selectedEtf] || 0));
+            const pub = filtered.filter((r) => !r.is_private);
+            const priv = filtered.filter((r) => r.is_private);
+            return [...pub.slice(0, 10), ...priv];
+        } else {
+            const filtered = holdingsData
+                .filter((row) => displayHoldingsKeys.some((k) => row[k] !== undefined && (row[k] > 0 || row[k] === null)))
+                .sort((a, b) => {
+                    const sumA = displayHoldingsKeys.reduce((sum, k) => sum + (a[k] || 0), 0);
+                    const sumB = displayHoldingsKeys.reduce((sum, k) => sum + (b[k] || 0), 0);
+                    return sumB - sumA;
+                });
+            const pub = filtered.filter((r) => !r.is_private);
+            const priv = filtered.filter((r) => r.is_private);
+            return [...pub.slice(0, 15), ...priv];
+        }
+    })();
 
     // Custom Legend Renderer: Korean ETFs on top row, US ETFs on bottom row
     const renderCustomLegend = (props: any) => {
