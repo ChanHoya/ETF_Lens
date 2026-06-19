@@ -48,6 +48,9 @@ _OVERSEAS_TICKER_MAP = {
     "teradyne": "TER",
     "deere": "DE",
     "archer aviation": "ACHR",
+    "space exploration": "SPCX",  # SpaceX - secondary market ticker
+    "spacex": "SPCX",
+    "york space": "YSS",          # York Space Systems - secondary market
     # ── 반도체 섹터 ────────────────────────────────────────────────────────────
     "nvidia": "NVDA",
     "broadcom": "AVGO",

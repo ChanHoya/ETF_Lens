@@ -3406,6 +3406,9 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
         "teradyne": "TER",
         "deere": "DE",
         "archer aviation": "ACHR",
+        "space exploration": "SPCX",   # SpaceX - secondary market ticker
+        "spacex": "SPCX",
+        "york space": "YSS",           # York Space Systems - secondary market
         # ── 반도체 섹터 (TIGER 미국필라델피아반도체, AI반도체 등) ────────────────
         "nvidia": "NVDA",
         "broadcom": "AVGO",
@@ -3714,13 +3717,13 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
             elif "mda" in lower_name:
                 norm_name = "MDA Space (MDA 스페이스)"
             elif "space exploration" in lower_name or "spacex" in lower_name:
-                norm_name = "SpaceX (비상장)"
+                norm_name = "SpaceX"   # SPCX - secondary market, 비중 계산 가능
             elif "firefly" in lower_name:
                 norm_name = "Firefly Aerospace (비상장)"
             elif "hawkeye" in lower_name:
                 norm_name = "Hawkeye 360 (비상장)"
             elif "york space" in lower_name:
-                norm_name = "York Space Systems (비상장)"
+                norm_name = "York Space Systems"  # YSS - secondary market, 비중 계산 가능
             elif "karman" in lower_name:
                 norm_name = "Karman Holdings"
             elif "satellogic" in lower_name:
