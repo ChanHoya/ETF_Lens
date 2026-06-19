@@ -3590,14 +3590,24 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
         return []
 
     result = [
-        {"ticker": h["ticker"], "weight": round(mv / total * 100, 2)}
+        {
+            "ticker": h["ticker"],
+            "_display": h.get("_display") or h["ticker"],  # 정규화된 표시명 (ETF간 동일 종목 병합에 사용)
+            "_sym": h.get("_sym"),
+            "weight": round(mv / total * 100, 2),
+        }
         for h, mv in valid
     ]
     result.sort(key=lambda x: x["weight"], reverse=True)
 
     # is_private: ticker 매핑 없는 진짜 비상장만 True (가격조회 실패는 False)
     private_items = [
-        {"ticker": h["ticker"], "weight": None, "is_private": not bool(h.get("_sym"))}
+        {
+            "ticker": h["ticker"],
+            "_display": h.get("_display") or h["ticker"],
+            "weight": None,
+            "is_private": not bool(h.get("_sym")),
+        }
         for h in shares_only
         if not h.get("_sym") or h["_sym"] not in prices
     ]
