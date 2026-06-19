@@ -3399,6 +3399,14 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
                     except ValueError:
                         pass
 
+    # 현금성 항목 필터링 (원화현금, 설정현금액 등)
+    _CASH_KEYWORDS = {"현금", "설정현금", "원화", "달러현금", "cash"}
+    shares_only = [
+        h for h in shares_only
+        if h.get("shares", 0) > 0
+        and not any(kw in h["ticker"] for kw in _CASH_KEYWORDS)
+    ]
+
     if not shares_only:
         return []
 
@@ -3428,6 +3436,16 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
         "space exploration": "SPCX",   # SpaceX - secondary market ticker
         "spacex": "SPCX",
         "york space": "YSS",           # York Space Systems - secondary market
+        # 우주/방산 추가 (KODEX/ACE/Tiger/SOL 실제 보유 종목)
+        "howmet aerospace": "HWM",
+        "northrop grumman": "NOC",
+        "lockheed martin": "LMT",
+        "transdigm": "TDG",
+        "elbit systems": "ESLT",
+        "carpenter technology": "CRS",
+        "blacksky": "BKSY",
+        "telesat": "TSAT",
+        "alphabet": "GOOGL",
         # ── 반도체 섹터 (TIGER 미국필라델피아반도체, AI반도체 등) ────────────────
         "nvidia": "NVDA",
         "broadcom": "AVGO",
