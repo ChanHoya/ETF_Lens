@@ -6,6 +6,9 @@ from agents.quant.quant import ETFQuant
 import logging
 import json
 import asyncio
+import os as _os
+import json as _json_mod
+import re as _re_ticker
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from db.database import get_db
@@ -419,9 +422,117 @@ import time
 _bench_cache = {}
 _space_quotes_cache = {}
 _price_cache: dict = {}  # sym -> (price, timestamp) — 섹터 간 가격 공유, 레이트리밋 방지
-CACHE_TTL = 600  # 10 minutes – enough to avoid hammering the API while keeping data fresh
-SPACE_QUOTES_TTL = 300  # 5 minutes
+CACHE_TTL = 600
+SPACE_QUOTES_TTL = 300
 PRICE_CACHE_TTL = 3600  # 1 hour
+
+# ── 티커 자동 해석 시스템 ──────────────────────────────────────────────────────
+# JSON 캐시 파일 (서버 재시작 후에도 해석 결과 유지)
+_TICKER_CACHE_FILE = _os.path.join(_os.path.dirname(__file__), "..", "data", "ticker_cache.json")
+
+# 인메모리 캐시: {raw_name_lower → (symbol | None, display_name)}
+_ticker_resolution_cache: dict = {}
+# 역방향 맵: {display_name → symbol} — constituent_ticker_map 자동 생성에 사용
+_display_to_symbol: dict = {}
+
+
+def _load_ticker_cache():
+    global _ticker_resolution_cache, _display_to_symbol
+    try:
+        if _os.path.exists(_TICKER_CACHE_FILE):
+            with open(_TICKER_CACHE_FILE, "r", encoding="utf-8") as f:
+                data = _json_mod.load(f)
+            for raw, entry in data.items():
+                sym = entry.get("symbol")  # None = 비상장
+                disp = entry.get("display_name") or raw
+                _ticker_resolution_cache[raw.lower().strip()] = (sym, disp)
+                if disp and sym:
+                    _display_to_symbol[disp] = sym
+    except Exception as e:
+        logger.warning(f"[ticker_cache] 로드 실패: {e}")
+
+
+def _save_ticker_cache_entry(raw_lower: str, sym, disp: str):
+    """신규 해석 결과를 JSON 파일에 영구 저장."""
+    try:
+        data = {}
+        if _os.path.exists(_TICKER_CACHE_FILE):
+            with open(_TICKER_CACHE_FILE, "r", encoding="utf-8") as f:
+                data = _json_mod.load(f)
+        data[raw_lower] = {"symbol": sym, "display_name": disp}
+        with open(_TICKER_CACHE_FILE, "w", encoding="utf-8") as f:
+            _json_mod.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.warning(f"[ticker_cache] 저장 실패: {e}")
+
+
+async def _resolve_ticker(raw_name: str) -> tuple:
+    """
+    회사명(raw_name) → (ticker_symbol | None, display_name) 자동 해석.
+    우선순위: 인메모리 캐시(JSON 기반) → Yahoo Finance 검색 → 미상장 처리
+    """
+    key = raw_name.lower().strip()
+
+    # 1. 인메모리 캐시 (JSON에서 로드된 모든 알려진 매핑 포함)
+    if key in _ticker_resolution_cache:
+        return _ticker_resolution_cache[key]
+
+    # 2. Yahoo Finance 검색 (알려지지 않은 신규 종목 자동 해석)
+    try:
+        import requests as _req_ticker
+        # 검색어 정제: Inc/Corp/Ltd/CL A 등 제거
+        search_term = _re_ticker.sub(
+            r'\b(inc|corp|ltd|co|llc|the|co/the|ord|cl [a-z]|class [a-z]|plc|nv|ag|sa)\b',
+            ' ', key, flags=_re_ticker.IGNORECASE
+        ).strip()
+        search_term = ' '.join(search_term.split())  # 공백 정리
+
+        resp = await asyncio.to_thread(
+            lambda: _req_ticker.get(
+                f"https://query1.finance.yahoo.com/v1/finance/search?q={search_term}&quotesCount=5&newsCount=0",
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+                timeout=8,
+                verify=False,
+            ).json()
+        )
+        quotes = resp.get("quotes", [])
+        # 미국/캐나다 주요 거래소 상장 주식만 대상
+        valid = [
+            q for q in quotes
+            if q.get("typeDisp") == "Equity"
+            and q.get("exchDisp") in ("NYSE", "NASDAQ", "AMEX", "TSX", "NYSEArca")
+        ]
+
+        for q in valid:
+            sym = q.get("symbol", "")
+            returned_name = (q.get("longname") or q.get("shortname") or "").lower()
+            # 검색어 핵심 단어가 반환 회사명에 포함되는지 확인 (오매핑 방지)
+            search_words = [w for w in search_term.split() if len(w) >= 4]
+            if search_words and not any(w in returned_name for w in search_words):
+                logger.debug(f"[ticker_resolve] '{raw_name}' → {sym} 오매핑 거부 ({returned_name})")
+                continue
+
+            # 해석 성공
+            disp_name = (q.get("longname") or q.get("shortname") or raw_name).strip()
+            # 인메모리 및 JSON에 저장
+            _ticker_resolution_cache[key] = (sym, disp_name)
+            _display_to_symbol[disp_name] = sym
+            _save_ticker_cache_entry(key, sym, disp_name)
+            logger.info(f"[ticker_resolve] '{raw_name}' → {sym} ({disp_name}) [Yahoo 검색]")
+            return (sym, disp_name)
+
+    except Exception as e:
+        logger.warning(f"[ticker_resolve] '{raw_name}' 검색 오류: {e}")
+
+    # 3. 해석 실패 → 비상장/미확인 처리 (캐시에 저장하여 재시도 방지)
+    _ticker_resolution_cache[key] = (None, raw_name.strip())
+    _save_ticker_cache_entry(key, None, raw_name.strip())
+    logger.info(f"[ticker_resolve] '{raw_name}' → 티커 미확인 (비상장 또는 미상장)")
+    return (None, raw_name.strip())
+
+
+# 서버 시작 시 JSON 캐시 로드
+_load_ticker_cache()
 
 
 def get_bench_cached(key):
@@ -440,48 +551,52 @@ async def _fetch_stock_quote(ticker: str) -> dict:
     import requests
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-    
+
     def _sync_fetch():
         try:
-            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=5d"
-            headers = {"User-Agent": "Mozilla/5.0"}
+            # range=2d: closes[0]=전일종가, closes[-1]=당일종가(마감 후) 또는 당일 미포함(장중)
+            # → closes[0]을 prev_close로 사용하면 장중/마감 모두 정확한 전일대비 계산 가능
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=2d"
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
             r = requests.get(url, headers=headers, timeout=5, verify=False)
             if r.status_code != 200:
-                logger.warning(f"Error fetching space quote for {ticker}: status code {r.status_code}")
+                logger.warning(f"[quote_fetch] {ticker}: HTTP {r.status_code}")
                 return {"price": None, "change_pct": None}
-            
+
             data = r.json()
             result = data.get("chart", {}).get("result", [])
             if not result:
                 return {"price": None, "change_pct": None}
-            
+
             meta = result[0].get("meta", {})
             price = meta.get("regularMarketPrice")
-            
+
             indicators = result[0].get("indicators", {}).get("quote", [{}])[0]
             closes = [c for c in indicators.get("close", []) if c is not None]
-            
-            prev_close = None
+
+            if price is None and closes:
+                price = closes[-1]
+
+            # closes[0] = 전일종가 (range=2d 의 첫 번째 세션)
+            # closes[-1] = 당일종가 또는 현재가
             if len(closes) >= 2:
-                prev_close = closes[-2]
-                if price is None:
-                    price = closes[-1]
+                prev_close = closes[0]   # 전일 확정 종가
             elif len(closes) == 1:
-                if price is None:
-                    price = closes[0]
-            
-            if prev_close is None:
-                prev_close = meta.get("chartPreviousClose") or meta.get("previousClose")
-            
-            if price is not None and prev_close is not None and prev_close != 0:
+                # 장중: closes[0]이 전일종가, price는 실시간 → closes[0]을 prev로 사용
+                # 마감: closes[0]=오늘종가, prev 정보 없음
+                prev_close = closes[0] if (price and abs(price - closes[0]) > 0.01) else None
+            else:
+                prev_close = None
+
+            if price is not None and prev_close is not None and prev_close > 0:
                 change_pct = ((price - prev_close) / prev_close) * 100
                 return {"price": round(price, 2), "change_pct": round(change_pct, 2)}
             elif price is not None:
                 return {"price": round(price, 2), "change_pct": 0.0}
-            
+
             return {"price": None, "change_pct": None}
         except Exception as e:
-            logger.error(f"Failed to fetch space quote for {ticker}: {e}")
+            logger.error(f"[quote_fetch] {ticker} failed: {e}")
             return {"price": None, "change_pct": None}
 
     return await asyncio.to_thread(_sync_fetch)
@@ -3412,111 +3527,11 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
     if not shares_only:
         return []
 
-    _TICKER_MAP = {
-        # ── 우주 섹터 ──────────────────────────────────────────────────────────
-        "intuitive machines": "LUNR",
-        "rocket lab": "RKLB",
-        "planet labs": "PL",
-        "ast spacemobile": "ASTS",
-        "ast space": "ASTS",
-        "redwire": "RDW",
-        "echostar": "SATS",
-        "kratos defense": "KTOS",
-        "karman holdings": "KRMN",
-        "satellogic": "SATL",
-        "spire global": "SPIR",
-        "mda space": "MDA.TO",
-        "globalstar": "GSAT",
-        "viasat": "VSAT",
-        "iridium": "IRDM",
-        "voyager technologies": "VOYG",
-        "l3harris": "LHX",
-        "boeing": "BA",
-        "teradyne": "TER",
-        "deere": "DE",
-        "archer aviation": "ACHR",
-        "space exploration": "SPCX",   # SpaceX - secondary market ticker
-        "spacex": "SPCX",
-        "york space": "YSS",           # York Space Systems - secondary market
-        # 우주/방산 추가 (KODEX/ACE/Tiger/SOL 실제 보유 종목)
-        "howmet aerospace": "HWM",
-        "northrop grumman": "NOC",
-        "lockheed martin": "LMT",
-        "transdigm": "TDG",
-        "elbit systems": "ESLT",
-        "carpenter technology": "CRS",
-        "blacksky": "BKSY",
-        "telesat": "TSAT",
-        "alphabet": "GOOGL",
-        # ── 반도체 섹터 (TIGER 미국필라델피아반도체, AI반도체 등) ────────────────
-        "nvidia": "NVDA",
-        "broadcom": "AVGO",
-        "taiwan semiconductor": "TSM",
-        "tsmc": "TSM",
-        "advanced micro devices": "AMD",
-        "intel": "INTC",
-        "marvell technology": "MRVL",
-        "marvell": "MRVL",
-        "globalfoundries": "GFS",
-        "microchip technology": "MCHP",
-        "qualcomm": "QCOM",
-        "kla corp": "KLAC",
-        "kla ": "KLAC",
-        "on semiconductor": "ON",
-        "lam research": "LRCX",
-        "arm holdings": "ARM",
-        "applied materials": "AMAT",
-        "micron": "MU",
-        "texas instruments": "TXN",
-        "analog devices": "ADI",
-        "monolithic power": "MPWR",
-        "entegris": "ENTG",
-        "synopsys": "SNPS",
-        "cadence": "CDNS",
-        "asml": "ASML",
-        "skyworks": "SWKS",
-        # ── 에너지/전력 섹터 ─────────────────────────────────────────────────────
-        "solaris energy": "SEI",
-        "ge vernova": "GEV",
-        "eaton": "ETN",
-        "constellation energy": "CEG",
-        "vistra": "VST",
-        "nextera": "NEE",
-        "vertiv": "VRT",
-        "quanta services": "PWR",
-        "southern company": "SO",
-        "powell industries": "POWL",
-        "nrg energy": "NRG",
-        "duke energy": "DUK",
-        "cameco": "CCJ",
-        "bloom energy": "BE",
-        "nvent electric": "NVT",
-        "credo technology": "CRDO",
-        "modine": "MOD",
-        "generac": "GNRC",
-        "nokia": "NOK",
-        "siemens energy": "SMEGF",
-        "tdk": "TTDKY",
-        "fujikura": "FJKCY",
-        "global x uranium": "URA",
-        "hubbell": "HUBB",
-        "schneider electric": "SBGSF",
-        "abb ltd": "ABBNY",
-        "vulcan materials": "VMC",
-        "caterpillar": "CAT",
-        "bwx technologies": "BWXT",
-        "oklo": "OKLO",
-        "nuscale": "SMR",
-        "csx": "CSX",
-    }
-
-    for h in shares_only:
-        name_lower = h["ticker"].lower()
-        h["_sym"] = None
-        for key, sym in _TICKER_MAP.items():
-            if key in name_lower:
-                h["_sym"] = sym
-                break
+    # 티커 자동 해석: JSON 캐시 → Yahoo Finance 검색 (하드코딩 _TICKER_MAP 대체)
+    resolve_results = await asyncio.gather(*[_resolve_ticker(h["ticker"]) for h in shares_only])
+    for h, (sym, display) in zip(shares_only, resolve_results):
+        h["_sym"] = sym
+        h["_display"] = display
 
     # 모듈 레벨 가격 캐시에서 먼저 로드 (섹터 간 공유 → Yahoo 중복 요청 방지)
     tickers_needed = []
@@ -3742,78 +3757,9 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
         holdings = live if live else (db_holdings if db_holdings else fallbacks.get(etf_name, []))
 
         for h in holdings:
-            t_name = h["ticker"]
-            norm_name = t_name.strip()
-            lower_name = norm_name.lower()
-
-            if "rocket" in lower_name or "rklb" in lower_name or "로켓랩" in lower_name:
-                norm_name = "Rocket Lab (로켓랩)"
-            elif "ast space" in lower_name or "스페이스모바일" in lower_name or "ast" in lower_name:
-                norm_name = "AST SpaceMobile (스페이스모바일)"
-            elif "echostar" in lower_name or "에코스타" in lower_name:
-                norm_name = "EchoStar (에코스타)"
-            elif "intuitive" in lower_name or "인튜이티브" in lower_name:
-                norm_name = "Intuitive Machines (인튜이티브 머신스)"
-            elif "planet lab" in lower_name or "플래닛랩" in lower_name or "planet" in lower_name:
-                norm_name = "Planet Labs (플래닛랩스)"
-            elif "redwire" in lower_name or "레드와이어" in lower_name:
-                norm_name = "Redwire (레드와이어)"
-            elif "l3harris" in lower_name:
-                norm_name = "L3Harris Technologies"
-            elif "amd" in lower_name or "advanced micro" in lower_name:
-                norm_name = "Advanced Micro Devices"
-            elif "boeing" in lower_name or "보잉" in lower_name:
-                norm_name = "Boeing (보잉)"
-            elif "teradyne" in lower_name:
-                norm_name = "Teradyne"
-            elif "kratos" in lower_name:
-                norm_name = "Kratos Defense"
-            elif "globalstar" in lower_name or "글로벌스타" in lower_name:
-                norm_name = "Globalstar (글로벌스타)"
-            elif "deere" in lower_name or "디어앤컴퍼니" in lower_name:
-                norm_name = "Deere & Company (디어앤컴퍼니)"
-            elif "mda" in lower_name:
-                norm_name = "MDA Space (MDA 스페이스)"
-            elif "space exploration" in lower_name or "spacex" in lower_name:
-                norm_name = "SpaceX"   # SPCX - secondary market, 비중 계산 가능
-            elif "firefly" in lower_name:
-                norm_name = "Firefly Aerospace (비상장)"
-            elif "hawkeye" in lower_name:
-                norm_name = "Hawkeye 360 (비상장)"
-            elif "york space" in lower_name:
-                norm_name = "York Space Systems"  # YSS - secondary market, 비중 계산 가능
-            elif "karman" in lower_name:
-                norm_name = "Karman Holdings"
-            elif "satellogic" in lower_name:
-                norm_name = "Satellogic"
-            elif "spire" in lower_name:
-                norm_name = "Spire Global"
-            elif "voyager tech" in lower_name:
-                norm_name = "Voyager Technologies"  # VOYG - secondary market
-            elif "viasat" in lower_name:
-                norm_name = "Viasat Inc"
-            elif "iridium" in lower_name:
-                norm_name = "Iridium Communications"
-            elif "howmet" in lower_name:
-                norm_name = "Howmet Aerospace"
-            elif "northrop grumman" in lower_name:
-                norm_name = "Northrop Grumman"
-            elif "lockheed" in lower_name:
-                norm_name = "Lockheed Martin"
-            elif "transdigm" in lower_name:
-                norm_name = "TransDigm Group"
-            elif "elbit" in lower_name:
-                norm_name = "Elbit Systems"
-            elif "carpenter technology" in lower_name:
-                norm_name = "Carpenter Technology"
-            elif "blacksky" in lower_name:
-                norm_name = "BlackSky Technology"
-            elif "telesat" in lower_name:
-                norm_name = "Telesat"
-            elif "alphabet" in lower_name:
-                norm_name = "Alphabet (Google)"
-            elif "general aerospace" in lower_name:
-                norm_name = "General Aerospace"
+            # 라이브 데이터: _resolve_ticker가 이미 _display 설정
+            # DB/fallback 데이터: ticker 필드가 이미 표시용 이름
+            norm_name = h.get("_display") or h["ticker"].strip()
 
             weight_val = h.get("weight")
             is_private = h.get("is_private", False)
@@ -3851,76 +3797,39 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
         reverse=True,
     )
 
-    # ── yfinance quotes integration ──
-    constituent_ticker_map = {
-        # 기존 종목
-        "Rocket Lab (로켓랩)": "RKLB",
-        "AST SpaceMobile (스페이스모바일)": "ASTS",
-        "EchoStar (에코스타)": "SATS",
-        "Planet Labs (플래닛랩스)": "PL",
-        "Intuitive Machines (인튜이티브 머신스)": "LUNR",
-        "L3Harris Technologies": "LHX",
-        "Advanced Micro Devices": "AMD",
-        "Boeing (보잉)": "BA",
-        "Redwire (레드와이어)": "RDW",
-        "Kratos Defense": "KTOS",
-        "MDA Space (MDA 스페이스)": "MDA.TO",
-        "Teradyne": "TER",
-        "Globalstar (글로벌스타)": "GSAT",
-        "Deere & Company (디어앤컴퍼니)": "DE",
-        "Archer Aviation": "ACHR",
-        # 신규 추가 (한국 우주ETF WiseReport 기준)
-        "SpaceX": "SPCX",
-        "York Space Systems": "YSS",
-        "Satellogic": "SATL",
-        "Spire Global": "SPIR",
-        "Karman Holdings": "KRMN",
-        "Viasat Inc": "VSAT",
-        "Iridium Communications": "IRDM",
-        "Voyager Technologies": "VOYG",
-        "Howmet Aerospace": "HWM",
-        "Northrop Grumman": "NOC",
-        "Lockheed Martin": "LMT",
-        "TransDigm Group": "TDG",
-        "Elbit Systems": "ESLT",
-        "Carpenter Technology": "CRS",
-        "BlackSky Technology": "BKSY",
-        "Telesat": "TSAT",
-        "Alphabet (Google)": "GOOGL",
-    }
-
     # 비상장 종목은 weight=0으로 정렬 후 하위로 밀려나므로, 별도 분리 후 항상 포함
     public_rows = [r for r in table_rows if not r.get("is_private")]
     private_rows = [r for r in table_rows if r.get("is_private")]
     top_15_rows = public_rows + private_rows  # 전체 반환 (프론트에서 스크롤로 표시)
 
-    # 5-minute caching mechanism for quote data
+    # ── 주가 조회: _display_to_symbol로 constituent_ticker_map 자동 생성 ──
+    # JSON 캐시에서 display_name → symbol 역방향 맵이 자동 구성됨
     global _space_quotes_cache
     now = time.time()
     cached_quotes = None
     if "quotes" in _space_quotes_cache:
         val, ts = _space_quotes_cache["quotes"]
-        if now - ts < SPACE_QUOTES_TTL:
+        # 캐시가 최신이고 모든 현재 종목을 포함하는지 확인
+        current_constituents = {r["constituent"] for r in top_15_rows if not r.get("is_private")}
+        if now - ts < SPACE_QUOTES_TTL and current_constituents.issubset(val.keys()):
             cached_quotes = val
-            
+
     if cached_quotes is None:
-        # Collect tickers to fetch
         tickers_to_fetch = {}
         for r in top_15_rows:
             constituent = r["constituent"]
-            ticker = constituent_ticker_map.get(constituent)
-            if ticker:
-                tickers_to_fetch[constituent] = ticker
-                
-        # Fetch quotes in parallel
+            sym = _display_to_symbol.get(constituent)
+            if sym:
+                tickers_to_fetch[constituent] = sym
+
         constituents = list(tickers_to_fetch.keys())
         tasks = [_fetch_stock_quote(tickers_to_fetch[c]) for c in constituents]
         quote_results = await asyncio.gather(*tasks)
-        
+
         cached_quotes = {}
         for c, q in zip(constituents, quote_results):
             cached_quotes[c] = q
-            
+
         _space_quotes_cache["quotes"] = (cached_quotes, now)
 
     # Inject quotes into top 15 rows
