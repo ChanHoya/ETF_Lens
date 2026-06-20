@@ -522,38 +522,48 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                     </div>
 
                     {/* 현 시점 추정 시뮬레이션 토글 */}
-                    <button
-                        onClick={() => estimateBuilt && setUseEstimate(v => !v)}
-                        disabled={!estimateBuilt}
-                        title={estimateBuilt ? '현재가 기준 추정치로 전환' : '추정 데이터 준비 중'}
-                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 border whitespace-nowrap ${
-                            !estimateBuilt
-                                ? 'bg-white/5 text-gray-500 border-white/5 cursor-wait'
-                                : useEstimate
-                                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-amber-400/50 shadow-[0_0_14px_rgba(245,158,11,0.3)]'
-                                    : 'bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20'
-                        }`}
-                    >
-                        {estimateLoading && !estimateBuilt ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                            <Sparkles className="w-3.5 h-3.5" />
-                        )}
-                        <span>
-                            {estimateBuilt
-                                ? (() => {
-                                    const parts = (estimateBuilt.asOf || '').split('-');
-                                    const label = parts.length === 3 ? `${parseInt(parts[1],10)}월 ${parseInt(parts[2],10)}일` : '현재';
-                                    return `현시점(${label}) 기준 추정 시뮬레이션`;
-                                })()
-                                : '추정 시뮬레이션 준비 중...'}
-                        </span>
-                        {estimateBuilt && (
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black ${useEstimate ? 'bg-white/25' : 'bg-amber-500/20'}`}>
-                                {useEstimate ? 'ON' : 'OFF'}
+                    <div className="relative group flex-shrink-0">
+                        <button
+                            onClick={() => estimateBuilt && setUseEstimate(v => !v)}
+                            disabled={!estimateBuilt}
+                            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border whitespace-nowrap ${
+                                !estimateBuilt
+                                    ? 'bg-white/5 text-gray-500 border-white/5 cursor-wait'
+                                    : useEstimate
+                                        ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-amber-400/50 shadow-[0_0_14px_rgba(245,158,11,0.3)]'
+                                        : 'bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20'
+                            }`}
+                        >
+                            {!estimateBuilt ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                                <Sparkles className="w-3.5 h-3.5" />
+                            )}
+                            <span>
+                                {estimateBuilt
+                                    ? (() => {
+                                        const parts = (estimateBuilt.asOf || '').split('-');
+                                        const label = parts.length === 3 ? `${parseInt(parts[1],10)}월 ${parseInt(parts[2],10)}일` : '현재';
+                                        return `현시점(${label}) 기준 추정 시뮬레이션`;
+                                    })()
+                                    : '추정 시뮬레이션 준비중 (10분 이상 소요) ...'}
                             </span>
-                        )}
-                    </button>
+                            {estimateBuilt && (
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black ${useEstimate ? 'bg-white/25' : 'bg-amber-500/20'}`}>
+                                    {useEstimate ? 'ON' : 'OFF'}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* 마우스 오버 설명 팝업 */}
+                        <div className="absolute right-0 top-full mt-2 w-72 p-3 rounded-xl bg-[#0f0f17] border border-amber-500/30 shadow-2xl text-[11px] leading-relaxed text-gray-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                            <div className="flex items-center gap-1.5 mb-1.5 text-amber-300 font-bold">
+                                <Sparkles className="w-3 h-3" />
+                                현 시점 추정 시뮬레이션
+                            </div>
+                            전일 종가(분배금 등은 제외) 기준으로 시뮬레이션한 정보를 반영해서 보여줍니다.
+                        </div>
+                    </div>
                 </div>
             )}
 
