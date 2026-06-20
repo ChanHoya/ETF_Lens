@@ -42,9 +42,10 @@ function findTickerCode(name: string): string | undefined {
 interface Props {
   data: TffAssetReturns;
   onOpenDetail?: (code: string) => void;
+  currentMonthKey?: string; // 현 시점 추정 월 키 (예: "6월")
 }
 
-export default function AssetsView({ data, onOpenDetail }: Props) {
+export default function AssetsView({ data, onOpenDetail, currentMonthKey }: Props) {
   const { assets, total, benchmarks } = data;
   const [sortBy, setSortBy] = useState<string>('cumulative');
   const [selectedType, setSelectedType] = useState<string>('전체');
@@ -210,14 +211,16 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                   <thead>
                       <tr className="bg-black/40 text-gray-400 border-b border-white/10">
                           <th className="py-1.5 px-2 md:px-3 font-semibold min-w-[200px] border-r border-white/5">종목명(상품명)</th>
-                          {availableMonths.map(m => (
-                              <th 
-                                  key={m} 
+                          {availableMonths.map(m => {
+                              const isCurrent = currentMonthKey && m === currentMonthKey;
+                              return (
+                              <th
+                                  key={m}
                                   onClick={() => handleTableSort(m)}
-                                  className="py-1.5 px-1 font-semibold text-center w-24 border-r border-white/5 cursor-pointer hover:bg-white/5 select-none transition-colors"
+                                  className={`py-1.5 px-1 font-semibold text-center w-24 border-r border-white/5 cursor-pointer hover:bg-white/5 select-none transition-colors ${isCurrent ? 'bg-amber-500/10 text-amber-300' : ''}`}
                               >
                                   <div className="flex items-center justify-center gap-1.5">
-                                      <span>{m}</span>
+                                      <span>{isCurrent ? `${m}(현재)` : m}</span>
                                       {tableSortKey === m ? (
                                           tableSortDir === 'desc' ? (
                                               <ArrowDown className="w-3 h-3 text-sky-400" />
@@ -229,8 +232,9 @@ export default function AssetsView({ data, onOpenDetail }: Props) {
                                       )}
                                   </div>
                               </th>
-                          ))}
-                          <th 
+                              );
+                          })}
+                          <th
                               onClick={() => handleTableSort('cumulative')}
                               className="py-1.5 px-1 font-semibold text-center w-24 cursor-pointer hover:bg-white/5 select-none transition-colors"
                           >

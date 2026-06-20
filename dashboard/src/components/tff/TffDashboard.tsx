@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { UploadCloud, Loader2, FileSpreadsheet, Trash2, History, ArrowLeftRight, X, Lock, Unlock, LogOut, Key } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { UploadCloud, Loader2, FileSpreadsheet, Trash2, History, ArrowLeftRight, X, Lock, Unlock, LogOut, Key, Sparkles } from 'lucide-react';
 import { TffFundData } from '../../lib/tff/types';
 import { parseTffExcel } from '../../lib/tff/excelParser';
 import { API_BASE } from '../../lib/apiConfig';
+import { fetchTffEstimate, buildEstimateData, TffEstimateResponse } from '../../lib/tff/estimate';
 import CumulativeView from './views/CumulativeView';
 import AssetsView from './views/AssetsView';
 import PortfolioDetailView from './views/PortfolioDetailView';
@@ -32,6 +33,11 @@ export default function TffDashboard({ onOpenDetail }: Props) {
     const [activeSubTab, setActiveSubTab] = useState<'overview'|'cumulative'|'assets'|'ytm'|'monthly'>('overview');
     const [selectedMonth, setSelectedMonth] = useState<string>(''); // For monthly view filter
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // 현 시점 추정 시뮬레이션 상태
+    const [estimateRaw, setEstimateRaw] = useState<TffEstimateResponse | null>(null);
+    const [estimateLoading, setEstimateLoading] = useState(false);
+    const [useEstimate, setUseEstimate] = useState(false);
 
     // 마스터 권한 및 패스코드 상태
     const [isAdmin, setIsAdmin] = useState(false);
@@ -152,6 +158,39 @@ export default function TffDashboard({ onOpenDetail }: Props) {
         fetchLatestData();
         loadHistory();
     }, []);
+
+    // fundData 로드 후 백그라운드에서 현 시점 추정 데이터 패치
+    useEffect(() => {
+        if (!fundData) {
+            setEstimateRaw(null);
+            setUseEstimate(false);
+            return;
+        }
+        let cancelled = false;
+        setEstimateRaw(null);
+        setUseEstimate(false);
+        setEstimateLoading(true);
+        fetchTffEstimate(fundData)
+            .then(res => { if (!cancelled) setEstimateRaw(res); })
+            .finally(() => { if (!cancelled) setEstimateLoading(false); });
+        return () => { cancelled = true; };
+    }, [(fundData as any)?.id, fundData?.latestMonth]);
+
+    // 추정 응답 + 업로드 데이터 → 파생 데이터
+    const estimateBuilt = useMemo(() => {
+        if (!fundData || !estimateRaw) return null;
+        try {
+            return buildEstimateData(fundData, estimateRaw);
+        } catch (e) {
+            console.error('[tff estimate] build 실패', e);
+            return null;
+        }
+    }, [fundData, estimateRaw]);
+
+    // 토글 ON & 데이터 준비됨 → 추정 표시본, 아니면 원본
+    const displayData: TffFundData | null = !fundData
+        ? null
+        : (useEstimate && estimateBuilt ? estimateBuilt.estDisplay : (estimateBuilt ? estimateBuilt.baseDisplay : fundData));
 
     const processFile = async (file: File) => {
         if (!file.name.endsWith('.xlsx')) {
@@ -463,8 +502,8 @@ export default function TffDashboard({ onOpenDetail }: Props) {
 
             {/* 헤더 2행: 탭 내비게이션 (데이터 있을 때만) */}
             {fundData && (
-                <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 relative z-20 px-0">
-                    <div className="flex flex-row items-center bg-black/40 p-1.5 rounded-xl border border-white/5 overflow-x-auto custom-scrollbar whitespace-nowrap w-full">
+                <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 relative z-20 px-0 flex flex-col lg:flex-row lg:items-center gap-2">
+                    <div className="flex flex-row items-center bg-black/40 p-1.5 rounded-xl border border-white/5 overflow-x-auto custom-scrollbar whitespace-nowrap flex-1">
                         {[
                             { id: 'overview', label: '포트폴리오 현황' },
                             { id: 'cumulative', label: '총누적손익' },
@@ -481,6 +520,40 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                             </button>
                         ))}
                     </div>
+
+                    {/* 현 시점 추정 시뮬레이션 토글 */}
+                    <button
+                        onClick={() => estimateBuilt && setUseEstimate(v => !v)}
+                        disabled={!estimateBuilt}
+                        title={estimateBuilt ? '현재가 기준 추정치로 전환' : '추정 데이터 준비 중'}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 border whitespace-nowrap ${
+                            !estimateBuilt
+                                ? 'bg-white/5 text-gray-500 border-white/5 cursor-wait'
+                                : useEstimate
+                                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-amber-400/50 shadow-[0_0_14px_rgba(245,158,11,0.3)]'
+                                    : 'bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20'
+                        }`}
+                    >
+                        {estimateLoading && !estimateBuilt ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                            <Sparkles className="w-3.5 h-3.5" />
+                        )}
+                        <span>
+                            {estimateBuilt
+                                ? (() => {
+                                    const parts = (estimateBuilt.asOf || '').split('-');
+                                    const label = parts.length === 3 ? `${parseInt(parts[1],10)}월 ${parseInt(parts[2],10)}일` : '현재';
+                                    return `현시점(${label}) 기준 추정 시뮬레이션`;
+                                })()
+                                : '추정 시뮬레이션 준비 중...'}
+                        </span>
+                        {estimateBuilt && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black ${useEstimate ? 'bg-white/25' : 'bg-amber-500/20'}`}>
+                                {useEstimate ? 'ON' : 'OFF'}
+                            </span>
+                        )}
+                    </button>
                 </div>
             )}
 
@@ -580,38 +653,54 @@ export default function TffDashboard({ onOpenDetail }: Props) {
 
                         {/* Content Area Rendering */}
                         <div className="bg-black/30 rounded-2xl p-2 md:p-3 border border-white/5 min-h-[400px]">
-                            {activeSubTab === 'overview' && (
-                                <OverviewView data={fundData} />
+                            {activeSubTab === 'overview' && displayData && (
+                                <OverviewView data={displayData} />
                             )}
 
-                            {activeSubTab === 'cumulative' && fundData.cumulative && (
-                                <CumulativeView data={fundData.cumulative} />
+                            {activeSubTab === 'cumulative' && displayData?.cumulative && (
+                                <CumulativeView
+                                    data={displayData.cumulative}
+                                    estimatePeriod={estimateBuilt?.currentMonthPeriod}
+                                />
                             )}
 
-                            {activeSubTab === 'assets' && fundData.assetReturns && (
-                                <AssetsView data={fundData.assetReturns} onOpenDetail={onOpenDetail} />
+                            {activeSubTab === 'assets' && displayData?.assetReturns && (
+                                <AssetsView
+                                    data={displayData.assetReturns}
+                                    onOpenDetail={onOpenDetail}
+                                    currentMonthKey={estimateBuilt?.currentMonthKey}
+                                />
                             )}
 
-                            {activeSubTab === 'ytm' && fundData.ytm && (
-                                <YtmView data={fundData.ytm} onOpenDetail={onOpenDetail} />
+                            {activeSubTab === 'ytm' && displayData?.ytm && (
+                                <YtmView data={displayData.ytm} onOpenDetail={onOpenDetail} />
                             )}
 
-                            {activeSubTab === 'monthly' && (
+                            {activeSubTab === 'monthly' && displayData && (
                                 <div className="space-y-4 -mt-1 md:-mt-2">
-                                    {selectedMonth && fundData.monthlyMap[selectedMonth] ? (
-                                        <MonthlyView 
-                                            data={fundData.monthlyMap[selectedMonth]} 
-                                            onOpenDetail={onOpenDetail} 
+                                    {selectedMonth && displayData.monthlyMap[selectedMonth] ? (
+                                        <MonthlyView
+                                            data={displayData.monthlyMap[selectedMonth]}
+                                            onOpenDetail={onOpenDetail}
                                             titleRightElement={
-                                                <select 
-                                                    value={selectedMonth}
-                                                    onChange={(e) => setSelectedMonth(e.target.value)}
-                                                    className="bg-black/50 border border-white/20 text-white text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-1.5 outline-none ml-2"
-                                                >
-                                                    {Object.keys(fundData.monthlyMap).sort((a,b) => parseInt(a)-parseInt(b)).map(m => (
-                                                        <option key={m} value={m}>{m} 상세 현황</option>
-                                                    ))}
-                                                </select>
+                                                <div className="flex items-center gap-2">
+                                                    <select
+                                                        value={selectedMonth}
+                                                        onChange={(e) => setSelectedMonth(e.target.value)}
+                                                        className="bg-black/50 border border-white/20 text-white text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block p-1.5 outline-none ml-2"
+                                                    >
+                                                        {Object.keys(displayData.monthlyMap).sort((a,b) => parseInt(a)-parseInt(b)).map(m => (
+                                                            <option key={m} value={m}>
+                                                                {estimateBuilt && m === estimateBuilt.currentMonthKey ? `${m}(현재·추정)` : `${m} 상세 현황`}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    {estimateBuilt && selectedMonth === estimateBuilt.currentMonthKey && (
+                                                        <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded-lg whitespace-nowrap">
+                                                            현재가 기준 추정치
+                                                        </span>
+                                                    )}
+                                                </div>
                                             }
                                         />
                                     ) : (

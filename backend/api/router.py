@@ -5192,6 +5192,149 @@ class TffVerifyTokenRequest(BaseModel):
 class TffDeleteRequest(BaseModel):
     admin_key: str
 
+class TffEstimateHolding(BaseModel):
+    code: str
+    name: str
+
+class TffEstimateRequest(BaseModel):
+    holdings: List[TffEstimateHolding]
+    year: int       # 마지막 업로드 월의 연도 (예: 2026)
+    month: int      # 마지막 업로드 월 번호 (예: 5 → 5월말 종가를 기준가로)
+
+
+# 현 시점 추정 캐시 (서버 단기 캐시)
+_tff_estimate_cache: dict = {}
+_TFF_ESTIMATE_TTL = 1800  # 30분
+
+
+def _last_day_of_month(year: int, month: int) -> datetime:
+    if month == 12:
+        return datetime(year, 12, 31)
+    return datetime(year, month + 1, 1) - timedelta(days=1)
+
+
+@router.post("/tff/estimate")
+async def estimate_tff_current(req: TffEstimateRequest):
+    """업로드된 마지막 월말 종가 대비 현재 종가 변동률을 계산하여
+    당월(현 시점) 기준 추정 평가액/수익률 산출.
+    - 기준가: req.month 월말의 마지막 거래일 종가
+    - 현재가: 가장 최근 거래일 종가
+    """
+    import pandas as pd
+
+    # 캐시 키: 종목 코드 집합 + 기준 연월
+    codes_key = ",".join(sorted({h.code for h in req.holdings if h.code}))
+    cache_key = f"{req.year}-{req.month}:{codes_key}"
+    now_ts = time.time()
+    if cache_key in _tff_estimate_cache:
+        ts, val = _tff_estimate_cache[cache_key]
+        if now_ts - ts < _TFF_ESTIMATE_TTL:
+            return {**val, "cached": True}
+
+    base_cutoff = _last_day_of_month(req.year, req.month)
+    base_cutoff_str = base_cutoff.strftime("%Y-%m-%d")
+    fetch_start = (base_cutoff - timedelta(days=12)).strftime("%Y-%m-%d")
+    fetch_end = (datetime.now(_KST) + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    def _fetch_series(code: str):
+        """6자리 KR 코드의 일별 종가 시리즈 (fdr → DB 폴백)."""
+        try:
+            df = fdr.DataReader(code, fetch_start, fetch_end)
+            if df is not None and not df.empty and "Close" in df.columns:
+                s = df["Close"].dropna()
+                if not s.empty:
+                    if s.index.tz is not None:
+                        s.index = s.index.tz_convert(None)
+                    return s
+        except Exception as e:
+            logger.warning(f"[tff_estimate] fdr 실패 {code}: {e}")
+        return pd.Series(dtype=float)
+
+    async def _estimate_one(h: TffEstimateHolding):
+        code = (h.code or "").strip()
+        # 코드 없음(현금/파킹형 등) → 변동 0 처리
+        if not code or not code[0].isdigit():
+            return {
+                "code": code, "name": h.name, "basePrice": None,
+                "currentPrice": None, "changePct": 0.0, "available": False,
+            }
+        s = await asyncio.to_thread(_fetch_series, code)
+        if s.empty:
+            return {
+                "code": code, "name": h.name, "basePrice": None,
+                "currentPrice": None, "changePct": 0.0, "available": False,
+            }
+        base_slice = s[s.index <= base_cutoff_str]
+        if base_slice.empty:
+            return {
+                "code": code, "name": h.name, "basePrice": None,
+                "currentPrice": None, "changePct": 0.0, "available": False,
+            }
+        base_price = float(base_slice.iloc[-1])
+        current_price = float(s.iloc[-1])
+        current_date = s.index[-1].strftime("%Y-%m-%d")
+        change_pct = ((current_price - base_price) / base_price * 100) if base_price > 0 else 0.0
+        return {
+            "code": code, "name": h.name,
+            "basePrice": round(base_price, 2),
+            "currentPrice": round(current_price, 2),
+            "currentDate": current_date,
+            "changePct": round(change_pct, 4),
+            "available": True,
+        }
+
+    results = await asyncio.gather(*[_estimate_one(h) for h in req.holdings])
+
+    # 벤치마크(KOSPI, S&P500) 당월 변동률 — KRX 차단 회피 위해 yfinance 사용
+    # yfinance는 동시 호출 시 내부 상태 충돌이 있어 단일 스레드에서 순차 조회한다.
+    def _bench_change_one(sym: str):
+        try:
+            import yfinance as yf
+            df = yf.download(sym, start=fetch_start, end=fetch_end,
+                             progress=False, threads=False)
+            if df is None or df.empty:
+                return None
+            c = df["Close"].dropna()
+            if hasattr(c, "columns"):
+                c = c.iloc[:, 0]
+            if c.index.tz is not None:
+                c.index = c.index.tz_convert(None)
+            base = c[c.index <= base_cutoff_str]
+            if base.empty:
+                return None
+            bp = float(base.iloc[-1])
+            cp = float(c.iloc[-1])
+            return round((cp - bp) / bp * 100, 4) if bp > 0 else None
+        except Exception as e:
+            logger.warning(f"[tff_estimate] benchmark {sym} 실패: {e}")
+            return None
+
+    def _bench_all():
+        return _bench_change_one("^KS11"), _bench_change_one("^GSPC")
+
+    kospi_chg, sp500_chg = await asyncio.to_thread(_bench_all)
+
+    as_of = max(
+        [r["currentDate"] for r in results if r.get("currentDate")],
+        default=datetime.now(_KST).strftime("%Y-%m-%d"),
+    )
+    current_month = req.month + 1 if req.month < 12 else 1
+    payload = {
+        "status": "ok",
+        "asOf": as_of,
+        "baseMonth": req.month,
+        "baseMonthLabel": f"{req.month}월",
+        "currentMonth": current_month,
+        "currentMonthLabel": f"{current_month}월",
+        "holdings": results,
+        "benchmarks": {"kospi": kospi_chg, "sp500": sp500_chg},
+        "fetchedCount": sum(1 for r in results if r["available"]),
+        "totalCount": len(results),
+        "cached": False,
+    }
+    _tff_estimate_cache[cache_key] = (now_ts, payload)
+    return payload
+
 
 @router.post("/tff/upload")
 async def upload_tff_record(req: TffUploadRequest, db: AsyncSession = Depends(get_db)):

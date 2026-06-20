@@ -7,9 +7,10 @@ import {
 
 interface Props {
   data: TffCumulativeSummary;
+  estimatePeriod?: string; // 현 시점 추정 포인트의 period (예: "2026-06")
 }
 
-export default function CumulativeView({ data }: Props) {
+export default function CumulativeView({ data, estimatePeriod }: Props) {
   const { totalData, yearlyData, monthlyData } = data;
   const [hoveredDataKey, setHoveredDataKey] = useState<string | null>(null);
 
@@ -110,10 +111,16 @@ export default function CumulativeView({ data }: Props) {
 
       {/* 2. 시계열 자산 흐름 차트 (월별) */}
       <div className="mt-8 bg-black/40 border border-white/5 rounded-2xl p-6">
-        <h4 className="text-lg font-semibold text-gray-200 mb-6 flex items-center gap-2">
+        <h4 className="text-lg font-semibold text-gray-200 mb-2 flex items-center gap-2">
             <CalendarDays className="w-5 h-5 text-indigo-400" />
             자산 및 수익 시계열 추이
         </h4>
+        {estimatePeriod && (
+            <p className="text-[11px] text-amber-400/90 mb-5 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                마지막 <strong className="font-bold">{estimatePeriod}</strong> 포인트는 현재가 기준 추정치입니다.
+            </p>
+        )}
         
         {processedMonthlyData && processedMonthlyData.length > 0 ? (
           <div className="flex flex-col gap-6 w-full">
@@ -172,7 +179,11 @@ export default function CumulativeView({ data }: Props) {
                     onMouseLeave={() => setHoveredDataKey(null)}
                   />
                   <ReferenceLine y={0} stroke="#ffffff30" strokeWidth={1} />
-                  
+                  {estimatePeriod && (
+                    <ReferenceLine x={estimatePeriod} stroke="#f59e0b" strokeDasharray="4 3" strokeOpacity={0.6}
+                      label={{ value: '추정', position: 'top', fill: '#f59e0b', fontSize: 10, fontWeight: 'bold' }} />
+                  )}
+
                   {/* 배경으로 깔리는 영역형 차트 (기말평가액) */}
                   <Area 
                     type="monotone" 
@@ -260,7 +271,10 @@ export default function CumulativeView({ data }: Props) {
                     onMouseLeave={() => setHoveredDataKey(null)}
                   />
                   <ReferenceLine y={0} stroke="#ffffff30" strokeWidth={1} />
-                  
+                  {estimatePeriod && (
+                    <ReferenceLine x={estimatePeriod} stroke="#f59e0b" strokeDasharray="4 3" strokeOpacity={0.6} />
+                  )}
+
                   {/* 수익률 라인 차트 */}
                   <Line 
                     type="monotone" 
