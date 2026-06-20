@@ -147,6 +147,7 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     axisLine={false}
                     tickLine={false}
                     interval={0}
+                    scale="band"
                     padding={{ left: 20, right: 20 }}
                     tickFormatter={(tickItem, index) => {
                       if (!tickItem) return '';
@@ -239,6 +240,7 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     axisLine={false}
                     tickLine={false}
                     interval={0}
+                    scale="band"
                     padding={{ left: 20, right: 20 }}
                     tickFormatter={(tickItem, index) => {
                       if (!tickItem) return '';

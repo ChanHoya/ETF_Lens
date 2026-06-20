@@ -147,16 +147,15 @@ export default function OverviewView({ data, contributionHoldings }: Props) {
         const sourceHoldings = (contributionHoldings && contributionHoldings.length > 0)
             ? contributionHoldings
             : latestInfo!.holdings;
-        // 투자수익금(investmentPnl) 기준으로 정렬
+        // 투자수익금(investmentPnl) 기준으로 정렬 → 상위 7개(Top 7)만 표시
         const sorted = [...sourceHoldings].sort((a, b) => b.investmentPnl - a.investmentPnl);
 
-        let top3 = sorted.slice(0, 3).filter(a => a.investmentPnl > 0);
-        let bottom3 = sorted.filter(a => a.investmentPnl < 0).slice(-3).reverse(); // 가장 손실 큰 3개 (sorted는 내림차순이므로 뒤에서부터)
+        const top7 = sorted.slice(0, 7);
 
-        const allPerformers = [...top3, ...bottom3].map(d => ({
+        const allPerformers = top7.map(d => ({
             name: d.name,
             pnl: d.investmentPnl,
-            fill: d.investmentPnl > 0 ? '#ef4444' : '#3b82f6'
+            fill: d.investmentPnl >= 0 ? '#ef4444' : '#3b82f6'
         }));
 
         let maxVal = 0;
@@ -365,9 +364,9 @@ export default function OverviewView({ data, contributionHoldings }: Props) {
                 {/* 성과 기여도 */}
                 <div className="bg-black/20 border border-white/5 rounded-2xl p-4 md:p-6 flex flex-col">
                     <h4 className="text-sm font-bold text-gray-300 mb-2 flex items-center gap-2 border-l-2 border-rose-500 pl-2">
-                        <TrendingUp className="w-4 h-4 text-rose-400" /> 올해 수익 기여 종목 (Top 3 & Bottom 3)
+                        <TrendingUp className="w-4 h-4 text-rose-400" /> 올해 수익 기여 종목 (Top 7)
                     </h4>
-                    <p className="text-[10px] text-gray-500 mb-6 font-medium pl-2">* 실제 평가수익금(절대금액) 기준으로 포트폴리오에 가장 영향력이 컸던 종목입니다.</p>
+                    <p className="text-[10px] text-gray-500 mb-6 font-medium pl-2">* 올해 누적 평가수익금(절대금액) 기준 상위 7개 종목입니다.</p>
 
                     <div className="flex-1 w-full relative min-h-[250px]">
                         <ResponsiveContainer width="100%" height="100%">
