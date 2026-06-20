@@ -106,6 +106,9 @@ export interface TffEstimateBuilt {
     // toggle ON: 전체 수치를 추정으로 전환
     estDisplay: TffFundData;
     portfolioMtdPct: number;       // 당월 포트폴리오 추정 수익률 (퍼센트)
+    // "올해 수익 기여 종목" 차트용 종목별 YTD 누적 손익 (OFF/ON)
+    contributionBase: TffHoldingsRow[];
+    contributionEst: TffHoldingsRow[];
     fetchedCount: number;
     totalCount: number;
 }
@@ -179,6 +182,30 @@ export function buildEstimateData(
             totalBalance: baseCash,
         },
     };
+
+    // 1-b) "올해(YTD) 수익 기여 종목" 차트용 — 종목별 연초 누적 손익
+    // (월별 시트의 월간 손익을 종목별로 합산 → 올해 누적. ON일 때 당월 MTD 가산)
+    const ytdPnlByName: Record<string, number> = {};
+    Object.values(fundData.monthlyMap).forEach(mi => {
+        mi.holdings.forEach(h => {
+            ytdPnlByName[h.name] = (ytdPnlByName[h.name] || 0) + (h.investmentPnl || 0);
+        });
+    });
+    const juneDeltaByName: Record<string, number> = {};
+    estHoldings.forEach(h => { juneDeltaByName[h.name] = h.investmentPnl; });
+
+    const contributionBase: TffHoldingsRow[] = baseMonthInfo.holdings.map(h => ({
+        ...h,
+        investmentPnl: ytdPnlByName[h.name] || 0,
+    }));
+    const contributionEst: TffHoldingsRow[] = baseMonthInfo.holdings.map(h => {
+        const { chg } = lookupChg(h.code, h.name);
+        return {
+            ...h,
+            endValue: h.endValue * (1 + chg / 100),
+            investmentPnl: (ytdPnlByName[h.name] || 0) + (juneDeltaByName[h.name] || 0),
+        };
+    });
 
     const portfolioMtdPct = baseTotal.endValue > 0 ? (sumPnl / baseTotal.endValue) * 100 : 0;
     const kospiChg = est.benchmarks?.kospi ?? null;
@@ -304,6 +331,8 @@ export function buildEstimateData(
         baseDisplay,
         estDisplay,
         portfolioMtdPct,
+        contributionBase,
+        contributionEst,
         fetchedCount: est.fetchedCount,
         totalCount: est.totalCount,
     };

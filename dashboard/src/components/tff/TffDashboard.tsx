@@ -664,7 +664,14 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                         {/* Content Area Rendering */}
                         <div className="bg-black/30 rounded-2xl p-2 md:p-3 border border-white/5 min-h-[400px]">
                             {activeSubTab === 'overview' && displayData && (
-                                <OverviewView data={displayData} />
+                                <OverviewView
+                                    data={displayData}
+                                    contributionHoldings={
+                                        estimateBuilt
+                                            ? (useEstimate ? estimateBuilt.contributionEst : estimateBuilt.contributionBase)
+                                            : undefined
+                                    }
+                                />
                             )}
 
                             {activeSubTab === 'cumulative' && displayData?.cumulative && (

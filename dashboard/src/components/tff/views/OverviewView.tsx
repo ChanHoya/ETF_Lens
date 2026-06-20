@@ -5,6 +5,8 @@ import { PiggyBank, TrendingUp, TrendingDown, Layers, Wallet, BarChart2 } from '
 
 interface Props {
     data: TffFundData;
+    // "올해 수익 기여 종목" 차트용 종목별 YTD 누적 손익 (제공 시 우선 사용)
+    contributionHoldings?: TffHoldingsRow[];
 }
 
 function categorizeAsset(name: string) {
@@ -55,7 +57,7 @@ const PRIMARY_COLORS: Record<string, string> = {
     "기타": "#10b981"    // emerald
 };
 
-export default function OverviewView({ data }: Props) {
+export default function OverviewView({ data, contributionHoldings }: Props) {
     const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
     // 1. Data Selection
@@ -141,8 +143,12 @@ export default function OverviewView({ data }: Props) {
 
     // 4. Top Contributors / Detractors
     const performanceData = useMemo(() => {
+        // 올해(YTD) 누적 손익 기준 — 제공되면 우선 사용, 없으면 최신월 보유분
+        const sourceHoldings = (contributionHoldings && contributionHoldings.length > 0)
+            ? contributionHoldings
+            : latestInfo!.holdings;
         // 투자수익금(investmentPnl) 기준으로 정렬
-        const sorted = [...latestInfo!.holdings].sort((a, b) => b.investmentPnl - a.investmentPnl);
+        const sorted = [...sourceHoldings].sort((a, b) => b.investmentPnl - a.investmentPnl);
 
         let top3 = sorted.slice(0, 3).filter(a => a.investmentPnl > 0);
         let bottom3 = sorted.filter(a => a.investmentPnl < 0).slice(-3).reverse(); // 가장 손실 큰 3개 (sorted는 내림차순이므로 뒤에서부터)
@@ -167,7 +173,7 @@ export default function OverviewView({ data }: Props) {
             data: allPerformers,
             domain
         };
-    }, [latestInfo]);
+    }, [latestInfo, contributionHoldings]);
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
