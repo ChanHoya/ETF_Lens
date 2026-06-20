@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { TffCumulativeSummary } from '../../../lib/tff/types';
 import { TrendingUp, TrendingDown, DollarSign, Activity, CalendarDays } from 'lucide-react';
 import {
@@ -13,6 +13,44 @@ interface Props {
 export default function CumulativeView({ data, estimatePeriod }: Props) {
   const { totalData, yearlyData, monthlyData } = data;
   const [hoveredDataKey, setHoveredDataKey] = useState<string | null>(null);
+  const chartWrapRef = useRef<HTMLDivElement>(null);
+
+  // 막대/포인트 가운데에 표시되는 흰색 세로선 커서
+  const VLineCursor = (props: any) => {
+    const { points, top, height } = props;
+    if (!points || points.length === 0) return null;
+    const x = points[0].x;
+    const y1 = points[0].y ?? top ?? 0;
+    const y2 = points[1]?.y ?? ((top ?? 0) + (height ?? 0));
+    return <line x1={x} y1={y1} x2={x} y2={y2} stroke="rgba(255,255,255,0.65)" strokeWidth={1.5} />;
+  };
+
+  // 팝업 박스를 막대 왼쪽에 배치하는 커스텀 툴팁 (오른쪽 절반 구간에서 왼쪽으로)
+  const SeriesTooltip = ({ active, payload, label, coordinate, valueFormatter }: any) => {
+    if (!active || !payload || payload.length === 0) return null;
+    const width = chartWrapRef.current?.clientWidth ?? 0;
+    const placeLeft = coordinate && width > 0 ? coordinate.x > width * 0.4 : true;
+    return (
+      <div style={{
+        transform: placeLeft ? 'translateX(calc(-100% - 20px))' : 'translateX(20px)',
+        backgroundColor: 'rgba(30,30,45,0.97)',
+        border: '1px solid #ffffff20',
+        borderRadius: '12px',
+        padding: '10px 13px',
+        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+        pointerEvents: 'none',
+        minWidth: '180px',
+      }}>
+        <p style={{ color: '#9ca3af', marginBottom: '8px', fontSize: '12px' }}>{label}</p>
+        {payload.map((entry: any, i: number) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '14px', fontSize: '13px', marginBottom: '3px' }}>
+            <span style={{ color: entry.color || entry.stroke || '#cbd5e1', fontWeight: 600 }}>{entry.name}</span>
+            <span style={{ color: '#f8fafc', fontWeight: 700 }}>{valueFormatter(entry.value)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   // 누적 투자수익금 계산
   let curAccProfit = 0;
@@ -123,7 +161,7 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
         )}
         
         {processedMonthlyData && processedMonthlyData.length > 0 ? (
-          <div className="flex flex-col gap-6 w-full">
+          <div className="flex flex-col gap-6 w-full" ref={chartWrapRef}>
             {/* 1. 금액 차트 (기말평가액, 수익금) */}
             <div className="w-full h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -147,8 +185,8 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     axisLine={false}
                     tickLine={false}
                     interval={0}
-                    scale="band"
-                    padding={{ left: 20, right: 20 }}
+                    scale="point"
+                    padding={{ left: 30, right: 30 }}
                     tickFormatter={(tickItem, index) => {
                       if (!tickItem) return '';
                       const [year, month] = tickItem.split('-');
@@ -166,13 +204,11 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     domain={['auto', 'auto']}
                     width={60}
                   />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1e1e2d', borderColor: '#ffffff20', borderRadius: '12px' }}
-                    itemStyle={{ fontSize: '13px' }}
-                    labelStyle={{ color: '#9ca3af', marginBottom: '8px' }}
-                    formatter={(value: number, name: string) => {
-                      return [formatMoney(value) + '원', name];
-                    }}
+                  <Tooltip
+                    cursor={<VLineCursor />}
+                    offset={0}
+                    allowEscapeViewBox={{ x: true, y: false }}
+                    content={<SeriesTooltip valueFormatter={(v: number) => formatMoney(v) + '원'} />}
                   />
                   <Legend 
                     wrapperStyle={{ paddingTop: '10px' }} 
@@ -197,12 +233,13 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     fill="url(#colorAsset)" 
                   />
                   {/* 수익금액 바 차트 */}
-                  <Bar 
-                    dataKey="profitAmount" 
-                    name="월별 투자수익금" 
+                  <Bar
+                    dataKey="profitAmount"
+                    name="월별 투자수익금"
                     fill="#f43f5e"
                     fillOpacity={hoveredDataKey && hoveredDataKey !== 'profitAmount' ? 0.2 : 1}
-                    radius={[4, 4, 0, 0]} 
+                    radius={[4, 4, 0, 0]}
+                    barSize={16}
                     maxBarSize={40}
                     activeBar={{ stroke: '#ffffff', strokeWidth: 2 }}
                   >
@@ -240,8 +277,8 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     axisLine={false}
                     tickLine={false}
                     interval={0}
-                    scale="band"
-                    padding={{ left: 20, right: 20 }}
+                    scale="point"
+                    padding={{ left: 30, right: 30 }}
                     tickFormatter={(tickItem, index) => {
                       if (!tickItem) return '';
                       const [year, month] = tickItem.split('-');
@@ -259,13 +296,11 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     domain={['auto', 'auto']}
                     width={60}
                   />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1e1e2d', borderColor: '#ffffff20', borderRadius: '12px' }}
-                    itemStyle={{ fontSize: '13px' }}
-                    labelStyle={{ color: '#9ca3af', marginBottom: '8px' }}
-                    formatter={(value: number, name: string) => {
-                      return [value.toFixed(1) + '%', name];
-                    }}
+                  <Tooltip
+                    cursor={<VLineCursor />}
+                    offset={0}
+                    allowEscapeViewBox={{ x: true, y: false }}
+                    content={<SeriesTooltip valueFormatter={(v: number) => v.toFixed(1) + '%'} />}
                   />
                   <Legend 
                     wrapperStyle={{ paddingTop: '10px' }} 
