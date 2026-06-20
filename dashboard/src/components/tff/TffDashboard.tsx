@@ -546,7 +546,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                         const label = parts.length === 3 ? `${parseInt(parts[1],10)}월 ${parseInt(parts[2],10)}일` : '현재';
                                         return `현시점(${label}) 기준 추정 시뮬레이션`;
                                     })()
-                                    : '추정 시뮬레이션 준비중 (10분 이상 소요) ...'}
+                                    : '추정 시뮬레이션 준비중 (최대 수분 소요) ...'}
                             </span>
                             {estimateBuilt && (
                                 <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black ${useEstimate ? 'bg-white/25' : 'bg-amber-500/20'}`}>
