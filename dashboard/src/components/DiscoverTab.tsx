@@ -540,11 +540,11 @@ export default function DiscoverTab() {
             {/* 오늘의 시장 모달 (finance.richgo.ai 임베드) */}
             {showTodayMarket && (
                 <div
-                    className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 md:p-6 animate-in fade-in duration-200"
+                    className="fixed inset-0 z-[200] flex items-start justify-center bg-black/70 backdrop-blur-sm p-2 md:p-3 animate-in fade-in duration-200"
                     onClick={() => setShowTodayMarket(false)}
                 >
                     <div
-                        className="relative w-full max-w-6xl h-[90vh] bg-[#0d0d12] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                        className="relative w-full max-w-6xl h-[96vh] bg-[#0d0d12] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* 헤더 */}
@@ -581,6 +581,9 @@ export default function DiscoverTab() {
                                 className="absolute inset-0 w-full h-full border-0"
                                 referrerPolicy="no-referrer-when-downgrade"
                                 sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                                onLoad={(e) => {
+                                    try { (e.currentTarget as HTMLIFrameElement).contentWindow?.scrollTo(0, 0); } catch { /* cross-origin */ }
+                                }}
                                 onError={() => setTodayMarketBlocked(true)}
                             />
                             {todayMarketBlocked && (
