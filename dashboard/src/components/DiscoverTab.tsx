@@ -579,11 +579,7 @@ export default function DiscoverTab() {
                                 src={TODAY_MARKET_URL}
                                 title="오늘의 시장"
                                 className="absolute inset-0 w-full h-full border-0"
-                                referrerPolicy="no-referrer-when-downgrade"
-                                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-                                onLoad={(e) => {
-                                    try { (e.currentTarget as HTMLIFrameElement).contentWindow?.scrollTo(0, 0); } catch { /* cross-origin */ }
-                                }}
+                                allowFullScreen
                                 onError={() => setTodayMarketBlocked(true)}
                             />
                             {todayMarketBlocked && (
