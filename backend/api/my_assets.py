@@ -555,10 +555,44 @@ async def get_my_portfolio(
                     res_all_prs = await db.execute(stmt_all_prs)
                     all_principal = sum(p.principal for p in res_all_prs.scalars().all())
                 
+                # 이번 조회에서 성공한 계좌 합
                 tot_asset = float(aggregated_summary["total_asset"])
                 tot_eval = float(aggregated_summary["total_eval_amount"])
                 tot_cash = float(aggregated_summary["cash_balance"])
-                
+
+                # ── 통합값 오염 방지 ──
+                # 일부 계좌가 일시적으로 조회 실패하면 valid_results 합만으로 'ALL'이
+                # 덮어써져 급락처럼 보이는 손상이 발생한다. 이번에 빠진 계좌는 가장 최근
+                # 스냅샷(<= 오늘) 값으로 보완해 통합 시계열의 연속성을 유지한다.
+                try:
+                    valid_acc_nos = {r["account_no"] for r in valid_results}
+                    known_acc_nos = (await db.execute(
+                        select(UserAssetSnapshot.account_no)
+                        .where(UserAssetSnapshot.account_no != "ALL")
+                        .distinct()
+                    )).scalars().all()
+                    for missing_acc in known_acc_nos:
+                        if missing_acc in valid_acc_nos:
+                            continue
+                        last_snap = (await db.execute(
+                            select(UserAssetSnapshot)
+                            .where(
+                                UserAssetSnapshot.account_no == missing_acc,
+                                UserAssetSnapshot.date <= today_str,
+                            )
+                            .order_by(UserAssetSnapshot.date.desc())
+                            .limit(1)
+                        )).scalars().first()
+                        if last_snap:
+                            tot_asset += last_snap.total_asset
+                            tot_eval += last_snap.eval_amount
+                            tot_cash += last_snap.cash_balance
+                            logger.warning(
+                                f"[Asset Snapshot] '{missing_acc}' 이번 조회 누락 → 최근 스냅샷({last_snap.date})으로 통합값 보완"
+                            )
+                except Exception as patch_err:
+                    logger.error(f"[Asset Snapshot] ALL 통합값 보완 실패: {patch_err}")
+
                 all_profit = tot_asset - all_principal if all_principal > 0 else 0.0
                 all_return = (all_profit / all_principal * 100) if all_principal > 0 else 0.0
                 
@@ -1317,6 +1351,66 @@ async def get_portfolio_overlap(request: Request, db: AsyncSession = Depends(get
     return result
 
 
+async def _repair_corrupted_all_snapshots(db, all_snapshots):
+    """일부 계좌 조회 실패로 통합('ALL') 스냅샷이 일부 계좌 합으로만 덮어써져
+    급락/급등처럼 보이는 손상 데이터를 계좌별 스냅샷 합으로 보정한다.
+
+    계좌별 스냅샷이 '완전히' 적재된 날짜(= 해당 기간 최대 계좌 수와 동일)에 한해서만
+    보정하므로, 초기처럼 일부 계좌만 존재하던 과거 데이터는 건드리지 않는다.
+    """
+    from db.models import UserAssetSnapshot, UserPrincipal
+    from sqlalchemy import select
+
+    # 계좌별(non-ALL) 스냅샷을 날짜별로 합산/카운트
+    stmt = select(UserAssetSnapshot).where(UserAssetSnapshot.account_no != "ALL")
+    rows = (await db.execute(stmt)).scalars().all()
+    if not rows:
+        return
+
+    by_date = {}
+    for r in rows:
+        agg = by_date.setdefault(r.date, {"total": 0.0, "eval": 0.0, "cash": 0.0, "n": 0})
+        agg["total"] += r.total_asset
+        agg["eval"] += r.eval_amount
+        agg["cash"] += r.cash_balance
+        agg["n"] += 1
+
+    expected_n = max(agg["n"] for agg in by_date.values())  # 완전 적재 기준 계좌 수
+    if expected_n < 2:
+        return
+
+    # 'ALL' 원금 (수익률 재계산용)
+    all_pr = (await db.execute(
+        select(UserPrincipal).where(UserPrincipal.account_no == "ALL")
+    )).scalars().first()
+    if all_pr:
+        all_principal = all_pr.principal
+    else:
+        all_principal = sum(
+            p.principal for p in (await db.execute(select(UserPrincipal))).scalars().all()
+        )
+
+    corrected = 0
+    for snap in all_snapshots:
+        agg = by_date.get(snap.date)
+        if not agg or agg["n"] != expected_n:
+            continue  # 계좌별 데이터가 불완전한 날짜는 신뢰할 수 없으므로 보정하지 않음
+        # 통합값이 계좌별 합과 2% 이상 벌어지면 손상으로 간주하고 보정
+        if abs(snap.total_asset - agg["total"]) <= agg["total"] * 0.02:
+            continue
+        snap.total_asset = round(agg["total"], 2)
+        snap.eval_amount = round(agg["eval"], 2)
+        snap.cash_balance = round(agg["cash"], 2)
+        if all_principal > 0:
+            snap.accumulated_profit = round(agg["total"] - all_principal, 2)
+            snap.accumulated_return = round((agg["total"] - all_principal) / all_principal * 100, 2)
+        corrected += 1
+
+    if corrected:
+        await db.commit()
+        logger.info(f"[Asset History] Repaired {corrected} corrupted 'ALL' snapshot(s) from per-account sums")
+
+
 @router.get("/asset-history")
 async def get_asset_history(
     request: Request,
@@ -1348,7 +1442,15 @@ async def get_asset_history(
         today = datetime.now(KST)
         cutoff_date = (today - timedelta(days=days)).strftime("%Y-%m-%d")
         filtered_snapshots = [s for s in snapshots if s.date >= cutoff_date]
-        
+
+        # 통합('ALL') 시계열에 한해, 일부 계좌 조회 실패로 손상된 과거 스냅샷을 보정
+        if account_no == "ALL":
+            try:
+                await _repair_corrupted_all_snapshots(db, filtered_snapshots)
+            except Exception as e:
+                await db.rollback()
+                logger.error(f"[Asset History] snapshot repair failed: {e}")
+
         today_str = today.strftime("%Y-%m-%d")
         has_today = any(s.date == today_str for s in filtered_snapshots)
         

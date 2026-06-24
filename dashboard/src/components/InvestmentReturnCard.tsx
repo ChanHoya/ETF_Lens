@@ -136,9 +136,9 @@ export default function InvestmentReturnCard({ totalEvalAmount, cashBalance }: P
             {/* ── 1. 통합 요약 헤더 (3컬럼) ── */}
             <div className="flex flex-col md:flex-row items-center gap-4 md:gap-0 justify-between bg-white/[0.03] border border-white/5 rounded-[32px] py-4 px-6 md:py-4 md:px-8 backdrop-blur-md">
                 
-                {/* (1) 초기 투자금 */}
+                {/* (1) 누적 투자금액 */}
                 <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left border-b md:border-b-0 md:border-r border-white/10 pb-2 md:pb-0 md:pr-8 w-full md:w-auto">
-                    <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">초기 투자금</p>
+                    <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">누적 투자금액</p>
                     <div className="flex items-baseline gap-1">
                         <p className="text-2xl md:text-4xl font-extrabold tracking-tight text-white">{fmtKRW(totalPrincipal)}</p>
                         <span className="text-xs md:text-sm text-gray-500">원</span>
