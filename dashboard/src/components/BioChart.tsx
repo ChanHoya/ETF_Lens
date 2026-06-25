@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Activity, ArrowUpRight, Sparkles, TrendingUp, BookOpen, PieChart, Info, ShieldAlert } from 'lucide-react';
+import { Activity, ArrowUpRight, TrendingUp, BookOpen, PieChart } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
+import SectorInsightReport, { InsightContent } from './SectorInsightReport';
 
 interface BioChartProps {
     onOpenDetail?: (code: string) => void;
@@ -43,6 +44,35 @@ const etfNameToCodeMap: { [key: string]: string } = {
     "TIGER 바이오TOP10": "364970",
 };
 
+
+const BIO_INSIGHT_FALLBACK: InsightContent = {
+    tab1: { cards: [
+        { title: `거시경제적 피벗 (Macro Pivot)`, body: `2025년 하반기부터 본격화된 금리 인하 기조에 따라 바이오텍의 자본 조달 비용이 낮아지며 뚜렷한 회복세를 보이고 있습니다. 자본 집약적인 바이오 산업 특성상 유동성 공급은 투자 매력도를 높이는 기폭제 역할을 합니다.` },
+        { title: `특허 절벽 & M&A 활성화`, body: `2026~2030년대 초반 블록버스터 의약품 특허가 대거 만료(엘리퀴스 '26, 키트루다 '28)됩니다. 매출 공백을 메우기 위해 글로벌 빅파마들은 임상 3상/상업화 단계 후기 자산(M&A 중 비중 24년 27% → 25년 46% 급증) 인수에 총력을 기울이고 있습니다. (예: J&J의 인트라-셀룰라 145억 달러 인수)` },
+        { title: `FDA 신약 승인 랠리`, body: `2025년 46개 혁신 신약이 승인(소분자 67%)된 데 이어, 비마약성 통증제 수제트리진('25.01), 구토 치료제 트라디피탄트('25.12), 주 1회 인슐린 아이코덱('26.03), 경구용 비만 치료제 오포글리프론('26.04) 등 획기적인 승인이 잇따르고 있습니다.` },
+    ] },
+    etfs: {
+        domestic: { items: [
+            { name: `KoAct 바이오헬스케어액티브 (462900 | AUM 6,000억대):`, desc: `플랫폼 기술수출 및 ADC/이중항체 중심 기업(올릭스 9.9%, 알테오젠 8.9%, 셀트리온 7.7%, 에이비엘 7.7%, 리가켐 7.7%)을 동적으로 편입하며 1년 27.64%의 초과수익을 거두었습니다.` },
+            { name: `TIMEFOLIO K바이오액티브 (463050 | AUM 3,300억대):`, desc: `모멘텀 트레이딩 및 비중 조절이 매우 신속한 하이퍼 액티브 펀드입니다. 알테오젠 10%, 셀트리온 9.5% 등 주도주에 과감하게 집중합니다. (연 보수 0.80%)` },
+            { name: `TIGER 바이오TOP10 (364970 | AUM 2,900억대):`, desc: `국내 3대 대장주(셀트리온 26.2%, 알테오젠 21.5%, 삼성바이오로직스 15.9%) 비중이 63% 이상을 차지하도록 설계되어 대형주 위주의 안정적인 연금 장기투자에 유리합니다.` },
+        ] },
+        overseas: { items: [
+            { name: `IBB (AUM $8.5B | 보수 0.44%):`, desc: `대형 제약사/메가캡 바이오(버텍스, 길리어드, 암젠 등) 비중이 높아 하방 경직성이 우수하고 장기적인 안정성을 지닌 포트폴리오의 초석입니다.` },
+            { name: `XBI (AUM $8.4B | 보수 0.35%):`, desc: `동일 가중 방식을 적용하여 중소형/마이크로캡 비중이 높습니다. 금리 인하 및 M&A 붐의 최대 수혜주로 2025년 35.84% 수익률로 뛰어난 탄력성을 증명했습니다.` },
+            { name: `특화 테마형 (CANC / ARKG / BBH):`, desc: `항암 액티브 CANC(1년 +56.76%), 유전자 혁신 ARKG, 대형주 초집중 BBH 및 헬스케어 전체 지수를 추종하여 변동성을 억제하는 XLV($38.4B), VHT($19.2B) 등이 좋은 대안입니다.` },
+        ] },
+    },
+    strategy: {
+        models: { items: [
+            { name: `글로벌 대장주 중심 코어-새틀라이트 (코어 60~70% : 새틀라이트 30~40%):`, detail: `코어 60~70% = 미국 대형 바이오텍(IBB) + 헬스케어 지수(XLV, VHT) | 새틀라이트 30~40% = XBI, CANC, 국내 플랫폼 액티브(KoAct, TIMEFOLIO)` },
+        ] },
+        guides: { items: [
+            { name: `글로벌 신약 랠리와 국내 플랫폼의 인과성:`, body: `미국 시장의 중소형 신약 허가 랠리와 M&A는 글로벌 빅파마의 자금력을 강화시키고, 이는 다시 우수한 원천 플랫폼 기술을 가진 한국 바이오텍(ADC, 이중항체 등)으로의 글로벌 기술이전 활성화로 이어지는 긴밀한 연결고리를 형성합니다.` },
+        ] },
+        footnote: `개인연금 및 퇴직연금 계좌(IRP) 내에서는 국내 상장 바이오 액티브 ETF를 최대 70~100%까지 편입 가능하므로 과세이연 및 절세 혜택 극대화를 적극 권장합니다.`,
+    },
+};
 export default function BioChart({ onOpenDetail }: BioChartProps) {
     const [period, setPeriod] = useState('1Y');
     const [chartData, setChartData] = useState<any[]>([]);
@@ -514,144 +544,19 @@ export default function BioChart({ onOpenDetail }: BioChartProps) {
             <div className="w-full border-t border-white/10 my-6"></div>
 
             {/* Expert Insight Section */}
-            <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <h4 className="text-base font-extrabold text-white flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
-                        글로벌 제약·바이오 메가 트렌드 & 포트폴리오 전략
-                    </h4>
-                    <span className="text-[10px] text-emerald-400/80 font-bold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
-                        Gemini Expert Report
-                    </span>
-                </div>
-
-                {/* Tab Menu */}
-                <div className="flex flex-wrap bg-[#1a1a23]/60 p-1 rounded-xl border border-white/5 gap-1 self-start">
-                    {[
-                        { id: 'cycle', label: '1. 혁신 사이클 & M&A', icon: TrendingUp },
-                        { id: 'etfs', label: '2. 국내외 핵심 ETF 분석', icon: BookOpen },
-                        { id: 'strategy', label: '3. 연금 자산배분 솔루션', icon: PieChart }
-                    ].map((tab) => {
-                        const Icon = tab.icon;
-                        const isSelected = activeInsightTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveInsightTab(tab.id as any)}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                                    isSelected
-                                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
-                                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                                }`}
-                            >
-                                <Icon className="w-3.5 h-3.5" />
-                                {tab.label}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {/* Tab Contents */}
-                {activeInsightTab === 'cycle' && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-1">
-                        {/* Card 1: Macro Pivot */}
-                        <div className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-                                <TrendingUp className="w-4 h-4" />
-                                <span>거시경제적 피벗 (Macro Pivot)</span>
-                            </div>
-                            <p className="text-xs text-gray-300 leading-relaxed">
-                                2025년 하반기부터 본격화된 금리 인하 기조에 따라 바이오텍의 자본 조달 비용이 낮아지며 뚜렷한 회복세를 보이고 있습니다. 자본 집약적인 바이오 산업 특성상 유동성 공급은 투자 매력도를 높이는 기폭제 역할을 합니다.
-                            </p>
-                        </div>
-                        {/* Card 2: Patent Cliff */}
-                        <div className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-                                <ShieldAlert className="w-4 h-4" />
-                                <span>특허 절벽 & M&A 활성화</span>
-                            </div>
-                            <p className="text-xs text-gray-300 leading-relaxed">
-                                2026~2030년대 초반 블록버스터 의약품 특허가 대거 만료(엘리퀴스 &apos;26, 키트루다 &apos;28)됩니다. 매출 공백을 메우기 위해 글로벌 빅파마들은 임상 3상/상업화 단계 후기 자산(M&A 중 비중 24년 27% &rarr; 25년 46% 급증) 인수에 총력을 기울이고 있습니다. (예: J&J의 인트라-셀룰라 145억 달러 인수)
-                            </p>
-                        </div>
-                        {/* Card 3: FDA Approval */}
-                        <div className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-blue-400 font-bold text-sm">
-                                <Info className="w-4 h-4" />
-                                <span>FDA 신약 승인 랠리</span>
-                            </div>
-                            <p className="text-xs text-gray-300 leading-relaxed">
-                                2025년 46개 혁신 신약이 승인(소분자 67%)된 데 이어, 비마약성 통증제 수제트리진(&apos;25.01), 구토 치료제 트라디피탄트(&apos;25.12), 주 1회 인슐린 아이코덱(&apos;26.03), 경구용 비만 치료제 오포글리프론(&apos;26.04) 등 획기적인 승인이 잇따르고 있습니다.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {activeInsightTab === 'etfs' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
-                        {/* US ETFs */}
-                        <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-3">
-                            <h5 className="text-sm font-bold text-emerald-400 border-b border-white/5 pb-2">미국 시장 핵심 ETF</h5>
-                            <div className="flex flex-col gap-2.5 text-xs text-gray-300">
-                                <div>
-                                    <span className="font-bold text-white">IBB (AUM $8.5B | 보수 0.44%):</span>
-                                    <p className="mt-0.5 text-gray-400">대형 제약사/메가캡 바이오(버텍스, 길리어드, 암젠 등) 비중이 높아 하방 경직성이 우수하고 장기적인 안정성을 지닌 포트폴리오의 초석입니다.</p>
-                                </div>
-                                <div>
-                                    <span className="font-bold text-white">XBI (AUM $8.4B | 보수 0.35%):</span>
-                                    <p className="mt-0.5 text-gray-400">동일 가중 방식을 적용하여 중소형/마이크로캡 비중이 높습니다. 금리 인하 및 M&A 붐의 최대 수혜주로 2025년 35.84% 수익률로 뛰어난 탄력성을 증명했습니다.</p>
-                                </div>
-                                <div>
-                                    <span className="font-bold text-white">특화 테마형 (CANC / ARKG / BBH):</span>
-                                    <p className="mt-0.5 text-gray-400">항암 액티브 CANC(1년 +56.76%), 유전자 혁신 ARKG, 대형주 초집중 BBH 및 헬스케어 전체 지수를 추종하여 변동성을 억제하는 XLV($38.4B), VHT($19.2B) 등이 좋은 대안입니다.</p>
-                                </div>
-                            </div>
-                        </div>
-                        {/* KR ETFs */}
-                        <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-3">
-                            <h5 className="text-sm font-bold text-teal-400 border-b border-white/5 pb-2">국내 시장 핵심 ETF</h5>
-                            <div className="flex flex-col gap-2.5 text-xs text-gray-300">
-                                <div>
-                                    <span className="font-bold text-white">KoAct 바이오헬스케어액티브 (462900 | AUM 6,000억대):</span>
-                                    <p className="mt-0.5 text-gray-400">플랫폼 기술수출 및 ADC/이중항체 중심 기업(올릭스 9.9%, 알테오젠 8.9%, 셀트리온 7.7%, 에이비엘 7.7%, 리가켐 7.7%)을 동적으로 편입하며 1년 27.64%의 초과수익을 거두었습니다.</p>
-                                </div>
-                                <div>
-                                    <span className="font-bold text-white">TIMEFOLIO K바이오액티브 (463050 | AUM 3,300억대):</span>
-                                    <p className="mt-0.5 text-gray-400">모멘텀 트레이딩 및 비중 조절이 매우 신속한 하이퍼 액티브 펀드입니다. 알테오젠 10%, 셀트리온 9.5% 등 주도주에 과감하게 집중합니다. (연 보수 0.80%)</p>
-                                </div>
-                                <div>
-                                    <span className="font-bold text-white">TIGER 바이오TOP10 (364970 | AUM 2,900억대):</span>
-                                    <p className="mt-0.5 text-gray-400">국내 3대 대장주(셀트리온 26.2%, 알테오젠 21.5%, 삼성바이오로직스 15.9%) 비중이 63% 이상을 차지하도록 설계되어 대형주 위주의 안정적인 연금 장기투자에 유리합니다.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeInsightTab === 'strategy' && (
-                    <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-4 mt-1">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <h5 className="text-xs font-bold text-emerald-400 mb-1">글로벌 대장주 중심 코어-새틀라이트</h5>
-                                <p className="text-xs text-gray-300 leading-relaxed">
-                                    포트폴리오의 60~70%는 매출 기반이 단단한 미국 대형 바이오텍(IBB) 및 헬스케어 지수(XLV, VHT)로 안전판을 구축하고, 30~40%는 금리 인하/M&A 국면의 업사이드를 노리는 XBI, CANC, 국내 플랫폼 액티브(KoAct, TIMEFOLIO)에 배분하여 성과를 다변화합니다.
-                                </p>
-                            </div>
-                            <div>
-                                <h5 className="text-xs font-bold text-emerald-400 mb-1">글로벌 신약 랠리와 국내 플랫폼의 인과성</h5>
-                                <p className="text-xs text-gray-300 leading-relaxed">
-                                    미국 시장의 중소형 신약 허가 랠리와 M&A는 글로벌 빅파마의 자금력을 강화시키고, 이는 다시 우수한 원천 플랫폼 기술을 가진 한국 바이오텍(ADC, 이중항체 등)으로의 글로벌 기술이전 활성화로 이어지는 긴밀한 연결고리를 형성합니다.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="border-t border-white/5 pt-3">
-                            <p className="text-[10px] text-gray-500 leading-relaxed">
-                                * 개인연금 및 퇴직연금 계좌(IRP) 내에서는 국내 상장 바이오 액티브 ETF를 최대 70~100%까지 편입 가능하므로 과세이연 및 절세 혜택 극대화를 적극 권장합니다.
-                            </p>
-                        </div>
-                    </div>
-                )}
-            </div>
+            <SectorInsightReport
+                sector="bio"
+                title="글로벌 제약·바이오 메가 트렌드 & 포트폴리오 전략"
+                accent="emerald"
+                tabs={[
+                    { id: 'cycle', label: '1. 혁신 사이클 & M&A', icon: TrendingUp },
+                    { id: 'etfs', label: '2. 국내외 핵심 ETF 분석', icon: BookOpen },
+                    { id: 'strategy', label: '3. 연금 자산배분 솔루션', icon: PieChart },
+                ]}
+                activeTab={activeInsightTab}
+                onTabChange={(id) => setActiveInsightTab(id as any)}
+                fallback={BIO_INSIGHT_FALLBACK}
+            />
         </div>
     );
 }

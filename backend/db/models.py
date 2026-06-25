@@ -21,6 +21,17 @@ class SimulationHistory(Base):
     result_payload = Column(Text)  # JSON string of frontend ready payload
 
 
+class SectorInsight(Base):
+    """섹터별 'Gemini Expert Report' 동적 생성본 캐시.
+    Update 버튼 클릭 시 Gemini로 재생성되며, 생성 일시와 함께 저장되어
+    다음 접속 시 저장본을 그대로 보여준다."""
+    __tablename__ = "sector_insight"
+
+    sector = Column(String, primary_key=True, index=True)  # space / semi / energy / bio
+    content = Column(Text)  # JSON string (tab1 / etfs / strategy 구조)
+    generated_at = Column(DateTime, default=datetime.utcnow)
+
+
 class ETFMaster(Base):
     __tablename__ = "etf_master"
 

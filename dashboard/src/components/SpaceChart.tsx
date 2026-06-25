@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Activity, ArrowUpRight, Sparkles, TrendingUp, BookOpen, PieChart, BarChart3, AlertTriangle } from 'lucide-react';
+import { Activity, ArrowUpRight, TrendingUp, BookOpen, PieChart } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
+import SectorInsightReport, { InsightContent } from './SectorInsightReport';
 
 interface SpaceChartProps {
     onOpenDetail?: (code: string) => void;
@@ -127,6 +128,36 @@ const isBeforeKrMarketOpen = (): boolean => {
     }
 };
 
+
+const SPACE_INSIGHT_FALLBACK: InsightContent = {
+    tab1: { cards: [
+        { title: '저궤도 위성 통신망(LEO)과 D2C 혁신', body: '스타링크의 지배적 확장 속에서 스마트폰-위성 직접 연결(D2C) 시장이 개화하고 있습니다. AST SpaceMobile(ASTS) 등 혁신 기업들이 글로벌 통신사와의 파트너십을 바탕으로 지상 기지국 없는 완전한 글로벌 연결성을 구축하여 통신 패러다임을 바꿉니다.' },
+        { title: '민간 로켓 발사 대중화 & RKLB 모멘텀', body: '위성 발사 수요는 폭증하나 발사체 캐파는 만성 쇼티지 상태입니다. 독점적 위치의 SpaceX 스타쉽에 대응하여 Rocket Lab(RKLB)의 소형 발사체 일렉트론(Electron) 및 중형 재사용 로켓 뉴트론(Neutron) 개발이 가속화되며 발사 대중화 수혜를 흡수하고 있습니다.' },
+        { title: '우주 방산 및 정부 탐사(Artemis) 예산 수혜', body: '강대국 간의 우주 헤게모니 경쟁 심화로 국가 안보 위성 프로젝트 및 우주군 예산이 지속 증액되고 있습니다. 아울러 NASA 주도의 유인 달 탐사 아르테미스(Artemis) 계획 본격화로 민간 우주 하드웨어 및 서비스 조달 수혜가 본격화됩니다.' },
+    ] },
+    etfs: {
+        domestic: { items: [
+            { name: 'KODEX 미국우주항공 (488050) & SOL 미국우주항공TOP10 (495470):', desc: '록히드마틴, 노스롭그루먼, 하리스 등 강력한 미국의 전통 우주항공/방위산업 대형 계약 기업들에 집중 투자합니다. 정부 조달 계약 기반의 견실한 이익 구조와 안정성을 지향합니다.' },
+            { name: 'ACE 미국우주테크액티브 (484930) & Tiger 미국우주테크 (488100):', desc: 'RKLB, ASTS, LUNR 등 뉴스 및 기술 이벤트 모멘텀이 강한 민간 우주테크 혁신 기업들의 비중이 상대적으로 높습니다. 우주 패러다임 변화에 따라 장기적인 고수익 성장을 기대하는 액티브/패시브 포트폴리오입니다.' },
+        ] },
+        overseas: { items: [
+            { name: 'ARKX (ARK Space Exploration & Innovation ETF | AUM $200M+):', desc: '액티브 혁신 투자의 선두인 ARK가 우주 탐사와 혁신 기술 전반에 배분합니다. 농업 기술(DE), 3D 프린팅 등 간접적인 수혜 산업까지 포괄적인 포트폴리오를 구성해 다각화된 투자를 제공합니다.' },
+            { name: 'UFO (Procure Space ETF | AUM $35M+):', desc: '순수 우주 산업 및 인프라 지수를 추종하는 대표적인 패시브 상품입니다. 위성 통신 서비스 및 수송, 하드웨어 장비 비중이 매우 높아 글로벌 순수 우주 섹터 전체 성장률을 추종하는 정석적인 기초 자산입니다.' },
+        ] },
+    },
+    strategy: {
+        models: { items: [
+            { name: '공격성장형 (우주 60% : 기타 40%):', detail: 'ACE 미국우주테크 25% + UFO 20% + RKLB/ASTS 개별주 15% | S&P 500 20% + 미국 채권 20%' },
+            { name: '균형포커스형 (우주 40% : 기타 60%):', detail: 'KODEX 미국우주항공 20% + ARKX 15% + Tiger 우주테크 5% | 배당성장 30% + 국채 30%' },
+            { name: '인컴방어형 (우주 20% : 기타 80%):', detail: 'KODEX 미국우주항공 15% + SOL 우주항공 5% | 리츠/커버드콜 배당 40% + 중단기 채권 40%' },
+        ] },
+        guides: { items: [
+            { name: '뉴스 변동성 및 냉각 진입 기준:', body: '민간 발사 성공 여부나 스케줄 지연 등으로 단기 주가 출렁임이 심하게 일어납니다. 핵심 ETF들의 가격이 120일 또는 200일 SMA선 부근까지 기술적 조정을 겪거나 RSI가 40 이하로 충분히 냉각됐을 때 긴 호흡으로 1차 진입합니다.' },
+            { name: '과열 과다이격 분할 비중 조절:', body: '대형 발사 성공이나 수주 뉴스 폭발로 이격도가 200일선 대비 +30% 이상 벌어지고, 단기 RSI가 75를 초과하는 등 투기적 매수세 유입 시에는 장기 적립 포지션 중 20%를 부분 실현해 리스크를 통제하는 것을 지향합니다.' },
+        ] },
+        footnote: '우주 섹터는 전통 방산주와 뉴스에 극도로 민감한 초기 성장 벤처 기술주가 섞여 있어 타 분야 대비 고유 변동성(Beta)이 매우 큽니다. 정부 계약 기반의 방산 기업(대형주)과 미래 혁신 위성 통신/운송 기업(중소형주)을 적절히 배분하여 극단적인 변동성을 흡수하며 장기적인 적립식 전략으로 가야 성공적입니다.',
+    },
+};
 export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
     const [period, setPeriod] = useState('1Y');
     const [chartData, setChartData] = useState<any[]>([]);
@@ -904,160 +935,19 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
             <div className="w-full border-t border-white/10 my-6"></div>
 
             {/* Expert Insight Section */}
-            <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <h4 className="text-base font-extrabold text-white flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-cyan-500 animate-pulse" />
-                        AI 패러다임 쉬프트와 글로벌 우주항공 공급망 전략
-                    </h4>
-                    <span className="text-[10px] text-cyan-500/80 font-bold px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">
-                        Gemini Expert Report
-                    </span>
-                </div>
-
-                {/* Tab Menu */}
-                <div className="flex flex-wrap bg-[#1a1a23]/60 p-1 rounded-xl border border-white/5 gap-1 self-start">
-                    {[
-                        { id: 'macro', label: '1. 매크로 & 우주항공 트렌드', icon: TrendingUp },
-                        { id: 'etfs', label: '2. 국내외 핵심 ETF 분석', icon: BookOpen },
-                        { id: 'strategy', label: '3. 자산배분 모델 & 가이드', icon: PieChart }
-                    ].map((tab) => {
-                        const Icon = tab.icon;
-                        const isSelected = activeInsightTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveInsightTab(tab.id as any)}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                                    isSelected
-                                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
-                                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                                }`}
-                            >
-                                <Icon className="w-3.5 h-3.5" />
-                                {tab.label}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {/* Tab Contents */}
-                {activeInsightTab === 'macro' && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-1">
-                        {/* Card 1: Starlink & LEO */}
-                        <div className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-cyan-400 font-bold text-sm">
-                                <TrendingUp className="w-4 h-4" />
-                                <span>저궤도 위성 통신망(LEO)과 D2C 혁신</span>
-                            </div>
-                            <p className="text-xs text-gray-300 leading-relaxed">
-                                스타링크의 지배적 확장 속에서 스마트폰-위성 직접 연결(D2C) 시장이 개화하고 있습니다. AST SpaceMobile(ASTS) 등 혁신 기업들이 글로벌 통신사와의 파트너십을 바탕으로 지상 기지국 없는 완전한 글로벌 연결성을 구축하여 통신 패러다임을 바꿉니다.
-                            </p>
-                        </div>
-                        {/* Card 2: Rocket Launch */}
-                        <div className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-purple-400 font-bold text-sm">
-                                <AlertTriangle className="w-4 h-4" />
-                                <span>민간 로켓 발사 대중화 & RKLB 모멘텀</span>
-                            </div>
-                            <p className="text-xs text-gray-300 leading-relaxed">
-                                위성 발사 수요는 폭증하나 발사체 캐파는 만성 쇼티지 상태입니다. 독점적 위치의 SpaceX 스타쉽에 대응하여 Rocket Lab(RKLB)의 소형 발사체 일렉트론(Electron) 및 중형 재사용 로켓 뉴트론(Neutron) 개발이 가속화되며 발사 대중화 수혜를 흡수하고 있습니다.
-                            </p>
-                        </div>
-                        {/* Card 3: Gov Budget */}
-                        <div className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-blue-400 font-bold text-sm">
-                                <BarChart3 className="w-4 h-4" />
-                                <span>우주 방산 및 정부 탐사(Artemis) 예산 수혜</span>
-                            </div>
-                            <p className="text-xs text-gray-300 leading-relaxed">
-                                강대국 간의 우주 헤게모니 경쟁 심화로 국가 안보 위성 프로젝트 및 우주군 예산이 지속 증액되고 있습니다. 아울러 NASA 주도의 유인 달 탐사 아르테미스(Artemis) 계획 본격화로 민간 우주 하드웨어 및 서비스 조달 수혜가 본격화됩니다.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {activeInsightTab === 'etfs' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
-                        {/* KR ETFs */}
-                        <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-3">
-                            <h5 className="text-sm font-bold text-cyan-400 border-b border-white/5 pb-2">국내 상장 핵심 ETF</h5>
-                            <div className="flex flex-col gap-2.5 text-xs text-gray-300">
-                                <div>
-                                    <span className="font-bold text-white">KODEX 미국우주항공 (488050) & SOL 미국우주항공TOP10 (495470):</span>
-                                    <p className="mt-0.5 text-gray-400">록히드마틴, 노스롭그루먼, 하리스 등 강력한 미국의 전통 우주항공/방위산업 대형 계약 기업들에 집중 투자합니다. 정부 조달 계약 기반의 견실한 이익 구조와 안정성을 지향합니다.</p>
-                                </div>
-                                <div>
-                                    <span className="font-bold text-white">ACE 미국우주테크액티브 (484930) & Tiger 미국우주테크 (488100):</span>
-                                    <p className="mt-0.5 text-gray-400">RKLB, ASTS, LUNR 등 뉴스 및 기술 이벤트 모멘텀이 강한 민간 우주테크 혁신 기업들의 비중이 상대적으로 높습니다. 우주 패러다임 변화에 따라 장기적인 고수익 성장을 기대하는 액티브/패시브 포트폴리오입니다.</p>
-                                </div>
-                            </div>
-                        </div>
-                        {/* US ETFs */}
-                        <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-3">
-                            <h5 className="text-sm font-bold text-blue-400 border-b border-white/5 pb-2">해외 상장 핵심 ETF</h5>
-                            <div className="flex flex-col gap-2.5 text-xs text-gray-300">
-                                <div>
-                                    <span className="font-bold text-white">ARKX (ARK Space Exploration & Innovation ETF | AUM $200M+):</span>
-                                    <p className="mt-0.5 text-gray-400">액티브 혁신 투자의 선두인 ARK가 우주 탐사와 혁신 기술 전반에 배분합니다. 농업 기술(DE), 3D 프린팅 등 간접적인 수혜 산업까지 포괄적인 포트폴리오를 구성해 다각화된 투자를 제공합니다.</p>
-                                </div>
-                                <div>
-                                    <span className="font-bold text-white">UFO (Procure Space ETF | AUM $35M+):</span>
-                                    <p className="mt-0.5 text-gray-400">순수 우주 산업 및 인프라 지수를 추종하는 대표적인 패시브 상품입니다. 위성 통신 서비스 및 수송, 하드웨어 장비 비중이 매우 높아 글로벌 순수 우주 섹터 전체 성장률을 추종하는 정석적인 기초 자산입니다.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeInsightTab === 'strategy' && (
-                    <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-4 mt-1">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <h5 className="text-xs font-bold text-cyan-400 mb-2 flex items-center gap-1">
-                                    <PieChart className="w-3.5 h-3.5" />
-                                    포트폴리오 자산배분 모델 제안
-                                </h5>
-                                <div className="text-xs text-gray-300 space-y-2 leading-relaxed font-sans">
-                                    <div>
-                                        <span className="font-bold text-white">공격성장형 (우주 60% : 기타 40%):</span>
-                                        <span className="text-gray-400"> ACE 미국우주테크 25% + UFO 20% + RKLB/ASTS 개별주 15% | S&P 500 20% + 미국 채권 20%</span>
-                                    </div>
-                                    <div>
-                                        <span className="font-bold text-white">균형포커스형 (우주 40% : 기타 60%):</span>
-                                        <span className="text-gray-400"> KODEX 미국우주항공 20% + ARKX 15% + Tiger 우주테크 5% | 배당성장 30% + 국채 30%</span>
-                                    </div>
-                                    <div>
-                                        <span className="font-bold text-white">인컴방어형 (우주 20% : 기타 80%):</span>
-                                        <span className="text-gray-400"> KODEX 미국우주항공 15% + SOL 우주항공 5% | 리츠/커버드콜 배당 40% + 중단기 채권 40%</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <h5 className="text-xs font-bold text-cyan-400 mb-2 flex items-center gap-1">
-                                    <TrendingUp className="w-3.5 h-3.5" />
-                                    우주테크 이벤트/기술적 진입 가이드
-                                </h5>
-                                <div className="text-xs text-gray-300 space-y-2 leading-relaxed">
-                                    <div>
-                                        <span className="font-bold text-white">뉴스 변동성 및 냉각 진입 기준:</span>
-                                        <p className="mt-0.5 text-gray-400">민간 발사 성공 여부나 스케줄 지연 등으로 단기 주가 출렁임이 심하게 일어납니다. 핵심 ETF들의 가격이 120일 또는 200일 SMA선 부근까지 기술적 조정을 겪거나 RSI가 40 이하로 충분히 냉각됐을 때 긴 호흡으로 1차 진입합니다.</p>
-                                    </div>
-                                    <div>
-                                        <span className="font-bold text-white">과열 과다이격 분할 비중 조절:</span>
-                                        <p className="mt-0.5 text-gray-400">대형 발사 성공이나 수주 뉴스 폭발로 이격도가 200일선 대비 +30% 이상 벌어지고, 단기 RSI가 75를 초과하는 등 투기적 매수세 유입 시에는 장기 적립 포지션 중 20%를 부분 실현해 리스크를 통제하는 것을 지향합니다.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="border-t border-white/5 pt-3">
-                            <p className="text-[10px] text-gray-500 leading-relaxed font-semibold">
-                                * 우주 섹터는 전통 방산주와 뉴스에 극도로 민감한 초기 성장 벤처 기술주가 섞여 있어 타 분야 대비 고유 변동성(Beta)이 매우 큽니다. 정부 계약 기반의 방산 기업(대형주)과 미래 혁신 위성 통신/운송 기업(중소형주)을 적절히 배분하여 극단적인 변동성을 흡수하며 장기적인 적립식 전략으로 가야 성공적입니다.
-                            </p>
-                        </div>
-                    </div>
-                )}
-            </div>
+            <SectorInsightReport
+                sector="space"
+                title="AI 패러다임 쉬프트와 글로벌 우주항공 공급망 전략"
+                accent="cyan"
+                tabs={[
+                    { id: 'macro', label: '1. 매크로 & 우주항공 트렌드', icon: TrendingUp },
+                    { id: 'etfs', label: '2. 국내외 핵심 ETF 분석', icon: BookOpen },
+                    { id: 'strategy', label: '3. 자산배분 모델 & 가이드', icon: PieChart },
+                ]}
+                activeTab={activeInsightTab}
+                onTabChange={(id) => setActiveInsightTab(id as any)}
+                fallback={SPACE_INSIGHT_FALLBACK}
+            />
         </div>
     );
 }

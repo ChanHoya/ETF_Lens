@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Activity, ArrowUpRight, Sparkles, TrendingUp, BookOpen, PieChart, BarChart3, AlertTriangle, Cpu, GitBranch, ArrowRight, Target } from 'lucide-react';
+import { Activity, ArrowUpRight, TrendingUp, BookOpen, PieChart, Cpu, GitBranch, ArrowRight, Target } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, ReferenceLine, ZAxis } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
+import SectorInsightReport, { InsightContent } from './SectorInsightReport';
 
 interface SemiChartProps {
     onOpenDetail?: (code: string) => void;
@@ -133,6 +134,38 @@ const isBeforeKrMarketOpen = (): boolean => {
     }
 };
 
+
+const SEMI_INSIGHT_FALLBACK: InsightContent = {
+    tab1: { cards: [
+        { title: `AI Blackwell & HBM3e/HBM4 수요 폭발`, body: `NVIDIA의 차세대 블랙웰(Blackwell) 칩셋 양산 가속화와 함께 HBM3e 및 HBM4 수요가 연간 80% 이상 폭증하고 있습니다. TSMC의 어드밴스드 패키징(CoWoS) 캐파 병목과 고대역폭 메모리의 공급 정합성이 섹터 성장의 최대 핵심 동인입니다.` },
+        { title: `빅테크 파운드리 CAPEX 투자 사이클`, body: `MS, 구글, 메타 등 하이퍼스케일러의 AI 인프라 자본지출(CAPEX)이 사상 최대치를 지속 갱신 중입니다. 이는 TSMC의 미국/유럽 선단 팹 증설 및 ASML의 하이 NA EUV 노광장비 도입 촉진으로 소부장 장비사들의 전례없는 장기 수주 사이클을 제공합니다.` },
+        { title: `메모리 사이클의 질적 변화 (Customization)`, body: `범용 D램의 가격 변동 주기에 종속되던 과거와 달리, HBM, CXL 등 인공지능 친화형 맞춤형(Custom) 메모리 솔루션 비중이 급증하고 있습니다. 이는 메모리 공급사들의 판가 결정력을 크게 상향시켜 수익 다변화와 이익 안정성을 견인합니다.` },
+    ] },
+    etfs: {
+        domestic: { items: [
+            { name: `TIGER 반도체TOP10 (396500) & ACE AI반도체TOP3+ (469150):`, desc: `삼성전자와 SK하이닉스 투톱 비중이 매우 높으며, 한미반도체를 포함한 K-HBM 선도 밸류체인에 집중 배분합니다. 대형주 모멘텀 유입 시 가장 민감한 수익 탄력성을 자랑합니다.` },
+            { name: `KODEX AI반도체핵심장비 (471990) & SOL AI반도체소부장 (455850):`, desc: `후공정 가공 및 HBM 핵심 기술을 쥔 한미반도체, 검사 소켓 대장주 리노공업, 전공정 원자재 부품사들을 고루 편입해 대형주 리스크를 분산하고 공정 국산화 수혜를 골고루 취합합니다.` },
+            { name: `TIGER 미국필라델피아반도체나스닥 (381180) & TIGER 미국필라델피아AI반도체나스닥 (497570):`, desc: `전통적인 필라델피아 지수를 온전히 추종하여 안정적인 수익을 거두는 381180과 엔비디아, TSMC, 브로드컴 등 AI 반도체 최전선 핵심 10종에 초집중하여 주가 상승력을 극대화한 497570이 글로벌 투자에 적합합니다.` },
+            { name: `단일종목 2X 레버리지 Active ETF 계열:`, desc: `삼성전자 또는 SK하이닉스의 일일 변동성 2배를 실시간 추종하여 강력한 단기 모멘텀 거래 기회를 제공합니다. 변동성 잠식 비용이 발생할 수 있어 장기 보유보다 전략적 분할 진입이 필요합니다.` },
+        ] },
+        overseas: { items: [
+            { name: `SMH (VanEck Semiconductor ETF | AUM $24.8B):`, desc: `글로벌 팹리스 최강자 NVIDIA와 글로벌 파운드리 1위 TSMC, 통신 네트워크 칩 선두 Broadcom의 상위 3사 비중을 약 42% 이상 압축 배분하여 최강의 성장성을 증명하는 글로벌 대장주 ETF입니다.` },
+            { name: `SOXQ (Invesco PHLX Semiconductor ETF | AUM $3.2B):`, desc: `필라델피아 반도체 지수를 저렴한 보수(연 0.19%)로 온전히 누릴 수 있어 장기 연금 적립식 투자의 기초 자산으로 적합하며, 인텔 및 아날로그 디바이스 등 다양한 밸류 라인업을 고르게 보완합니다.` },
+        ] },
+    },
+    strategy: {
+        models: { items: [
+            { name: `공격성장형 (반도체 60% : 기타 40%):`, detail: `SMH 25% + ACE AI반도체 20% + SOL 소부장 15% | S&P 500 20% + 미국 채권 20%` },
+            { name: `균형포커스형 (반도체 40% : 기타 60%):`, detail: `TIGER 미필반나 20% + TIGER 반도체TOP10 15% + SOXQ 5% | 배당성장 30% + 국채 30%` },
+            { name: `인컴방어형 (반도체 20% : 기타 80%):`, detail: `SOXQ 10% + SOL 소부장 10% | 커버드콜 배당 40% + 중단기 우량 회사채 40%` },
+        ] },
+        guides: { items: [
+            { name: `이격 신호등 기반 진입 기준:`, body: `핵심 반도체 ETF의 200일 SMA 대비 이격도가 90% 이하로 수축되고, 지수 12개월 Forward P/E가 22배 이하(SOX 기준)로 떨어지며 RSI가 35 수준으로 냉각될 때 적극적인 분할 진입 시점으로 간주합니다.` },
+            { name: `추세 이격 과열 및 분할 매도 기준:`, body: `200일 SMA 대비 이격도가 +25% 이상 급속 벌어지며, 단기 RSI가 75를 초과하는 오버슈팅 국면 도래 시 포지션의 30% 수준을 부분 실현하여 이익을 확정 짓는 것을 권장합니다.` },
+        ] },
+        footnote: `반도체 섹터는 전력 에너지나 바이오 대비 높은 주가 변동성(Beta)과 주기성을 가집니다. AI의 장기 성장 잠재력은 강력하나 단기 매크로 경기 위축 시 변동성이 큰 만큼 레버리지 상품은 단기 트레이딩 위주로 접근하고, 장기 포지션은 보수가 저렴한 필라델피아 지수 추종 상품으로 적립하는 투 트랙 운용을 권장합니다.`,
+    },
+};
 export default function SemiChart({ onOpenDetail }: SemiChartProps) {
     const [period, setPeriod] = useState('1Y');
     const [chartData, setChartData] = useState<any[]>([]);
@@ -1001,171 +1034,20 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
             <div className="w-full border-t border-white/10 my-6"></div>
 
             {/* Expert Insight Section */}
-            <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <h4 className="text-base font-extrabold text-white flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-                        AI 패러다임 쉬프트와 글로벌 반도체 공급망 전략
-                    </h4>
-                    <span className="text-[10px] text-amber-500/80 font-bold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
-                        Gemini Expert Report
-                    </span>
-                </div>
-
-                {/* Tab Menu */}
-                <div className="flex flex-wrap bg-[#1a1a23]/60 p-1 rounded-xl border border-white/5 gap-1 self-start">
-                    {[
-                        { id: 'macro', label: '1. 매크로 & AI 반도체 트렌드', icon: TrendingUp },
-                        { id: 'etfs', label: '2. 국내외 핵심 ETF 분석', icon: BookOpen },
-                        { id: 'strategy', label: '3. 자산배분 모델 & 가이드', icon: PieChart },
-                        { id: 'qcycle', label: '4. Q-Cycle 퀀트 스크리너', icon: Cpu }
-                    ].map((tab) => {
-                        const Icon = tab.icon;
-                        const isSelected = activeInsightTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveInsightTab(tab.id as any)}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                                    isSelected
-                                        ? tab.id === 'qcycle'
-                                            ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md'
-                                            : 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md'
-                                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                                }`}
-                            >
-                                <Icon className="w-3.5 h-3.5" />
-                                {tab.label}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {/* Tab Contents */}
-                {activeInsightTab === 'macro' && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-1">
-                        {/* Card 1: AI Blackwell Demand */}
-                        <div className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-                                <TrendingUp className="w-4 h-4" />
-                                <span>AI Blackwell & HBM3e/HBM4 수요 폭발</span>
-                            </div>
-                            <p className="text-xs text-gray-300 leading-relaxed">
-                                NVIDIA의 차세대 블랙웰(Blackwell) 칩셋 양산 가속화와 함께 HBM3e 및 HBM4 수요가 연간 80% 이상 폭증하고 있습니다. TSMC의 어드밴스드 패키징(CoWoS) 캐파 병목과 고대역폭 메모리의 공급 정합성이 섹터 성장의 최대 핵심 동인입니다.
-                            </p>
-                        </div>
-                        {/* Card 2: Capex */}
-                        <div className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-red-400 font-bold text-sm">
-                                <AlertTriangle className="w-4 h-4" />
-                                <span>빅테크 파운드리 CAPEX 투자 사이클</span>
-                            </div>
-                            <p className="text-xs text-gray-300 leading-relaxed">
-                                MS, 구글, 메타 등 하이퍼스케일러의 AI 인프라 자본지출(CAPEX)이 사상 최대치를 지속 갱신 중입니다. 이는 TSMC의 미국/유럽 선단 팹 증설 및 ASML의 하이 NA EUV 노광장비 도입 촉진으로 소부장 장비사들의 전례없는 장기 수주 사이클을 제공합니다.
-                            </p>
-                        </div>
-                        {/* Card 3: Memory Cycle */}
-                        <div className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-blue-400 font-bold text-sm">
-                                <BarChart3 className="w-4 h-4" />
-                                <span>메모리 사이클의 질적 변화 (Customization)</span>
-                            </div>
-                            <p className="text-xs text-gray-300 leading-relaxed">
-                                범용 D램의 가격 변동 주기에 종속되던 과거와 달리, HBM, CXL 등 인공지능 친화형 맞춤형(Custom) 메모리 솔루션 비중이 급증하고 있습니다. 이는 메모리 공급사들의 판가 결정력을 크게 상향시켜 수익 다변화와 이익 안정성을 견인합니다.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {activeInsightTab === 'etfs' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
-                        {/* KR ETFs */}
-                        <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-3">
-                            <h5 className="text-sm font-bold text-amber-400 border-b border-white/5 pb-2">국내 상장 핵심 ETF</h5>
-                            <div className="flex flex-col gap-2.5 text-xs text-gray-300">
-                                <div>
-                                    <span className="font-bold text-white">TIGER 반도체TOP10 (396500) & ACE AI반도체TOP3+ (469150):</span>
-                                    <p className="mt-0.5 text-gray-400">삼성전자와 SK하이닉스 투톱 비중이 매우 높으며, 한미반도체를 포함한 K-HBM 선도 밸류체인에 집중 배분합니다. 대형주 모멘텀 유입 시 가장 민감한 수익 탄력성을 자랑합니다.</p>
-                                </div>
-                                <div>
-                                    <span className="font-bold text-white">KODEX AI반도체핵심장비 (471990) & SOL AI반도체소부장 (455850):</span>
-                                    <p className="mt-0.5 text-gray-400">후공정 가공 및 HBM 핵심 기술을 쥔 한미반도체, 검사 소켓 대장주 리노공업, 전공정 원자재 부품사들을 고루 편입해 대형주 리스크를 분산하고 공정 국산화 수혜를 골고루 취합합니다.</p>
-                                </div>
-                                <div>
-                                    <span className="font-bold text-white">TIGER 미국필라델피아반도체나스닥 (381180) & TIGER 미국필라델피아AI반도체나스닥 (497570):</span>
-                                    <p className="mt-0.5 text-gray-400">전통적인 필라델피아 지수를 온전히 추종하여 안정적인 수익을 거두는 381180과 엔비디아, TSMC, 브로드컴 등 AI 반도체 최전선 핵심 10종에 초집중하여 주가 상승력을 극대화한 497570이 글로벌 투자에 적합합니다.</p>
-                                </div>
-                                <div>
-                                    <span className="font-bold text-white">단일종목 2X 레버리지 Active ETF 계열:</span>
-                                    <p className="mt-0.5 text-gray-400">삼성전자 또는 SK하이닉스의 일일 변동성 2배를 실시간 추종하여 강력한 단기 모멘텀 거래 기회를 제공합니다. 변동성 잠식 비용이 발생할 수 있어 장기 보유보다 전략적 분할 진입이 필요합니다.</p>
-                                </div>
-                            </div>
-                        </div>
-                        {/* US ETFs */}
-                        <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-3">
-                            <h5 className="text-sm font-bold text-orange-400 border-b border-white/5 pb-2">해외 상장 핵심 ETF</h5>
-                            <div className="flex flex-col gap-2.5 text-xs text-gray-300">
-                                <div>
-                                    <span className="font-bold text-white">SMH (VanEck Semiconductor ETF | AUM $24.8B):</span>
-                                    <p className="mt-0.5 text-gray-400">글로벌 팹리스 최강자 NVIDIA와 글로벌 파운드리 1위 TSMC, 통신 네트워크 칩 선두 Broadcom의 상위 3사 비중을 약 42% 이상 압축 배분하여 최강의 성장성을 증명하는 글로벌 대장주 ETF입니다.</p>
-                                </div>
-                                <div>
-                                    <span className="font-bold text-white">SOXQ (Invesco PHLX Semiconductor ETF | AUM $3.2B):</span>
-                                    <p className="mt-0.5 text-gray-400">필라델피아 반도체 지수를 저렴한 보수(연 0.19%)로 온전히 누릴 수 있어 장기 연금 적립식 투자의 기초 자산으로 적합하며, 인텔 및 아날로그 디바이스 등 다양한 밸류 라인업을 고르게 보완합니다.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeInsightTab === 'strategy' && (
-                    <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-4 mt-1">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <h5 className="text-xs font-bold text-amber-400 mb-2 flex items-center gap-1">
-                                    <PieChart className="w-3.5 h-3.5" />
-                                    포트폴리오 자산배분 모델 제안
-                                </h5>
-                                <div className="text-xs text-gray-300 space-y-2 leading-relaxed font-sans">
-                                    <div>
-                                        <span className="font-bold text-white">공격성장형 (반도체 60% : 기타 40%):</span>
-                                        <span className="text-gray-400"> SMH 25% + ACE AI반도체 20% + SOL 소부장 15% | S&P 500 20% + 미국 채권 20%</span>
-                                    </div>
-                                    <div>
-                                        <span className="font-bold text-white">균형포커스형 (반도체 40% : 기타 60%):</span>
-                                        <span className="text-gray-400"> TIGER 미필반나 20% + TIGER 반도체TOP10 15% + SOXQ 5% | 배당성장 30% + 국채 30%</span>
-                                    </div>
-                                    <div>
-                                        <span className="font-bold text-white">인컴방어형 (반도체 20% : 기타 80%):</span>
-                                        <span className="text-gray-400"> SOXQ 10% + SOL 소부장 10% | 커버드콜 배당 40% + 중단기 우량 회사채 40%</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <h5 className="text-xs font-bold text-amber-400 mb-2 flex items-center gap-1">
-                                    <TrendingUp className="w-3.5 h-3.5" />
-                                    반도체 이격 신호등 및 기술적 매매 진입 가이드
-                                </h5>
-                                <div className="text-xs text-gray-300 space-y-2 leading-relaxed">
-                                    <div>
-                                        <span className="font-bold text-white">이격 신호등 기반 진입 기준:</span>
-                                        <p className="mt-0.5 text-gray-400">핵심 반도체 ETF의 200일 SMA 대비 이격도가 90% 이하로 수축되고, 지수 12개월 Forward P/E가 22배 이하(SOX 기준)로 떨어지며 RSI가 35 수준으로 냉각될 때 적극적인 분할 진입 시점으로 간주합니다.</p>
-                                    </div>
-                                    <div>
-                                        <span className="font-bold text-white">추세 이격 과열 및 분할 매도 기준:</span>
-                                        <p className="mt-0.5 text-gray-400">200일 SMA 대비 이격도가 +25% 이상 급속 벌어지며, 단기 RSI가 75를 초과하는 오버슈팅 국면 도래 시 포지션의 30% 수준을 부분 실현하여 이익을 확정 짓는 것을 권장합니다.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="border-t border-white/5 pt-3">
-                            <p className="text-[10px] text-gray-500 leading-relaxed">
-                                * 반도체 섹터는 전력 에너지나 바이오 대비 높은 주가 변동성(Beta)과 주기성을 가집니다. AI의 장기 성장 잠재력은 강력하나 단기 매크로 경기 위축 시 변동성이 큰 만큼 레버리지 상품은 단기 트레이딩 위주로 접근하고, 장기 포지션은 보수가 저렴한 필라델피아 지수 추종 상품으로 적립하는 투 트랙 운용을 권장합니다.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
+            <SectorInsightReport
+                sector="semi"
+                title="AI 패러다임 쉬프트와 글로벌 반도체 공급망 전략"
+                accent="amber"
+                tabs={[
+                    { id: 'macro', label: '1. 매크로 & AI 반도체 트렌드', icon: TrendingUp },
+                    { id: 'etfs', label: '2. 국내외 핵심 ETF 분석', icon: BookOpen },
+                    { id: 'strategy', label: '3. 자산배분 모델 & 가이드', icon: PieChart },
+                    { id: 'qcycle', label: '4. Q-Cycle 퀀트 스크리너', icon: Cpu },
+                ]}
+                activeTab={activeInsightTab}
+                onTabChange={(id) => setActiveInsightTab(id as any)}
+                fallback={SEMI_INSIGHT_FALLBACK}
+            >
                 {activeInsightTab === 'qcycle' && (
                     <div className="flex flex-col gap-6 mt-1">
 
@@ -1405,7 +1287,7 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
                         </p>
                     </div>
                 )}
-            </div>
+            </SectorInsightReport>
         </div>
     );
 }
