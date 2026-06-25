@@ -64,6 +64,15 @@ _SECTORS: dict[str, dict] = {
         "us": {"XLU": "Utilities Select", "NLR": "원자력 ETF", "GRID": "전력망 ETF",
                "VST": "Vistra", "CEG": "Constellation", "POWR": "PowerSchool", "PAVE": "인프라 ETF"},
     },
+    "semiparts": {
+        "label": "반도체 소부장(소재·부품·장비)",
+        "kr_etfs": {"471760": "TIGER AI반도체핵심공정", "471990": "KODEX AI반도체핵심장비",
+                    "455850": "SOL AI반도체소부장", "474590": "WON 반도체밸류체인액티브",
+                    "464920": "PLUS 일본반도체소부장", "446770": "ACE 글로벌반도체TOP4 Plus"},
+        "us": {"SOXX": "iShares 반도체 ETF", "XSD": "SPDR 반도체(동일가중) ETF",
+               "ASML": "ASML", "AMAT": "Applied Materials", "LRCX": "Lam Research",
+               "KLAC": "KLA", "TER": "Teradyne", "8035.T": "Tokyo Electron"},
+    },
     "bio": {
         "label": "바이오/헬스케어",
         "kr_etfs": {"462900": "KoAct 바이오헬스케어액티브", "463050": "TIMEFOLIO K바이오액티브",

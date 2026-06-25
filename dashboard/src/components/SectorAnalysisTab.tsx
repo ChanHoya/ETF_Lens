@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Activity, Globe, Zap, Layers } from 'lucide-react';
 import SemiChart from '@/components/SemiChart';
+import SemiPartsChart from '@/components/SemiPartsChart';
 import SpaceChart from '@/components/SpaceChart';
 import BioChart from '@/components/BioChart';
 import EnergyChart from '@/components/EnergyChart';
@@ -124,6 +125,17 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                                     <h3 className="text-xl font-extrabold text-white">반도체 특화 분석</h3>
                                 </div>
                                 <SemiChart onOpenDetail={onOpenDetail} />
+                            </div>
+                        )}
+
+                        {/* SemiPartsChart: Semiconductor Materials/Parts/Equipment (Detailed View) */}
+                        {region !== 'US' && selectedSector === '반도체소부장' && (
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2.5 px-2 mt-4">
+                                    <Zap className="w-5 h-5 text-violet-400" />
+                                    <h3 className="text-xl font-extrabold text-white">반도체 소부장 특화 분석</h3>
+                                </div>
+                                <SemiPartsChart onOpenDetail={onOpenDetail} />
                             </div>
                         )}
 

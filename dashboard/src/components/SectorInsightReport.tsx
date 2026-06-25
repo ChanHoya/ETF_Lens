@@ -21,7 +21,7 @@ export interface InsightContent {
 interface TabDef { id: string; label: string; icon: React.ComponentType<{ className?: string }>; }
 
 interface Props {
-    sector: 'space' | 'semi' | 'energy' | 'bio';
+    sector: 'space' | 'semi' | 'energy' | 'bio' | 'semiparts';
     title: string;
     tabs: TabDef[];          // 탭 바(섹터별 라벨/순서). 1번=트렌드, 'etfs', 'strategy', (그 외=children)
     activeTab: string;
