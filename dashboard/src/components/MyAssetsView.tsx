@@ -8,6 +8,35 @@ import { API_BASE } from "@/lib/apiConfig";
 import RiskBanner from "@/components/RiskBanner";
 import AssetHistoryChart from "@/components/AssetHistoryChart";
 
+// Render 콜드 스타트 대응: 첫 요청 시 백엔드가 잠들어 있으면 "Failed to fetch"(네트워크 실패)나
+// 502/503(기동 중)이 나므로, 서버가 깨어날 때까지 점진적 backoff로 재시도한다.
+async function fetchWithWake(
+    url: string,
+    opts: RequestInit | undefined,
+    onWaking: () => void,
+    retries = 6,
+): Promise<Response> {
+    for (let attempt = 0; ; attempt++) {
+        try {
+            const res = await fetch(url, opts);
+            if ((res.status === 502 || res.status === 503) && attempt < retries) {
+                onWaking();
+                await new Promise((r) => setTimeout(r, Math.min(3000 * (attempt + 1), 8000)));
+                continue;
+            }
+            return res;
+        } catch (e) {
+            // "Failed to fetch" 등 네트워크 레벨 실패 → 콜드 스타트 가능성, 재시도
+            if (attempt < retries) {
+                onWaking();
+                await new Promise((r) => setTimeout(r, Math.min(3000 * (attempt + 1), 8000)));
+                continue;
+            }
+            throw e;
+        }
+    }
+}
+
 export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenDetail?: (code: string) => void, onAnalyzePeers?: (items: any[]) => void }) {
     const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -15,6 +44,7 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
     const [kisData, setKisData] = useState<any>(null);
     const [tradesData, setTradesData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
+    const [wakingUp, setWakingUp] = useState(false);
     const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
 
     const [isSimulatedMode, setIsSimulatedMode] = useState<boolean>(false);
@@ -32,10 +62,11 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
         if (isManualRefresh) setIsRefreshing(true);
         else setIsLoading(true);
         setError(null);
+        setWakingUp(false);
         try {
             // 1. Fetch simulated state first
             try {
-                const simRes = await fetch(`${API_BASE}/api/v1/order/simulated-portfolio`);
+                const simRes = await fetchWithWake(`${API_BASE}/api/v1/order/simulated-portfolio`, undefined, () => setWakingUp(true));
                 if (simRes.ok) {
                     const simJson = await simRes.json();
                     if (simJson.has_simulated && simJson.data) {
@@ -51,7 +82,7 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
             }
 
             const [portfolioRes] = await Promise.all([
-                fetch(`${API_BASE}/api/v1/my/portfolio`),
+                fetchWithWake(`${API_BASE}/api/v1/my/portfolio`, undefined, () => setWakingUp(true)),
                 fetchTrades(),
             ]);
             const data = await portfolioRes.json();
@@ -74,6 +105,7 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
+            setWakingUp(false);
         }
     }, [fetchTrades]);
 
@@ -204,15 +236,19 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
             {isLoading && !isAuthorized ? (
                 <div className="flex flex-col items-center justify-center p-20">
                     <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
-                    <p className="text-gray-400">인증 정보를 확인 중입니다...</p>
+                    {wakingUp ? (
+                        <p className="text-gray-400 text-center max-w-xs">서버를 깨우는 중입니다... <br /><span className="text-xs text-gray-500">(휴면 중이던 서버 기동에 최대 1분 정도 걸릴 수 있어요)</span></p>
+                    ) : (
+                        <p className="text-gray-400">인증 정보를 확인 중입니다...</p>
+                    )}
                 </div>
             ) : !isAuthorized ? (
                 <MyAuthModal onSuccess={handleAuthSuccess} initialError={error} />
             ) : isLoading ? (
                 <div className="flex flex-col items-center justify-center p-20 w-full max-w-4xl bg-white/[0.02] border border-white/5 rounded-3xl backdrop-blur-xl mt-8">
                     <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
-                    <h2 className="text-xl font-bold mb-2">My 포트폴리오 분석 중</h2>
-                    <p className="text-gray-400 text-center max-w-md">한국투자증권(KIS) API에서 데이터를 불러오고 있습니다. 최대 수십 초가 소요될 수 있습니다.</p>
+                    <h2 className="text-xl font-bold mb-2">{wakingUp ? "서버를 깨우는 중" : "My 포트폴리오 분석 중"}</h2>
+                    <p className="text-gray-400 text-center max-w-md">{wakingUp ? "휴면 중이던 백엔드 서버를 기동하고 있습니다. 최대 1분 정도 걸릴 수 있으니 잠시만 기다려 주세요." : "한국투자증권(KIS) API에서 데이터를 불러오고 있습니다. 최대 수십 초가 소요될 수 있습니다."}</p>
                 </div>
             ) : error ? (
                 <div className="flex flex-col items-center justify-center p-20 w-full max-w-4xl bg-white/[0.02] border border-white/5 rounded-3xl backdrop-blur-xl mt-8">
