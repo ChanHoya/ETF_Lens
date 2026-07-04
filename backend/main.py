@@ -294,6 +294,27 @@ async def debug_kis_token():
                 entry["error"] = f"{type(e).__name__}: {e}"
             results.append(entry)
 
+    # 추가 진단: 서버 egress IP(지리적 위치) + KIS 호스트 포트별 연결성
+    net = {}
+    async with httpx.AsyncClient(timeout=10) as client:
+        try:
+            ipr = await client.get("https://ipinfo.io/json")
+            net["egress"] = ipr.json()
+        except Exception as e:
+            net["egress_error"] = f"{type(e).__name__}: {e}"
+    import socket
+    for host, port in [("openapi.koreainvestment.com", 9443), ("koreainvestment.com", 443)]:
+        try:
+            infos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
+            ip = infos[0][4][0]
+            s = socket.socket(infos[0][0], socket.SOCK_STREAM)
+            s.settimeout(8)
+            s.connect((ip, port))
+            s.close()
+            net[f"{host}:{port}"] = {"dns": ip, "tcp_connect": "OK"}
+        except Exception as e:
+            net[f"{host}:{port}"] = {"tcp_connect": f"FAIL: {type(e).__name__}: {e}"}
+
     return {"checked_at": datetime.now().isoformat(), "url_base": kis_url_base,
-            "key_count": len(keys), "results": results}
+            "key_count": len(keys), "results": results, "network": net}
 
