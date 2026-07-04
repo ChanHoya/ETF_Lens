@@ -250,3 +250,50 @@ async def debug_peer_fetch():
 
     return {"checked_at": datetime.now().isoformat(), "results": results}
 
+
+@app.get("/api/v1/debug/kis-token")
+async def debug_kis_token():
+    """[임시 진단] Render 서버에서 각 KIS App Key로 토큰 발급을 시도해
+    실제 KIS 응답(status/error_code)을 반환한다. 시크릿·토큰은 노출하지 않음."""
+    import os
+    import httpx
+    from datetime import datetime
+
+    kis_url_base = os.environ.get("KIS_URL_BASE", "https://openapi.koreainvestment.com:9443").rstrip("/")
+    token_url = f"{kis_url_base}/oauth2/tokenP"
+
+    keys = []
+    for k, v in os.environ.items():
+        if k.startswith("KIS_APP_KEY") and v:
+            suffix = k.replace("KIS_APP_KEY", "")
+            sec = os.environ.get(f"KIS_APP_SECRET{suffix}")
+            if sec:
+                keys.append((k, v.strip(), sec.strip()))
+    if not keys and os.environ.get("KIS_APP_KEY") and os.environ.get("KIS_APP_SECRET"):
+        keys.append(("KIS_APP_KEY", os.environ["KIS_APP_KEY"].strip(), os.environ["KIS_APP_SECRET"].strip()))
+
+    results = []
+    async with httpx.AsyncClient(timeout=30) as client:
+        for name, ak, sec in keys:
+            masked = f"{ak[:6]}...{ak[-3:]}" if len(ak) > 9 else "***"
+            entry = {"env_name": name, "app_key": masked}
+            try:
+                r = await client.post(token_url, json={
+                    "grant_type": "client_credentials", "appkey": ak, "appsecret": sec,
+                })
+                entry["status_code"] = r.status_code
+                if r.status_code == 200 and r.json().get("access_token"):
+                    entry["result"] = "OK (token issued)"
+                    entry["expires_in"] = r.json().get("expires_in")
+                else:
+                    # KIS 에러 본문에는 error_code/error_description 만 있고 시크릿 없음
+                    entry["result"] = "FAIL"
+                    entry["kis_response"] = r.text[:300]
+            except Exception as e:
+                entry["result"] = "EXCEPTION"
+                entry["error"] = f"{type(e).__name__}: {e}"
+            results.append(entry)
+
+    return {"checked_at": datetime.now().isoformat(), "url_base": kis_url_base,
+            "key_count": len(keys), "results": results}
+
