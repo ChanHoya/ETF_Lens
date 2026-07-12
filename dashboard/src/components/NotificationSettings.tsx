@@ -8,6 +8,7 @@ export default function NotificationSettings() {
     const [alertExitSignal, setAlertExitSignal] = useState(true);
     const [alertRebalance, setAlertRebalance] = useState(true);
     const [alertDailySummary, setAlertDailySummary] = useState(false);
+    const [alertBrazil, setAlertBrazil] = useState(true);
 
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -26,6 +27,7 @@ export default function NotificationSettings() {
                     setAlertExitSignal(data.alert_exit_signal === 1);
                     setAlertRebalance(data.alert_rebalance === 1);
                     setAlertDailySummary(data.alert_daily_summary === 1);
+                    setAlertBrazil(data.alert_brazil === 1);
                 }
             } catch (err) {
                 console.error("Failed to fetch notification settings:", err);
@@ -53,7 +55,8 @@ export default function NotificationSettings() {
                     telegram_chat_id: telegramChatId,
                     alert_exit_signal: alertExitSignal ? 1 : 0,
                     alert_rebalance: alertRebalance ? 1 : 0,
-                    alert_daily_summary: alertDailySummary ? 1 : 0
+                    alert_daily_summary: alertDailySummary ? 1 : 0,
+                    alert_brazil: alertBrazil ? 1 : 0
                 })
             });
             const data = await res.json();
@@ -173,6 +176,22 @@ export default function NotificationSettings() {
                                             className="sr-only peer"
                                         />
                                         <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    </label>
+                                </div>
+
+                                <div className="flex items-center justify-between p-4 bg-white/[0.02] border border-emerald-500/15 rounded-2xl">
+                                    <div>
+                                        <h4 className="text-sm font-bold text-gray-200">🇧🇷 브라질 국채 이벤트·신호·뉴스 알림</h4>
+                                        <p className="text-[11px] text-gray-400 mt-0.5">Activation Zone 신호 전환, Copom·대선 등 주요 이벤트 D-day, 관련 신규 뉴스 발생 시 실시간 발송합니다.</p>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={alertBrazil}
+                                            onChange={(e) => setAlertBrazil(e.target.checked)}
+                                            className="sr-only peer"
+                                        />
+                                        <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
                                     </label>
                                 </div>
                             </div>

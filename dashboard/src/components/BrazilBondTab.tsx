@@ -9,6 +9,7 @@ import {
 import {
     Flag, TrendingDown, Gauge, AlertTriangle, Target, CalendarClock,
     Sparkles, RefreshCw, Layers, ShieldCheck, ArrowDownRight, Info, CheckCircle2,
+    Newspaper, Bell, ExternalLink, Send,
 } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
 
@@ -46,6 +47,7 @@ interface AiInsight {
     execution_checklist?: string[];
     risk_footnote?: string;
 }
+interface NewsItem { title: string; source: string; link: string; published: string | null; }
 
 // ── 색 유틸 ──────────────────────────────────────────────────────────────────
 const GAUGE_STYLE: Record<string, { dot: string; text: string; ring: string; label: string }> = {
@@ -75,6 +77,9 @@ export default function BrazilBondTab() {
     const [insightAt, setInsightAt] = useState<string | null>(null);
     const [genLoading, setGenLoading] = useState(false);
 
+    const [news, setNews] = useState<NewsItem[]>([]);
+    const [newsLoading, setNewsLoading] = useState(true);
+
     useEffect(() => {
         (async () => {
             try {
@@ -96,6 +101,16 @@ export default function BrazilBondTab() {
                 setError(String(e?.message || e));
             } finally {
                 setLoading(false);
+            }
+        })();
+        // 뉴스는 별도로 로드(라이브 수집이라 느릴 수 있어 대시보드를 막지 않음)
+        (async () => {
+            try {
+                setNewsLoading(true);
+                const r = await fetch(`${API_BASE}/api/v1/brazil-bond/news?limit=12`, { cache: 'no-store' });
+                if (r.ok) setNews((await r.json()).items || []);
+            } catch { /* 무시 */ } finally {
+                setNewsLoading(false);
             }
         })();
     }, []);
@@ -251,12 +266,16 @@ export default function BrazilBondTab() {
                 </p>
             </section>
 
-            {/* ── 매크로 캘린더 ────────────────────────────────────── */}
+            {/* ── 매크로 캘린더 (시계열 타임라인) ──────────────────── */}
             <section>
-                <SectionTitle icon={<CalendarClock className="w-5 h-5 text-cyan-400" />} title="Macro Catalyst Timeline" sub="Q3-Q4 핵심 관전 캘린더" />
-                <div className="flex flex-wrap gap-2">
-                    {s.timeline.filter(c => c.d_day >= 0).map((c) => <TimelineChip key={c.key} c={c} />)}
-                </div>
+                <SectionTitle icon={<CalendarClock className="w-5 h-5 text-cyan-400" />} title="Macro Catalyst Timeline" sub="Q3-Q4 핵심 관전 캘린더 · 이벤트 시점의 지표 발표 일정" />
+                <MacroTimeline timeline={s.timeline} />
+            </section>
+
+            {/* ── 관련 뉴스 피드 ───────────────────────────────────── */}
+            <section>
+                <SectionTitle icon={<Newspaper className="w-5 h-5 text-amber-400" />} title="관련 뉴스 & 정보" sub="브라질 국채·헤알·금리 관련 최신 뉴스 (자동 수집)" />
+                <NewsFeed news={news} loading={newsLoading} />
             </section>
 
             {/* ── 실행 전 최종 체크리스트 ──────────────────────────── */}
@@ -274,6 +293,9 @@ export default function BrazilBondTab() {
                     ))}
                 </div>
             </section>
+
+            {/* ── 텔레그램 알림 구독 ───────────────────────────────── */}
+            <BrazilAlertConfig />
 
             <p className="text-[11px] text-gray-600 leading-relaxed border-t border-white/5 pt-3">
                 ※ 본 화면은 투자 권유가 아닌 판단 보조용 정보입니다. 모든 수치는 기준일 스냅샷이며 이후 변동됩니다.
@@ -454,17 +476,164 @@ function TrancheCard({ t }: { t: { id: number; weight: string; timing: string; t
     );
 }
 
-function TimelineChip({ c }: { c: Catalyst }) {
-    const urgent = c.d_day <= 7;
+// 시계열 세로 타임라인: 좌측 레일 + 마커. 과거는 흐리게, 임박(D≤7)은 강조.
+function MacroTimeline({ timeline }: { timeline: Catalyst[] }) {
+    const impactColor = (impact: string) => impact === 'fx' ? 'amber' : impact === 'rate' ? 'cyan' : 'rose';
     return (
-        <div className={`rounded-xl border px-4 py-2.5 ${urgent ? 'border-amber-500/40 bg-amber-500/10' : 'border-white/10 bg-black/20'}`}>
-            <div className="flex items-center gap-2">
-                <span className={`text-lg font-black ${urgent ? 'text-amber-300' : 'text-gray-300'}`}>D-{c.d_day}</span>
-                <span className="text-sm font-bold text-white">{c.title}</span>
-                <span className="text-[11px] text-gray-500">{c.date}</span>
+        <div className="relative pl-6">
+            <div className="absolute left-2 top-1 bottom-1 w-px bg-gradient-to-b from-white/20 via-white/10 to-transparent" />
+            <div className="flex flex-col gap-3">
+                {timeline.map((c) => {
+                    const past = c.d_day < 0;
+                    const urgent = c.d_day >= 0 && c.d_day <= 7;
+                    const col = impactColor(c.impact);
+                    const dot = past ? 'bg-gray-600' : urgent ? 'bg-amber-400 ring-4 ring-amber-400/20 animate-pulse'
+                        : col === 'amber' ? 'bg-amber-400' : col === 'cyan' ? 'bg-cyan-400' : 'bg-rose-400';
+                    return (
+                        <div key={c.key} className="relative">
+                            <span className={`absolute -left-[18px] top-1.5 w-3 h-3 rounded-full ${dot}`} />
+                            <div className={`rounded-xl border px-4 py-2.5 ${past ? 'border-white/5 bg-black/10 opacity-60'
+                                : urgent ? 'border-amber-500/40 bg-amber-500/10' : 'border-white/10 bg-black/20'}`}>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className={`text-base font-black ${past ? 'text-gray-500' : urgent ? 'text-amber-300' : 'text-gray-200'}`}>
+                                        {past ? '완료' : `D-${c.d_day}`}
+                                    </span>
+                                    <span className={`text-sm font-bold ${past ? 'text-gray-400' : 'text-white'}`}>{c.title}</span>
+                                    <span className="text-[11px] text-gray-500">{c.date}</span>
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${col === 'amber' ? 'bg-amber-500/15 text-amber-300'
+                                        : col === 'cyan' ? 'bg-cyan-500/15 text-cyan-300' : 'bg-rose-500/15 text-rose-300'}`}>
+                                        {c.impact === 'fx' ? '환율' : c.impact === 'rate' ? '금리' : '금리·환율'}
+                                    </span>
+                                </div>
+                                <p className="text-[11px] text-gray-400 mt-0.5">{c.note}</p>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
-            <p className="text-[11px] text-gray-400 mt-0.5 max-w-md">{c.note}</p>
         </div>
+    );
+}
+
+function NewsFeed({ news, loading }: { news: NewsItem[]; loading: boolean }) {
+    if (loading) {
+        return (
+            <div className="bg-black/20 rounded-2xl border border-white/5 p-6 text-center">
+                <RefreshCw className="w-5 h-5 text-amber-400 animate-spin mx-auto" />
+                <p className="text-xs text-gray-500 mt-2">최신 뉴스를 수집하는 중…</p>
+            </div>
+        );
+    }
+    if (!news.length) {
+        return <p className="text-xs text-gray-500 bg-black/20 rounded-2xl border border-white/5 p-4">표시할 뉴스가 없습니다.</p>;
+    }
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {news.map((n, i) => (
+                <a key={i} href={n.link} target="_blank" rel="noopener noreferrer"
+                    className="group flex items-start gap-3 bg-black/20 hover:bg-black/40 rounded-xl border border-white/5 hover:border-amber-500/30 p-3 transition">
+                    <Newspaper className="w-4 h-4 text-amber-400/70 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm text-gray-200 group-hover:text-white leading-snug line-clamp-2">{n.title}</p>
+                        <div className="flex items-center gap-2 mt-1 text-[11px] text-gray-500">
+                            <span>{n.source}</span>
+                            {n.published && <><span>·</span><span>{n.published}</span></>}
+                        </div>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-600 group-hover:text-amber-400 shrink-0 mt-0.5" />
+                </a>
+            ))}
+        </div>
+    );
+}
+
+// 하단 텔레그램 알림 구독 — 브라질 알림 토글 + 연결 상태 + 테스트 발송
+function BrazilAlertConfig() {
+    const [alertBrazil, setAlertBrazil] = useState(true);
+    const [chatId, setChatId] = useState('');
+    const [hasToken, setHasToken] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const r = await fetch(`${API_BASE}/api/v1/notification/settings`);
+                if (r.ok) {
+                    const d = await r.json();
+                    setAlertBrazil(d.alert_brazil === 1);
+                    setChatId(d.telegram_chat_id || '');
+                    setHasToken(!!(d.telegram_token && d.telegram_token.length));
+                }
+            } catch { /* 무시 */ } finally { setLoaded(true); }
+        })();
+    }, []);
+
+    const flash = (ok: boolean, msg: string) => { setToast({ ok, msg }); setTimeout(() => setToast(null), 4000); };
+
+    const saveToggle = async (next: boolean) => {
+        setAlertBrazil(next);
+        try {
+            // 기존 설정을 보존하며 alert_brazil만 갱신 (토큰은 마스킹된 채로 전송해도 백엔드가 원본 유지)
+            const cur = await (await fetch(`${API_BASE}/api/v1/notification/settings`)).json();
+            const r = await fetch(`${API_BASE}/api/v1/notification/settings`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    telegram_token: cur.telegram_token || '', telegram_chat_id: cur.telegram_chat_id || '',
+                    alert_exit_signal: cur.alert_exit_signal ?? 1, alert_rebalance: cur.alert_rebalance ?? 1,
+                    alert_daily_summary: cur.alert_daily_summary ?? 0, alert_brazil: next ? 1 : 0,
+                }),
+            });
+            if (!r.ok) throw new Error();
+            flash(true, next ? '브라질 알림을 켰습니다.' : '브라질 알림을 껐습니다.');
+        } catch {
+            setAlertBrazil(!next);
+            flash(false, '설정 저장에 실패했습니다.');
+        }
+    };
+
+    return (
+        <section className="bg-gradient-to-br from-emerald-950/30 to-black/20 rounded-2xl border border-emerald-500/20 p-5">
+            <SectionTitle icon={<Bell className="w-5 h-5 text-emerald-400" />} title="텔레그램 실시간 알림" sub="주요 이벤트 D-day · 신호 전환 · 관련 신규 뉴스 발생 시 자동 발송" />
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked={alertBrazil} disabled={!loaded}
+                            onChange={(e) => saveToggle(e.target.checked)} className="sr-only peer" />
+                        <div className="w-11 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600" />
+                    </label>
+                    <div>
+                        <p className="text-sm font-bold text-white">브라질 국채 알림 {alertBrazil ? '켜짐' : '꺼짐'}</p>
+                        <p className="text-[11px] text-gray-400">
+                            {hasToken && chatId
+                                ? <>연결됨 · Chat ID <span className="font-mono">{chatId}</span></>
+                                : <>텔레그램 봇 미연결 — <span className="text-emerald-300">My &gt; 실시간 AI 전략 알림 설정</span>에서 토큰·Chat ID를 등록하세요.</>}
+                        </p>
+                    </div>
+                </div>
+                <button onClick={async () => {
+                    setBusy(true);
+                    try {
+                        const cur = await (await fetch(`${API_BASE}/api/v1/notification/settings`)).json();
+                        const r = await fetch(`${API_BASE}/api/v1/notification/test`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ telegram_token: cur.telegram_token || '', telegram_chat_id: cur.telegram_chat_id || '' }),
+                        });
+                        const d = await r.json();
+                        flash(r.ok, r.ok ? '테스트 알림을 발송했습니다.' : (d.detail || '발송 실패'));
+                    } catch { flash(false, '발송 중 오류'); } finally { setBusy(false); }
+                }} disabled={busy || !hasToken}
+                    className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl bg-emerald-600/80 text-white disabled:opacity-40 hover:bg-emerald-600 transition shrink-0">
+                    {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} 테스트 발송
+                </button>
+            </div>
+            {toast && (
+                <div className={`mt-3 text-xs font-semibold px-3 py-2 rounded-lg border ${toast.ok ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-rose-500/10 text-rose-300 border-rose-500/20'}`}>
+                    {toast.msg}
+                </div>
+            )}
+        </section>
     );
 }
 

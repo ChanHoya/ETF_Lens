@@ -15,6 +15,7 @@ class SettingsSchema(BaseModel):
     alert_exit_signal: int = Field(1, description="1 if exit signal alert enabled, 0 otherwise")
     alert_rebalance: int = Field(1, description="1 if rebalance recommendation alert enabled, 0 otherwise")
     alert_daily_summary: int = Field(0, description="1 if morning summary enabled, 0 otherwise")
+    alert_brazil: int = Field(1, description="1 if Brazil bond event/news alert enabled, 0 otherwise")
 
 class TestSchema(BaseModel):
     telegram_token: str
@@ -38,15 +39,17 @@ async def get_settings(db: AsyncSession = Depends(get_db)):
             telegram_chat_id="",
             alert_exit_signal=1,
             alert_rebalance=1,
-            alert_daily_summary=0
+            alert_daily_summary=0,
+            alert_brazil=1
         )
-    
+
     return SettingsSchema(
         telegram_token=mask_token(settings.telegram_token),
         telegram_chat_id=settings.telegram_chat_id,
         alert_exit_signal=settings.alert_exit_signal,
         alert_rebalance=settings.alert_rebalance,
-        alert_daily_summary=settings.alert_daily_summary
+        alert_daily_summary=settings.alert_daily_summary,
+        alert_brazil=getattr(settings, "alert_brazil", 1)
     )
 
 @router.post("/settings")
@@ -70,6 +73,7 @@ async def save_settings(data: SettingsSchema, db: AsyncSession = Depends(get_db)
     settings.alert_exit_signal = data.alert_exit_signal
     settings.alert_rebalance = data.alert_rebalance
     settings.alert_daily_summary = data.alert_daily_summary
+    settings.alert_brazil = data.alert_brazil
     
     try:
         await db.commit()
