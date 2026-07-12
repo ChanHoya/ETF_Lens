@@ -36,11 +36,6 @@ async def get_settings(chat_id: Optional[str] = None, db: AsyncSession = Depends
         settings = result.scalars().first()
     
     if not settings:
-        # Fallback to the latest settings for backward compatibility if no chat_id was provided or found
-        result = await db.execute(select(NotificationSettings).order_by(NotificationSettings.id.desc()))
-        settings = result.scalars().first()
-    
-    if not settings:
         return SettingsSchema(
             telegram_token="",
             telegram_chat_id="",
@@ -104,13 +99,7 @@ async def test_notification(data: TestSchema, db: AsyncSession = Depends(get_db)
         if settings and settings.telegram_token:
             token = settings.telegram_token
         else:
-            # Fallback to the latest one
-            result = await db.execute(select(NotificationSettings).order_by(NotificationSettings.id.desc()))
-            settings = result.scalars().first()
-            if settings and settings.telegram_token:
-                token = settings.telegram_token
-            else:
-                raise HTTPException(status_code=400, detail="저장된 토큰이 없습니다. 먼저 토큰을 입력해 주세요.")
+            raise HTTPException(status_code=400, detail="저장된 토큰이 없습니다. 먼저 토큰을 입력해 주세요.")
             
     test_message = (
         "<b>✨ [ETF Lens] 실시간 알림 채널 검증 완료</b>\n\n"

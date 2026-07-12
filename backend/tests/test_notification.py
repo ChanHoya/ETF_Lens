@@ -53,7 +53,7 @@ async def test_notification_settings_flow():
         assert res_save.json()["status"] == "success"
 
         # 3. GET settings again to verify values are saved and masked correctly
-        res_get2 = await ac.get("/api/v1/notification/settings")
+        res_get2 = await ac.get("/api/v1/notification/settings?chat_id=987654321")
         assert res_get2.status_code == 200
         get2_data = res_get2.json()
         assert get2_data["telegram_chat_id"] == "987654321"
