@@ -15,6 +15,12 @@ def setup_db(event_loop):
     async def _setup_db():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            # Ensure alert_brazil column exists in local test sqlite database
+            from sqlalchemy import text
+            try:
+                await conn.execute(text("ALTER TABLE notification_settings ADD COLUMN alert_brazil INTEGER DEFAULT 1"))
+            except Exception:
+                pass
     event_loop.run_until_complete(_setup_db())
     yield
     async def _teardown_db():

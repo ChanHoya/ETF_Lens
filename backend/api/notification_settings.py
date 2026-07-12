@@ -29,9 +29,16 @@ def mask_token(token: Optional[str]) -> Optional[str]:
     return f"{token[:6]}*******{token[-4:]}"
 
 @router.get("/settings", response_model=SettingsSchema)
-async def get_settings(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(NotificationSettings).order_by(NotificationSettings.id.desc()))
-    settings = result.scalars().first()
+async def get_settings(chat_id: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+    settings = None
+    if chat_id:
+        result = await db.execute(select(NotificationSettings).where(NotificationSettings.telegram_chat_id == chat_id))
+        settings = result.scalars().first()
+    
+    if not settings:
+        # Fallback to the latest settings for backward compatibility if no chat_id was provided or found
+        result = await db.execute(select(NotificationSettings).order_by(NotificationSettings.id.desc()))
+        settings = result.scalars().first()
     
     if not settings:
         return SettingsSchema(
@@ -54,9 +61,11 @@ async def get_settings(db: AsyncSession = Depends(get_db)):
 
 @router.post("/settings")
 async def save_settings(data: SettingsSchema, db: AsyncSession = Depends(get_db)):
-    # Fetch existing
-    result = await db.execute(select(NotificationSettings).order_by(NotificationSettings.id.desc()))
-    settings = result.scalars().first()
+    # Fetch existing setting by telegram_chat_id to support individual registration
+    settings = None
+    if data.telegram_chat_id:
+        result = await db.execute(select(NotificationSettings).where(NotificationSettings.telegram_chat_id == data.telegram_chat_id))
+        settings = result.scalars().first()
     
     # Check if we should preserve the masked token
     token_to_save = data.telegram_token
@@ -88,14 +97,20 @@ async def save_settings(data: SettingsSchema, db: AsyncSession = Depends(get_db)
 async def test_notification(data: TestSchema, db: AsyncSession = Depends(get_db)):
     token = data.telegram_token
     
-    # If token is masked, retrieve from DB
+    # If token is masked, retrieve from DB matching the chat_id
     if "******" in token:
-        result = await db.execute(select(NotificationSettings).order_by(NotificationSettings.id.desc()))
+        result = await db.execute(select(NotificationSettings).where(NotificationSettings.telegram_chat_id == data.telegram_chat_id))
         settings = result.scalars().first()
         if settings and settings.telegram_token:
             token = settings.telegram_token
         else:
-            raise HTTPException(status_code=400, detail="저장된 토큰이 없습니다. 먼저 토큰을 입력해 주세요.")
+            # Fallback to the latest one
+            result = await db.execute(select(NotificationSettings).order_by(NotificationSettings.id.desc()))
+            settings = result.scalars().first()
+            if settings and settings.telegram_token:
+                token = settings.telegram_token
+            else:
+                raise HTTPException(status_code=400, detail="저장된 토큰이 없습니다. 먼저 토큰을 입력해 주세요.")
             
     test_message = (
         "<b>✨ [ETF Lens] 실시간 알림 채널 검증 완료</b>\n\n"
@@ -116,3 +131,4 @@ async def test_notification(data: TestSchema, db: AsyncSession = Depends(get_db)
         raise HTTPException(status_code=400, detail=f"메시지 전송 중 서버 오류: {str(e)}")
             
     return {"status": "success", "msg": "테스트 텔레그램 알림을 성공적으로 발송했습니다. 수신 상태를 확인해 보세요!"}
+

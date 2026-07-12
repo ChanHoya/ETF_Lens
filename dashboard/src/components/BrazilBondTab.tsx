@@ -559,7 +559,11 @@ function BrazilAlertConfig() {
     useEffect(() => {
         (async () => {
             try {
-                const r = await fetch(`${API_BASE}/api/v1/notification/settings`);
+                const localChatId = localStorage.getItem('telegram_chat_id') || '';
+                const url = localChatId
+                    ? `${API_BASE}/api/v1/notification/settings?chat_id=${encodeURIComponent(localChatId)}`
+                    : `${API_BASE}/api/v1/notification/settings`;
+                const r = await fetch(url);
                 if (r.ok) {
                     const d = await r.json();
                     setAlertBrazil(d.alert_brazil === 1);
@@ -575,8 +579,13 @@ function BrazilAlertConfig() {
     const saveToggle = async (next: boolean) => {
         setAlertBrazil(next);
         try {
+            const localChatId = localStorage.getItem('telegram_chat_id') || '';
+            const url = localChatId
+                ? `${API_BASE}/api/v1/notification/settings?chat_id=${encodeURIComponent(localChatId)}`
+                : `${API_BASE}/api/v1/notification/settings`;
+            
             // 기존 설정을 보존하며 alert_brazil만 갱신 (토큰은 마스킹된 채로 전송해도 백엔드가 원본 유지)
-            const cur = await (await fetch(`${API_BASE}/api/v1/notification/settings`)).json();
+            const cur = await (await fetch(url)).json();
             const r = await fetch(`${API_BASE}/api/v1/notification/settings`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -615,7 +624,11 @@ function BrazilAlertConfig() {
                 <button onClick={async () => {
                     setBusy(true);
                     try {
-                        const cur = await (await fetch(`${API_BASE}/api/v1/notification/settings`)).json();
+                        const localChatId = localStorage.getItem('telegram_chat_id') || '';
+                        const url = localChatId
+                            ? `${API_BASE}/api/v1/notification/settings?chat_id=${encodeURIComponent(localChatId)}`
+                            : `${API_BASE}/api/v1/notification/settings`;
+                        const cur = await (await fetch(url)).json();
                         const r = await fetch(`${API_BASE}/api/v1/notification/test`, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ telegram_token: cur.telegram_token || '', telegram_chat_id: cur.telegram_chat_id || '' }),

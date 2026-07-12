@@ -19,7 +19,11 @@ export default function NotificationSettings() {
         const fetchSettings = async () => {
             setIsLoading(true);
             try {
-                const res = await fetch(`${API_BASE}/api/v1/notification/settings`);
+                const localChatId = localStorage.getItem('telegram_chat_id') || '';
+                const url = localChatId
+                    ? `${API_BASE}/api/v1/notification/settings?chat_id=${encodeURIComponent(localChatId)}`
+                    : `${API_BASE}/api/v1/notification/settings`;
+                const res = await fetch(url);
                 if (res.ok) {
                     const data = await res.json();
                     setTelegramToken(data.telegram_token || '');
@@ -61,6 +65,9 @@ export default function NotificationSettings() {
             });
             const data = await res.json();
             if (res.ok && data.status === 'success') {
+                if (telegramChatId) {
+                    localStorage.setItem('telegram_chat_id', telegramChatId);
+                }
                 showToast('success', data.msg || '설정이 저장되었습니다.');
             } else {
                 showToast('error', data.detail || '설정 저장에 실패했습니다.');

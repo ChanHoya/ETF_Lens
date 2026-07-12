@@ -76,3 +76,4 @@ When modifying a module:
 | 2026-05-26 | Space ETF Analysis | Added price and change_pct fields to /space-holdings response | SpaceChart | Updated |
 | 2026-05-28 | ETF Disparity Monitoring | Created /analyze/etf/disparity API & enriched portfolio response | MyDashboard, SpaceChart, BioChart, scheduler | Updated |
 | 2026-06-01 | Asset History Tracking | Added GET /asset-history API & daily snapshot recording to /portfolio | MyAssetsView | Updated |
+| 2026-07-12 | Notification Settings | GET /settings accepts optional chat_id, POST /settings upserts by chat_id | NotificationSettings, BrazilBondTab | Updated |

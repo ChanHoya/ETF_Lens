@@ -1,192 +1,862 @@
 {
-  "intuitive machines inc": {"symbol": "LUNR", "display_name": "Intuitive Machines (인튜이티브 머신스)"},
-  "intuitive machines": {"symbol": "LUNR", "display_name": "Intuitive Machines (인튜이티브 머신스)"},
-  "rocket lab corp": {"symbol": "RKLB", "display_name": "Rocket Lab (로켓랩)"},
-  "rocket lab usa": {"symbol": "RKLB", "display_name": "Rocket Lab (로켓랩)"},
-  "rocket lab usa inc": {"symbol": "RKLB", "display_name": "Rocket Lab (로켓랩)"},
-  "planet labs pbc": {"symbol": "PL", "display_name": "Planet Labs (플래닛랩스)"},
-  "planet labs": {"symbol": "PL", "display_name": "Planet Labs (플래닛랩스)"},
-  "ast spacemobile inc": {"symbol": "ASTS", "display_name": "AST SpaceMobile (스페이스모바일)"},
-  "ast spacemobile cl a ord": {"symbol": "ASTS", "display_name": "AST SpaceMobile (스페이스모바일)"},
-  "ast spacemobile": {"symbol": "ASTS", "display_name": "AST SpaceMobile (스페이스모바일)"},
-  "ast space": {"symbol": "ASTS", "display_name": "AST SpaceMobile (스페이스모바일)"},
-  "redwire corp": {"symbol": "RDW", "display_name": "Redwire (레드와이어)"},
-  "redwire": {"symbol": "RDW", "display_name": "Redwire (레드와이어)"},
-  "echostar corp": {"symbol": "SATS", "display_name": "EchoStar (에코스타)"},
-  "echostar corp-a": {"symbol": "SATS", "display_name": "EchoStar (에코스타)"},
-  "echostar": {"symbol": "SATS", "display_name": "EchoStar (에코스타)"},
-  "kratos defense & security solutions inc": {"symbol": "KTOS", "display_name": "Kratos Defense"},
-  "kratos defense": {"symbol": "KTOS", "display_name": "Kratos Defense"},
-  "karman holdings inc": {"symbol": "KRMN", "display_name": "Karman Holdings"},
-  "karman holdings": {"symbol": "KRMN", "display_name": "Karman Holdings"},
-  "satellogic inc-a": {"symbol": "SATL", "display_name": "Satellogic"},
-  "satellogic": {"symbol": "SATL", "display_name": "Satellogic"},
-  "spire global inc": {"symbol": "SPIR", "display_name": "Spire Global"},
-  "spire global": {"symbol": "SPIR", "display_name": "Spire Global"},
-  "mda space ltd": {"symbol": "MDA.TO", "display_name": "MDA Space (MDA 스페이스)"},
-  "mda space": {"symbol": "MDA.TO", "display_name": "MDA Space (MDA 스페이스)"},
-  "globalstar inc": {"symbol": "GSAT", "display_name": "Globalstar (글로벌스타)"},
-  "globalstar": {"symbol": "GSAT", "display_name": "Globalstar (글로벌스타)"},
-  "viasat inc": {"symbol": "VSAT", "display_name": "Viasat Inc"},
-  "viasat": {"symbol": "VSAT", "display_name": "Viasat Inc"},
-  "iridium communications inc": {"symbol": "IRDM", "display_name": "Iridium Communications"},
-  "iridium communications": {"symbol": "IRDM", "display_name": "Iridium Communications"},
-  "iridium": {"symbol": "IRDM", "display_name": "Iridium Communications"},
-  "voyager technologies inc": {"symbol": "VOYG", "display_name": "Voyager Technologies"},
-  "voyager technologies inc-a": {"symbol": "VOYG", "display_name": "Voyager Technologies"},
-  "voyager technologies": {"symbol": "VOYG", "display_name": "Voyager Technologies"},
-  "l3harris technologies": {"symbol": "LHX", "display_name": "L3Harris Technologies"},
-  "l3harris technologies inc": {"symbol": "LHX", "display_name": "L3Harris Technologies"},
-  "l3harris": {"symbol": "LHX", "display_name": "L3Harris Technologies"},
-  "boeing co/the": {"symbol": "BA", "display_name": "Boeing (보잉)"},
-  "boeing": {"symbol": "BA", "display_name": "Boeing (보잉)"},
-  "teradyne inc": {"symbol": "TER", "display_name": "Teradyne"},
-  "teradyne": {"symbol": "TER", "display_name": "Teradyne"},
-  "deere & company": {"symbol": "DE", "display_name": "Deere & Company (디어앤컴퍼니)"},
-  "deere": {"symbol": "DE", "display_name": "Deere & Company (디어앤컴퍼니)"},
-  "archer aviation inc": {"symbol": "ACHR", "display_name": "Archer Aviation"},
-  "archer aviation": {"symbol": "ACHR", "display_name": "Archer Aviation"},
-  "howmet aerospace inc": {"symbol": "HWM", "display_name": "Howmet Aerospace"},
-  "howmet aerospace": {"symbol": "HWM", "display_name": "Howmet Aerospace"},
-  "howmet": {"symbol": "HWM", "display_name": "Howmet Aerospace"},
-  "northrop grumman corp": {"symbol": "NOC", "display_name": "Northrop Grumman"},
-  "northrop grumman": {"symbol": "NOC", "display_name": "Northrop Grumman"},
-  "lockheed martin corp": {"symbol": "LMT", "display_name": "Lockheed Martin"},
-  "lockheed martin": {"symbol": "LMT", "display_name": "Lockheed Martin"},
-  "lockheed": {"symbol": "LMT", "display_name": "Lockheed Martin"},
-  "transdigm group inc": {"symbol": "TDG", "display_name": "TransDigm Group"},
-  "transdigm": {"symbol": "TDG", "display_name": "TransDigm Group"},
-  "elbit systems ltd": {"symbol": "ESLT", "display_name": "Elbit Systems"},
-  "elbit systems": {"symbol": "ESLT", "display_name": "Elbit Systems"},
-  "elbit": {"symbol": "ESLT", "display_name": "Elbit Systems"},
-  "carpenter technology corp": {"symbol": "CRS", "display_name": "Carpenter Technology"},
-  "carpenter technology": {"symbol": "CRS", "display_name": "Carpenter Technology"},
-  "blacksky technology inc": {"symbol": "BKSY", "display_name": "BlackSky Technology"},
-  "blacksky technology": {"symbol": "BKSY", "display_name": "BlackSky Technology"},
-  "blacksky": {"symbol": "BKSY", "display_name": "BlackSky Technology"},
-  "telesat corp": {"symbol": "TSAT", "display_name": "Telesat"},
-  "telesat": {"symbol": "TSAT", "display_name": "Telesat"},
-  "alphabet inc-cl a": {"symbol": "GOOGL", "display_name": "Alphabet (Google)"},
-  "alphabet inc": {"symbol": "GOOGL", "display_name": "Alphabet (Google)"},
-  "alphabet": {"symbol": "GOOGL", "display_name": "Alphabet (Google)"},
-  "nvidia corp": {"symbol": "NVDA", "display_name": "NVIDIA"},
-  "nvidia": {"symbol": "NVDA", "display_name": "NVIDIA"},
-  "broadcom inc": {"symbol": "AVGO", "display_name": "Broadcom"},
-  "broadcom": {"symbol": "AVGO", "display_name": "Broadcom"},
-  "taiwan semiconductor manufacturing": {"symbol": "TSM", "display_name": "TSMC"},
-  "tsmc": {"symbol": "TSM", "display_name": "TSMC"},
-  "advanced micro devices inc": {"symbol": "AMD", "display_name": "Advanced Micro Devices"},
-  "advanced micro devices": {"symbol": "AMD", "display_name": "Advanced Micro Devices"},
-  "intel corp": {"symbol": "INTC", "display_name": "Intel"},
-  "intel": {"symbol": "INTC", "display_name": "Intel"},
-  "marvell technology inc": {"symbol": "MRVL", "display_name": "Marvell Technology"},
-  "marvell technology": {"symbol": "MRVL", "display_name": "Marvell Technology"},
-  "marvell": {"symbol": "MRVL", "display_name": "Marvell Technology"},
-  "globalfoundries inc": {"symbol": "GFS", "display_name": "GlobalFoundries"},
-  "globalfoundries": {"symbol": "GFS", "display_name": "GlobalFoundries"},
-  "microchip technology inc": {"symbol": "MCHP", "display_name": "Microchip Technology"},
-  "microchip technology": {"symbol": "MCHP", "display_name": "Microchip Technology"},
-  "qualcomm inc": {"symbol": "QCOM", "display_name": "Qualcomm"},
-  "qualcomm": {"symbol": "QCOM", "display_name": "Qualcomm"},
-  "kla corp": {"symbol": "KLAC", "display_name": "KLA Corp"},
-  "kla": {"symbol": "KLAC", "display_name": "KLA Corp"},
-  "on semiconductor corp": {"symbol": "ON", "display_name": "ON Semiconductor"},
-  "on semiconductor": {"symbol": "ON", "display_name": "ON Semiconductor"},
-  "lam research corp": {"symbol": "LRCX", "display_name": "Lam Research"},
-  "lam research": {"symbol": "LRCX", "display_name": "Lam Research"},
-  "arm holdings plc": {"symbol": "ARM", "display_name": "Arm Holdings"},
-  "arm holdings": {"symbol": "ARM", "display_name": "Arm Holdings"},
-  "applied materials inc": {"symbol": "AMAT", "display_name": "Applied Materials"},
-  "applied materials": {"symbol": "AMAT", "display_name": "Applied Materials"},
-  "micron technology inc": {"symbol": "MU", "display_name": "Micron Technology"},
-  "micron technology": {"symbol": "MU", "display_name": "Micron Technology"},
-  "micron": {"symbol": "MU", "display_name": "Micron Technology"},
-  "texas instruments inc": {"symbol": "TXN", "display_name": "Texas Instruments"},
-  "texas instruments": {"symbol": "TXN", "display_name": "Texas Instruments"},
-  "analog devices inc": {"symbol": "ADI", "display_name": "Analog Devices"},
-  "analog devices": {"symbol": "ADI", "display_name": "Analog Devices"},
-  "monolithic power systems inc": {"symbol": "MPWR", "display_name": "Monolithic Power Systems"},
-  "monolithic power systems": {"symbol": "MPWR", "display_name": "Monolithic Power Systems"},
-  "monolithic power": {"symbol": "MPWR", "display_name": "Monolithic Power Systems"},
-  "entegris inc": {"symbol": "ENTG", "display_name": "Entegris"},
-  "entegris": {"symbol": "ENTG", "display_name": "Entegris"},
-  "synopsys inc": {"symbol": "SNPS", "display_name": "Synopsys"},
-  "synopsys": {"symbol": "SNPS", "display_name": "Synopsys"},
-  "cadence design systems inc": {"symbol": "CDNS", "display_name": "Cadence Design Systems"},
-  "cadence design systems": {"symbol": "CDNS", "display_name": "Cadence Design Systems"},
-  "cadence": {"symbol": "CDNS", "display_name": "Cadence Design Systems"},
-  "asml holding nv": {"symbol": "ASML", "display_name": "ASML"},
-  "asml": {"symbol": "ASML", "display_name": "ASML"},
-  "skyworks solutions inc": {"symbol": "SWKS", "display_name": "Skyworks Solutions"},
-  "skyworks": {"symbol": "SWKS", "display_name": "Skyworks Solutions"},
-  "nxp semiconductors nv": {"symbol": "NXPI", "display_name": "NXP Semiconductors"},
-  "nxp semiconductors": {"symbol": "NXPI", "display_name": "NXP Semiconductors"},
-  "ge vernova inc": {"symbol": "GEV", "display_name": "GE Vernova"},
-  "ge vernova": {"symbol": "GEV", "display_name": "GE Vernova"},
-  "eaton corp plc": {"symbol": "ETN", "display_name": "Eaton Corporation"},
-  "eaton corp": {"symbol": "ETN", "display_name": "Eaton Corporation"},
-  "eaton": {"symbol": "ETN", "display_name": "Eaton Corporation"},
-  "constellation energy corp": {"symbol": "CEG", "display_name": "Constellation Energy"},
-  "constellation energy": {"symbol": "CEG", "display_name": "Constellation Energy"},
-  "vistra corp": {"symbol": "VST", "display_name": "Vistra"},
-  "vistra": {"symbol": "VST", "display_name": "Vistra"},
-  "nextera energy inc": {"symbol": "NEE", "display_name": "NextEra Energy"},
-  "nextera energy": {"symbol": "NEE", "display_name": "NextEra Energy"},
-  "nextera": {"symbol": "NEE", "display_name": "NextEra Energy"},
-  "vertiv holdings co": {"symbol": "VRT", "display_name": "Vertiv Holdings"},
-  "vertiv holdings": {"symbol": "VRT", "display_name": "Vertiv Holdings"},
-  "vertiv": {"symbol": "VRT", "display_name": "Vertiv Holdings"},
-  "quanta services inc": {"symbol": "PWR", "display_name": "Quanta Services"},
-  "quanta services": {"symbol": "PWR", "display_name": "Quanta Services"},
-  "southern co/the": {"symbol": "SO", "display_name": "Southern Company"},
-  "southern company": {"symbol": "SO", "display_name": "Southern Company"},
-  "powell industries inc": {"symbol": "POWL", "display_name": "Powell Industries"},
-  "powell industries": {"symbol": "POWL", "display_name": "Powell Industries"},
-  "nrg energy inc": {"symbol": "NRG", "display_name": "NRG Energy"},
-  "nrg energy": {"symbol": "NRG", "display_name": "NRG Energy"},
-  "duke energy corp": {"symbol": "DUK", "display_name": "Duke Energy"},
-  "duke energy": {"symbol": "DUK", "display_name": "Duke Energy"},
-  "cameco corp": {"symbol": "CCJ", "display_name": "Cameco"},
-  "cameco": {"symbol": "CCJ", "display_name": "Cameco"},
-  "bloom energy corp": {"symbol": "BE", "display_name": "Bloom Energy"},
-  "bloom energy": {"symbol": "BE", "display_name": "Bloom Energy"},
-  "nvent electric plc": {"symbol": "NVT", "display_name": "nVent Electric"},
-  "nvent electric": {"symbol": "NVT", "display_name": "nVent Electric"},
-  "credo technology group holding": {"symbol": "CRDO", "display_name": "Credo Technology"},
-  "credo technology": {"symbol": "CRDO", "display_name": "Credo Technology"},
-  "modine manufacturing co": {"symbol": "MOD", "display_name": "Modine Manufacturing"},
-  "modine manufacturing": {"symbol": "MOD", "display_name": "Modine Manufacturing"},
-  "modine": {"symbol": "MOD", "display_name": "Modine Manufacturing"},
-  "generac holdings inc": {"symbol": "GNRC", "display_name": "Generac Holdings"},
-  "generac holdings": {"symbol": "GNRC", "display_name": "Generac Holdings"},
-  "generac": {"symbol": "GNRC", "display_name": "Generac Holdings"},
-  "nokia oyj": {"symbol": "NOK", "display_name": "Nokia"},
-  "nokia": {"symbol": "NOK", "display_name": "Nokia"},
-  "hubbell inc": {"symbol": "HUBB", "display_name": "Hubbell"},
-  "hubbell": {"symbol": "HUBB", "display_name": "Hubbell"},
-  "vulcan materials co": {"symbol": "VMC", "display_name": "Vulcan Materials"},
-  "vulcan materials": {"symbol": "VMC", "display_name": "Vulcan Materials"},
-  "caterpillar inc": {"symbol": "CAT", "display_name": "Caterpillar"},
-  "caterpillar": {"symbol": "CAT", "display_name": "Caterpillar"},
-  "bwx technologies inc": {"symbol": "BWXT", "display_name": "BWX Technologies"},
-  "bwx technologies": {"symbol": "BWXT", "display_name": "BWX Technologies"},
-  "oklo inc": {"symbol": "OKLO", "display_name": "Oklo"},
-  "oklo": {"symbol": "OKLO", "display_name": "Oklo"},
-  "nuscale power corp": {"symbol": "SMR", "display_name": "NuScale Power"},
-  "nuscale power": {"symbol": "SMR", "display_name": "NuScale Power"},
-  "nuscale": {"symbol": "SMR", "display_name": "NuScale Power"},
-  "csx corp": {"symbol": "CSX", "display_name": "CSX Corporation"},
-  "csx": {"symbol": "CSX", "display_name": "CSX Corporation"},
-  "solaris energy infrastructure inc": {"symbol": "SEI", "display_name": "Solaris Energy"},
-  "solaris energy": {"symbol": "SEI", "display_name": "Solaris Energy"},
-  "space exploration technologies corp": {"symbol": "SPCX", "display_name": "SpaceX"},
-  "space exploration techn-cl a": {"symbol": "SPCX", "display_name": "SpaceX"},
-  "space exploration technologies": {"symbol": "SPCX", "display_name": "SpaceX"},
-  "york space systems inc": {"symbol": "YSS", "display_name": "York Space Systems"},
-  "firefly aerospace inc": {"symbol": null, "display_name": "Firefly Aerospace (비상장)"},
-  "firefly aerospace": {"symbol": null, "display_name": "Firefly Aerospace (비상장)"},
-  "hawkeye 360 inc": {"symbol": null, "display_name": "Hawkeye 360 (비상장)"},
-  "hawkeye 360": {"symbol": null, "display_name": "Hawkeye 360 (비상장)"},
-  "general aerospace co": {"symbol": null, "display_name": "General Aerospace (비상장)"},
-  "general aerospace": {"symbol": null, "display_name": "General Aerospace (비상장)"}
+  "intuitive machines inc": {
+    "symbol": "LUNR",
+    "display_name": "Intuitive Machines (인튜이티브 머신스)"
+  },
+  "intuitive machines": {
+    "symbol": "LUNR",
+    "display_name": "Intuitive Machines (인튜이티브 머신스)"
+  },
+  "rocket lab corp": {
+    "symbol": "RKLB",
+    "display_name": "Rocket Lab (로켓랩)"
+  },
+  "rocket lab usa": {
+    "symbol": "RKLB",
+    "display_name": "Rocket Lab (로켓랩)"
+  },
+  "rocket lab usa inc": {
+    "symbol": "RKLB",
+    "display_name": "Rocket Lab (로켓랩)"
+  },
+  "planet labs pbc": {
+    "symbol": "PL",
+    "display_name": "Planet Labs (플래닛랩스)"
+  },
+  "planet labs": {
+    "symbol": "PL",
+    "display_name": "Planet Labs (플래닛랩스)"
+  },
+  "ast spacemobile inc": {
+    "symbol": "ASTS",
+    "display_name": "AST SpaceMobile (스페이스모바일)"
+  },
+  "ast spacemobile cl a ord": {
+    "symbol": "ASTS",
+    "display_name": "AST SpaceMobile (스페이스모바일)"
+  },
+  "ast spacemobile": {
+    "symbol": "ASTS",
+    "display_name": "AST SpaceMobile (스페이스모바일)"
+  },
+  "ast space": {
+    "symbol": "ASTS",
+    "display_name": "AST SpaceMobile (스페이스모바일)"
+  },
+  "redwire corp": {
+    "symbol": "RDW",
+    "display_name": "Redwire (레드와이어)"
+  },
+  "redwire": {
+    "symbol": "RDW",
+    "display_name": "Redwire (레드와이어)"
+  },
+  "echostar corp": {
+    "symbol": "SATS",
+    "display_name": "EchoStar (에코스타)"
+  },
+  "echostar corp-a": {
+    "symbol": "SATS",
+    "display_name": "EchoStar (에코스타)"
+  },
+  "echostar": {
+    "symbol": "SATS",
+    "display_name": "EchoStar (에코스타)"
+  },
+  "kratos defense & security solutions inc": {
+    "symbol": "KTOS",
+    "display_name": "Kratos Defense"
+  },
+  "kratos defense": {
+    "symbol": "KTOS",
+    "display_name": "Kratos Defense"
+  },
+  "karman holdings inc": {
+    "symbol": "KRMN",
+    "display_name": "Karman Holdings"
+  },
+  "karman holdings": {
+    "symbol": "KRMN",
+    "display_name": "Karman Holdings"
+  },
+  "satellogic inc-a": {
+    "symbol": "SATL",
+    "display_name": "Satellogic"
+  },
+  "satellogic": {
+    "symbol": "SATL",
+    "display_name": "Satellogic"
+  },
+  "spire global inc": {
+    "symbol": "SPIR",
+    "display_name": "Spire Global"
+  },
+  "spire global": {
+    "symbol": "SPIR",
+    "display_name": "Spire Global"
+  },
+  "mda space ltd": {
+    "symbol": "MDA.TO",
+    "display_name": "MDA Space (MDA 스페이스)"
+  },
+  "mda space": {
+    "symbol": "MDA.TO",
+    "display_name": "MDA Space (MDA 스페이스)"
+  },
+  "globalstar inc": {
+    "symbol": "GSAT",
+    "display_name": "Globalstar (글로벌스타)"
+  },
+  "globalstar": {
+    "symbol": "GSAT",
+    "display_name": "Globalstar (글로벌스타)"
+  },
+  "viasat inc": {
+    "symbol": "VSAT",
+    "display_name": "Viasat Inc"
+  },
+  "viasat": {
+    "symbol": "VSAT",
+    "display_name": "Viasat Inc"
+  },
+  "iridium communications inc": {
+    "symbol": "IRDM",
+    "display_name": "Iridium Communications"
+  },
+  "iridium communications": {
+    "symbol": "IRDM",
+    "display_name": "Iridium Communications"
+  },
+  "iridium": {
+    "symbol": "IRDM",
+    "display_name": "Iridium Communications"
+  },
+  "voyager technologies inc": {
+    "symbol": "VOYG",
+    "display_name": "Voyager Technologies"
+  },
+  "voyager technologies inc-a": {
+    "symbol": "VOYG",
+    "display_name": "Voyager Technologies"
+  },
+  "voyager technologies": {
+    "symbol": "VOYG",
+    "display_name": "Voyager Technologies"
+  },
+  "l3harris technologies": {
+    "symbol": "LHX",
+    "display_name": "L3Harris Technologies"
+  },
+  "l3harris technologies inc": {
+    "symbol": "LHX",
+    "display_name": "L3Harris Technologies"
+  },
+  "l3harris": {
+    "symbol": "LHX",
+    "display_name": "L3Harris Technologies"
+  },
+  "boeing co/the": {
+    "symbol": "BA",
+    "display_name": "Boeing (보잉)"
+  },
+  "boeing": {
+    "symbol": "BA",
+    "display_name": "Boeing (보잉)"
+  },
+  "teradyne inc": {
+    "symbol": "TER",
+    "display_name": "Teradyne"
+  },
+  "teradyne": {
+    "symbol": "TER",
+    "display_name": "Teradyne"
+  },
+  "deere & company": {
+    "symbol": "DE",
+    "display_name": "Deere & Company (디어앤컴퍼니)"
+  },
+  "deere": {
+    "symbol": "DE",
+    "display_name": "Deere & Company (디어앤컴퍼니)"
+  },
+  "archer aviation inc": {
+    "symbol": "ACHR",
+    "display_name": "Archer Aviation"
+  },
+  "archer aviation": {
+    "symbol": "ACHR",
+    "display_name": "Archer Aviation"
+  },
+  "howmet aerospace inc": {
+    "symbol": "HWM",
+    "display_name": "Howmet Aerospace"
+  },
+  "howmet aerospace": {
+    "symbol": "HWM",
+    "display_name": "Howmet Aerospace"
+  },
+  "howmet": {
+    "symbol": "HWM",
+    "display_name": "Howmet Aerospace"
+  },
+  "northrop grumman corp": {
+    "symbol": "NOC",
+    "display_name": "Northrop Grumman"
+  },
+  "northrop grumman": {
+    "symbol": "NOC",
+    "display_name": "Northrop Grumman"
+  },
+  "lockheed martin corp": {
+    "symbol": "LMT",
+    "display_name": "Lockheed Martin"
+  },
+  "lockheed martin": {
+    "symbol": "LMT",
+    "display_name": "Lockheed Martin"
+  },
+  "lockheed": {
+    "symbol": "LMT",
+    "display_name": "Lockheed Martin"
+  },
+  "transdigm group inc": {
+    "symbol": "TDG",
+    "display_name": "TransDigm Group"
+  },
+  "transdigm": {
+    "symbol": "TDG",
+    "display_name": "TransDigm Group"
+  },
+  "elbit systems ltd": {
+    "symbol": "ESLT",
+    "display_name": "Elbit Systems"
+  },
+  "elbit systems": {
+    "symbol": "ESLT",
+    "display_name": "Elbit Systems"
+  },
+  "elbit": {
+    "symbol": "ESLT",
+    "display_name": "Elbit Systems"
+  },
+  "carpenter technology corp": {
+    "symbol": "CRS",
+    "display_name": "Carpenter Technology"
+  },
+  "carpenter technology": {
+    "symbol": "CRS",
+    "display_name": "Carpenter Technology"
+  },
+  "blacksky technology inc": {
+    "symbol": "BKSY",
+    "display_name": "BlackSky Technology"
+  },
+  "blacksky technology": {
+    "symbol": "BKSY",
+    "display_name": "BlackSky Technology"
+  },
+  "blacksky": {
+    "symbol": "BKSY",
+    "display_name": "BlackSky Technology"
+  },
+  "telesat corp": {
+    "symbol": "TSAT",
+    "display_name": "Telesat"
+  },
+  "telesat": {
+    "symbol": "TSAT",
+    "display_name": "Telesat"
+  },
+  "alphabet inc-cl a": {
+    "symbol": "GOOGL",
+    "display_name": "Alphabet (Google)"
+  },
+  "alphabet inc": {
+    "symbol": "GOOGL",
+    "display_name": "Alphabet (Google)"
+  },
+  "alphabet": {
+    "symbol": "GOOGL",
+    "display_name": "Alphabet (Google)"
+  },
+  "nvidia corp": {
+    "symbol": "NVDA",
+    "display_name": "NVIDIA"
+  },
+  "nvidia": {
+    "symbol": "NVDA",
+    "display_name": "NVIDIA"
+  },
+  "broadcom inc": {
+    "symbol": "AVGO",
+    "display_name": "Broadcom"
+  },
+  "broadcom": {
+    "symbol": "AVGO",
+    "display_name": "Broadcom"
+  },
+  "taiwan semiconductor manufacturing": {
+    "symbol": "TSM",
+    "display_name": "TSMC"
+  },
+  "tsmc": {
+    "symbol": "TSM",
+    "display_name": "TSMC"
+  },
+  "advanced micro devices inc": {
+    "symbol": "AMD",
+    "display_name": "Advanced Micro Devices"
+  },
+  "advanced micro devices": {
+    "symbol": "AMD",
+    "display_name": "Advanced Micro Devices"
+  },
+  "intel corp": {
+    "symbol": "INTC",
+    "display_name": "Intel"
+  },
+  "intel": {
+    "symbol": "INTC",
+    "display_name": "Intel"
+  },
+  "marvell technology inc": {
+    "symbol": "MRVL",
+    "display_name": "Marvell Technology"
+  },
+  "marvell technology": {
+    "symbol": "MRVL",
+    "display_name": "Marvell Technology"
+  },
+  "marvell": {
+    "symbol": "MRVL",
+    "display_name": "Marvell Technology"
+  },
+  "globalfoundries inc": {
+    "symbol": "GFS",
+    "display_name": "GlobalFoundries"
+  },
+  "globalfoundries": {
+    "symbol": "GFS",
+    "display_name": "GlobalFoundries"
+  },
+  "microchip technology inc": {
+    "symbol": "MCHP",
+    "display_name": "Microchip Technology"
+  },
+  "microchip technology": {
+    "symbol": "MCHP",
+    "display_name": "Microchip Technology"
+  },
+  "qualcomm inc": {
+    "symbol": "QCOM",
+    "display_name": "Qualcomm"
+  },
+  "qualcomm": {
+    "symbol": "QCOM",
+    "display_name": "Qualcomm"
+  },
+  "kla corp": {
+    "symbol": "KLAC",
+    "display_name": "KLA Corp"
+  },
+  "kla": {
+    "symbol": "KLAC",
+    "display_name": "KLA Corp"
+  },
+  "on semiconductor corp": {
+    "symbol": "ON",
+    "display_name": "ON Semiconductor"
+  },
+  "on semiconductor": {
+    "symbol": "ON",
+    "display_name": "ON Semiconductor"
+  },
+  "lam research corp": {
+    "symbol": "LRCX",
+    "display_name": "Lam Research"
+  },
+  "lam research": {
+    "symbol": "LRCX",
+    "display_name": "Lam Research"
+  },
+  "arm holdings plc": {
+    "symbol": "ARM",
+    "display_name": "Arm Holdings"
+  },
+  "arm holdings": {
+    "symbol": "ARM",
+    "display_name": "Arm Holdings"
+  },
+  "applied materials inc": {
+    "symbol": "AMAT",
+    "display_name": "Applied Materials"
+  },
+  "applied materials": {
+    "symbol": "AMAT",
+    "display_name": "Applied Materials"
+  },
+  "micron technology inc": {
+    "symbol": "MU",
+    "display_name": "Micron Technology"
+  },
+  "micron technology": {
+    "symbol": "MU",
+    "display_name": "Micron Technology"
+  },
+  "micron": {
+    "symbol": "MU",
+    "display_name": "Micron Technology"
+  },
+  "texas instruments inc": {
+    "symbol": "TXN",
+    "display_name": "Texas Instruments"
+  },
+  "texas instruments": {
+    "symbol": "TXN",
+    "display_name": "Texas Instruments"
+  },
+  "analog devices inc": {
+    "symbol": "ADI",
+    "display_name": "Analog Devices"
+  },
+  "analog devices": {
+    "symbol": "ADI",
+    "display_name": "Analog Devices"
+  },
+  "monolithic power systems inc": {
+    "symbol": "MPWR",
+    "display_name": "Monolithic Power Systems"
+  },
+  "monolithic power systems": {
+    "symbol": "MPWR",
+    "display_name": "Monolithic Power Systems"
+  },
+  "monolithic power": {
+    "symbol": "MPWR",
+    "display_name": "Monolithic Power Systems"
+  },
+  "entegris inc": {
+    "symbol": "ENTG",
+    "display_name": "Entegris"
+  },
+  "entegris": {
+    "symbol": "ENTG",
+    "display_name": "Entegris"
+  },
+  "synopsys inc": {
+    "symbol": "SNPS",
+    "display_name": "Synopsys"
+  },
+  "synopsys": {
+    "symbol": "SNPS",
+    "display_name": "Synopsys"
+  },
+  "cadence design systems inc": {
+    "symbol": "CDNS",
+    "display_name": "Cadence Design Systems"
+  },
+  "cadence design systems": {
+    "symbol": "CDNS",
+    "display_name": "Cadence Design Systems"
+  },
+  "cadence": {
+    "symbol": "CDNS",
+    "display_name": "Cadence Design Systems"
+  },
+  "asml holding nv": {
+    "symbol": "ASML",
+    "display_name": "ASML"
+  },
+  "asml": {
+    "symbol": "ASML",
+    "display_name": "ASML"
+  },
+  "skyworks solutions inc": {
+    "symbol": "SWKS",
+    "display_name": "Skyworks Solutions"
+  },
+  "skyworks": {
+    "symbol": "SWKS",
+    "display_name": "Skyworks Solutions"
+  },
+  "nxp semiconductors nv": {
+    "symbol": "NXPI",
+    "display_name": "NXP Semiconductors"
+  },
+  "nxp semiconductors": {
+    "symbol": "NXPI",
+    "display_name": "NXP Semiconductors"
+  },
+  "ge vernova inc": {
+    "symbol": "GEV",
+    "display_name": "GE Vernova"
+  },
+  "ge vernova": {
+    "symbol": "GEV",
+    "display_name": "GE Vernova"
+  },
+  "eaton corp plc": {
+    "symbol": "ETN",
+    "display_name": "Eaton Corporation"
+  },
+  "eaton corp": {
+    "symbol": "ETN",
+    "display_name": "Eaton Corporation"
+  },
+  "eaton": {
+    "symbol": "ETN",
+    "display_name": "Eaton Corporation"
+  },
+  "constellation energy corp": {
+    "symbol": "CEG",
+    "display_name": "Constellation Energy"
+  },
+  "constellation energy": {
+    "symbol": "CEG",
+    "display_name": "Constellation Energy"
+  },
+  "vistra corp": {
+    "symbol": "VST",
+    "display_name": "Vistra"
+  },
+  "vistra": {
+    "symbol": "VST",
+    "display_name": "Vistra"
+  },
+  "nextera energy inc": {
+    "symbol": "NEE",
+    "display_name": "NextEra Energy"
+  },
+  "nextera energy": {
+    "symbol": "NEE",
+    "display_name": "NextEra Energy"
+  },
+  "nextera": {
+    "symbol": "NEE",
+    "display_name": "NextEra Energy"
+  },
+  "vertiv holdings co": {
+    "symbol": "VRT",
+    "display_name": "Vertiv Holdings"
+  },
+  "vertiv holdings": {
+    "symbol": "VRT",
+    "display_name": "Vertiv Holdings"
+  },
+  "vertiv": {
+    "symbol": "VRT",
+    "display_name": "Vertiv Holdings"
+  },
+  "quanta services inc": {
+    "symbol": "PWR",
+    "display_name": "Quanta Services"
+  },
+  "quanta services": {
+    "symbol": "PWR",
+    "display_name": "Quanta Services"
+  },
+  "southern co/the": {
+    "symbol": "SO",
+    "display_name": "Southern Company"
+  },
+  "southern company": {
+    "symbol": "SO",
+    "display_name": "Southern Company"
+  },
+  "powell industries inc": {
+    "symbol": "POWL",
+    "display_name": "Powell Industries"
+  },
+  "powell industries": {
+    "symbol": "POWL",
+    "display_name": "Powell Industries"
+  },
+  "nrg energy inc": {
+    "symbol": "NRG",
+    "display_name": "NRG Energy"
+  },
+  "nrg energy": {
+    "symbol": "NRG",
+    "display_name": "NRG Energy"
+  },
+  "duke energy corp": {
+    "symbol": "DUK",
+    "display_name": "Duke Energy"
+  },
+  "duke energy": {
+    "symbol": "DUK",
+    "display_name": "Duke Energy"
+  },
+  "cameco corp": {
+    "symbol": "CCJ",
+    "display_name": "Cameco"
+  },
+  "cameco": {
+    "symbol": "CCJ",
+    "display_name": "Cameco"
+  },
+  "bloom energy corp": {
+    "symbol": "BE",
+    "display_name": "Bloom Energy"
+  },
+  "bloom energy": {
+    "symbol": "BE",
+    "display_name": "Bloom Energy"
+  },
+  "nvent electric plc": {
+    "symbol": "NVT",
+    "display_name": "nVent Electric"
+  },
+  "nvent electric": {
+    "symbol": "NVT",
+    "display_name": "nVent Electric"
+  },
+  "credo technology group holding": {
+    "symbol": "CRDO",
+    "display_name": "Credo Technology"
+  },
+  "credo technology": {
+    "symbol": "CRDO",
+    "display_name": "Credo Technology"
+  },
+  "modine manufacturing co": {
+    "symbol": "MOD",
+    "display_name": "Modine Manufacturing"
+  },
+  "modine manufacturing": {
+    "symbol": "MOD",
+    "display_name": "Modine Manufacturing"
+  },
+  "modine": {
+    "symbol": "MOD",
+    "display_name": "Modine Manufacturing"
+  },
+  "generac holdings inc": {
+    "symbol": "GNRC",
+    "display_name": "Generac Holdings"
+  },
+  "generac holdings": {
+    "symbol": "GNRC",
+    "display_name": "Generac Holdings"
+  },
+  "generac": {
+    "symbol": "GNRC",
+    "display_name": "Generac Holdings"
+  },
+  "nokia oyj": {
+    "symbol": "NOK",
+    "display_name": "Nokia"
+  },
+  "nokia": {
+    "symbol": "NOK",
+    "display_name": "Nokia"
+  },
+  "hubbell inc": {
+    "symbol": "HUBB",
+    "display_name": "Hubbell"
+  },
+  "hubbell": {
+    "symbol": "HUBB",
+    "display_name": "Hubbell"
+  },
+  "vulcan materials co": {
+    "symbol": "VMC",
+    "display_name": "Vulcan Materials"
+  },
+  "vulcan materials": {
+    "symbol": "VMC",
+    "display_name": "Vulcan Materials"
+  },
+  "caterpillar inc": {
+    "symbol": "CAT",
+    "display_name": "Caterpillar"
+  },
+  "caterpillar": {
+    "symbol": "CAT",
+    "display_name": "Caterpillar"
+  },
+  "bwx technologies inc": {
+    "symbol": "BWXT",
+    "display_name": "BWX Technologies"
+  },
+  "bwx technologies": {
+    "symbol": "BWXT",
+    "display_name": "BWX Technologies"
+  },
+  "oklo inc": {
+    "symbol": "OKLO",
+    "display_name": "Oklo"
+  },
+  "oklo": {
+    "symbol": "OKLO",
+    "display_name": "Oklo"
+  },
+  "nuscale power corp": {
+    "symbol": "SMR",
+    "display_name": "NuScale Power"
+  },
+  "nuscale power": {
+    "symbol": "SMR",
+    "display_name": "NuScale Power"
+  },
+  "nuscale": {
+    "symbol": "SMR",
+    "display_name": "NuScale Power"
+  },
+  "csx corp": {
+    "symbol": "CSX",
+    "display_name": "CSX Corporation"
+  },
+  "csx": {
+    "symbol": "CSX",
+    "display_name": "CSX Corporation"
+  },
+  "solaris energy infrastructure inc": {
+    "symbol": "SEI",
+    "display_name": "Solaris Energy"
+  },
+  "solaris energy": {
+    "symbol": "SEI",
+    "display_name": "Solaris Energy"
+  },
+  "space exploration technologies corp": {
+    "symbol": "SPCX",
+    "display_name": "SpaceX"
+  },
+  "space exploration techn-cl a": {
+    "symbol": "SPCX",
+    "display_name": "SpaceX"
+  },
+  "space exploration technologies": {
+    "symbol": "SPCX",
+    "display_name": "SpaceX"
+  },
+  "york space systems inc": {
+    "symbol": "YSS",
+    "display_name": "York Space Systems"
+  },
+  "firefly aerospace inc": {
+    "symbol": null,
+    "display_name": "Firefly Aerospace (비상장)"
+  },
+  "firefly aerospace": {
+    "symbol": null,
+    "display_name": "Firefly Aerospace (비상장)"
+  },
+  "hawkeye 360 inc": {
+    "symbol": null,
+    "display_name": "Hawkeye 360 (비상장)"
+  },
+  "hawkeye 360": {
+    "symbol": null,
+    "display_name": "Hawkeye 360 (비상장)"
+  },
+  "general aerospace co": {
+    "symbol": null,
+    "display_name": "General Aerospace (비상장)"
+  },
+  "general aerospace": {
+    "symbol": null,
+    "display_name": "General Aerospace (비상장)"
+  },
+  "screen holdings co ltd": {
+    "symbol": null,
+    "display_name": "SCREEN HOLDINGS CO LTD"
+  },
+  "tokyo ohka kogyo co ltd": {
+    "symbol": null,
+    "display_name": "TOKYO OHKA KOGYO CO LTD"
+  },
+  "dexerials corp": {
+    "symbol": null,
+    "display_name": "DEXERIALS CORP"
+  },
+  "nippon sanso holdings corp": {
+    "symbol": null,
+    "display_name": "NIPPON SANSO HOLDINGS CORP"
+  },
+  "kokusai electric corp": {
+    "symbol": null,
+    "display_name": "KOKUSAI ELECTRIC CORP"
+  },
+  "iwatani corp": {
+    "symbol": null,
+    "display_name": "IWATANI CORP"
+  },
+  "tokyo electron ltd": {
+    "symbol": null,
+    "display_name": "TOKYO ELECTRON LTD"
+  },
+  "sumco corp": {
+    "symbol": null,
+    "display_name": "SUMCO CORP"
+  },
+  "sumitomo chemical co ltd": {
+    "symbol": null,
+    "display_name": "SUMITOMO CHEMICAL CO LTD"
+  },
+  "rorze corp": {
+    "symbol": null,
+    "display_name": "RORZE CORP"
+  },
+  "resonac holdings corp": {
+    "symbol": null,
+    "display_name": "RESONAC HOLDINGS CORP"
+  },
+  "hoya corp": {
+    "symbol": null,
+    "display_name": "HOYA CORP"
+  },
+  "advantest corp": {
+    "symbol": null,
+    "display_name": "ADVANTEST CORP"
+  },
+  "shin-etsu chemical co ltd": {
+    "symbol": null,
+    "display_name": "SHIN-ETSU CHEMICAL CO LTD"
+  },
+  "ulvac inc": {
+    "symbol": null,
+    "display_name": "ULVAC INC"
+  },
+  "shibaura mechatronics corp": {
+    "symbol": null,
+    "display_name": "SHIBAURA MECHATRONICS CORP"
+  },
+  "adeka corp": {
+    "symbol": null,
+    "display_name": "ADEKA CORP"
+  },
+  "disco corp": {
+    "symbol": "WBD",
+    "display_name": "Warner Bros. Discovery, Inc."
+  },
+  "micronics japan co ltd": {
+    "symbol": null,
+    "display_name": "MICRONICS JAPAN CO LTD"
+  },
+  "tokyo seimitsu co ltd": {
+    "symbol": null,
+    "display_name": "TOKYO SEIMITSU CO LTD"
+  },
+  "taiwan semiconductor-sp adr": {
+    "symbol": null,
+    "display_name": "TAIWAN SEMICONDUCTOR-SP ADR"
+  },
+  "삼성전자": {
+    "symbol": null,
+    "display_name": "삼성전자"
+  },
+  "asml holding": {
+    "symbol": "ASML",
+    "display_name": "ASML Holding N.V."
+  },
+  "sk하이닉스": {
+    "symbol": null,
+    "display_name": "SK하이닉스"
+  },
+  "broadcom ltd": {
+    "symbol": "AVGO",
+    "display_name": "Broadcom Inc."
+  }
 }
