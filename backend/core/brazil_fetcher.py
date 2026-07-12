@@ -299,6 +299,31 @@ async def sync_brazil_series() -> dict:
         print(f"[brazil_fetcher] brl_krw cross failed: {e}")
         result["brl_krw"] = -1
 
+    # 5) 역사적 y5 데이터 공백 방지를 위해 selic_target를 대리값(Proxy)으로 채우기
+    try:
+        async with AsyncSessionLocal() as db:
+            existing_y5_res = await db.execute(select(BrazilSeries.date).where(BrazilSeries.series_key == "y5"))
+            existing_y5_dates = set(existing_y5_res.scalars().all())
+            
+            selic_res = await db.execute(select(BrazilSeries.date, BrazilSeries.value).where(BrazilSeries.series_key == "selic_target"))
+            selic_rows = selic_res.all()
+            
+            to_insert = []
+            for d, v in selic_rows:
+                if d not in existing_y5_dates:
+                    to_insert.append(BrazilSeries(series_key="y5", date=d, value=v))
+            
+            if to_insert:
+                db.add_all(to_insert)
+                await db.commit()
+                print(f"[brazil_fetcher] Populated {len(to_insert)} proxy y5 rows from selic_target")
+                result["y5_proxy_inserted"] = len(to_insert)
+            else:
+                result["y5_proxy_inserted"] = 0
+    except Exception as e:
+        print(f"[brazil_fetcher] Failed to populate proxy y5 rows: {e}")
+        result["y5_proxy_inserted"] = -1
+
     print(f"[brazil_fetcher] sync done: {result}")
     return result
 

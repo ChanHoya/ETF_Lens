@@ -266,6 +266,16 @@ export default function BrazilBondTab() {
                 <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
                     <SectionTitle icon={<TrendingDown className="w-5 h-5 text-cyan-400" />} title="금리 사이클" sub="Selic vs 5년물 국채금리 vs IPCA (10년)" />
                     <RateCycleChart history={history} />
+                    <div className="mt-4 p-3 bg-white/5 border border-white/5 rounded-xl text-xs text-gray-400 space-y-1.5">
+                        <div className="font-bold text-gray-300 flex items-center gap-1">
+                            💡 금리 사이클 해석 가이드
+                        </div>
+                        <ul className="list-disc list-inside space-y-1 text-[11px] leading-relaxed">
+                            <li><strong className="text-gray-300">기준금리(Selic) & 물가(IPCA) 관계:</strong> 인플레이션(IPCA) 상승에 대응하여 중앙은행은 Selic 금리를 인상하고, 물가가 안정되면 Selic 금리를 인하하는 전형적인 지연 후행 사이클을 보입니다.</li>
+                            <li><strong className="text-gray-300">5년물 국채금리 선행성:</strong> 시장 금리인 5년물 국채금리는 통화정책 회의(Copom) 결정보다 수개월 앞서 시장의 재정 리스크, 기대 인플레이션, 대선 변동성을 반영하며 고점을 찍고 내려오는 선행 경향이 있습니다.</li>
+                            <li><strong className="text-gray-300">투자 시점 포착:</strong> 역사적으로 물가(IPCA)가 꺾이고 Selic 인하 사이클이 시작되기 직전, 5년물 국채금리가 피크(고점)를 형성하는 구간이 채권 매매 차익(자본이득)을 최대화할 수 있는 진입 최적기입니다.</li>
+                        </ul>
+                    </div>
                 </div>
             </section>
 
@@ -641,20 +651,41 @@ function MacroTimeline({ timeline }: { timeline: Catalyst[] }) {
                     return (
                         <div key={c.key} className="relative">
                             <span className={`absolute -left-[18px] top-1.5 w-3 h-3 rounded-full ${dot}`} />
-                            <div className={`rounded-xl border px-4 py-2.5 ${past ? 'border-white/5 bg-black/10 opacity-60'
+                            <div className={`rounded-xl border px-4 py-3.5 ${past ? 'border-white/5 bg-black/10 opacity-60'
                                 : urgent ? 'border-amber-500/40 bg-amber-500/10' : 'border-white/10 bg-black/20'}`}>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className={`text-base font-black ${past ? 'text-gray-500' : urgent ? 'text-amber-300' : 'text-gray-200'}`}>
-                                        {past ? '완료' : `D-${c.d_day}`}
-                                    </span>
-                                    <span className={`text-sm font-bold ${past ? 'text-gray-400' : 'text-white'}`}>{c.title}</span>
-                                    <span className="text-xs text-gray-500">{c.date}</span>
-                                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${col === 'amber' ? 'bg-amber-500/15 text-amber-300'
-                                        : col === 'cyan' ? 'bg-cyan-500/15 text-cyan-300' : 'bg-rose-500/15 text-rose-300'}`}>
-                                        {c.impact === 'fx' ? '환율' : c.impact === 'rate' ? '금리' : '금리·환율'}
-                                    </span>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {/* 1) 왼쪽: Timeline 상의 이벤트 명 및 세부정보 */}
+                                    <div className="space-y-1.5 pr-2 md:border-r md:border-white/5 flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                <span className={`text-base font-black ${past ? 'text-gray-500' : urgent ? 'text-amber-300' : 'text-gray-200'}`}>
+                                                    {past ? '완료' : `D-${c.d_day}`}
+                                                </span>
+                                                <span className={`text-sm font-bold ${past ? 'text-gray-400' : 'text-white'}`}>{c.title}</span>
+                                                <span className="text-xs text-gray-500">{c.date}</span>
+                                            </div>
+                                            <div className="mt-1 flex items-center gap-2">
+                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${col === 'amber' ? 'bg-amber-500/15 text-amber-300'
+                                                    : col === 'cyan' ? 'bg-cyan-500/15 text-cyan-300' : 'bg-rose-500/15 text-rose-300'}`}>
+                                                    {c.impact === 'fx' ? '환율' : c.impact === 'rate' ? '금리' : '금리·환율'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-1">{c.note}</p>
+                                    </div>
+                                    
+                                    {/* 2) 중간: 실제 해당 시점에서의 발표 내용 (현재는 빈칸 처리) */}
+                                    <div className="space-y-1 md:border-r md:border-white/5 md:px-2 flex flex-col justify-start">
+                                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">실제 발표 내용</span>
+                                        <p className="text-xs text-gray-600 italic mt-1">—</p>
+                                    </div>
+
+                                    {/* 3) 오른쪽: 발표 내용 기반의 브라질 국채 전망 및 액션플랜 (현재는 빈칸 처리) */}
+                                    <div className="space-y-1 md:pl-2 flex flex-col justify-start">
+                                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">국채 전망 및 액션플랜</span>
+                                        <p className="text-xs text-gray-600 italic mt-1">—</p>
+                                    </div>
                                 </div>
-                                <p className="text-xs text-gray-400 mt-0.5">{c.note}</p>
                             </div>
                         </div>
                     );
