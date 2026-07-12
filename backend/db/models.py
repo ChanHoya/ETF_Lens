@@ -6,6 +6,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from db.database import Base
@@ -30,6 +31,22 @@ class SectorInsight(Base):
     sector = Column(String, primary_key=True, index=True)  # space / semi / energy / bio
     content = Column(Text)  # JSON string (tab1 / etfs / strategy 구조)
     generated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class BrazilSeries(Base):
+    """브라질 국채 매크로 시계열 저장 (Selic·IPCA·환율·5년물 금리·Focus 컨센서스).
+    series_key + date 로 유니크. 스케줄러가 일 1회 BCB SGS/Focus/스크레이핑으로 upsert."""
+    __tablename__ = "brazil_series"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    series_key = Column(String, index=True)  # selic_target / ipca_12m / ipca_mom / usd_brl / brl_krw / y5 / focus_selic_eoy 등
+    date = Column(String, index=True)  # 'YYYY-MM-DD'
+    value = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("series_key", "date", name="uq_brazil_series_key_date"),
+    )
 
 
 class ETFMaster(Base):

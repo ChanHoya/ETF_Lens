@@ -537,6 +537,14 @@ def setup_scheduler():
         await check_etf_disparity_and_alert()
         trigger_replication_background()
 
+    async def _job_brazil():
+        from core.brazil_fetcher import sync_brazil_series
+        from api.brazil_bond import check_brazil_signal_and_alert
+        await sync_brazil_series()
+        await check_brazil_signal_and_alert()
+        await update_app_version("[brazil]")
+        trigger_replication_background()
+
     async def _job_keep_alive():
         """Render 유휴 스핀다운 방지: 자기 자신의 /health 를 호출해 idle 타이머를 리셋한다.
         RENDER_EXTERNAL_URL(렌더가 자동 주입)이 없으면 로컬/비-Render 환경이므로 no-op."""
@@ -570,6 +578,9 @@ def setup_scheduler():
     # 월-금 09:10 (Market Open) 및 15:15 (Market Close) 실행
     scheduler.add_job(_job_disparity, "cron", day_of_week="mon-fri", hour=9, minute=10, id="market_open_disparity_check")
     scheduler.add_job(_job_disparity, "cron", day_of_week="mon-fri", hour=15, minute=15, id="market_close_disparity_check")
+
+    # 매일 08:30 (KST) - 브라질 국채 매크로 시계열 동기화 + 신호 전환 알림
+    scheduler.add_job(_job_brazil, "cron", hour=8, minute=30, id="daily_brazil_series_sync")
 
     # 10분마다 self-ping → Render idle(15분) 스핀다운 방지. 외부 서버/서비스 불필요.
     # RENDER_EXTERNAL_URL 미설정(로컬) 시 잡은 실행돼도 즉시 no-op.
