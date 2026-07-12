@@ -66,6 +66,16 @@
   1. **국내 자산/지수**: pykrx 또는 `FinanceDataReader`(네이버 파이낸스)를 1순위로 지정하여 야후 파이낸스 의존도 최소화.
   2. **해외 자산/지수**: `yfinance` 라이브러리 대신 Yahoo v8 Chart API를 `requests` 직접 호출하여 버그 회피 및 병렬 처리(`asyncio.to_thread` + Semaphore)를 적용해 타임아웃 방지.
 
+### [FP-028] 일별-월별 이종 시계열 병합 시 Recharts Line 차트의 선 끊김 및 미출력 현상
+- **증상**: 일별 데이터(Selic 등)와 월별 데이터(IPCA 등) 또는 짧은 시계열(5년물 금리)을 날짜 인덱스로 외부 병합하여 차트에 표시할 때, 대부분의 일별 날짜에 월별 데이터가 `null` 혹은 `undefined`로 존재하여 라인이 그려지지 않고 투명하게 빈 공간으로 노출됨.
+- **원인**: Recharts `Line` 컴포넌트는 중간에 데이터 포인트가 누락(`null`/`undefined`)될 경우 이전 포인트와 다음 포인트를 연결하지 않고 기본적으로 끊어서 렌더링하기 때문.
+- **해결**: Line 컴포넌트에 `connectNulls={true}` 속성을 명시적으로 할당하여 개별 날짜에 값이 없는 공백 구간을 앞뒤 포인트와 직선으로 연결하여 연속적인 트렌드 선으로 시각화함.
+
+### [FP-029] 다국어 시스템 환경에서의 스크레이핑 날짜 파싱(Date Parsing) Locale 의존성 에러
+- **증상**: 해외 웹사이트(예: Investing.com)의 영문 월 표시("Jul", "Jan" 등)가 포함된 날짜 문자열("Jul 10, 2026")을 파이썬 `datetime.strptime(..., "%b %d, %Y")`로 파싱 시 로컬 운영체제의 언어/지역 설정(Locale)이 한글 등 비영어권인 경우 `ValueError: time data does not match format` 예외가 발생하여 수집이 중단됨.
+- **원인**: 시스템 기본 로캘이 한글로 설정된 파이썬 런타임은 "Jul" 등의 영문 월 약어를 인식하지 못하기 때문.
+- **해결**: 외부 라이브러리나 OS 로캘 설정에 의존하는 `strptime` 대신, 파이썬 코드 내에 영문 월 약어와 숫자 매핑 사전(`{"jan": "01", "feb": "02", ...}`)을 하드코딩하여 직접 날짜 문자열을 분할 가공하는 독립적이고 안전한 수동 날짜 파싱 방식을 적용함.
+
 ## TypeScript Typings & UI Rendering
 
 ### Recharts Line Chart Horizontally Clipped Edges
