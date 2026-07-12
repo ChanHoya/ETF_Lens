@@ -9,7 +9,7 @@ import {
 import {
     Flag, TrendingDown, Gauge, AlertTriangle, Target, CalendarClock,
     Sparkles, RefreshCw, Layers, ShieldCheck, ArrowDownRight, Info, CheckCircle2,
-    Newspaper, Bell, ExternalLink, Send,
+    Newspaper, Bell, ExternalLink, Send, Settings,
 } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
 
@@ -556,6 +556,11 @@ function BrazilAlertConfig() {
     const [busy, setBusy] = useState(false);
     const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
 
+    const [showRegister, setShowRegister] = useState(false);
+    const [inputToken, setInputToken] = useState('');
+    const [inputChatId, setInputChatId] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+
     useEffect(() => {
         (async () => {
             try {
@@ -569,6 +574,8 @@ function BrazilAlertConfig() {
                     setAlertBrazil(d.alert_brazil === 1);
                     setChatId(d.telegram_chat_id || '');
                     setHasToken(!!(d.telegram_token && d.telegram_token.length));
+                    setInputToken(d.telegram_token || '');
+                    setInputChatId(d.telegram_chat_id || '');
                 }
             } catch { /* 무시 */ } finally { setLoaded(true); }
         })();
@@ -602,6 +609,50 @@ function BrazilAlertConfig() {
         }
     };
 
+    const handleRegisterSave = async () => {
+        if (!inputChatId.trim()) {
+            flash(false, 'Chat ID를 입력해 주세요.');
+            return;
+        }
+        setIsSaving(true);
+        try {
+            let cur = { alert_exit_signal: 1, alert_rebalance: 1, alert_daily_summary: 0 };
+            try {
+                const localChatId = localStorage.getItem('telegram_chat_id') || '';
+                const url = localChatId
+                    ? `${API_BASE}/api/v1/notification/settings?chat_id=${encodeURIComponent(localChatId)}`
+                    : `${API_BASE}/api/v1/notification/settings`;
+                cur = await (await fetch(url)).json();
+            } catch { /* 무시 */ }
+
+            const r = await fetch(`${API_BASE}/api/v1/notification/settings`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    telegram_token: inputToken,
+                    telegram_chat_id: inputChatId.trim(),
+                    alert_exit_signal: cur.alert_exit_signal ?? 1,
+                    alert_rebalance: cur.alert_rebalance ?? 1,
+                    alert_daily_summary: cur.alert_daily_summary ?? 0,
+                    alert_brazil: alertBrazil ? 1 : 0
+                }),
+            });
+            const d = await r.json();
+            if (r.ok && d.status === 'success') {
+                localStorage.setItem('telegram_chat_id', inputChatId.trim());
+                setChatId(inputChatId.trim());
+                setHasToken(!!(inputToken && inputToken.length));
+                flash(true, '텔레그램 봇 및 Chat ID 설정이 완료되었습니다.');
+                setShowRegister(false);
+            } else {
+                flash(false, d.detail || '저장에 실패했습니다.');
+            }
+        } catch {
+            flash(false, '저장 중 오류가 발생했습니다.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
         <section className="bg-gradient-to-br from-emerald-950/30 to-black/20 rounded-2xl border border-emerald-500/20 p-5">
             <SectionTitle icon={<Bell className="w-5 h-5 text-emerald-400" />} title="텔레그램 실시간 알림" sub="주요 이벤트 D-day · 신호 전환 · 관련 신규 뉴스 발생 시 자동 발송" />
@@ -617,30 +668,77 @@ function BrazilAlertConfig() {
                         <p className="text-[11px] text-gray-400">
                             {hasToken && chatId
                                 ? <>연결됨 · Chat ID <span className="font-mono">{chatId}</span></>
-                                : <>텔레그램 봇 미연결 — <span className="text-emerald-300">My &gt; 실시간 AI 전략 알림 설정</span>에서 토큰·Chat ID를 등록하세요.</>}
+                                : <>텔레그램 봇 미연결 — <span className="text-emerald-300 cursor-pointer hover:underline" onClick={() => setShowRegister(true)}>여기</span>를 눌러 토큰과 Chat ID를 등록하세요.</>}
                         </p>
                     </div>
                 </div>
-                <button onClick={async () => {
-                    setBusy(true);
-                    try {
-                        const localChatId = localStorage.getItem('telegram_chat_id') || '';
-                        const url = localChatId
-                            ? `${API_BASE}/api/v1/notification/settings?chat_id=${encodeURIComponent(localChatId)}`
-                            : `${API_BASE}/api/v1/notification/settings`;
-                        const cur = await (await fetch(url)).json();
-                        const r = await fetch(`${API_BASE}/api/v1/notification/test`, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ telegram_token: cur.telegram_token || '', telegram_chat_id: cur.telegram_chat_id || '' }),
-                        });
-                        const d = await r.json();
-                        flash(r.ok, r.ok ? '테스트 알림을 발송했습니다.' : (d.detail || '발송 실패'));
-                    } catch { flash(false, '발송 중 오류'); } finally { setBusy(false); }
-                }} disabled={busy || !hasToken}
-                    className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl bg-emerald-600/80 text-white disabled:opacity-40 hover:bg-emerald-600 transition shrink-0">
-                    {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} 테스트 발송
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => setShowRegister(!showRegister)}
+                        className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl border border-white/10 hover:border-white/20 text-gray-300 hover:text-white transition">
+                        <Settings className="w-3.5 h-3.5" /> 설정 관리
+                    </button>
+                    <button onClick={async () => {
+                        setBusy(true);
+                        try {
+                            const localChatId = localStorage.getItem('telegram_chat_id') || '';
+                            const url = localChatId
+                                ? `${API_BASE}/api/v1/notification/settings?chat_id=${encodeURIComponent(localChatId)}`
+                                : `${API_BASE}/api/v1/notification/settings`;
+                            const cur = await (await fetch(url)).json();
+                            const r = await fetch(`${API_BASE}/api/v1/notification/test`, {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ telegram_token: cur.telegram_token || '', telegram_chat_id: cur.telegram_chat_id || '' }),
+                            });
+                            const d = await r.json();
+                            flash(r.ok, r.ok ? '테스트 알림을 발송했습니다.' : (d.detail || '발송 실패'));
+                        } catch { flash(false, '발송 중 오류'); } finally { setBusy(false); }
+                    }} disabled={busy || !hasToken}
+                        className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl bg-emerald-600/80 text-white disabled:opacity-40 hover:bg-emerald-600 transition shrink-0">
+                        {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} 테스트 발송
+                    </button>
+                </div>
             </div>
+
+            {showRegister && (
+                <div className="mt-4 p-4 border border-emerald-500/20 bg-black/40 rounded-xl flex flex-col gap-3">
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-gray-300">텔레그램 봇 토큰 (Telegram Bot Token)</label>
+                        <input
+                            type="text"
+                            value={inputToken}
+                            onChange={(e) => setInputToken(e.target.value)}
+                            placeholder="마스킹된 토큰 또는 새 토큰 입력"
+                            className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-gray-300">텔레그램 수신자 Chat ID (Chat ID)</label>
+                        <input
+                            type="text"
+                            value={inputChatId}
+                            onChange={(e) => setInputChatId(e.target.value)}
+                            placeholder="숫자로 된 Chat ID 입력 (예: 12345678)"
+                            className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 mt-1">
+                        <button
+                            onClick={() => setShowRegister(false)}
+                            className="px-3 py-1 text-xs text-gray-400 hover:text-white transition"
+                        >
+                            취소
+                        </button>
+                        <button
+                            onClick={handleRegisterSave}
+                            disabled={isSaving}
+                            className="px-3 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition disabled:opacity-50"
+                        >
+                            {isSaving ? '저장 중...' : '설정 저장'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {toast && (
                 <div className={`mt-3 text-xs font-semibold px-3 py-2 rounded-lg border ${toast.ok ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-rose-500/10 text-rose-300 border-rose-500/20'}`}>
                     {toast.msg}
