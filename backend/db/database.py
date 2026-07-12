@@ -3,8 +3,12 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import declarative_base
 
 # 환경변수 DATABASE_URL 우선 사용 (Render PostgreSQL)
-# 없으면 로컬 SQLite fallback
-_raw_db_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./etf_data_v2.db")
+# 없으면 로컬 SQLite fallback (backend 디렉토리 내의 etf_data_v2.db 절대 경로로 생성)
+_raw_db_url = os.getenv("DATABASE_URL")
+if not _raw_db_url:
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    db_path = os.path.join(base_dir, "etf_data_v2.db")
+    _raw_db_url = f"sqlite+aiosqlite:///{db_path}"
 
 # Render는 postgres:// 형식으로 제공 → asyncpg용으로 교체
 if _raw_db_url.startswith("postgres://"):

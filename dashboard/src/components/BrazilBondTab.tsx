@@ -367,24 +367,47 @@ function ConditionPill({ ok, label }: { ok: boolean; label: string }) {
     );
 }
 
+function getThresholdText(key: string): string {
+    switch (key) {
+        case 'selic': return '🟢 ≥14.0% | 🔴 <12.0%';
+        case 'y5': return '🟢 14.2%~15.0% | 🔴 >15.0%';
+        case 'brl_krw': return '🟢 ≤290원 | 🔴 >300원';
+        case 'ipca_mom': return '🟢 ≤0.35% | 🔴 ≥0.60%';
+        case 'real_rate': return '🟢 ≥8.0%p | 🔴 <5.0%p';
+        case 'focus_selic': return '🟢 ≥14.0% | 🔴 <12.0%';
+        case 'focus_ipca': return '🟢 ≤4.5% | 🔴 >6.0%';
+        case 'focus_usdbrl': return '🟢 ≤5.0 | 🔴 >5.5';
+        default: return '';
+    }
+}
+
 function GaugeCard({ ind }: { ind: Indicator }) {
     const g = GAUGE_STYLE[ind.gauge] || GAUGE_STYLE.gray;
     const chg = ind.change;
+    const ruleText = getThresholdText(ind.key);
     return (
-        <div className={`bg-black/20 rounded-2xl border border-white/5 p-4 ring-1 ${g.ring}`}>
-            <div className="flex items-center justify-between">
-                <span className="text-[12px] lg:text-[13px] text-gray-400 font-semibold">{ind.label}</span>
-                <span className={`w-2.5 h-2.5 rounded-full ${g.dot} shrink-0`} />
-            </div>
-            <div className={`text-2xl font-black mt-2 ${g.text}`}>
-                {fmt(ind.value, ind.unit === '원' ? 1 : 2)}<span className="text-sm ml-0.5 text-gray-500">{ind.unit}</span>
-            </div>
-            {chg !== null && chg !== undefined && Math.abs(chg) > 0.0001 ? (
-                <div className={`text-xs mt-1 font-semibold ${chg > 0 ? 'text-rose-300' : 'text-emerald-300'}`}>
-                    {chg > 0 ? '▲' : '▼'} {fmt(Math.abs(chg), 2)} (직전 대비)
+        <div className={`bg-black/20 rounded-2xl border border-white/5 p-4 ring-1 ${g.ring} flex flex-col justify-between min-h-[145px]`}>
+            <div>
+                <div className="flex items-center justify-between">
+                    <span className="text-[12px] lg:text-[13px] text-gray-400 font-semibold">{ind.label}</span>
+                    <span className={`w-2.5 h-2.5 rounded-full ${g.dot} shrink-0`} />
                 </div>
-            ) : (
-                <div className="h-4 mt-1" />
+                <div className={`text-2xl font-black mt-2 ${g.text}`}>
+                    {fmt(ind.value, ind.unit === '원' ? 1 : 2)}<span className="text-sm ml-0.5 text-gray-500">{ind.unit}</span>
+                </div>
+                {chg !== null && chg !== undefined && Math.abs(chg) > 0.0001 ? (
+                    <div className={`text-xs mt-1 font-semibold ${chg > 0 ? 'text-rose-300' : 'text-emerald-300'}`}>
+                        {chg > 0 ? '▲' : '▼'} {fmt(Math.abs(chg), 2)} (직전 대비)
+                    </div>
+                ) : (
+                    <div className="h-4 mt-1" />
+                )}
+            </div>
+            {ruleText && (
+                <div className="text-[10px] lg:text-[11px] text-gray-500 mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between">
+                    <span>판정 기준</span>
+                    <span className="font-semibold text-gray-400">{ruleText}</span>
+                </div>
             )}
         </div>
     );
@@ -447,6 +470,22 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
     const y5 = summary.indicators.find(i => i.key === 'y5')?.value ?? null;
     const fx = summary.indicators.find(i => i.key === 'brl_krw')?.value ?? null;
     const point = (y5 !== null && fx !== null) ? [{ x: fx, y: y5 }] : [];
+
+    // Dynamic zoomed domains centered around the midpoint between current and target
+    const xDomain = useMemo(() => {
+        if (fx === null) return [302, 272];
+        const target = t.fx_target; // 290
+        const mid = (fx + target) / 2;
+        return [Math.ceil(mid + 7), Math.floor(mid - 7)];
+    }, [fx, t.fx_target]);
+
+    const yDomain = useMemo(() => {
+        if (y5 === null) return [13.5, 15.6];
+        const target = t.rate_floor; // 14.2
+        const mid = (y5 + target) / 2;
+        return [parseFloat((mid - 0.4).toFixed(2)), parseFloat((mid + 0.4).toFixed(2))];
+    }, [y5, t.rate_floor]);
+
     return (
         <div className="space-y-4">
             <ResponsiveContainer width="100%" height={280}>
@@ -466,9 +505,9 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                     {fx !== null && <ReferenceLine x={fx} stroke="#ffffff40" strokeDasharray="3 3" label={{ value: `현재 ${fx.toFixed(1)}원`, fill: '#ffffff80', fontSize: 10, position: 'insideBottomLeft' }} />}
                     {y5 !== null && <ReferenceLine y={y5} stroke="#ffffff40" strokeDasharray="3 3" label={{ value: `현재 ${y5.toFixed(2)}%`, fill: '#ffffff80', fontSize: 10, position: 'insideTopRight' }} />}
 
-                    <XAxis type="number" dataKey="x" domain={[302, 272]} reversed={false} tick={{ fill: '#9ca3af', fontSize: 12 }}
+                    <XAxis type="number" dataKey="x" domain={xDomain} reversed={false} tick={{ fill: '#9ca3af', fontSize: 12 }}
                         label={{ value: '원/헤알 환율 (원)', position: 'insideBottom', offset: -10, fill: '#6b7280', fontSize: 12 }} />
-                    <YAxis type="number" dataKey="y" domain={[13.5, 15.6]} tick={{ fill: '#9ca3af', fontSize: 12 }}
+                    <YAxis type="number" dataKey="y" domain={yDomain} tick={{ fill: '#9ca3af', fontSize: 12 }}
                         label={{ value: '5년물 금리(%)', angle: -90, position: 'insideLeft', fill: '#6b7280', fontSize: 12 }} />
                     <ZAxis range={[400, 400]} />
                     <RechartsTooltip
