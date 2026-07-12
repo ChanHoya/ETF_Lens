@@ -161,9 +161,24 @@ async def sync_etf_batch():
     async def process_code(code: str, name: str, issuer: str):
         async with sem:
             try:
+                from sqlalchemy import func
+                from datetime import timedelta
+
+                # Check if we already have history for this ETF to determine full vs incremental fetch
+                existing_count = 0
+                async with AsyncSessionLocal() as db:
+                    res_count = await db.execute(
+                        select(func.count(ETFDailyPrice.id)).where(ETFDailyPrice.code == code)
+                    )
+                    existing_count = res_count.scalar() or 0
+
+                # If we have less than 200 rows, do a full fetch (10 years)
+                # Otherwise, do an incremental fetch (1 year, from which we only insert the last 30 days)
+                skip_chart = existing_count >= 200
+
                 # Fetch fresh data skipping cache
                 data = await harvester.fetch_naver_etf_data(
-                    code, skip_holdings=False, skip_chart=False
+                    code, skip_holdings=False, skip_chart=skip_chart
                 )
 
                 async with AsyncSessionLocal() as db:
@@ -191,23 +206,40 @@ async def sync_etf_batch():
                             master.tot_fee = float(fee_nums[0])
                     master.aum = b_info.get("순자산총액")
 
-                    # 2. Upsert Daily Prices
-                    # We can clear old prices and insert new ones to simplify for SQLite
+                    # 2. Upsert Daily Prices (Incremental update strategy to save memory)
+                    # We delete existing holdings and replace them (holdings are small)
                     await db.execute(
                         ETFHoldings.__table__.delete().where(ETFHoldings.code == code)
-                    )
-                    await db.execute(
-                        ETFDailyPrice.__table__.delete().where(
-                            ETFDailyPrice.code == code
-                        )
                     )
 
                     prices = data.get("historical_data", {}).get("prices", [])
                     dates = data.get("historical_data", {}).get("dates", [])
-                    price_objs = [
-                        ETFDailyPrice(code=code, date=d, close=p)
-                        for d, p in zip(dates, prices)
-                    ]
+
+                    if skip_chart:
+                        # Incremental update: Only delete and insert the last 30 days
+                        cutoff_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+                        await db.execute(
+                            ETFDailyPrice.__table__.delete().where(
+                                (ETFDailyPrice.code == code) & (ETFDailyPrice.date >= cutoff_date)
+                            )
+                        )
+                        price_objs = [
+                            ETFDailyPrice(code=code, date=d, close=p)
+                            for d, p in zip(dates, prices)
+                            if d >= cutoff_date
+                        ]
+                    else:
+                        # Full load: Delete all old prices and insert full history
+                        await db.execute(
+                            ETFDailyPrice.__table__.delete().where(
+                                ETFDailyPrice.code == code
+                            )
+                        )
+                        price_objs = [
+                            ETFDailyPrice(code=code, date=d, close=p)
+                            for d, p in zip(dates, prices)
+                        ]
+
                     db.add_all(price_objs)
 
                     # 3. Upsert Holdings
@@ -241,29 +273,46 @@ async def sync_etf_batch():
     try:
         from api.router import cached_fdr_reader, fetch_yahoo_finance
         from datetime import timedelta
-
-
-        start_str = (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d")
+        from sqlalchemy import func
 
         async with AsyncSessionLocal() as db:
-            await db.execute(BenchmarkPrice.__table__.delete())
+            res_bench = await db.execute(
+                select(func.count(BenchmarkPrice.id))
+            )
+            existing_bench_count = res_bench.scalar() or 0
+
+        # If empty/low, load 10 years; otherwise load last 30 days to save memory
+        load_days = 3650 if existing_bench_count < 200 else 30
+        start_str = (datetime.now() - timedelta(days=load_days)).strftime("%Y-%m-%d")
+
+        async with AsyncSessionLocal() as db:
+            if load_days == 3650:
+                await db.execute(BenchmarkPrice.__table__.delete())
+            else:
+                cutoff_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+                await db.execute(
+                    BenchmarkPrice.__table__.delete().where(BenchmarkPrice.date >= cutoff_date)
+                )
 
             benchmarks = {
                 "KS11": await cached_fdr_reader("KS11", start_str),
                 "KQ11": await cached_fdr_reader("KQ11", start_str),
-                "^GSPC": await fetch_yahoo_finance("^GSPC", 10),
-                "^IXIC": await fetch_yahoo_finance("^IXIC", 10),
+                "^GSPC": await fetch_yahoo_finance("^GSPC", 1 if load_days == 30 else 10),
+                "^IXIC": await fetch_yahoo_finance("^IXIC", 1 if load_days == 30 else 10),
             }
 
             for symbol, df in benchmarks.items():
                 if not df.empty:
                     price_objs = []
+                    cutoff_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
                     for dt_ts, row in df.iterrows():
                         dt_str = str(dt_ts.date())
+                        if load_days == 30 and dt_str < cutoff_date:
+                            continue
                         price_objs.append(
                             BenchmarkPrice(
                                 symbol=symbol, date=dt_str, close=row["Close"]
-                            )
+                              )
                         )
                     db.add_all(price_objs)
 
