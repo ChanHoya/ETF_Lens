@@ -41,40 +41,63 @@ async def update_app_version(job_label: str = "") -> None:
 async def sync_etf_master_list():
     """
     KRX ETF 전체 코드+이름+운용사 목록을 ETFMaster에 upsert합니다.
-    1순위: pykrx (KRX 공식)
+    1순위: Naver ETF 리스트 API (매우 가볍고 0.1초 이내 완료, OOM 차단)
     2순위: FinanceDataReader StockListing
-    3순위: Naver ETF 리스트 API
     + manual_inclusions: 당일 신규 상장 종목 (API 반영 지연 우회)
     """
     print(f"[{datetime.now()}] [ETF Master Sync] Starting KRX ETF list sync...")
     rows: list[dict] = []
 
-    # --- 1순위: pykrx (KRX 공식) ---
+    def get_issuer_from_name(name: str) -> str:
+        name_upper = name.upper()
+        for brand, issuer in [
+            ("KODEX", "삼성자산운용"),
+            ("TIGER", "미래에셋자산운용"),
+            ("KBSTAR", "KB자산운용"),
+            ("ACE", "한국투자신탁운용"),
+            ("SOL", "신한자산운용"),
+            ("HANARO", "NH-Amundi자산운용"),
+            ("KOSEF", "키움투자자산운용"),
+            ("PLUS", "한화자산운용"),
+            ("ARIRANG", "한화자산운용"),
+            ("WOORI", "우리자산운용"),
+            ("HI", "하이자산운용"),
+            ("FOCUS", "브레인자산운용"),
+            ("UNIS", "유니에스자산운용"),
+            ("TREX", "유리자산운용"),
+            ("MIGHTY", "에이치디씨자산운용"),
+            ("KAP", "한국자산평가"),
+        ]:
+            if brand in name_upper:
+                return issuer
+        return ""
+
+    # --- 1순위: Naver ETF 리스트 API ---
     try:
-        from pykrx import stock as krx_stock  # type: ignore
-        date_str = datetime.now().strftime("%Y%m%d")
-        tickers = await asyncio.to_thread(krx_stock.get_etf_ticker_list, date_str)
-        if not tickers:
-            from datetime import timedelta
-            for delta in range(1, 5):
-                prev = (datetime.now() - timedelta(days=delta)).strftime("%Y%m%d")
-                tickers = await asyncio.to_thread(krx_stock.get_etf_ticker_list, prev)
-                if tickers:
-                    date_str = prev
-                    break
-
-        for ticker in tickers:
-            try:
-                name = await asyncio.to_thread(krx_stock.get_etf_ticker_name, ticker)
-                rows.append({"code": ticker.zfill(6), "name": name, "issuer": ""})
-            except Exception:
-                pass
-
-        print(f"[ETF Master Sync] pykrx: {len(rows)} ETFs loaded (date={date_str})")
+        import urllib.request, json, ssl
+        ctx = ssl._create_unverified_context()
+        url = "https://finance.naver.com/api/sise/etfItemList.nhn"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        res = await asyncio.to_thread(
+            lambda: urllib.request.urlopen(req, timeout=10, context=ctx).read()
+        )
+        try:
+            text = res.decode("utf-8")
+        except UnicodeDecodeError:
+            text = res.decode("cp949")
+            
+        data = json.loads(text)
+        items = data.get("result", {}).get("etfItemList", [])
+        for item in items:
+            code = str(item.get("itemcode", "")).strip().zfill(6)
+            name = str(item.get("itemname", "")).strip()
+            if code and name and len(code) == 6:
+                rows.append({"code": code, "name": name, "issuer": get_issuer_from_name(name)})
+        print(f"[ETF Master Sync] Naver API: {len(rows)} ETFs loaded")
     except Exception as e:
-        print(f"[ETF Master Sync] pykrx failed: {e}")
+        print(f"[ETF Master Sync] Naver API failed: {e}")
 
-    # --- 2순위: FinanceDataReader ---
+    # --- 2순위: FinanceDataReader fallback ---
     if not rows:
         try:
             import FinanceDataReader as fdr  # type: ignore
@@ -83,34 +106,12 @@ async def sync_etf_master_list():
                 code = str(row.get("Symbol", row.get("Code", ""))).strip().zfill(6)
                 name = str(row.get("Name", "")).strip()
                 if code and name and len(code) == 6:
-                    rows.append({"code": code, "name": name, "issuer": ""})
+                    rows.append({"code": code, "name": name, "issuer": get_issuer_from_name(name)})
             print(f"[ETF Master Sync] fdr fallback: {len(rows)} ETFs loaded")
         except Exception as e:
-            print(f"[ETF Master Sync] fdr also failed: {e}")
+            print(f"[ETF Master Sync] fdr fallback failed: {e}")
 
-    # --- 3순위: Naver ETF 리스트 API (pykrx/fdr 모두 실패 시) ---
-    if not rows:
-        try:
-            import urllib.request, json, ssl
-            ctx = ssl._create_unverified_context()
-            url = "https://finance.naver.com/api/sise/etfItemList.nhn"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            res = await asyncio.to_thread(
-                lambda: urllib.request.urlopen(req, timeout=10, context=ctx).read()
-            )
-            data = json.loads(res)
-            items = data.get("result", {}).get("etfItemList", [])
-            for item in items:
-                code = str(item.get("itemcode", "")).strip()
-                raw_name = item.get("itemname", "")
-                # Naver 리스트 API 이름은 인코딩 이슈가 있을 수 있어 개별 API로 이름 확정
-                if code and len(code) >= 6:
-                    rows.append({"code": code.zfill(6), "name": raw_name, "issuer": ""})
-            print(f"[ETF Master Sync] Naver API fallback: {len(rows)} ETFs loaded")
-        except Exception as e:
-            print(f"[ETF Master Sync] Naver API also failed: {e}")
-
-    # === 강제 추가: 신규 상장 종목 (pykrx/fdr/Naver에 반영 지연 우회) ===
+    # === 강제 추가: 신규 상장 종목 ===
     manual_inclusions = [
         {"code": "0180V0", "name": "ACE 미국우주테크액티브", "issuer": "ACE"},
         {"code": "0183J0", "name": "TIGER 미국우주테크", "issuer": "TIGER"},
@@ -124,27 +125,29 @@ async def sync_etf_master_list():
         print("[ETF Master Sync] No ETF data retrieved. Skipping DB update.")
         return
 
-    # --- DB Upsert ---
+    # --- DB Bulk Upsert (단 1회의 데이터베이스 쿼리로 성능 극대화) ---
     async with AsyncSessionLocal() as db:
-        upserted = 0
-        for item in rows:
-            try:
-                result = await db.execute(
-                    select(ETFMaster).where(ETFMaster.code == item["code"])
-                )
-                master = result.scalars().first()
+        try:
+            existing_res = await db.execute(select(ETFMaster))
+            existing_masters = {m.code: m for m in existing_res.scalars().all()}
+            
+            upserted = 0
+            for item in rows:
+                code = item["code"]
+                master = existing_masters.get(code)
                 if not master:
-                    master = ETFMaster(code=item["code"])
+                    master = ETFMaster(code=code)
                     db.add(master)
                 master.name = item["name"]
                 if item.get("issuer"):
                     master.issuer = item["issuer"]
                 upserted += 1
-            except Exception as e:
-                print(f"[ETF Master Sync] upsert error {item['code']}: {e}")
-        await db.commit()
-
-    print(f"[{datetime.now()}] [ETF Master Sync] Done. {upserted} ETFs upserted.")
+                
+            await db.commit()
+            print(f"[{datetime.now()}] [ETF Master Sync] Done. {upserted} ETFs bulk-upserted.")
+        except Exception as e:
+            print(f"[ETF Master Sync] bulk upsert error: {e}")
+            await db.rollback()
 
 
 async def sync_etf_batch():
