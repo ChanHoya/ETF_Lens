@@ -52,29 +52,30 @@ def _norm_sgs_date(dmy: str) -> str:
 
 async def _fetch_sgs(client: httpx.AsyncClient, code: int) -> list[dict]:
     """SGS 시리즈. [{'date':'YYYY-MM-DD','value':float}, ...] (날짜 오름차순).
-    일별 시리즈(Selic·PTAX)는 최대 10년 윈도우 제한이 있어 dataInicial+dataFinal 범위 조회한다.
-    일시적 네트워크 실패에 대비해 dataInicial 실패 시 ultimos/1000 으로 폴백한다."""
+    일별 시리즈(Selic·PTAX)는 dataInicial+dataFinal 범위 조회만 안정적이다
+    (ultimos/N 은 Selic 목표의 미래날짜 선반영 때문에 N이 조금만 커도 400).
+    일시 네트워크 실패에 대비해 9년 윈도우로 3회 재시도 후, 마지막엔 4년 윈도우로 폴백한다."""
     url = _SGS_BASE.format(code=code)
     now = datetime.now(_KST)
-    start = (now - timedelta(days=365 * 9)).strftime("%d/%m/%Y")
     end = now.strftime("%d/%m/%Y")
+
+    async def _range(days: int):
+        start = (now - timedelta(days=days)).strftime("%d/%m/%Y")
+        r = await client.get(
+            url, params={"formato": "json", "dataInicial": start, "dataFinal": end}, timeout=30
+        )
+        r.raise_for_status()
+        return r.json()
+
     rows = None
-    for attempt in range(2):
+    for attempt in range(3):
         try:
-            r = await client.get(
-                url, params={"formato": "json", "dataInicial": start, "dataFinal": end}, timeout=30
-            )
-            r.raise_for_status()
-            rows = r.json()
+            rows = await _range(365 * 9)
             break
         except Exception:
-            if attempt == 0:
-                await asyncio.sleep(1.5)
-                continue
+            await asyncio.sleep(1.5)
     if rows is None:
-        r = await client.get(url + "/ultimos/1000", params={"formato": "json"}, timeout=30)
-        r.raise_for_status()
-        rows = r.json()
+        rows = await _range(365 * 4)  # 짧은 윈도우 폴백 (윈도우/부하 이슈 회피)
     out = []
     today = datetime.now(_KST).date()
     for row in rows:
@@ -233,6 +234,22 @@ async def sync_brazil_series() -> dict:
 
     print(f"[brazil_fetcher] sync done: {result}")
     return result
+
+
+async def seed_brazil_series_if_empty():
+    """신규 배포 등으로 brazil_series 가 비어 있으면 백그라운드로 즉시 동기화한다.
+    (스케줄러 일 1회 잡을 기다리지 않고 첫 접속부터 데이터가 보이도록.)"""
+    from sqlalchemy import func
+    async with AsyncSessionLocal() as db:
+        cnt = (await db.execute(select(func.count()).select_from(BrazilSeries))).scalar() or 0
+    if cnt > 0:
+        print(f"[brazil_fetcher] seed skip (rows={cnt})")
+        return
+    print("[brazil_fetcher] brazil_series empty → seeding now")
+    try:
+        await sync_brazil_series()
+    except Exception as e:
+        print(f"[brazil_fetcher] seed failed: {e}")
 
 
 if __name__ == "__main__":

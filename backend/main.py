@@ -136,6 +136,13 @@ async def lifespan(app: FastAPI):
         except Exception as _e:
             print(f"[Startup] Seeding skipped: {_e}")
 
+        # ── 5.5. 브라질 국채 매크로 시계열 시딩 (신규 배포 시 빈 테이블 즉시 채움) ──
+        try:
+            from core.brazil_fetcher import seed_brazil_series_if_empty
+            asyncio.create_task(seed_brazil_series_if_empty())
+        except Exception as _e:
+            print(f"[Startup] Brazil seeding skipped: {_e}")
+
         setup_scheduler()
 
     # DB 연결 대기로 인한 Render 60초 포트바인딩 타임아웃 방지를 위해 백그라운드로 실행
