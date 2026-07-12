@@ -1,0 +1,677 @@
+"use client";
+// 브라질 국채 매크로 대시보드·Activation Zone 신호·AI 전략 리포트·캐리 쿠션 시뮬레이터 뷰
+
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+    ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid,
+    Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, ReferenceArea, ReferenceLine, ZAxis,
+} from 'recharts';
+import {
+    Flag, TrendingDown, Gauge, AlertTriangle, Target, CalendarClock,
+    Sparkles, RefreshCw, Layers, ShieldCheck, ArrowDownRight, Info, CheckCircle2,
+} from 'lucide-react';
+import { API_BASE } from '@/lib/apiConfig';
+
+// ── 타입 ────────────────────────────────────────────────────────────────────
+interface Indicator {
+    key: string; label: string; unit: string; date: string | null;
+    value: number | null; prev: number | null; change: number | null; gauge: string;
+}
+interface Signal {
+    zone: string; grade: string; color: string;
+    rate_ok: boolean; fx_ok: boolean; headline: string; action: string;
+}
+interface CarryPoint {
+    fx_end: number; fx_change_pct: number; total_return_pct: number; cagr_pct: number; is_breakeven: boolean;
+}
+interface Catalyst { date: string; key: string; title: string; note: string; impact: string; d_day: number; }
+interface Summary {
+    as_of: string;
+    indicators: Indicator[];
+    real_rate: { label: string; unit: string; value: number | null; gauge: string };
+    focus: { selic_eoy: number | null; ipca_eoy: number | null; usdbrl_eoy: number | null };
+    signal: Signal;
+    targets: { rate_floor: number; rate_tranche2: number; rate_risk: number; fx_target: number };
+    carry_cushion: CarryPoint[];
+    timeline: Catalyst[];
+    next_catalyst: Catalyst | null;
+    aug_scenarios: { id: string; title: string; color: string; logic: string; action: string }[];
+    tranches: { id: number; weight: string; timing: string; trigger: string; rationale: string }[];
+    due_diligence: { title: string; body: string }[];
+}
+interface AiInsight {
+    verdict?: { grade: string; summary: string };
+    analysis?: { cards: { title: string; body: string }[] };
+    strategy?: { entry: string; hold: string; exit: string };
+    execution_checklist?: string[];
+    risk_footnote?: string;
+}
+
+// ── 색 유틸 ──────────────────────────────────────────────────────────────────
+const GAUGE_STYLE: Record<string, { dot: string; text: string; ring: string; label: string }> = {
+    green: { dot: 'bg-emerald-400', text: 'text-emerald-300', ring: 'ring-emerald-500/30', label: '양호' },
+    amber: { dot: 'bg-amber-400', text: 'text-amber-300', ring: 'ring-amber-500/30', label: '주의' },
+    red: { dot: 'bg-rose-500', text: 'text-rose-300', ring: 'ring-rose-500/30', label: '경고' },
+    gray: { dot: 'bg-gray-500', text: 'text-gray-300', ring: 'ring-gray-500/20', label: '중립' },
+};
+const ZONE_STYLE: Record<string, { from: string; to: string; badge: string }> = {
+    TRANCHE1: { from: 'from-emerald-600', to: 'to-green-600', badge: 'bg-emerald-500' },
+    TRANCHE2: { from: 'from-emerald-600', to: 'to-teal-600', badge: 'bg-emerald-500' },
+    WATCH: { from: 'from-slate-600', to: 'to-gray-600', badge: 'bg-slate-500' },
+    RISK_REASSESS: { from: 'from-rose-700', to: 'to-red-700', badge: 'bg-rose-600' },
+    UNKNOWN: { from: 'from-gray-700', to: 'to-gray-700', badge: 'bg-gray-600' },
+};
+
+const fmt = (v: number | null | undefined, d = 2) =>
+    v === null || v === undefined ? '—' : v.toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+export default function BrazilBondTab() {
+    const [summary, setSummary] = useState<Summary | null>(null);
+    const [history, setHistory] = useState<Record<string, { date: string; value: number }[]>>({});
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const [insight, setInsight] = useState<AiInsight | null>(null);
+    const [insightAt, setInsightAt] = useState<string | null>(null);
+    const [genLoading, setGenLoading] = useState(false);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                setLoading(true);
+                const [sRes, hRes, iRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/v1/brazil-bond/summary`, { cache: 'no-store' }),
+                    fetch(`${API_BASE}/api/v1/brazil-bond/history?series=selic_target,y5,ipca_12m,brl_krw,usd_brl,focus_selic_eoy&years=10`, { cache: 'no-store' }),
+                    fetch(`${API_BASE}/api/v1/brazil-bond/insight`, { cache: 'no-store' }),
+                ]);
+                if (!sRes.ok) throw new Error(`summary ${sRes.status}`);
+                setSummary(await sRes.json());
+                if (hRes.ok) setHistory((await hRes.json()).series || {});
+                if (iRes.ok) {
+                    const j = await iRes.json();
+                    setInsight(j.content || null);
+                    setInsightAt(j.generated_at || null);
+                }
+            } catch (e: any) {
+                setError(String(e?.message || e));
+            } finally {
+                setLoading(false);
+            }
+        })();
+    }, []);
+
+    const generateReport = async () => {
+        try {
+            setGenLoading(true);
+            const res = await fetch(`${API_BASE}/api/v1/brazil-bond/insight/generate`, { method: 'POST' });
+            if (!res.ok) {
+                const t = await res.json().catch(() => ({}));
+                throw new Error(t.detail || `생성 실패 (${res.status})`);
+            }
+            const j = await res.json();
+            setInsight(j.content || null);
+            setInsightAt(j.generated_at || null);
+        } catch (e: any) {
+            alert(`AI 리포트 생성 오류: ${e?.message || e}`);
+        } finally {
+            setGenLoading(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="w-full bg-[#121217]/80 p-10 border border-white/10 rounded-3xl backdrop-blur-3xl text-center">
+                <RefreshCw className="w-8 h-8 text-emerald-400 animate-spin mx-auto mb-3" />
+                <p className="text-gray-400">브라질 매크로 데이터를 불러오는 중…</p>
+            </div>
+        );
+    }
+    if (error || !summary) {
+        return (
+            <div className="w-full bg-[#121217]/80 p-10 border border-rose-500/20 rounded-3xl backdrop-blur-3xl text-center">
+                <AlertTriangle className="w-8 h-8 text-rose-400 mx-auto mb-3" />
+                <p className="text-gray-300">데이터를 불러오지 못했습니다.</p>
+                <p className="text-xs text-gray-500 mt-1">{error}</p>
+            </div>
+        );
+    }
+
+    const s = summary;
+    const zoneStyle = ZONE_STYLE[s.signal.zone] || ZONE_STYLE.UNKNOWN;
+
+    return (
+        <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-500 bg-[#121217]/80 p-4 lg:p-6 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] space-y-6">
+
+            {/* ── 헤더 ─────────────────────────────────────────────── */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/20 p-4 rounded-2xl border border-white/5">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 shrink-0">
+                        <Flag className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-extrabold text-white">브라질 국채 (헤알화)</h2>
+                        <p className="text-sm text-gray-400 font-medium mt-0.5">AI 매크로 분석 기반 조건부 분할 진입 & 실행 플레이북</p>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <p className="text-[11px] text-gray-500 uppercase tracking-wide">기준일</p>
+                    <p className="text-sm font-bold text-gray-300">{s.as_of}</p>
+                </div>
+            </div>
+
+            {/* ── AI Verdict + 다음 이벤트 D-day ───────────────────── */}
+            <div className={`rounded-2xl p-5 bg-gradient-to-br ${zoneStyle.from} ${zoneStyle.to} shadow-lg`}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className={`text-[11px] font-black px-2 py-0.5 rounded-full ${zoneStyle.badge} text-white uppercase tracking-wide`}>
+                                Activation Zone
+                            </span>
+                            <span className="text-2xl font-black text-white">{s.signal.grade}</span>
+                        </div>
+                        <p className="text-white/95 font-semibold text-[15px] leading-relaxed">{s.signal.headline}</p>
+                        <p className="text-white/80 text-sm mt-1.5">▶ {s.signal.action}</p>
+                        <div className="flex gap-2 mt-3">
+                            <ConditionPill ok={s.signal.rate_ok} label={`금리 14.2%↑`} />
+                            <ConditionPill ok={s.signal.fx_ok} label={`환율 290원↓`} />
+                        </div>
+                    </div>
+                    {s.next_catalyst && (
+                        <div className="bg-black/25 rounded-xl px-5 py-3 text-center shrink-0 border border-white/10">
+                            <div className="flex items-center gap-1.5 justify-center text-white/70 text-[11px] font-bold uppercase mb-1">
+                                <CalendarClock className="w-3.5 h-3.5" /> 다음 관전 이벤트
+                            </div>
+                            <div className="text-3xl font-black text-white leading-none">D-{s.next_catalyst.d_day}</div>
+                            <div className="text-xs text-white/80 mt-1 font-semibold">{s.next_catalyst.title}</div>
+                            <div className="text-[11px] text-white/60">{s.next_catalyst.date}</div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* ── 지표 스코어보드 ──────────────────────────────────── */}
+            <section>
+                <SectionTitle icon={<Gauge className="w-5 h-5 text-emerald-400" />} title="Current Market Dashboard" sub="매크로 지표 현황" />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    {s.indicators.map((ind) => <GaugeCard key={ind.key} ind={ind} />)}
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+                    <MiniStat label="실질금리 (Selic−IPCA)" value={`${fmt(s.real_rate.value, 2)}%p`} gauge={s.real_rate.gauge} />
+                    <MiniStat label="Focus 연말 Selic 컨센서스" value={`${fmt(s.focus.selic_eoy, 2)}%`} gauge="gray" />
+                    <MiniStat label="Focus 연말 IPCA 컨센서스" value={`${fmt(s.focus.ipca_eoy, 2)}%`} gauge="gray" />
+                    <MiniStat label="Focus 연말 USD/BRL" value={fmt(s.focus.usdbrl_eoy, 2)} gauge="gray" />
+                </div>
+            </section>
+
+            {/* ── Activation Zone 맵 + 차트 ────────────────────────── */}
+            <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
+                    <SectionTitle icon={<Target className="w-5 h-5 text-emerald-400" />} title="The Activation Zone" sub="2축 목표 진입 구간 맵 (금리 × 환율)" />
+                    <ActivationZoneChart summary={s} />
+                </div>
+                <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
+                    <SectionTitle icon={<TrendingDown className="w-5 h-5 text-cyan-400" />} title="금리 사이클" sub="Selic vs 5년물 국채금리 vs IPCA (10년)" />
+                    <RateCycleChart history={history} />
+                </div>
+            </section>
+
+            <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
+                    <SectionTitle icon={<ArrowDownRight className="w-5 h-5 text-amber-400" />} title="원/헤알 환율" sub="BRL/KRW 추이 + 290원 타겟 (10년)" />
+                    <FxChart history={history} target={s.targets.fx_target} />
+                </div>
+                <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
+                    <SectionTitle icon={<ShieldCheck className="w-5 h-5 text-emerald-400" />} title="The Carry Cushion" sub="만기 환율별 원화 누적수익 (5년 보유)" />
+                    <CarryCushionChart points={s.carry_cushion} />
+                </div>
+            </section>
+
+            {/* ── AI 전략 리포트 ───────────────────────────────────── */}
+            <AiReportSection insight={insight} insightAt={insightAt} genLoading={genLoading} onGenerate={generateReport} />
+
+            {/* ── 수익 시뮬레이터 ──────────────────────────────────── */}
+            <CarrySimulator summary={s} />
+
+            {/* ── 8월 Copom 시나리오 ───────────────────────────────── */}
+            <section>
+                <SectionTitle icon={<Layers className="w-5 h-5 text-indigo-400" />} title="August Copom Playbook" sub="8월 금리 결정 시나리오별 대응" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {s.aug_scenarios.map((sc) => <ScenarioCard key={sc.id} sc={sc} />)}
+                </div>
+            </section>
+
+            {/* ── 3단계 분할 매수 로드맵 ───────────────────────────── */}
+            <section>
+                <SectionTitle icon={<Target className="w-5 h-5 text-emerald-400" />} title="3-Tranche Execution Strategy" sub="3단계 분할 매수 로드맵" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {s.tranches.map((t) => <TrancheCard key={t.id} t={t} />)}
+                </div>
+                <p className="text-[11px] text-gray-500 mt-2 flex items-center gap-1">
+                    <Info className="w-3 h-3" /> 비중은 유동 금융자산의 최대 5~10% 이내(위성 포지션), 만기 3~5년 스위트스팟 권장.
+                </p>
+            </section>
+
+            {/* ── 매크로 캘린더 ────────────────────────────────────── */}
+            <section>
+                <SectionTitle icon={<CalendarClock className="w-5 h-5 text-cyan-400" />} title="Macro Catalyst Timeline" sub="Q3-Q4 핵심 관전 캘린더" />
+                <div className="flex flex-wrap gap-2">
+                    {s.timeline.filter(c => c.d_day >= 0).map((c) => <TimelineChip key={c.key} c={c} />)}
+                </div>
+            </section>
+
+            {/* ── 실행 전 최종 체크리스트 ──────────────────────────── */}
+            <section>
+                <SectionTitle icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />} title="Final Due Diligence Checklist" sub="매수 버튼 클릭 전 필수 확인 사항" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {s.due_diligence.map((d, i) => (
+                        <div key={i} className="flex gap-3 bg-black/20 rounded-xl border border-white/5 p-4">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-bold text-white text-sm">{d.title}</p>
+                                <p className="text-xs text-gray-400 mt-1 leading-relaxed">{d.body}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            <p className="text-[11px] text-gray-600 leading-relaxed border-t border-white/5 pt-3">
+                ※ 본 화면은 투자 권유가 아닌 판단 보조용 정보입니다. 모든 수치는 기준일 스냅샷이며 이후 변동됩니다.
+                세금(IOF 포함)·환전 비용은 증권사·세무 전문가 확인이 필요합니다.
+            </p>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// 하위 컴포넌트
+// ══════════════════════════════════════════════════════════════════════════
+function SectionTitle({ icon, title, sub }: { icon: React.ReactNode; title: string; sub: string }) {
+    return (
+        <div className="flex items-center gap-2.5 mb-3">
+            {icon}
+            <div>
+                <h3 className="text-base font-extrabold text-white leading-none">{title}</h3>
+                <p className="text-[11px] text-gray-500 mt-0.5">{sub}</p>
+            </div>
+        </div>
+    );
+}
+
+function ConditionPill({ ok, label }: { ok: boolean; label: string }) {
+    return (
+        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${ok ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-100' : 'bg-black/25 border-white/15 text-white/60'}`}>
+            {ok ? '✓' : '○'} {label}
+        </span>
+    );
+}
+
+function GaugeCard({ ind }: { ind: Indicator }) {
+    const g = GAUGE_STYLE[ind.gauge] || GAUGE_STYLE.gray;
+    const chg = ind.change;
+    return (
+        <div className={`bg-black/20 rounded-2xl border border-white/5 p-4 ring-1 ${g.ring}`}>
+            <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-400 font-semibold">{ind.label}</span>
+                <span className={`w-2.5 h-2.5 rounded-full ${g.dot}`} />
+            </div>
+            <div className={`text-2xl font-black mt-2 ${g.text}`}>
+                {fmt(ind.value, ind.unit === '원' ? 1 : 2)}<span className="text-sm ml-0.5 text-gray-500">{ind.unit}</span>
+            </div>
+            {chg !== null && chg !== undefined && Math.abs(chg) > 0.0001 && (
+                <div className={`text-[11px] mt-1 font-semibold ${chg > 0 ? 'text-rose-300' : 'text-emerald-300'}`}>
+                    {chg > 0 ? '▲' : '▼'} {fmt(Math.abs(chg), 2)} (직전 대비)
+                </div>
+            )}
+        </div>
+    );
+}
+
+function MiniStat({ label, value, gauge }: { label: string; value: string; gauge: string }) {
+    const g = GAUGE_STYLE[gauge] || GAUGE_STYLE.gray;
+    return (
+        <div className="bg-black/15 rounded-xl border border-white/5 p-3">
+            <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${g.dot}`} />
+                <span className="text-[11px] text-gray-400">{label}</span>
+            </div>
+            <div className="text-lg font-bold text-white mt-1">{value}</div>
+        </div>
+    );
+}
+
+// Activation Zone: 2축 산점도 (환율 X 역방향, 금리 Y). 현재 위치 점 표시.
+function ActivationZoneChart({ summary }: { summary: Summary }) {
+    const t = summary.targets;
+    const y5 = summary.indicators.find(i => i.key === 'y5')?.value ?? null;
+    const fx = summary.indicators.find(i => i.key === 'brl_krw')?.value ?? null;
+    const point = (y5 !== null && fx !== null) ? [{ x: fx, y: y5 }] : [];
+    return (
+        <ResponsiveContainer width="100%" height={280}>
+            <ScatterChart margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                {/* 존 배경: 환율 X축은 reversed(300→270) */}
+                <ReferenceArea x1={t.fx_target} x2={272} y1={t.rate_floor} y2={t.rate_tranche2} fill="#10b981" fillOpacity={0.15} />
+                <ReferenceArea x1={t.fx_target} x2={272} y1={t.rate_tranche2} y2={t.rate_risk} fill="#10b981" fillOpacity={0.28} />
+                <ReferenceArea x1={302} x2={t.fx_target} y1={13.5} y2={t.rate_floor} fill="#64748b" fillOpacity={0.15} />
+                <ReferenceArea x1={302} x2={272} y1={t.rate_risk} y2={15.6} fill="#f59e0b" fillOpacity={0.15} />
+                <ReferenceLine x={t.fx_target} stroke="#10b981" strokeDasharray="4 4" />
+                <ReferenceLine y={t.rate_floor} stroke="#10b981" strokeDasharray="4 4" />
+                <XAxis type="number" dataKey="x" domain={[302, 272]} reversed={false} tick={{ fill: '#9ca3af', fontSize: 11 }}
+                    label={{ value: '원/헤알 환율 (원)', position: 'insideBottom', offset: -10, fill: '#6b7280', fontSize: 11 }} />
+                <YAxis type="number" dataKey="y" domain={[13.5, 15.6]} tick={{ fill: '#9ca3af', fontSize: 11 }}
+                    label={{ value: '5년물 금리(%)', angle: -90, position: 'insideLeft', fill: '#6b7280', fontSize: 11 }} />
+                <ZAxis range={[400, 400]} />
+                <RechartsTooltip
+                    cursor={{ strokeDasharray: '3 3' }}
+                    contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: any, n: any) => [fmt(v, 2), n === 'x' ? '환율' : '금리']} />
+                <Scatter data={point} fill="#fff" shape="circle" />
+            </ScatterChart>
+        </ResponsiveContainer>
+    );
+}
+
+function RateCycleChart({ history }: { history: Record<string, { date: string; value: number }[]> }) {
+    const data = useMemo(() => mergeSeries(history, ['selic_target', 'y5', 'ipca_12m']), [history]);
+    return (
+        <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 10 }} minTickGap={40} />
+                <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} domain={['auto', 'auto']} />
+                <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Line type="monotone" dataKey="selic_target" name="기준금리(Selic)" stroke="#818cf8" dot={false} strokeWidth={2} />
+                <Line type="monotone" dataKey="y5" name="5년물 국채금리" stroke="#34d399" dot={false} strokeWidth={2} />
+                <Line type="monotone" dataKey="ipca_12m" name="IPCA(12M)" stroke="#fbbf24" dot={false} strokeWidth={1.5} />
+            </LineChart>
+        </ResponsiveContainer>
+    );
+}
+
+function FxChart({ history, target }: { history: Record<string, { date: string; value: number }[]>; target: number }) {
+    const data = useMemo(() => mergeSeries(history, ['brl_krw']), [history]);
+    return (
+        <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 10 }} minTickGap={40} />
+                <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} domain={['auto', 'auto']} />
+                <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }} />
+                <ReferenceLine y={target} stroke="#34d399" strokeDasharray="5 5" label={{ value: `타겟 ${target}원`, fill: '#34d399', fontSize: 11, position: 'insideTopRight' }} />
+                <Line type="monotone" dataKey="brl_krw" name="원/헤알" stroke="#fbbf24" dot={false} strokeWidth={2} />
+            </LineChart>
+        </ResponsiveContainer>
+    );
+}
+
+function CarryCushionChart({ points }: { points: CarryPoint[] }) {
+    const data = points.map(p => ({ label: `${p.fx_end}원`, ret: p.total_return_pct, be: p.is_breakeven }));
+    return (
+        <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                <XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} unit="%" />
+                <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: any) => [`${fmt(v, 1)}%`, '원화 누적수익']} />
+                <ReferenceLine y={0} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: '손익분기', fill: '#f59e0b', fontSize: 11, position: 'insideBottomRight' }} />
+                <Line type="monotone" dataKey="ret" name="원화 누적수익" stroke="#34d399" strokeWidth={2.5}
+                    dot={{ r: 3, fill: '#34d399' }} />
+            </LineChart>
+        </ResponsiveContainer>
+    );
+}
+
+function ScenarioCard({ sc }: { sc: { id: string; title: string; color: string; logic: string; action: string } }) {
+    const border = sc.color === 'green' ? 'border-emerald-500/40' : sc.color === 'red' ? 'border-rose-500/40' : 'border-amber-500/40';
+    const badge = sc.color === 'green' ? 'bg-emerald-500' : sc.color === 'red' ? 'bg-rose-600' : 'bg-amber-500';
+    const actionBg = sc.color === 'green' ? 'bg-emerald-500/15 text-emerald-200' : sc.color === 'red' ? 'bg-rose-500/15 text-rose-200' : 'bg-amber-500/15 text-amber-200';
+    return (
+        <div className={`bg-black/20 rounded-2xl border ${border} p-4 flex flex-col gap-2`}>
+            <div className="flex items-center gap-2">
+                <span className={`w-6 h-6 rounded-full ${badge} text-white text-xs font-black flex items-center justify-center`}>{sc.id}</span>
+                <span className="font-bold text-white text-sm">{sc.title}</span>
+            </div>
+            <p className="text-xs text-gray-400 leading-relaxed"><span className="text-gray-500">시장 논리 · </span>{sc.logic}</p>
+            <div className={`text-xs font-semibold rounded-lg px-3 py-2 mt-auto ${actionBg}`}>▶ {sc.action}</div>
+        </div>
+    );
+}
+
+function TrancheCard({ t }: { t: { id: number; weight: string; timing: string; trigger: string; rationale: string } }) {
+    return (
+        <div className="bg-gradient-to-br from-emerald-900/20 to-black/20 rounded-2xl border border-emerald-500/20 p-4">
+            <div className="flex items-center justify-between mb-2">
+                <span className="font-black text-white">Tranche {t.id}</span>
+                <span className="text-[11px] font-bold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-full">{t.weight}</span>
+            </div>
+            <p className="text-[11px] text-gray-500 mb-1">{t.timing}</p>
+            <p className="text-xs text-gray-300"><span className="text-emerald-400 font-bold">Trigger · </span>{t.trigger}</p>
+            <p className="text-xs text-gray-400 mt-1"><span className="text-gray-500">Rationale · </span>{t.rationale}</p>
+        </div>
+    );
+}
+
+function TimelineChip({ c }: { c: Catalyst }) {
+    const urgent = c.d_day <= 7;
+    return (
+        <div className={`rounded-xl border px-4 py-2.5 ${urgent ? 'border-amber-500/40 bg-amber-500/10' : 'border-white/10 bg-black/20'}`}>
+            <div className="flex items-center gap-2">
+                <span className={`text-lg font-black ${urgent ? 'text-amber-300' : 'text-gray-300'}`}>D-{c.d_day}</span>
+                <span className="text-sm font-bold text-white">{c.title}</span>
+                <span className="text-[11px] text-gray-500">{c.date}</span>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-0.5 max-w-md">{c.note}</p>
+        </div>
+    );
+}
+
+function AiReportSection({ insight, insightAt, genLoading, onGenerate }: {
+    insight: AiInsight | null; insightAt: string | null; genLoading: boolean; onGenerate: () => void;
+}) {
+    return (
+        <section className="bg-gradient-to-br from-indigo-950/40 to-black/20 rounded-2xl border border-indigo-500/20 p-5">
+            <div className="flex items-center justify-between mb-3">
+                <SectionTitle icon={<Sparkles className="w-5 h-5 text-indigo-400" />} title="AI 전략 리포트" sub={insightAt ? `생성: ${new Date(insightAt).toLocaleString('ko-KR')}` : '라이브 지표 + 플레이북 기반'} />
+                <button onClick={onGenerate} disabled={genLoading}
+                    className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg disabled:opacity-50 hover:brightness-110 transition">
+                    {genLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    {genLoading ? '분석 중…' : (insight ? '재생성' : 'AI 분석 생성')}
+                </button>
+            </div>
+            {!insight ? (
+                <p className="text-sm text-gray-400 text-center py-6">
+                    아직 생성된 리포트가 없습니다. <span className="text-indigo-300 font-semibold">AI 분석 생성</span>을 눌러 현재 매크로 국면을 진단하세요.
+                </p>
+            ) : (
+                <div className="space-y-4">
+                    {insight.verdict && (
+                        <div className="bg-black/25 rounded-xl p-4 border border-white/5">
+                            <p className="text-lg font-black text-white">{insight.verdict.grade}</p>
+                            <p className="text-sm text-gray-300 mt-1 leading-relaxed">{insight.verdict.summary}</p>
+                        </div>
+                    )}
+                    {insight.analysis?.cards && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {insight.analysis.cards.map((c, i) => (
+                                <div key={i} className="bg-black/20 rounded-xl p-3 border border-white/5">
+                                    <p className="font-bold text-indigo-300 text-sm">{c.title}</p>
+                                    <p className="text-xs text-gray-400 mt-1 leading-relaxed">{c.body}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {insight.strategy && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <StrategyBox label="진입 (Entry)" body={insight.strategy.entry} tone="emerald" />
+                            <StrategyBox label="보유 (Hold)" body={insight.strategy.hold} tone="cyan" />
+                            <StrategyBox label="청산 (Exit)" body={insight.strategy.exit} tone="amber" />
+                        </div>
+                    )}
+                    {insight.execution_checklist && insight.execution_checklist.length > 0 && (
+                        <div className="bg-black/20 rounded-xl p-4 border border-white/5">
+                            <p className="text-sm font-bold text-white mb-2">실행 체크리스트</p>
+                            <ul className="space-y-1.5">
+                                {insight.execution_checklist.map((it, i) => (
+                                    <li key={i} className="flex gap-2 text-xs text-gray-300">
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> {it}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    {insight.risk_footnote && (
+                        <p className="text-xs text-rose-300 flex items-center gap-1.5 bg-rose-500/10 rounded-lg px-3 py-2 border border-rose-500/20">
+                            <AlertTriangle className="w-4 h-4 shrink-0" /> {insight.risk_footnote}
+                        </p>
+                    )}
+                </div>
+            )}
+        </section>
+    );
+}
+
+function StrategyBox({ label, body, tone }: { label: string; body: string; tone: string }) {
+    const c = tone === 'emerald' ? 'text-emerald-300' : tone === 'cyan' ? 'text-cyan-300' : 'text-amber-300';
+    return (
+        <div className="bg-black/20 rounded-xl p-3 border border-white/5">
+            <p className={`text-xs font-black ${c} uppercase tracking-wide`}>{label}</p>
+            <p className="text-xs text-gray-300 mt-1.5 leading-relaxed">{body}</p>
+        </div>
+    );
+}
+
+// ── 캐리 쿠션 수익 시뮬레이터 (클라이언트 계산) ──────────────────────────────
+function CarrySimulator({ summary }: { summary: Summary }) {
+    const curFx = summary.indicators.find(i => i.key === 'brl_krw')?.value ?? 294;
+    const curY5 = summary.indicators.find(i => i.key === 'y5')?.value ?? 14.3;
+
+    const [amount, setAmount] = useState(10_000_000);   // 투자금(원)
+    const [ytm, setYtm] = useState(Number(curY5.toFixed(2)));  // 매수 YTM(%)
+    const [years, setYears] = useState(5);
+    const [entryFx, setEntryFx] = useState(Number(curFx.toFixed(1)));
+    const [exitFx, setExitFx] = useState(Number(curFx.toFixed(1)));
+    const [spread, setSpread] = useState(1.0);          // 왕복 환전 스프레드+비용(%)
+
+    const calc = (fxEnd: number) => {
+        const growth = Math.pow(1 + ytm / 100, years);      // 헤알 기준 원리금 성장
+        const fxFactor = fxEnd / entryFx;                    // 환손익 배수
+        const gross = growth * fxFactor;
+        const net = gross * (1 - spread / 100);              // 왕복 비용 차감(근사)
+        return {
+            totalPct: (net - 1) * 100,
+            fxPct: (fxFactor - 1) * 100,
+            carryPct: (growth - 1) * 100,
+            payout: amount * net,
+        };
+    };
+    const res = calc(exitFx);
+    const breakeven = entryFx / (Math.pow(1 + ytm / 100, years) * (1 - spread / 100));
+
+    const scenarios = [entryFx, entryFx * 0.95, entryFx * 0.9, entryFx * 0.8, Math.round(breakeven * 10) / 10];
+
+    return (
+        <section className="bg-black/20 rounded-2xl border border-white/5 p-5">
+            <SectionTitle icon={<ShieldCheck className="w-5 h-5 text-emerald-400" />} title="캐리 쿠션 수익 시뮬레이터" sub="원화 환산 수익 = 이자(캐리) × 환손익 − 비용 (비과세 가정)" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* 입력 */}
+                <div className="space-y-3">
+                    <SliderRow label="투자금" value={`${(amount / 10000).toLocaleString('ko-KR')}만원`}>
+                        <input type="range" min={1_000_000} max={100_000_000} step={1_000_000} value={amount}
+                            onChange={e => setAmount(Number(e.target.value))} className="w-full accent-emerald-500" />
+                    </SliderRow>
+                    <SliderRow label="매수 YTM (만기수익률)" value={`${ytm.toFixed(2)}%`}>
+                        <input type="range" min={10} max={16} step={0.05} value={ytm}
+                            onChange={e => setYtm(Number(e.target.value))} className="w-full accent-emerald-500" />
+                    </SliderRow>
+                    <SliderRow label="보유 기간" value={`${years}년`}>
+                        <input type="range" min={1} max={10} step={1} value={years}
+                            onChange={e => setYears(Number(e.target.value))} className="w-full accent-emerald-500" />
+                    </SliderRow>
+                    <SliderRow label="진입 환율 (원/헤알)" value={`${entryFx.toFixed(1)}원`}>
+                        <input type="range" min={200} max={320} step={0.5} value={entryFx}
+                            onChange={e => setEntryFx(Number(e.target.value))} className="w-full accent-amber-500" />
+                    </SliderRow>
+                    <SliderRow label="만기 환율 (원/헤알)" value={`${exitFx.toFixed(1)}원`}>
+                        <input type="range" min={120} max={340} step={0.5} value={exitFx}
+                            onChange={e => setExitFx(Number(e.target.value))} className="w-full accent-amber-500" />
+                    </SliderRow>
+                    <SliderRow label="왕복 환전 스프레드+비용" value={`${spread.toFixed(1)}%`}>
+                        <input type="range" min={0} max={4} step={0.1} value={spread}
+                            onChange={e => setSpread(Number(e.target.value))} className="w-full accent-rose-500" />
+                    </SliderRow>
+                </div>
+                {/* 결과 */}
+                <div className="space-y-3">
+                    <div className={`rounded-2xl p-5 border ${res.totalPct >= 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/10 border-rose-500/30'}`}>
+                        <p className="text-xs text-gray-400">만기 원화 실현금액 ({years}년 후, 세전·비과세)</p>
+                        <p className={`text-3xl font-black mt-1 ${res.totalPct >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                            {Math.round(res.payout).toLocaleString('ko-KR')}원
+                        </p>
+                        <p className={`text-sm font-bold mt-1 ${res.totalPct >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                            총수익률 {res.totalPct >= 0 ? '+' : ''}{fmt(res.totalPct, 1)}% · CAGR {fmt((Math.pow(res.payout / amount, 1 / years) - 1) * 100, 1)}%
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                            <div className="bg-black/25 rounded-lg p-2">
+                                <span className="text-gray-500">이자(캐리) 성장</span>
+                                <p className="text-emerald-300 font-bold">+{fmt(res.carryPct, 1)}%</p>
+                            </div>
+                            <div className="bg-black/25 rounded-lg p-2">
+                                <span className="text-gray-500">환손익</span>
+                                <p className={`font-bold ${res.fxPct >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{res.fxPct >= 0 ? '+' : ''}{fmt(res.fxPct, 1)}%</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-black/20 rounded-xl border border-white/5 p-3">
+                        <p className="text-xs text-gray-400 mb-2">손익분기 만기환율: <span className="text-amber-300 font-bold">{fmt(breakeven, 1)}원</span> (이 아래로 떨어지면 원금 손실)</p>
+                        <table className="w-full text-xs">
+                            <thead>
+                                <tr className="text-gray-500 text-left">
+                                    <th className="font-medium pb-1">만기환율</th><th className="font-medium pb-1">환율변동</th><th className="font-medium pb-1 text-right">총수익률</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {scenarios.map((fxEnd, i) => {
+                                    const r = calc(fxEnd);
+                                    return (
+                                        <tr key={i} className="border-t border-white/5">
+                                            <td className="py-1 text-gray-300">{fmt(fxEnd, 1)}원</td>
+                                            <td className={`py-1 ${r.fxPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{r.fxPct >= 0 ? '+' : ''}{fmt(r.fxPct, 1)}%</td>
+                                            <td className={`py-1 text-right font-bold ${r.totalPct >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{r.totalPct >= 0 ? '+' : ''}{fmt(r.totalPct, 1)}%</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function SliderRow({ label, value, children }: { label: string; value: string; children: React.ReactNode }) {
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-400">{label}</span>
+                <span className="text-sm font-bold text-white">{value}</span>
+            </div>
+            {children}
+        </div>
+    );
+}
+
+// ── 유틸: 여러 시계열을 date 기준 병합 ───────────────────────────────────────
+function mergeSeries(history: Record<string, { date: string; value: number }[]>, keys: string[]) {
+    const map = new Map<string, any>();
+    for (const k of keys) {
+        for (const pt of (history[k] || [])) {
+            if (!map.has(pt.date)) map.set(pt.date, { date: pt.date });
+            map.get(pt.date)[k] = pt.value;
+        }
+    }
+    return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
