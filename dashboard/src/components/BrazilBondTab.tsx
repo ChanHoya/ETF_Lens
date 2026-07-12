@@ -169,7 +169,7 @@ export default function BrazilBondTab() {
                     </div>
                 </div>
                 <div className="text-right">
-                    <p className="text-[11px] text-gray-500 uppercase tracking-wide">기준일</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">기준일</p>
                     <p className="text-sm font-bold text-gray-300">{s.as_of}</p>
                 </div>
             </div>
@@ -179,7 +179,7 @@ export default function BrazilBondTab() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                            <span className={`text-[11px] font-black px-2 py-0.5 rounded-full ${zoneStyle.badge} text-white uppercase tracking-wide`}>
+                            <span className={`text-xs font-black px-2 py-0.5 rounded-full ${zoneStyle.badge} text-white uppercase tracking-wide`}>
                                 Activation Zone
                             </span>
                             <span className="text-2xl font-black text-white">{s.signal.grade}</span>
@@ -193,28 +193,67 @@ export default function BrazilBondTab() {
                     </div>
                     {s.next_catalyst && (
                         <div className="bg-black/25 rounded-xl px-5 py-3 text-center shrink-0 border border-white/10">
-                            <div className="flex items-center gap-1.5 justify-center text-white/70 text-[11px] font-bold uppercase mb-1">
+                            <div className="flex items-center gap-1.5 justify-center text-white/70 text-xs font-bold uppercase mb-1">
                                 <CalendarClock className="w-3.5 h-3.5" /> 다음 관전 이벤트
                             </div>
                             <div className="text-3xl font-black text-white leading-none">D-{s.next_catalyst.d_day}</div>
                             <div className="text-xs text-white/80 mt-1 font-semibold">{s.next_catalyst.title}</div>
-                            <div className="text-[11px] text-white/60">{s.next_catalyst.date}</div>
+                            <div className="text-xs text-white/60 mt-1">{s.next_catalyst.date}</div>
                         </div>
                     )}
                 </div>
             </div>
 
             {/* ── 지표 스코어보드 ──────────────────────────────────── */}
-            <section>
-                <SectionTitle icon={<Gauge className="w-5 h-5 text-emerald-400" />} title="Current Market Dashboard" sub="매크로 지표 현황" />
+            <section className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <SectionTitle icon={<Gauge className="w-5 h-5 text-emerald-400" />} title="Current Market Dashboard" sub="매크로 지표 현황" />
+                    <IndicatorGuide />
+                </div>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     {s.indicators.map((ind) => <GaugeCard key={ind.key} ind={ind} />)}
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
-                    <MiniStat label="실질금리 (Selic−IPCA)" value={`${fmt(s.real_rate.value, 2)}%p`} gauge={s.real_rate.gauge} />
-                    <MiniStat label="Focus 연말 Selic 컨센서스" value={`${fmt(s.focus.selic_eoy, 2)}%`} gauge="gray" />
-                    <MiniStat label="Focus 연말 IPCA 컨센서스" value={`${fmt(s.focus.ipca_eoy, 2)}%`} gauge="gray" />
-                    <MiniStat label="Focus 연말 USD/BRL" value={fmt(s.focus.usdbrl_eoy, 2)} gauge="gray" />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <GaugeCard ind={{
+                        key: 'real_rate',
+                        label: s.real_rate.label,
+                        unit: s.real_rate.unit,
+                        date: null,
+                        value: s.real_rate.value,
+                        prev: null,
+                        change: null,
+                        gauge: s.real_rate.gauge
+                    }} />
+                    <GaugeCard ind={{
+                        key: 'focus_selic_eoy',
+                        label: 'Focus 연말 Selic 컨센서스',
+                        unit: '%',
+                        date: null,
+                        value: s.focus.selic_eoy,
+                        prev: null,
+                        change: null,
+                        gauge: (s.focus as any).selic_eoy_gauge || 'gray'
+                    }} />
+                    <GaugeCard ind={{
+                        key: 'focus_ipca_eoy',
+                        label: 'Focus 연말 IPCA 컨센서스',
+                        unit: '%',
+                        date: null,
+                        value: s.focus.ipca_eoy,
+                        prev: null,
+                        change: null,
+                        gauge: (s.focus as any).ipca_eoy_gauge || 'gray'
+                    }} />
+                    <GaugeCard ind={{
+                        key: 'focus_usdbrl_eoy',
+                        label: 'Focus 연말 USD/BRL',
+                        unit: '',
+                        date: null,
+                        value: s.focus.usdbrl_eoy,
+                        prev: null,
+                        change: null,
+                        gauge: (s.focus as any).usdbrl_eoy_gauge || 'gray'
+                    }} />
                 </div>
             </section>
 
@@ -261,7 +300,7 @@ export default function BrazilBondTab() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {s.tranches.map((t) => <TrancheCard key={t.id} t={t} />)}
                 </div>
-                <p className="text-[11px] text-gray-500 mt-2 flex items-center gap-1">
+                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
                     <Info className="w-3 h-3" /> 비중은 유동 금융자산의 최대 5~10% 이내(위성 포지션), 만기 3~5년 스위트스팟 권장.
                 </p>
             </section>
@@ -297,7 +336,7 @@ export default function BrazilBondTab() {
             {/* ── 텔레그램 알림 구독 ───────────────────────────────── */}
             <BrazilAlertConfig />
 
-            <p className="text-[11px] text-gray-600 leading-relaxed border-t border-white/5 pt-3">
+            <p className="text-xs text-gray-600 leading-relaxed border-t border-white/5 pt-3">
                 ※ 본 화면은 투자 권유가 아닌 판단 보조용 정보입니다. 모든 수치는 기준일 스냅샷이며 이후 변동됩니다.
                 세금(IOF 포함)·환전 비용은 증권사·세무 전문가 확인이 필요합니다.
             </p>
@@ -313,8 +352,8 @@ function SectionTitle({ icon, title, sub }: { icon: React.ReactNode; title: stri
         <div className="flex items-center gap-2.5 mb-3">
             {icon}
             <div>
-                <h3 className="text-base font-extrabold text-white leading-none">{title}</h3>
-                <p className="text-[11px] text-gray-500 mt-0.5">{sub}</p>
+                <h3 className="text-lg font-extrabold text-white leading-none">{title}</h3>
+                <p className="text-xs text-gray-500 mt-1">{sub}</p>
             </div>
         </div>
     );
@@ -322,7 +361,7 @@ function SectionTitle({ icon, title, sub }: { icon: React.ReactNode; title: stri
 
 function ConditionPill({ ok, label }: { ok: boolean; label: string }) {
     return (
-        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${ok ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-100' : 'bg-black/25 border-white/15 text-white/60'}`}>
+        <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${ok ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-100' : 'bg-black/25 border-white/15 text-white/60'}`}>
             {ok ? '✓' : '○'} {label}
         </span>
     );
@@ -334,30 +373,70 @@ function GaugeCard({ ind }: { ind: Indicator }) {
     return (
         <div className={`bg-black/20 rounded-2xl border border-white/5 p-4 ring-1 ${g.ring}`}>
             <div className="flex items-center justify-between">
-                <span className="text-[11px] text-gray-400 font-semibold">{ind.label}</span>
-                <span className={`w-2.5 h-2.5 rounded-full ${g.dot}`} />
+                <span className="text-[12px] lg:text-[13px] text-gray-400 font-semibold">{ind.label}</span>
+                <span className={`w-2.5 h-2.5 rounded-full ${g.dot} shrink-0`} />
             </div>
             <div className={`text-2xl font-black mt-2 ${g.text}`}>
                 {fmt(ind.value, ind.unit === '원' ? 1 : 2)}<span className="text-sm ml-0.5 text-gray-500">{ind.unit}</span>
             </div>
-            {chg !== null && chg !== undefined && Math.abs(chg) > 0.0001 && (
-                <div className={`text-[11px] mt-1 font-semibold ${chg > 0 ? 'text-rose-300' : 'text-emerald-300'}`}>
+            {chg !== null && chg !== undefined && Math.abs(chg) > 0.0001 ? (
+                <div className={`text-xs mt-1 font-semibold ${chg > 0 ? 'text-rose-300' : 'text-emerald-300'}`}>
                     {chg > 0 ? '▲' : '▼'} {fmt(Math.abs(chg), 2)} (직전 대비)
                 </div>
+            ) : (
+                <div className="h-4 mt-1" />
             )}
         </div>
     );
 }
 
-function MiniStat({ label, value, gauge }: { label: string; value: string; gauge: string }) {
-    const g = GAUGE_STYLE[gauge] || GAUGE_STYLE.gray;
+function IndicatorGuide() {
+    const [open, setOpen] = useState(false);
     return (
-        <div className="bg-black/15 rounded-xl border border-white/5 p-3">
-            <div className="flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${g.dot}`} />
-                <span className="text-[11px] text-gray-400">{label}</span>
-            </div>
-            <div className="text-lg font-bold text-white mt-1">{value}</div>
+        <div className="relative">
+            <button
+                onClick={() => setOpen(!open)}
+                className="text-xs font-bold px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 transition flex items-center gap-1.5"
+            >
+                <Info className="w-3.5 h-3.5" /> 지표 상태 판정 기준 안내
+            </button>
+            {open && (
+                <div className="absolute right-0 mt-2 p-4 bg-[#1a1a23] border border-white/15 rounded-xl shadow-2xl text-[12px] text-gray-300 w-80 space-y-2.5 z-20 animate-in fade-in duration-200">
+                    <h4 className="font-extrabold text-white text-sm border-b border-white/10 pb-1">🚦 지표별 신호등 상태 기준</h4>
+                    <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                        <div>
+                            <p className="font-bold text-emerald-300">기준금리 (Selic)</p>
+                            <p className="text-gray-400">🟢 14.0% 이상 (고금리 매력 구간)</p>
+                            <p className="text-gray-400">🟡 12.0% ~ 14.0% (점진적 인하 사이클)</p>
+                            <p className="text-gray-400">🔴 12.0% 미만 (캐리 매력 저하)</p>
+                        </div>
+                        <div>
+                            <p className="font-bold text-emerald-300">5년물 국채금리</p>
+                            <p className="text-gray-400">🟢 14.2% ~ 15.0% (진입 최적 구간)</p>
+                            <p className="text-gray-400">🟡 14.2% 미만 (금리 매력 부족)</p>
+                            <p className="text-gray-400">🔴 15.0% 초과 (재정/대선 리스크 반영)</p>
+                        </div>
+                        <div>
+                            <p className="font-bold text-emerald-300">원/헤알 환율 (BRL/KRW)</p>
+                            <p className="text-gray-400">🟢 290원 이하 (환율 안전 마진 확보)</p>
+                            <p className="text-gray-400">🟡 290원 ~ 300원 (주의 관망)</p>
+                            <p className="text-gray-400">🔴 300원 초과 (고환율 진입 비권장)</p>
+                        </div>
+                        <div>
+                            <p className="font-bold text-emerald-300">연말 IPCA 물가 전망</p>
+                            <p className="text-gray-400">🟢 4.5% 이하 (중앙은행 관리 목표치 내)</p>
+                            <p className="text-gray-400">🟡 4.5% ~ 6.0% (물가 불안정 경계)</p>
+                            <p className="text-gray-400">🔴 6.0% 초과 (초인플레이션 위험)</p>
+                        </div>
+                        <div>
+                            <p className="font-bold text-emerald-300">실질금리 (Selic - IPCA)</p>
+                            <p className="text-gray-400">🟢 8.0%p 이상 (실질 고금리 매력)</p>
+                            <p className="text-gray-400">🟡 5.0%p ~ 8.0%p (보통)</p>
+                            <p className="text-gray-400">🔴 5.0%p 미만 (매력 저하)</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -369,28 +448,59 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
     const fx = summary.indicators.find(i => i.key === 'brl_krw')?.value ?? null;
     const point = (y5 !== null && fx !== null) ? [{ x: fx, y: y5 }] : [];
     return (
-        <ResponsiveContainer width="100%" height={280}>
-            <ScatterChart margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                {/* 존 배경: 환율 X축은 reversed(300→270) */}
-                <ReferenceArea x1={t.fx_target} x2={272} y1={t.rate_floor} y2={t.rate_tranche2} fill="#10b981" fillOpacity={0.15} />
-                <ReferenceArea x1={t.fx_target} x2={272} y1={t.rate_tranche2} y2={t.rate_risk} fill="#10b981" fillOpacity={0.28} />
-                <ReferenceArea x1={302} x2={t.fx_target} y1={13.5} y2={t.rate_floor} fill="#64748b" fillOpacity={0.15} />
-                <ReferenceArea x1={302} x2={272} y1={t.rate_risk} y2={15.6} fill="#f59e0b" fillOpacity={0.15} />
-                <ReferenceLine x={t.fx_target} stroke="#10b981" strokeDasharray="4 4" />
-                <ReferenceLine y={t.rate_floor} stroke="#10b981" strokeDasharray="4 4" />
-                <XAxis type="number" dataKey="x" domain={[302, 272]} reversed={false} tick={{ fill: '#9ca3af', fontSize: 11 }}
-                    label={{ value: '원/헤알 환율 (원)', position: 'insideBottom', offset: -10, fill: '#6b7280', fontSize: 11 }} />
-                <YAxis type="number" dataKey="y" domain={[13.5, 15.6]} tick={{ fill: '#9ca3af', fontSize: 11 }}
-                    label={{ value: '5년물 금리(%)', angle: -90, position: 'insideLeft', fill: '#6b7280', fontSize: 11 }} />
-                <ZAxis range={[400, 400]} />
-                <RechartsTooltip
-                    cursor={{ strokeDasharray: '3 3' }}
-                    contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }}
-                    formatter={(v: any, n: any) => [fmt(v, 2), n === 'x' ? '환율' : '금리']} />
-                <Scatter data={point} fill="#fff" shape="circle" />
-            </ScatterChart>
-        </ResponsiveContainer>
+        <div className="space-y-4">
+            <ResponsiveContainer width="100%" height={280}>
+                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                    {/* 존 배경: 환율 X축은 reversed(300→270) */}
+                    <ReferenceArea x1={t.fx_target} x2={272} y1={t.rate_floor} y2={t.rate_tranche2} fill="#10b981" fillOpacity={0.15} />
+                    <ReferenceArea x1={t.fx_target} x2={272} y1={t.rate_tranche2} y2={t.rate_risk} fill="#10b981" fillOpacity={0.28} />
+                    <ReferenceArea x1={302} x2={t.fx_target} y1={13.5} y2={t.rate_floor} fill="#64748b" fillOpacity={0.15} />
+                    <ReferenceArea x1={302} x2={272} y1={t.rate_risk} y2={15.6} fill="#f59e0b" fillOpacity={0.15} />
+                    
+                    {/* 목표 조건 기준선 (초록색 점선) */}
+                    <ReferenceLine x={t.fx_target} stroke="#10b981" strokeDasharray="4 4" label={{ value: '목표 290원', fill: '#10b981', fontSize: 10, position: 'insideTopLeft' }} />
+                    <ReferenceLine y={t.rate_floor} stroke="#10b981" strokeDasharray="4 4" label={{ value: '목표 14.2%', fill: '#10b981', fontSize: 10, position: 'insideBottomRight' }} />
+                    
+                    {/* 현재 좌표 가이드선 (흰색 실선/점선) */}
+                    {fx !== null && <ReferenceLine x={fx} stroke="#ffffff40" strokeDasharray="3 3" label={{ value: `현재 ${fx.toFixed(1)}원`, fill: '#ffffff80', fontSize: 10, position: 'insideBottomLeft' }} />}
+                    {y5 !== null && <ReferenceLine y={y5} stroke="#ffffff40" strokeDasharray="3 3" label={{ value: `현재 ${y5.toFixed(2)}%`, fill: '#ffffff80', fontSize: 10, position: 'insideTopRight' }} />}
+
+                    <XAxis type="number" dataKey="x" domain={[302, 272]} reversed={false} tick={{ fill: '#9ca3af', fontSize: 12 }}
+                        label={{ value: '원/헤알 환율 (원)', position: 'insideBottom', offset: -10, fill: '#6b7280', fontSize: 12 }} />
+                    <YAxis type="number" dataKey="y" domain={[13.5, 15.6]} tick={{ fill: '#9ca3af', fontSize: 12 }}
+                        label={{ value: '5년물 금리(%)', angle: -90, position: 'insideLeft', fill: '#6b7280', fontSize: 12 }} />
+                    <ZAxis range={[400, 400]} />
+                    <RechartsTooltip
+                        cursor={{ strokeDasharray: '3 3' }}
+                        contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12, color: '#fff' }}
+                        itemStyle={{ color: '#fff' }}
+                        labelStyle={{ color: '#9ca3af' }}
+                        formatter={(v: any, n: any) => [fmt(v, 2), n === 'x' ? '환율' : '금리']} />
+                    <Scatter data={point} fill="#fff" shape="circle" />
+                </ScatterChart>
+            </ResponsiveContainer>
+            
+            {/* 존 범례 설명 */}
+            <div className="grid grid-cols-2 gap-2 text-xs border-t border-white/5 pt-3">
+                <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-emerald-500/15 border border-emerald-500/40 shrink-0" />
+                    <span className="text-gray-400">🟢 1차 진입 (14.2%~14.7% 금리 & 290원 이하 환율)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-emerald-600/40 border border-emerald-500/60 shrink-0" />
+                    <span className="text-gray-400">🟢 적극 매수 (14.7%~15.0% 금리 & 290원 이하 환율)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-rose-500/20 border border-rose-500/40 shrink-0" />
+                    <span className="text-gray-400">🔴 리스크 재평가 (15.0% 초과 금리 - 진입 보류)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-slate-500/20 border border-slate-500/40 shrink-0" />
+                    <span className="text-gray-400">⚪ 관망/대기 (290원 초과 환율 또는 14.2% 미만 금리)</span>
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -400,13 +510,13 @@ function RateCycleChart({ history }: { history: Record<string, { date: string; v
         <ResponsiveContainer width="100%" height={260}>
             <LineChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 10 }} minTickGap={40} />
-                <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} domain={['auto', 'auto']} />
+                <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} />
+                <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} domain={['auto', 'auto']} />
                 <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="selic_target" name="기준금리(Selic)" stroke="#818cf8" dot={false} strokeWidth={2} />
-                <Line type="monotone" dataKey="y5" name="5년물 국채금리" stroke="#34d399" dot={false} strokeWidth={2} />
-                <Line type="monotone" dataKey="ipca_12m" name="IPCA(12M)" stroke="#fbbf24" dot={false} strokeWidth={1.5} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Line type="monotone" dataKey="selic_target" name="기준금리(Selic)" stroke="#818cf8" dot={false} strokeWidth={2} connectNulls={true} />
+                <Line type="monotone" dataKey="y5" name="5년물 국채금리" stroke="#34d399" dot={false} strokeWidth={2} connectNulls={true} />
+                <Line type="monotone" dataKey="ipca_12m" name="IPCA(12M)" stroke="#fbbf24" dot={false} strokeWidth={1.5} connectNulls={true} />
             </LineChart>
         </ResponsiveContainer>
     );
@@ -418,10 +528,10 @@ function FxChart({ history, target }: { history: Record<string, { date: string; 
         <ResponsiveContainer width="100%" height={260}>
             <LineChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 10 }} minTickGap={40} />
-                <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} domain={['auto', 'auto']} />
+                <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} />
+                <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} domain={['auto', 'auto']} />
                 <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }} />
-                <ReferenceLine y={target} stroke="#34d399" strokeDasharray="5 5" label={{ value: `타겟 ${target}원`, fill: '#34d399', fontSize: 11, position: 'insideTopRight' }} />
+                <ReferenceLine y={target} stroke="#34d399" strokeDasharray="5 5" label={{ value: `타겟 ${target}원`, fill: '#34d399', fontSize: 12, position: 'insideTopRight' }} />
                 <Line type="monotone" dataKey="brl_krw" name="원/헤알" stroke="#fbbf24" dot={false} strokeWidth={2} />
             </LineChart>
         </ResponsiveContainer>
@@ -434,11 +544,11 @@ function CarryCushionChart({ points }: { points: CarryPoint[] }) {
         <ResponsiveContainer width="100%" height={260}>
             <LineChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} unit="%" />
+                <XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} unit="%" />
                 <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }}
                     formatter={(v: any) => [`${fmt(v, 1)}%`, '원화 누적수익']} />
-                <ReferenceLine y={0} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: '손익분기', fill: '#f59e0b', fontSize: 11, position: 'insideBottomRight' }} />
+                <ReferenceLine y={0} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: '손익분기', fill: '#f59e0b', fontSize: 12, position: 'insideBottomRight' }} />
                 <Line type="monotone" dataKey="ret" name="원화 누적수익" stroke="#34d399" strokeWidth={2.5}
                     dot={{ r: 3, fill: '#34d399' }} />
             </LineChart>
@@ -467,9 +577,9 @@ function TrancheCard({ t }: { t: { id: number; weight: string; timing: string; t
         <div className="bg-gradient-to-br from-emerald-900/20 to-black/20 rounded-2xl border border-emerald-500/20 p-4">
             <div className="flex items-center justify-between mb-2">
                 <span className="font-black text-white">Tranche {t.id}</span>
-                <span className="text-[11px] font-bold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-full">{t.weight}</span>
+                <span className="text-xs font-bold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-full">{t.weight}</span>
             </div>
-            <p className="text-[11px] text-gray-500 mb-1">{t.timing}</p>
+            <p className="text-xs text-gray-500 mb-1">{t.timing}</p>
             <p className="text-xs text-gray-300"><span className="text-emerald-400 font-bold">Trigger · </span>{t.trigger}</p>
             <p className="text-xs text-gray-400 mt-1"><span className="text-gray-500">Rationale · </span>{t.rationale}</p>
         </div>
@@ -499,13 +609,13 @@ function MacroTimeline({ timeline }: { timeline: Catalyst[] }) {
                                         {past ? '완료' : `D-${c.d_day}`}
                                     </span>
                                     <span className={`text-sm font-bold ${past ? 'text-gray-400' : 'text-white'}`}>{c.title}</span>
-                                    <span className="text-[11px] text-gray-500">{c.date}</span>
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${col === 'amber' ? 'bg-amber-500/15 text-amber-300'
+                                    <span className="text-xs text-gray-500">{c.date}</span>
+                                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${col === 'amber' ? 'bg-amber-500/15 text-amber-300'
                                         : col === 'cyan' ? 'bg-cyan-500/15 text-cyan-300' : 'bg-rose-500/15 text-rose-300'}`}>
                                         {c.impact === 'fx' ? '환율' : c.impact === 'rate' ? '금리' : '금리·환율'}
                                     </span>
                                 </div>
-                                <p className="text-[11px] text-gray-400 mt-0.5">{c.note}</p>
+                                <p className="text-xs text-gray-400 mt-0.5">{c.note}</p>
                             </div>
                         </div>
                     );
@@ -535,7 +645,7 @@ function NewsFeed({ news, loading }: { news: NewsItem[]; loading: boolean }) {
                     <Newspaper className="w-4 h-4 text-amber-400/70 shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                         <p className="text-sm text-gray-200 group-hover:text-white leading-snug line-clamp-2">{n.title}</p>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] text-gray-500">
+                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
                             <span>{n.source}</span>
                             {n.published && <><span>·</span><span>{n.published}</span></>}
                         </div>
@@ -665,7 +775,7 @@ function BrazilAlertConfig() {
                     </label>
                     <div>
                         <p className="text-sm font-bold text-white">브라질 국채 알림 {alertBrazil ? '켜짐' : '꺼짐'}</p>
-                        <p className="text-[11px] text-gray-400">
+                        <p className="text-xs text-gray-400">
                             {hasToken && chatId
                                 ? <>연결됨 · Chat ID <span className="font-mono">{chatId}</span></>
                                 : <>텔레그램 봇 미연결 — <span className="text-emerald-300 cursor-pointer hover:underline" onClick={() => setShowRegister(true)}>여기</span>를 눌러 토큰과 Chat ID를 등록하세요.</>}

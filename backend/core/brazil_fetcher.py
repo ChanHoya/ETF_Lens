@@ -137,6 +137,67 @@ async def _fetch_5y_yield(client: httpx.AsyncClient) -> float | None:
         return None
 
 
+async def _fetch_5y_yield_history(client: httpx.AsyncClient) -> list[dict]:
+    """investing.com 에서 브라질 5년물 국채금리(%) 일별 시계열 스크레이핑.
+    반환: [{'date': 'YYYY-MM-DD', 'value': float}, ...]"""
+    url = "https://www.investing.com/rates-bonds/brazil-5-year-bond-yield-historical-data"
+    try:
+        r = await client.get(
+            url,
+            headers={"User-Agent": _UA, "Accept-Language": "en-US,en;q=0.9", "Referer": "https://www.google.com/"},
+            timeout=30,
+        )
+        r.raise_for_status()
+        
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(r.text, 'html.parser')
+        tables = soup.find_all("table")
+        if not tables:
+            print("[brazil_fetcher] No tables found on historical page")
+            return []
+            
+        table = tables[0]
+        rows = table.find_all("tr")
+        if len(rows) < 2:
+            print("[brazil_fetcher] Historical table has no data rows")
+            return []
+            
+        out = []
+        months = {
+            "jan": "01", "feb": "02", "mar": "03", "apr": "04", "may": "05", "jun": "06",
+            "jul": "07", "aug": "08", "sep": "09", "oct": "10", "nov": "11", "dec": "12"
+        }
+        
+        for row in rows[1:]:
+            cells = [td.get_text(strip=True) for td in row.find_all("td")]
+            if len(cells) < 2:
+                continue
+            
+            # cells[0] is Date (e.g. "Jul 10, 2026"), cells[1] is Price (e.g. "14.283")
+            date_raw = cells[0].replace(",", "").strip()
+            parts = date_raw.split()
+            if len(parts) != 3:
+                continue
+                
+            m_str, d_str, y_str = parts[0].lower()[:3], parts[1], parts[2]
+            if m_str not in months:
+                continue
+                
+            try:
+                day = int(d_str)
+                year = int(y_str)
+                iso_date = f"{year:04d}-{months[m_str]}-{day:02d}"
+                val = float(cells[1])
+                out.append({"date": iso_date, "value": val})
+            except ValueError:
+                continue
+                
+        return out
+    except Exception as e:
+        print(f"[brazil_fetcher] 5Y yield history scrape failed: {e}")
+        return []
+
+
 def _fetch_usd_krw_series_sync(days: int = 400) -> dict[str, float]:
     """FinanceDataReader 로 USD/KRW 일별 종가. {'YYYY-MM-DD': float}."""
     try:
@@ -204,11 +265,17 @@ async def sync_brazil_series() -> dict:
                 print(f"[brazil_fetcher] Focus {key}({indicator}) failed: {e}")
                 result[key] = -1
 
-        # 3) 5년물 국채금리 (오늘 값 1점)
-        y5 = await _fetch_5y_yield(client)
-        if y5 is not None:
+        # 3) 5년물 국채금리 (최근 시계열 및 오늘 값)
+        y5_rows = await _fetch_5y_yield_history(client)
+        if not y5_rows:
+            # 단일값 스크레이핑 폴백
+            single_val = await _fetch_5y_yield(client)
+            if single_val is not None:
+                y5_rows = [{"date": today_iso, "value": single_val}]
+
+        if y5_rows:
             async with AsyncSessionLocal() as db:
-                result["y5"] = await _upsert(db, "y5", [{"date": today_iso, "value": y5}])
+                result["y5"] = await _upsert(db, "y5", y5_rows)
                 await db.commit()
         else:
             result["y5"] = -1

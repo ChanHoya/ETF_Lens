@@ -140,9 +140,22 @@ def _gauge(metric: str, v: float | None) -> str:
             return "green"
         return "amber" if v <= 300 else "red"
     if metric == "selic":
-        return "amber"  # 인하 사이클 진행 = 중립 컨텍스트
+        # 기준금리 (Selic): 14.0% 이상이면 green, 12.0%~14.0% 이면 amber, 그 이하면 red (캐리 매력)
+        if v >= 14.0:
+            return "green"
+        return "amber" if v >= 12.0 else "red"
     if metric == "ipca_mom":
         return "green" if v < 0.35 else ("amber" if v < 0.6 else "red")
+    if metric == "ipca_annual":
+        # 연간 물가 상승률 (컨센서스): 4.5% 이하면 green (목표 한계선 3%±1.5%), 4.5%~6.0% 이면 amber, 6.0% 초과면 red
+        if v <= 4.5:
+            return "green"
+        return "amber" if v <= 6.0 else "red"
+    if metric == "usd_brl":
+        # USD/BRL 환율: 5.0 이하면 green, 5.0~5.5 이면 amber, 5.5 초과면 red
+        if v <= 5.0:
+            return "green"
+        return "amber" if v <= 5.5 else "red"
     if metric == "real_rate":
         return "green" if v >= 8.0 else ("amber" if v >= 5.0 else "red")
     return "gray"
@@ -239,6 +252,9 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
             "selic_eoy": cur("focus_selic_eoy"),
             "ipca_eoy": cur("focus_ipca_eoy"),
             "usdbrl_eoy": cur("focus_usdbrl_eoy"),
+            "selic_eoy_gauge": _gauge("selic", cur("focus_selic_eoy")),
+            "ipca_eoy_gauge": _gauge("ipca_annual", cur("focus_ipca_eoy")),
+            "usdbrl_eoy_gauge": _gauge("usd_brl", cur("focus_usdbrl_eoy")),
         },
         "signal": signal,
         "targets": {"rate_floor": RATE_FLOOR, "rate_tranche2": RATE_TRANCHE2,

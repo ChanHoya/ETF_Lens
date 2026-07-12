@@ -4,13 +4,14 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 6 — 개인별 텔레그램 알림 수신처(봇 토큰 + Chat ID) 다중화 및 localStorage 연동 완료 (2026-07-12)
+✅ Current: Sprint 6 — 브라질 채권 대시보드 가독성(폰트), 스코어보드 디자인/임계치 일원화, 5년물 금리 시계열 복구 및 Activation Zone 안내 고도화 완료 (2026-07-12)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-07-12):
-> - 개인별 텔레그램 알림 수신처(봇 토큰 + Chat ID) 등록 및 브라우저 localStorage 동적 연동 완료.
-> - 알림 발생 시 데이터베이스에 등록된 모든 사용자에게 알림 메시지를 각각 발송하는 멀티캐스트 로직 구현 완료.
-> - 백엔드 테스트 및 프론트엔드 최적화 빌드가 정상 동작함을 확인 완료.
+> - 브라질 채권 대시보드 가독성(최소 폰트 text-xs 상향), 스코어보드 카드 8종 GaugeCard로 디자인 및 임계값(Selic, IPCA 연간, USD/BRL) 일원화 완료.
+> - investing.com historical 데이터를 긁어오는 5년물 국채금리(y5) 스크래퍼로 백엔드 시계열 복구(~22일분) 완료.
+> - Activation Zone 차트의 현재 좌표 가이드선 추가, Recharts 툴팁 글자색 흰색 변경, 4구간 설명 범례 추가 완료.
+> - 금리 사이클 차트 내 IPCA 및 y5 라인의 connectNulls={true} 적용으로 시각적 렌더링 정상화 완료.
 > - 다음 세션: S6-4 배당 스크래퍼 진행.
  
  
