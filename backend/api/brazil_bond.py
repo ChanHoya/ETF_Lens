@@ -252,6 +252,15 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
     }
 
 
+@router.post("/sync")
+async def trigger_sync():
+    """수동 동기화 트리거 + 진단. 시리즈별 upsert 건수를 반환한다(-1=실패).
+    신규 배포 직후 데이터 적재 및 소스별 접근성 확인용."""
+    from core.brazil_fetcher import sync_brazil_series
+    result = await sync_brazil_series()
+    return {"synced_at": datetime.now(_KST).isoformat(), "counts": result}
+
+
 @router.get("/history")
 async def get_history(series: str, years: int = 10, db: AsyncSession = Depends(get_db)):
     """차트용 시계열. series=쉼표구분 key. 예: series=selic_target,y5,ipca_12m."""
@@ -320,7 +329,7 @@ def _call_gemini_sync(api_key: str, prompt: str) -> str:
                 last_err = e
                 continue
             raise e
-    raise last_err
+    raise last_err or RuntimeError("Gemini 호출에 실패했습니다.")
 
 
 def _extract_json(text: str) -> dict:
