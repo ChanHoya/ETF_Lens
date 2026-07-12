@@ -261,6 +261,19 @@ async def trigger_sync():
     return {"synced_at": datetime.now(_KST).isoformat(), "counts": result}
 
 
+@router.get("/news")
+async def get_news(refresh: bool = True, limit: int = 12):
+    """브라질 국채 관련 최신 뉴스(Google News RSS). refresh=True면 라이브 수집 후 저장."""
+    from core.brazil_news import sync_brazil_news, get_recent_news
+    if refresh:
+        try:
+            await sync_brazil_news(alert_new=False)
+        except Exception as e:
+            print(f"[brazil_bond] news refresh failed: {e}")
+    items = await get_recent_news(limit)
+    return {"items": items}
+
+
 @router.get("/history")
 async def get_history(series: str, years: int = 10, db: AsyncSession = Depends(get_db)):
     """차트용 시계열. series=쉼표구분 key. 예: series=selic_target,y5,ipca_12m."""
@@ -445,15 +458,36 @@ async def check_brazil_signal_and_alert():
             tag = "D-DAY" if dd == 0 else "D-1"
             msgs.append(f"🗓️ <b>[{tag}] {c['title']}</b> ({c['date']})\n{c['note']}")
 
-        if msgs:
-            await send_telegram_message("\n\n".join(msgs), category="brazil_bond")
+    # 신규 뉴스 감지 → 알림에 포함 (세션 밖에서 실행: 자체 세션 사용)
+    notified_links = []
+    try:
+        from core.brazil_news import sync_brazil_news, mark_notified
+        nres = await sync_brazil_news(alert_new=True)
+        fresh = nres.get("new_items", [])[:4]
+        if fresh:
+            lines = ["📰 <b>브라질 국채 관련 새 뉴스</b>"]
+            for it in fresh:
+                lines.append(f"• <a href=\"{it['link']}\">{it['title']}</a> ({it['source']})")
+            msgs.append("\n".join(lines))
+            notified_links = [it["link"] for it in fresh]
+    except Exception as e:
+        print(f"[brazil_bond] news alert skipped: {e}")
 
-        # zone 상태 갱신
+    if msgs:
+        ok, _ = await send_telegram_message("\n\n".join(msgs), category="brazil_bond")
+        if ok and notified_links:
+            await mark_notified(notified_links)
+
+    # zone 상태 갱신 (새 세션)
+    async with AsyncSessionLocal() as db:
         now = datetime.now(timezone.utc).replace(tzinfo=None)
+        state = (await db.execute(
+            select(SectorInsight).where(SectorInsight.sector == "brazil_signal_state")
+        )).scalar_one_or_none()
         if state:
             state.content = sig["zone"]
             state.generated_at = now
         else:
             db.add(SectorInsight(sector="brazil_signal_state", content=sig["zone"], generated_at=now))
         await db.commit()
-        print(f"[brazil_bond] signal check: zone={sig['zone']} prev={prev_zone} alerts={len(msgs)}")
+    print(f"[brazil_bond] signal check: zone={sig['zone']} prev={prev_zone} alerts={len(msgs)}")

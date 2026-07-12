@@ -54,6 +54,9 @@ async def send_telegram_message(text: str, force: bool = False, category: str = 
             if category == "daily_summary" and settings.alert_daily_summary == 0:
                 logger.info("[Notifier] Daily summary alert is disabled in settings.")
                 return False
+            if category == "brazil_bond" and getattr(settings, "alert_brazil", 1) == 0:
+                logger.info("[Notifier] Brazil bond alert is disabled in settings.")
+                return False
 
     if not token or not chat_id:
         logger.warning("[Notifier] Telegram Token or Chat ID not configured. Skipping notification.")

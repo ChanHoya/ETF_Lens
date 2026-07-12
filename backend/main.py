@@ -87,6 +87,19 @@ async def lifespan(app: FastAPI):
         except Exception as _e:
             print(f"[Startup] etf_daily_prices columns migration skipped: {_e}")
 
+        # ── 2.7. notification_settings.alert_brazil 컬럼 추가 (브라질 알림 토글) ──────
+        try:
+            async with engine.begin() as conn:
+                if _is_sqlite:
+                    try:
+                        await conn.execute(text("ALTER TABLE notification_settings ADD COLUMN alert_brazil INTEGER DEFAULT 1"))
+                    except Exception:
+                        pass  # 이미 존재
+                else:
+                    await conn.execute(text("ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS alert_brazil INTEGER DEFAULT 1"))
+        except Exception as _e:
+            print(f"[Startup] alert_brazil column migration skipped: {_e}")
+
         # ── 3. ETF 성과 및 랭킹 비용 컬럼 마이그레이션 (SQLite 전용 스크립트) ───────
         if _is_sqlite:
             try:

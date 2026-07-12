@@ -49,6 +49,20 @@ class BrazilSeries(Base):
     )
 
 
+class BrazilNews(Base):
+    """브라질 국채 관련 뉴스(구글 뉴스 RSS). link 유니크로 신규 감지 및 텔레그램 알림에 사용."""
+    __tablename__ = "brazil_news"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    link = Column(String, unique=True, index=True)
+    title = Column(String)
+    source = Column(String, nullable=True)
+    published = Column(String, nullable=True)   # 'YYYY-MM-DD HH:MM' (KST)
+    published_ts = Column(Integer, index=True, nullable=True)  # 정렬용 epoch
+    notified = Column(Integer, default=0)       # 텔레그램 발송 여부(0/1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class ETFMaster(Base):
     __tablename__ = "etf_master"
 
@@ -212,6 +226,7 @@ class NotificationSettings(Base):
     alert_exit_signal = Column(Integer, default=1)  # 0: 비활성, 1: 활성
     alert_rebalance = Column(Integer, default=1)
     alert_daily_summary = Column(Integer, default=0)
+    alert_brazil = Column(Integer, default=1)  # 브라질 국채 이벤트/신호/뉴스 알림
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
