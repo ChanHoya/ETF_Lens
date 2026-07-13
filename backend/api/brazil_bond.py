@@ -278,7 +278,7 @@ async def trigger_sync():
 
 
 @router.get("/news")
-async def get_news(refresh: bool = True, limit: int = 12):
+async def get_news(refresh: bool = False, limit: int = 12):
     """브라질 국채 관련 최신 뉴스(Google News RSS). refresh=True면 라이브 수집 후 저장."""
     from core.brazil_news import sync_brazil_news, get_recent_news
     if refresh:

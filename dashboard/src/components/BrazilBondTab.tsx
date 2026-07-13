@@ -81,35 +81,89 @@ export default function BrazilBondTab() {
     const [newsLoading, setNewsLoading] = useState(true);
 
     useEffect(() => {
+        // 1. Try to load cached data from localStorage for instant 0ms load
+        try {
+            const cachedSummary = localStorage.getItem('brazil_bond_summary');
+            const cachedHistory = localStorage.getItem('brazil_bond_history');
+            const cachedInsight = localStorage.getItem('brazil_bond_insight');
+            const cachedNews = localStorage.getItem('brazil_bond_news');
+
+            if (cachedSummary) setSummary(JSON.parse(cachedSummary));
+            if (cachedHistory) setHistory(JSON.parse(cachedHistory));
+            if (cachedInsight) {
+                const j = JSON.parse(cachedInsight);
+                setInsight(j.content || null);
+                setInsightAt(j.generated_at || null);
+            }
+            if (cachedNews) setNews(JSON.parse(cachedNews));
+
+            if (cachedSummary && cachedHistory) {
+                setLoading(false); // disable loading spinner immediately!
+            }
+            if (cachedNews) {
+                setNewsLoading(false);
+            }
+        } catch (cacheErr) {
+            console.warn("Failed to load brazil-bond cache:", cacheErr);
+        }
+
+        // 2. Fetch fresh data from API in background to update the cache
         (async () => {
             try {
-                setLoading(true);
+                // If there's no cache, show spinner
+                if (!localStorage.getItem('brazil_bond_summary') || !localStorage.getItem('brazil_bond_history')) {
+                    setLoading(true);
+                }
                 const [sRes, hRes, iRes] = await Promise.all([
                     fetch(`${API_BASE}/api/v1/brazil-bond/summary`, { cache: 'no-store' }),
                     fetch(`${API_BASE}/api/v1/brazil-bond/history?series=selic_target,y5,ipca_12m,brl_krw,usd_brl,focus_selic_eoy&years=10`, { cache: 'no-store' }),
                     fetch(`${API_BASE}/api/v1/brazil-bond/insight`, { cache: 'no-store' }),
                 ]);
                 if (!sRes.ok) throw new Error(`summary ${sRes.status}`);
-                setSummary(await sRes.json());
-                if (hRes.ok) setHistory((await hRes.json()).series || {});
+                
+                const sData = await sRes.json();
+                setSummary(sData);
+                localStorage.setItem('brazil_bond_summary', JSON.stringify(sData));
+
+                if (hRes.ok) {
+                    const hData = await hRes.json();
+                    const series = hData.series || {};
+                    setHistory(series);
+                    localStorage.setItem('brazil_bond_history', JSON.stringify(series));
+                }
+
                 if (iRes.ok) {
                     const j = await iRes.json();
                     setInsight(j.content || null);
                     setInsightAt(j.generated_at || null);
+                    localStorage.setItem('brazil_bond_insight', JSON.stringify(j));
                 }
             } catch (e: any) {
-                setError(String(e?.message || e));
+                if (!localStorage.getItem('brazil_bond_summary')) {
+                    setError(String(e?.message || e));
+                } else {
+                    console.error("Background refresh failed:", e);
+                }
             } finally {
                 setLoading(false);
             }
         })();
-        // 뉴스는 별도로 로드(라이브 수집이라 느릴 수 있어 대시보드를 막지 않음)
+
+        // 3. Fetch news in the background (using refresh=false to avoid live scraping)
         (async () => {
             try {
-                setNewsLoading(true);
-                const r = await fetch(`${API_BASE}/api/v1/brazil-bond/news?limit=12`, { cache: 'no-store' });
-                if (r.ok) setNews((await r.json()).items || []);
-            } catch { /* 무시 */ } finally {
+                if (!localStorage.getItem('brazil_bond_news')) {
+                    setNewsLoading(true);
+                }
+                const r = await fetch(`${API_BASE}/api/v1/brazil-bond/news?limit=12&refresh=false`, { cache: 'no-store' });
+                if (r.ok) {
+                    const nData = (await r.json()).items || [];
+                    setNews(nData);
+                    localStorage.setItem('brazil_bond_news', JSON.stringify(nData));
+                }
+            } catch (e) {
+                console.error("Background news refresh failed:", e);
+            } finally {
                 setNewsLoading(false);
             }
         })();
