@@ -4,14 +4,12 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 6 — 브라질 채권 대시보드 가독성(폰트), 스코어보드 디자인/임계치 일원화, 5년물 금리 시계열 복구 및 Activation Zone 안내 고도화 완료 (2026-07-12)
+✅ Current: Sprint 6 — 브라질 채권 대시보드 속도 최적화(0ms 캐싱) 및 백엔드 불필요 크롤링 비활성화 완료 (2026-07-13)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
-> 세션 핸드오프 (2026-07-12):
-> - 브라질 채권 대시보드 가독성(최소 폰트 text-xs 상향), 스코어보드 카드 8종 GaugeCard로 디자인 및 임계값(Selic, IPCA 연간, USD/BRL) 일원화 완료.
-> - investing.com historical 데이터를 긁어오는 5년물 국채금리(y5) 스크래퍼로 백엔드 시계열 복구(~22일분) 완료.
-> - Activation Zone 차트의 현재 좌표 가이드선 추가, Recharts 툴팁 글자색 흰색 변경, 4구간 설명 범례 추가 완료.
-> - 금리 사이클 차트 내 IPCA 및 y5 라인의 connectNulls={true} 적용으로 시각적 렌더링 정상화 완료.
+> 세션 핸드오프 (2026-07-13):
+> - 브라질 채권 탭 진입 시 매번 발생하던 지연 문제를 해결하기 위해 localStorage 기반 캐시 렌더링(0ms 로딩) 및 백그라운드 갱신 패턴 적용 완료.
+> - 백엔드 뉴스 API(/news) 호출 시 기본 라이브 크롤링을 비활성화(refresh=False 기본값 지정)하여 API 응답 시간을 11ms 수준으로 단축 완료.
 > - 다음 세션: S6-4 배당 스크래퍼 진행.
  
  
