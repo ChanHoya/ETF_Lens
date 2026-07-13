@@ -58,6 +58,8 @@
 | S6-10: 섹터별 주가 흐름 격자 (Sector Flow Grid) | ✅ done | next_leader.py, SectorFlowGrid.tsx, SectorAnalysisTab.tsx | KOSPI, KOSDAQ, S&P 500, NASDAQ의 주요 섹터별 1년 주가 흐름을 미니 AreaChart 및 5/20/60일 이동평균선(점선) 격자로 시각화 완료 |
 | S6-11: 반도체 ETF 구성종목 변동 그래프 및 전문가 리포트 개편 | ✅ done | backend/api/router.py, active_etfs.py, SemiChart.tsx, SectorAnalysisTab.tsx | 12종 반도체 ETF(국내/해외/미국) 3대 탭 개편, 점선 오버레이, 괴리율 및 실시간 프리마켓 예상가 연동, Gemini 반도체 Expert Report 통합 완료 |
 | 텔레그램 개인 알림 수신처 다중화 | ✅ done | backend/core/notifier.py, backend/api/notification_settings.py, NotificationSettings.tsx, BrazilBondTab.tsx | 개인별 텔레그램 봇 토큰 및 Chat ID 등록 지원, 브라우저 localStorage 연동 및 알림 이벤트 발생 시 등록된 모든 사용자 대상 멀티캐스트 알림 발송 |
+| 브라질 채권 분석 (Selic vs Y5) | ✅ done | backend/api/brazil_bond.py, brazil_fetcher.py, BrazilBondTab.tsx | FRED 10년 역사적 금리(INTGSTBRM193N)와 Investing.com 실시간 22일 일별 가격의 이색(주황/초록) 연동 차트, 10Y/1Y/6M/3M 조회 범위 필터링 및 2가지 산정기준 가이드라인 제공 |
+
 
 
 

@@ -28,6 +28,7 @@ A living document of module relationships. Update whenever modules are added or 
 | Sector Flow Grid | Presentation | Sparkline line charts with 5/20/60-day moving average (dashed lines) overlays showing 1-year sector returns | backend/api/next_leader.py, SectorFlowGrid | SectorAnalysisTab | Antigravity |
 | Energy ETF Analysis | Presentation | Energy sector ETF performance charts, custom legends, and toggled constituent comparison tables | api/router, EnergyChart | SectorAnalysisTab | Antigravity |
 | Semiconductor ETF Analysis | Presentation | Semiconductor sector ETF performance charts, custom legends, and toggled constituent comparison tables | api/router, SemiChart | SectorAnalysisTab | Antigravity |
+| Brazil Bond Analysis | Presentation | Brazil macro interest rate cycle analysis, historical yield trends, real-time scraping, and portfolio CAGR simulation | api/brazil_bond, core/brazil_fetcher | BrazilBondTab | Antigravity |
 <!-- Add new modules above this line -->
 
 

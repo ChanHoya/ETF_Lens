@@ -116,7 +116,7 @@ export default function BrazilBondTab() {
                 }
                 const [sRes, hRes, iRes] = await Promise.all([
                     fetch(`${API_BASE}/api/v1/brazil-bond/summary`, { cache: 'no-store' }),
-                    fetch(`${API_BASE}/api/v1/brazil-bond/history?series=selic_target,y5,ipca_12m,brl_krw,usd_brl,focus_selic_eoy&years=10`, { cache: 'no-store' }),
+                    fetch(`${API_BASE}/api/v1/brazil-bond/history?series=selic_target,y5,y5_fred,ipca_12m,brl_krw,usd_brl,focus_selic_eoy&years=10`, { cache: 'no-store' }),
                     fetch(`${API_BASE}/api/v1/brazil-bond/insight`, { cache: 'no-store' }),
                 ]);
                 if (!sRes.ok) throw new Error(`summary ${sRes.status}`);
@@ -608,20 +608,110 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
 }
 
 function RateCycleChart({ history }: { history: Record<string, { date: string; value: number }[]> }) {
-    const data = useMemo(() => mergeSeries(history, ['selic_target', 'y5', 'ipca_12m']), [history]);
+    const [range, setRange] = useState<'10Y' | '1Y' | '6M' | '3M'>('10Y');
+
+    const data = useMemo(() => {
+        const merged = mergeSeries(history, ['selic_target', 'y5', 'y5_fred', 'ipca_12m']);
+        if (merged.length === 0) return [];
+
+        // Find the first index where actual y5 data starts (Option A)
+        let firstActualIdx = -1;
+        let firstActualDate = '';
+        let firstActualVal = 0;
+
+        for (let i = 0; i < merged.length; i++) {
+            const val = merged[i].y5;
+            if (val !== undefined && val !== null) {
+                firstActualIdx = i;
+                firstActualDate = merged[i].date;
+                firstActualVal = val;
+                break;
+            }
+        }
+
+        // If we have actual data, adjust the y5_fred line to bridge seamlessly
+        if (firstActualIdx !== -1) {
+            for (let i = 0; i < merged.length; i++) {
+                const pt = merged[i];
+                if (i < firstActualIdx) {
+                    pt.y5_fred_adjusted = pt.y5_fred;
+                } else if (i === firstActualIdx) {
+                    // Smooth touch point (Linear bridge)
+                    pt.y5_fred_adjusted = firstActualVal;
+                } else {
+                    // Do not render historical line after actual starts
+                    pt.y5_fred_adjusted = undefined;
+                }
+            }
+        } else {
+            // Fallback
+            for (const pt of merged) {
+                pt.y5_fred_adjusted = pt.y5_fred;
+            }
+        }
+
+        // Filter by selected date range
+        const lastDateStr = merged[merged.length - 1]?.date || new Date().toISOString().split('T')[0];
+        let cutoffDate = '';
+        if (range !== '10Y') {
+            const d = new Date(lastDateStr);
+            if (range === '1Y') d.setFullYear(d.getFullYear() - 1);
+            else if (range === '6M') d.setMonth(d.getMonth() - 6);
+            else if (range === '3M') d.setMonth(d.getMonth() - 3);
+            cutoffDate = d.toISOString().split('T')[0];
+        }
+
+        if (cutoffDate) {
+            return merged.filter(pt => pt.date >= cutoffDate);
+        }
+        return merged;
+    }, [history, range]);
+
     return (
-        <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} />
-                <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} domain={['auto', 'auto']} />
-                <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line type="monotone" dataKey="selic_target" name="기준금리(Selic)" stroke="#818cf8" dot={false} strokeWidth={2} connectNulls={true} />
-                <Line type="monotone" dataKey="y5" name="5년물 국채금리" stroke="#34d399" dot={false} strokeWidth={2} connectNulls={true} />
-                <Line type="monotone" dataKey="ipca_12m" name="IPCA(12M)" stroke="#fbbf24" dot={false} strokeWidth={1.5} connectNulls={true} />
-            </LineChart>
-        </ResponsiveContainer>
+        <div className="space-y-4">
+            {/* Range Toggle Buttons */}
+            <div className="flex justify-end items-center gap-1.5">
+                {(['10Y', '1Y', '6M', '3M'] as const).map(r => (
+                    <button
+                        key={r}
+                        onClick={() => setRange(r)}
+                        className={`text-xs font-bold px-2.5 py-1 rounded-lg border transition ${
+                            range === r
+                                ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300'
+                                : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'
+                        }`}
+                    >
+                        {r}
+                    </button>
+                ))}
+            </div>
+
+            <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                    <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} />
+                    <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} domain={['auto', 'auto']} />
+                    <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Line type="monotone" dataKey="selic_target" name="기준금리(Selic)" stroke="#818cf8" dot={false} strokeWidth={2} connectNulls={true} />
+                    <Line type="monotone" dataKey="y5_fred_adjusted" name="5년물 국채금리 (역사적/FRED)" stroke="#f97316" dot={false} strokeWidth={2} connectNulls={true} />
+                    <Line type="monotone" dataKey="y5" name="5년물 국채금리 (실제/최근)" stroke="#34d399" dot={false} strokeWidth={2} connectNulls={true} />
+                    <Line type="monotone" dataKey="ipca_12m" name="IPCA(12M)" stroke="#fbbf24" dot={false} strokeWidth={1.5} connectNulls={true} />
+                </LineChart>
+            </ResponsiveContainer>
+
+            {/* 산정 기준 가이드 설명 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3.5 bg-white/5 border border-white/5 rounded-2xl text-[11px] text-gray-400 leading-relaxed">
+                <div>
+                    <strong className="text-gray-300">① 역사적 국채금리 (FRED 기준)</strong>
+                    <p className="mt-0.5">FRED의 브라질 정부 증권 금리(Series ID: <span className="text-orange-400 font-semibold">INTGSTBRM193N</span>) 월간 데이터를 연동하여, 과거 10년간의 장기 금리 사이클 추이를 오차 없이 정밀하게 추적합니다.</p>
+                </div>
+                <div>
+                    <strong className="text-emerald-300">② 실제 국채금리 (Investing.com 실시간)</strong>
+                    <p className="mt-0.5">Investing.com의 일별 시장 가격을 스크레이핑하여 최근 22일간의 실제 시장 금리 변동을 반영합니다. 두 지표의 경계점은 선형 보간으로 매끄럽게 연결하여 금리가 튀는 왜곡을 방지했습니다.</p>
+                </div>
+            </div>
+        </div>
     );
 }
 

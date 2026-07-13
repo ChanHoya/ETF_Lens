@@ -198,6 +198,42 @@ async def _fetch_5y_yield_history(client: httpx.AsyncClient) -> list[dict]:
         return []
 
 
+async def _fetch_fred_series(fred_id: str, days: int = 3650) -> list[dict]:
+    """FRED CSV API로 데이터 가져오기 → [{'date': 'YYYY-MM-DD', 'value': float}]"""
+    try:
+        end_str = datetime.now(_KST).strftime("%Y-%m-%d")
+        url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={fred_id}&vintage_date={end_str}"
+        headers = {
+            "User-Agent": "python-requests/2.31.0"
+        }
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, headers=headers, timeout=20)
+        if resp.status_code != 200:
+            print(f"[brazil_fetcher] FRED {fred_id} status={resp.status_code}")
+            return []
+        
+        cutoff = (datetime.now(_KST) - timedelta(days=days)).date()
+        result = []
+        for line in resp.text.strip().split("\n")[1:]:  # skip header
+            parts = line.split(",")
+            if len(parts) < 2:
+                continue
+            date_str, val_str = parts[0].strip(), parts[1].strip()
+            if val_str == "." or not val_str:
+                continue
+            try:
+                dt = date.fromisoformat(date_str)
+                if dt < cutoff:
+                    continue
+                result.append({"date": date_str, "value": float(val_str)})
+            except Exception:
+                continue
+        return result
+    except Exception as e:
+        print(f"[brazil_fetcher] FRED {fred_id} failed: {e}")
+        return []
+
+
 def _fetch_usd_krw_series_sync(days: int = 400) -> dict[str, float]:
     """FinanceDataReader 로 USD/KRW 일별 종가. {'YYYY-MM-DD': float}."""
     try:
@@ -280,6 +316,19 @@ async def sync_brazil_series() -> dict:
         else:
             result["y5"] = -1
 
+        # 3.5) FRED 브라질 국채금리 대리 지표 (INTGSTBRM193N)
+        try:
+            fred_rows = await _fetch_fred_series("INTGSTBRM193N")
+            if fred_rows:
+                async with AsyncSessionLocal() as db:
+                    result["y5_fred"] = await _upsert(db, "y5_fred", fred_rows)
+                    await db.commit()
+            else:
+                result["y5_fred"] = -1
+        except Exception as e:
+            print(f"[brazil_fetcher] FRED y5_fred sync failed: {e}")
+            result["y5_fred"] = -1
+
     # 4) BRL/KRW 크로스 = USD/KRW ÷ USD/BRL (일별 교집합)
     try:
         usd_krw = await asyncio.to_thread(_fetch_usd_krw_series_sync)
@@ -298,31 +347,6 @@ async def sync_brazil_series() -> dict:
     except Exception as e:
         print(f"[brazil_fetcher] brl_krw cross failed: {e}")
         result["brl_krw"] = -1
-
-    # 5) 역사적 y5 데이터 공백 방지를 위해 selic_target를 대리값(Proxy)으로 채우기
-    try:
-        async with AsyncSessionLocal() as db:
-            existing_y5_res = await db.execute(select(BrazilSeries.date).where(BrazilSeries.series_key == "y5"))
-            existing_y5_dates = set(existing_y5_res.scalars().all())
-            
-            selic_res = await db.execute(select(BrazilSeries.date, BrazilSeries.value).where(BrazilSeries.series_key == "selic_target"))
-            selic_rows = selic_res.all()
-            
-            to_insert = []
-            for d, v in selic_rows:
-                if d not in existing_y5_dates:
-                    to_insert.append(BrazilSeries(series_key="y5", date=d, value=v))
-            
-            if to_insert:
-                db.add_all(to_insert)
-                await db.commit()
-                print(f"[brazil_fetcher] Populated {len(to_insert)} proxy y5 rows from selic_target")
-                result["y5_proxy_inserted"] = len(to_insert)
-            else:
-                result["y5_proxy_inserted"] = 0
-    except Exception as e:
-        print(f"[brazil_fetcher] Failed to populate proxy y5 rows: {e}")
-        result["y5_proxy_inserted"] = -1
 
     print(f"[brazil_fetcher] sync done: {result}")
     return result

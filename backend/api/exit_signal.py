@@ -158,7 +158,7 @@ async def _fetch_fred_series(fred_id: str, days: int = 400) -> dict[str, float]:
         end_str = _kst_now().strftime("%Y-%m-%d")  # KST 기준 오늘
         url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={fred_id}&vintage_date={end_str}"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": "python-requests/2.31.0"
         }
         resp = await asyncio.to_thread(
             lambda: __import__("requests").get(url, headers=headers, timeout=15)
