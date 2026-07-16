@@ -17,8 +17,21 @@ from db.models import BrazilNews
 
 _KST = timezone(timedelta(hours=9))
 
-# 한국어 브라질 국채 관련 검색어 (OR 결합)
-_QUERY = "브라질 국채 OR 헤알 OR 브라질 금리 OR 브라질 Selic"
+# 한국어 브라질 국채 관련 검색어.
+# Google News RSS 는 복잡한 OR/구문 쿼리에서 결과가 급감·정체된다(실측: OR 결합 10건/구문 0건).
+# 단순 단어 쿼리는 각 100건·당일 기사까지 정상 반환하므로, 여러 단순 쿼리를 병합·중복제거한다.
+_QUERIES = ["브라질 국채", "헤알", "브라질 기준금리"]
+
+# 관련성 필터: '헤알'이 금액 단위로만 쓰인 비금융 기사(예: 'LG전자…20억 헤알 공장')를 걸러낸다.
+# 아래 토큰 중 하나라도 제목에 있으면 국채·환율·통화정책 관련으로 간주. (필터 후 0건이면 원본 유지)
+_RELEVANT_TOKENS = [
+    "증시", "국채", "금리", "셀릭", "Selic", "환율", "헤알 강세", "헤알 약세", "헤알화",
+    "중앙은행", "기준금리", "채권", "이보베스파", "물가", "인플레", "Copom", "달러채", "외환",
+]
+
+
+def _is_relevant(title: str) -> bool:
+    return any(tok in title for tok in _RELEVANT_TOKENS)
 
 
 def _parse_rss(xml_text: str) -> list[dict]:
@@ -57,17 +70,32 @@ def _parse_rss(xml_text: str) -> list[dict]:
 
 
 async def fetch_brazil_news(limit: int = 25) -> list[dict]:
-    """Google News RSS 에서 최신 뉴스 파싱(발행일 내림차순). 실패 시 빈 리스트."""
+    """여러 단순 쿼리를 Google News RSS 로 조회→link 기준 중복제거·발행일 내림차순 병합.
+    실패한 쿼리는 건너뛴다. 모두 실패하면 빈 리스트."""
     from urllib.parse import quote
-    url = f"https://news.google.com/rss/search?q={quote(_QUERY)}&hl=ko&gl=KR&ceid=KR:ko"
-    try:
-        async with httpx.AsyncClient(follow_redirects=True) as client:
-            r = await client.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0"})
-            r.raise_for_status()
-            items = _parse_rss(r.text)
-    except Exception as e:
-        print(f"[brazil_news] fetch failed: {e}")
-        return []
+    merged: dict[str, dict] = {}
+    seen_titles: set[str] = set()
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        for q in _QUERIES:
+            url = f"https://news.google.com/rss/search?q={quote(q)}&hl=ko&gl=KR&ceid=KR:ko"
+            try:
+                r = await client.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0"})
+                r.raise_for_status()
+                for it in _parse_rss(r.text):
+                    # link + 제목 이중 중복제거(같은 기사가 쿼리별로 다른 Google News 링크를 가짐)
+                    tkey = it["title"].strip()
+                    if it["link"] in merged or tkey in seen_titles:
+                        continue
+                    merged[it["link"]] = it
+                    seen_titles.add(tkey)
+            except Exception as e:
+                print(f"[brazil_news] fetch failed for '{q}': {e}")
+                continue
+    items = list(merged.values())
+    # 관련성 필터(필터 결과가 비면 원본 유지 → 안전 폴백)
+    relevant = [it for it in items if _is_relevant(it["title"])]
+    if relevant:
+        items = relevant
     items.sort(key=lambda x: x["published_ts"] or 0, reverse=True)
     return items[:limit]
 

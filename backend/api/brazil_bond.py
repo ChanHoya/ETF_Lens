@@ -38,7 +38,9 @@ FX_TARGET = 290.0      # 환율 조건 (290원↓)
 # ── 하반기 매크로 캘린더 (2026, 고정 일정) ───────────────────────────────────
 CATALYSTS = [
     {"date": "2026-07-16", "key": "bok", "title": "한국은행 금통위",
-     "note": "인상 기대감 → 원화 강세 모멘텀 → 원/헤알 290원 하회 트리거", "impact": "fx"},
+     "note": "인상 기대감 → 원화 강세 모멘텀 → 원/헤알 290원 하회 트리거", "impact": "fx",
+     "actual": "기준금리 0.25%p 인상 → 연 2.75% 결정. 12개월 이어진 동결을 끝낸 긴축 전환으로, 신현송 총재 주재 회의에서 금통위원 7명 전원이 참석해 결정.",
+     "outlook": "한은 긴축 전환은 원화 강세 압력으로 작용해 원/헤알 290원 하회 트리거에 우호적. 현재 약 292.9원으로 진입 조건에 근접했으나, 실제 290원 하회를 확인한 뒤 1차 분할 진입을 판단하고 8/5 브라질 Copom 결과와 병행 관찰 권장."},
     {"date": "2026-08-05", "key": "copom_aug", "title": "브라질 Copom (8월)",
      "note": "6월 물가 서프라이즈로 금리 인하 접전. 5년물 14% 이탈 여부 결정", "impact": "rate"},
     {"date": "2026-10-04", "key": "election", "title": "브라질 대선 1차 투표",
@@ -212,6 +214,14 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
             "ipca_mom", "ipca_12m", "focus_selic_eoy", "focus_ipca_eoy", "focus_usdbrl_eoy"]
     data = {k: await _latest(db, k) for k in keys}
 
+    # 원/헤알은 하루 1회 배치 스냅샷이 아니라 조회 시점의 실시간 시세로 현재값을 덮어쓴다.
+    # (실패 시 DB 스냅샷 유지 → graceful degradation). 직전값=마지막 DB 종가로 두어 '직전 대비' 계산.
+    from core.brazil_fetcher import fetch_brl_krw_live
+    live_fx = await fetch_brl_krw_live()
+    if live_fx is not None:
+        _, db_fx, _ = data["brl_krw"]
+        data["brl_krw"] = (datetime.now(_KST).strftime("%Y-%m-%d"), live_fx, db_fx)
+
     def cur(k):
         return data[k][1]
 
@@ -242,6 +252,11 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
         _ind("brl_krw", "원/헤알 (BRL/KRW)", "원", "brl_krw"),
         _ind("ipca_mom", "6월 물가 (IPCA m/m)", "%", "ipca_mom"),
     ]
+    # 원/헤알 카드에 실시간 시세 반영 여부 표시
+    if live_fx is not None:
+        for ind in indicators:
+            if ind["key"] == "brl_krw":
+                ind["live"] = True
 
     return {
         "as_of": max([d for d, _, _ in data.values() if d] or [today.isoformat()]),
@@ -277,13 +292,24 @@ async def trigger_sync():
     return {"synced_at": datetime.now(_KST).isoformat(), "counts": result}
 
 
+# 뉴스 자동 갱신 게이트: 마지막 라이브 수집 시각(에포크초). 프론트가 refresh=false로만 호출해도
+# TTL 경과 시 자동으로 새로 스크레이핑하도록 한다. (모듈 전역 — 단일 인스턴스 기준)
+_last_news_sync_ts = 0.0
+_NEWS_SYNC_TTL = 20 * 60  # 20분
+
+
 @router.get("/news")
 async def get_news(refresh: bool = False, limit: int = 12):
-    """브라질 국채 관련 최신 뉴스(Google News RSS). refresh=True면 라이브 수집 후 저장."""
+    """브라질 국채 관련 최신 뉴스(Google News RSS).
+    refresh=True 또는 마지막 수집 후 20분 경과 시 라이브 수집 후 저장."""
     from core.brazil_news import sync_brazil_news, get_recent_news
-    if refresh:
+    import time
+    global _last_news_sync_ts
+    now = time.time()
+    if refresh or (now - _last_news_sync_ts > _NEWS_SYNC_TTL):
         try:
             await sync_brazil_news(alert_new=False)
+            _last_news_sync_ts = now
         except Exception as e:
             print(f"[brazil_bond] news refresh failed: {e}")
     items = await get_recent_news(limit)

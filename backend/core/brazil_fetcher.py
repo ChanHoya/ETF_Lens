@@ -119,6 +119,84 @@ async def _fetch_focus(client: httpx.AsyncClient, indicator: str) -> list[dict]:
     return [{"date": d, "value": v} for d, v in sorted(seen.items())]
 
 
+# 원/헤알 실시간 시세 60초 캐시 (다중 호출·다수 사용자 대비 Yahoo 과호출 방지)
+_brl_krw_live_cache: dict = {"ts": 0.0, "value": None}
+_BRL_KRW_LIVE_TTL = 60  # 초
+
+
+async def _yahoo_quote(client: httpx.AsyncClient, symbol: str) -> float | None:
+    """Yahoo Finance chart API 로 심볼의 현재 시세(regularMarketPrice) 반환. 실패 시 None.
+    query1 이 429/오류를 내면 query2 호스트로 폴백한다."""
+    last_err = None
+    for host in ("query1", "query2"):
+        url = f"https://{host}.finance.yahoo.com/v8/finance/chart/{symbol}"
+        try:
+            r = await client.get(
+                url, params={"interval": "1m", "range": "1d"},
+                headers={"User-Agent": _UA}, timeout=15,
+            )
+            r.raise_for_status()
+            meta = r.json()["chart"]["result"][0]["meta"]
+            p = meta.get("regularMarketPrice")
+            return float(p) if p else None
+        except Exception as e:
+            last_err = e
+            continue
+    if last_err:
+        raise last_err
+    return None
+
+
+async def _fetch_naver_brl_krw(client: httpx.AsyncClient) -> float | None:
+    """Naver front-api 로 원/헤알(BRL/KRW) 실시간 시세(하나은행 고시환율). 실패 시 None."""
+    url = "https://m.stock.naver.com/front-api/marketIndex/productDetail"
+    r = await client.get(
+        url, params={"category": "exchange", "reutersCode": "FX_BRLKRW"},
+        headers={"User-Agent": _UA}, timeout=15,
+    )
+    r.raise_for_status()
+    cp = (r.json().get("result") or {}).get("closePrice")
+    return float(str(cp).replace(",", "")) if cp else None
+
+
+async def fetch_brl_krw_live() -> float | None:
+    """원/헤알(BRL/KRW) 조회 시점 실시간 시세. 60초 캐시. 실패 시 None(→ 호출부에서 DB값 유지).
+    1순위 Naver 하나은행 고시환율, 2순위 Yahoo BRLKRW=X, 3순위 Yahoo USDKRW=X ÷ USDBRL=X 크로스."""
+    import time
+    now = time.time()
+    if _brl_krw_live_cache["value"] is not None and now - _brl_krw_live_cache["ts"] < _BRL_KRW_LIVE_TTL:
+        return _brl_krw_live_cache["value"]
+    try:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            val = None
+            for fetch in (
+                lambda: _fetch_naver_brl_krw(client),
+                lambda: _yahoo_quote(client, "BRLKRW=X"),
+            ):
+                try:
+                    val = await fetch()
+                    if val is not None:
+                        break
+                except Exception:
+                    val = None
+            if val is None:
+                try:
+                    usdkrw = await _yahoo_quote(client, "USDKRW=X")
+                    usdbrl = await _yahoo_quote(client, "USDBRL=X")
+                    if usdkrw and usdbrl and usdbrl > 0:
+                        val = usdkrw / usdbrl
+                except Exception:
+                    val = None
+            if val is not None:
+                val = round(val, 2)
+                _brl_krw_live_cache["ts"] = now
+                _brl_krw_live_cache["value"] = val
+            return val
+    except Exception as e:
+        print(f"[brazil_fetcher] BRL/KRW live fetch failed: {e}")
+        return None
+
+
 async def _fetch_5y_yield(client: httpx.AsyncClient) -> float | None:
     """investing.com 에서 브라질 5년물 국채금리(%) 스크레이핑. 실패 시 None."""
     try:

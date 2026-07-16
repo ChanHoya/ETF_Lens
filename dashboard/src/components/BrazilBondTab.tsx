@@ -17,6 +17,7 @@ import { API_BASE } from '@/lib/apiConfig';
 interface Indicator {
     key: string; label: string; unit: string; date: string | null;
     value: number | null; prev: number | null; change: number | null; gauge: string;
+    live?: boolean;
 }
 interface Signal {
     zone: string; grade: string; color: string;
@@ -25,7 +26,7 @@ interface Signal {
 interface CarryPoint {
     fx_end: number; fx_change_pct: number; total_return_pct: number; cagr_pct: number; is_breakeven: boolean;
 }
-interface Catalyst { date: string; key: string; title: string; note: string; impact: string; d_day: number; }
+interface Catalyst { date: string; key: string; title: string; note: string; impact: string; d_day: number; actual?: string | null; outlook?: string | null; }
 interface Summary {
     as_of: string;
     indicators: Indicator[];
@@ -108,7 +109,7 @@ export default function BrazilBondTab() {
         }
 
         // 2. Fetch fresh data from API in background to update the cache
-        (async () => {
+        const loadFresh = async () => {
             try {
                 // If there's no cache, show spinner
                 if (!localStorage.getItem('brazil_bond_summary') || !localStorage.getItem('brazil_bond_history')) {
@@ -120,7 +121,7 @@ export default function BrazilBondTab() {
                     fetch(`${API_BASE}/api/v1/brazil-bond/insight`, { cache: 'no-store' }),
                 ]);
                 if (!sRes.ok) throw new Error(`summary ${sRes.status}`);
-                
+
                 const sData = await sRes.json();
                 setSummary(sData);
                 localStorage.setItem('brazil_bond_summary', JSON.stringify(sData));
@@ -147,10 +148,10 @@ export default function BrazilBondTab() {
             } finally {
                 setLoading(false);
             }
-        })();
+        };
 
         // 3. Fetch news in the background (using refresh=false to avoid live scraping)
-        (async () => {
+        const loadNews = async () => {
             try {
                 if (!localStorage.getItem('brazil_bond_news')) {
                     setNewsLoading(true);
@@ -166,7 +167,31 @@ export default function BrazilBondTab() {
             } finally {
                 setNewsLoading(false);
             }
-        })();
+        };
+
+        // 4. D-day/지표/뉴스는 서버에서 요청 시점 기준으로 실시간 계산되므로,
+        // 탭을 리로드하지 않아도 반영되도록 주기적 폴링 + 탭 복귀 시 재조회를 건다.
+        let lastRefreshAt = Date.now();
+        const refreshAll = () => {
+            lastRefreshAt = Date.now();
+            loadFresh();
+            loadNews();
+        };
+
+        refreshAll();
+        const REFRESH_MS = 5 * 60 * 1000; // 5분마다 자동 갱신
+        const intervalId = setInterval(refreshAll, REFRESH_MS);
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && Date.now() - lastRefreshAt > 60 * 1000) {
+                refreshAll();
+            }
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+
+        return () => {
+            clearInterval(intervalId);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        };
     }, []);
 
     const generateReport = async () => {
@@ -453,7 +478,14 @@ function GaugeCard({ ind }: { ind: Indicator }) {
         <div className={`bg-black/20 rounded-2xl border border-white/5 p-4 ring-1 ${g.ring} flex flex-col justify-between min-h-[145px]`}>
             <div>
                 <div className="flex items-center justify-between">
-                    <span className="text-[12px] lg:text-[13px] text-gray-400 font-semibold">{ind.label}</span>
+                    <span className="text-[12px] lg:text-[13px] text-gray-400 font-semibold">
+                        {ind.label}
+                        {ind.live && (
+                            <span className="ml-1.5 inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 align-middle">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />실시간
+                            </span>
+                        )}
+                    </span>
                     <span className={`w-2.5 h-2.5 rounded-full ${g.dot} shrink-0`} />
                 </div>
                 <div className={`text-2xl font-black mt-2 ${g.text}`}>
@@ -818,16 +850,20 @@ function MacroTimeline({ timeline }: { timeline: Catalyst[] }) {
                                         <p className="text-xs text-gray-400 mt-1">{c.note}</p>
                                     </div>
                                     
-                                    {/* 2) 중간: 실제 해당 시점에서의 발표 내용 (현재는 빈칸 처리) */}
+                                    {/* 2) 중간: 실제 해당 시점에서의 발표 내용 (발표 후 채워짐) */}
                                     <div className="space-y-1 md:border-r md:border-white/5 md:px-2 flex flex-col justify-start">
                                         <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">실제 발표 내용</span>
-                                        <p className="text-xs text-gray-600 italic mt-1">—</p>
+                                        {c.actual
+                                            ? <p className="text-xs text-gray-300 mt-1 leading-relaxed">{c.actual}</p>
+                                            : <p className="text-xs text-gray-600 italic mt-1">{past ? '발표 내용 집계 대기' : '—'}</p>}
                                     </div>
 
-                                    {/* 3) 오른쪽: 발표 내용 기반의 브라질 국채 전망 및 액션플랜 (현재는 빈칸 처리) */}
+                                    {/* 3) 오른쪽: 발표 내용 기반의 브라질 국채 전망 및 액션플랜 (발표 후 채워짐) */}
                                     <div className="space-y-1 md:pl-2 flex flex-col justify-start">
                                         <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">국채 전망 및 액션플랜</span>
-                                        <p className="text-xs text-gray-600 italic mt-1">—</p>
+                                        {c.outlook
+                                            ? <p className="text-xs text-gray-300 mt-1 leading-relaxed">{c.outlook}</p>
+                                            : <p className="text-xs text-gray-600 italic mt-1">—</p>}
                                     </div>
                                 </div>
                             </div>
