@@ -148,11 +148,11 @@ async def _yahoo_quote(client: httpx.AsyncClient, symbol: str) -> float | None:
     return None
 
 
-async def _fetch_naver_brl_krw(client: httpx.AsyncClient) -> float | None:
-    """Naver front-api 로 원/헤알(BRL/KRW) 실시간 시세(하나은행 고시환율). 실패 시 None."""
+async def _fetch_naver_fx(client: httpx.AsyncClient, reuters_code: str) -> float | None:
+    """Naver front-api 로 환율 실시간 시세(하나은행 고시환율). reuters_code 예: FX_BRLKRW, FX_USDKRW. 실패 시 None."""
     url = "https://m.stock.naver.com/front-api/marketIndex/productDetail"
     r = await client.get(
-        url, params={"category": "exchange", "reutersCode": "FX_BRLKRW"},
+        url, params={"category": "exchange", "reutersCode": reuters_code},
         headers={"User-Agent": _UA}, timeout=15,
     )
     r.raise_for_status()
@@ -171,7 +171,7 @@ async def fetch_brl_krw_live() -> float | None:
         async with httpx.AsyncClient(follow_redirects=True) as client:
             val = None
             for fetch in (
-                lambda: _fetch_naver_brl_krw(client),
+                lambda: _fetch_naver_fx(client, "FX_BRLKRW"),
                 lambda: _yahoo_quote(client, "BRLKRW=X"),
             ):
                 try:
@@ -199,15 +199,30 @@ async def fetch_brl_krw_live() -> float | None:
 
 
 async def fetch_usd_brl_live() -> float | None:
-    """달러/헤알(USD/BRL) 조회 시점 실시간 시세. Yahoo USDBRL=X(query1/query2 폴백). 60초 캐시.
-    실패 시 None(→ 호출부에서 DB PTAX값 유지)."""
+    """달러/헤알(USD/BRL) 조회 시점 실시간 시세. 60초 캐시. 실패 시 None(→ 호출부에서 DB PTAX값 유지).
+    1순위 Naver 크로스(USD/KRW ÷ BRL/KRW — 한국 소스라 IP 제한 없음), 2순위 Yahoo USDBRL=X.
+    (Yahoo 는 Render 데이터센터 IP에서 429가 잦아 Naver 크로스를 우선한다.)"""
     import time
     now = time.time()
     if _usd_brl_live_cache["value"] is not None and now - _usd_brl_live_cache["ts"] < _BRL_KRW_LIVE_TTL:
         return _usd_brl_live_cache["value"]
     try:
         async with httpx.AsyncClient(follow_redirects=True) as client:
-            val = await _yahoo_quote(client, "USDBRL=X")
+            val = None
+            # 1순위: Naver USD/KRW ÷ BRL/KRW 크로스
+            try:
+                usdkrw = await _fetch_naver_fx(client, "FX_USDKRW")
+                brlkrw = await _fetch_naver_fx(client, "FX_BRLKRW")
+                if usdkrw and brlkrw and brlkrw > 0:
+                    val = usdkrw / brlkrw
+            except Exception:
+                val = None
+            # 2순위: Yahoo USDBRL=X
+            if val is None:
+                try:
+                    val = await _yahoo_quote(client, "USDBRL=X")
+                except Exception:
+                    val = None
             if val is not None:
                 val = round(val, 4)
                 _usd_brl_live_cache["ts"] = now
