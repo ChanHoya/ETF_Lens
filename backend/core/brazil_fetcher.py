@@ -462,6 +462,29 @@ async def sync_brazil_series() -> dict:
         print(f"[brazil_fetcher] brl_krw cross failed: {e}")
         result["brl_krw"] = -1
 
+    # y5 프록시 오염 정리: 과거 y5가 selic 복사본으로 백필된 행 제거.
+    # (실제 5년물 시장금리는 기준금리와 소수점까지 정확히 같을 수 없음 → 정확 일치 = 백필 오염)
+    # 정리 후 FRED 역사적 곡선(y5_fred)이 과거 구간을, 실제 최근 y5가 최근 구간을 담당하게 된다.
+    try:
+        async with AsyncSessionLocal() as db:
+            selic_map = {
+                r.date: r.value for r in
+                (await db.execute(select(BrazilSeries).where(BrazilSeries.series_key == "selic_target"))).scalars()
+            }
+            y5_all = (await db.execute(select(BrazilSeries).where(BrazilSeries.series_key == "y5"))).scalars().all()
+            removed = 0
+            for r in y5_all:
+                s = selic_map.get(r.date)
+                if s is not None and abs(r.value - s) < 1e-6:
+                    await db.delete(r)
+                    removed += 1
+            if removed:
+                await db.commit()
+            result["y5_proxy_removed"] = removed
+            print(f"[brazil_fetcher] y5 proxy cleanup: removed {removed} selic-copy rows")
+    except Exception as e:
+        print(f"[brazil_fetcher] y5 proxy cleanup failed: {e}")
+
     print(f"[brazil_fetcher] sync done: {result}")
     return result
 

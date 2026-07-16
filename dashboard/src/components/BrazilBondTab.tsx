@@ -660,7 +660,7 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
 }
 
 function RateCycleChart({ history }: { history: Record<string, { date: string; value: number }[]> }) {
-    const [range, setRange] = useState<'10Y' | '1Y' | '6M' | '3M'>('10Y');
+    const [range, setRange] = useState<'10Y' | '1Y' | '6M' | '3M'>('1Y');
 
     const data = useMemo(() => {
         const merged = mergeSeries(history, ['selic_target', 'y5', 'y5_fred', 'ipca_12m']);
