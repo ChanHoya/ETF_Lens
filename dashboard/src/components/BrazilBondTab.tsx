@@ -35,6 +35,10 @@ interface Summary {
         selic_eoy: number | null; ipca_eoy: number | null; usdbrl_eoy: number | null;
         selic_eoy_date?: string | null; ipca_eoy_date?: string | null; usdbrl_eoy_date?: string | null;
     };
+    usd_brl?: {
+        value: number | null; prev: number | null; change: number | null;
+        date: string | null; live?: boolean; brl_trend?: 'strong' | 'weak' | 'flat';
+    };
     signal: Signal;
     targets: { rate_floor: number; rate_tranche2: number; rate_risk: number; fx_target: number };
     carry_cushion: CarryPoint[];
@@ -363,7 +367,10 @@ export default function BrazilBondTab() {
 
             <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
-                    <SectionTitle icon={<ArrowDownRight className="w-5 h-5 text-amber-400" />} title="원/헤알 환율" sub="BRL/KRW 추이 + 290원 타겟 (10년)" />
+                    <div className="flex items-start justify-between gap-2">
+                        <SectionTitle icon={<ArrowDownRight className="w-5 h-5 text-amber-400" />} title="원/헤알 & 달러/헤알 환율" sub="BRL/KRW · USD/BRL 추이 (10년)" />
+                        <BrlTrendBadge usdbrl={s.usd_brl} />
+                    </div>
                     <FxChart history={history} target={s.targets.fx_target} />
                 </div>
                 <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
@@ -760,17 +767,45 @@ function RateCycleChart({ history }: { history: Record<string, { date: string; v
     );
 }
 
+// 헤알 강세/약세 뱃지: USD/BRL 하락 = 헤알 강세. 현재 USD/BRL + 직전 대비 표시.
+function BrlTrendBadge({ usdbrl }: { usdbrl?: Summary['usd_brl'] }) {
+    if (!usdbrl || usdbrl.value === null || usdbrl.value === undefined) return null;
+    const trend = usdbrl.brl_trend || 'flat';
+    const style = trend === 'strong'
+        ? { cls: 'bg-emerald-500/15 border-emerald-400/40 text-emerald-200', label: '헤알 강세', arrow: '▲' }
+        : trend === 'weak'
+            ? { cls: 'bg-rose-500/15 border-rose-400/40 text-rose-200', label: '헤알 약세', arrow: '▼' }
+            : { cls: 'bg-white/5 border-white/15 text-gray-300', label: '보합', arrow: '─' };
+    const chg = usdbrl.change;
+    return (
+        <div className={`shrink-0 rounded-xl border px-3 py-1.5 text-right ${style.cls}`}>
+            <div className="text-[10px] font-bold uppercase tracking-wide opacity-80 flex items-center gap-1 justify-end">
+                USD/BRL {usdbrl.live && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
+            </div>
+            <div className="text-sm font-black leading-tight">{fmt(usdbrl.value, 4)}</div>
+            <div className="text-[11px] font-bold">{style.arrow} {style.label}
+                {chg !== null && chg !== undefined && Math.abs(chg) > 0.0001 && (
+                    <span className="opacity-70"> ({chg > 0 ? '+' : ''}{fmt(chg, 4)})</span>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function FxChart({ history, target }: { history: Record<string, { date: string; value: number }[]>; target: number }) {
-    const data = useMemo(() => mergeSeries(history, ['brl_krw']), [history]);
+    const data = useMemo(() => mergeSeries(history, ['brl_krw', 'usd_brl']), [history]);
     return (
         <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
+            <LineChart data={data} margin={{ top: 5, right: 6, bottom: 5, left: -10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                 <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} />
-                <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} domain={['auto', 'auto']} />
+                <YAxis yAxisId="krw" tick={{ fill: '#fbbf24', fontSize: 11 }} domain={['auto', 'auto']} width={44} />
+                <YAxis yAxisId="brl" orientation="right" tick={{ fill: '#60a5fa', fontSize: 11 }} domain={['auto', 'auto']} width={40} />
                 <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }} />
-                <ReferenceLine y={target} stroke="#34d399" strokeDasharray="5 5" label={{ value: `타겟 ${target}원`, fill: '#34d399', fontSize: 12, position: 'insideTopRight' }} />
-                <Line type="monotone" dataKey="brl_krw" name="원/헤알" stroke="#fbbf24" dot={false} strokeWidth={2} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <ReferenceLine yAxisId="krw" y={target} stroke="#34d399" strokeDasharray="5 5" label={{ value: `타겟 ${target}원`, fill: '#34d399', fontSize: 11, position: 'insideTopRight' }} />
+                <Line yAxisId="krw" type="monotone" dataKey="brl_krw" name="원/헤알(좌)" stroke="#fbbf24" dot={false} strokeWidth={2} connectNulls={true} />
+                <Line yAxisId="brl" type="monotone" dataKey="usd_brl" name="달러/헤알(우)" stroke="#60a5fa" dot={false} strokeWidth={2} connectNulls={true} />
             </LineChart>
         </ResponsiveContainer>
     );

@@ -214,13 +214,18 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
             "ipca_mom", "ipca_12m", "focus_selic_eoy", "focus_ipca_eoy", "focus_usdbrl_eoy"]
     data = {k: await _latest(db, k) for k in keys}
 
-    # 원/헤알은 하루 1회 배치 스냅샷이 아니라 조회 시점의 실시간 시세로 현재값을 덮어쓴다.
+    # 원/헤알·달러/헤알은 하루 1회 배치 스냅샷이 아니라 조회 시점의 실시간 시세로 현재값을 덮어쓴다.
     # (실패 시 DB 스냅샷 유지 → graceful degradation). 직전값=마지막 DB 종가로 두어 '직전 대비' 계산.
-    from core.brazil_fetcher import fetch_brl_krw_live
+    from core.brazil_fetcher import fetch_brl_krw_live, fetch_usd_brl_live
+    _today_iso = datetime.now(_KST).strftime("%Y-%m-%d")
     live_fx = await fetch_brl_krw_live()
     if live_fx is not None:
         _, db_fx, _ = data["brl_krw"]
-        data["brl_krw"] = (datetime.now(_KST).strftime("%Y-%m-%d"), live_fx, db_fx)
+        data["brl_krw"] = (_today_iso, live_fx, db_fx)
+    live_usdbrl = await fetch_usd_brl_live()
+    if live_usdbrl is not None:
+        _, db_ub, _ = data["usd_brl"]
+        data["usd_brl"] = (_today_iso, live_usdbrl, db_ub)
 
     def cur(k):
         return data[k][1]
@@ -260,6 +265,14 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
             if ind["key"] == "brl_krw":
                 ind["live"] = True
 
+    # 달러/헤알(USD/BRL) 현재값 + 헤알 강세/약세 판정. USD/BRL 하락 = 헤알 강세.
+    ub_date, ub_val, ub_prev = data["usd_brl"]
+    ub_chg = round(ub_val - ub_prev, 4) if (ub_val is not None and ub_prev is not None) else None
+    if ub_chg is None or abs(ub_chg) < 1e-9:
+        brl_trend = "flat"
+    else:
+        brl_trend = "strong" if ub_chg < 0 else "weak"
+
     return {
         "as_of": max([d for d, _, _ in data.values() if d] or [today.isoformat()]),
         "indicators": indicators,
@@ -277,6 +290,8 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
             "ipca_eoy_date": data["focus_ipca_eoy"][0],
             "usdbrl_eoy_date": data["focus_usdbrl_eoy"][0],
         },
+        "usd_brl": {"value": ub_val, "prev": ub_prev, "change": ub_chg, "date": ub_date,
+                    "live": live_usdbrl is not None, "brl_trend": brl_trend},
         "signal": signal,
         "targets": {"rate_floor": RATE_FLOOR, "rate_tranche2": RATE_TRANCHE2,
                     "rate_risk": RATE_RISK, "fx_target": FX_TARGET},
@@ -539,3 +554,120 @@ async def check_brazil_signal_and_alert():
             db.add(SectorInsight(sector="brazil_signal_state", content=sig["zone"], generated_at=now))
         await db.commit()
     print(f"[brazil_bond] signal check: zone={sig['zone']} prev={prev_zone} alerts={len(msgs)}")
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 대시보드 지표 텔레그램 브리핑 (매일 아침 + 모든 지표 초록불 전환 시)
+# ══════════════════════════════════════════════════════════════════════════
+_GAUGE_EMOJI = {"green": "🟢", "amber": "🟡", "red": "🔴", "gray": "⚪"}
+_TREND_LABEL = {"strong": "헤알 강세 📈", "weak": "헤알 약세 📉", "flat": "보합 ➖"}
+
+
+def _collect_gauges(summary: dict) -> list[str]:
+    """대시보드 8개 카드의 신호등 색상 목록(원/헤알·5년물·Selic·IPCA·실질금리·Focus 3종)."""
+    gauges = [ind.get("gauge", "gray") for ind in summary.get("indicators", [])]
+    gauges.append(summary.get("real_rate", {}).get("gauge", "gray"))
+    f = summary.get("focus", {})
+    gauges += [f.get("selic_eoy_gauge", "gray"), f.get("ipca_eoy_gauge", "gray"), f.get("usdbrl_eoy_gauge", "gray")]
+    return gauges
+
+
+def build_brazil_dashboard_message(summary: dict, header_note: str | None = None) -> str:
+    """대시보드 카드와 동일한 지표 내용을 텔레그램(HTML) 메시지로 구성한다."""
+    sig = summary.get("signal", {})
+    as_of = summary.get("as_of", "")
+
+    def _fmt(v, d=2):
+        return "—" if v is None else f"{v:,.{d}f}"
+
+    lines = []
+    if header_note:
+        lines.append(header_note)
+    lines.append(f"🇧🇷 <b>브라질 국채 대시보드</b> ({as_of})")
+    lines.append(f"Activation Zone: <b>{sig.get('grade','—')}</b>")
+    if sig.get("headline"):
+        lines.append(sig["headline"])
+    lines.append("")
+    lines.append("📊 <b>매크로 지표 현황</b>")
+    for ind in summary.get("indicators", []):
+        emoji = _GAUGE_EMOJI.get(ind.get("gauge", "gray"), "⚪")
+        unit = ind.get("unit", "")
+        d = 1 if unit == "원" else 2
+        live = " · 실시간" if ind.get("live") else (f" ({ind['date']})" if ind.get("date") else "")
+        lines.append(f"{emoji} {ind['label']}: <b>{_fmt(ind['value'], d)}{unit}</b>{live}")
+    rr = summary.get("real_rate", {})
+    lines.append(f"{_GAUGE_EMOJI.get(rr.get('gauge','gray'),'⚪')} {rr.get('label','실질금리')}: <b>{_fmt(rr.get('value'))}{rr.get('unit','')}</b>"
+                 + (f" ({rr['date']})" if rr.get("date") else ""))
+    f = summary.get("focus", {})
+    lines.append(f"{_GAUGE_EMOJI.get(f.get('selic_eoy_gauge','gray'),'⚪')} Focus 연말 Selic: <b>{_fmt(f.get('selic_eoy'))}%</b>")
+    lines.append(f"{_GAUGE_EMOJI.get(f.get('ipca_eoy_gauge','gray'),'⚪')} Focus 연말 IPCA: <b>{_fmt(f.get('ipca_eoy'))}%</b>")
+    lines.append(f"{_GAUGE_EMOJI.get(f.get('usdbrl_eoy_gauge','gray'),'⚪')} Focus 연말 USD/BRL: <b>{_fmt(f.get('usdbrl_eoy'))}</b>")
+
+    ub = summary.get("usd_brl", {})
+    if ub.get("value") is not None:
+        trend = _TREND_LABEL.get(ub.get("brl_trend", "flat"), "")
+        lines.append(f"💵 달러/헤알(USD/BRL): <b>{_fmt(ub.get('value'), 4)}</b> · {trend}")
+
+    if sig.get("action"):
+        lines.append("")
+        lines.append(f"▶ {sig['action']}")
+    lines.append("")
+    lines.append("🔗 <a href='https://etf-lens.vercel.app'>etf-lens.vercel.app</a>")
+    return "\n".join(lines)
+
+
+async def _build_summary_for_alert() -> dict:
+    """알림용 대시보드 요약. get_summary 로직을 자체 세션으로 재사용."""
+    from db.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        return await get_summary(db=db)
+
+
+async def send_brazil_dashboard_digest() -> None:
+    """매일 아침 대시보드 지표 브리핑을 텔레그램으로 발송(카테고리 brazil_bond)."""
+    from core.notifier import send_telegram_message
+    try:
+        summary = await _build_summary_for_alert()
+        msg = build_brazil_dashboard_message(summary, header_note="☀️ <b>[브라질 국채 아침 브리핑]</b>")
+        ok, _ = await send_telegram_message(msg, category="brazil_bond")
+        print(f"[brazil_bond] daily digest sent: {ok}")
+    except Exception as e:
+        print(f"[brazil_bond] daily digest failed: {e}")
+
+
+async def check_brazil_all_green_and_alert() -> None:
+    """모든 지표(8종)가 초록불이면, 직전 상태가 초록불이 아니었을 때(전환)만 알림 발송.
+    반복 발송을 막기 위해 SectorInsight(sector='brazil_all_green_state')에 '1'/'0' 저장."""
+    from core.notifier import send_telegram_message
+    from db.database import AsyncSessionLocal
+    try:
+        summary = await _build_summary_for_alert()
+    except Exception as e:
+        print(f"[brazil_bond] all-green check: summary failed: {e}")
+        return
+
+    gauges = _collect_gauges(summary)
+    all_green = bool(gauges) and all(g == "green" for g in gauges)
+
+    async with AsyncSessionLocal() as db:
+        state = (await db.execute(
+            select(SectorInsight).where(SectorInsight.sector == "brazil_all_green_state")
+        )).scalar_one_or_none()
+        prev_green = (state.content == "1") if state else False
+
+        transitioned = all_green and not prev_green
+        if transitioned:
+            msg = build_brazil_dashboard_message(
+                summary, header_note="🟢 <b>[모든 지표 초록불!]</b> 진입 조건이 정렬되었습니다.")
+            ok, _ = await send_telegram_message(msg, category="brazil_bond")
+            print(f"[brazil_bond] all-green transition alert sent: {ok}")
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        new_val = "1" if all_green else "0"
+        if state:
+            state.content = new_val
+            state.generated_at = now
+        else:
+            db.add(SectorInsight(sector="brazil_all_green_state", content=new_val, generated_at=now))
+        await db.commit()
+    print(f"[brazil_bond] all-green check: all_green={all_green} prev={prev_green}")

@@ -119,8 +119,9 @@ async def _fetch_focus(client: httpx.AsyncClient, indicator: str) -> list[dict]:
     return [{"date": d, "value": v} for d, v in sorted(seen.items())]
 
 
-# 원/헤알 실시간 시세 60초 캐시 (다중 호출·다수 사용자 대비 Yahoo 과호출 방지)
+# 원/헤알·달러/헤알 실시간 시세 60초 캐시 (다중 호출·다수 사용자 대비 과호출 방지)
 _brl_krw_live_cache: dict = {"ts": 0.0, "value": None}
+_usd_brl_live_cache: dict = {"ts": 0.0, "value": None}
 _BRL_KRW_LIVE_TTL = 60  # 초
 
 
@@ -194,6 +195,26 @@ async def fetch_brl_krw_live() -> float | None:
             return val
     except Exception as e:
         print(f"[brazil_fetcher] BRL/KRW live fetch failed: {e}")
+        return None
+
+
+async def fetch_usd_brl_live() -> float | None:
+    """달러/헤알(USD/BRL) 조회 시점 실시간 시세. Yahoo USDBRL=X(query1/query2 폴백). 60초 캐시.
+    실패 시 None(→ 호출부에서 DB PTAX값 유지)."""
+    import time
+    now = time.time()
+    if _usd_brl_live_cache["value"] is not None and now - _usd_brl_live_cache["ts"] < _BRL_KRW_LIVE_TTL:
+        return _usd_brl_live_cache["value"]
+    try:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            val = await _yahoo_quote(client, "USDBRL=X")
+            if val is not None:
+                val = round(val, 4)
+                _usd_brl_live_cache["ts"] = now
+                _usd_brl_live_cache["value"] = val
+            return val
+    except Exception as e:
+        print(f"[brazil_fetcher] USD/BRL live fetch failed: {e}")
         return None
 
 
