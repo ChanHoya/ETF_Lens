@@ -635,39 +635,97 @@ async def send_brazil_dashboard_digest() -> None:
         print(f"[brazil_bond] daily digest failed: {e}")
 
 
+def _collect_core_gauges(summary: dict) -> list[str]:
+    """핵심 지표(Current Market Dashboard 메인 4종: 기준금리·5년물·원/헤알·IPCA m/m) 신호등."""
+    return [ind.get("gauge", "gray") for ind in summary.get("indicators", [])]
+
+
+def _all_green(gauges: list[str]) -> bool:
+    return bool(gauges) and all(g == "green" for g in gauges)
+
+
+async def _read_green_state(db, key: str) -> bool:
+    row = (await db.execute(
+        select(SectorInsight).where(SectorInsight.sector == key)
+    )).scalar_one_or_none()
+    return (row.content == "1") if row else False
+
+
+async def _write_green_state(db, key: str, val: bool) -> None:
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    row = (await db.execute(
+        select(SectorInsight).where(SectorInsight.sector == key)
+    )).scalar_one_or_none()
+    content = "1" if val else "0"
+    if row:
+        row.content = content
+        row.generated_at = now
+    else:
+        db.add(SectorInsight(sector=key, content=content, generated_at=now))
+
+
 async def check_brazil_all_green_and_alert() -> None:
-    """모든 지표(8종)가 초록불이면, 직전 상태가 초록불이 아니었을 때(전환)만 알림 발송.
-    반복 발송을 막기 위해 SectorInsight(sector='brazil_all_green_state')에 '1'/'0' 저장."""
+    """핵심 지표(메인 4종) 또는 전체 지표(8종)가 초록불로 '전환'될 때만 알림 발송.
+    반복 발송 방지를 위해 SectorInsight 에 상태('1'/'0') 저장.
+    - 전체 초록 전환: '모든 지표 초록불' 메시지.
+    - (전체 전환이 아닐 때) 핵심만 초록 전환: '핵심 지표 초록불' 메시지."""
     from core.notifier import send_telegram_message
     from db.database import AsyncSessionLocal
     try:
         summary = await _build_summary_for_alert()
     except Exception as e:
-        print(f"[brazil_bond] all-green check: summary failed: {e}")
+        print(f"[brazil_bond] green check: summary failed: {e}")
         return
 
-    gauges = _collect_gauges(summary)
-    all_green = bool(gauges) and all(g == "green" for g in gauges)
+    core_green = _all_green(_collect_core_gauges(summary))
+    full_green = _all_green(_collect_gauges(summary))
 
     async with AsyncSessionLocal() as db:
-        state = (await db.execute(
-            select(SectorInsight).where(SectorInsight.sector == "brazil_all_green_state")
-        )).scalar_one_or_none()
-        prev_green = (state.content == "1") if state else False
+        prev_core = await _read_green_state(db, "brazil_core_green_state")
+        prev_full = await _read_green_state(db, "brazil_all_green_state")
 
-        transitioned = all_green and not prev_green
-        if transitioned:
+        msg = None
+        if full_green and not prev_full:
             msg = build_brazil_dashboard_message(
-                summary, header_note="🟢 <b>[모든 지표 초록불!]</b> 진입 조건이 정렬되었습니다.")
+                summary, header_note="🟢 <b>[모든 지표 초록불!]</b> 진입 조건이 완전히 정렬되었습니다.")
+        elif core_green and not prev_core:
+            msg = build_brazil_dashboard_message(
+                summary, header_note="🟢 <b>[핵심 지표 초록불]</b> 금리·환율 등 핵심 지표가 진입 우호적입니다.")
+        if msg:
             ok, _ = await send_telegram_message(msg, category="brazil_bond")
-            print(f"[brazil_bond] all-green transition alert sent: {ok}")
+            print(f"[brazil_bond] green transition alert sent: {ok}")
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
-        new_val = "1" if all_green else "0"
-        if state:
-            state.content = new_val
-            state.generated_at = now
-        else:
-            db.add(SectorInsight(sector="brazil_all_green_state", content=new_val, generated_at=now))
+        await _write_green_state(db, "brazil_core_green_state", core_green)
+        await _write_green_state(db, "brazil_all_green_state", full_green)
         await db.commit()
-    print(f"[brazil_bond] all-green check: all_green={all_green} prev={prev_green}")
+    print(f"[brazil_bond] green check: core={core_green}(prev {prev_core}) full={full_green}(prev {prev_full})")
+
+
+class _TestDigestSchema(BaseModel):
+    telegram_token: str
+    telegram_chat_id: str
+
+
+@router.post("/test-digest")
+async def test_digest(data: _TestDigestSchema, db: AsyncSession = Depends(get_db)):
+    """현재 대시보드 지표 값으로 구성한 브리핑을 지정된(테스트) 텔레그램으로 즉시 발송."""
+    from core.notifier import send_telegram_message
+    from db.models import NotificationSettings
+
+    token = data.telegram_token
+    if "******" in token:  # 마스킹된 토큰이면 DB에서 원본 조회
+        res = await db.execute(
+            select(NotificationSettings).where(NotificationSettings.telegram_chat_id == data.telegram_chat_id)
+        )
+        s = res.scalars().first()
+        if s and s.telegram_token:
+            token = s.telegram_token
+        else:
+            raise HTTPException(status_code=400, detail="저장된 토큰이 없습니다. 먼저 토큰을 입력해 주세요.")
+
+    summary = await get_summary(db=db)
+    msg = build_brazil_dashboard_message(summary, header_note="🧪 <b>[테스트] 브라질 국채 대시보드</b>")
+    ok, err = await send_telegram_message(msg, force=True, test_token=token, test_chat_id=data.telegram_chat_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail=f"전송 실패: {err}")
+    return {"status": "success", "msg": "현재 지표 값으로 테스트 브리핑을 발송했습니다."}

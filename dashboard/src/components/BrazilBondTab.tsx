@@ -368,7 +368,7 @@ export default function BrazilBondTab() {
             <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
                     <div className="flex items-start justify-between gap-2">
-                        <SectionTitle icon={<ArrowDownRight className="w-5 h-5 text-amber-400" />} title="원/헤알 & 달러/헤알 환율" sub="BRL/KRW · USD/BRL 추이 (10년)" />
+                        <SectionTitle icon={<ArrowDownRight className="w-5 h-5 text-amber-400" />} title="원/헤알 & 달러/헤알 환율" sub="BRL/KRW · USD/BRL 추이 (기간 선택)" />
                         <BrlTrendBadge usdbrl={s.usd_brl} />
                     </div>
                     <FxChart history={history} target={s.targets.fx_target} />
@@ -793,21 +793,53 @@ function BrlTrendBadge({ usdbrl }: { usdbrl?: Summary['usd_brl'] }) {
 }
 
 function FxChart({ history, target }: { history: Record<string, { date: string; value: number }[]>; target: number }) {
-    const data = useMemo(() => mergeSeries(history, ['brl_krw', 'usd_brl']), [history]);
+    const [range, setRange] = useState<'1M' | '3M' | '6M' | '1Y' | '3Y' | '10Y'>('1Y');
+
+    const data = useMemo(() => {
+        const merged = mergeSeries(history, ['brl_krw', 'usd_brl']);
+        if (merged.length === 0 || range === '10Y') return merged;
+        const lastDateStr = merged[merged.length - 1]?.date || new Date().toISOString().split('T')[0];
+        const d = new Date(lastDateStr);
+        if (range === '1M') d.setMonth(d.getMonth() - 1);
+        else if (range === '3M') d.setMonth(d.getMonth() - 3);
+        else if (range === '6M') d.setMonth(d.getMonth() - 6);
+        else if (range === '1Y') d.setFullYear(d.getFullYear() - 1);
+        else if (range === '3Y') d.setFullYear(d.getFullYear() - 3);
+        const cutoff = d.toISOString().split('T')[0];
+        return merged.filter(pt => pt.date >= cutoff);
+    }, [history, range]);
+
     return (
-        <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={data} margin={{ top: 5, right: 6, bottom: 5, left: -10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} />
-                <YAxis yAxisId="krw" tick={{ fill: '#fbbf24', fontSize: 11 }} domain={['auto', 'auto']} width={44} />
-                <YAxis yAxisId="brl" orientation="right" tick={{ fill: '#60a5fa', fontSize: 11 }} domain={['auto', 'auto']} width={40} />
-                <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <ReferenceLine yAxisId="krw" y={target} stroke="#34d399" strokeDasharray="5 5" label={{ value: `타겟 ${target}원`, fill: '#34d399', fontSize: 11, position: 'insideTopRight' }} />
-                <Line yAxisId="krw" type="monotone" dataKey="brl_krw" name="원/헤알(좌)" stroke="#fbbf24" dot={false} strokeWidth={2} connectNulls={true} />
-                <Line yAxisId="brl" type="monotone" dataKey="usd_brl" name="달러/헤알(우)" stroke="#60a5fa" dot={false} strokeWidth={2} connectNulls={true} />
-            </LineChart>
-        </ResponsiveContainer>
+        <div className="space-y-3">
+            <div className="flex justify-end items-center gap-1.5">
+                {(['1M', '3M', '6M', '1Y', '3Y', '10Y'] as const).map(r => (
+                    <button
+                        key={r}
+                        onClick={() => setRange(r)}
+                        className={`text-xs font-bold px-2.5 py-1 rounded-lg border transition ${
+                            range === r
+                                ? 'bg-amber-500/20 border-amber-400/50 text-amber-300'
+                                : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'
+                        }`}
+                    >
+                        {r}
+                    </button>
+                ))}
+            </div>
+            <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={data} margin={{ top: 5, right: 6, bottom: 5, left: -10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                    <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} />
+                    <YAxis yAxisId="krw" tick={{ fill: '#fbbf24', fontSize: 11 }} domain={['auto', 'auto']} width={44} />
+                    <YAxis yAxisId="brl" orientation="right" tick={{ fill: '#60a5fa', fontSize: 11 }} domain={['auto', 'auto']} width={40} />
+                    <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <ReferenceLine yAxisId="krw" y={target} stroke="#34d399" strokeDasharray="5 5" label={{ value: `타겟 ${target}원`, fill: '#34d399', fontSize: 11, position: 'insideTopRight' }} />
+                    <Line yAxisId="krw" type="monotone" dataKey="brl_krw" name="원/헤알(좌)" stroke="#fbbf24" dot={false} strokeWidth={2} connectNulls={true} />
+                    <Line yAxisId="brl" type="monotone" dataKey="usd_brl" name="달러/헤알(우)" stroke="#60a5fa" dot={false} strokeWidth={2} connectNulls={true} />
+                </LineChart>
+            </ResponsiveContainer>
+        </div>
     );
 }
 
@@ -1063,7 +1095,7 @@ function BrazilAlertConfig() {
 
     return (
         <section className="bg-gradient-to-br from-emerald-950/30 to-black/20 rounded-2xl border border-emerald-500/20 p-5">
-            <SectionTitle icon={<Bell className="w-5 h-5 text-emerald-400" />} title="텔레그램 실시간 알림" sub="주요 이벤트 D-day · 신호 전환 · 관련 신규 뉴스 발생 시 자동 발송" />
+            <SectionTitle icon={<Bell className="w-5 h-5 text-emerald-400" />} title="텔레그램 실시간 알림" sub="매일 아침 대시보드 브리핑 · 핵심/전체 지표 초록불 · 신호 전환 · D-day · 신규 뉴스 자동 발송" />
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -1093,12 +1125,13 @@ function BrazilAlertConfig() {
                                 ? `${API_BASE}/api/v1/notification/settings?chat_id=${encodeURIComponent(localChatId)}`
                                 : `${API_BASE}/api/v1/notification/settings`;
                             const cur = await (await fetch(url)).json();
-                            const r = await fetch(`${API_BASE}/api/v1/notification/test`, {
+                            // 현재 대시보드 지표 값으로 구성한 브리핑을 등록된 텔레그램으로 테스트 발송
+                            const r = await fetch(`${API_BASE}/api/v1/brazil-bond/test-digest`, {
                                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ telegram_token: cur.telegram_token || '', telegram_chat_id: cur.telegram_chat_id || '' }),
                             });
                             const d = await r.json();
-                            flash(r.ok, r.ok ? '테스트 알림을 발송했습니다.' : (d.detail || '발송 실패'));
+                            flash(r.ok, r.ok ? '현재 지표 값으로 테스트 브리핑을 발송했습니다.' : (d.detail || '발송 실패'));
                         } catch { flash(false, '발송 중 오류'); } finally { setBusy(false); }
                     }} disabled={busy || !hasToken}
                         className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl bg-emerald-600/80 text-white disabled:opacity-40 hover:bg-emerald-600 transition shrink-0">
