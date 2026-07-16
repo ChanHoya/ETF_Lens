@@ -30,8 +30,11 @@ interface Catalyst { date: string; key: string; title: string; note: string; imp
 interface Summary {
     as_of: string;
     indicators: Indicator[];
-    real_rate: { label: string; unit: string; value: number | null; gauge: string };
-    focus: { selic_eoy: number | null; ipca_eoy: number | null; usdbrl_eoy: number | null };
+    real_rate: { label: string; unit: string; value: number | null; gauge: string; date?: string | null };
+    focus: {
+        selic_eoy: number | null; ipca_eoy: number | null; usdbrl_eoy: number | null;
+        selic_eoy_date?: string | null; ipca_eoy_date?: string | null; usdbrl_eoy_date?: string | null;
+    };
     signal: Signal;
     targets: { rate_floor: number; rate_tranche2: number; rate_risk: number; fx_target: number };
     carry_cushion: CarryPoint[];
@@ -297,7 +300,7 @@ export default function BrazilBondTab() {
                         key: 'real_rate',
                         label: s.real_rate.label,
                         unit: s.real_rate.unit,
-                        date: null,
+                        date: s.real_rate.date ?? null,
                         value: s.real_rate.value,
                         prev: null,
                         change: null,
@@ -307,7 +310,7 @@ export default function BrazilBondTab() {
                         key: 'focus_selic_eoy',
                         label: 'Focus 연말 Selic 컨센서스',
                         unit: '%',
-                        date: null,
+                        date: s.focus.selic_eoy_date ?? null,
                         value: s.focus.selic_eoy,
                         prev: null,
                         change: null,
@@ -317,7 +320,7 @@ export default function BrazilBondTab() {
                         key: 'focus_ipca_eoy',
                         label: 'Focus 연말 IPCA 컨센서스',
                         unit: '%',
-                        date: null,
+                        date: s.focus.ipca_eoy_date ?? null,
                         value: s.focus.ipca_eoy,
                         prev: null,
                         change: null,
@@ -327,7 +330,7 @@ export default function BrazilBondTab() {
                         key: 'focus_usdbrl_eoy',
                         label: 'Focus 연말 USD/BRL',
                         unit: '',
-                        date: null,
+                        date: s.focus.usdbrl_eoy_date ?? null,
                         value: s.focus.usdbrl_eoy,
                         prev: null,
                         change: null,
@@ -499,10 +502,20 @@ function GaugeCard({ ind }: { ind: Indicator }) {
                     <div className="h-4 mt-1" />
                 )}
             </div>
-            {ruleText && (
-                <div className="text-[10px] lg:text-[11px] text-gray-500 mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between">
-                    <span>판정 기준</span>
-                    <span className="font-semibold text-gray-400">{ruleText}</span>
+            {(ruleText || ind.date) && (
+                <div className="mt-2.5 pt-2 border-t border-white/5 space-y-1">
+                    {ruleText && (
+                        <div className="text-[10px] lg:text-[11px] text-gray-500 flex items-center justify-between">
+                            <span>판정 기준</span>
+                            <span className="font-semibold text-gray-400">{ruleText}</span>
+                        </div>
+                    )}
+                    {ind.date && (
+                        <div className="text-[10px] lg:text-[11px] text-gray-500 flex items-center justify-between">
+                            <span>확인일자</span>
+                            <span className="font-semibold text-gray-400">{ind.date}</span>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

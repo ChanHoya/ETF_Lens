@@ -235,6 +235,8 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
     selic = cur("selic_target")
     ipca12 = cur("ipca_12m")
     real_rate = round(selic - ipca12, 2) if (selic is not None and ipca12 is not None) else None
+    # 실질금리 확인일자 = 구성 지표(Selic·IPCA12M) 중 더 최근 날짜
+    real_rate_date = max([d for d in (data["selic_target"][0], data["ipca_12m"][0]) if d], default=None)
     y5, fx = cur("y5"), cur("brl_krw")
 
     signal = compute_signal(y5, fx)
@@ -262,7 +264,8 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
         "as_of": max([d for d, _, _ in data.values() if d] or [today.isoformat()]),
         "indicators": indicators,
         "real_rate": {"label": "실질금리 (Selic−IPCA)", "unit": "%p",
-                      "value": real_rate, "gauge": _gauge("real_rate", real_rate)},
+                      "value": real_rate, "gauge": _gauge("real_rate", real_rate),
+                      "date": real_rate_date},
         "focus": {
             "selic_eoy": cur("focus_selic_eoy"),
             "ipca_eoy": cur("focus_ipca_eoy"),
@@ -270,6 +273,9 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
             "selic_eoy_gauge": _gauge("selic", cur("focus_selic_eoy")),
             "ipca_eoy_gauge": _gauge("ipca_annual", cur("focus_ipca_eoy")),
             "usdbrl_eoy_gauge": _gauge("usd_brl", cur("focus_usdbrl_eoy")),
+            "selic_eoy_date": data["focus_selic_eoy"][0],
+            "ipca_eoy_date": data["focus_ipca_eoy"][0],
+            "usdbrl_eoy_date": data["focus_usdbrl_eoy"][0],
         },
         "signal": signal,
         "targets": {"rate_floor": RATE_FLOOR, "rate_tranche2": RATE_TRANCHE2,
