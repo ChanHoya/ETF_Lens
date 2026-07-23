@@ -659,6 +659,26 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
     );
 }
 
+// 금리 사이클 커스텀 툴팁: 월간 시리즈(FRED·IPCA)도 앞채움 값(_tt_*)으로 항상 표시.
+function RateCycleTooltip({ active, payload, label }: any) {
+    if (!active || !payload || !payload.length) return null;
+    const row = payload[0]?.payload || {};
+    const items = [
+        { k: '_tt_selic', name: '기준금리(Selic)', color: '#818cf8' },
+        { k: '_tt_fred', name: '5년물 국채금리 (역사적/FRED)', color: '#f97316' },
+        { k: '_tt_y5', name: '5년물 국채금리 (실제/최근)', color: '#34d399' },
+        { k: '_tt_ipca', name: 'IPCA(12M)', color: '#fbbf24' },
+    ].filter(it => row[it.k] !== undefined && row[it.k] !== null);
+    return (
+        <div style={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12, padding: '8px 10px' }}>
+            <div style={{ color: '#9ca3af', marginBottom: 4 }}>{label}</div>
+            {items.map(it => (
+                <div key={it.k} style={{ color: it.color }}>{it.name} : <b>{Number(row[it.k]).toFixed(2)}</b></div>
+            ))}
+        </div>
+    );
+}
+
 function RateCycleChart({ history }: { history: Record<string, { date: string; value: number }[]> }) {
     const [range, setRange] = useState<'10Y' | '1Y' | '6M' | '3M'>('1Y');
 
@@ -713,6 +733,22 @@ function RateCycleChart({ history }: { history: Record<string, { date: string; v
             if (lastPt.ipca_12m === undefined || lastPt.ipca_12m === null) lastPt.ipca_12m = lastIpca;
         }
 
+        // 툴팁 전용 값(_tt_*): 월간 시리즈(FRED·IPCA)를 마지막 값으로 앞채움(carry-forward)하여
+        // 월중 날짜를 호버해도 모든 시리즈가 툴팁에 표시되게 한다. (선 모양은 원본 dataKey 그대로 유지)
+        let ffSelic: number | undefined, ffFred: number | undefined, ffY5: number | undefined, ffIpca: number | undefined;
+        for (let i = 0; i < merged.length; i++) {
+            const pt = merged[i];
+            if (pt.selic_target != null) ffSelic = pt.selic_target;
+            if (pt.y5_fred_adjusted != null) ffFred = pt.y5_fred_adjusted;
+            if (pt.y5 != null) ffY5 = pt.y5;
+            if (pt.ipca_12m != null) ffIpca = pt.ipca_12m;
+            pt._tt_selic = ffSelic;
+            pt._tt_ipca = ffIpca;
+            // FRED(역사적)는 실제 데이터 시작점까지만, 실제(y5)는 그 지점부터만 툴팁에 노출
+            pt._tt_fred = (firstActualIdx === -1 || i <= firstActualIdx) ? ffFred : undefined;
+            pt._tt_y5 = (firstActualIdx !== -1 && i >= firstActualIdx) ? ffY5 : undefined;
+        }
+
         // Filter by selected date range
         const lastDateStr = merged[merged.length - 1]?.date || new Date().toISOString().split('T')[0];
         let cutoffDate = '';
@@ -754,7 +790,7 @@ function RateCycleChart({ history }: { history: Record<string, { date: string; v
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                     <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} />
                     <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} domain={['auto', 'auto']} />
-                    <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }} />
+                    <RechartsTooltip content={<RateCycleTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     <Line type="monotone" dataKey="selic_target" name="기준금리(Selic)" stroke="#818cf8" dot={false} strokeWidth={2} connectNulls={true} />
                     <Line type="monotone" dataKey="y5_fred_adjusted" name="5년물 국채금리 (역사적/FRED)" stroke="#f97316" dot={false} strokeWidth={2} connectNulls={true} />
