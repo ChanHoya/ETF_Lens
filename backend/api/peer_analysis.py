@@ -101,6 +101,16 @@ CATEGORY_PEERS: list[dict] = [
         "benchmark": "^KS11",
     },
     {
+        "keywords": ["조선top10", "조선해운", "조선"],
+        "group": "조선",
+        "benchmark": "^KS11",
+    },
+    {
+        "keywords": ["ai전력핵심설비", "ai전력", "전력핵심설비", "전력설비", "전력기기", "전력인프라"],
+        "group": "전력설비·AI전력",
+        "benchmark": "^KS11",
+    },
+    {
         "keywords": ["코스피200", "kospi200"],
         "group": "코스피200",
         "benchmark": "^KS11",
