@@ -12,10 +12,11 @@ router = APIRouter(prefix="/api/v1/notification", tags=["Notification"])
 class SettingsSchema(BaseModel):
     telegram_token: Optional[str] = Field(None, description="Telegram Bot Token")
     telegram_chat_id: Optional[str] = Field(None, description="Telegram Chat ID")
-    alert_exit_signal: int = Field(1, description="1 if exit signal alert enabled, 0 otherwise")
-    alert_rebalance: int = Field(1, description="1 if rebalance recommendation alert enabled, 0 otherwise")
-    alert_daily_summary: int = Field(0, description="1 if morning summary enabled, 0 otherwise")
-    alert_brazil: int = Field(1, description="1 if Brazil bond event/news alert enabled, 0 otherwise")
+    # 토글은 부분 업데이트: None 이면 해당 카테고리는 건드리지 않는다(각 화면이 자기 토글만 갱신).
+    alert_exit_signal: Optional[int] = Field(None, description="1 if exit signal alert enabled, 0 otherwise")
+    alert_rebalance: Optional[int] = Field(None, description="1 if rebalance recommendation alert enabled, 0 otherwise")
+    alert_daily_summary: Optional[int] = Field(None, description="1 if morning summary enabled, 0 otherwise")
+    alert_brazil: Optional[int] = Field(None, description="1 if Brazil bond event/news alert enabled, 0 otherwise")
 
 class TestSchema(BaseModel):
     telegram_token: str
@@ -70,14 +71,25 @@ async def save_settings(data: SettingsSchema, db: AsyncSession = Depends(get_db)
         
     if not settings:
         settings = NotificationSettings()
+        # 신규 등록: 명시적으로 켠 카테고리만 활성화되도록 전부 0에서 시작한다.
+        # (예: 브라질탭에서 등록하면 alert_brazil 만 오고 나머지는 0 → 브라질 알림만 수신)
+        settings.alert_exit_signal = 0
+        settings.alert_rebalance = 0
+        settings.alert_daily_summary = 0
+        settings.alert_brazil = 0
         db.add(settings)
-        
+
     settings.telegram_token = token_to_save
     settings.telegram_chat_id = data.telegram_chat_id
-    settings.alert_exit_signal = data.alert_exit_signal
-    settings.alert_rebalance = data.alert_rebalance
-    settings.alert_daily_summary = data.alert_daily_summary
-    settings.alert_brazil = data.alert_brazil
+    # 부분 업데이트: 전달된(None 아닌) 토글만 갱신 → 각 화면이 자기 카테고리만 건드린다.
+    if data.alert_exit_signal is not None:
+        settings.alert_exit_signal = data.alert_exit_signal
+    if data.alert_rebalance is not None:
+        settings.alert_rebalance = data.alert_rebalance
+    if data.alert_daily_summary is not None:
+        settings.alert_daily_summary = data.alert_daily_summary
+    if data.alert_brazil is not None:
+        settings.alert_brazil = data.alert_brazil
     
     try:
         await db.commit()

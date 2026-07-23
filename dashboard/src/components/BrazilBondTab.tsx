@@ -1042,14 +1042,13 @@ function BrazilAlertConfig() {
                 ? `${API_BASE}/api/v1/notification/settings?chat_id=${encodeURIComponent(localChatId)}`
                 : `${API_BASE}/api/v1/notification/settings`;
             
-            // 기존 설정을 보존하며 alert_brazil만 갱신 (토큰은 마스킹된 채로 전송해도 백엔드가 원본 유지)
+            // 브라질 알림 토글만 부분 갱신 — 다른 카테고리(exit/rebalance/daily)는 건드리지 않는다.
             const cur = await (await fetch(url)).json();
             const r = await fetch(`${API_BASE}/api/v1/notification/settings`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     telegram_token: cur.telegram_token || '', telegram_chat_id: cur.telegram_chat_id || '',
-                    alert_exit_signal: cur.alert_exit_signal ?? 1, alert_rebalance: cur.alert_rebalance ?? 1,
-                    alert_daily_summary: cur.alert_daily_summary ?? 0, alert_brazil: next ? 1 : 0,
+                    alert_brazil: next ? 1 : 0,
                 }),
             });
             if (!r.ok) throw new Error();
@@ -1067,24 +1066,17 @@ function BrazilAlertConfig() {
         }
         setIsSaving(true);
         try {
-            let cur = { alert_exit_signal: 1, alert_rebalance: 1, alert_daily_summary: 0 };
-            try {
-                const localChatId = localStorage.getItem('telegram_chat_id') || '';
-                const url = localChatId
-                    ? `${API_BASE}/api/v1/notification/settings?chat_id=${encodeURIComponent(localChatId)}`
-                    : `${API_BASE}/api/v1/notification/settings`;
-                cur = await (await fetch(url)).json();
-            } catch { /* 무시 */ }
-
+            // 브라질탭 등록 = 브라질 전용 채널. 다른 카테고리(손절/리밸런싱/데일리)는 명시적으로 꺼서
+            // 이 화면에서 등록한 ID에는 브라질 알림만 발송되도록 한다(개인 포트폴리오 알림 혼입 방지).
             const r = await fetch(`${API_BASE}/api/v1/notification/settings`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     telegram_token: inputToken,
                     telegram_chat_id: inputChatId.trim(),
-                    alert_exit_signal: cur.alert_exit_signal ?? 1,
-                    alert_rebalance: cur.alert_rebalance ?? 1,
-                    alert_daily_summary: cur.alert_daily_summary ?? 0,
-                    alert_brazil: alertBrazil ? 1 : 0
+                    alert_brazil: alertBrazil ? 1 : 0,
+                    alert_exit_signal: 0,
+                    alert_rebalance: 0,
+                    alert_daily_summary: 0,
                 }),
             });
             const d = await r.json();
