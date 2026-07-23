@@ -233,6 +233,48 @@ async def fetch_usd_brl_live() -> float | None:
         return None
 
 
+async def _fetch_5y_yield_anbima(client: httpx.AsyncClient, ref_date: date) -> float | None:
+    """ANBIMA ETTJ(공식 국채 수익률곡선)에서 해당 일자의 5년(1260영업일) 명목금리(%) 조회.
+    CZ-down.asp 에 Dt_Ref(dd/mm/yyyy)로 POST → CSV 의 '1.260;IPCA;PREFIXADOS;인플레' 행 파싱.
+    휴장일/미발표일은 행이 없어 None. (investing.com 403 봇차단의 대체 1순위 소스)"""
+    try:
+        r = await client.post(
+            "https://www.anbima.com.br/informacoes/est-termo/CZ-down.asp",
+            data={"Idioma": "PT", "Dt_Ref": ref_date.strftime("%d/%m/%Y"), "saida": "csv"},
+            headers={"User-Agent": _UA, "Content-Type": "application/x-www-form-urlencoded"},
+            timeout=20,
+        )
+        r.raise_for_status()
+        text = r.content.decode("latin-1", "ignore")
+        for line in text.splitlines():
+            if line.startswith("1.260;") or line.startswith("1260;"):
+                cols = line.split(";")
+                if len(cols) >= 3 and cols[2].strip():
+                    val = float(cols[2].strip().replace(".", "").replace(",", "."))
+                    if 3.0 <= val <= 30.0:  # 금리 범위 sanity check
+                        return val
+        return None
+    except Exception as e:
+        print(f"[brazil_fetcher] ANBIMA 5Y {ref_date} failed: {e}")
+        return None
+
+
+async def _fetch_5y_anbima_recent(client: httpx.AsyncClient, days: int = 10) -> list[dict]:
+    """ANBIMA ETTJ 로 최근 days 일(주말 제외)의 5년 금리 시계열 수집.
+    [{'date': 'YYYY-MM-DD', 'value': float}] (날짜 오름차순). 실패한 날짜는 건너뜀."""
+    out = []
+    today = datetime.now(_KST).date()
+    for i in range(days, -1, -1):
+        d = today - timedelta(days=i)
+        if d.weekday() >= 5:  # 토·일 제외
+            continue
+        val = await _fetch_5y_yield_anbima(client, d)
+        if val is not None:
+            out.append({"date": d.isoformat(), "value": val})
+        await asyncio.sleep(0.2)  # 구형 ASP 서버 예의상 간격
+    return out
+
+
 async def _fetch_5y_yield(client: httpx.AsyncClient) -> float | None:
     """investing.com 에서 브라질 5년물 국채금리(%) 스크레이핑. 실패 시 None."""
     try:
@@ -415,8 +457,10 @@ async def sync_brazil_series() -> dict:
                 print(f"[brazil_fetcher] Focus {key}({indicator}) failed: {e}")
                 result[key] = -1
 
-        # 3) 5년물 국채금리 (최근 시계열 및 오늘 값)
-        y5_rows = await _fetch_5y_yield_history(client)
+        # 3) 5년물 국채금리 — 1순위 ANBIMA ETTJ(공식, 최근 10일 백필), 2순위 investing.com(403 봇차단 잦음)
+        y5_rows = await _fetch_5y_anbima_recent(client, days=10)
+        if not y5_rows:
+            y5_rows = await _fetch_5y_yield_history(client)
         if not y5_rows:
             # 단일값 스크레이핑 폴백
             single_val = await _fetch_5y_yield(client)

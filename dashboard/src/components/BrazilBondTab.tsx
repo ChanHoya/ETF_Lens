@@ -702,6 +702,17 @@ function RateCycleChart({ history }: { history: Record<string, { date: string; v
             }
         }
 
+        // IPCA(12M·월간)를 마지막 발표값으로 차트 우측 끝까지 연장.
+        // 12M 누적 물가는 다음 달 발표 전까지 '현재값'으로 유효한 step 지표라 중간에 선이 끊기지 않게 한다.
+        let lastIpca: number | undefined;
+        for (const pt of merged) {
+            if (pt.ipca_12m !== undefined && pt.ipca_12m !== null) lastIpca = pt.ipca_12m;
+        }
+        if (lastIpca !== undefined) {
+            const lastPt = merged[merged.length - 1];
+            if (lastPt.ipca_12m === undefined || lastPt.ipca_12m === null) lastPt.ipca_12m = lastIpca;
+        }
+
         // Filter by selected date range
         const lastDateStr = merged[merged.length - 1]?.date || new Date().toISOString().split('T')[0];
         let cutoffDate = '';
