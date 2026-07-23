@@ -275,6 +275,28 @@ async def _fetch_5y_anbima_recent(client: httpx.AsyncClient, days: int = 10) -> 
     return out
 
 
+async def backfill_y5_anbima(days: int = 365) -> dict:
+    """ANBIMA ETTJ로 최근 days일(달력) 5년물 실제 금리를 조회해 y5에 upsert (일회성 백필).
+    일일 동기화(최근 10일)와 별개로, 초록 '실제/최근' 선을 과거로 연장할 때 사용한다.
+    252영업일(1년) 기준 약 2~3분 소요되므로 반드시 백그라운드로 실행할 것."""
+    print(f"[brazil_fetcher] y5 backfill start: {days}d")
+    try:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            rows = await _fetch_5y_anbima_recent(client, days=days)
+        if not rows:
+            print("[brazil_fetcher] y5 backfill: no rows fetched")
+            return {"y5_backfilled": 0}
+        async with AsyncSessionLocal() as db:
+            n = await _upsert(db, "y5", rows)
+            await db.commit()
+        print(f"[brazil_fetcher] y5 backfill done: fetched={len(rows)} upserted={n} "
+              f"({rows[0]['date']}~{rows[-1]['date']})")
+        return {"y5_backfilled": n, "fetched": len(rows)}
+    except Exception as e:
+        print(f"[brazil_fetcher] y5 backfill failed: {e}")
+        return {"y5_backfilled": -1}
+
+
 async def _fetch_5y_yield(client: httpx.AsyncClient) -> float | None:
     """investing.com 에서 브라질 5년물 국채금리(%) 스크레이핑. 실패 시 None."""
     try:

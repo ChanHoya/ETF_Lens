@@ -313,6 +313,22 @@ async def trigger_sync():
     return {"synced_at": datetime.now(_KST).isoformat(), "counts": result}
 
 
+# 백필 백그라운드 태스크 참조 보관(GC 방지)
+_backfill_tasks: set = set()
+
+
+@router.post("/backfill-y5")
+async def backfill_y5(days: int = 365):
+    """ANBIMA로 5년물 실제 금리를 최근 days일 백필(백그라운드 실행, 즉시 응답).
+    252영업일(1년) 약 2~3분 소요 → 완료는 /history 로 확인. 일일 동기화(10일)와 별개."""
+    from core.brazil_fetcher import backfill_y5_anbima
+    task = asyncio.create_task(backfill_y5_anbima(days))
+    _backfill_tasks.add(task)
+    task.add_done_callback(_backfill_tasks.discard)
+    return {"status": "started", "days": days,
+            "note": "백그라운드 백필 시작. 2~3분 후 history의 y5가 확장됩니다."}
+
+
 # 뉴스 자동 갱신 게이트: 마지막 라이브 수집 시각(에포크초). 프론트가 refresh=false로만 호출해도
 # TTL 경과 시 자동으로 새로 스크레이핑하도록 한다. (모듈 전역 — 단일 인스턴스 기준)
 _last_news_sync_ts = 0.0
