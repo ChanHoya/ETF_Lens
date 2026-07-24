@@ -587,11 +587,11 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
     const fx = summary.indicators.find(i => i.key === 'brl_krw')?.value ?? null;
     const point = (y5 !== null && fx !== null) ? [{ x: fx, y: y5 }] : [];
 
-    // 현재 위치 점·가이드선 색: 존 상태 반영 (리스크 재평가=빨강, 진입존=초록, 관망/대기=흰색)
-    const zone = summary.signal.zone;
-    const zoneColor = zone === 'RISK_REASSESS' ? '#ef4444'
-        : (zone === 'TRANCHE1' || zone === 'TRANCHE2') ? '#34d399'
-        : '#ffffff';
+    // 현재 위치 점·가이드선 색: 두 축 독립 판정. 가로선(금리)=금리 게이지색, 세로선(환율)=환율 게이지색.
+    // 점 채움=금리색, 점 테두리=환율색. 스코어보드 카드 신호등(gauge)과 동일 기준으로 일관성 유지.
+    const GAUGE_HEX: Record<string, string> = { green: '#34d399', amber: '#f59e0b', red: '#ef4444', gray: '#9ca3af' };
+    const rateColor = GAUGE_HEX[summary.indicators.find(i => i.key === 'y5')?.gauge || 'gray'];
+    const fxColor = GAUGE_HEX[summary.indicators.find(i => i.key === 'brl_krw')?.gauge || 'gray'];
 
     // Dynamic zoomed domains centered around the midpoint between current and target
     const xDomain = useMemo(() => {
@@ -623,9 +623,9 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                     <ReferenceLine x={t.fx_target} stroke="#10b981" strokeDasharray="4 4" label={{ value: '목표 290원', fill: '#10b981', fontSize: 10, position: 'insideTopLeft' }} />
                     <ReferenceLine y={t.rate_floor} stroke="#10b981" strokeDasharray="4 4" label={{ value: '목표 14.2%', fill: '#10b981', fontSize: 10, position: 'insideBottomRight' }} />
                     
-                    {/* 현재 좌표 가이드선 (존 상태색: 리스크=빨강, 진입=초록, 관망=흰색) */}
-                    {fx !== null && <ReferenceLine x={fx} stroke={zoneColor} strokeOpacity={0.55} strokeDasharray="3 3" label={{ value: `현재 ${fx.toFixed(1)}원`, fill: zoneColor, fontSize: 10, position: 'insideBottomLeft' }} />}
-                    {y5 !== null && <ReferenceLine y={y5} stroke={zoneColor} strokeOpacity={0.55} strokeDasharray="3 3" label={{ value: `현재 ${y5.toFixed(2)}%`, fill: zoneColor, fontSize: 10, position: 'insideTopRight' }} />}
+                    {/* 세로선=환율색, 가로선=금리색 (각 축 게이지 기준 독립 판정) */}
+                    {fx !== null && <ReferenceLine x={fx} stroke={fxColor} strokeOpacity={0.6} strokeDasharray="3 3" label={{ value: `현재 ${fx.toFixed(1)}원`, fill: fxColor, fontSize: 10, position: 'insideBottomLeft' }} />}
+                    {y5 !== null && <ReferenceLine y={y5} stroke={rateColor} strokeOpacity={0.6} strokeDasharray="3 3" label={{ value: `현재 ${y5.toFixed(2)}%`, fill: rateColor, fontSize: 10, position: 'insideTopRight' }} />}
 
                     <XAxis type="number" dataKey="x" domain={xDomain} reversed={false} tick={{ fill: '#9ca3af', fontSize: 12 }}
                         label={{ value: '원/헤알 환율 (원)', position: 'insideBottom', offset: -10, fill: '#6b7280', fontSize: 12 }} />
@@ -638,27 +638,31 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                         itemStyle={{ color: '#fff' }}
                         labelStyle={{ color: '#9ca3af' }}
                         formatter={(v: any, n: any) => [fmt(v, 2), n === 'x' ? '환율' : '금리']} />
-                    <Scatter data={point} fill={zoneColor} stroke="#ffffff" strokeWidth={2} shape="circle" />
+                    {/* 점: 채움=금리색, 테두리=환율색 */}
+                    <Scatter data={point} fill={rateColor} stroke={fxColor} strokeWidth={3} shape="circle" />
                 </ScatterChart>
             </ResponsiveContainer>
             
-            {/* 존 범례 설명 */}
-            <div className="grid grid-cols-2 gap-2 text-xs border-t border-white/5 pt-3">
-                <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full bg-emerald-500/15 border border-emerald-500/40 shrink-0" />
-                    <span className="text-gray-400">🟢 1차 진입 (14.2%~14.7% 금리 & 290원 이하 환율)</span>
+            {/* 범례: ① 축별 색 기준(금리=점 채움·가로선 / 환율=점 테두리·세로선) ② 종합 판정 */}
+            <div className="border-t border-white/5 pt-3 space-y-2.5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 text-[11px] leading-relaxed">
+                    <div className="text-gray-400">
+                        <span className="font-bold text-gray-300">금리</span> <span className="text-gray-500">(점 채움·가로선)</span>
+                        <span className="text-emerald-300"> 🟢 14.2~15.0% 우호</span>
+                        <span className="text-rose-300"> · 🔴 15.0% 초과 리스크</span>
+                        <span className="text-amber-300"> · 🟡 14.2% 미만 미달</span>
+                    </div>
+                    <div className="text-gray-400">
+                        <span className="font-bold text-gray-300">환율</span> <span className="text-gray-500">(점 테두리·세로선)</span>
+                        <span className="text-emerald-300"> 🟢 290원 이하 우호</span>
+                        <span className="text-amber-300"> · 🟡 290~300원 주의</span>
+                        <span className="text-rose-300"> · 🔴 300원 초과 고환율</span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full bg-emerald-600/40 border border-emerald-500/60 shrink-0" />
-                    <span className="text-gray-400">🟢 적극 매수 (14.7%~15.0% 금리 & 290원 이하 환율)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full bg-rose-500/20 border border-rose-500/40 shrink-0" />
-                    <span className="text-gray-400">🔴 리스크 재평가 (15.0% 초과 금리 - 진입 보류)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full bg-slate-500/20 border border-slate-500/40 shrink-0" />
-                    <span className="text-gray-400">⚪ 관망/대기 (290원 초과 환율 또는 14.2% 미만 금리)</span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 text-[11px] leading-relaxed border-t border-white/5 pt-2">
+                    <span className="text-gray-400">채움·테두리 모두 🟢 → <b className="text-emerald-300">1차 진입</b> <span className="text-gray-500">(금리 14.7%↑ 적극 매수)</span></span>
+                    <span className="text-gray-400">채움 🔴 <span className="text-gray-500">(금리 15% 초과)</span> → <b className="text-rose-300">리스크 재평가·보류</b></span>
+                    <span className="text-gray-400">그 외 하나라도 미충족 → <b className="text-gray-300">관망/대기</b></span>
                 </div>
             </div>
         </div>
