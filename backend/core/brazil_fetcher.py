@@ -276,25 +276,65 @@ async def _fetch_5y_anbima_recent(client: httpx.AsyncClient, days: int = 10) -> 
 
 
 async def backfill_y5_anbima(days: int = 365) -> dict:
-    """ANBIMA ETTJ로 최근 days일(달력) 5년물 실제 금리를 조회해 y5에 upsert (일회성 백필).
-    일일 동기화(최근 10일)와 별개로, 초록 '실제/최근' 선을 과거로 연장할 때 사용한다.
-    252영업일(1년) 기준 약 2~3분 소요되므로 반드시 백그라운드로 실행할 것."""
-    print(f"[brazil_fetcher] y5 backfill start: {days}d")
+    """ANBIMA ETTJ로 최근 days일 범위에서 '아직 없는 영업일'만 골라 5년물 실제 금리를 채운다(gap-fill).
+    - 이미 있는 날짜는 건너뛴다(재실행 저렴·idempotent).
+    - 실패한 날짜는 1회 재시도.
+    - 20건마다 부분 커밋 → 중단(인터넷/서버 재시작)돼도 진행분이 보존되고 재실행 시 이어서 채운다.
+    일일 동기화(최근 10일)와 별개로 초록 '실제/최근' 선을 과거로 연장할 때 사용."""
+    today = datetime.now(_KST).date()
+    # 1) 이미 보유한 y5 날짜
+    async with AsyncSessionLocal() as db:
+        existing = {
+            r.date for r in
+            (await db.execute(select(BrazilSeries).where(BrazilSeries.series_key == "y5"))).scalars()
+        }
+    # 2) 범위 내 영업일 중 미보유분만 대상(오래된 날짜부터)
+    targets = []
+    for i in range(days, -1, -1):
+        d = today - timedelta(days=i)
+        if d.weekday() >= 5:  # 주말 제외
+            continue
+        if d.isoformat() in existing:
+            continue
+        targets.append(d)
+    print(f"[brazil_fetcher] y5 backfill: {len(targets)} missing business days (range {days}d)")
+    if not targets:
+        return {"y5_backfilled": 0, "targets": 0, "note": "no gaps"}
+
+    fetched = 0
+    batch: list[dict] = []
     try:
         async with httpx.AsyncClient(follow_redirects=True) as client:
-            rows = await _fetch_5y_anbima_recent(client, days=days)
-        if not rows:
-            print("[brazil_fetcher] y5 backfill: no rows fetched")
-            return {"y5_backfilled": 0}
-        async with AsyncSessionLocal() as db:
-            n = await _upsert(db, "y5", rows)
-            await db.commit()
-        print(f"[brazil_fetcher] y5 backfill done: fetched={len(rows)} upserted={n} "
-              f"({rows[0]['date']}~{rows[-1]['date']})")
-        return {"y5_backfilled": n, "fetched": len(rows)}
+            for d in targets:
+                val = await _fetch_5y_yield_anbima(client, d)
+                if val is None:  # 1회 재시도
+                    await asyncio.sleep(0.5)
+                    val = await _fetch_5y_yield_anbima(client, d)
+                if val is not None:
+                    batch.append({"date": d.isoformat(), "value": val})
+                await asyncio.sleep(0.25)
+                if len(batch) >= 20:  # 부분 커밋(중단 대비)
+                    async with AsyncSessionLocal() as db:
+                        fetched += await _upsert(db, "y5", batch)
+                        await db.commit()
+                    batch = []
+        if batch:
+            async with AsyncSessionLocal() as db:
+                fetched += await _upsert(db, "y5", batch)
+                await db.commit()
+        print(f"[brazil_fetcher] y5 backfill done: upserted={fetched} of {len(targets)} targets")
+        return {"y5_backfilled": fetched, "targets": len(targets)}
     except Exception as e:
-        print(f"[brazil_fetcher] y5 backfill failed: {e}")
-        return {"y5_backfilled": -1}
+        # 예외 발생 시에도 지금까지 batch 를 커밋 시도(진행분 보존)
+        if batch:
+            try:
+                async with AsyncSessionLocal() as db:
+                    fetched += await _upsert(db, "y5", batch)
+                    await db.commit()
+            except Exception:
+                pass
+        print(f"[brazil_fetcher] y5 backfill interrupted: {e} (saved {fetched})")
+        return {"y5_backfilled": fetched, "targets": len(targets), "interrupted": True}
 
 
 async def _fetch_5y_yield(client: httpx.AsyncClient) -> float | None:
