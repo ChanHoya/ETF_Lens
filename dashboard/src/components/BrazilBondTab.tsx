@@ -587,6 +587,12 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
     const fx = summary.indicators.find(i => i.key === 'brl_krw')?.value ?? null;
     const point = (y5 !== null && fx !== null) ? [{ x: fx, y: y5 }] : [];
 
+    // 현재 위치 점·가이드선 색: 존 상태 반영 (리스크 재평가=빨강, 진입존=초록, 관망/대기=흰색)
+    const zone = summary.signal.zone;
+    const zoneColor = zone === 'RISK_REASSESS' ? '#ef4444'
+        : (zone === 'TRANCHE1' || zone === 'TRANCHE2') ? '#34d399'
+        : '#ffffff';
+
     // Dynamic zoomed domains centered around the midpoint between current and target
     const xDomain = useMemo(() => {
         if (fx === null) return [302, 272];
@@ -617,9 +623,9 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                     <ReferenceLine x={t.fx_target} stroke="#10b981" strokeDasharray="4 4" label={{ value: '목표 290원', fill: '#10b981', fontSize: 10, position: 'insideTopLeft' }} />
                     <ReferenceLine y={t.rate_floor} stroke="#10b981" strokeDasharray="4 4" label={{ value: '목표 14.2%', fill: '#10b981', fontSize: 10, position: 'insideBottomRight' }} />
                     
-                    {/* 현재 좌표 가이드선 (흰색 실선/점선) */}
-                    {fx !== null && <ReferenceLine x={fx} stroke="#ffffff40" strokeDasharray="3 3" label={{ value: `현재 ${fx.toFixed(1)}원`, fill: '#ffffff80', fontSize: 10, position: 'insideBottomLeft' }} />}
-                    {y5 !== null && <ReferenceLine y={y5} stroke="#ffffff40" strokeDasharray="3 3" label={{ value: `현재 ${y5.toFixed(2)}%`, fill: '#ffffff80', fontSize: 10, position: 'insideTopRight' }} />}
+                    {/* 현재 좌표 가이드선 (존 상태색: 리스크=빨강, 진입=초록, 관망=흰색) */}
+                    {fx !== null && <ReferenceLine x={fx} stroke={zoneColor} strokeOpacity={0.55} strokeDasharray="3 3" label={{ value: `현재 ${fx.toFixed(1)}원`, fill: zoneColor, fontSize: 10, position: 'insideBottomLeft' }} />}
+                    {y5 !== null && <ReferenceLine y={y5} stroke={zoneColor} strokeOpacity={0.55} strokeDasharray="3 3" label={{ value: `현재 ${y5.toFixed(2)}%`, fill: zoneColor, fontSize: 10, position: 'insideTopRight' }} />}
 
                     <XAxis type="number" dataKey="x" domain={xDomain} reversed={false} tick={{ fill: '#9ca3af', fontSize: 12 }}
                         label={{ value: '원/헤알 환율 (원)', position: 'insideBottom', offset: -10, fill: '#6b7280', fontSize: 12 }} />
@@ -632,7 +638,7 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                         itemStyle={{ color: '#fff' }}
                         labelStyle={{ color: '#9ca3af' }}
                         formatter={(v: any, n: any) => [fmt(v, 2), n === 'x' ? '환율' : '금리']} />
-                    <Scatter data={point} fill="#fff" shape="circle" />
+                    <Scatter data={point} fill={zoneColor} stroke="#ffffff" strokeWidth={2} shape="circle" />
                 </ScatterChart>
             </ResponsiveContainer>
             
