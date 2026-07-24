@@ -591,6 +591,34 @@ async def sync_brazil_series() -> dict:
     except Exception as e:
         print(f"[brazil_fetcher] y5 proxy cleanup failed: {e}")
 
+    # y5 고아 점 정리: 최근 연속 일별 블록만 남긴다.
+    # ANBIMA 다운로드가 최근 ~5개월만 제공하므로 그보다 오래된 고립 점(옛 스크레이핑 잔재)은
+    # 큰 gap(30일 초과)으로 떨어져 있어 차트에서 직선 보간·FRED 은폐 왜곡을 유발한다 → 제거.
+    try:
+        async with AsyncSessionLocal() as db:
+            y5_rows = sorted(
+                (await db.execute(select(BrazilSeries).where(BrazilSeries.series_key == "y5"))).scalars().all(),
+                key=lambda r: r.date,
+            )
+            if len(y5_rows) >= 2:
+                # 최신 점에서 뒤로 걸으며 연속 블록의 시작 인덱스를 찾는다(gap>30일이면 경계).
+                block_start = 0
+                for i in range(len(y5_rows) - 1, 0, -1):
+                    gap = (date.fromisoformat(y5_rows[i].date) - date.fromisoformat(y5_rows[i - 1].date)).days
+                    if gap > 30:
+                        block_start = i
+                        break
+                orphans = y5_rows[:block_start]
+                for r in orphans:
+                    await db.delete(r)
+                if orphans:
+                    await db.commit()
+                result["y5_orphans_removed"] = len(orphans)
+                print(f"[brazil_fetcher] y5 orphan cleanup: removed {len(orphans)} isolated old points "
+                      f"(연속 블록 시작 {y5_rows[block_start].date})")
+    except Exception as e:
+        print(f"[brazil_fetcher] y5 orphan cleanup failed: {e}")
+
     print(f"[brazil_fetcher] sync done: {result}")
     return result
 
