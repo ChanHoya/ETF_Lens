@@ -66,7 +66,7 @@ const GAUGE_STYLE: Record<string, { dot: string; text: string; ring: string; lab
 };
 const ZONE_STYLE: Record<string, { from: string; to: string; badge: string }> = {
     TRANCHE1: { from: 'from-emerald-600', to: 'to-green-600', badge: 'bg-emerald-500' },
-    TRANCHE2: { from: 'from-emerald-600', to: 'to-teal-600', badge: 'bg-emerald-500' },
+    TRANCHE2: { from: 'from-amber-600', to: 'to-yellow-600', badge: 'bg-amber-500' },
     WATCH: { from: 'from-slate-600', to: 'to-gray-600', badge: 'bg-slate-500' },
     RISK_REASSESS: { from: 'from-rose-700', to: 'to-red-700', badge: 'bg-rose-600' },
     UNKNOWN: { from: 'from-gray-700', to: 'to-gray-700', badge: 'bg-gray-600' },
@@ -469,7 +469,7 @@ function ConditionPill({ ok, label }: { ok: boolean; label: string }) {
 function getThresholdText(key: string): string {
     switch (key) {
         case 'selic': return '🟢 ≥14.0% | 🔴 <12.0%';
-        case 'y5': return '🟢 14.2%~15.0% | 🔴 >15.0%';
+        case 'y5': return '🟢 14.2~14.7% | 🟡 ~15%·~14.2% | 🔴 >15%·<13%';
         case 'brl_krw': return '🟢 ≤290원 | 🔴 >300원';
         case 'ipca_mom': return '🟢 ≤0.35% | 🔴 ≥0.60%';
         case 'real_rate': return '🟢 ≥8.0%p | 🔴 <5.0%p';
@@ -551,9 +551,11 @@ function IndicatorGuide() {
                         </div>
                         <div>
                             <p className="font-bold text-emerald-300">5년물 국채금리</p>
-                            <p className="text-gray-400">🟢 14.2% ~ 15.0% (진입 최적 구간)</p>
-                            <p className="text-gray-400">🟡 14.2% 미만 (금리 매력 부족)</p>
+                            <p className="text-gray-400">🟢 14.2% ~ 14.7% (최적 진입 — 위기선 아래 안전 버퍼)</p>
+                            <p className="text-gray-400">🟡 14.7% ~ 15.0% (천장 접근 — 고캐리이나 신중)</p>
+                            <p className="text-gray-400">🟡 13.0% ~ 14.2% (매력 저하 — 캐리 축소)</p>
                             <p className="text-gray-400">🔴 15.0% 초과 (재정/대선 리스크 반영)</p>
+                            <p className="text-gray-400">🔴 13.0% 미만 (캐리 부족 — 실질금리 매력 상실)</p>
                         </div>
                         <div>
                             <p className="font-bold text-emerald-300">원/헤알 환율 (BRL/KRW)</p>
@@ -614,10 +616,12 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                 <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                     {/* 존 배경: 환율 X축은 reversed(300→270) */}
-                    <ReferenceArea x1={t.fx_target} x2={272} y1={t.rate_floor} y2={t.rate_tranche2} fill="#10b981" fillOpacity={0.15} />
-                    <ReferenceArea x1={t.fx_target} x2={272} y1={t.rate_tranche2} y2={t.rate_risk} fill="#10b981" fillOpacity={0.28} />
-                    <ReferenceArea x1={302} x2={t.fx_target} y1={13.5} y2={t.rate_floor} fill="#64748b" fillOpacity={0.15} />
-                    <ReferenceArea x1={302} x2={272} y1={t.rate_risk} y2={15.6} fill="#f59e0b" fillOpacity={0.15} />
+                    {/* 14.2~14.7 최적(초록) · 14.7~15.0 천장 접근 주의(노랑) · >15 리스크(빨강) · <14.2 매력 저하(노랑) */}
+                    <ReferenceArea x1={t.fx_target} x2={272} y1={t.rate_floor} y2={t.rate_tranche2} fill="#10b981" fillOpacity={0.22} />
+                    <ReferenceArea x1={t.fx_target} x2={272} y1={t.rate_tranche2} y2={t.rate_risk} fill="#f59e0b" fillOpacity={0.18} />
+                    <ReferenceArea x1={302} x2={272} y1={13.5} y2={t.rate_floor} fill="#f59e0b" fillOpacity={0.12} />
+                    <ReferenceArea x1={302} x2={t.fx_target} y1={t.rate_floor} y2={15.6} fill="#64748b" fillOpacity={0.12} />
+                    <ReferenceArea x1={302} x2={272} y1={t.rate_risk} y2={15.6} fill="#ef4444" fillOpacity={0.15} />
                     
                     {/* 목표 조건 기준선 (초록색 점선) */}
                     <ReferenceLine x={t.fx_target} stroke="#10b981" strokeDasharray="4 4" label={{ value: '목표 290원', fill: '#10b981', fontSize: 10, position: 'insideTopLeft' }} />
@@ -648,9 +652,9 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 text-[11px] leading-relaxed">
                     <div className="text-gray-400">
                         <span className="font-bold text-gray-300">금리</span> <span className="text-gray-500">(점 채움·가로선)</span>
-                        <span className="text-emerald-300"> 🟢 14.2~15.0% 우호</span>
-                        <span className="text-rose-300"> · 🔴 15.0% 초과 리스크</span>
-                        <span className="text-amber-300"> · 🟡 14.2% 미만 미달</span>
+                        <span className="text-emerald-300"> 🟢 14.2~14.7% 최적</span>
+                        <span className="text-amber-300"> · 🟡 14.7~15·13~14.2 주의</span>
+                        <span className="text-rose-300"> · 🔴 &gt;15·&lt;13 부적합</span>
                     </div>
                     <div className="text-gray-400">
                         <span className="font-bold text-gray-300">환율</span> <span className="text-gray-500">(점 테두리·세로선)</span>
@@ -660,9 +664,9 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 text-[11px] leading-relaxed border-t border-white/5 pt-2">
-                    <span className="text-gray-400">채움·테두리 모두 🟢 → <b className="text-emerald-300">1차 진입</b> <span className="text-gray-500">(금리 14.7%↑ 적극 매수)</span></span>
-                    <span className="text-gray-400">채움 🔴 <span className="text-gray-500">(금리 15% 초과)</span> → <b className="text-rose-300">리스크 재평가·보류</b></span>
-                    <span className="text-gray-400">그 외 하나라도 미충족 → <b className="text-gray-300">관망/대기</b></span>
+                    <span className="text-gray-400">채움 🟢+테두리 🟢 → <b className="text-emerald-300">1차 진입</b> <span className="text-gray-500">(최적)</span></span>
+                    <span className="text-gray-400">채움 🟡 <span className="text-gray-500">(14.7~15%)</span> → <b className="text-amber-300">신중 진입</b> <span className="text-gray-500">(천장 접근)</span></span>
+                    <span className="text-gray-400">채움 🔴 <span className="text-gray-500">(&gt;15·&lt;13%)</span> → <b className="text-rose-300">리스크/부적합·보류</b></span>
                 </div>
             </div>
         </div>

@@ -30,9 +30,10 @@ router = APIRouter()
 _KST = timezone(timedelta(hours=9))
 
 # ── 플레이북 임계값 (Activation Zone) ────────────────────────────────────────
-RATE_FLOOR = 14.2      # 금리 조건 하한 (14.2%↑)
-RATE_TRANCHE2 = 14.7   # 적극 매수(Tranche 2) 진입 금리
-RATE_RISK = 15.0       # 초과 시 리스크 재평가
+RATE_FLOOR = 14.2      # 최적 진입 하한 (이 아래는 매력 저하)
+RATE_TRANCHE2 = 14.7   # 최적 상한 = 천장 접근 경계 (14.7~15.0는 고캐리이나 위기선 근접→주의)
+RATE_RISK = 15.0       # 초과 시 리스크 재평가(위기 신호)
+RATE_CARRY_MIN = 13.0  # 이 아래는 캐리 부족(실질금리 매력 상실)→부적합
 FX_TARGET = 290.0      # 환율 조건 (290원↓)
 
 # ── 하반기 매크로 캘린더 (2026, 고정 일정) ───────────────────────────────────
@@ -108,13 +109,14 @@ def compute_signal(y5: float | None, fx: float | None) -> dict:
 
     if rate_ok and fx_ok:
         if y5 >= RATE_TRANCHE2:
-            return {"zone": "TRANCHE2", "grade": "적극 매수 구간", "color": "green",
+            # 14.7~15.0: 캐리는 가장 두둑하나 위기선(15%) 근접 → 신중(주의)
+            return {"zone": "TRANCHE2", "grade": "신중 진입 (천장 접근)", "color": "amber",
                     "rate_ok": True, "fx_ok": True,
-                    "headline": f"금리 {y5:.2f}% (≥14.7%) · 환율 {fx:.1f}원 (≤290원) — 황금 교차 구간.",
-                    "action": "2차 추가 매수 후보. 금리·환율 조건 동시 충족 창에서 트랜치 집행."}
-        return {"zone": "TRANCHE1", "grade": "1차 진입 활성화", "color": "green",
+                    "headline": f"금리 {y5:.2f}% (14.7~15.0%) · 환율 {fx:.1f}원 (≤290원) — 고캐리이나 위기선 근접.",
+                    "action": "진입 가능하나 분할 규모·속도 축소. 15% 상향 이탈 시 즉시 보류."}
+        return {"zone": "TRANCHE1", "grade": "1차 진입 (최적 구간)", "color": "green",
                 "rate_ok": True, "fx_ok": True,
-                "headline": f"금리 {y5:.2f}% (≥14.2%) · 환율 {fx:.1f}원 (≤290원) — 진입 조건 충족.",
+                "headline": f"금리 {y5:.2f}% (14.2~14.7%) · 환율 {fx:.1f}원 (≤290원) — 안전 버퍼 확보한 최적 진입 구간.",
                 "action": "1차 분할 매수 활성화. 일시납 금지, 목표 비중의 일부만."}
 
     # 조건 미충족 → 관망
@@ -135,8 +137,14 @@ def _gauge(metric: str, v: float | None) -> str:
         return "gray"
     if metric == "y5":
         if v > RATE_RISK:
-            return "red"
-        return "green" if v >= RATE_FLOOR else "amber"
+            return "red"                    # >15.0 리스크(위기 신호)
+        if v >= RATE_TRANCHE2:
+            return "amber"                  # 14.7~15.0 천장 접근 주의
+        if v >= RATE_FLOOR:
+            return "green"                  # 14.2~14.7 최적 진입
+        if v >= RATE_CARRY_MIN:
+            return "amber"                  # 13.0~14.2 매력 저하
+        return "red"                        # <13.0 캐리 부족(부적합)
     if metric == "brl_krw":
         if v <= FX_TARGET:
             return "green"
