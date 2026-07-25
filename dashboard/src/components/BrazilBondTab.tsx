@@ -978,17 +978,26 @@ function CarryCushionChart({ points }: { points: CarryPoint[] }) {
 }
 
 function ScenarioCard({ sc }: { sc: { id: string; title: string; color: string; logic: string; action: string } }) {
-    const border = sc.color === 'green' ? 'border-emerald-500/40' : sc.color === 'red' ? 'border-rose-500/40' : 'border-amber-500/40';
-    const badge = sc.color === 'green' ? 'bg-emerald-500' : sc.color === 'red' ? 'bg-rose-600' : 'bg-amber-500';
-    const actionBg = sc.color === 'green' ? 'bg-emerald-500/15 text-emerald-200' : sc.color === 'red' ? 'bg-rose-500/15 text-rose-200' : 'bg-amber-500/15 text-amber-200';
+    const border = sc.color === 'green' ? 'border-emerald-500/40'
+                 : sc.color === 'red' ? 'border-rose-500/40'
+                 : sc.color === 'purple' || sc.color === 'indigo' ? 'border-purple-500/50'
+                 : 'border-amber-500/40';
+    const badge = sc.color === 'green' ? 'bg-emerald-500'
+                : sc.color === 'red' ? 'bg-rose-600'
+                : sc.color === 'purple' || sc.color === 'indigo' ? 'bg-purple-600'
+                : 'bg-amber-500';
+    const actionBg = sc.color === 'green' ? 'bg-emerald-500/15 text-emerald-200'
+                   : sc.color === 'red' ? 'bg-rose-500/15 text-rose-200'
+                   : sc.color === 'purple' || sc.color === 'indigo' ? 'bg-purple-500/15 text-purple-200'
+                   : 'bg-amber-500/15 text-amber-200';
     return (
-        <div className={`bg-black/20 rounded-2xl border ${border} p-4 flex flex-col gap-2`}>
+        <div className={`bg-black/30 rounded-2xl border ${border} p-3.5 flex flex-col gap-2`}>
             <div className="flex items-center gap-2">
-                <span className={`w-6 h-6 rounded-full ${badge} text-white text-xs font-black flex items-center justify-center`}>{sc.id}</span>
-                <span className="font-bold text-white text-sm">{sc.title}</span>
+                <span className={`w-6 h-6 rounded-full ${badge} text-white text-xs font-black flex items-center justify-center shrink-0`}>{sc.id}</span>
+                <span className="font-bold text-white text-xs leading-snug">{sc.title}</span>
             </div>
             <p className="text-xs text-gray-400 leading-relaxed"><span className="text-gray-500">시장 논리 · </span>{sc.logic}</p>
-            <div className={`text-xs font-semibold rounded-lg px-3 py-2 mt-auto ${actionBg}`}>▶ {sc.action}</div>
+            <div className={`text-xs font-semibold rounded-lg px-2.5 py-1.5 mt-auto ${actionBg}`}>▶ {sc.action}</div>
         </div>
     );
 }
@@ -1105,7 +1114,7 @@ function MacroTimeline({ timeline, augScenarios }: {
                                         <p className="text-xs font-bold text-amber-300 mb-2 flex items-center gap-1.5">
                                             <Layers className="w-3.5 h-3.5" /> 8월 Copom 금리 결정 시나리오별 대응 플레이북
                                         </p>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                                             {augScenarios.map((sc) => (
                                                 <ScenarioCard key={sc.id} sc={sc} />
                                             ))}

@@ -4,12 +4,12 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Sprint 6 — Copom 시나리오 D-11 이벤트 내 들여쓰기 통합 & Tranche 1 실행구간 하이라이트 구축 완료 (2026-07-25)
+✅ Current: Sprint 6 — Copom 금리 인상 시나리오(시나리오 D) 추가 및 플레이북 전면 연동 완료 (2026-07-25)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-07-25):
-> - August Copom Playbook 독립 제목 섹션을 삭제하고, A/B/C 3개 시나리오 대응 카드를 D-11 브라질 Copom (8월) 하이라이트 타임라인 카드 하단 들여쓰기 영역으로 직관적으로 통합 배치했습니다.
-> - 3-Tranche Execution Strategy에서 현재 실시간 판단 및 실행 구간인 Tranche 1 카드를 CURRENT STAGE 뱃지 및 에메랄드 펄스 글로우 애니메이션으로 하이라이트했습니다.
+> - 물가 서프라이즈 및 재정 노이즈로 인한 Copom 깜짝 금리 인상 가능성에 대비하여 백엔드/프론트엔드 플레이북에 [시나리오 D: 25~50bp 인상 (긴축 재개)] 및 대응 지침을 추가했습니다.
+> - 시나리오 카드가 D-11 Copom 이벤트 하단 들여쓰기 공간에서 4열(A, B, C, D)로 깔끔하게 렌더링되도록 레이아웃을 확장했습니다.
 > - 다음 세션: S6-4 배당 스크래퍼 진행.
  
  
