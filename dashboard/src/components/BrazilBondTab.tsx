@@ -377,14 +377,6 @@ export default function BrazilBondTab() {
             {/* ── 수익 시뮬레이터 ──────────────────────────────────── */}
             <CarrySimulator summary={s} />
 
-            {/* ── 8월 Copom 시나리오 ───────────────────────────────── */}
-            <section>
-                <SectionTitle icon={<Layers className="w-5 h-5 text-indigo-400" />} title="August Copom Playbook" sub="8월 금리 결정 시나리오별 대응" />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {s.aug_scenarios.map((sc) => <ScenarioCard key={sc.id} sc={sc} />)}
-                </div>
-            </section>
-
             {/* ── 3단계 분할 매수 로드맵 ───────────────────────────── */}
             <section>
                 <SectionTitle icon={<Target className="w-5 h-5 text-emerald-400" />} title="3-Tranche Execution Strategy" sub="3단계 분할 매수 로드맵" />
@@ -399,7 +391,7 @@ export default function BrazilBondTab() {
             {/* ── 매크로 캘린더 (시계열 타임라인) ──────────────────── */}
             <section>
                 <SectionTitle icon={<CalendarClock className="w-5 h-5 text-cyan-400" />} title="Macro Catalyst Timeline" sub="Q3-Q4 핵심 관전 캘린더 · 이벤트 시점의 지표 발표 일정" />
-                <MacroTimeline timeline={s.timeline} />
+                <MacroTimeline timeline={s.timeline} augScenarios={s.aug_scenarios} />
             </section>
 
             {/* ── 관련 뉴스 피드 ───────────────────────────────────── */}
@@ -1002,21 +994,34 @@ function ScenarioCard({ sc }: { sc: { id: string; title: string; color: string; 
 }
 
 function TrancheCard({ t }: { t: { id: number; weight: string; timing: string; trigger: string; rationale: string } }) {
+    const isCurrent = t.id === 1; // 현재 판단 기준 트랜치 (Tranche 1)
     return (
-        <div className="bg-gradient-to-br from-emerald-900/20 to-black/20 rounded-2xl border border-emerald-500/20 p-4">
+        <div className={`rounded-2xl p-4 transition-all duration-300 relative ${
+            isCurrent
+                ? 'bg-gradient-to-br from-emerald-900/40 via-emerald-950/30 to-black/40 border-2 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.25)] ring-1 ring-emerald-400/50 animate-pulse'
+                : 'bg-gradient-to-br from-emerald-950/20 to-black/20 border border-emerald-500/20 opacity-80'
+        }`}>
+            {isCurrent && (
+                <span className="absolute -top-2.5 right-4 bg-emerald-400 text-black text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-md">
+                    🎯 CURRENT STAGE (현재 실행 구간)
+                </span>
+            )}
             <div className="flex items-center justify-between mb-2">
-                <span className="font-black text-white">Tranche {t.id}</span>
-                <span className="text-xs font-bold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-full">{t.weight}</span>
+                <span className={`font-black ${isCurrent ? 'text-emerald-300 text-base' : 'text-white'}`}>Tranche {t.id}</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isCurrent ? 'bg-emerald-400 text-black font-black' : 'text-emerald-300 bg-emerald-500/15'}`}>{t.weight}</span>
             </div>
-            <p className="text-xs text-gray-500 mb-1">{t.timing}</p>
-            <p className="text-xs text-gray-300"><span className="text-emerald-400 font-bold">Trigger · </span>{t.trigger}</p>
+            <p className="text-xs text-gray-400 mb-1">{t.timing}</p>
+            <p className="text-xs text-gray-200"><span className="text-emerald-400 font-bold">Trigger · </span>{t.trigger}</p>
             <p className="text-xs text-gray-400 mt-1"><span className="text-gray-500">Rationale · </span>{t.rationale}</p>
         </div>
     );
 }
 
 // 시계열 세로 타임라인: 좌측 레일 + 마커. 과거는 흐리게, 다음 이벤트(D-day)는 강렬하게 점등 애니메이션.
-function MacroTimeline({ timeline }: { timeline: Catalyst[] }) {
+function MacroTimeline({ timeline, augScenarios }: {
+    timeline: Catalyst[];
+    augScenarios?: { id: string; title: string; color: string; logic: string; action: string }[];
+}) {
     const impactColor = (impact: string) => impact === 'fx' ? 'amber' : impact === 'rate' ? 'cyan' : 'rose';
     
     // 가장 가까운 다음 미완료 이벤트의 key 찾기 (예: D-11 Copom 8월)
@@ -1035,6 +1040,8 @@ function MacroTimeline({ timeline }: { timeline: Catalyst[] }) {
                         : isNext
                             ? 'bg-amber-400 ring-4 ring-amber-400/40 animate-pulse'
                             : col === 'amber' ? 'bg-amber-400' : col === 'cyan' ? 'bg-cyan-400' : 'bg-rose-400';
+
+                    const isCopomAug = c.key === 'copom_aug';
 
                     return (
                         <div key={c.key} className="relative">
@@ -1091,6 +1098,20 @@ function MacroTimeline({ timeline }: { timeline: Catalyst[] }) {
                                             : <p className="text-xs text-gray-500 italic mt-1">— (이벤트 대기 중)</p>}
                                     </div>
                                 </div>
+
+                                {/* 8월 Copom 이벤트 카드인 경우 A, B, C 시나리오를 카드 하단에 들여쓰기로 렌더링 */}
+                                {isCopomAug && augScenarios && augScenarios.length > 0 && (
+                                    <div className="mt-4 pt-3.5 border-t border-amber-500/30">
+                                        <p className="text-xs font-bold text-amber-300 mb-2 flex items-center gap-1.5">
+                                            <Layers className="w-3.5 h-3.5" /> 8월 Copom 금리 결정 시나리오별 대응 플레이북
+                                        </p>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                                            {augScenarios.map((sc) => (
+                                                <ScenarioCard key={sc.id} sc={sc} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );
