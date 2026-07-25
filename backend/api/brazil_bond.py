@@ -101,34 +101,45 @@ def compute_signal(y5: float | None, fx: float | None) -> dict:
                 "headline": "금리 또는 환율 데이터를 불러오지 못했습니다.",
                 "action": "데이터 갱신 후 재확인"}
 
-    if y5 > RATE_RISK:
-        return {"zone": "RISK_REASSESS", "grade": "리스크 재평가", "color": "red",
+    # 두 축 신호등(gauge) 색 조합으로 종합 판정.
+    # G+G=적극, G+Y=1차, Y+Y=신중, 하나라도 R=보류(금리>15는 리스크 재평가, 그 외 red는 부적합).
+    rc = _gauge("y5", y5)
+    fc = _gauge("brl_krw", fx)
+
+    if rc == "red" or fc == "red":
+        if y5 > RATE_RISK:  # 금리 15% 초과 = 진짜 위험(자본손실 가능)
+            return {"zone": "RISK_REASSESS", "grade": "리스크 재평가", "color": "red",
+                    "rate_ok": rate_ok, "fx_ok": fx_ok,
+                    "headline": f"5년물 {y5:.2f}% > 15.0% — 시장이 선거/재정 리스크를 가격에 반영 중.",
+                    "action": "매수 전 펀더멘털 훼손(선거·재정) 여부 필수 확인. 신규 진입 신중."}
+        # 그 외 red = 위험이 아니라 '매력 없음'(금리<13 캐리 부족 / 환율>300 고환율)
+        why = []
+        if y5 < RATE_CARRY_MIN:
+            why.append(f"금리 {y5:.2f}% < 13% (캐리 부족)")
+        if fx > 300:
+            why.append(f"환율 {fx:.1f}원 > 300원 (고환율)")
+        return {"zone": "WATCH", "grade": "진입 보류 (부적합)", "color": "red",
                 "rate_ok": rate_ok, "fx_ok": fx_ok,
-                "headline": f"5년물 {y5:.2f}% > 15.0% — 시장이 선거/재정 리스크를 가격에 반영 중.",
-                "action": "매수 전 펀더멘털 훼손(선거·재정) 여부 필수 확인. 신규 진입 신중."}
+                "headline": ("진입 부적합: " + ", ".join(why) + ".") if why else "진입 조건 미충족.",
+                "action": "신규 진입 보류. 조건 회복까지 관망."}
 
-    if rate_ok and fx_ok:
-        if y5 >= RATE_TRANCHE2:
-            # 14.7~15.0: 캐리는 가장 두둑하나 위기선(15%) 근접 → 신중(주의)
-            return {"zone": "TRANCHE2", "grade": "신중 진입 (천장 접근)", "color": "amber",
-                    "rate_ok": True, "fx_ok": True,
-                    "headline": f"금리 {y5:.2f}% (14.7~15.0%) · 환율 {fx:.1f}원 (≤290원) — 고캐리이나 위기선 근접.",
-                    "action": "진입 가능하나 분할 규모·속도 축소. 15% 상향 이탈 시 즉시 보류."}
-        return {"zone": "TRANCHE1", "grade": "1차 진입 (최적 구간)", "color": "green",
+    if rc == "green" and fc == "green":
+        return {"zone": "AGGRESSIVE", "grade": "적극 진입 (추가 매수)", "color": "green",
                 "rate_ok": True, "fx_ok": True,
-                "headline": f"금리 {y5:.2f}% (14.2~14.7%) · 환율 {fx:.1f}원 (≤290원) — 안전 버퍼 확보한 최적 진입 구간.",
-                "action": "1차 분할 매수 활성화. 일시납 금지, 목표 비중의 일부만."}
+                "headline": f"금리 {y5:.2f}% (14.2~14.7% 최적) · 환율 {fx:.1f}원 (≤290원) — 두 축 모두 최적.",
+                "action": "적극 분할 매수. 안전 버퍼·저환율 동시 충족 창에서 비중 확대."}
 
-    # 조건 미충족 → 관망
-    miss = []
-    if not rate_ok:
-        miss.append(f"금리 {y5:.2f}% < 14.2%")
-    if not fx_ok:
-        miss.append(f"환율 {fx:.1f}원 > 290원")
-    return {"zone": "WATCH", "grade": "관망 / 차익실현", "color": "gray",
+    if (rc == "green") != (fc == "green"):  # 정확히 한 축만 초록(나머지 노랑)
+        return {"zone": "TRANCHE1", "grade": "1차 진입", "color": "green",
+                "rate_ok": rate_ok, "fx_ok": fx_ok,
+                "headline": f"금리 {y5:.2f}% · 환율 {fx:.1f}원 — 한 축 최적·한 축 주의, 부분 진입 유효.",
+                "action": "1차 분할 매수. 목표 비중의 일부만, 나머지는 두 축 정렬 대기."}
+
+    # 둘 다 노랑
+    return {"zone": "CAUTION", "grade": "신중 진입", "color": "amber",
             "rate_ok": rate_ok, "fx_ok": fx_ok,
-            "headline": "진입 조건 미충족: " + ", ".join(miss) + ".",
-            "action": "신규 진입 보류. 두 조건 동시 충족(14.2%↑ & 290원↓)까지 대기."}
+            "headline": f"금리 {y5:.2f}% · 환율 {fx:.1f}원 — 두 축 모두 주의 구간.",
+            "action": "진입 규모·속도 축소. 조건 개선(초록 전환) 확인 후 확대."}
 
 
 def _gauge(metric: str, v: float | None) -> str:

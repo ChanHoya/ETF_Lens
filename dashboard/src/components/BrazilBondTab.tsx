@@ -65,7 +65,9 @@ const GAUGE_STYLE: Record<string, { dot: string; text: string; ring: string; lab
     gray: { dot: 'bg-gray-500', text: 'text-gray-300', ring: 'ring-gray-500/20', label: '중립' },
 };
 const ZONE_STYLE: Record<string, { from: string; to: string; badge: string }> = {
-    TRANCHE1: { from: 'from-emerald-600', to: 'to-green-600', badge: 'bg-emerald-500' },
+    AGGRESSIVE: { from: 'from-emerald-500', to: 'to-green-600', badge: 'bg-emerald-500' },
+    TRANCHE1: { from: 'from-emerald-600', to: 'to-green-700', badge: 'bg-emerald-500' },
+    CAUTION: { from: 'from-amber-600', to: 'to-yellow-600', badge: 'bg-amber-500' },
     TRANCHE2: { from: 'from-amber-600', to: 'to-yellow-600', badge: 'bg-amber-500' },
     WATCH: { from: 'from-slate-600', to: 'to-gray-600', badge: 'bg-slate-500' },
     RISK_REASSESS: { from: 'from-rose-700', to: 'to-red-700', badge: 'bg-rose-600' },
@@ -469,7 +471,7 @@ function ConditionPill({ ok, label }: { ok: boolean; label: string }) {
 function getThresholdText(key: string): string {
     switch (key) {
         case 'selic': return '🟢 ≥14.0% | 🔴 <12.0%';
-        case 'y5': return '🟢 14.2~14.7% | 🟡 ~15%·~14.2% | 🔴 >15%·<13%';
+        case 'y5': return '🟢 14.2~14.7% | 🟡 14.7~15·13~14.2 | 🔴 >15·<13';
         case 'brl_krw': return '🟢 ≤290원 | 🔴 >300원';
         case 'ipca_mom': return '🟢 ≤0.35% | 🔴 ≥0.60%';
         case 'real_rate': return '🟢 ≥8.0%p | 🔴 <5.0%p';
@@ -512,14 +514,14 @@ function GaugeCard({ ind }: { ind: Indicator }) {
             {(ruleText || ind.date) && (
                 <div className="mt-2.5 pt-2 border-t border-white/5 space-y-1">
                     {ruleText && (
-                        <div className="text-[10px] lg:text-[11px] text-gray-500 flex items-center justify-between">
+                        <div className="text-[10px] lg:text-[11px] text-gray-500">
                             <span>판정 기준</span>
-                            <span className="font-semibold text-gray-400">{ruleText}</span>
+                            <div className="font-semibold text-gray-400 mt-0.5 leading-snug">{ruleText}</div>
                         </div>
                     )}
                     {ind.date && (
-                        <div className="text-[10px] lg:text-[11px] text-gray-500 flex items-center justify-between">
-                            <span>확인일자</span>
+                        <div className="text-[10px] lg:text-[11px] text-gray-500 flex items-center justify-between gap-2">
+                            <span className="shrink-0">확인일자</span>
                             <span className="font-semibold text-gray-400">{ind.date}</span>
                         </div>
                     )}
@@ -647,14 +649,14 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                 </ScatterChart>
             </ResponsiveContainer>
             
-            {/* 범례: ① 축별 색 기준(금리=점 채움·가로선 / 환율=점 테두리·세로선) ② 종합 판정 */}
+            {/* 범례: ① 축별 색 기준(금리·환율 각 한 줄) ② 점의 채움(금리)+테두리(환율) 색 조합 종합 판정 */}
             <div className="border-t border-white/5 pt-3 space-y-2.5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 text-[11px] leading-relaxed">
+                <div className="space-y-1.5 text-[11px] leading-relaxed">
                     <div className="text-gray-400">
                         <span className="font-bold text-gray-300">금리</span> <span className="text-gray-500">(점 채움·가로선)</span>
-                        <span className="text-emerald-300"> 🟢 14.2~14.7% 최적</span>
+                        <span className="text-emerald-300"> 🟢 14.2~14.7 최적</span>
                         <span className="text-amber-300"> · 🟡 14.7~15·13~14.2 주의</span>
-                        <span className="text-rose-300"> · 🔴 &gt;15·&lt;13 부적합</span>
+                        <span className="text-rose-300"> · 🔴 15↑·13↓ 부적합</span>
                     </div>
                     <div className="text-gray-400">
                         <span className="font-bold text-gray-300">환율</span> <span className="text-gray-500">(점 테두리·세로선)</span>
@@ -663,10 +665,14 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                         <span className="text-rose-300"> · 🔴 300원 초과 고환율</span>
                     </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 text-[11px] leading-relaxed border-t border-white/5 pt-2">
-                    <span className="text-gray-400">채움 🟢+테두리 🟢 → <b className="text-emerald-300">1차 진입</b> <span className="text-gray-500">(최적)</span></span>
-                    <span className="text-gray-400">채움 🟡 <span className="text-gray-500">(14.7~15%)</span> → <b className="text-amber-300">신중 진입</b> <span className="text-gray-500">(천장 접근)</span></span>
-                    <span className="text-gray-400">채움 🔴 <span className="text-gray-500">(&gt;15·&lt;13%)</span> → <b className="text-rose-300">리스크/부적합·보류</b></span>
+                <div className="border-t border-white/5 pt-2 space-y-1.5">
+                    <div className="text-[10px] text-gray-500">종합 판정 <span className="text-gray-600">(점 채움=금리 + 테두리=환율)</span></div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 text-[11px] leading-relaxed">
+                        <span className="text-gray-400">🟢+🟢 → <b className="text-emerald-300">적극 진입</b></span>
+                        <span className="text-gray-400">🟢+🟡 → <b className="text-emerald-300">1차 진입</b></span>
+                        <span className="text-gray-400">🟡+🟡 → <b className="text-amber-300">신중 진입</b></span>
+                        <span className="text-gray-400">🔴 하나라도 → <b className="text-rose-300">리스크/보류</b></span>
+                    </div>
                 </div>
             </div>
         </div>
