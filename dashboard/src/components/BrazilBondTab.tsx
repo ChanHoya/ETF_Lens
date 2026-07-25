@@ -635,9 +635,9 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                     <ReferenceArea x1={302} x2={t.fx_target} y1={t.rate_floor} y2={15.6} fill="#64748b" fillOpacity={0.12} />
                     <ReferenceArea x1={302} x2={272} y1={t.rate_risk} y2={15.6} fill="#ef4444" fillOpacity={0.15} />
                     
-                    {/* 목표 조건 기준선 (초록색 점선) */}
-                    <ReferenceLine x={t.fx_target} stroke="#10b981" strokeDasharray="4 4" label={{ value: '목표 290원', fill: '#10b981', fontSize: 10, position: 'insideTopLeft' }} />
-                    <ReferenceLine y={t.rate_floor} stroke="#10b981" strokeDasharray="4 4" label={{ value: '목표 14.2%', fill: '#10b981', fontSize: 10, position: 'insideBottomRight' }} />
+                    {/* 목표 조건 기준선 (하얀색 점선) */}
+                    <ReferenceLine x={t.fx_target} stroke="#ffffff" strokeOpacity={0.7} strokeDasharray="4 4" label={{ value: '목표 290원', fill: '#ffffff', fontSize: 10, position: 'insideTopLeft' }} />
+                    <ReferenceLine y={t.rate_floor} stroke="#ffffff" strokeOpacity={0.7} strokeDasharray="4 4" label={{ value: '목표 14.2%', fill: '#ffffff', fontSize: 10, position: 'insideBottomRight' }} />
                     
                     {/* 세로선=환율색, 가로선=금리색 (각 축 게이지 기준 독립 판정) */}
                     {fx !== null && <ReferenceLine x={fx} stroke={fxColor} strokeOpacity={0.6} strokeDasharray="3 3" label={{ value: `현재 ${fx.toFixed(1)}원`, fill: fxColor, fontSize: 10, position: 'insideBottomLeft' }} />}
@@ -675,25 +675,24 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                         <span className="text-rose-300"> · 🔴 300원 초과 고환율</span>
                     </div>
                 </div>
-                <div className="border-t border-white/5 pt-2 space-y-2">
-                    <div className="text-[10px] text-gray-500">종합 판정 <span className="text-gray-600">(동그라미 채움=금리 · 테두리=환율)</span></div>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px] leading-relaxed">
-                        <div className="flex items-center gap-2">
-                            <ComboDot fill={GAUGE_HEX.green} stroke={GAUGE_HEX.green} />
-                            <span className="text-gray-400">→ <b className="text-emerald-300">적극 진입</b></span>
+                <div className="border-t border-white/5 pt-2.5 space-y-2.5">
+                    <div className="text-[10px] text-gray-500 uppercase tracking-wide">종합 판정 · 판정별 대응</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-3 text-[11px] leading-relaxed">
+                        <div className="flex gap-2.5">
+                            <div className="flex gap-1 shrink-0 pt-0.5"><ComboDot fill={GAUGE_HEX.green} stroke={GAUGE_HEX.green} /></div>
+                            <div><b className="text-emerald-300">적극 진입 (추가 매수)</b> <span className="text-gray-400">— 금리·환율 모두 초록. 안전 버퍼와 저환율이 동시 충족되는 최상의 창 → 목표 비중까지 적극 분할 확대.</span></div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <ComboDot fill={GAUGE_HEX.green} stroke={GAUGE_HEX.amber} />
-                            <ComboDot fill={GAUGE_HEX.amber} stroke={GAUGE_HEX.green} />
-                            <span className="text-gray-400">→ <b className="text-emerald-300">1차 진입</b></span>
+                        <div className="flex gap-2.5">
+                            <div className="flex gap-1 shrink-0 pt-0.5"><ComboDot fill={GAUGE_HEX.green} stroke={GAUGE_HEX.amber} /><ComboDot fill={GAUGE_HEX.amber} stroke={GAUGE_HEX.green} /></div>
+                            <div><b className="text-emerald-300">1차 진입</b> <span className="text-gray-400">— 한 축은 최적(초록)·다른 축은 주의(노랑). 목표 비중의 일부만 먼저 분할하고, 나머지는 두 축이 모두 초록으로 정렬될 때 집행.</span></div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <ComboDot fill={GAUGE_HEX.amber} stroke={GAUGE_HEX.amber} />
-                            <span className="text-gray-400">→ <b className="text-amber-300">신중 진입</b></span>
+                        <div className="flex gap-2.5">
+                            <div className="flex gap-1 shrink-0 pt-0.5"><ComboDot fill={GAUGE_HEX.amber} stroke={GAUGE_HEX.amber} /></div>
+                            <div><b className="text-amber-300">신중 진입</b> <span className="text-gray-400">— 두 축 모두 주의(노랑). 진입 규모·속도를 줄이고, 조건이 초록으로 개선되는지 확인한 뒤 확대.</span></div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <ComboDot fill={GAUGE_HEX.red} stroke={GAUGE_HEX.red} />
-                            <span className="text-gray-400">채움/테두리 🔴 → <b className="text-rose-300">리스크/보류</b></span>
+                        <div className="flex gap-2.5">
+                            <div className="flex gap-1 shrink-0 pt-0.5"><ComboDot fill={GAUGE_HEX.red} stroke={GAUGE_HEX.red} /></div>
+                            <div><b className="text-rose-300">리스크/보류</b> <span className="text-gray-400">— 금리 15% 초과는 재정·선거 위기 신호(리스크 재평가), 금리 13% 미만·환율 300원 초과는 매력 상실(진입 보류). 어느 쪽이든 신규 진입 중단·관망.</span></div>
                         </div>
                     </div>
                 </div>
