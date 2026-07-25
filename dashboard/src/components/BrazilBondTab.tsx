@@ -1015,59 +1015,80 @@ function TrancheCard({ t }: { t: { id: number; weight: string; timing: string; t
     );
 }
 
-// 시계열 세로 타임라인: 좌측 레일 + 마커. 과거는 흐리게, 임박(D≤7)은 강조.
+// 시계열 세로 타임라인: 좌측 레일 + 마커. 과거는 흐리게, 다음 이벤트(D-day)는 강렬하게 점등 애니메이션.
 function MacroTimeline({ timeline }: { timeline: Catalyst[] }) {
     const impactColor = (impact: string) => impact === 'fx' ? 'amber' : impact === 'rate' ? 'cyan' : 'rose';
+    
+    // 가장 가까운 다음 미완료 이벤트의 key 찾기 (예: D-11 Copom 8월)
+    const nextEventKey = timeline.find(c => c.d_day >= 0)?.key;
+
     return (
         <div className="relative pl-6">
             <div className="absolute left-2 top-1 bottom-1 w-px bg-gradient-to-b from-white/20 via-white/10 to-transparent" />
             <div className="flex flex-col gap-3">
                 {timeline.map((c) => {
                     const past = c.d_day < 0;
-                    const urgent = c.d_day >= 0 && c.d_day <= 7;
+                    const isNext = c.key === nextEventKey;
                     const col = impactColor(c.impact);
-                    const dot = past ? 'bg-gray-600' : urgent ? 'bg-amber-400 ring-4 ring-amber-400/20 animate-pulse'
-                        : col === 'amber' ? 'bg-amber-400' : col === 'cyan' ? 'bg-cyan-400' : 'bg-rose-400';
+                    const dot = past
+                        ? 'bg-gray-600'
+                        : isNext
+                            ? 'bg-amber-400 ring-4 ring-amber-400/40 animate-pulse'
+                            : col === 'amber' ? 'bg-amber-400' : col === 'cyan' ? 'bg-cyan-400' : 'bg-rose-400';
+
                     return (
                         <div key={c.key} className="relative">
-                            <span className={`absolute -left-[18px] top-1.5 w-3 h-3 rounded-full ${dot}`} />
-                            <div className={`rounded-xl border px-4 py-3.5 ${past ? 'border-white/5 bg-black/10 opacity-60'
-                                : urgent ? 'border-amber-500/40 bg-amber-500/10' : 'border-white/10 bg-black/20'}`}>
+                            <span className={`absolute -left-[18px] top-4 w-3 h-3 rounded-full ${dot}`} />
+                            <div className={`rounded-2xl border transition-all duration-300 ${
+                                past
+                                    ? 'border-white/5 bg-black/10 opacity-60 p-4'
+                                    : isNext
+                                        ? 'border-amber-400/80 bg-gradient-to-r from-amber-500/20 via-yellow-500/10 to-amber-500/20 shadow-[0_0_25px_rgba(245,158,11,0.25)] animate-pulse p-4 ring-1 ring-amber-400/50'
+                                        : 'border-white/10 bg-black/20 p-4'
+                            }`}>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     {/* 1) 왼쪽: Timeline 상의 이벤트 명 및 세부정보 */}
-                                    <div className="space-y-1.5 pr-2 md:border-r md:border-white/5 flex flex-col justify-between">
+                                    <div className="space-y-1.5 pr-2 md:border-r md:border-white/10 flex flex-col justify-between">
                                         <div>
-                                            <div className="flex flex-wrap items-center gap-1.5">
-                                                <span className={`text-base font-black ${past ? 'text-gray-500' : urgent ? 'text-amber-300' : 'text-gray-200'}`}>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                {isNext && (
+                                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-400 text-black uppercase tracking-wider animate-bounce">
+                                                        NEXT EVENT
+                                                    </span>
+                                                )}
+                                                <span className={`text-base font-black ${past ? 'text-gray-500' : isNext ? 'text-amber-300 text-lg' : 'text-gray-200'}`}>
                                                     {past ? '완료' : `D-${c.d_day}`}
                                                 </span>
-                                                <span className={`text-sm font-bold ${past ? 'text-gray-400' : 'text-white'}`}>{c.title}</span>
-                                                <span className="text-xs text-gray-500">{c.date}</span>
+                                                <span className={`text-sm font-bold ${past ? 'text-gray-400' : isNext ? 'text-white text-base' : 'text-white'}`}>{c.title}</span>
+                                                <span className="text-xs text-gray-400 font-mono">{c.date}</span>
                                             </div>
-                                            <div className="mt-1 flex items-center gap-2">
-                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${col === 'amber' ? 'bg-amber-500/15 text-amber-300'
-                                                    : col === 'cyan' ? 'bg-cyan-500/15 text-cyan-300' : 'bg-rose-500/15 text-rose-300'}`}>
-                                                    {c.impact === 'fx' ? '환율' : c.impact === 'rate' ? '금리' : '금리·환율'}
+                                            <div className="mt-1.5 flex items-center gap-2">
+                                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                                                    col === 'amber' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                                    : col === 'cyan' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                                }`}>
+                                                    {c.impact === 'fx' ? '환율 변수' : c.impact === 'rate' ? '금리 변수' : '금리·환율 이중 변수'}
                                                 </span>
                                             </div>
                                         </div>
-                                        <p className="text-xs text-gray-400 mt-1">{c.note}</p>
+                                        <p className="text-xs text-gray-300 mt-1 leading-relaxed">{c.note}</p>
                                     </div>
                                     
-                                    {/* 2) 중간: 실제 해당 시점에서의 발표 내용 (발표 후 채워짐) */}
-                                    <div className="space-y-1 md:border-r md:border-white/5 md:px-2 flex flex-col justify-start">
-                                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">실제 발표 내용</span>
+                                    {/* 2) 중간: 실제 해당 시점에서의 발표 내용 */}
+                                    <div className="space-y-1 md:border-r md:border-white/10 md:px-2 flex flex-col justify-start">
+                                        <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">실제 발표 내용</span>
                                         {c.actual
-                                            ? <p className="text-xs text-gray-300 mt-1 leading-relaxed">{c.actual}</p>
-                                            : <p className="text-xs text-gray-600 italic mt-1">{past ? '발표 내용 집계 대기' : '—'}</p>}
+                                            ? <p className="text-xs text-gray-200 mt-1 leading-relaxed font-medium">{c.actual}</p>
+                                            : <p className="text-xs text-gray-500 italic mt-1">{past ? '발표 내용 집계 대기' : '— (이벤트 대기 중)'}</p>}
                                     </div>
 
-                                    {/* 3) 오른쪽: 발표 내용 기반의 브라질 국채 전망 및 액션플랜 (발표 후 채워짐) */}
+                                    {/* 3) 오른쪽: 국채 전망 및 액션플랜 */}
                                     <div className="space-y-1 md:pl-2 flex flex-col justify-start">
-                                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">국채 전망 및 액션플랜</span>
+                                        <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">국채 전망 및 액션플랜</span>
                                         {c.outlook
-                                            ? <p className="text-xs text-gray-300 mt-1 leading-relaxed">{c.outlook}</p>
-                                            : <p className="text-xs text-gray-600 italic mt-1">—</p>}
+                                            ? <p className="text-xs text-gray-200 mt-1 leading-relaxed font-medium">{c.outlook}</p>
+                                            : <p className="text-xs text-gray-500 italic mt-1">— (이벤트 대기 중)</p>}
                                     </div>
                                 </div>
                             </div>
@@ -1095,16 +1116,19 @@ function NewsFeed({ news, loading }: { news: NewsItem[]; loading: boolean }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {news.map((n, i) => (
                 <a key={i} href={n.link} target="_blank" rel="noopener noreferrer"
-                    className="group flex items-start gap-3 bg-black/20 hover:bg-black/40 rounded-xl border border-white/5 hover:border-amber-500/30 p-3 transition">
-                    <Newspaper className="w-4 h-4 text-amber-400/70 shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                        <p className="text-sm text-gray-200 group-hover:text-white leading-snug line-clamp-2">{n.title}</p>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                            <span>{n.source}</span>
-                            {n.published && <><span>·</span><span>{n.published}</span></>}
+                    className="group flex items-center justify-between gap-2.5 bg-black/20 hover:bg-black/40 rounded-xl border border-white/5 hover:border-amber-500/40 px-3.5 py-2.5 transition text-xs">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Newspaper className="w-4 h-4 text-amber-400/80 shrink-0" />
+                        <div className="min-w-0 flex-1 flex items-center gap-2 overflow-hidden">
+                            <span className="font-semibold text-gray-200 group-hover:text-white truncate transition-colors shrink min-w-0">
+                                {n.title}
+                            </span>
+                            <span className="text-[11px] text-gray-400 whitespace-nowrap shrink-0">
+                                ({n.source}{n.published ? ` · ${n.published}` : ''})
+                            </span>
                         </div>
                     </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-gray-600 group-hover:text-amber-400 shrink-0 mt-0.5" />
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-500 group-hover:text-amber-400 shrink-0 ml-1" />
                 </a>
             ))}
         </div>
