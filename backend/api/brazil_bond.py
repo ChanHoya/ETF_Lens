@@ -526,31 +526,54 @@ async def generate_insight(db: AsyncSession = Depends(get_db)):
 # 신호 전환 알림 (스케줄러가 호출) — 등급 변경·임박 캘린더 텔레그램 발송
 # ══════════════════════════════════════════════════════════════════════════
 async def check_brazil_signal_and_alert():
-    """Activation Zone 등급이 직전 저장분과 달라졌거나 핵심 캘린더 D-1/D-day면 알림."""
+    """Activation Zone 등급이 직전 저장분과 달라졌거나, COPOM Selic 금리가 변경되었거나, 핵심 캘린더 D-1/D-day면 알림."""
     from core.notifier import send_telegram_message
     from db.database import AsyncSessionLocal
 
     async with AsyncSessionLocal() as db:
         _, y5, _ = await _latest(db, "y5")
         _, fx, _ = await _latest(db, "brl_krw")
+        _, selic, _ = await _latest(db, "selic_target")
         sig = compute_signal(y5, fx)
 
-        # 직전 신호 등급을 BrazilSeries 에 문자열 대신 별도 저장하기보다,
-        # SectorInsight(sector='brazil_signal_state') 재사용해 마지막 zone 기록.
+        # 직전 신호 등급
         state = (await db.execute(
             select(SectorInsight).where(SectorInsight.sector == "brazil_signal_state")
         )).scalar_one_or_none()
         prev_zone = state.content if state else None
 
+        # 직전 Selic 금리
+        selic_state = (await db.execute(
+            select(SectorInsight).where(SectorInsight.sector == "brazil_selic_state")
+        )).scalar_one_or_none()
+        try:
+            prev_selic = float(selic_state.content) if selic_state and selic_state.content else None
+        except Exception:
+            prev_selic = None
+
         today = datetime.now(_KST).date()
         imminent = [c for c in CATALYSTS if 0 <= _d_day(c["date"], today) <= 1]
 
         msgs = []
+        # 1. COPOM 기준금리 변경 감지 핫 알림
+        if selic is not None and prev_selic is not None and abs(selic - prev_selic) >= 0.01:
+            diff = selic - prev_selic
+            direction = "인상 📈" if diff > 0 else "인하 📉"
+            msgs.append(
+                f"🚨 <b>[COPOM 기준금리 결정 발표]</b>\n"
+                f"브라질 기준금리(Selic): <b>{prev_selic:.2f}% ➔ {selic:.2f}%</b> ({diff:+.2f}%p {direction})\n"
+                f"Activation Zone: <b>{sig['grade']}</b>\n"
+                f"{sig['headline']}\n▶ {sig['action']}"
+            )
+
+        # 2. Zone 신호 전환 알림
         if sig["zone"] != prev_zone and sig["zone"] not in ("UNKNOWN",):
             msgs.append(
                 f"🇧🇷 <b>브라질 국채 신호 전환</b> → <b>{sig['grade']}</b>\n"
                 f"{sig['headline']}\n▶ {sig['action']}"
             )
+
+        # 3. 캘린더 임박 알림
         for c in imminent:
             dd = _d_day(c["date"], today)
             tag = "D-DAY" if dd == 0 else "D-1"
@@ -576,7 +599,7 @@ async def check_brazil_signal_and_alert():
         if ok and notified_links:
             await mark_notified(notified_links)
 
-    # zone 상태 갱신 (새 세션)
+    # zone 및 selic 상태 갱신 (새 세션)
     async with AsyncSessionLocal() as db:
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         state = (await db.execute(
@@ -587,8 +610,19 @@ async def check_brazil_signal_and_alert():
             state.generated_at = now
         else:
             db.add(SectorInsight(sector="brazil_signal_state", content=sig["zone"], generated_at=now))
+
+        if selic is not None:
+            selic_st = (await db.execute(
+                select(SectorInsight).where(SectorInsight.sector == "brazil_selic_state")
+            )).scalar_one_or_none()
+            if selic_st:
+                selic_st.content = str(selic)
+                selic_st.generated_at = now
+            else:
+                db.add(SectorInsight(sector="brazil_selic_state", content=str(selic), generated_at=now))
+
         await db.commit()
-    print(f"[brazil_bond] signal check: zone={sig['zone']} prev={prev_zone} alerts={len(msgs)}")
+    print(f"[brazil_bond] signal check: zone={sig['zone']} prev_zone={prev_zone} selic={selic} prev_selic={prev_selic} alerts={len(msgs)}")
 
 
 # ══════════════════════════════════════════════════════════════════════════

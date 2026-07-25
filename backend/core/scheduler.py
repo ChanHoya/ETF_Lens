@@ -602,10 +602,19 @@ def setup_scheduler():
         await update_app_version("[brazil]")
         trigger_replication_background()
 
-    async def _job_brazil_all_green():
-        """실시간 환율 변동으로 장중 모든 지표가 초록불이 되는 순간을 잡기 위한 주기 체크."""
-        from api.brazil_bond import check_brazil_all_green_and_alert
-        await check_brazil_all_green_and_alert()
+    async def _job_brazil_intraday():
+        """실시간 수집 및 COPOM Selic 변경·신호 전환·초록불 감지 주기 모니터링 (15분 간격)."""
+        from core.brazil_fetcher import sync_brazil_series
+        from api.brazil_bond import (
+            check_brazil_signal_and_alert,
+            check_brazil_all_green_and_alert,
+        )
+        try:
+            await sync_brazil_series()
+            await check_brazil_signal_and_alert()
+            await check_brazil_all_green_and_alert()
+        except Exception as e:
+            print(f"[scheduler] _job_brazil_intraday failed: {e}")
 
     async def _job_keep_alive():
         """Render 유휴 스핀다운 방지: 자기 자신의 /health 를 호출해 idle 타이머를 리셋한다.
@@ -644,8 +653,8 @@ def setup_scheduler():
     # 매일 08:30 (KST) - 브라질 국채 매크로 시계열 동기화 + 신호 전환 알림 + 아침 대시보드 브리핑
     scheduler.add_job(_job_brazil, "cron", hour=8, minute=30, id="daily_brazil_series_sync")
 
-    # 30분마다 - 실시간 환율 변동으로 모든 지표가 초록불이 되는 순간 감지(전환 시에만 1회 발송)
-    scheduler.add_job(_job_brazil_all_green, "interval", minutes=30, id="brazil_all_green_check")
+    # 15분마다 - 브라질 국채 실시간 수집 + COPOM Selic 금리 변경 / 신호 전환 / 초록불 핫 알림
+    scheduler.add_job(_job_brazil_intraday, "interval", minutes=15, id="brazil_intraday_check")
 
     # 10분마다 self-ping → Render idle(15분) 스핀다운 방지. 외부 서버/서비스 불필요.
     # RENDER_EXTERNAL_URL 미설정(로컬) 시 잡은 실행돼도 즉시 no-op.
