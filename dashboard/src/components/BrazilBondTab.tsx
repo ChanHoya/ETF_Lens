@@ -353,17 +353,7 @@ export default function BrazilBondTab() {
                 </div>
                 <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
                     <SectionTitle icon={<TrendingDown className="w-5 h-5 text-cyan-400" />} title="금리 사이클" sub="Selic vs 5년물 국채금리 vs IPCA (10년)" />
-                    <RateCycleChart history={history} />
-                    <div className="mt-4 p-3 bg-white/5 border border-white/5 rounded-xl text-xs text-gray-400 space-y-1.5">
-                        <div className="font-bold text-gray-300 flex items-center gap-1">
-                            💡 금리 사이클 해석 가이드
-                        </div>
-                        <ul className="list-disc list-inside space-y-1 text-[11px] leading-relaxed">
-                            <li><strong className="text-gray-300">기준금리(Selic) & 물가(IPCA) 관계:</strong> 인플레이션(IPCA) 상승에 대응하여 중앙은행은 Selic 금리를 인상하고, 물가가 안정되면 Selic 금리를 인하하는 전형적인 지연 후행 사이클을 보입니다.</li>
-                            <li><strong className="text-gray-300">5년물 국채금리 선행성:</strong> 시장 금리인 5년물 국채금리는 통화정책 회의(Copom) 결정보다 수개월 앞서 시장의 재정 리스크, 기대 인플레이션, 대선 변동성을 반영하며 고점을 찍고 내려오는 선행 경향이 있습니다.</li>
-                            <li><strong className="text-gray-300">투자 시점 포착:</strong> 역사적으로 물가(IPCA)가 꺾이고 Selic 인하 사이클이 시작되기 직전, 5년물 국채금리가 피크(고점)를 형성하는 구간이 채권 매매 차익(자본이득)을 최대화할 수 있는 진입 최적기입니다.</li>
-                        </ul>
-                    </div>
+                    <RateCycleChart history={history} summary={s} />
                 </div>
             </section>
 
@@ -659,42 +649,48 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                 </ScatterChart>
             </ResponsiveContainer>
             
-            {/* 범례: ① 축별 색 기준(금리·환율 각 한 줄) ② 점의 채움(금리)+테두리(환율) 색 조합 종합 판정 */}
-            <div className="border-t border-white/5 pt-3 space-y-2.5">
-                <div className="space-y-1.5 text-[11px] leading-relaxed">
-                    <div className="text-gray-400">
-                        <span className="font-bold text-gray-300">금리</span> <span className="text-gray-500">(점 채움·가로선)</span>
-                        <span className="text-emerald-300"> 🟢 14.2~14.7 최적</span>
-                        <span className="text-amber-300"> · 🟡 14.7~15·13~14.2 주의</span>
-                        <span className="text-rose-300"> · 🔴 15↑·13↓ 부적합</span>
+            {/* 슬림화된 범례 */}
+            <div className="border-t border-white/5 pt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-400">
+                <div className="flex items-center gap-3">
+                    <span className="font-semibold text-gray-300">범례 기준:</span>
+                    <span className="text-emerald-300 font-medium">🟢 최적 (금리 14.2~14.7% / 환율 ≤290원)</span>
+                    <span className="text-amber-300 font-medium">🟡 주의 (금리 14.7~15.0%·13~14.2% / 환율 290~300원)</span>
+                    <span className="text-rose-300 font-medium">🔴 경고 (금리 &gt;15%·&lt;13% / 환율 &gt;300원)</span>
+                </div>
+            </div>
+
+            {/* 현재 그래프 수치에 따른 실시간 분석 및 종합 판정 벤토 카드 */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">현재 수치 분석 & 종합 판정</span>
+                    <span className={`text-xs font-black px-2.5 py-1 rounded-full text-white ${ZONE_STYLE[summary.signal.zone]?.badge || 'bg-emerald-500'}`}>
+                        {summary.signal.grade}
+                    </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-black/30 rounded-xl p-2.5 border border-white/5">
+                        <span className="text-gray-400 text-[11px]">현재 5년물 금리</span>
+                        <div className="text-sm font-bold text-white mt-0.5">
+                            {y5 !== null ? `${y5.toFixed(2)}%` : '—'}
+                            <span className={`ml-1.5 text-[11px] font-medium ${rateColor === '#34d399' ? 'text-emerald-300' : rateColor === '#f59e0b' ? 'text-amber-300' : 'text-rose-300'}`}>
+                                ({y5 !== null && y5 >= 14.2 && y5 <= 14.7 ? '최적 안전버퍼' : y5 !== null && y5 > 14.7 && y5 <= 15.0 ? '천장접근 경계' : '주의 구간'})
+                            </span>
+                        </div>
                     </div>
-                    <div className="text-gray-400">
-                        <span className="font-bold text-gray-300">환율</span> <span className="text-gray-500">(점 테두리·세로선)</span>
-                        <span className="text-emerald-300"> 🟢 290원 이하 우호</span>
-                        <span className="text-amber-300"> · 🟡 290~300원 주의</span>
-                        <span className="text-rose-300"> · 🔴 300원 초과 고환율</span>
+                    <div className="bg-black/30 rounded-xl p-2.5 border border-white/5">
+                        <span className="text-gray-400 text-[11px]">현재 원/헤알 환율</span>
+                        <div className="text-sm font-bold text-white mt-0.5">
+                            {fx !== null ? `${fx.toFixed(1)}원` : '—'}
+                            <span className={`ml-1.5 text-[11px] font-medium ${fxColor === '#34d399' ? 'text-emerald-300' : fxColor === '#f59e0b' ? 'text-amber-300' : 'text-rose-300'}`}>
+                                ({fx !== null && fx <= 290 ? '저환율 우호' : '고환율 주의'})
+                            </span>
+                        </div>
                     </div>
                 </div>
-                <div className="border-t border-white/5 pt-2.5 space-y-2.5">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-wide">종합 판정 · 판정별 대응</div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-3 text-[11px] leading-relaxed">
-                        <div className="flex gap-2.5">
-                            <div className="flex gap-1 shrink-0 pt-0.5"><ComboDot fill={GAUGE_HEX.green} stroke={GAUGE_HEX.green} /></div>
-                            <div><b className="text-emerald-300">적극 진입 (추가 매수)</b> <span className="text-gray-400">— 금리·환율 모두 초록. 안전 버퍼와 저환율이 동시 충족되는 최상의 창 → 목표 비중까지 적극 분할 확대.</span></div>
-                        </div>
-                        <div className="flex gap-2.5">
-                            <div className="flex gap-1 shrink-0 pt-0.5"><ComboDot fill={GAUGE_HEX.green} stroke={GAUGE_HEX.amber} /><ComboDot fill={GAUGE_HEX.amber} stroke={GAUGE_HEX.green} /></div>
-                            <div><b className="text-emerald-300">1차 진입</b> <span className="text-gray-400">— 한 축은 최적(초록)·다른 축은 주의(노랑). 목표 비중의 일부만 먼저 분할하고, 나머지는 두 축이 모두 초록으로 정렬될 때 집행.</span></div>
-                        </div>
-                        <div className="flex gap-2.5">
-                            <div className="flex gap-1 shrink-0 pt-0.5"><ComboDot fill={GAUGE_HEX.amber} stroke={GAUGE_HEX.amber} /></div>
-                            <div><b className="text-amber-300">신중 진입</b> <span className="text-gray-400">— 두 축 모두 주의(노랑). 진입 규모·속도를 줄이고, 조건이 초록으로 개선되는지 확인한 뒤 확대.</span></div>
-                        </div>
-                        <div className="flex gap-2.5">
-                            <div className="flex gap-1 shrink-0 pt-0.5"><ComboDot fill={GAUGE_HEX.red} stroke={GAUGE_HEX.red} /></div>
-                            <div><b className="text-rose-300">리스크/보류</b> <span className="text-gray-400">— 금리 15% 초과는 재정·선거 위기 신호(리스크 재평가), 금리 13% 미만·환율 300원 초과는 매력 상실(진입 보류). 어느 쪽이든 신규 진입 중단·관망.</span></div>
-                        </div>
-                    </div>
+                <div className="text-xs text-gray-300 bg-black/20 rounded-xl p-2.5 border border-white/5 leading-relaxed">
+                    <p className="font-semibold text-emerald-300 mb-0.5">💡 현재 진단 & 대응 지침</p>
+                    <p>{summary.signal.headline}</p>
+                    <p className="text-gray-400 mt-1">▶ {summary.signal.action}</p>
                 </div>
             </div>
         </div>
@@ -721,8 +717,13 @@ function RateCycleTooltip({ active, payload, label }: any) {
     );
 }
 
-function RateCycleChart({ history }: { history: Record<string, { date: string; value: number }[]> }) {
+function RateCycleChart({ history, summary }: { history: Record<string, { date: string; value: number }[]>; summary?: Summary }) {
     const [range, setRange] = useState<'10Y' | '1Y' | '6M' | '3M'>('1Y');
+
+    const selic = summary?.indicators.find(i => i.key === 'selic_target')?.value ?? null;
+    const y5 = summary?.indicators.find(i => i.key === 'y5')?.value ?? null;
+    const ipca12 = summary?.indicators.find(i => i.key === 'ipca_12m')?.value ?? null;
+    const realRate = summary?.real_rate?.value ?? (selic !== null && ipca12 !== null ? Number((selic - ipca12).toFixed(2)) : null);
 
     const data = useMemo(() => {
         const merged = mergeSeries(history, ['selic_target', 'y5', 'y5_fred', 'ipca_12m']);
@@ -841,15 +842,49 @@ function RateCycleChart({ history }: { history: Record<string, { date: string; v
                 </LineChart>
             </ResponsiveContainer>
 
-            {/* 산정 기준 가이드 설명 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3.5 bg-white/5 border border-white/5 rounded-2xl text-[11px] text-gray-400 leading-relaxed">
-                <div>
-                    <strong className="text-gray-300">① 역사적 국채금리 (FRED 기준)</strong>
-                    <p className="mt-0.5">FRED의 브라질 정부 증권 금리(Series ID: <span className="text-orange-400 font-semibold">INTGSTBRM193N</span>) 월간 데이터를 연동하여, 과거 10년간의 장기 금리 사이클 추이를 오차 없이 정밀하게 추적합니다.</p>
+            {/* 슬림화된 산정기준 안내 바 */}
+            <div className="border-t border-white/5 pt-2.5 text-[11px] text-gray-400">
+                <span className="text-gray-400">
+                    <strong className="text-gray-300">산정 기준:</strong> FRED 월간 역사적 데이터(Series: INTGSTBRM193N) × Investing.com 최근 22일 실시간 일별 시세를 선형 보간으로 매끄럽게 연동.
+                </span>
+            </div>
+
+            {/* 현재 그래프 수치에 따른 실시간 금리 사이클 국면 분석 & 종합 판정 벤토 카드 */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">현재 금리 사이클 국면 분석 & 판정</span>
+                    <span className="text-xs font-black px-2.5 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-200">
+                        {realRate !== null && realRate >= 8.0 ? '실질 고금리 피크 (캐리 최적기)' : '금리 인하 전환 관망'}
+                    </span>
                 </div>
-                <div>
-                    <strong className="text-emerald-300">② 실제 국채금리 (Investing.com 실시간)</strong>
-                    <p className="mt-0.5">Investing.com의 일별 시장 가격을 스크레이핑하여 최근 22일간의 실제 시장 금리 변동을 반영합니다. 두 지표의 경계점은 선형 보간으로 매끄럽게 연결하여 금리가 튀는 왜곡을 방지했습니다.</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-black/30 rounded-xl p-2.5 border border-white/5">
+                        <span className="text-gray-400 text-[11px]">기준금리(Selic) vs 물가(IPCA)</span>
+                        <div className="text-sm font-bold text-white mt-0.5">
+                            {selic !== null ? `${selic.toFixed(2)}%` : '—'} / {ipca12 !== null ? `${ipca12.toFixed(2)}%` : '—'}
+                            <span className="ml-1 text-[11px] text-emerald-300 font-medium">(실질 {realRate !== null ? `${realRate.toFixed(2)}%p` : '—'})</span>
+                        </div>
+                    </div>
+                    <div className="bg-black/30 rounded-xl p-2.5 border border-white/5">
+                        <span className="text-gray-400 text-[11px]">5년물 시장금리 vs Selic</span>
+                        <div className="text-sm font-bold text-white mt-0.5">
+                            {y5 !== null ? `${y5.toFixed(2)}%` : '—'}
+                            {y5 !== null && selic !== null && (
+                                <span className={`ml-1 text-[11px] font-medium ${y5 >= selic ? 'text-amber-300' : 'text-emerald-300'}`}>
+                                    ({y5 >= selic ? `+${(y5 - selic).toFixed(2)}%p 프리미엄` : `${(y5 - selic).toFixed(2)}%p 선제하락`})
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+                <div className="text-xs text-gray-300 bg-black/20 rounded-xl p-2.5 border border-white/5 leading-relaxed space-y-1">
+                    <p className="font-semibold text-cyan-300">💡 현재 국면 사이클 분석</p>
+                    <p>
+                        • <strong className="text-gray-200">실질 고금리 수혜:</strong> 물가(IPCA {ipca12 ?? '—'}%)가 둔화된 반면 Selic({selic ?? '—'}%) 고금리가 유지되어 <strong>실질금리 {realRate ?? '—'}%p</strong>의 강력한 이자 쿠션(Carry)이 형성된 구간입니다.
+                    </p>
+                    <p>
+                        • <strong className="text-gray-200">채권 자본차익 기회:</strong> 역사적으로 물가가 꺾이고 Copom의 Selic 인하 사이클이 시작되기 직전 5년물 국채금리가 피크(고점)를 찍으므로, 현 구간은 높은 이자수익과 향후 금리 하락 시 채권 매매 차익을 함께 노릴 수 있는 최적기입니다.
+                    </p>
                 </div>
             </div>
         </div>
