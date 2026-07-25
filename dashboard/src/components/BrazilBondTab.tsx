@@ -468,6 +468,17 @@ function ConditionPill({ ok, label }: { ok: boolean; label: string }) {
     );
 }
 
+// 게이지 색 hex (Activation Zone 점·범례 공용)
+const GAUGE_HEX: Record<string, string> = { green: '#34d399', amber: '#f59e0b', red: '#ef4444', gray: '#9ca3af' };
+
+// 범례용 조합 동그라미: 채움색(금리)+테두리색(환율)을 실제 차트 점과 동일하게 표현
+function ComboDot({ fill, stroke }: { fill: string; stroke: string }) {
+    return (
+        <span className="inline-block w-3.5 h-3.5 rounded-full align-middle shrink-0"
+            style={{ background: fill, border: `2px solid ${stroke}` }} />
+    );
+}
+
 function getThresholdText(key: string): string {
     switch (key) {
         case 'selic': return '🟢 ≥14.0% | 🔴 <12.0%';
@@ -593,7 +604,6 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
 
     // 현재 위치 점·가이드선 색: 두 축 독립 판정. 가로선(금리)=금리 게이지색, 세로선(환율)=환율 게이지색.
     // 점 채움=금리색, 점 테두리=환율색. 스코어보드 카드 신호등(gauge)과 동일 기준으로 일관성 유지.
-    const GAUGE_HEX: Record<string, string> = { green: '#34d399', amber: '#f59e0b', red: '#ef4444', gray: '#9ca3af' };
     const rateColor = GAUGE_HEX[summary.indicators.find(i => i.key === 'y5')?.gauge || 'gray'];
     const fxColor = GAUGE_HEX[summary.indicators.find(i => i.key === 'brl_krw')?.gauge || 'gray'];
 
@@ -665,13 +675,26 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                         <span className="text-rose-300"> · 🔴 300원 초과 고환율</span>
                     </div>
                 </div>
-                <div className="border-t border-white/5 pt-2 space-y-1.5">
-                    <div className="text-[10px] text-gray-500">종합 판정 <span className="text-gray-600">(점 채움=금리 + 테두리=환율)</span></div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 text-[11px] leading-relaxed">
-                        <span className="text-gray-400">🟢+🟢 → <b className="text-emerald-300">적극 진입</b></span>
-                        <span className="text-gray-400">🟢+🟡 → <b className="text-emerald-300">1차 진입</b></span>
-                        <span className="text-gray-400">🟡+🟡 → <b className="text-amber-300">신중 진입</b></span>
-                        <span className="text-gray-400">🔴 하나라도 → <b className="text-rose-300">리스크/보류</b></span>
+                <div className="border-t border-white/5 pt-2 space-y-2">
+                    <div className="text-[10px] text-gray-500">종합 판정 <span className="text-gray-600">(동그라미 채움=금리 · 테두리=환율)</span></div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px] leading-relaxed">
+                        <div className="flex items-center gap-2">
+                            <ComboDot fill={GAUGE_HEX.green} stroke={GAUGE_HEX.green} />
+                            <span className="text-gray-400">→ <b className="text-emerald-300">적극 진입</b></span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <ComboDot fill={GAUGE_HEX.green} stroke={GAUGE_HEX.amber} />
+                            <ComboDot fill={GAUGE_HEX.amber} stroke={GAUGE_HEX.green} />
+                            <span className="text-gray-400">→ <b className="text-emerald-300">1차 진입</b></span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <ComboDot fill={GAUGE_HEX.amber} stroke={GAUGE_HEX.amber} />
+                            <span className="text-gray-400">→ <b className="text-amber-300">신중 진입</b></span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <ComboDot fill={GAUGE_HEX.red} stroke={GAUGE_HEX.red} />
+                            <span className="text-gray-400">채움/테두리 🔴 → <b className="text-rose-300">리스크/보류</b></span>
+                        </div>
                     </div>
                 </div>
             </div>
