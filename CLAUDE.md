@@ -1,117 +1,79 @@
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+# CLAUDE.md
 
+범용 코드 작업 규칙(계획·단순화·범위 제한·검증·보안)은 `~/.claude/rules/coding-behavior.md`에
+있고 코드 파일을 편집할 때 자동으로 로드된다. 이 파일에는 이 프로젝트 고유 규칙만 둔다.
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+## 1. 한국어 문장에 콜론 종결 금지
 
-Tradeoff: These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+한국어 문장은 콜론이 아니라 마침표로 끝낸다.
 
-1. Think Before Coding
-Don't assume. Don't hide confusion. Surface tradeoffs.
+사용자가 한국어로 쓰면 출력도 한국어다.
 
-Before implementing:
+- 다음 줄이 목록이나 예시여도 문장을 `:`로 끝내지 않는다.
+- 영어 문서로 학습한 LLM은 콜론 습관을 한국어에 흘린다. 잡아낼 것.
+- 기준: 모든 한국어 문장 종결부는 `.`, `?`, `!` 중 하나여야 한다. `:`는 아니다.
+- 코드 안, 키-값 쌍, 라벨의 콜론은 괜찮다. 문장 종결로만 쓰지 않는다.
 
-State your assumptions explicitly. If uncertain, ask.
-If multiple interpretations exist, present them - don't pick silently.
-If a simpler approach exists, say so. Push back when warranted.
-If something is unclear, stop. Name what's confusing. Ask.
+## 2. 새 소스 파일 첫 줄에 한국어 헤더 주석
 
-2. Simplicity First
-Minimum code that solves the problem. Nothing speculative.
+새 파일을 만들 때 첫 줄에 역할을 한 줄 한국어로 적는다.
 
-No features beyond what was asked.
-No abstractions for single-use code.
-No "flexibility" or "configurability" that wasn't requested.
-No error handling for impossible scenarios.
-If you write 200 lines and it could be 50, rewrite it.
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+- TypeScript/JavaScript: `// 사용자 인증 상태를 관리하는 Context Provider`
+- Python: `# KIS API 호출을 비동기로 래핑하는 클라이언트`
+- SQL: `-- 일별 집계 결과를 저장하는 머티리얼라이즈드 뷰`
 
-3. Surgical Changes
-Touch only what you must. Clean up only your own mess.
+필수 지시자(`'use client'`, `'use server'`, shebang) 바로 아래에 놓는다.
+설정 파일(`*.config.ts`, `package.json` 등)은 건너뛴다.
 
-When editing existing code:
+이유: 에이전트는 코드베이스 전체가 아니라 파일을 선택적으로 읽는다. 한 줄 한국어 헤더가
+있으면 다음 세션(사람이든 에이전트든)이 파일 전체를 다시 읽지 않고도 위치를 잡을 수 있다.
 
-Don't "improve" adjacent code, comments, or formatting.
-Don't refactor things that aren't broken.
-Match existing style, even if you'd do it differently.
-If you notice unrelated dead code, mention it - don't delete it.
-When your changes create orphans:
+## 3. 플랜 + 체크리스트 + 컨텍스트 노트
 
-Remove imports/variables/functions that YOUR changes made unused.
-Don't remove pre-existing dead code unless asked.
-The test: Every changed line should trace directly to the user's request.
+사소하지 않은 작업은 시작 전에 산출물 세 개를 만든다. 이것 없이 코딩을 시작하지 않는다.
 
-4. Goal-Driven Execution
-Define success criteria. Loop until verified.
+- **플랜** — 무엇을 왜 만드는가.
+- **체크리스트** (`checklist.md`) — 구체적 태스크를 체크박스로. 진행하며 체크한다.
+- **컨텍스트 노트** (`context-notes.md`) — 작업 중 내린 결정과 그 이유. 계속 덧붙인다.
 
-Transform tasks into verifiable goals:
+사용자가 플랜만 주고 바로 코딩하라고 하면 멈추고 묻는다. "체크리스트와 컨텍스트 노트를
+먼저 만들까요?" 다음 세션은 그 노트가 있어야 모든 결정을 다시 유도하지 않고 이어받는다.
 
-"Add validation" → "Write tests for invalid inputs, then make them pass"
-"Fix the bug" → "Write a test that reproduces it, then make it pass"
-"Refactor X" → "Ensure tests pass before and after"
-For multi-step tasks, state a brief plan:
+## 4. 완료 선언 전에 테스트 실행
 
- 1. [Step] → verify: [check]
- 2. [Step] → verify: [check]
- 3. [Step] → verify: [check]
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+코드를 건드렸으면 "done"이라고 말하기 전에 테스트를 돌린다.
 
-5. No Closing Colons (Korean Output)
-End Korean sentences with a period, not a colon.
+- `npm test`, `pytest`, `cargo test` 등 그 프로젝트가 쓰는 것을 돌린다.
+- 통과하면 결과를 보고한다. 실패하면 고치고 다시 돌린다.
+- 테스트 설정이 없으면 최소한 빌드/컴파일이 되는지 확인한다.
+- 사용자가 "끝", "완료", "다 됐어"라고 신호하기 **전에** 선제적으로 돌린다.
+- LLM이 가장 자주 건너뛰는 단계다. 타협 대상이 아니다.
 
-When the user writes in Korean, your output is also Korean:
+## 5. 시맨틱 커밋
 
-Don't end sentences with : even if the next line is a list or example.
-LLMs trained on English docs leak the colon habit into Korean. Catch it.
-The test: every Korean sentence terminator should be ., ?, or ! — not :.
-Colons are fine inside code, key-value pairs, or labels. Not as sentence enders.
+하나의 논리적 변경이 끝나면 커밋한다. 사용자가 요청할 때까지 기다리지 않는다.
 
-6. File Header Comments in Korean
-First line of every new source file: a one-line Korean comment stating its role.
+- 기준: "이 커밋을 한 문장으로 설명할 수 있는가?" 가능하면 커밋한다. 아니면 변경이 아직 섞여 있는 것이니 쪼갠다.
+- 좋음: "auth 미들웨어 추가". 나쁨: "auth 추가하고 UI도 고치고 버그도 수정" (3개로 분리).
+- 무관한 편집 20개를 쌓아서 개별 롤백 능력을 잃지 않는다.
+- 커밋을 위한 커밋은 하지 않는다. 의미 있는 단위만.
+- 개인 프로토타입이나 일회용 스크립트는 속도를 해칠 정도라면 느슨하게 묶어도 된다. 핵심은 격식이 아니라 되돌릴 수 있느냐다.
 
-When creating a new file:
+## 6. 에러를 읽어라, 추측하지 마라
 
-TypeScript/JavaScript: // 사용자 인증 상태를 관리하는 Context Provider
-Python: # KIS API 호출을 비동기로 래핑하는 클라이언트
-SQL: -- 일별 집계 결과를 저장하는 머티리얼라이즈드 뷰
-Place it directly under required directives ('use client', 'use server', shebang).
-Skip config files (*.config.ts, package.json, etc.).
-Why: agents read files selectively, not whole codebases. A one-line Korean header gives instant context so the next session (human or agent) can navigate without re-reading the entire file.
+실제 에러/로그 줄을 읽는다. 기억에서 패턴 매칭하지 않는다.
 
-7. Plan + Checklist + Context Notes
-Before any non-trivial task, produce three artifacts. Don't start coding without them.
+무언가 실패했을 때:
 
-Plan — what we're building and why.
-Checklist (checklist.md) — concrete tasks as checkboxes. Tick as you go.
-Context Notes (context-notes.md) — decisions made during the work and the reasoning behind them. Append continuously.
-If the user gives only a plan and asks you to start coding, stop and ask: "Should I create the checklist and context notes first?" The next session — yours or someone else's — needs the notes to pick up where you left off without re-deriving every decision.
+- 전체 에러 메시지와 스택 트레이스를 읽는다.
+- 그럴 것이라 가정한 내용이 아니라 실제 로그 출력을 확인한다.
+- 원인을 확인하기 전에 "흔한 해결책"을 적용하지 않는다.
+- 불분명하면 print/log를 넣어 상태를 확인한 뒤 고친다.
 
-8. Run Tests Before Marking Complete
-If you touched code, run the tests before saying "done".
+"테스트 실행" 다음으로 LLM이 가장 자주 건너뛰는 단계다. 에러 키워드에서 추측해 가장 최근에
+본 패턴의 수정을 적용한다. 한 줄짜리 버그가 세 파일짜리 리팩터링이 되는 경로가 이것이다.
 
-npm test, pytest, cargo test, whatever the project uses — run it.
-If tests pass, report results. If they fail, fix and re-run.
-No test setup? At minimum, verify the project builds/compiles.
-Run tests proactively, before the user signals "끝", "완료", "다 됐어" — not after.
-This is the step LLMs skip most often. Treat it as non-negotiable.
+---
 
-9. Semantic Commits
-Commit when one logical change is complete. Don't wait for the user to ask.
-
-The test: "Can I describe this commit in one sentence?" If yes, commit. If no, the changes are still mixed — split them.
-Good: "auth 미들웨어 추가". Bad: "auth 추가하고 UI도 고치고 버그도 수정" (split into 3).
-Don't accumulate 20 unrelated edits and lose the ability to roll back individually.
-Don't commit just to commit — meaningful units only.
-Note: For solo prototypes or throwaway scripts, group commits loosely if it slows you down. The point is reversibility, not ceremony.
-
-10. Read Errors, Don't Guess
-Read the actual error/log line. Don't pattern-match from memory.
-
-When something fails:
-
-Read the full error message and stack trace.
-Check the actual log output, not what you assume it should say.
-Don't apply a "common fix" before confirming the cause.
-If unclear, add a print/log to verify state — then fix.
-This is the step LLMs skip most often after "run tests". They guess from error keywords and apply the most-recent-pattern fix. That's how a one-line bug becomes a three-file refactor.
-
-These guidelines are working if: fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+**이 규칙들이 작동하고 있다는 신호:** diff에 불필요한 변경이 줄고, 과설계로 인한 재작성이
+줄고, 확인 질문이 실수 이후가 아니라 구현 이전에 나온다.
