@@ -557,37 +557,45 @@ def setup_scheduler():
     from core.etf_performance import update_all_etf_performance_job
     from core.db_replicator import trigger_replication_background
 
+    import gc
+
     # wrapper: 각 job 완료 후 버전 자동 업데이트 및 PostgreSQL 복제 트리거
     async def _job_master():
         await sync_etf_master_list()
         await update_app_version("[master]")
         trigger_replication_background()
+        gc.collect()
 
     async def _job_batch():
         await sync_etf_batch()
         await update_app_version("[batch]")
         trigger_replication_background()
+        gc.collect()
 
     async def _job_price():
         await sync_etf_prices_yfinance()
         await update_app_version("[price]")
         trigger_replication_background()
+        gc.collect()
 
     async def _job_perf():
         await update_all_etf_performance_job()
         await update_app_version("[perf]")
         await check_exit_signal_and_alert()
         trigger_replication_background()
+        gc.collect()
 
     async def _job_macro():
         from api.exit_signal import sync_us_macro_indicators_job
         await sync_us_macro_indicators_job()
         await update_app_version("[macro]")
         trigger_replication_background()
+        gc.collect()
 
     async def _job_disparity():
         await check_etf_disparity_and_alert()
         trigger_replication_background()
+        gc.collect()
 
     async def _job_brazil():
         from core.brazil_fetcher import sync_brazil_series
@@ -601,6 +609,7 @@ def setup_scheduler():
         await check_brazil_all_green_and_alert()   # 모든 지표 초록불 전환 감지
         await update_app_version("[brazil]")
         trigger_replication_background()
+        gc.collect()
 
     async def _job_brazil_intraday():
         """실시간 수집 및 COPOM Selic 변경·신호 전환·초록불 감지 주기 모니터링 (15분 간격)."""
