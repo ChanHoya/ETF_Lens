@@ -7,9 +7,10 @@ Base: Exit Strategy Monitoring (KOSPI)
 ✅ Current: Sprint 6 — Copom 금리 인상 시나리오(시나리오 D) 추가 및 플레이북 전면 연동 완료 (2026-07-25)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
-> 세션 핸드오프 (2026-07-25):
-> - 물가 서프라이즈 및 재정 노이즈로 인한 Copom 깜짝 금리 인상 가능성에 대비하여 백엔드/프론트엔드 플레이북에 [시나리오 D: 25~50bp 인상 (긴축 재개)] 및 대응 지침을 추가했습니다.
-> - 시나리오 카드가 D-11 Copom 이벤트 하단 들여쓰기 공간에서 4열(A, B, C, D)로 깔끔하게 렌더링되도록 레이아웃을 확장했습니다.
+> 세션 핸드오프 (2026-07-30):
+> - Render 512MB RAM 초과 OOM 장애 해결: Primary DB가 PostgreSQL인 프로덕션 환경에서 redundant한 SQLite-to-PostgreSQL 복제 연산을 자동 스킵하도록 처리.
+> - 로컬 복제 시에도 1,000건 단위 스트리밍 배치(chunked batching) 및 스케줄러 job별 명시적 gc.collect() 호출로 메모리 스파이크 차단 완료.
+> - main 브랜치 커밋 (`fix: resolve Render OOM (512MB RAM) ...`) 및 푸시 완료.
 > - 다음 세션: S6-4 배당 스크래퍼 진행.
  
  
