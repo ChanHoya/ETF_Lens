@@ -243,10 +243,16 @@
 - **원인**: FRED(세인트루이스 연준) 측에서 파이썬 requests 라이브러리의 기본 User-Agent(`python-requests/...`)를 이용한 CSV 다운로드 요청을 차단하여 504 Gateway Timeout이나 연결 오류가 유발되고, 수집 결과가 빈 리스트(`[]`)로 백엔드 캐시에 강제 덮어쓰기됨.
 - **해결**: FRED API 요청에 크롬 브라우저와 유사한 헤더(`User-Agent`)를 추가하여 차단을 예방하고, 수집 실패 시 빈 리스트로 캐시를 덮어쓰지 않고 기본 mock/fallback 시계열 데이터를 그대로 보존하도록 백엔드 처리(exit_signal.py)를 개선함.
 
-### [FP-027] 단일 최신 인덱스 참조로 인한 매크로 지표 발표일 불일치 N/A 현상
-- **증상**: 매월 초 미국 CPI가 신규 발표되면, 아직 미발표 상태인 PPI 및 PCE 카드까지 강제로 최신 기준월(예: 5월)로 넘어가면서 데이터가 `null`이 되어 화면에 `N/A`로 표시되는 현상.
-- **원인**: CPI, PPI, PCE의 실시간 발표일 격차가 존재함에도 프론트엔드가 DB의 마지막 요소(예: 5월 CPI만 포함된 최신 레코드)를 단일 `latestItem`으로 삼아 3개 지표의 기준일과 전월 대비 연산을 일괄적으로 수행했기 때문.
-- **해결**: 프론트엔드(`DiscoverTab.tsx`)가 CPI, PPI, PCE 각각에 대해 개별적으로 가장 최신의 non-null 값을 역추적(reverse loop)하도록 변경하여, 발표 시차에 맞춰 개별 카드별로 최신 기준월과 이전 달 값을 유연하게 찾아 렌더링하도록 개선함.
+### [FP-030] 512MB RAM 제약 서버(Render)에서의 Primary PostgreSQL 환경 내 Self-Replication OOM 장애
+- **증상**: Render 프로덕션 환경에서 매일/주기적 스케줄러 배치 job(가격 수집, 브라질 국채 등) 실행 직후 인스턴스가 `Ran out of memory (used over 512MB) while running your code`로 강제 종료(SIGKILL) 및 무한 재시작 반복.
+- **원인**:
+  1. `DATABASE_URL`이 이미 Render PostgreSQL로 설정된 프로덕션 환경에서, 스케줄러 job 완료 후 `replicate_sqlite_to_postgres()`가 호출되어 동일한 PostgreSQL DB를 대상으로 무의미한 Self-Replication 수행.
+  2. 복제 로직이 `ETFDailyPrice` (수십만 건) 등 대용량 데이터 전체를 `select().scalars().all()`로 수십만 개의 Python ORM 객체로 RAM에 한꺼번에 로드하여 메모리 스파이크 유발.
+- **해결**:
+  1. `DATABASE_URL`이 PostgreSQL인 환경에서는 `replicate_sqlite_to_postgres()`를 0ms 만에 즉시 no-op 스킵하도록 방어 조건 추가.
+  2. 로컬 개발 환경(SQLite) 수동 복제 시에도 1,000건 단위의 스트리밍 배치(chunked batching) 및 `del` + `gc.collect()`를 적용하여 RAM 사용량을 항상 수 MB 수준으로 제어.
+  3. 스케줄러 작업 wrapper에 명시적 `import gc; gc.collect()`를 적용하여 메모리 안정성 극대화.
+
 
 
 
