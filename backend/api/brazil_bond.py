@@ -606,11 +606,18 @@ async def check_brazil_signal_and_alert():
                 f"{sig['headline']}\n▶ {sig['action']}"
             )
 
-        # 3. 캘린더 임박 알림
+        # 3. 캘린더 임박 알림 (당일 중복 발송 방지: 하루 1회만 발송)
+        notified_catalysts = []
         for c in imminent:
             dd = _d_day(c["date"], today)
             tag = "D-DAY" if dd == 0 else "D-1"
-            msgs.append(f"🗓️ <b>[{tag}] {c['title']}</b> ({c['date']})\n{c['note']}")
+            cal_key = f"brazil_cal_alert_{c['key']}_{tag}_{today.isoformat()}"
+            cal_st = (await db.execute(
+                select(SectorInsight).where(SectorInsight.sector == cal_key)
+            )).scalar_one_or_none()
+            if not cal_st:
+                msgs.append(f"🗓️ <b>[{tag}] {c['title']}</b> ({c['date']})\n{c['note']}")
+                notified_catalysts.append(cal_key)
 
     # 신규 뉴스 감지 → 알림에 포함 (세션 밖에서 실행: 자체 세션 사용)
     notified_links = []
@@ -629,8 +636,15 @@ async def check_brazil_signal_and_alert():
 
     if msgs:
         ok, _ = await send_telegram_message("\n\n".join(msgs), category="brazil_bond")
-        if ok and notified_links:
-            await mark_notified(notified_links)
+        if ok:
+            if notified_links:
+                await mark_notified(notified_links)
+            if notified_catalysts:
+                async with AsyncSessionLocal() as db:
+                    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+                    for k in notified_catalysts:
+                        db.add(SectorInsight(sector=k, content="1", generated_at=now_utc))
+                    await db.commit()
 
     # zone 및 selic 상태 갱신 (새 세션)
     async with AsyncSessionLocal() as db:

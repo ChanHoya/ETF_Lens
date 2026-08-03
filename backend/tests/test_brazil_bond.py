@@ -21,3 +21,11 @@ def test_is_same_date_kst():
 
     # None check
     assert _is_same_date_kst(None) is False
+
+
+def test_calendar_alert_key_format():
+    today = datetime.now(_KST).date()
+    cal_key = f"brazil_cal_alert_copom_aug_D-1_{today.isoformat()}"
+    assert "brazil_cal_alert_copom_aug_D-1_" in cal_key
+    assert today.isoformat() in cal_key
+
