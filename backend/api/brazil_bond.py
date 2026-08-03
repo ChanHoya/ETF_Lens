@@ -481,19 +481,44 @@ class InsightResponse(BaseModel):
     generated_at: str | None = None
 
 
+def _is_same_date_kst(dt: datetime | None) -> bool:
+    if not dt:
+        return False
+    now_kst = datetime.now(_KST).date()
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    dt_kst = dt.astimezone(_KST).date()
+    return dt_kst == now_kst
+
+
 @router.get("/insight", response_model=InsightResponse)
-async def get_insight(db: AsyncSession = Depends(get_db)):
+async def get_insight(auto_generate: bool = True, db: AsyncSession = Depends(get_db)):
     row = (await db.execute(
         select(SectorInsight).where(SectorInsight.sector == "brazil_bond")
     )).scalar_one_or_none()
+
+    # 기 생성된 리포트가 없거나 이전 날짜인 경우 자동 재생성 (동일 날짜인 경우 skip)
+    if auto_generate and (not row or not row.content or not _is_same_date_kst(row.generated_at)):
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if api_key:
+            try:
+                print("[brazil_bond] AI strategy report missing or from previous date -> auto-generating...")
+                return await generate_insight(db)
+            except Exception as e:
+                print(f"[brazil_bond] auto-generate insight on GET failed: {e}")
+
     if not row or not row.content:
         return InsightResponse(content=None, generated_at=None)
     try:
         content = json.loads(row.content)
     except Exception:
         content = None
-    return InsightResponse(content=content,
-                           generated_at=row.generated_at.isoformat() if row.generated_at else None)
+
+    gen_at = row.generated_at.isoformat() if row.generated_at else None
+    if gen_at and not gen_at.endswith("Z") and "+" not in gen_at and "-" not in gen_at[10:]:
+        gen_at += "Z"
+
+    return InsightResponse(content=content, generated_at=gen_at)
 
 
 @router.post("/insight/generate", response_model=InsightResponse)
@@ -511,18 +536,23 @@ async def generate_insight(db: AsyncSession = Depends(get_db)):
         print(f"[brazil_bond] generate error: {e}")
         raise HTTPException(status_code=500, detail=f"리포트 생성 중 오류: {str(e)[:200]}")
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(timezone.utc)
     row = (await db.execute(
         select(SectorInsight).where(SectorInsight.sector == "brazil_bond")
     )).scalar_one_or_none()
     payload = json.dumps(content, ensure_ascii=False)
+    naive_now = now.replace(tzinfo=None)
     if row:
         row.content = payload
-        row.generated_at = now
+        row.generated_at = naive_now
     else:
-        db.add(SectorInsight(sector="brazil_bond", content=payload, generated_at=now))
+        db.add(SectorInsight(sector="brazil_bond", content=payload, generated_at=naive_now))
     await db.commit()
-    return InsightResponse(content=content, generated_at=now.isoformat())
+
+    gen_at = now.isoformat()
+    if not gen_at.endswith("Z") and "+" not in gen_at:
+        gen_at += "Z"
+    return InsightResponse(content=content, generated_at=gen_at)
 
 
 # ══════════════════════════════════════════════════════════════════════════

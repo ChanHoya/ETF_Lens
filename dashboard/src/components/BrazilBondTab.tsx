@@ -1,7 +1,7 @@
 "use client";
 // 브라질 국채 매크로 대시보드·Activation Zone 신호·AI 전략 리포트·캐리 쿠션 시뮬레이터 뷰
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, ReferenceArea, ReferenceLine, ZAxis,
@@ -77,6 +77,16 @@ const ZONE_STYLE: Record<string, { from: string; to: string; badge: string }> = 
 const fmt = (v: number | null | undefined, d = 2) =>
     v === null || v === undefined ? '—' : v.toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d });
 
+const isSameDate = (dateStr: string | null | undefined): boolean => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const today = new Date();
+    return d.getFullYear() === today.getFullYear() &&
+           d.getMonth() === today.getMonth() &&
+           d.getDate() === today.getDate();
+};
+
 export default function BrazilBondTab() {
     const [summary, setSummary] = useState<Summary | null>(null);
     const [history, setHistory] = useState<Record<string, { date: string; value: number }[]>>({});
@@ -86,6 +96,7 @@ export default function BrazilBondTab() {
     const [insight, setInsight] = useState<AiInsight | null>(null);
     const [insightAt, setInsightAt] = useState<string | null>(null);
     const [genLoading, setGenLoading] = useState(false);
+    const autoGenAttemptedRef = useRef(false);
 
     const [news, setNews] = useState<NewsItem[]>([]);
     const [newsLoading, setNewsLoading] = useState(true);
@@ -104,6 +115,9 @@ export default function BrazilBondTab() {
                 const j = JSON.parse(cachedInsight);
                 setInsight(j.content || null);
                 setInsightAt(j.generated_at || null);
+                if (!isSameDate(j.generated_at)) {
+                    setGenLoading(true);
+                }
             }
             if (cachedNews) setNews(JSON.parse(cachedNews));
 
@@ -147,6 +161,12 @@ export default function BrazilBondTab() {
                     setInsight(j.content || null);
                     setInsightAt(j.generated_at || null);
                     localStorage.setItem('brazil_bond_insight', JSON.stringify(j));
+
+                    // 기 생성된 리포트가 이전 날짜이거나 없으면 자동 재생성 (동일 날짜면 skip)
+                    if (!autoGenAttemptedRef.current && (!j.generated_at || !isSameDate(j.generated_at))) {
+                        autoGenAttemptedRef.current = true;
+                        generateReport(true);
+                    }
                 }
             } catch (e: any) {
                 if (!localStorage.getItem('brazil_bond_summary')) {
@@ -203,7 +223,7 @@ export default function BrazilBondTab() {
         };
     }, []);
 
-    const generateReport = async () => {
+    const generateReport = async (silent = false) => {
         try {
             setGenLoading(true);
             const res = await fetch(`${API_BASE}/api/v1/brazil-bond/insight/generate`, { method: 'POST' });
@@ -214,8 +234,12 @@ export default function BrazilBondTab() {
             const j = await res.json();
             setInsight(j.content || null);
             setInsightAt(j.generated_at || null);
+            localStorage.setItem('brazil_bond_insight', JSON.stringify(j));
         } catch (e: any) {
-            alert(`AI 리포트 생성 오류: ${e?.message || e}`);
+            console.error("AI 리포트 생성 오류:", e);
+            if (!silent) {
+                alert(`AI 리포트 생성 오류: ${e?.message || e}`);
+            }
         } finally {
             setGenLoading(false);
         }

@@ -7,10 +7,10 @@ Base: Exit Strategy Monitoring (KOSPI)
 ✅ Current: Sprint 6 — Copom 금리 인상 시나리오(시나리오 D) 추가 및 플레이북 전면 연동 완료 (2026-07-25)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
-> 세션 핸드오프 (2026-07-30):
-> - Render 512MB RAM 초과 OOM 장애 해결: Primary DB가 PostgreSQL인 프로덕션 환경에서 redundant한 SQLite-to-PostgreSQL 복제 연산을 자동 스킵하도록 처리.
-> - 로컬 복제 시에도 1,000건 단위 스트리밍 배치(chunked batching) 및 스케줄러 job별 명시적 gc.collect() 호출로 메모리 스파이크 차단 완료.
-> - main 브랜치 커밋 (`fix: resolve Render OOM (512MB RAM) ...`) 및 푸시 완료.
+> 세션 핸드오프 (2026-08-04):
+> - 브라질 국채 서비스 진입 시 AI 전략 리포트 일자별 자동 재생성 기능 추가 완료.
+> - 동일 날짜(당일) 리포트가 이미 존재하는 경우 자동 재생성 스킵, 이전 날짜이거나 없는 경우 백엔드/프론트엔드에서 자동으로 최신 지표 기반 재생성 수행.
+> - `_is_same_date_kst` 및 `isSameDate` 헬퍼 함수 구현 및 백엔드 단위 테스트 (`tests/test_brazil_bond.py`) 작성/통과.
 > - 다음 세션: S6-4 배당 스크래퍼 진행.
  
  
