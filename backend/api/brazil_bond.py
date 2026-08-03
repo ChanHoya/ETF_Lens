@@ -619,32 +619,21 @@ async def check_brazil_signal_and_alert():
                 msgs.append(f"🗓️ <b>[{tag}] {c['title']}</b> ({c['date']})\n{c['note']}")
                 notified_catalysts.append(cal_key)
 
-    # 신규 뉴스 감지 → 알림에 포함 (세션 밖에서 실행: 자체 세션 사용)
-    notified_links = []
+    # 뉴스 수집만 백그라운드에서 조용히 수행 (단독 뉴스 알림은 발송하지 않고 아침 브리핑에 통합)
     try:
-        from core.brazil_news import sync_brazil_news, mark_notified
-        nres = await sync_brazil_news(alert_new=True)
-        fresh = nres.get("new_items", [])[:4]
-        if fresh:
-            lines = ["📰 <b>브라질 국채 관련 새 뉴스</b>"]
-            for it in fresh:
-                lines.append(f"• <a href=\"{it['link']}\">{it['title']}</a> ({it['source']})")
-            msgs.append("\n".join(lines))
-            notified_links = [it["link"] for it in fresh]
+        from core.brazil_news import sync_brazil_news
+        await sync_brazil_news(alert_new=False)
     except Exception as e:
-        print(f"[brazil_bond] news alert skipped: {e}")
+        print(f"[brazil_bond] news sync skipped: {e}")
 
     if msgs:
         ok, _ = await send_telegram_message("\n\n".join(msgs), category="brazil_bond")
-        if ok:
-            if notified_links:
-                await mark_notified(notified_links)
-            if notified_catalysts:
-                async with AsyncSessionLocal() as db:
-                    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
-                    for k in notified_catalysts:
-                        db.add(SectorInsight(sector=k, content="1", generated_at=now_utc))
-                    await db.commit()
+        if ok and notified_catalysts:
+            async with AsyncSessionLocal() as db:
+                now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+                for k in notified_catalysts:
+                    db.add(SectorInsight(sector=k, content="1", generated_at=now_utc))
+                await db.commit()
 
     # zone 및 selic 상태 갱신 (새 세션)
     async with AsyncSessionLocal() as db:
@@ -688,8 +677,8 @@ def _collect_gauges(summary: dict) -> list[str]:
     return gauges
 
 
-def build_brazil_dashboard_message(summary: dict, header_note: str | None = None) -> str:
-    """대시보드 카드와 동일한 지표 내용을 텔레그램(HTML) 메시지로 구성한다."""
+def build_brazil_dashboard_message(summary: dict, header_note: str | None = None, news_items: list[dict] | None = None) -> str:
+    """대시보드 카드와 동일한 지표 내용 및 주요 뉴스를 아침 브리핑 텔레그램(HTML) 메시지로 구성한다."""
     sig = summary.get("signal", {})
     as_of = summary.get("as_of", "")
 
@@ -727,6 +716,13 @@ def build_brazil_dashboard_message(summary: dict, header_note: str | None = None
     if sig.get("action"):
         lines.append("")
         lines.append(f"▶ {sig['action']}")
+
+    if news_items:
+        lines.append("")
+        lines.append("📰 <b>주요 관련 뉴스</b>")
+        for it in news_items[:4]:
+            lines.append(f"• <a href=\"{it['link']}\">{it['title']}</a> ({it['source']})")
+
     lines.append("")
     lines.append("🔗 <a href='https://etf-lens.vercel.app'>etf-lens.vercel.app</a>")
     return "\n".join(lines)
@@ -740,11 +736,19 @@ async def _build_summary_for_alert() -> dict:
 
 
 async def send_brazil_dashboard_digest() -> None:
-    """매일 아침 대시보드 지표 브리핑을 텔레그램으로 발송(카테고리 brazil_bond)."""
+    """매일 아침 대시보드 지표 브리핑 및 뉴스를 텔레그램으로 발송(카테고리 brazil_bond)."""
     from core.notifier import send_telegram_message
     try:
         summary = await _build_summary_for_alert()
-        msg = build_brazil_dashboard_message(summary, header_note="☀️ <b>[브라질 국채 아침 브리핑]</b>")
+        news_items = []
+        try:
+            from core.brazil_news import sync_brazil_news, get_recent_news
+            await sync_brazil_news(alert_new=False)
+            news_items = await get_recent_news(limit=4)
+        except Exception as ne:
+            print(f"[brazil_bond] news sync for digest failed: {ne}")
+
+        msg = build_brazil_dashboard_message(summary, header_note="☀️ <b>[브라질 국채 아침 브리핑]</b>", news_items=news_items)
         ok, _ = await send_telegram_message(msg, category="brazil_bond")
         print(f"[brazil_bond] daily digest sent: {ok}")
     except Exception as e:
