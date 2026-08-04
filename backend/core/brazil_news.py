@@ -7,7 +7,7 @@ link 유니크로 upsert 하며, 이전에 없던(신규) 항목을 반환해 �
 import asyncio
 import html
 import re
-from datetime import timezone, timedelta
+from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
 
 import httpx
@@ -130,13 +130,48 @@ async def sync_brazil_news(alert_new: bool = False) -> dict:
 
 async def get_recent_news(limit: int = 12) -> list[dict]:
     """저장된 뉴스 최신순 반환(프론트 피드용)."""
-    async with AsyncSessionLocal() as db:
-        rows = (await db.execute(
-            select(BrazilNews.title, BrazilNews.source, BrazilNews.link, BrazilNews.published, BrazilNews.published_ts)
-            .order_by(BrazilNews.published_ts.desc().nullslast())
-            .limit(limit)
-        )).all()
-    return [{"title": t, "source": s, "link": l, "published": p} for t, s, l, p, _ in rows]
+    try:
+        async with AsyncSessionLocal() as db:
+            rows = (await db.execute(
+                select(BrazilNews.title, BrazilNews.source, BrazilNews.link, BrazilNews.published, BrazilNews.published_ts)
+                .order_by(BrazilNews.published_ts.desc().nullslast())
+                .limit(limit)
+            )).all()
+        return [{"title": t, "source": s, "link": l, "published": p} for t, s, l, p, _ in rows]
+    except Exception as e:
+        print(f"[brazil_news] get_recent_news failed: {e}")
+        return []
+
+
+async def get_recent_news_since_yesterday() -> list[dict]:
+    """전일 00:00 KST부터 당일까지 발생한 뉴스 목록을 반환 (중복 제거)."""
+    today = datetime.now(_KST).date()
+    yesterday = today - timedelta(days=1)
+    start_dt = datetime(yesterday.year, yesterday.month, yesterday.day, tzinfo=_KST)
+    start_ts = int(start_dt.timestamp())
+
+    try:
+        async with AsyncSessionLocal() as db:
+            rows = (await db.execute(
+                select(BrazilNews.title, BrazilNews.source, BrazilNews.link, BrazilNews.published, BrazilNews.published_ts)
+                .where(BrazilNews.published_ts >= start_ts)
+                .order_by(BrazilNews.published_ts.desc().nullslast())
+            )).all()
+
+        seen_titles: set[str] = set()
+        seen_links: set[str] = set()
+        deduped = []
+        for t, s, l, p, _ in rows:
+            clean_title = t.strip()
+            if l in seen_links or clean_title in seen_titles:
+                continue
+            seen_titles.add(clean_title)
+            seen_links.add(l)
+            deduped.append({"title": clean_title, "source": s, "link": l, "published": p})
+        return deduped
+    except Exception as e:
+        print(f"[brazil_news] get_recent_news_since_yesterday failed: {e}")
+        return []
 
 
 async def mark_notified(links: list[str]):

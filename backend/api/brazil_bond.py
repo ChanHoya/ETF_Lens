@@ -719,8 +719,8 @@ def build_brazil_dashboard_message(summary: dict, header_note: str | None = None
 
     if news_items:
         lines.append("")
-        lines.append("📰 <b>주요 관련 뉴스</b>")
-        for it in news_items[:4]:
+        lines.append("📰 <b>전일~당일 주요 뉴스</b>")
+        for it in news_items:
             lines.append(f"• <a href=\"{it['link']}\">{it['title']}</a> ({it['source']})")
 
     lines.append("")
@@ -736,15 +736,15 @@ async def _build_summary_for_alert() -> dict:
 
 
 async def send_brazil_dashboard_digest() -> None:
-    """매일 아침 대시보드 지표 브리핑 및 뉴스를 텔레그램으로 발송(카테고리 brazil_bond)."""
+    """매일 아침 대시보드 지표 브리핑 및 전일~당일 뉴스를 텔레그램으로 발송(카테고리 brazil_bond)."""
     from core.notifier import send_telegram_message
     try:
         summary = await _build_summary_for_alert()
         news_items = []
         try:
-            from core.brazil_news import sync_brazil_news, get_recent_news
+            from core.brazil_news import sync_brazil_news, get_recent_news_since_yesterday
             await sync_brazil_news(alert_new=False)
-            news_items = await get_recent_news(limit=4)
+            news_items = await get_recent_news_since_yesterday()
         except Exception as ne:
             print(f"[brazil_bond] news sync for digest failed: {ne}")
 

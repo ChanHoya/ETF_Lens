@@ -29,3 +29,11 @@ def test_calendar_alert_key_format():
     assert "brazil_cal_alert_copom_aug_D-1_" in cal_key
     assert today.isoformat() in cal_key
 
+
+@pytest.mark.asyncio
+async def test_get_recent_news_since_yesterday():
+    from core.brazil_news import get_recent_news_since_yesterday
+    news = await get_recent_news_since_yesterday()
+    assert isinstance(news, list)
+
+
