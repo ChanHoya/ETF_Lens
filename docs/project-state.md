@@ -4,11 +4,12 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Activation Zone 현재 위치 펄스(animate-ping/pulse) 하이라이트 추가 및 빌드/푸시 완료 (2026-08-05)
+✅ Current: Activation Zone 주의/경고 음영 바운드 수식 정정으로 전체 영역 노란색/빨간색 음영 정상 표출 완료 (2026-08-05)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-08-05):
-> - Activation Zone 2축 차트 내 현재 환율×금리 교차점(동그라미)에 animate-ping 바깥 파동 및 animate-pulse 펄스 하이라이트 애니메이션 구현.
+> - Recharts의 ReferenceArea 바운드가 Y축 domain 범위(13.0~15.5%)를 벗어나 무효화되던 원인 규명 및 좌표 수정.
+> - 환율 290~300원 구간, 금리 14.2% 이하 구간, 금리 14.7~15.0% 구간 등 모든 주의 영역(#f59e0b)과 경고 영역(#ef4444)이 정상적으로 렌더링되도록 처리.
 > - 프로덕션 빌드 성공 및 git commit / push 완료 (main branch).
  
  
