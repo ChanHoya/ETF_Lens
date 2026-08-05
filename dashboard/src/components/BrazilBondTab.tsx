@@ -670,8 +670,46 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                         itemStyle={{ color: '#fff' }}
                         labelStyle={{ color: '#9ca3af' }}
                         formatter={(v: any, n: any) => [fmt(v, 2), n === 'x' ? '환율' : '금리']} />
-                    {/* 점: 채움=금리색, 테두리=환율색 */}
-                    <Scatter data={point} fill={rateColor} stroke={fxColor} strokeWidth={3} shape="circle" />
+                    {/* 현재 위치 점: 깜빡임 오라(animate-ping + animate-pulse) 하이라이트 적용 */}
+                    <Scatter
+                        data={point}
+                        shape={(props: any) => {
+                            const { cx, cy } = props;
+                            if (cx === undefined || cy === undefined || isNaN(cx) || isNaN(cy)) return null;
+                            return (
+                                <g key={`pulsing-dot-${cx}-${cy}`}>
+                                    {/* 핑 애니메이션 바깥 파동링 */}
+                                    <circle
+                                        cx={cx}
+                                        cy={cy}
+                                        r={14}
+                                        fill={rateColor}
+                                        opacity={0.6}
+                                        className="animate-ping"
+                                        style={{ transformOrigin: `${cx}px ${cy}px` }}
+                                    />
+                                    {/* 은은한 아우라 링 */}
+                                    <circle
+                                        cx={cx}
+                                        cy={cy}
+                                        r={11}
+                                        fill={fxColor}
+                                        opacity={0.35}
+                                    />
+                                    {/* 메인 하이라이트 코어 점 (펄스 애니메이션) */}
+                                    <circle
+                                        cx={cx}
+                                        cy={cy}
+                                        r={8}
+                                        fill={rateColor}
+                                        stroke={fxColor}
+                                        strokeWidth={3}
+                                        className="animate-pulse"
+                                    />
+                                </g>
+                            );
+                        }}
+                    />
                 </ScatterChart>
             </ResponsiveContainer>
             
