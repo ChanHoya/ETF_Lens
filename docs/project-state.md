@@ -4,13 +4,14 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Activation Zone 2축 차트 환율 X축 240~320원 고정 레인지 및 현재/목표 갭 가이드선 수정 완료 (2026-08-05)
+✅ Current: Activation Zone 목표금리 상하한 점선 및 주의(노랑)/경고(빨강) 음영 영역 개편 완료 (2026-08-05)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-08-05):
-> - Activation Zone 2축 차트의 환율 X축 고정 레인지(240~320원) 적용 완료.
-> - 목표 환율(290원) vs 현재 환율(278.4원) 세로선 분리 및 갭 뱃지 표시 완료.
-> - 프로덕션 빌드 테스트 및 git commit / push 완료 (main branch).
+> - Activation Zone 차트에 목표 금리 하한(14.2%) 및 상한(14.7%) 점선 표시 완료.
+> - 목표 금리 이탈 및 환율 290~300원 대역 주의(노란색 #f59e0b) 음영 적용.
+> - 금리 > 15.0% 및 환율 상한선 초과(> 300원) 대역 경고(빨간색 #ef4444) 음영 적용.
+> - 프로덕션 빌드 성공 및 git commit / push 완료 (main branch).
  
  
 ## Current Sprint
