@@ -601,7 +601,7 @@ function IndicatorGuide() {
     );
 }
 
-// Activation Zone: 2축 산점도 (환율 X 역방향, 금리 Y). 현재 위치 점 표시.
+// Activation Zone: 2축 산점도 (환율 X, 금리 Y). 현재 위치 점 표시.
 function ActivationZoneChart({ summary }: { summary: Summary }) {
     const t = summary.targets;
     const y5 = summary.indicators.find(i => i.key === 'y5')?.value ?? null;
@@ -613,43 +613,41 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
     const rateColor = GAUGE_HEX[summary.indicators.find(i => i.key === 'y5')?.gauge || 'gray'];
     const fxColor = GAUGE_HEX[summary.indicators.find(i => i.key === 'brl_krw')?.gauge || 'gray'];
 
-    // Dynamic zoomed domains centered around the midpoint between current and target
-    const xDomain = useMemo(() => {
-        if (fx === null) return [302, 272];
-        const target = t.fx_target; // 290
-        const mid = (fx + target) / 2;
-        return [Math.ceil(mid + 7), Math.floor(mid - 7)];
-    }, [fx, t.fx_target]);
+    // X축 레인지: 240 ~ 320원 고정 레인지
+    const xDomain = useMemo(() => [240, 320], []);
 
     const yDomain = useMemo(() => {
-        if (y5 === null) return [13.5, 15.6];
+        if (y5 === null) return [13.5, 15.5];
         const target = t.rate_floor; // 14.2
-        const mid = (y5 + target) / 2;
-        return [parseFloat((mid - 0.4).toFixed(2)), parseFloat((mid + 0.4).toFixed(2))];
+        const minVal = Math.min(y5, target) - 0.4;
+        const maxVal = Math.max(y5, 15.0) + 0.4;
+        return [parseFloat(minVal.toFixed(2)), parseFloat(maxVal.toFixed(2))];
     }, [y5, t.rate_floor]);
+
+    const fxGap = (fx !== null && t.fx_target !== undefined) ? t.fx_target - fx : null;
 
     return (
         <div className="space-y-4">
             <ResponsiveContainer width="100%" height={280}>
                 <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                    {/* 존 배경: 환율 X축은 reversed(300→270) */}
+                    {/* 존 배경: X축 240~320 레인지 */}
                     {/* 14.2~14.7 최적(초록) · 14.7~15.0 천장 접근 주의(노랑) · >15 리스크(빨강) · <14.2 매력 저하(노랑) */}
-                    <ReferenceArea x1={t.fx_target} x2={272} y1={t.rate_floor} y2={t.rate_tranche2} fill="#10b981" fillOpacity={0.22} />
-                    <ReferenceArea x1={t.fx_target} x2={272} y1={t.rate_tranche2} y2={t.rate_risk} fill="#f59e0b" fillOpacity={0.18} />
-                    <ReferenceArea x1={302} x2={272} y1={13.5} y2={t.rate_floor} fill="#f59e0b" fillOpacity={0.12} />
-                    <ReferenceArea x1={302} x2={t.fx_target} y1={t.rate_floor} y2={15.6} fill="#64748b" fillOpacity={0.12} />
-                    <ReferenceArea x1={302} x2={272} y1={t.rate_risk} y2={15.6} fill="#ef4444" fillOpacity={0.15} />
+                    <ReferenceArea x1={240} x2={t.fx_target} y1={t.rate_floor} y2={t.rate_tranche2} fill="#10b981" fillOpacity={0.22} />
+                    <ReferenceArea x1={240} x2={t.fx_target} y1={t.rate_tranche2} y2={t.rate_risk} fill="#f59e0b" fillOpacity={0.18} />
+                    <ReferenceArea x1={240} x2={320} y1={13.5} y2={t.rate_floor} fill="#f59e0b" fillOpacity={0.12} />
+                    <ReferenceArea x1={t.fx_target} x2={320} y1={t.rate_floor} y2={15.5} fill="#64748b" fillOpacity={0.12} />
+                    <ReferenceArea x1={240} x2={320} y1={t.rate_risk} y2={15.5} fill="#ef4444" fillOpacity={0.15} />
                     
                     {/* 목표 조건 기준선 (하얀색 점선) */}
-                    <ReferenceLine x={t.fx_target} stroke="#ffffff" strokeOpacity={0.7} strokeDasharray="4 4" label={{ value: '목표 290원', fill: '#ffffff', fontSize: 10, position: 'insideTopLeft' }} />
-                    <ReferenceLine y={t.rate_floor} stroke="#ffffff" strokeOpacity={0.7} strokeDasharray="4 4" label={{ value: '목표 14.2%', fill: '#ffffff', fontSize: 10, position: 'insideBottomRight' }} />
+                    <ReferenceLine x={t.fx_target} stroke="#ffffff" strokeOpacity={0.8} strokeDasharray="4 4" label={{ value: '목표 290원', fill: '#ffffff', fontSize: 10, position: 'insideTopRight' }} />
+                    <ReferenceLine y={t.rate_floor} stroke="#ffffff" strokeOpacity={0.8} strokeDasharray="4 4" label={{ value: '목표 14.2%', fill: '#ffffff', fontSize: 10, position: 'insideBottomRight' }} />
                     
                     {/* 세로선=환율색, 가로선=금리색 (각 축 게이지 기준 독립 판정) */}
-                    {fx !== null && <ReferenceLine x={fx} stroke={fxColor} strokeOpacity={0.6} strokeDasharray="3 3" label={{ value: `현재 ${fx.toFixed(1)}원`, fill: fxColor, fontSize: 10, position: 'insideBottomLeft' }} />}
-                    {y5 !== null && <ReferenceLine y={y5} stroke={rateColor} strokeOpacity={0.6} strokeDasharray="3 3" label={{ value: `현재 ${y5.toFixed(2)}%`, fill: rateColor, fontSize: 10, position: 'insideTopRight' }} />}
+                    {fx !== null && <ReferenceLine x={fx} stroke={fxColor} strokeOpacity={0.8} strokeDasharray="3 3" label={{ value: `현재 ${fx.toFixed(1)}원`, fill: fxColor, fontSize: 10, position: 'insideBottomLeft' }} />}
+                    {y5 !== null && <ReferenceLine y={y5} stroke={rateColor} strokeOpacity={0.8} strokeDasharray="3 3" label={{ value: `현재 ${y5.toFixed(2)}%`, fill: rateColor, fontSize: 10, position: 'insideTopLeft' }} />}
 
-                    <XAxis type="number" dataKey="x" domain={xDomain} reversed={false} tick={{ fill: '#9ca3af', fontSize: 12 }}
+                    <XAxis type="number" dataKey="x" domain={xDomain} ticks={[240, 260, 280, 290, 300, 320]} tick={{ fill: '#9ca3af', fontSize: 12 }}
                         label={{ value: '원/헤알 환율 (원)', position: 'insideBottom', offset: -10, fill: '#6b7280', fontSize: 12 }} />
                     <YAxis type="number" dataKey="y" domain={yDomain} tick={{ fill: '#9ca3af', fontSize: 12 }}
                         label={{ value: '5년물 금리(%)', angle: -90, position: 'insideLeft', fill: '#6b7280', fontSize: 12 }} />
@@ -665,7 +663,7 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                 </ScatterChart>
             </ResponsiveContainer>
             
-            {/* 슬림화된 범례 */}
+            {/* 범례 및 목표대비 갭 표시 */}
             <div className="border-t border-white/5 pt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-400">
                 <div className="flex items-center gap-3">
                     <span className="font-semibold text-gray-300">범례 기준:</span>
@@ -673,6 +671,12 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                     <span className="text-amber-300 font-medium">🟡 주의 (금리 14.7~15.0%·13~14.2% / 환율 290~300원)</span>
                     <span className="text-rose-300 font-medium">🔴 경고 (금리 &gt;15%·&lt;13% / 환율 &gt;300원)</span>
                 </div>
+                {fxGap !== null && fx !== null && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-medium">
+                        <span>환율 갭:</span>
+                        <span className="font-bold">{fxGap > 0 ? `+${fxGap.toFixed(1)}원 (우호)` : `${fxGap.toFixed(1)}원 (초과)`}</span>
+                    </div>
+                )}
             </div>
 
             {/* 현재 그래프 수치에 따른 실시간 분석 및 종합 판정 벤토 카드 */}
