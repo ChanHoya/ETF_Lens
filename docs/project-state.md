@@ -4,12 +4,11 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: Activation Zone 주의 구간(환율 290~300원, 금리 ≤14.2%) 노란색 음영 통일 및 빌드/푸시 완료 (2026-08-05)
+✅ Current: Activation Zone 현재 위치 펄스(animate-ping/pulse) 하이라이트 추가 및 빌드/푸시 완료 (2026-08-05)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-08-05):
-> - 환율 290~300원 구간 및 금리 14.2% 이하 구간을 금리 14.7~15.0% 구간과 동일한 노란색 주의 음영(#f59e0b, opacity 0.22)으로 일원화.
-> - Y축 스케일을 13.2~15.4%로 고정하여 14.2% 이하 영역의 음영 시인성 완전 확보.
+> - Activation Zone 2축 차트 내 현재 환율×금리 교차점(동그라미)에 animate-ping 바깥 파동 및 animate-pulse 펄스 하이라이트 애니메이션 구현.
 > - 프로덕션 빌드 성공 및 git commit / push 완료 (main branch).
  
  
