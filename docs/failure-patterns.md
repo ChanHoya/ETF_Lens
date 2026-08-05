@@ -258,6 +258,14 @@
 - **원인**: 실시간 금리/환율 변경 감지를 위한 15분 intraday 스케줄러(`check_brazil_signal_and_alert`) 내에서 D-1/D-DAY 캘린더 이벤트를 체크할 때, 당일 이미 알림을 보냈는지에 대한 디두플리케이션(중복 체크) 상태 저장이 누락되어 스케줄러 실행 시마다 알림 메시지에 지속 추가됨.
 - **해결**: `SectorInsight` DB에 `brazil_cal_alert_{key}_{tag}_{date}` 형태의 당일 발송 상태 레코드를 기록하여, 15분 스케줄러 호출 시 당일 이미 D-1/D-DAY 알림을 보낸 이벤트는 메시지 생성을 스킵(하루 1회 제한)하도록 디두플리케이션 처리.
 
+### [FP-032] Recharts ReferenceArea 도메인 범위를 벗어난 y1/y2 또는 x1/x2 좌표 지정 시 컴포넌트 전체 미표출(null) 버그
+- **증상**: Recharts 차트의 배경 구간 음영(`ReferenceArea`)에 `fill="#f59e0b"` 등을 설정하고 코드를 작성했으나, 특정 음영 영역만 화면에 그려지지 않고 칠흑색(검은색) 배경으로 구멍이 뚫린 채 투명하게 렌더링됨.
+- **원인**: Recharts의 `ReferenceArea` 컴포넌트는 `x1`, `x2`, `y1`, `y2` 좌표 중 단 하나라도 현재 `XAxis` 또는 `YAxis`의 `domain` 범위를 벗어나면(예: `yDomain=[13.4, 15.4]`인데 `y1=12.0` 지정), 뷰포트 자르기(clipping) 대신 해당 `ReferenceArea` 컴포넌트 전체를 `null`로 평가하여 렌더링을 완전히 취소함.
+- **해결**:
+  1. `XAxis` 및 `YAxis`의 `domain` 범위(예: `xDomain=[240, 320]`, `yDomain=[13.0, 15.5]`)를 고정 또는 안전한 범위로 정의.
+  2. 모든 `ReferenceArea`의 `x1`, `x2`, `y1`, `y2` 경계값이 반드시 `domain`의 min/max 범위 이내에 엄격하게 정렬되도록 수치를 일치시켜 무효화(null conversion)를 방지함.
+
+
 
 
 
