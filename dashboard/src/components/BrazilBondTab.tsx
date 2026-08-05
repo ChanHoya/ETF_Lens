@@ -616,9 +616,10 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
     // X축 레인지: 240 ~ 320원 고정 레인지
     const xDomain = useMemo(() => [240, 320], []);
 
+    // Y축 레인지: 13.2% ~ 15.4% 고정 레인지 (목표하한 14.2%, 목표상한 14.7%, 경고선 15.0% 전 영역 포함)
     const yDomain = useMemo(() => {
-        if (y5 === null) return [13.5, 15.5];
-        const minVal = Math.min(y5, 13.8) - 0.2;
+        if (y5 === null) return [13.2, 15.4];
+        const minVal = Math.min(y5, 13.6) - 0.2;
         const maxVal = Math.max(y5, 15.1) + 0.3;
         return [parseFloat(minVal.toFixed(1)), parseFloat(maxVal.toFixed(1))];
     }, [y5]);
@@ -630,24 +631,22 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
             <ResponsiveContainer width="100%" height={280}>
                 <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                    {/* 🟢 최적 구간: 금리 14.2~14.7% & 환율 ≤ 290원 */}
+                    {/* 🟢 최적 구간 (초록색 음영): 금리 14.2~14.7% & 환율 ≤ 290원 */}
                     <ReferenceArea x1={240} x2={t.fx_target} y1={t.rate_floor} y2={t.rate_tranche2} fill="#10b981" fillOpacity={0.25} />
 
-                    {/* 🟡 주의 구간 (노란색 음영): 목표 금리 상하한 이탈 & 환율 290~300원 */}
+                    {/* 🟡 주의 구간 (노란색 음영 동일 적용 #f59e0b, opacity 0.22) */}
                     {/* 1) 금리 상한(14.7%) ~ 경고선(15.0%) (환율 ≤ 290원) */}
-                    <ReferenceArea x1={240} x2={t.fx_target} y1={t.rate_tranche2} y2={t.rate_risk} fill="#f59e0b" fillOpacity={0.20} />
-                    {/* 2) 금리 하한(14.2%) 미만 구간 (환율 ≤ 290원) */}
-                    <ReferenceArea x1={240} x2={t.fx_target} y1={13.0} y2={t.rate_floor} fill="#f59e0b" fillOpacity={0.15} />
-                    {/* 3) 환율 290 ~ 300원 주의 구간 (금리 13.0~15.0%) */}
-                    <ReferenceArea x1={t.fx_target} x2={300} y1={13.0} y2={t.rate_risk} fill="#f59e0b" fillOpacity={0.18} />
+                    <ReferenceArea x1={240} x2={t.fx_target} y1={t.rate_tranche2} y2={t.rate_risk} fill="#f59e0b" fillOpacity={0.22} />
+                    {/* 2) 금리 하한(14.2%) 이하 구간 (환율 ≤ 290원) */}
+                    <ReferenceArea x1={240} x2={t.fx_target} y1={12.0} y2={t.rate_floor} fill="#f59e0b" fillOpacity={0.22} />
+                    {/* 3) 환율 290 ~ 300원 구간 (금리 ≤ 15.0%) */}
+                    <ReferenceArea x1={t.fx_target} x2={300} y1={12.0} y2={t.rate_risk} fill="#f59e0b" fillOpacity={0.22} />
 
-                    {/* 🔴 경고 구간 (빨간색 음영): 금리 > 15.0% 및 환율 상한선(>300원) 초과 */}
+                    {/* 🔴 경고 구간 (빨간색 음영 #ef4444, opacity 0.25) */}
                     {/* 1) 금리 15.0% 초과 경고 구간 */}
-                    <ReferenceArea x1={240} x2={300} y1={t.rate_risk} y2={16.0} fill="#ef4444" fillOpacity={0.22} />
-                    {/* 2) 환율 300원 초과 경고 영역 */}
+                    <ReferenceArea x1={240} x2={300} y1={t.rate_risk} y2={16.0} fill="#ef4444" fillOpacity={0.25} />
+                    {/* 2) 환율 300원 초과 경고 영역 (전체 금리 대역) */}
                     <ReferenceArea x1={300} x2={320} y1={12.0} y2={16.0} fill="#ef4444" fillOpacity={0.25} />
-                    {/* 3) 금리 13.0% 미만 극단 저금리 경고 */}
-                    <ReferenceArea x1={240} x2={300} y1={12.0} y2={13.0} fill="#ef4444" fillOpacity={0.18} />
                     
                     {/* 목표 조건 기준선 (하얀색 점선: 환율 290원, 금리 하한 14.2%, 금리 상한 14.7%) */}
                     <ReferenceLine x={t.fx_target} stroke="#ffffff" strokeOpacity={0.8} strokeDasharray="4 4" label={{ value: '목표 290원', fill: '#ffffff', fontSize: 10, position: 'insideTopRight' }} />
