@@ -31,6 +31,14 @@ const fmtShort = (n: number) => {
     return fmtKRW(n);
 };
 
+const getAccountDisplayName = (acc: { account_no: string; account_name: string }, idx: number) => {
+    const rawName = (acc.account_name || "").trim();
+    // 이름에 이미 숫자가 포함되어 있는지 검사 (예: "연동계좌 1" 등)
+    const hasNumber = /\d+/.test(rawName);
+    const baseName = hasNumber ? rawName : `${rawName || "연동계좌"} ${idx + 1}`;
+    return `${baseName} (${acc.account_no})`;
+};
+
 export default function AssetHistoryChart({ accounts }: Props) {
     const [selectedAccount, setSelectedAccount] = useState<string>("ALL");
     const [compareMetric, setCompareMetric] = useState<"asset" | "return">("asset");
@@ -61,22 +69,23 @@ export default function AssetHistoryChart({ accounts }: Props) {
                     setIsLoading(false);
                     return;
                 }
-                const promises = accounts.map(async (acc) => {
+                const promises = accounts.map(async (acc, idx) => {
+                    const displayName = getAccountDisplayName(acc, idx);
                     try {
                         const res = await fetch(
                             `${API_BASE}/api/v1/my/asset-history?account_no=${encodeURIComponent(
                                 acc.account_no
                             )}&use_reconstruction=${useReconstruction}&days=1825`
                         );
-                        if (!res.ok) return { account_no: acc.account_no, name: acc.account_name, history: [] };
+                        if (!res.ok) return { account_no: acc.account_no, name: displayName, history: [] };
                         const data = await res.json();
                         return {
                             account_no: acc.account_no,
-                            name: acc.account_name,
+                            name: displayName,
                             history: data.status === "success" && data.history ? (data.history as HistoryItem[]) : []
                         };
                     } catch {
-                        return { account_no: acc.account_no, name: acc.account_name, history: [] };
+                        return { account_no: acc.account_no, name: displayName, history: [] };
                     }
                 });
                 const results = await Promise.all(promises);
@@ -172,7 +181,7 @@ export default function AssetHistoryChart({ accounts }: Props) {
         if (active && payload && payload.length) {
             const date = payload[0].payload.date;
             return (
-                <div className="bg-[#0f111a]/95 border border-white/10 p-3.5 rounded-2xl shadow-2xl backdrop-blur-xl text-xs space-y-2 min-w-[220px]">
+                <div className="bg-[#0f111a]/95 border border-white/10 p-3.5 rounded-2xl shadow-2xl backdrop-blur-xl text-xs space-y-2 min-w-[260px]">
                     <p className="text-gray-400 font-bold border-b border-white/5 pb-1">{date}</p>
                     {compareData.map((acc, idx) => {
                         const color = ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length].stroke;
@@ -180,9 +189,9 @@ export default function AssetHistoryChart({ accounts }: Props) {
                         if (val === undefined || val === null) return null;
                         return (
                             <div key={acc.account_no} className="flex justify-between items-center gap-4">
-                                <div className="flex items-center gap-1.5 truncate max-w-[140px]">
+                                <div className="flex items-center gap-1.5">
                                     <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: color }} />
-                                    <span className="text-gray-300 font-semibold truncate">{acc.name}</span>
+                                    <span className="text-gray-300 font-semibold">{acc.name}</span>
                                 </div>
                                 <span className="font-extrabold whitespace-nowrap" style={{ color }}>
                                     {compareMetric === "asset" ? `${fmtKRW(val)}원` : `${val >= 0 ? "+" : ""}${val.toFixed(2)}%`}
@@ -221,9 +230,9 @@ export default function AssetHistoryChart({ accounts }: Props) {
                     >
                         <option value="ALL">전체 계좌 통합</option>
                         <option value="COMPARE_ALL">📊 개별 계좌 전체 비교 (모두 보기)</option>
-                        {accounts.map((acc) => (
+                        {accounts.map((acc, idx) => (
                             <option key={acc.account_no} value={acc.account_no}>
-                                {acc.account_name} ({acc.account_no})
+                                {getAccountDisplayName(acc, idx)}
                             </option>
                         ))}
                     </select>
