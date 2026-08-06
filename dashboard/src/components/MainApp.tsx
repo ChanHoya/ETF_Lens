@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, BarChart, Bar, Cell, PieChart, Pie, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
-import { Search, Loader2, Plus, X, ChevronDown, Aperture, Star, Trash2, Edit2, Check, Share2, RefreshCw, BarChart2, Minus, Zap, Crown, Target, Layers, BookOpen, AlertCircle, ArrowUpRight, ArrowDownRight, Clock, ShieldAlert, Cpu } from "lucide-react";
+import { Search, Loader2, Plus, X, ChevronDown, Aperture, Star, Trash2, Edit2, Check, Share2, RefreshCw, BarChart2, Minus, Zap, Crown, Target, Layers, BookOpen, AlertCircle, ArrowUpRight, ArrowDownRight, Clock, ShieldAlert, Cpu, Maximize2, Minimize2 } from "lucide-react";
 import { API_BASE } from '@/lib/apiConfig';
 import { prefetchMonitorData } from '@/lib/monitorPrefetch';
 import CompareChart from "@/components/CompareChart";
@@ -103,6 +103,46 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
         setFailedServices(["서버 통신"]);
       });
   }, []);
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        const docEl = document.documentElement as any;
+        if (docEl.requestFullscreen) {
+          await docEl.requestFullscreen();
+        } else if (docEl.webkitRequestFullscreen) {
+          await docEl.webkitRequestFullscreen();
+        } else if (docEl.msRequestFullscreen) {
+          await docEl.msRequestFullscreen();
+        }
+      } else {
+        const doc = document as any;
+        if (doc.exitFullscreen) {
+          await doc.exitFullscreen();
+        } else if (doc.webkitExitFullscreen) {
+          await doc.webkitExitFullscreen();
+        } else if (doc.msExitFullscreen) {
+          await doc.msExitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.error("Fullscreen toggle error:", err);
+    }
+  };
 
 
 
@@ -1042,46 +1082,60 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
         <div className="absolute bottom-[-10%] left-[10%] w-[60vw] h-[60vw] rounded-full bg-pink-600/10 blur-[150px] mix-blend-screen transition-all duration-1000"></div>
       </div>
 
-      <header className="w-full max-w-[95vw] xl:max-w-[1400px] mb-2 md:mb-4 flex flex-row md:flex-row justify-between items-center gap-2 md:gap-3 relative z-50">
-        {/* 로고 */}
-        <div className="flex flex-col items-start cursor-pointer group shrink-0" onClick={handleReset}>
-          <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 drop-shadow-sm flex items-center gap-2 group-hover:opacity-80 transition-opacity">
-            <Aperture className="w-6 h-6 md:w-10 md:h-10 text-indigo-400 group-hover:rotate-180 transition-transform duration-700" />
-            ETF Lens
-            <div className="hidden sm:flex flex-col gap-1 items-start ml-2">
-              <span className={`text-[10px] md:text-[11px] font-mono font-medium px-2 py-0.5 rounded-md uppercase tracking-widest whitespace-nowrap ${dbVersion === 'VER --'
-                ? "text-rose-400 bg-rose-400/10 border border-rose-400/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse"
-                : "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
-                }`}>
-                {dbVersion}
-              </span>
-              {healthStatus === 'pending' && (
-                <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-gray-400 bg-gray-400/10 border border-gray-400/20 animate-pulse flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-ping" />
-                  외부연동 체크중...
+      <header className="w-full max-w-[95vw] xl:max-w-[1400px] mb-2 md:mb-4 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-2.5 md:gap-3 relative z-50">
+        {/* 상단 행: 로고 & 툴버튼 (전체화면 + AI Assistant) */}
+        <div className="flex items-center justify-between gap-2 shrink-0">
+          <div className="flex flex-col items-start cursor-pointer group shrink-0" onClick={handleReset}>
+            <h1 className="text-xl sm:text-2xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 drop-shadow-sm flex items-center gap-1.5 sm:gap-2 group-hover:opacity-80 transition-opacity">
+              <Aperture className="w-6 h-6 md:w-10 md:h-10 text-indigo-400 group-hover:rotate-180 transition-transform duration-700" />
+              ETF Lens
+              <div className="hidden sm:flex flex-col gap-1 items-start ml-2">
+                <span className={`text-[10px] md:text-[11px] font-mono font-medium px-2 py-0.5 rounded-md uppercase tracking-widest whitespace-nowrap ${dbVersion === 'VER --'
+                  ? "text-rose-400 bg-rose-400/10 border border-rose-400/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse"
+                  : "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
+                  }`}>
+                  {dbVersion}
                 </span>
-              )}
-              {healthStatus === 'ok' && (
-                <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-sky-400 bg-sky-400/10 border border-sky-400/20 animate-pulse shadow-[0_0_10px_rgba(56,189,248,0.2)]">
-                  모든 연동기능이 정상작동중 입니다.
-                </span>
-              )}
-              {healthStatus === 'error' && (
-                <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-rose-500 bg-rose-500/10 border border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] flex items-center gap-1">
-                  <AlertCircle size={12} /> {failedServices.length > 0 ? `${failedServices.join(', ')} 오류 체크바람` : '현재 연동에 문제가 있습니다. 체크바람'}
-                </span>
-              )}
-            </div>
-          </h1>
+                {healthStatus === 'pending' && (
+                  <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-gray-400 bg-gray-400/10 border border-gray-400/20 animate-pulse flex items-center gap-1">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-ping" />
+                    외부연동 체크중...
+                  </span>
+                )}
+                {healthStatus === 'ok' && (
+                  <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-sky-400 bg-sky-400/10 border border-sky-400/20 animate-pulse shadow-[0_0_10px_rgba(56,189,248,0.2)]">
+                    모든 연동기능이 정상작동중 입니다.
+                  </span>
+                )}
+                {healthStatus === 'error' && (
+                  <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-rose-500 bg-rose-500/10 border border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] flex items-center gap-1">
+                    <AlertCircle size={12} /> {failedServices.length > 0 ? `${failedServices.join(', ')} 오류 체크바람` : '현재 연동에 문제가 있습니다. 체크바람'}
+                  </span>
+                )}
+              </div>
+            </h1>
+          </div>
+
+          {/* 우측 툴버튼 (전체화면 + AI Assistant) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* 전체화면 확대 버튼 */}
+            <button
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "화면 복원" : "전체 화면 확대"}
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 hover:text-indigo-100 text-xs sm:text-sm font-bold transition-all shadow-sm shrink-0 backdrop-blur-md active:scale-95 cursor-pointer"
+            >
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" /> : <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />}
+              <span>{isFullscreen ? "복원" : "전체화면"}</span>
+            </button>
+
+            {/* AI Assistant 버튼 */}
+            <ChatBot renderTrigger isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
+          </div>
         </div>
 
-        {/* 우측: AI 버튼 + 탭 (PC에서만 탭 표시) */}
-        <div className="flex items-center gap-2 md:gap-4">
-          {/* AI Assistant 버튼 */}
-          <ChatBot renderTrigger isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
-
-          {/* 메인 탭 — PC 전용 (모바일은 하단 네비로 대체) */}
-          <nav className="hidden md:flex items-center gap-2 md:gap-4 bg-white/[0.03] px-4 md:px-6 py-2 rounded-full border border-white/10 backdrop-blur-md shadow-sm">
+        {/* 가로 스크롤 가능한 메인 메뉴바 (모바일 & PC 공통 터치 스크롤 지원) */}
+        <div className="relative w-full md:w-auto overflow-hidden rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-md shadow-sm">
+          <nav className="flex items-center gap-1.5 sm:gap-2 md:gap-3 px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 overflow-x-auto scrollbar-hide whitespace-nowrap touch-pan-x min-w-0 max-w-full">
             {[
               { id: 'analysis', label: '종목분석' },
               { id: 'sector', label: '섹터분석' },
@@ -1127,7 +1181,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                     setNaverEtfCode(null);
                     setSelectedDetailEtf(null);
                   }}
-                  className={`text-[17px] tracking-wide font-bold transition-all px-3 md:px-4 py-1.5 rounded-full whitespace-nowrap ${isActive ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'}`}
+                  className={`text-sm sm:text-[15px] md:text-[17px] tracking-wide font-bold transition-all px-3 sm:px-3.5 md:px-4 py-1 sm:py-1.5 rounded-full whitespace-nowrap shrink-0 ${isActive ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'}`}
                 >
                   {tab.label}
                 </button>
@@ -1709,68 +1763,11 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
       </div >
 
 
-      {/* Copyright — PC only */}
-      <div className="hidden md:flex mt-auto w-full text-center text-sm text-gray-500/80 font-medium items-center justify-center gap-3 pb-1">
+      {/* Copyright */}
+      <div className="flex mt-auto w-full text-center text-xs sm:text-sm text-gray-500/80 font-medium items-center justify-center gap-3 py-3">
         <span>Copyright &copy; Hoya 2026</span>
         <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260531_2310</span>
       </div>
-
-      {/* 모바일 전용 하단 네비게이션 바 (md 이상에서는 숨김) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[90] flex items-center justify-around bg-[#1e2035]/98 backdrop-blur-xl border-t border-white/20 shadow-[0_-4px_24px_rgba(0,0,0,0.5)]"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', height: 'calc(68px + env(safe-area-inset-bottom, 0px))' }}
-      >
-        {[
-          { id: 'analysis',     label: '종목분석',  icon: <BarChart2 className="w-6 h-6" /> },
-          { id: 'sector',       label: '섹터분석',  icon: <Layers    className="w-6 h-6" /> },
-          { id: 'discover',     label: '시장동향',  icon: <Cpu       className="w-6 h-6" /> },
-          { id: 'etftracker',   label: 'ETF추적기', icon: <Target    className="w-6 h-6" /> },
-          { id: 'etfcheck',     label: 'ETF Check', icon: <BookOpen  className="w-6 h-6" /> },
-        ].map(tab => {
-          const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call', 'brazil'].includes(activeTab);
-          const isActive =
-            (tab.id === 'etfcheck'  && isEtfCheckModalOpen) ||
-            (tab.id === 'analysis'  && isAnalysisActive && !isEtfCheckModalOpen) ||
-            (activeTab === tab.id   && !isEtfCheckModalOpen);
-          return (
-            <button
-              key={tab.id}
-              onClick={() => {
-                if (tab.id === 'etfcheck') {
-                  setIsEtfCheckModalOpen(true);
-                  setHasOpenedEtfCheck(true);
-                  return;
-                }
-                if (tab.id === 'etftracker') {
-                  window.open('https://ystreet.co.kr/etf-tracker/', '_blank', 'noopener,noreferrer');
-                  return;
-                }
-                if (tab.id === 'analysis') {
-                  clearAllSlots();
-                  setIsEtfCheckModalOpen(false);
-                  return;
-                }
-                setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff' | 'sector' | 'brazil');
-                setIsEtfCheckModalOpen(false);
-                setNaverEtfCode(null);
-                setSelectedDetailEtf(null);
-              }}
-              className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full pt-1 transition-all ${
-                isActive ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              <span className={`transition-transform ${isActive ? 'scale-110' : ''}`}>
-                {tab.icon}
-              </span>
-              <span className={`text-[11px] font-bold tracking-tight ${isActive ? 'text-indigo-400' : 'text-gray-400'}`}>
-                {tab.label}
-              </span>
-              {isActive && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500" />
-              )}
-            </button>
-          );
-        })}
-      </nav>
 
       {/* Global Loading Overlay */}
       {loading && (
