@@ -4,12 +4,13 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: 8/6 Copom 발표 완료에 따른 Tranche 2 (🎯 CURRENT STAGE 현재 실행 구간) 동적 스위칭 로직 반영 완료 (2026-08-06)
+✅ Current: 상단 메인 메뉴바 터치 가로 스크롤 구현, 하단 네비 제거 및 전체화면 확대 기능 추가 완료 (2026-08-06)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-08-06):
-> - 기존에 UI상 `Tranche 1`으로 고정(하드코딩)되어 있던 분할 매수 로드맵의 `CURRENT STAGE (현재 실행 구간)` 하이라이트 지정을 날짜 및 Copom 발표 경과 상태에 따라 동적 전환되도록 개편.
-> - 8월 6일 Copom 발표가 완료됨에 따라 **Tranche 2 (8월 초 Copom 후, 누적 50~60%)**가 🎯 CURRENT STAGE로 자동 점등되도록 백엔드(`brazil_bond.py`) 및 프론트엔드(`BrazilBondTab.tsx`) 연동 완료.
+> - 모바일/스마트폰 좁은 화면 대응: 상단 메인 메뉴바를 `overflow-x-auto scrollbar-hide touch-pan-x` 구조로 개편하여 터치 드래그로 `종목분석`, `섹터분석`, `시장동향`, `ETF추적기`, `ETF Check`, `TFF_Fund`, `My` 전 탭을 가로 스크롤 탐색 가능하도록 적용.
+> - 하단 화면 가림 개선: 화면 높이를 차단하던 모바일 하단 고정 네비게이션 팝업 바를 완전 제거하여 컨텐츠 영역 100% 확보.
+> - 브라우저 타이틀바 제거 & 전체화면 기능: 상단 헤더 우측 툴바에 HTML5 Fullscreen API 연동 `전체화면` / `복원` 확대 버튼 추가.
 > - 프로덕션 빌드 성공 및 git commit / push 완료 (main branch).
  
  
