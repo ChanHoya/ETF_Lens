@@ -4,13 +4,13 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: 2026-08-06 브라질 Copom 금리 결정(25bp 인하 ➔ 14.00%, 시나리오 A 적중) 결과 및 대응 액션플랜 타임라인 즉시 업데이트 완료 (2026-08-06)
+✅ Current: 8/6 Copom 발표 완료에 따른 Tranche 2 (🎯 CURRENT STAGE 현재 실행 구간) 동적 스위칭 로직 반영 완료 (2026-08-06)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-08-06):
-> - 8월 6일 새벽 발표된 브라질 Copom 금리 인하 결과(기존 14.25% ➔ 14.00%, 25bp 인하 만장일치) 수집 및 백엔드(`brazil_bond.py`) 매크로 캘린더 타임라인 즉시 업데이트.
-> - 사전에 정의된 플레이북 **시나리오 A (25bp 인하 + 신중 문구)** 적중 확인 및 5년물 14.0~14.4% 타겟 영역 진입과 원/헤알 환율 290원 이하 확인 시 1·2차 트랜치 분할 집행 액션플랜 반영.
-> - 프로덕션 빌드/테스트 통과 및 git commit / push 완료 (main branch).
+> - 기존에 UI상 `Tranche 1`으로 고정(하드코딩)되어 있던 분할 매수 로드맵의 `CURRENT STAGE (현재 실행 구간)` 하이라이트 지정을 날짜 및 Copom 발표 경과 상태에 따라 동적 전환되도록 개편.
+> - 8월 6일 Copom 발표가 완료됨에 따라 **Tranche 2 (8월 초 Copom 후, 누적 50~60%)**가 🎯 CURRENT STAGE로 자동 점등되도록 백엔드(`brazil_bond.py`) 및 프론트엔드(`BrazilBondTab.tsx`) 연동 완료.
+> - 프로덕션 빌드 성공 및 git commit / push 완료 (main branch).
  
  
 ## Current Sprint
