@@ -1130,41 +1130,44 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
       </div>
 
       <header className="w-full max-w-[95vw] xl:max-w-[1400px] mb-2 md:mb-4 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-2.5 md:gap-3 relative z-50">
-        {/* 상단 행: 로고 & 툴버튼 (전체화면 + AI Assistant) */}
+        {/* 상단 행: 로고 (좌측) & 버전/상태/툴버튼 (우측) */}
         <div className="flex items-center justify-between gap-2 shrink-0">
+          {/* 좌측 로고 */}
           <div className="flex flex-col items-start cursor-pointer group shrink-0" onClick={handleReset}>
             <h1 className="text-xl sm:text-2xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 drop-shadow-sm flex items-center gap-1.5 sm:gap-2 group-hover:opacity-80 transition-opacity">
               <Aperture className="w-6 h-6 md:w-10 md:h-10 text-indigo-400 group-hover:rotate-180 transition-transform duration-700" />
               ETF Lens
-              <div className="hidden sm:flex flex-col gap-1 items-start ml-2">
-                <span className={`text-[10px] md:text-[11px] font-mono font-medium px-2 py-0.5 rounded-md uppercase tracking-widest whitespace-nowrap ${dbVersion === 'VER --'
-                  ? "text-rose-400 bg-rose-400/10 border border-rose-400/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse"
-                  : "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
-                  }`}>
-                  {dbVersion}
-                </span>
-                {healthStatus === 'pending' && (
-                  <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-gray-400 bg-gray-400/10 border border-gray-400/20 animate-pulse flex items-center gap-1">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-ping" />
-                    외부연동 체크중...
-                  </span>
-                )}
-                {healthStatus === 'ok' && (
-                  <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-sky-400 bg-sky-400/10 border border-sky-400/20 animate-pulse shadow-[0_0_10px_rgba(56,189,248,0.2)]">
-                    모든 연동기능이 정상작동중 입니다.
-                  </span>
-                )}
-                {healthStatus === 'error' && (
-                  <span className="text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-rose-500 bg-rose-500/10 border border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] flex items-center gap-1">
-                    <AlertCircle size={12} /> {failedServices.length > 0 ? `${failedServices.join(', ')} 오류 체크바람` : '현재 연동에 문제가 있습니다. 체크바람'}
-                  </span>
-                )}
-              </div>
             </h1>
           </div>
 
-          {/* 우측 툴버튼 (전체화면 + AI Assistant) */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* 우측 툴버튼 + 버전/연동 상태 정보 */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* 버전 및 연동 상태 정보 (메뉴바 오른쪽/우측 영역 배치) */}
+            <div className="hidden sm:flex flex-col gap-0.5 items-end shrink-0">
+              <span className={`text-[10px] sm:text-[11px] font-mono font-medium px-2 py-0.5 rounded-md uppercase tracking-widest whitespace-nowrap ${dbVersion === 'VER --'
+                ? "text-rose-400 bg-rose-400/10 border border-rose-400/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse"
+                : "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
+                }`}>
+                {dbVersion}
+              </span>
+              {healthStatus === 'pending' && (
+                <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-gray-400 bg-gray-400/10 border border-gray-400/20 animate-pulse flex items-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-ping" />
+                  외부연동 체크중...
+                </span>
+              )}
+              {healthStatus === 'ok' && (
+                <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-sky-400 bg-sky-400/10 border border-sky-400/20 animate-pulse shadow-[0_0_10px_rgba(56,189,248,0.2)]">
+                  모든 연동기능이 정상작동중 입니다.
+                </span>
+              )}
+              {healthStatus === 'error' && (
+                <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-rose-500 bg-rose-500/10 border border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] flex items-center gap-1">
+                  <AlertCircle size={12} /> {failedServices.length > 0 ? `${failedServices.join(', ')} 오류 체크바람` : '현재 연동에 문제가 있습니다. 체크바람'}
+                </span>
+              )}
+            </div>
+
             {/* 전체화면 확대 버튼 */}
             <button
               onClick={toggleFullscreen}
