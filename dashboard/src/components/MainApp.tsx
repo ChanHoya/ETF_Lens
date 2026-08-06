@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, BarChart, Bar, Cell, PieChart, Pie, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
-import { Search, Loader2, Plus, X, ChevronDown, Aperture, Star, Trash2, Edit2, Check, Share2, RefreshCw, BarChart2, Minus, Zap, Crown, Target, Layers, BookOpen, AlertCircle, ArrowUpRight, ArrowDownRight, Clock, ShieldAlert, Cpu, Maximize2, Minimize2 } from "lucide-react";
+import { Search, Loader2, Plus, X, ChevronDown, ChevronLeft, ChevronRight, Aperture, Star, Trash2, Edit2, Check, Share2, RefreshCw, BarChart2, Minus, Zap, Crown, Target, Layers, BookOpen, AlertCircle, ArrowUpRight, ArrowDownRight, Clock, ShieldAlert, Cpu, Maximize2, Minimize2 } from "lucide-react";
 import { API_BASE } from '@/lib/apiConfig';
 import { prefetchMonitorData } from '@/lib/monitorPrefetch';
 import CompareChart from "@/components/CompareChart";
@@ -142,6 +142,53 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
     } catch (err) {
       console.error("Fullscreen toggle error:", err);
     }
+  };
+
+  // 메인 메뉴바 PC 마우스 드래그 & 스크롤 제어
+  const mainNavRef = useRef<HTMLDivElement>(null);
+  const [isNavMouseDown, setIsNavMouseDown] = useState(false);
+  const [navStartX, setNavStartX] = useState(0);
+  const [navScrollLeft, setNavScrollLeft] = useState(0);
+  const [hasNavDragged, setHasNavDragged] = useState(false);
+
+  const handleNavMouseDown = (e: React.MouseEvent) => {
+    if (!mainNavRef.current) return;
+    setIsNavMouseDown(true);
+    setHasNavDragged(false);
+    setNavStartX(e.pageX - mainNavRef.current.offsetLeft);
+    setNavScrollLeft(mainNavRef.current.scrollLeft);
+  };
+
+  const handleNavMouseLeave = () => {
+    setIsNavMouseDown(false);
+  };
+
+  const handleNavMouseUp = () => {
+    setIsNavMouseDown(false);
+  };
+
+  const handleNavMouseMove = (e: React.MouseEvent) => {
+    if (!isNavMouseDown || !mainNavRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - mainNavRef.current.offsetLeft;
+    const walk = (x - navStartX) * 1.5;
+    if (Math.abs(walk) > 5) {
+      setHasNavDragged(true);
+    }
+    mainNavRef.current.scrollLeft = navScrollLeft - walk;
+  };
+
+  const handleNavWheel = (e: React.WheelEvent) => {
+    if (!mainNavRef.current) return;
+    if (e.deltaY !== 0) {
+      mainNavRef.current.scrollLeft += e.deltaY;
+    }
+  };
+
+  const scrollNav = (direction: 'left' | 'right') => {
+    if (!mainNavRef.current) return;
+    const scrollAmount = direction === 'left' ? -200 : 200;
+    mainNavRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
   };
 
 
@@ -1133,9 +1180,28 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
           </div>
         </div>
 
-        {/* 가로 스크롤 가능한 메인 메뉴바 (모바일 & PC 공통 터치 스크롤 지원) */}
-        <div className="relative w-full md:w-auto overflow-hidden rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-md shadow-sm">
-          <nav className="flex items-center gap-1.5 sm:gap-2 md:gap-3 px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 overflow-x-auto scrollbar-hide whitespace-nowrap touch-pan-x min-w-0 max-w-full">
+        {/* 가로 스크롤 & PC 마우스 드래그/화살표 스크롤 메인 메뉴바 */}
+        <div className="relative flex items-center w-full md:w-auto overflow-hidden rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-md shadow-sm group">
+          {/* 좌측 스크롤 화살표 버튼 */}
+          <button
+            onClick={() => scrollNav('left')}
+            className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-black/60 hover:bg-indigo-600 text-gray-300 hover:text-white transition-all shrink-0 ml-1 shadow-md border border-white/10 active:scale-95 cursor-pointer z-10"
+            title="왼쪽 스크롤"
+          >
+            <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
+
+          <nav
+            ref={mainNavRef}
+            onMouseDown={handleNavMouseDown}
+            onMouseLeave={handleNavMouseLeave}
+            onMouseUp={handleNavMouseUp}
+            onMouseMove={handleNavMouseMove}
+            onWheel={handleNavWheel}
+            className={`flex items-center gap-1.5 sm:gap-2 md:gap-3 px-2 sm:px-3 py-1.5 sm:py-2 overflow-x-auto scrollbar-hide whitespace-nowrap touch-pan-x min-w-0 max-w-full select-none ${
+              isNavMouseDown ? 'cursor-grabbing' : 'cursor-grab'
+            }`}
+          >
             {[
               { id: 'analysis', label: '종목분석' },
               { id: 'sector', label: '섹터분석' },
@@ -1152,7 +1218,11 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
               return (
                 <button
                   key={tab.id}
-                  onClick={() => {
+                  onClick={(e) => {
+                    if (hasNavDragged) {
+                      e.preventDefault();
+                      return;
+                    }
                     if (tab.id === 'etfcheck') {
                       setIsEtfCheckModalOpen(true);
                       setHasOpenedEtfCheck(true);
@@ -1181,13 +1251,22 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                     setNaverEtfCode(null);
                     setSelectedDetailEtf(null);
                   }}
-                  className={`text-sm sm:text-[15px] md:text-[17px] tracking-wide font-bold transition-all px-3 sm:px-3.5 md:px-4 py-1 sm:py-1.5 rounded-full whitespace-nowrap shrink-0 ${isActive ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'}`}
+                  className={`text-sm sm:text-[15px] md:text-[17px] tracking-wide font-bold transition-all px-3 sm:px-3.5 md:px-4 py-1 sm:py-1.5 rounded-full whitespace-nowrap shrink-0 cursor-pointer ${isActive ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'}`}
                 >
                   {tab.label}
                 </button>
               )
             })}
           </nav>
+
+          {/* 우측 스크롤 화살표 버튼 */}
+          <button
+            onClick={() => scrollNav('right')}
+            className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-black/60 hover:bg-indigo-600 text-gray-300 hover:text-white transition-all shrink-0 mr-1 shadow-md border border-white/10 active:scale-95 cursor-pointer z-10"
+            title="오른쪽 스크롤"
+          >
+            <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
         </div>
       </header>
 
