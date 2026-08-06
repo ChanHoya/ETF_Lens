@@ -297,35 +297,46 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
     else:
         brl_trend = "strong" if ub_chg < 0 else "weak"
 
-    return {
-        "as_of": max([d for d, _, _ in data.values() if d] or [today.isoformat()]),
-        "indicators": indicators,
-        "real_rate": {"label": "실질금리 (Selic−IPCA)", "unit": "%p",
-                      "value": real_rate, "gauge": _gauge("real_rate", real_rate),
-                      "date": real_rate_date},
-        "focus": {
-            "selic_eoy": cur("focus_selic_eoy"),
-            "ipca_eoy": cur("focus_ipca_eoy"),
-            "usdbrl_eoy": cur("focus_usdbrl_eoy"),
-            "selic_eoy_gauge": _gauge("selic", cur("focus_selic_eoy")),
-            "ipca_eoy_gauge": _gauge("ipca_annual", cur("focus_ipca_eoy")),
-            "usdbrl_eoy_gauge": _gauge("usd_brl", cur("focus_usdbrl_eoy")),
-            "selic_eoy_date": data["focus_selic_eoy"][0],
-            "ipca_eoy_date": data["focus_ipca_eoy"][0],
-            "usdbrl_eoy_date": data["focus_usdbrl_eoy"][0],
-        },
-        "usd_brl": {"value": ub_val, "prev": ub_prev, "change": ub_chg, "date": ub_date,
-                    "live": live_usdbrl is not None, "brl_trend": brl_trend},
-        "signal": signal,
-        "targets": {"rate_floor": RATE_FLOOR, "rate_tranche2": RATE_TRANCHE2,
-                    "rate_risk": RATE_RISK, "fx_target": FX_TARGET},
-        "carry_cushion": carry_cushion_curve(entry_fx=fx if fx else 294.0),
-        "timeline": timeline,
-        "next_catalyst": upcoming[0] if upcoming else None,
-        "aug_scenarios": AUG_SCENARIOS,
-        "tranches": TRANCHES,
-        "due_diligence": DUE_DILIGENCE,
-    }
+        # 3단계 분할 매수 로드맵 현재 실행 구간 자동 판단
+        # - 2026-08-06(Copom) 이후 ~ 2026-10-04(대선 전): Tranche 2 (8월 초 Copom 후, 누적 50~60%)
+        # - 2026-10-05 이후: Tranche 3 (10월 대선 전후, 잔여 40%)
+        # - 2026-08-06 이전: Tranche 1 (7월 말까지, 20~30%)
+        current_tranche_id = 1
+        if today >= date(2026, 10, 5):
+            current_tranche_id = 3
+        elif today >= date(2026, 8, 6):
+            current_tranche_id = 2
+
+        return {
+            "as_of": max([d for d, _, _ in data.values() if d] or [today.isoformat()]),
+            "indicators": indicators,
+            "real_rate": {"label": "실질금리 (Selic−IPCA)", "unit": "%p",
+                          "value": real_rate, "gauge": _gauge("real_rate", real_rate),
+                          "date": real_rate_date},
+            "focus": {
+                "selic_eoy": cur("focus_selic_eoy"),
+                "ipca_eoy": cur("focus_ipca_eoy"),
+                "usdbrl_eoy": cur("focus_usdbrl_eoy"),
+                "selic_eoy_gauge": _gauge("selic", cur("focus_selic_eoy")),
+                "ipca_eoy_gauge": _gauge("ipca_annual", cur("focus_ipca_eoy")),
+                "usdbrl_eoy_gauge": _gauge("usd_brl", cur("focus_usdbrl_eoy")),
+                "selic_eoy_date": data["focus_selic_eoy"][0],
+                "ipca_eoy_date": data["focus_ipca_eoy"][0],
+                "usdbrl_eoy_date": data["focus_usdbrl_eoy"][0],
+            },
+            "usd_brl": {"value": ub_val, "prev": ub_prev, "change": ub_chg, "date": ub_date,
+                        "live": live_usdbrl is not None, "brl_trend": brl_trend},
+            "signal": signal,
+            "targets": {"rate_floor": RATE_FLOOR, "rate_tranche2": RATE_TRANCHE2,
+                        "rate_risk": RATE_RISK, "fx_target": FX_TARGET},
+            "carry_cushion": carry_cushion_curve(entry_fx=fx if fx else 294.0),
+            "timeline": timeline,
+            "next_catalyst": upcoming[0] if upcoming else None,
+            "aug_scenarios": AUG_SCENARIOS,
+            "current_tranche_id": current_tranche_id,
+            "tranches": TRANCHES,
+            "due_diligence": DUE_DILIGENCE,
+        }
 
 
 @router.post("/sync")

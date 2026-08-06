@@ -45,6 +45,7 @@ interface Summary {
     timeline: Catalyst[];
     next_catalyst: Catalyst | null;
     aug_scenarios: { id: string; title: string; color: string; logic: string; action: string }[];
+    current_tranche_id?: number;
     tranches: { id: number; weight: string; timing: string; trigger: string; rationale: string }[];
     due_diligence: { title: string; body: string }[];
 }
@@ -405,7 +406,9 @@ export default function BrazilBondTab() {
             <section>
                 <SectionTitle icon={<Target className="w-5 h-5 text-emerald-400" />} title="3-Tranche Execution Strategy" sub="3단계 분할 매수 로드맵" />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {s.tranches.map((t) => <TrancheCard key={t.id} t={t} />)}
+                    {s.tranches.map((t) => (
+                        <TrancheCard key={t.id} t={t} currentTrancheId={s.current_tranche_id} />
+                    ))}
                 </div>
                 <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
                     <Info className="w-3 h-3" /> 비중은 유동 금융자산의 최대 5~10% 이내(위성 포지션), 만기 3~5년 스위트스팟 권장.
@@ -1075,8 +1078,13 @@ function ScenarioCard({ sc }: { sc: { id: string; title: string; color: string; 
     );
 }
 
-function TrancheCard({ t }: { t: { id: number; weight: string; timing: string; trigger: string; rationale: string } }) {
-    const isCurrent = t.id === 1; // 현재 판단 기준 트랜치 (Tranche 1)
+function TrancheCard({ t, currentTrancheId }: {
+    t: { id: number; weight: string; timing: string; trigger: string; rationale: string };
+    currentTrancheId?: number;
+}) {
+    // 8/6 Copom 이후 default=2 (Tranche 2)
+    const activeId = currentTrancheId ?? (new Date() >= new Date("2026-08-06") ? 2 : 1);
+    const isCurrent = t.id === activeId;
     return (
         <div className={`rounded-2xl p-4 transition-all duration-300 relative ${
             isCurrent
