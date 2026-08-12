@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, BarChart, Bar, Cell, PieChart, Pie, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
 import { Search, Loader2, Plus, X, ChevronDown, ChevronLeft, ChevronRight, Aperture, Star, Trash2, Edit2, Check, Share2, RefreshCw, BarChart2, Minus, Zap, Crown, Target, Layers, BookOpen, AlertCircle, ArrowUpRight, ArrowDownRight, Clock, ShieldAlert, Cpu, Maximize2, Minimize2 } from "lucide-react";
 import { API_BASE } from '@/lib/apiConfig';
@@ -1219,7 +1219,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                 (tab.id === 'analysis' && isAnalysisActive && !isEtfCheckModalOpen) ||
                 (activeTab === tab.id && !isEtfCheckModalOpen);
               return (
-                <React.Fragment key={tab.id}>
+                <Fragment key={tab.id}>
                   {tab.id === 'etftracker' && (
                     <div className="h-3.5 w-[1px] bg-white/20 mx-0.5 shrink-0 self-center" />
                   )}
@@ -1267,7 +1267,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                   >
                     {tab.label}
                   </button>
-                </React.Fragment>
+                </Fragment>
               )
             })}
           </nav>
