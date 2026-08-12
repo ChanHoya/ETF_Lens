@@ -88,6 +88,16 @@ const isSameDate = (dateStr: string | null | undefined): boolean => {
            d.getDate() === today.getDate();
 };
 
+const getDynamicDDay = (targetDateStr: string): number => {
+    if (!targetDateStr) return 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(targetDateStr);
+    target.setHours(0, 0, 0, 0);
+    const diffTime = target.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
 export default function BrazilBondTab() {
     const [summary, setSummary] = useState<Summary | null>(null);
     const [history, setHistory] = useState<Record<string, { date: string; value: number }[]>>({});
@@ -173,7 +183,9 @@ export default function BrazilBondTab() {
                 if (!localStorage.getItem('brazil_bond_summary')) {
                     setError(String(e?.message || e));
                 } else {
-                    console.error("Background refresh failed:", e);
+                    console.error("Background refresh failed (server waking up?):", e);
+                    // 백그라운드 갱신 실패(서버 깨어나는 중 등) 시 5초 후 재시도
+                    setTimeout(loadFresh, 5000);
                 }
             } finally {
                 setLoading(false);
@@ -309,7 +321,7 @@ export default function BrazilBondTab() {
                             <div className="flex items-center gap-1.5 justify-center text-white/70 text-xs font-bold uppercase mb-1">
                                 <CalendarClock className="w-3.5 h-3.5" /> 다음 관전 이벤트
                             </div>
-                            <div className="text-3xl font-black text-white leading-none">D-{s.next_catalyst.d_day}</div>
+                            <div className="text-3xl font-black text-white leading-none">D-{getDynamicDDay(s.next_catalyst.date)}</div>
                             <div className="text-xs text-white/80 mt-1 font-semibold">{s.next_catalyst.title}</div>
                             <div className="text-xs text-white/60 mt-1">{s.next_catalyst.date}</div>
                         </div>

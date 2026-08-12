@@ -23,14 +23,19 @@ export default function TffGateWrapper({ onOpenDetail }: Props) {
         try {
             if (sessionStorage.getItem(SESSION_KEY) === 'true') {
                 setAuthenticated(true);
-            } else {
-                setTimeout(() => inputRef.current?.focus(), 100);
             }
         } catch {
             // iOS 시크릿 모드 등 sessionStorage 불가 시 미인증 유지
             setAuthenticated(false);
         }
     }, []);
+
+    useEffect(() => {
+        if (mounted && !authenticated) {
+            const timer = setTimeout(() => inputRef.current?.focus(), 100);
+            return () => clearTimeout(timer);
+        }
+    }, [mounted, authenticated]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -86,6 +91,7 @@ export default function TffGateWrapper({ onOpenDetail }: Props) {
                             onChange={(e) => { setInput(e.target.value); setError(false); }}
                             placeholder="PIN 번호 입력"
                             maxLength={8}
+                            autoFocus
                             className={`w-full bg-white/[0.06] border ${error ? 'border-red-500/70' : 'border-white/10'} rounded-xl px-5 py-3 text-white text-center text-xl tracking-[0.5em] placeholder:text-gray-600 placeholder:text-sm placeholder:tracking-normal outline-none focus:border-sky-500/60 focus:bg-white/[0.08] transition-all`}
                         />
                     </div>

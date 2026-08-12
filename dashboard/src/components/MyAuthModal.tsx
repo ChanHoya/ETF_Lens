@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Lock, Info, Hash } from 'lucide-react';
 
 export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: () => void, initialError: string | null }) {
@@ -6,11 +6,17 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: ()
     const [hasExistingPin, setHasExistingPin] = useState(false); // SSR-safe: useEffect에서 초기화
     const [setupPin, setSetupPin] = useState('');
     const [error, setError] = useState(initialError || '');
+    const pinInputRef = useRef<HTMLInputElement>(null);
 
     // localStorage는 클라이언트 전용 — useEffect에서 안전하게 접근
     useEffect(() => {
-        setHasExistingPin(!!localStorage.getItem("etf_lens_pin"));
-    }, []);
+        const existing = !!localStorage.getItem("etf_lens_pin");
+        setHasExistingPin(existing);
+        const timer = setTimeout(() => {
+            pinInputRef.current?.focus();
+        }, 100);
+        return () => clearTimeout(timer);
+    }, [hasExistingPin]);
 
     const handlePinLogin = (e: React.FormEvent) => {
         e.preventDefault();
@@ -70,11 +76,13 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: ()
                         <label className="block text-sm font-medium text-gray-300 mb-2">PIN 번호</label>
                         <div className="relative">
                             <input
+                                ref={pinInputRef}
                                 type="password"
                                 value={pin}
                                 onChange={(e) => setPin(e.target.value)}
                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
                                 placeholder={"••••"}
+                                autoFocus
                                 required
                             />
                         </div>
@@ -93,11 +101,13 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: ()
                         </label>
                         <p className="text-xs text-gray-500 mb-3">다음 접속 시 위 비밀번호로 화면 잠금을 해제합니다.</p>
                         <input
+                            ref={pinInputRef}
                             type="password"
                             value={setupPin}
                             onChange={(e) => setSetupPin(e.target.value)}
                             className="w-full bg-indigo-500/5 border border-indigo-500/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-indigo-500/50 focus:bg-indigo-500/10 transition-colors"
                             placeholder="4자리 숫자 권장"
+                            autoFocus
                             required
                         />
                     </div>

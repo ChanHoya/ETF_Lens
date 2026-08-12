@@ -45,6 +45,14 @@ export default function TffDashboard({ onOpenDetail }: Props) {
     const [showPasscodeModal, setShowPasscodeModal] = useState(false);
     const [passcodeInput, setPasscodeInput] = useState('');
     const [passcodeError, setPasscodeError] = useState('');
+    const passcodeInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (showPasscodeModal) {
+            const timer = setTimeout(() => passcodeInputRef.current?.focus(), 100);
+            return () => clearTimeout(timer);
+        }
+    }, [showPasscodeModal]);
 
     // 중앙 서버 히스토리 관련 상태
     const [historyRecords, setHistoryRecords] = useState<TffHistoryRecord[]>([]);
@@ -965,6 +973,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
 
                         <div className="space-y-2">
                             <input
+                                ref={passcodeInputRef}
                                 type="password"
                                 placeholder="마스터 패스코드 입력"
                                 value={passcodeInput}
