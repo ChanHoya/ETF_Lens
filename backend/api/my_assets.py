@@ -1410,6 +1410,10 @@ async def _repair_corrupted_all_snapshots(db, all_snapshots):
         await db.commit()
         logger.info(f"[Asset History] Repaired {corrected} corrupted 'ALL' snapshot(s) from per-account sums")
 
+    full_dates = [d for d, agg in by_date.items() if agg["n"] == expected_n]
+    min_full_date = min(full_dates) if full_dates else None
+    return min_full_date
+
 
 @router.get("/asset-history")
 async def get_asset_history(
@@ -1443,10 +1447,13 @@ async def get_asset_history(
         cutoff_date = (today - timedelta(days=days)).strftime("%Y-%m-%d")
         filtered_snapshots = [s for s in snapshots if s.date >= cutoff_date]
 
-        # 통합('ALL') 시계열에 한해, 일부 계좌 조회 실패로 손상된 과거 스냅샷을 보정
+        # 통합('ALL') 시계열에 한해, 일부 계좌 조회 실패로 손상된 과거 스냅샷을 보정하고
+        # 등록 계좌 중 일부만 존재하던 과거 데이터(자산 급증 착시 원인)를 걸러냄
         if account_no == "ALL":
             try:
-                await _repair_corrupted_all_snapshots(db, filtered_snapshots)
+                min_full_date = await _repair_corrupted_all_snapshots(db, filtered_snapshots)
+                if min_full_date:
+                    filtered_snapshots = [s for s in filtered_snapshots if s.date >= min_full_date]
             except Exception as e:
                 await db.rollback()
                 logger.error(f"[Asset History] snapshot repair failed: {e}")
