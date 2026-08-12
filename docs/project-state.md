@@ -4,13 +4,13 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: 상단 헤더 탭 재배치 & 클라이언트 오류(React import) 핫픽스 완료 (2026-08-12)
+✅ Current: My 자산성장추이 기간수익률 선택 기간 시작점 기준 0% 시작 누적 수익률로 개편 완료 (2026-08-12)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-08-12):
-> - `MainApp.tsx`에서 `React` 및 `Fragment` 명시적 import 추가로 클라이언트 미정의 예외(`ReferenceError: React is not defined`) 해결.
-> - 상단 메뉴 탭 순서 `종목분석` ➔ `섹터분석` ➔ `시장동향` ➔ `TFF_Fund` ➔ `My` ➔ `ETF추적기` ➔ `ETF Check` 적용 및 PC 뷰 최적화 완료.
-> - Git commit & push 완료 (`10f87c51`).
+> - `AssetHistoryChart.tsx`에서 총자산 단순 비례 공식에서 탈피하여, 선택된 기간(`1W`, `1M`, `3M`, `1Y`, `ALL`)의 시작일 기준 0.00%부터 누적된 실제 투자 수익률(`accumulated_return(t) - baseReturn`)을 표시하도록 개선.
+> - 개별 계좌 비교 모드(`COMPARE_ALL`)에서도 각 계좌별로 선택 기간 시작일 0% 기준 누적 기간 수익률이 정상 비교되도록 수정.
+> - Git commit & push 완료 (`a9c34a60`).
  
  
 ## Current Sprint
