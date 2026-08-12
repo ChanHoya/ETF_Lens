@@ -1201,7 +1201,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
             onMouseUp={handleNavMouseUp}
             onMouseMove={handleNavMouseMove}
             onWheel={handleNavWheel}
-            className={`flex items-center gap-1.5 sm:gap-2 md:gap-3 px-2 sm:px-3 py-1.5 sm:py-2 overflow-x-auto scrollbar-hide whitespace-nowrap touch-pan-x min-w-0 max-w-full select-none ${
+            className={`flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 py-1 sm:py-1.5 overflow-x-auto scrollbar-hide whitespace-nowrap touch-pan-x min-w-0 max-w-full select-none ${
               isNavMouseDown ? 'cursor-grabbing' : 'cursor-grab'
             }`}
           >
@@ -1209,55 +1209,65 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
               { id: 'analysis', label: '종목분석' },
               { id: 'sector', label: '섹터분석' },
               { id: 'discover', label: '시장동향' },
-              { id: 'etftracker', label: 'ETF추적기' },
-              { id: 'etfcheck', label: 'ETF Check' },
               ...(showTffTab ? [{ id: 'tff', label: 'TFF_Fund' }] : []),
-              ...(showMyTab ? [{ id: 'my', label: 'My' }] : [])
+              ...(showMyTab ? [{ id: 'my', label: 'My' }] : []),
+              { id: 'etftracker', label: 'ETF추적기', isExternal: true },
+              { id: 'etfcheck', label: 'ETF Check', isExternal: true },
             ].map(tab => {
               const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call', 'brazil'].includes(activeTab);
               const isActive = (tab.id === 'etfcheck' && isEtfCheckModalOpen) ||
                 (tab.id === 'analysis' && isAnalysisActive && !isEtfCheckModalOpen) ||
                 (activeTab === tab.id && !isEtfCheckModalOpen);
               return (
-                <button
-                  key={tab.id}
-                  onClick={(e) => {
-                    if (hasNavDragged) {
-                      e.preventDefault();
-                      return;
-                    }
-                    if (tab.id === 'etfcheck') {
-                      setIsEtfCheckModalOpen(true);
-                      setHasOpenedEtfCheck(true);
-                      return;
-                    }
-                    if (tab.id === 'etftracker') {
-                      window.open('https://ystreet.co.kr/etf-tracker/', '_blank', 'noopener,noreferrer');
-                      return;
-                    }
-                    if (tab.id === 'my') {
-                      setActiveTab('my');
-                      return;
-                    }
-                    if (tab.id === 'tff') {
-                      setActiveTab('tff');
-                      return;
-                    }
+                <React.Fragment key={tab.id}>
+                  {tab.id === 'etftracker' && (
+                    <div className="h-3.5 w-[1px] bg-white/20 mx-0.5 shrink-0 self-center" />
+                  )}
+                  <button
+                    onClick={(e) => {
+                      if (hasNavDragged) {
+                        e.preventDefault();
+                        return;
+                      }
+                      if (tab.id === 'etfcheck') {
+                        setIsEtfCheckModalOpen(true);
+                        setHasOpenedEtfCheck(true);
+                        return;
+                      }
+                      if (tab.id === 'etftracker') {
+                        window.open('https://ystreet.co.kr/etf-tracker/', '_blank', 'noopener,noreferrer');
+                        return;
+                      }
+                      if (tab.id === 'my') {
+                        setActiveTab('my');
+                        return;
+                      }
+                      if (tab.id === 'tff') {
+                        setActiveTab('tff');
+                        return;
+                      }
 
-                    if (tab.id === 'analysis') {
-                      clearAllSlots();
+                      if (tab.id === 'analysis') {
+                        clearAllSlots();
+                        setIsEtfCheckModalOpen(false);
+                        return;
+                      }
+                      setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff' | 'sector' | 'brazil');
                       setIsEtfCheckModalOpen(false);
-                      return;
-                    }
-                    setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff' | 'sector' | 'brazil');
-                    setIsEtfCheckModalOpen(false);
-                    setNaverEtfCode(null);
-                    setSelectedDetailEtf(null);
-                  }}
-                  className={`text-sm sm:text-[15px] md:text-[17px] tracking-wide font-bold transition-all px-3 sm:px-3.5 md:px-4 py-1 sm:py-1.5 rounded-full whitespace-nowrap shrink-0 cursor-pointer ${isActive ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'}`}
-                >
-                  {tab.label}
-                </button>
+                      setNaverEtfCode(null);
+                      setSelectedDetailEtf(null);
+                    }}
+                    className={`text-xs sm:text-sm md:text-[14px] lg:text-[15px] tracking-wide font-bold transition-all px-2.5 sm:px-3 md:px-3.5 py-1 sm:py-1 rounded-full whitespace-nowrap shrink-0 cursor-pointer ${
+                      isActive
+                        ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]'
+                        : tab.isExternal
+                        ? 'text-gray-400/70 hover:text-gray-200 hover:bg-white/5 border border-white/5'
+                        : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                </React.Fragment>
               )
             })}
           </nav>
