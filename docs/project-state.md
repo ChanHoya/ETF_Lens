@@ -4,13 +4,13 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: 로고 옆 버전 및 연동 상태 정보 뱃지 메뉴바 오른쪽(우측 툴바) 영역으로 재배치 완료 (2026-08-06)
+✅ Current: 비밀번호 팝업 자동 커서 포커스 및 브라질채권 실시간 D-Day 동적 연산/콜드스타트 자동 재시도 적용 완료 (2026-08-12)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
-> 세션 핸드오프 (2026-08-06):
-> - 헤더 레이아웃 단순화 및 시각적 정돈: `ETF Lens` 로고 옆에 위치하던 버전(`VER ...`) 및 연동 상태(`모든 연동기능이 정상작동중 입니다`) 정보 뱃지를 메뉴바 우측 툴버튼(`전체화면`/`AI Assistant`) 영역으로 이동 배치.
-> - 좌측 로고 영역 시인성 극대화 및 우측 툴바 정보 집약 완료.
-> - 프로덕션 빌드 성공 및 git commit / push 완료 (main branch).
+> 세션 핸드오프 (2026-08-12):
+> - MyAssetsView, TffGateWrapper, TffDashboard 비밀번호/PIN 팝업 열림 시 입력창 커서 자동 포커싱(`autoFocus` & `useEffect` 타이머) 구현 완료.
+> - BrazilBondTab 로컬 캐시 사용 시 D-Day 실시간 동적 계산(`getDynamicDDay`) 및 서버 휴면 기동 시 백그라운드 재시도(`setTimeout`) 보완.
+> - Git commit & push 완료 (`bc1b7187`).
  
  
 ## Current Sprint
