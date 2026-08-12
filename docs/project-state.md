@@ -4,13 +4,13 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: My 자산성장추이 기간수익률 선택 기간 시작점 기준 0% 시작 누적 수익률로 개편 완료 (2026-08-12)
+✅ Current: 전체 계좌 통합 자산 성장 추이 과거 착시 제거 및 4개 계좌 수렴 구간 동기화 완료 (2026-08-12)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-08-12):
-> - `AssetHistoryChart.tsx`에서 총자산 단순 비례 공식에서 탈피하여, 선택된 기간(`1W`, `1M`, `3M`, `1Y`, `ALL`)의 시작일 기준 0.00%부터 누적된 실제 투자 수익률(`accumulated_return(t) - baseReturn`)을 표시하도록 개선.
-> - 개별 계좌 비교 모드(`COMPARE_ALL`)에서도 각 계좌별로 선택 기간 시작일 0% 기준 누적 기간 수익률이 정상 비교되도록 수정.
-> - Git commit & push 완료 (`a9c34a60`).
+> - `my_assets.py` 백엔드에서 `account_no == "ALL"` 조회 시 등록된 전체 계좌가 함께 존재하기 시작한 시점(`min_full_date`: 2026-06-01) 이전의 1개 계좌 전용 과거 데이터를 자동 필터링.
+> - 신규 계좌 추가로 인한 2.96억 ➔ 10.39억 인위적 자산 급증 착시 현상을 완벽히 해결하고, ~9.53억 ➔ ~7.20억의 실제 전체 자산 감소 흐름 반영.
+> - Git commit & push 완료 (`313240a5`).
  
  
 ## Current Sprint
