@@ -664,26 +664,49 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
         return res;
     }, [history, fx, y5]);
 
-    // ── 하루씩 궤적 이어지는 순차 애니메이션 제어 ────────────────────────────
-    const [animStep, setAnimStep] = useState<number>(1);
+    // ── 60fps 부드러운 유동적 점선 궤적 애니메이션 제어 (requestAnimationFrame) ─────
+    const [animProgress, setAnimProgress] = useState<number>(0);
     const [isAnimating, setIsAnimating] = useState<boolean>(false);
+    const animFrameRef = useRef<number | null>(null);
 
     const triggerAnimation = useCallback(() => {
-        if (fullTrajectoryPoints.length === 0) return;
-        setAnimStep(1);
+        if (fullTrajectoryPoints.length <= 1) return;
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+
+        setAnimProgress(0);
         setIsAnimating(true);
+
+        const startTime = performance.now();
+        const duration = 1800; // 1.8초간 부드럽게 흐르는 선 연결
+        const maxProgress = fullTrajectoryPoints.length - 1;
+
+        const animate = (now: number) => {
+            const elapsed = now - startTime;
+            const rawRatio = Math.min(elapsed / duration, 1.0);
+            
+            // Ease-in-out cubic 완급 조절 (부드러운 가속 및 감속)
+            const easedRatio = rawRatio < 0.5
+                ? 4 * rawRatio * rawRatio * rawRatio
+                : 1 - Math.pow(-2 * rawRatio + 2, 3) / 2;
+
+            const currentProgress = easedRatio * maxProgress;
+            setAnimProgress(currentProgress);
+
+            if (rawRatio < 1.0) {
+                animFrameRef.current = requestAnimationFrame(animate);
+            } else {
+                setIsAnimating(false);
+            }
+        };
+
+        animFrameRef.current = requestAnimationFrame(animate);
     }, [fullTrajectoryPoints.length]);
 
-    // 애니메이션 스텝 타이머: 220ms 간격으로 하루씩 점선 확장
     useEffect(() => {
-        if (!isAnimating) return;
-        if (animStep >= fullTrajectoryPoints.length) {
-            setIsAnimating(false);
-            return;
-        }
-        const timer = setTimeout(() => { setAnimStep(prev => prev + 1); }, 220);
-        return () => clearTimeout(timer);
-    }, [isAnimating, animStep, fullTrajectoryPoints.length]);
+        return () => {
+            if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+        };
+    }, []);
 
     // 1주간로그 버튼 클릭 시 모드 전환 및 애니메이션 발동
     const toggleLogMode = () => {
@@ -692,16 +715,50 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
             triggerAnimation();
         } else {
             setIsLogMode(false);
+            if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
         }
     };
 
-    // 현재 스텝까지 표시할 궤적 포인트들 (로그 모드일 때만 활용)
+    // 실시간 연속 보간(Interpolation) 궤적 데이터
     const visibleTrajectoryPoints = useMemo(() => {
         if (!isLogMode || fullTrajectoryPoints.length === 0) return [];
-        return fullTrajectoryPoints.slice(0, animStep);
-    }, [isLogMode, fullTrajectoryPoints, animStep]);
+        if (animProgress <= 0) return [fullTrajectoryPoints[0]];
 
-    const isTodayReached = !isLogMode || !isAnimating || animStep >= fullTrajectoryPoints.length;
+        const currentIndex = Math.floor(animProgress);
+        const fraction = animProgress - currentIndex;
+
+        const basePoints = fullTrajectoryPoints.slice(0, currentIndex + 1);
+
+        if (currentIndex < fullTrajectoryPoints.length - 1 && fraction > 0) {
+            const p1 = fullTrajectoryPoints[currentIndex];
+            const p2 = fullTrajectoryPoints[currentIndex + 1];
+            const interpX = p1.x + (p2.x - p1.x) * fraction;
+            const interpY = p1.y + (p2.y - p1.y) * fraction;
+
+            return [
+                ...basePoints,
+                {
+                    date: 'moving-tip',
+                    x: interpX,
+                    y: interpY,
+                    label: '',
+                    isToday: false,
+                    opacity: 0.9,
+                    isTip: true,
+                }
+            ];
+        }
+
+        return basePoints;
+    }, [isLogMode, fullTrajectoryPoints, animProgress]);
+
+    // 일자별 완료된 이전 점들 (라인 팁이 도달한 점만 순차 등장)
+    const passedHistoricalPoints = useMemo(() => {
+        if (!isLogMode || fullTrajectoryPoints.length === 0) return [];
+        return fullTrajectoryPoints.filter((p, index) => !p.isToday && index <= Math.floor(animProgress));
+    }, [isLogMode, fullTrajectoryPoints, animProgress]);
+
+    const isTodayReached = !isLogMode || !isAnimating || animProgress >= fullTrajectoryPoints.length - 1;
 
     // 현재 위치 점·가이드선 색: 두 축 독립 판정. 가로선(금리)=금리 게이지색, 세로선(환율)=환율 게이지색.
     const rateColor = GAUGE_HEX[summary.indicators.find(i => i.key === 'y5')?.gauge || 'gray'];
@@ -795,12 +852,12 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
                         labelStyle={{ color: '#9ca3af' }}
                         formatter={(v: any, n: any) => [fmt(v, 2), n === 'x' ? '환율' : '금리']} />
 
-                    {/* 1주간 로그 모드일 때만 궤적 점선 표시 (순차 확장) */}
+                    {/* 1주간 로그 모드일 때만 실시간 보간 점선 연결 */}
                     {isLogMode && visibleTrajectoryPoints.length > 1 && (
                         <Scatter
                             name="1주일 궤적선"
                             data={visibleTrajectoryPoints}
-                            line={{ stroke: '#38bdf8', strokeWidth: 2.2, strokeDasharray: '4 4' }}
+                            line={{ stroke: '#38bdf8', strokeWidth: 2.5, strokeDasharray: '4 4' }}
                             lineType="joint"
                             shape={() => null}
                             legendType="none"
@@ -808,10 +865,10 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
                     )}
 
                     {/* 1주간 로그 모드일 때만 궤적 점들과 일자 라벨 표시 */}
-                    {isLogMode && visibleTrajectoryPoints.length > 0 && (
+                    {isLogMode && passedHistoricalPoints.length > 0 && (
                         <Scatter
                             name="1주일 궤적점"
-                            data={visibleTrajectoryPoints.filter(p => !p.isToday)}
+                            data={passedHistoricalPoints}
                             shape={(props: any) => {
                                 const { cx, cy, payload } = props;
                                 if (cx === undefined || cy === undefined || isNaN(cx) || isNaN(cy)) return null;
@@ -837,6 +894,24 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
                                         >
                                             {payload?.label}
                                         </text>
+                                    </g>
+                                );
+                            }}
+                        />
+                    )}
+
+                    {/* 이동 애니메이션 중 실시간 진행 선도 팁 헤드 */}
+                    {isLogMode && isAnimating && visibleTrajectoryPoints.length > 0 && (
+                        <Scatter
+                            name="선도 팁"
+                            data={[visibleTrajectoryPoints[visibleTrajectoryPoints.length - 1]]}
+                            shape={(props: any) => {
+                                const { cx, cy } = props;
+                                if (cx === undefined || cy === undefined || isNaN(cx) || isNaN(cy)) return null;
+                                return (
+                                    <g key={`moving-tip-${cx}-${cy}`}>
+                                        <circle cx={cx} cy={cy} r={8} fill="#38bdf8" opacity={0.6} className="animate-ping" style={{ transformOrigin: `${cx}px ${cy}px` }} />
+                                        <circle cx={cx} cy={cy} r={5} fill="#0ea5e9" stroke="#ffffff" strokeWidth={2} />
                                     </g>
                                 );
                             }}
