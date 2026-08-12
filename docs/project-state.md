@@ -4,13 +4,13 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: 상단 헤더 메뉴 탭 순서 재배치 및 PC 화면 한눈에 보기 간격 최적화 완료 (2026-08-12)
+✅ Current: 상단 헤더 탭 재배치 & 클라이언트 오류(React import) 핫픽스 완료 (2026-08-12)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-08-12):
-> - 상단 메뉴 탭 순서를 `종목분석` ➔ `섹터분석` ➔ `시장동향` ➔ `TFF_Fund` ➔ `My` ➔ `ETF추적기` ➔ `ETF Check` 순으로 조정하여 내부 서비스와 외부 팝업 서비스(`ETF추적기`, `ETF Check`)를 시각적 구분선과 함께 분리.
-> - PC 화면에서 스크롤 없이 `My` 탭을 포함한 모든 탭이 한눈에 들어오도록 폰트 크기 및 마진/패딩/갭 최적화 완료.
-> - Git commit & push 완료 (`691d90df`).
+> - `MainApp.tsx`에서 `React` 및 `Fragment` 명시적 import 추가로 클라이언트 미정의 예외(`ReferenceError: React is not defined`) 해결.
+> - 상단 메뉴 탭 순서 `종목분석` ➔ `섹터분석` ➔ `시장동향` ➔ `TFF_Fund` ➔ `My` ➔ `ETF추적기` ➔ `ETF Check` 적용 및 PC 뷰 최적화 완료.
+> - Git commit & push 완료 (`10f87c51`).
  
  
 ## Current Sprint
