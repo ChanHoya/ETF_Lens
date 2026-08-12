@@ -4,13 +4,13 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: 브라질채권 Activation Zone 맵 60fps 유동적 궤적 연결 애니메이션 고도화 완료 (2026-08-12)
+✅ Current: 상단 헤더 메뉴 탭 순서 재배치 및 PC 화면 한눈에 보기 간격 최적화 완료 (2026-08-12)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-08-12):
-> - requestAnimationFrame 및 Ease-in-out Cubic 곡선을 이용해 1.8초간 60fps로 매끈하게 점선이 그려지는 실시간 보간(Interpolation) 궤적 애니메이션 적용.
-> - 애니메이션 진행 중 선도 레이저 팁 헤드가 물 흐르듯 선을 긋고, 도달한 일자별 라벨(8/5, 8/6...)이 부드럽게 등장.
-> - Git commit & push 완료 (`8a0ce17f`).
+> - 상단 메뉴 탭 순서를 `종목분석` ➔ `섹터분석` ➔ `시장동향` ➔ `TFF_Fund` ➔ `My` ➔ `ETF추적기` ➔ `ETF Check` 순으로 조정하여 내부 서비스와 외부 팝업 서비스(`ETF추적기`, `ETF Check`)를 시각적 구분선과 함께 분리.
+> - PC 화면에서 스크롤 없이 `My` 탭을 포함한 모든 탭이 한눈에 들어오도록 폰트 크기 및 마진/패딩/갭 최적화 완료.
+> - Git commit & push 완료 (`691d90df`).
  
  
 ## Current Sprint
