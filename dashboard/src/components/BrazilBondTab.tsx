@@ -385,8 +385,8 @@ export default function BrazilBondTab() {
             {/* ── Activation Zone 맵 + 차트 ────────────────────────── */}
             <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
-                    <SectionTitle icon={<Target className="w-5 h-5 text-emerald-400" />} title="The Activation Zone" sub="2축 목표 진입 구간 맵 (금리 × 환율)" />
-                    <ActivationZoneChart summary={s} />
+                    <SectionTitle icon={<Target className="w-5 h-5 text-emerald-400" />} title="The Activation Zone" sub="2축 목표 진입 구간 맵 (금리 × 환율) · 최근 1주일 궤적 연동" />
+                    <ActivationZoneChart summary={s} history={history} />
                 </div>
                 <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
                     <SectionTitle icon={<TrendingDown className="w-5 h-5 text-cyan-400" />} title="금리 사이클" sub="Selic vs 5년물 국채금리 vs IPCA (10년)" />
@@ -616,15 +616,70 @@ function IndicatorGuide() {
     );
 }
 
-// Activation Zone: 2축 산점도 (환율 X, 금리 Y). 현재 위치 점 표시.
-function ActivationZoneChart({ summary }: { summary: Summary }) {
+// Activation Zone: 2축 산점도 (환율 X, 금리 Y). 현재 위치 및 1주일 궤적 점선 표시.
+function ActivationZoneChart({ summary, history }: { summary: Summary; history?: Record<string, { date: string; value: number }[]> }) {
     const t = summary.targets;
     const y5 = summary.indicators.find(i => i.key === 'y5')?.value ?? null;
     const fx = summary.indicators.find(i => i.key === 'brl_krw')?.value ?? null;
     const point = (y5 !== null && fx !== null) ? [{ x: fx, y: y5 }] : [];
 
+    // 1주일 이동 궤적 포인트 생성 (최근 7일치 환율x금리 위치)
+    const trajectoryPoints = useMemo(() => {
+        if (!history) return [];
+        const fxList = history['brl_krw'] || [];
+        const y5List = (history['y5'] && history['y5'].length > 0) ? history['y5'] : (history['y5_fred'] || []);
+
+        if (fxList.length === 0) return [];
+
+        const y5Map = new Map<string, number>();
+        y5List.forEach(item => y5Map.set(item.date, item.value));
+
+        let lastY5 = y5List.length > 0 ? y5List[y5List.length - 1].value : null;
+
+        // Take recent 12 entries to extract last 7 valid days
+        const recentFx = fxList.slice(-12);
+
+        const list: { date: string; x: number; y: number; label: string; isToday: boolean; opacity: number }[] = [];
+
+        recentFx.forEach((item) => {
+            const date = item.date;
+            const fxVal = item.value;
+            const y5Val = y5Map.get(date) ?? lastY5;
+            if (y5Val !== null && y5Val !== undefined) {
+                lastY5 = y5Val;
+            }
+
+            if (fxVal !== null && y5Val !== null && y5Val !== undefined) {
+                const parts = date.split('-');
+                const monthDay = parts.length >= 3 ? `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)}` : date;
+                list.push({
+                    date,
+                    x: fxVal,
+                    y: y5Val,
+                    label: monthDay,
+                    isToday: false,
+                    opacity: 0.4,
+                });
+            }
+        });
+
+        // Take last 7 days max
+        const res = list.slice(-7);
+        if (res.length > 0) {
+            res.forEach((pt, i) => {
+                pt.opacity = 0.35 + (i / (res.length - 1 || 1)) * 0.55;
+            });
+            const last = res[res.length - 1];
+            last.isToday = true;
+            if (fx !== null && y5 !== null) {
+                last.x = fx;
+                last.y = y5;
+            }
+        }
+        return res;
+    }, [history, fx, y5]);
+
     // 현재 위치 점·가이드선 색: 두 축 독립 판정. 가로선(금리)=금리 게이지색, 세로선(환율)=환율 게이지색.
-    // 점 채움=금리색, 점 테두리=환율색. 스코어보드 카드 신호등(gauge)과 동일 기준으로 일관성 유지.
     const rateColor = GAUGE_HEX[summary.indicators.find(i => i.key === 'y5')?.gauge || 'gray'];
     const fxColor = GAUGE_HEX[summary.indicators.find(i => i.key === 'brl_krw')?.gauge || 'gray'];
 
@@ -645,17 +700,12 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                     <ReferenceArea x1={240} x2={t.fx_target} y1={t.rate_floor} y2={t.rate_tranche2} fill="#10b981" fillOpacity={0.28} />
 
                     {/* 🟡 주의 구간 (선명한 노란색 음영 #f59e0b, opacity 0.25) */}
-                    {/* 1) 금리 상한(14.7%) ~ 경고선(15.0%) (환율 ≤ 290원) */}
                     <ReferenceArea x1={240} x2={t.fx_target} y1={t.rate_tranche2} y2={t.rate_risk} fill="#f59e0b" fillOpacity={0.25} />
-                    {/* 2) 금리 하한(14.2%) 이하 구간 (13.0~14.2%, 환율 ≤ 290원) */}
                     <ReferenceArea x1={240} x2={t.fx_target} y1={13.0} y2={t.rate_floor} fill="#f59e0b" fillOpacity={0.25} />
-                    {/* 3) 환율 290 ~ 300원 구간 (금리 13.0~15.0%) */}
                     <ReferenceArea x1={t.fx_target} x2={300} y1={13.0} y2={t.rate_risk} fill="#f59e0b" fillOpacity={0.25} />
 
                     {/* 🔴 경고 구간 (빨간색 음영 #ef4444, opacity 0.30) */}
-                    {/* 1) 금리 15.0% 초과 경고 구간 (15.0~15.5%) */}
                     <ReferenceArea x1={240} x2={300} y1={t.rate_risk} y2={15.5} fill="#ef4444" fillOpacity={0.30} />
-                    {/* 2) 환율 300원 초과 경고 영역 (300~320원, 전체 금리 13.0~15.5%) */}
                     <ReferenceArea x1={300} x2={320} y1={13.0} y2={15.5} fill="#ef4444" fillOpacity={0.30} />
                     
                     {/* 목표 조건 기준선 (하얀색 점선: 환율 290원, 금리 하한 14.2%, 금리 상한 14.7%) */}
@@ -680,8 +730,58 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                         itemStyle={{ color: '#fff' }}
                         labelStyle={{ color: '#9ca3af' }}
                         formatter={(v: any, n: any) => [fmt(v, 2), n === 'x' ? '환율' : '금리']} />
+
+                    {/* 1주일 이동 궤적 연결 점선 */}
+                    {trajectoryPoints.length > 1 && (
+                        <Scatter
+                            name="1주일 궤적선"
+                            data={trajectoryPoints}
+                            line={{ stroke: '#38bdf8', strokeWidth: 2, strokeDasharray: '4 4' }}
+                            lineType="joint"
+                            shape={() => null}
+                            legendType="none"
+                        />
+                    )}
+
+                    {/* 1주일 이동 궤적 이전 일자 점들 */}
+                    {trajectoryPoints.length > 0 && (
+                        <Scatter
+                            name="1주일 궤적점"
+                            data={trajectoryPoints.filter(p => !p.isToday)}
+                            shape={(props: any) => {
+                                const { cx, cy, payload } = props;
+                                if (cx === undefined || cy === undefined || isNaN(cx) || isNaN(cy)) return null;
+                                return (
+                                    <g key={`traj-dot-${payload.date}`}>
+                                        <circle
+                                            cx={cx}
+                                            cy={cy}
+                                            r={4}
+                                            fill="#38bdf8"
+                                            stroke="#0f172a"
+                                            strokeWidth={1.5}
+                                            opacity={payload?.opacity ?? 0.6}
+                                        />
+                                        <text
+                                            x={cx}
+                                            y={cy - 7}
+                                            textAnchor="middle"
+                                            fill="#94a3b8"
+                                            fontSize={9}
+                                            fontWeight={600}
+                                            opacity={0.9}
+                                        >
+                                            {payload?.label}
+                                        </text>
+                                    </g>
+                                );
+                            }}
+                        />
+                    )}
+
                     {/* 현재 위치 점: 깜빡임 오라(animate-ping + animate-pulse) 하이라이트 적용 */}
                     <Scatter
+                        name="현재 위치"
                         data={point}
                         shape={(props: any) => {
                             const { cx, cy } = props;
@@ -730,6 +830,9 @@ function ActivationZoneChart({ summary }: { summary: Summary }) {
                     <span className="text-emerald-300 font-medium">🟢 최적 (금리 14.2~14.7% / 환율 ≤290원)</span>
                     <span className="text-amber-300 font-medium">🟡 주의 (금리 14.7~15.0%·13~14.2% / 환율 290~300원)</span>
                     <span className="text-rose-300 font-medium">🔴 경고 (금리 &gt;15%·&lt;13% / 환율 &gt;300원)</span>
+                    <span className="text-sky-300 font-medium flex items-center gap-1">
+                        <span className="inline-block w-2.5 h-0.5 bg-sky-400 rounded-full"></span> 🔵 1주일 궤적 (점선 & 날짜)
+                    </span>
                 </div>
                 {fxGap !== null && fx !== null && (
                     <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-medium">
