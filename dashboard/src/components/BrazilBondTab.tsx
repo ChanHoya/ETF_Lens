@@ -9,7 +9,7 @@ import {
 import {
     Flag, TrendingDown, Gauge, AlertTriangle, Target, CalendarClock,
     Sparkles, RefreshCw, Layers, ShieldCheck, ArrowDownRight, Info, CheckCircle2,
-    Newspaper, Bell, ExternalLink, Send, Settings, Play, RotateCcw,
+    Newspaper, Bell, ExternalLink, Send, Settings, Play, RotateCcw, ZoomIn, ZoomOut,
 } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
 
@@ -616,12 +616,15 @@ function IndicatorGuide() {
     );
 }
 
-// Activation Zone: 2축 산점도 (환율 X, 금리 Y). 현재 위치 및 1주일 궤적 점선 표시 + 순차 애니메이션.
+// Activation Zone: 2축 산점도 (환율 X, 금리 Y). 현재 위치 표시 & 1주간로그 클릭 시 줌인 시뮬레이션.
 function ActivationZoneChart({ summary, history }: { summary: Summary; history?: Record<string, { date: string; value: number }[]> }) {
     const t = summary.targets;
     const y5 = summary.indicators.find(i => i.key === 'y5')?.value ?? null;
     const fx = summary.indicators.find(i => i.key === 'brl_krw')?.value ?? null;
     const point = (y5 !== null && fx !== null) ? [{ x: fx, y: y5 }] : [];
+
+    // ── 1주간 로그 모드 (확대 줌인 시뮬레이션) 토글 ─────────────────────────────
+    const [isLogMode, setIsLogMode] = useState<boolean>(false);
 
     // 1주일 이동 궤적 전체 포인트 생성 (최근 7일치 환율x금리 위치)
     const fullTrajectoryPoints = useMemo(() => {
@@ -664,21 +667,12 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
     // ── 하루씩 궤적 이어지는 순차 애니메이션 제어 ────────────────────────────
     const [animStep, setAnimStep] = useState<number>(1);
     const [isAnimating, setIsAnimating] = useState<boolean>(false);
-    const hasAnimatedRef = useRef<boolean>(false);
 
     const triggerAnimation = useCallback(() => {
         if (fullTrajectoryPoints.length === 0) return;
         setAnimStep(1);
         setIsAnimating(true);
     }, [fullTrajectoryPoints.length]);
-
-    // 초기 마운트/데이터 준비 완료 시 자동 1회 실행
-    useEffect(() => {
-        if (fullTrajectoryPoints.length > 0 && !hasAnimatedRef.current) {
-            hasAnimatedRef.current = true;
-            triggerAnimation();
-        }
-    }, [fullTrajectoryPoints.length, triggerAnimation]);
 
     // 애니메이션 스텝 타이머: 220ms 간격으로 하루씩 점선 확장
     useEffect(() => {
@@ -691,28 +685,78 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
         return () => clearTimeout(timer);
     }, [isAnimating, animStep, fullTrajectoryPoints.length]);
 
-    // 현재 스텝까지 표시할 궤적 포인트들
-    const visibleTrajectoryPoints = useMemo(() => {
-        if (fullTrajectoryPoints.length === 0) return [];
-        return fullTrajectoryPoints.slice(0, animStep);
-    }, [fullTrajectoryPoints, animStep]);
+    // 1주간로그 버튼 클릭 시 모드 전환 및 애니메이션 발동
+    const toggleLogMode = () => {
+        if (!isLogMode) {
+            setIsLogMode(true);
+            triggerAnimation();
+        } else {
+            setIsLogMode(false);
+        }
+    };
 
-    // 현재 위치(오늘) 점은 애니메이션이 마지막 스텝에 도달했거나 애니메이션 중이 아닐 때 강조 표시
-    const isTodayReached = !isAnimating || animStep >= fullTrajectoryPoints.length;
+    // 현재 스텝까지 표시할 궤적 포인트들 (로그 모드일 때만 활용)
+    const visibleTrajectoryPoints = useMemo(() => {
+        if (!isLogMode || fullTrajectoryPoints.length === 0) return [];
+        return fullTrajectoryPoints.slice(0, animStep);
+    }, [isLogMode, fullTrajectoryPoints, animStep]);
+
+    const isTodayReached = !isLogMode || !isAnimating || animStep >= fullTrajectoryPoints.length;
 
     // 현재 위치 점·가이드선 색: 두 축 독립 판정. 가로선(금리)=금리 게이지색, 세로선(환율)=환율 게이지색.
     const rateColor = GAUGE_HEX[summary.indicators.find(i => i.key === 'y5')?.gauge || 'gray'];
     const fxColor = GAUGE_HEX[summary.indicators.find(i => i.key === 'brl_krw')?.gauge || 'gray'];
 
-    // X축 레인지: 240 ~ 320원 고정 레인지
-    const xDomain = useMemo(() => [240, 320], []);
-    // Y축 레인지: 13.0% ~ 15.5% 고정 레인지
-    const yDomain = useMemo(() => [13.0, 15.5], []);
+    // ── X/Y축 레인지 설정: 일반 모드는 고정 레인지, 1주간 로그 모드는 궤적 분포에 맞춰 줌인 ──
+    const standardXDomain = useMemo(() => [240, 320], []);
+    const standardYDomain = useMemo(() => [13.0, 15.5], []);
+
+    const zoomedDomains = useMemo(() => {
+        if (fullTrajectoryPoints.length === 0) {
+            return { xDomain: [240, 320], yDomain: [13.0, 15.5] };
+        }
+        const xs = fullTrajectoryPoints.map(p => p.x);
+        const ys = fullTrajectoryPoints.map(p => p.y);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+
+        // 점선 및 일자 라벨(8/5, 8/6...)이 겹치지 않게 여유 패딩 적용
+        const rangeX = maxX - minX;
+        const rangeY = maxY - minY;
+        const padX = Math.max(rangeX * 0.45, 3.0);
+        const padY = Math.max(rangeY * 0.45, 0.20);
+
+        const xMin = Math.floor((minX - padX) * 10) / 10;
+        const xMax = Math.ceil((maxX + padX) * 10) / 10;
+        const yMin = parseFloat((minY - padY).toFixed(2));
+        const yMax = parseFloat((maxY + padY).toFixed(2));
+
+        return {
+            xDomain: [xMin, xMax],
+            yDomain: [yMin, yMax],
+        };
+    }, [fullTrajectoryPoints]);
+
+    const activeXDomain = isLogMode ? zoomedDomains.xDomain : standardXDomain;
+    const activeYDomain = isLogMode ? zoomedDomains.yDomain : standardYDomain;
 
     const fxGap = (fx !== null && t.fx_target !== undefined) ? t.fx_target - fx : null;
 
     return (
         <div className="space-y-4">
+            {/* 1주간로그 줌인 모드 헤더 배너 (로그 모드일 때만 표시) */}
+            {isLogMode && (
+                <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-sky-500/15 border border-sky-500/30 text-sky-300 text-xs font-semibold animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex items-center gap-2">
+                        <ZoomIn className="w-4 h-4 text-sky-400 animate-pulse" />
+                        <span>🔍 1주간 로그 줌인 시뮬레이션 (축 범위 정밀 확대 모드)</span>
+                    </div>
+                    <span className="text-[11px] text-sky-400/80">점선 궤적 & 일자별 변동 분포 상세</span>
+                </div>
+            )}
+
             <ResponsiveContainer width="100%" height={280}>
                 <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
@@ -739,9 +783,9 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
                     {fx !== null && <ReferenceLine x={fx} stroke={fxColor} strokeOpacity={0.9} strokeDasharray="3 3" label={{ value: `현재 ${fx.toFixed(1)}원`, fill: fxColor, fontSize: 10, position: 'insideBottomLeft' }} />}
                     {y5 !== null && <ReferenceLine y={y5} stroke={rateColor} strokeOpacity={0.9} strokeDasharray="3 3" label={{ value: `현재 ${y5.toFixed(2)}%`, fill: rateColor, fontSize: 10, position: 'insideBottomLeft' }} />}
 
-                    <XAxis type="number" dataKey="x" domain={xDomain} ticks={[240, 260, 280, 290, 300, 320]} tick={{ fill: '#9ca3af', fontSize: 12 }}
+                    <XAxis type="number" dataKey="x" domain={activeXDomain} ticks={isLogMode ? undefined : [240, 260, 280, 290, 300, 320]} tick={{ fill: '#9ca3af', fontSize: 12 }}
                         label={{ value: '원/헤알 환율 (원)', position: 'insideBottom', offset: -10, fill: '#6b7280', fontSize: 12 }} />
-                    <YAxis type="number" dataKey="y" domain={yDomain} tick={{ fill: '#9ca3af', fontSize: 12 }}
+                    <YAxis type="number" dataKey="y" domain={activeYDomain} tick={{ fill: '#9ca3af', fontSize: 12 }}
                         label={{ value: '5년물 금리(%)', angle: -90, position: 'insideLeft', fill: '#6b7280', fontSize: 12 }} />
                     <ZAxis range={[400, 400]} />
                     <RechartsTooltip
@@ -751,8 +795,8 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
                         labelStyle={{ color: '#9ca3af' }}
                         formatter={(v: any, n: any) => [fmt(v, 2), n === 'x' ? '환율' : '금리']} />
 
-                    {/* 1주일 이동 궤적 연결 점선 (순차 확장) */}
-                    {visibleTrajectoryPoints.length > 1 && (
+                    {/* 1주간 로그 모드일 때만 궤적 점선 표시 (순차 확장) */}
+                    {isLogMode && visibleTrajectoryPoints.length > 1 && (
                         <Scatter
                             name="1주일 궤적선"
                             data={visibleTrajectoryPoints}
@@ -763,8 +807,8 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
                         />
                     )}
 
-                    {/* 1주일 이동 궤적 이전 일자 점들 (순차 등장) */}
-                    {visibleTrajectoryPoints.length > 0 && (
+                    {/* 1주간 로그 모드일 때만 궤적 점들과 일자 라벨 표시 */}
+                    {isLogMode && visibleTrajectoryPoints.length > 0 && (
                         <Scatter
                             name="1주일 궤적점"
                             data={visibleTrajectoryPoints.filter(p => !p.isToday)}
@@ -776,18 +820,18 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
                                         <circle
                                             cx={cx}
                                             cy={cy}
-                                            r={4.5}
+                                            r={5}
                                             fill="#38bdf8"
                                             stroke="#0f172a"
                                             strokeWidth={1.5}
-                                            opacity={payload?.opacity ?? 0.6}
+                                            opacity={payload?.opacity ?? 0.7}
                                         />
                                         <text
                                             x={cx}
-                                            y={cy - 7}
+                                            y={cy - 8}
                                             textAnchor="middle"
                                             fill="#38bdf8"
-                                            fontSize={9}
+                                            fontSize={10}
                                             fontWeight={700}
                                             opacity={0.95}
                                         >
@@ -799,7 +843,7 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
                         />
                     )}
 
-                    {/* 현재 위치 점: 애니메이션 도착 시 깜빡임 오라 하이라이트 발동 */}
+                    {/* 현재 위치 점: 일반 모드이거나 애니메이션 도착 시 하이라이트 발동 */}
                     {isTodayReached && (
                         <Scatter
                             name="현재 위치"
@@ -845,23 +889,51 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
                 </ScatterChart>
             </ResponsiveContainer>
             
-            {/* 범례 및 목표대비 갭 표시 */}
+            {/* 범례, 환율 갭 및 1주간로그 / 돌아가기 버튼 (우측 아래 위치) */}
             <div className="border-t border-white/5 pt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-400">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                     <span className="font-semibold text-gray-300">범례 기준:</span>
                     <span className="text-emerald-300 font-medium">🟢 최적 (금리 14.2~14.7% / 환율 ≤290원)</span>
                     <span className="text-amber-300 font-medium">🟡 주의 (금리 14.7~15.0%·13~14.2% / 환율 290~300원)</span>
                     <span className="text-rose-300 font-medium">🔴 경고 (금리 &gt;15%·&lt;13% / 환율 &gt;300원)</span>
-                    <span className="text-sky-300 font-medium flex items-center gap-1">
-                        <span className="inline-block w-2.5 h-0.5 bg-sky-400 rounded-full"></span> 🔵 1주일 궤적 (점선 & 날짜)
-                    </span>
+                    {isLogMode && (
+                        <span className="text-sky-300 font-medium flex items-center gap-1 animate-in fade-in duration-200">
+                            <span className="inline-block w-2.5 h-0.5 bg-sky-400 rounded-full"></span> 🔵 1주일 궤적 (줌인 확대)
+                        </span>
+                    )}
                 </div>
-                {fxGap !== null && fx !== null && (
-                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-medium">
-                        <span>환율 갭:</span>
-                        <span className="font-bold">{fxGap > 0 ? `+${fxGap.toFixed(1)}원 (우호)` : `${fxGap.toFixed(1)}원 (초과)`}</span>
-                    </div>
-                )}
+
+                <div className="flex items-center gap-2 ml-auto">
+                    {fxGap !== null && fx !== null && !isLogMode && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-medium">
+                            <span>환율 갭:</span>
+                            <span className="font-bold">{fxGap > 0 ? `+${fxGap.toFixed(1)}원 (우호)` : `${fxGap.toFixed(1)}원 (초과)`}</span>
+                        </div>
+                    )}
+
+                    {/* 1주간로그 / 돌아가기 버튼 (그래프 우측 아래 위치) */}
+                    <button
+                        onClick={toggleLogMode}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 ${
+                            isLogMode
+                                ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 ring-1 ring-amber-500/30'
+                                : 'bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 hover:border-sky-400'
+                        }`}
+                        title={isLogMode ? "원래 전체 X/Y축 범위로 돌아가기" : "최근 1주일간 변동 범위로 X/Y축을 좁혀서 궤적 시뮬레이션 보기"}
+                    >
+                        {isLogMode ? (
+                            <>
+                                <ZoomOut className="w-3.5 h-3.5 text-amber-400" />
+                                <span>돌아가기</span>
+                            </>
+                        ) : (
+                            <>
+                                <ZoomIn className="w-3.5 h-3.5 text-sky-400" />
+                                <span>1주간로그</span>
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* 현재 그래프 수치에 따른 실시간 분석 및 종합 판정 벤토 카드 */}
