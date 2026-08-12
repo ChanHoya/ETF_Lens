@@ -1,7 +1,7 @@
 "use client";
 // 브라질 국채 매크로 대시보드·Activation Zone 신호·AI 전략 리포트·캐리 쿠션 시뮬레이터 뷰
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
     ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, ReferenceArea, ReferenceLine, ZAxis,
@@ -9,7 +9,7 @@ import {
 import {
     Flag, TrendingDown, Gauge, AlertTriangle, Target, CalendarClock,
     Sparkles, RefreshCw, Layers, ShieldCheck, ArrowDownRight, Info, CheckCircle2,
-    Newspaper, Bell, ExternalLink, Send, Settings,
+    Newspaper, Bell, ExternalLink, Send, Settings, Play, RotateCcw,
 } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
 
@@ -616,15 +616,15 @@ function IndicatorGuide() {
     );
 }
 
-// Activation Zone: 2축 산점도 (환율 X, 금리 Y). 현재 위치 및 1주일 궤적 점선 표시.
+// Activation Zone: 2축 산점도 (환율 X, 금리 Y). 현재 위치 및 1주일 궤적 점선 표시 + 순차 애니메이션.
 function ActivationZoneChart({ summary, history }: { summary: Summary; history?: Record<string, { date: string; value: number }[]> }) {
     const t = summary.targets;
     const y5 = summary.indicators.find(i => i.key === 'y5')?.value ?? null;
     const fx = summary.indicators.find(i => i.key === 'brl_krw')?.value ?? null;
     const point = (y5 !== null && fx !== null) ? [{ x: fx, y: y5 }] : [];
 
-    // 1주일 이동 궤적 포인트 생성 (최근 7일치 환율x금리 위치)
-    const trajectoryPoints = useMemo(() => {
+    // 1주일 이동 궤적 전체 포인트 생성 (최근 7일치 환율x금리 위치)
+    const fullTrajectoryPoints = useMemo(() => {
         if (!history) return [];
         const fxList = history['brl_krw'] || [];
         const y5List = (history['y5'] && history['y5'].length > 0) ? history['y5'] : (history['y5_fred'] || []);
@@ -635,49 +635,70 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
         y5List.forEach(item => y5Map.set(item.date, item.value));
 
         let lastY5 = y5List.length > 0 ? y5List[y5List.length - 1].value : null;
-
-        // Take recent 12 entries to extract last 7 valid days
         const recentFx = fxList.slice(-12);
-
         const list: { date: string; x: number; y: number; label: string; isToday: boolean; opacity: number }[] = [];
 
         recentFx.forEach((item) => {
             const date = item.date;
             const fxVal = item.value;
             const y5Val = y5Map.get(date) ?? lastY5;
-            if (y5Val !== null && y5Val !== undefined) {
-                lastY5 = y5Val;
-            }
+            if (y5Val !== null && y5Val !== undefined) lastY5 = y5Val;
 
             if (fxVal !== null && y5Val !== null && y5Val !== undefined) {
                 const parts = date.split('-');
                 const monthDay = parts.length >= 3 ? `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)}` : date;
-                list.push({
-                    date,
-                    x: fxVal,
-                    y: y5Val,
-                    label: monthDay,
-                    isToday: false,
-                    opacity: 0.4,
-                });
+                list.push({ date, x: fxVal, y: y5Val, label: monthDay, isToday: false, opacity: 0.4 });
             }
         });
 
-        // Take last 7 days max
         const res = list.slice(-7);
         if (res.length > 0) {
-            res.forEach((pt, i) => {
-                pt.opacity = 0.35 + (i / (res.length - 1 || 1)) * 0.55;
-            });
+            res.forEach((pt, i) => { pt.opacity = 0.35 + (i / (res.length - 1 || 1)) * 0.55; });
             const last = res[res.length - 1];
             last.isToday = true;
-            if (fx !== null && y5 !== null) {
-                last.x = fx;
-                last.y = y5;
-            }
+            if (fx !== null && y5 !== null) { last.x = fx; last.y = y5; }
         }
         return res;
     }, [history, fx, y5]);
+
+    // ── 하루씩 궤적 이어지는 순차 애니메이션 제어 ────────────────────────────
+    const [animStep, setAnimStep] = useState<number>(1);
+    const [isAnimating, setIsAnimating] = useState<boolean>(false);
+    const hasAnimatedRef = useRef<boolean>(false);
+
+    const triggerAnimation = useCallback(() => {
+        if (fullTrajectoryPoints.length === 0) return;
+        setAnimStep(1);
+        setIsAnimating(true);
+    }, [fullTrajectoryPoints.length]);
+
+    // 초기 마운트/데이터 준비 완료 시 자동 1회 실행
+    useEffect(() => {
+        if (fullTrajectoryPoints.length > 0 && !hasAnimatedRef.current) {
+            hasAnimatedRef.current = true;
+            triggerAnimation();
+        }
+    }, [fullTrajectoryPoints.length, triggerAnimation]);
+
+    // 애니메이션 스텝 타이머: 220ms 간격으로 하루씩 점선 확장
+    useEffect(() => {
+        if (!isAnimating) return;
+        if (animStep >= fullTrajectoryPoints.length) {
+            setIsAnimating(false);
+            return;
+        }
+        const timer = setTimeout(() => { setAnimStep(prev => prev + 1); }, 220);
+        return () => clearTimeout(timer);
+    }, [isAnimating, animStep, fullTrajectoryPoints.length]);
+
+    // 현재 스텝까지 표시할 궤적 포인트들
+    const visibleTrajectoryPoints = useMemo(() => {
+        if (fullTrajectoryPoints.length === 0) return [];
+        return fullTrajectoryPoints.slice(0, animStep);
+    }, [fullTrajectoryPoints, animStep]);
+
+    // 현재 위치(오늘) 점은 애니메이션이 마지막 스텝에 도달했거나 애니메이션 중이 아닐 때 강조 표시
+    const isTodayReached = !isAnimating || animStep >= fullTrajectoryPoints.length;
 
     // 현재 위치 점·가이드선 색: 두 축 독립 판정. 가로선(금리)=금리 게이지색, 세로선(환율)=환율 게이지색.
     const rateColor = GAUGE_HEX[summary.indicators.find(i => i.key === 'y5')?.gauge || 'gray'];
@@ -685,8 +706,7 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
 
     // X축 레인지: 240 ~ 320원 고정 레인지
     const xDomain = useMemo(() => [240, 320], []);
-
-    // Y축 레인지: 13.0% ~ 15.5% 고정 레인지 (목표하한 14.2%, 목표상한 14.7%, 경고선 15.0% 전 영역 포함)
+    // Y축 레인지: 13.0% ~ 15.5% 고정 레인지
     const yDomain = useMemo(() => [13.0, 15.5], []);
 
     const fxGap = (fx !== null && t.fx_target !== undefined) ? t.fx_target - fx : null;
@@ -696,26 +716,26 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
             <ResponsiveContainer width="100%" height={280}>
                 <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                    {/* 🟢 최적 구간 (초록색 음영): 금리 14.2~14.7% & 환율 ≤ 290원 */}
+                    {/* 🟢 최적 구간 (초록색 음영) */}
                     <ReferenceArea x1={240} x2={t.fx_target} y1={t.rate_floor} y2={t.rate_tranche2} fill="#10b981" fillOpacity={0.28} />
 
-                    {/* 🟡 주의 구간 (선명한 노란색 음영 #f59e0b, opacity 0.25) */}
+                    {/* 🟡 주의 구간 */}
                     <ReferenceArea x1={240} x2={t.fx_target} y1={t.rate_tranche2} y2={t.rate_risk} fill="#f59e0b" fillOpacity={0.25} />
                     <ReferenceArea x1={240} x2={t.fx_target} y1={13.0} y2={t.rate_floor} fill="#f59e0b" fillOpacity={0.25} />
                     <ReferenceArea x1={t.fx_target} x2={300} y1={13.0} y2={t.rate_risk} fill="#f59e0b" fillOpacity={0.25} />
 
-                    {/* 🔴 경고 구간 (빨간색 음영 #ef4444, opacity 0.30) */}
+                    {/* 🔴 경고 구간 */}
                     <ReferenceArea x1={240} x2={300} y1={t.rate_risk} y2={15.5} fill="#ef4444" fillOpacity={0.30} />
                     <ReferenceArea x1={300} x2={320} y1={13.0} y2={15.5} fill="#ef4444" fillOpacity={0.30} />
                     
-                    {/* 목표 조건 기준선 (하얀색 점선: 환율 290원, 금리 하한 14.2%, 금리 상한 14.7%) */}
+                    {/* 목표 조건 기준선 */}
                     <ReferenceLine x={t.fx_target} stroke="#ffffff" strokeOpacity={0.8} strokeDasharray="4 4" label={{ value: '목표 290원', fill: '#ffffff', fontSize: 10, position: 'insideTopRight' }} />
                     <ReferenceLine x={300} stroke="#ef4444" strokeOpacity={0.7} strokeDasharray="3 3" label={{ value: '경고 300원', fill: '#ef4444', fontSize: 10, position: 'insideTopLeft' }} />
                     <ReferenceLine y={t.rate_floor} stroke="#ffffff" strokeOpacity={0.8} strokeDasharray="4 4" label={{ value: '목표 하한 14.2%', fill: '#ffffff', fontSize: 10, position: 'insideBottomRight' }} />
                     <ReferenceLine y={t.rate_tranche2} stroke="#ffffff" strokeOpacity={0.8} strokeDasharray="4 4" label={{ value: '목표 상한 14.7%', fill: '#ffffff', fontSize: 10, position: 'insideTopRight' }} />
                     <ReferenceLine y={t.rate_risk} stroke="#ef4444" strokeOpacity={0.7} strokeDasharray="3 3" label={{ value: '경고 15.0%', fill: '#ef4444', fontSize: 10, position: 'insideTopRight' }} />
                     
-                    {/* 현재 수치 위치 가이드선 (세로선=환율색, 가로선=금리색) */}
+                    {/* 현재 수치 위치 가이드선 */}
                     {fx !== null && <ReferenceLine x={fx} stroke={fxColor} strokeOpacity={0.9} strokeDasharray="3 3" label={{ value: `현재 ${fx.toFixed(1)}원`, fill: fxColor, fontSize: 10, position: 'insideBottomLeft' }} />}
                     {y5 !== null && <ReferenceLine y={y5} stroke={rateColor} strokeOpacity={0.9} strokeDasharray="3 3" label={{ value: `현재 ${y5.toFixed(2)}%`, fill: rateColor, fontSize: 10, position: 'insideBottomLeft' }} />}
 
@@ -731,32 +751,32 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
                         labelStyle={{ color: '#9ca3af' }}
                         formatter={(v: any, n: any) => [fmt(v, 2), n === 'x' ? '환율' : '금리']} />
 
-                    {/* 1주일 이동 궤적 연결 점선 */}
-                    {trajectoryPoints.length > 1 && (
+                    {/* 1주일 이동 궤적 연결 점선 (순차 확장) */}
+                    {visibleTrajectoryPoints.length > 1 && (
                         <Scatter
                             name="1주일 궤적선"
-                            data={trajectoryPoints}
-                            line={{ stroke: '#38bdf8', strokeWidth: 2, strokeDasharray: '4 4' }}
+                            data={visibleTrajectoryPoints}
+                            line={{ stroke: '#38bdf8', strokeWidth: 2.2, strokeDasharray: '4 4' }}
                             lineType="joint"
                             shape={() => null}
                             legendType="none"
                         />
                     )}
 
-                    {/* 1주일 이동 궤적 이전 일자 점들 */}
-                    {trajectoryPoints.length > 0 && (
+                    {/* 1주일 이동 궤적 이전 일자 점들 (순차 등장) */}
+                    {visibleTrajectoryPoints.length > 0 && (
                         <Scatter
                             name="1주일 궤적점"
-                            data={trajectoryPoints.filter(p => !p.isToday)}
+                            data={visibleTrajectoryPoints.filter(p => !p.isToday)}
                             shape={(props: any) => {
                                 const { cx, cy, payload } = props;
                                 if (cx === undefined || cy === undefined || isNaN(cx) || isNaN(cy)) return null;
                                 return (
-                                    <g key={`traj-dot-${payload.date}`}>
+                                    <g key={`traj-dot-${payload.date}`} className="animate-in fade-in zoom-in-50 duration-300">
                                         <circle
                                             cx={cx}
                                             cy={cy}
-                                            r={4}
+                                            r={4.5}
                                             fill="#38bdf8"
                                             stroke="#0f172a"
                                             strokeWidth={1.5}
@@ -766,10 +786,10 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
                                             x={cx}
                                             y={cy - 7}
                                             textAnchor="middle"
-                                            fill="#94a3b8"
+                                            fill="#38bdf8"
                                             fontSize={9}
-                                            fontWeight={600}
-                                            opacity={0.9}
+                                            fontWeight={700}
+                                            opacity={0.95}
                                         >
                                             {payload?.label}
                                         </text>
@@ -779,47 +799,49 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
                         />
                     )}
 
-                    {/* 현재 위치 점: 깜빡임 오라(animate-ping + animate-pulse) 하이라이트 적용 */}
-                    <Scatter
-                        name="현재 위치"
-                        data={point}
-                        shape={(props: any) => {
-                            const { cx, cy } = props;
-                            if (cx === undefined || cy === undefined || isNaN(cx) || isNaN(cy)) return null;
-                            return (
-                                <g key={`pulsing-dot-${cx}-${cy}`}>
-                                    {/* 핑 애니메이션 바깥 파동링 */}
-                                    <circle
-                                        cx={cx}
-                                        cy={cy}
-                                        r={14}
-                                        fill={rateColor}
-                                        opacity={0.6}
-                                        className="animate-ping"
-                                        style={{ transformOrigin: `${cx}px ${cy}px` }}
-                                    />
-                                    {/* 은은한 아우라 링 */}
-                                    <circle
-                                        cx={cx}
-                                        cy={cy}
-                                        r={11}
-                                        fill={fxColor}
-                                        opacity={0.35}
-                                    />
-                                    {/* 메인 하이라이트 코어 점 (펄스 애니메이션) */}
-                                    <circle
-                                        cx={cx}
-                                        cy={cy}
-                                        r={8}
-                                        fill={rateColor}
-                                        stroke={fxColor}
-                                        strokeWidth={3}
-                                        className="animate-pulse"
-                                    />
-                                </g>
-                            );
-                        }}
-                    />
+                    {/* 현재 위치 점: 애니메이션 도착 시 깜빡임 오라 하이라이트 발동 */}
+                    {isTodayReached && (
+                        <Scatter
+                            name="현재 위치"
+                            data={point}
+                            shape={(props: any) => {
+                                const { cx, cy } = props;
+                                if (cx === undefined || cy === undefined || isNaN(cx) || isNaN(cy)) return null;
+                                return (
+                                    <g key={`pulsing-dot-${cx}-${cy}`}>
+                                        {/* 핑 애니메이션 바깥 파동링 */}
+                                        <circle
+                                            cx={cx}
+                                            cy={cy}
+                                            r={14}
+                                            fill={rateColor}
+                                            opacity={0.6}
+                                            className="animate-ping"
+                                            style={{ transformOrigin: `${cx}px ${cy}px` }}
+                                        />
+                                        {/* 은은한 아우라 링 */}
+                                        <circle
+                                            cx={cx}
+                                            cy={cy}
+                                            r={11}
+                                            fill={fxColor}
+                                            opacity={0.35}
+                                        />
+                                        {/* 메인 하이라이트 코어 점 (펄스 애니메이션) */}
+                                        <circle
+                                            cx={cx}
+                                            cy={cy}
+                                            r={8}
+                                            fill={rateColor}
+                                            stroke={fxColor}
+                                            strokeWidth={3}
+                                            className="animate-pulse"
+                                        />
+                                    </g>
+                                );
+                            }}
+                        />
+                    )}
                 </ScatterChart>
             </ResponsiveContainer>
             
