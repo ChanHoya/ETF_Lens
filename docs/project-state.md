@@ -4,13 +4,13 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: 비밀번호 팝업 자동 커서 포커스 및 브라질채권 실시간 D-Day 동적 연산/콜드스타트 자동 재시도 적용 완료 (2026-08-12)
+✅ Current: 브라질채권 2축 맵 최근 1주일 궤적 하루씩 순차 연결 애니메이션 & 다시보기 기능 구축 완료 (2026-08-12)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-08-12):
-> - MyAssetsView, TffGateWrapper, TffDashboard 비밀번호/PIN 팝업 열림 시 입력창 커서 자동 포커싱(`autoFocus` & `useEffect` 타이머) 구현 완료.
-> - BrazilBondTab 로컬 캐시 사용 시 D-Day 실시간 동적 계산(`getDynamicDDay`) 및 서버 휴면 기동 시 백그라운드 재시도(`setTimeout`) 보완.
-> - Git commit & push 완료 (`bc1b7187`).
+> - ActivationZoneChart 최근 1주일 환율x금리 이동 궤적을 일자별(220ms 간격) 순차 등장 및 점선 드로잉 애니메이션 적용 완료.
+> - 차트 하단 '궤적 다시보기' 버튼 추가 및 오늘 위치 도달 시 깜빡임 하이라이트 발동.
+> - Git commit & push 완료 (`1d95b7e2`).
  
  
 ## Current Sprint
