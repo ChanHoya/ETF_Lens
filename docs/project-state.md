@@ -4,14 +4,13 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: 브라질채권 Activation Zone 맵 '1주간로그' 줌인 모드 & '돌아가기' 토글 구축 완료 (2026-08-12)
+✅ Current: 브라질채권 Activation Zone 맵 60fps 유동적 궤적 연결 애니메이션 고도화 완료 (2026-08-12)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-08-12):
-> - 기본 모드에서는 전체 목표 영역(240~320원 x 13.0~15.5%)과 오늘 위치만 깔끔하게 표시.
-> - 그래프 우측 하단 '1주간로그' 버튼 클릭 시 X/Y축 범위를 최근 1주일 궤적 범위로 정밀 줌인하여 점선 및 일자별 날짜(8/5, 8/6...)가 또렷하게 펼쳐지는 순차 시뮬레이션 적용.
-> - '돌아가기' 버튼 클릭 시 원래 넓은 전체 축 범위로 복귀.
-> - Git commit & push 완료 (`2ed304cb`).
+> - requestAnimationFrame 및 Ease-in-out Cubic 곡선을 이용해 1.8초간 60fps로 매끈하게 점선이 그려지는 실시간 보간(Interpolation) 궤적 애니메이션 적용.
+> - 애니메이션 진행 중 선도 레이저 팁 헤드가 물 흐르듯 선을 긋고, 도달한 일자별 라벨(8/5, 8/6...)이 부드럽게 등장.
+> - Git commit & push 완료 (`8a0ce17f`).
  
  
 ## Current Sprint
