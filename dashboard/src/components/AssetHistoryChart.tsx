@@ -300,13 +300,19 @@ export default function AssetHistoryChart({ accounts }: Props) {
 
                 compareData.forEach((accData) => {
                     const filteredHistory = accData.history.filter((item) => new Date(item.date) >= limitDate);
-                    const baseAsset = filteredHistory[0]?.total_asset ?? 0;
+                    const firstItem = filteredHistory[0];
+                    const baseReturn = firstItem && typeof firstItem.accumulated_return === 'number'
+                        ? firstItem.accumulated_return
+                        : null;
+                    const baseAsset = firstItem?.total_asset ?? 0;
 
                     filteredHistory.forEach((item) => {
                         if (!dateMap[item.date]) {
                             dateMap[item.date] = { date: item.date };
                         }
-                        const pr = baseAsset > 0 ? (item.total_asset / baseAsset - 1) * 100 : 0;
+                        const pr = (baseReturn !== null && typeof item.accumulated_return === 'number')
+                            ? item.accumulated_return - baseReturn
+                            : (baseAsset > 0 ? (item.total_asset / baseAsset - 1) * 100 : 0);
                         dateMap[item.date][`asset_${accData.account_no}`] = item.total_asset;
                         dateMap[item.date][`return_${accData.account_no}`] = pr;
                         dateMap[item.date][`info_${accData.account_no}`] = item;
@@ -462,12 +468,21 @@ export default function AssetHistoryChart({ accounts }: Props) {
                 </div>
             ) : (() => {
                 // ── 단일/통합 계좌 렌더링 ──
-                const baseAsset = filteredData[0]?.total_asset ?? 0;
+                const firstItem = filteredData[0];
+                const baseReturn = firstItem && typeof firstItem.accumulated_return === 'number'
+                    ? firstItem.accumulated_return
+                    : null;
+                const baseAsset = firstItem?.total_asset ?? 0;
 
-                const displayData = filteredData.map(d => ({
-                    ...d,
-                    period_return: baseAsset > 0 ? (d.total_asset / baseAsset - 1) * 100 : 0
-                }));
+                const displayData = filteredData.map(d => {
+                    const pr = (baseReturn !== null && typeof d.accumulated_return === 'number')
+                        ? d.accumulated_return - baseReturn
+                        : (baseAsset > 0 ? (d.total_asset / baseAsset - 1) * 100 : 0);
+                    return {
+                        ...d,
+                        period_return: pr
+                    };
+                });
 
                 const periodReturns = displayData.map(d => d.period_return);
                 const minRet = Math.min(...periodReturns);
