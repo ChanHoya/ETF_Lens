@@ -24,7 +24,7 @@ STANDARD_CATEGORIES = [
     {"key": "ISA", "name": "ISA", "country": "국내", "currency": "KRW"},
     {"key": "PENSION", "name": "연금저축펀드", "country": "국내", "currency": "KRW"},
     {"key": "IRP", "name": "퇴직연금IRP", "country": "국내", "currency": "KRW"},
-    {"key": "SAVINGS", "name": "기타저축계좌", "country": "복합", "currency": "KRW"},
+    {"key": "OTHER_INVEST", "name": "기타투자계좌", "country": "복합", "currency": "KRW"},
     {"key": "STOCK", "name": "일반주식계좌", "country": "국내", "currency": "KRW"},
 ]
 
@@ -32,12 +32,22 @@ CATEGORY_NAME_MAP = {
     "ISA": "ISA",
     "PENSION": "연금저축펀드",
     "IRP": "퇴직연금IRP",
-    "SAVINGS": "기타저축계좌",
+    "SAVINGS": "기타투자계좌",
+    "OTHER_INVEST": "기타투자계좌",
     "STOCK": "일반주식계좌",
     "연금저축펀드": "연금저축펀드",
     "퇴직연금IRP": "퇴직연금IRP",
-    "기타저축계좌": "기타저축계좌",
+    "기타저축계좌": "기타투자계좌",
+    "기타투자계좌": "기타투자계좌",
     "일반주식계좌": "일반주식계좌",
+}
+
+# 기본 KIS 계좌 매핑 정의 (사용자 계좌별 기본 분류)
+DEFAULT_KIS_ACCOUNT_MAPPING: Dict[str, Dict[str, str]] = {
+    "64490078-01": {"alias": "한투 ISA", "category": "ISA", "country": "국내"},
+    "81060777-22": {"alias": "한투 퇴직연금IRP", "category": "퇴직연금IRP", "country": "국내"},
+    "64896732-01": {"alias": "한투 기타투자계좌", "category": "기타투자계좌", "country": "국내"},
+    "81060777-01": {"alias": "한투 일반주식계좌", "category": "일반주식계좌", "country": "국내"},
 }
 
 
@@ -137,43 +147,112 @@ async def get_live_usd_krw_rate() -> float:
     return _FX_CACHE["rate"]
 
 
-# ── Helper: Fetch Live Stock Price ───────────────────────────────────────────
-async def fetch_stock_live_price(ticker: str, currency: str = "KRW") -> Optional[float]:
+# ── Helper: Fetch Live Stock Price & Info ────────────────────────────────────
+async def fetch_realtime_stock_info(ticker: str) -> Optional[Dict[str, Any]]:
     clean = ticker.strip().upper()
     if not clean:
         return None
 
-    # Korean 6-digit stock / ETF code
+    # 1. 국내 6자리 주식 / ETF 종목코드 (네이버 모바일 증권)
     if clean.isdigit() and len(clean) == 6:
         try:
-            ctx = ssl._create_unverified_context()
-            url = f"https://m.stock.naver.com/api/stock/{clean}/basic"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            res = await asyncio.to_thread(
-                lambda: urllib.request.urlopen(req, timeout=5, context=ctx).read()
-            )
-            data = json.loads(res)
-            price_str = data.get("closePrice", "")
-            if price_str:
-                return float(str(price_str).replace(",", ""))
+            async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
+                url = f"https://m.stock.naver.com/api/stock/{clean}/basic"
+                res = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                if res.status_code == 200:
+                    data = res.json()
+                    name = data.get("stockName") or clean
+                    cp_str = str(data.get("closePrice", "0")).replace(",", "")
+                    price = float(cp_str)
+                    return {
+                        "ticker": clean,
+                        "name": name,
+                        "price": price,
+                        "currency": "KRW",
+                        "country": "국내",
+                        "market": data.get("stockItemTotalInfo", {}).get("marketName") or "국내",
+                    }
         except Exception as e:
-            logger.debug(f"Naver price fetch failed for {clean}: {e}")
+            logger.debug(f"Naver domestic stock fetch error for {clean}: {e}")
 
-    # US ticker
+    # 2. 해외/미국 주식 티커 (네이버 글로벌 API)
+    overseas_urls = [
+        f"https://api.stock.naver.com/stock/{clean}/basic",
+        f"https://m.stock.naver.com/api/stock/{clean}.O/basic",
+        f"https://m.stock.naver.com/api/stock/{clean}.K/basic",
+        f"https://m.stock.naver.com/api/stock/{clean}.N/basic",
+    ]
+    try:
+        async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
+            for url in overseas_urls:
+                try:
+                    res = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                    if res.status_code == 200:
+                        data = res.json()
+                        name = data.get("stockName") or clean
+                        cp_str = str(data.get("closePrice", "0")).replace(",", "")
+                        price = float(cp_str)
+                        curr_raw = data.get("currencyType")
+                        curr = curr_raw if isinstance(curr_raw, str) else (curr_raw.get("code", "USD") if isinstance(curr_raw, dict) else "USD")
+                        return {
+                            "ticker": clean,
+                            "name": name,
+                            "price": price,
+                            "currency": curr or "USD",
+                            "country": "해외" if (curr or "USD") == "USD" else "국내",
+                            "market": data.get("stockExchangeName", "해외"),
+                        }
+                except Exception:
+                    continue
+    except Exception as e:
+        logger.debug(f"Naver overseas fetch error for {clean}: {e}")
+
+    # 3. Yahoo Finance Fallback
     try:
         import yfinance as yf
-        tk = yf.Ticker(clean)
-        hist = await asyncio.to_thread(lambda: tk.history(period="1d"))
-        if not hist.empty:
-            return float(hist["Close"].iloc[-1])
+
+        def _get_yf():
+            tk = yf.Ticker(clean)
+            fast = tk.fast_info
+            p = getattr(fast, "last_price", None)
+            if p is None:
+                hist = tk.history(period="1d")
+                if not hist.empty:
+                    p = float(hist["Close"].iloc[-1])
+            curr = getattr(fast, "currency", "USD") or "USD"
+            name = clean
+            try:
+                name = tk.info.get("shortName") or tk.info.get("longName") or clean
+            except Exception:
+                pass
+            return {
+                "ticker": clean,
+                "name": name,
+                "price": float(p) if p else None,
+                "currency": curr,
+                "country": "해외" if curr == "USD" else "국내",
+                "market": "US",
+            }
+
+        yf_res = await asyncio.to_thread(_get_yf)
+        if yf_res and yf_res.get("price") is not None:
+            return yf_res
     except Exception as e:
-        logger.debug(f"Yahoo price fetch failed for {clean}: {e}")
+        logger.debug(f"Yahoo fetch error for {clean}: {e}")
 
     return None
 
 
+async def fetch_stock_live_price(ticker: str, currency: str = "KRW") -> Optional[float]:
+    info = await fetch_realtime_stock_info(ticker)
+    return info.get("price") if info else None
+
+
 # ── Helper: Guess KIS Account Category ───────────────────────────────────────
 def guess_kis_category(acc_no: str, acc_name: Optional[str] = None) -> str:
+    clean_no = acc_no.strip()
+    if clean_no in DEFAULT_KIS_ACCOUNT_MAPPING:
+        return DEFAULT_KIS_ACCOUNT_MAPPING[clean_no]["category"]
     name_str = f"{acc_name or ''} {acc_no}".upper()
     if "ISA" in name_str:
         return "ISA"
@@ -181,9 +260,24 @@ def guess_kis_category(acc_no: str, acc_name: Optional[str] = None) -> str:
         return "연금저축펀드"
     if "IRP" in name_str or "퇴직" in name_str:
         return "퇴직연금IRP"
-    if "저축" in name_str or "CMA" in name_str or "발행어음" in name_str:
-        return "기타저축계좌"
+    if "저축" in name_str or "투자" in name_str or "CMA" in name_str or "발행어음" in name_str:
+        return "기타투자계좌"
     return "일반주식계좌"
+
+
+# ── Stock Price Lookup Endpoint ──────────────────────────────────────────────
+@router.get("/stock-price")
+async def get_stock_price(ticker: str):
+    """
+    종목코드(6자리 국내) 또는 티커(해외) 실시간 시세 및 종목명 조회 API
+    """
+    info = await fetch_realtime_stock_info(ticker)
+    if not info or info.get("price") is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"'{ticker}' 종목의 실시간 시세를 찾을 수 없습니다."
+        )
+    return {"status": "success", "data": info}
 
 
 # ── Main Integrated Asset Endpoint ───────────────────────────────────────────
@@ -230,9 +324,22 @@ async def get_integrated_assets(
     for acc in kis_accounts:
         acc_no = acc["account_no"]
         mapping = kis_map_dict.get(acc_no)
-        category = mapping.category if mapping else guess_kis_category(acc_no, acc.get("account_name"))
-        alias = mapping.alias if mapping and mapping.alias else acc.get("account_name", "한투 연동계좌")
-        country = mapping.country if mapping else "국내"
+        def_map = DEFAULT_KIS_ACCOUNT_MAPPING.get(acc_no, {})
+        category = (
+            mapping.category
+            if mapping and mapping.category
+            else def_map.get("category", guess_kis_category(acc_no, acc.get("account_name")))
+        )
+        alias = (
+            mapping.alias
+            if mapping and mapping.alias
+            else def_map.get("alias", acc.get("account_name", "한투 연동계좌"))
+        )
+        country = (
+            mapping.country
+            if mapping and mapping.country
+            else def_map.get("country", "국내")
+        )
 
         enriched_kis_accounts.append({
             "account_no": acc_no,
@@ -502,25 +609,35 @@ async def list_manual_assets(db: AsyncSession = Depends(get_db)):
 async def create_manual_asset(
     payload: ManualAssetCreate, db: AsyncSession = Depends(get_db)
 ):
-    # 티커가 있고 현재가가 0이면 실시간 가격 자동 조회 시도
     cur_p = payload.current_price
-    if cur_p == 0.0 and payload.ticker:
-        live_p = await fetch_stock_live_price(payload.ticker, payload.currency)
-        if live_p:
-            cur_p = live_p
+    asset_name = payload.asset_name
+    currency = payload.currency
+    country = payload.country
+
+    if payload.ticker:
+        info = await fetch_realtime_stock_info(payload.ticker)
+        if info:
+            if cur_p <= 0.0 and info.get("price"):
+                cur_p = info["price"]
+            if (not asset_name or asset_name.strip() == payload.ticker.strip()) and info.get("name"):
+                asset_name = info["name"]
+            if not currency or currency == "KRW":
+                currency = info.get("currency", currency)
+            if not country or country == "국내":
+                country = info.get("country", country)
 
     asset = ManualAsset(
-        category=payload.category,
+        category=CATEGORY_NAME_MAP.get(payload.category, "기타투자계좌"),
         account_name=payload.account_name,
         broker=payload.broker,
-        asset_name=payload.asset_name,
-        ticker=payload.ticker,
-        currency=payload.currency,
+        asset_name=asset_name,
+        ticker=payload.ticker.strip().upper() if payload.ticker else None,
+        currency=currency,
         purchase_price=payload.purchase_price,
         current_price=cur_p if cur_p > 0 else payload.purchase_price,
         quantity=payload.quantity,
         sector=payload.sector,
-        country=payload.country,
+        country=country,
         memo=payload.memo,
     )
     db.add(asset)

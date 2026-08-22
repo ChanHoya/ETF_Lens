@@ -20,9 +20,16 @@ const CATEGORIES = [
     "ISA",
     "연금저축펀드",
     "퇴직연금IRP",
-    "기타저축계좌",
+    "기타투자계좌",
     "일반주식계좌",
 ];
+
+const DEFAULT_MAPPINGS: Record<string, { alias: string; category: string; country: string }> = {
+    "64490078-01": { alias: "한투 ISA", category: "ISA", country: "국내" },
+    "81060777-22": { alias: "한투 퇴직연금IRP", category: "퇴직연금IRP", country: "국내" },
+    "64896732-01": { alias: "한투 기타투자계좌", category: "기타투자계좌", country: "국내" },
+    "81060777-01": { alias: "한투 일반주식계좌", category: "일반주식계좌", country: "국내" },
+};
 
 export default function KisAccountMappingModal({
     isOpen,
@@ -38,12 +45,23 @@ export default function KisAccountMappingModal({
     useEffect(() => {
         if (isOpen) {
             setMappings(
-                kisAccounts.map((acc) => ({
-                    account_no: acc.account_no,
-                    alias: acc.alias || acc.account_name || "한투 연동계좌",
-                    category: acc.category || "일반주식계좌",
-                    country: acc.country || "국내",
-                }))
+                kisAccounts.map((acc) => {
+                    const def = DEFAULT_MAPPINGS[acc.account_no] || {};
+                    let cat = acc.category;
+                    if (!cat || cat === "기타저축계좌" || (cat === "일반주식계좌" && def.category && def.category !== "일반주식계좌")) {
+                        cat = def.category || "일반주식계좌";
+                    }
+                    const alias = (acc.alias && acc.alias !== "연동계좌" && acc.alias !== "한투 연동계좌")
+                        ? acc.alias
+                        : (def.alias || acc.account_name || "한투 연동계좌");
+
+                    return {
+                        account_no: acc.account_no,
+                        alias,
+                        category: cat,
+                        country: acc.country || def.country || "국내",
+                    };
+                })
             );
             setError(null);
         }

@@ -46,6 +46,7 @@ const CATEGORY_ICONS: Record<string, string> = {
     "ISA": "🛡️",
     "연금저축펀드": "🌱",
     "퇴직연금IRP": "🏦",
+    "기타투자계좌": "💰",
     "기타저축계좌": "💰",
     "일반주식계좌": "📈",
 };
@@ -65,6 +66,11 @@ const CATEGORY_COLORS: Record<string, { badge: string; border: string; bar: stri
         badge: "bg-amber-500/10 text-amber-400 border-amber-500/20",
         border: "border-amber-500/20",
         bar: "bg-amber-500",
+    },
+    "기타투자계좌": {
+        badge: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+        border: "border-cyan-500/20",
+        bar: "bg-cyan-500",
     },
     "기타저축계좌": {
         badge: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",

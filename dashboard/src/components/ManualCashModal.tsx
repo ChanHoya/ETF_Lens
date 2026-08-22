@@ -10,7 +10,7 @@ interface ManualCashModalProps {
 }
 
 const CATEGORIES = [
-    "기타저축계좌",
+    "기타투자계좌",
     "ISA",
     "연금저축펀드",
     "퇴직연금IRP",
@@ -34,7 +34,7 @@ export default function ManualCashModal({
     onSuccess,
 }: ManualCashModalProps) {
     const [cashList, setCashList] = useState<any[]>([]);
-    const [category, setCategory] = useState("기타저축계좌");
+    const [category, setCategory] = useState("기타투자계좌");
     const [accountName, setAccountName] = useState("");
     const [broker, setBroker] = useState("케이뱅크");
     const [cashKrw, setCashKrw] = useState("");
