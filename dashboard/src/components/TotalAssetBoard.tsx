@@ -29,6 +29,42 @@ import KisAccountMappingModal from "./KisAccountMappingModal";
 import AccountSummaryDashboard from "./AccountSummaryDashboard";
 import HoldingsDetailDashboard from "./HoldingsDetailDashboard";
 import { SECTOR_OPTIONS, CLASSIFICATION_OPTIONS, UNSET_LABEL } from "@/lib/sectorOptions";
+import { filterHoldingsBySource } from "@/lib/holdingFilters";
+
+/** 보유 종목 표의 출처(KIS/수동) 필터 토글. 꺼지면 회색이 되고 해당 종목이 목록에서 빠진다. */
+function SourceFilterToggle({
+    active,
+    accent,
+    label,
+    onToggle,
+}: {
+    active: boolean;
+    accent: "kis" | "manual";
+    label: string;
+    onToggle: () => void;
+}) {
+    // Tailwind 가 클래스 문자열을 정적으로 훑기 때문에 조합하지 않고 통째로 둔다.
+    const activeStyle =
+        accent === "kis"
+            ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25"
+            : "bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25";
+
+    return (
+        <button
+            type="button"
+            onClick={onToggle}
+            aria-pressed={active}
+            title={`${label.replace(/^\S+\s/, "")} 종목 ${active ? "숨기기" : "보기"}`}
+            className={`text-[10px] px-1.5 py-0.5 rounded border font-bold transition-all active:scale-95 ${
+                active
+                    ? activeStyle
+                    : "bg-white/[0.03] text-gray-600 border-white/10 opacity-60 hover:opacity-90 line-through"
+            }`}
+        >
+            {label}
+        </button>
+    );
+}
 
 /** 섹터·분류 칩. 클릭하면 드롭다운으로 바뀌고, 값을 고르면 저장한다. */
 function TaxonomyCell({
@@ -203,6 +239,10 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
     const [isDeletingAsset, setIsDeletingAsset] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState("");
+
+    // 종목 출처 필터 (KIS 연동 / 수동 입력) — 기본은 둘 다 켜짐
+    const [showKis, setShowKis] = useState(true);
+    const [showManual, setShowManual] = useState(true);
 
     // Dashboard modals
     const [isAccountDashboardOpen, setIsAccountDashboardOpen] = useState(false);
@@ -381,6 +421,9 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
     } else {
         allHoldingsList = groupedHoldings[activeTab] || [];
     }
+
+    // Filter by source (KIS / 수동)
+    allHoldingsList = filterHoldingsBySource(allHoldingsList, { showKis, showManual });
 
     // Filter by search query
     if (searchQuery.trim()) {
@@ -852,24 +895,61 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                 <div className="overflow-x-auto">
                     {allHoldingsList.length === 0 ? (
                         <div className="p-12 text-center text-gray-500 text-xs">
-                            해당 분류에 등록된 종목이 없습니다.
-                            <div className="mt-3">
-                                <button
-                                    onClick={() => {
-                                        setSelectedManualAsset(null);
-                                        setIsAssetModalOpen(true);
-                                    }}
-                                    className="px-3.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-xl text-xs font-semibold transition-all"
-                                >
-                                    + 수동 자산 등록하기
-                                </button>
-                            </div>
+                            {!showKis && !showManual ? (
+                                <>
+                                    KIS와 수동 필터가 모두 꺼져 있습니다.
+                                    <div className="mt-3">
+                                        <button
+                                            onClick={() => {
+                                                setShowKis(true);
+                                                setShowManual(true);
+                                            }}
+                                            className="px-3.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-xl text-xs font-semibold transition-all"
+                                        >
+                                            필터 모두 켜기
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    해당 분류에 등록된 종목이 없습니다.
+                                    <div className="mt-3">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedManualAsset(null);
+                                                setIsAssetModalOpen(true);
+                                            }}
+                                            className="px-3.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-xl text-xs font-semibold transition-all"
+                                        >
+                                            + 수동 자산 등록하기
+                                        </button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     ) : (
                         <table className="w-full text-left text-xs border-collapse">
                             <thead>
                                 <tr className="border-b border-white/10 bg-white/[0.02] text-gray-400 font-semibold whitespace-nowrap">
-                                    <th className="py-3 px-4">종목명 / 상품명</th>
+                                    <th className="py-3 px-4">
+                                        <div className="flex items-center gap-2.5">
+                                            <span>종목명 / 상품명</span>
+                                            <div className="flex items-center gap-1">
+                                                <SourceFilterToggle
+                                                    active={showKis}
+                                                    accent="kis"
+                                                    label="🟢 KIS"
+                                                    onToggle={() => setShowKis((v) => !v)}
+                                                />
+                                                <SourceFilterToggle
+                                                    active={showManual}
+                                                    accent="manual"
+                                                    label="📝 수동"
+                                                    onToggle={() => setShowManual((v) => !v)}
+                                                />
+                                            </div>
+                                        </div>
+                                    </th>
                                     <th className="py-3 px-2 text-center">금융사/출처</th>
                                     <th className="py-3 px-2 text-center">섹터</th>
                                     <th className="py-3 px-2 text-center">분류</th>
