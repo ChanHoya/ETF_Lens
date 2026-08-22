@@ -82,6 +82,14 @@ class ManualAssetUpdate(BaseModel):
     memo: Optional[str] = None
 
 
+class BatchManualAssetCreate(BaseModel):
+    assets: List[ManualAssetCreate]
+
+
+class BatchManualAssetDelete(BaseModel):
+    ids: List[int]
+
+
 class ManualCashCreate(BaseModel):
     category: str
     account_name: str
@@ -635,7 +643,7 @@ async def create_manual_asset(
         currency=currency,
         purchase_price=payload.purchase_price,
         current_price=cur_p if cur_p > 0 else payload.purchase_price,
-        quantity=payload.quantity,
+        quantity=payload.quantity if payload.quantity > 0 else 1.0,
         sector=payload.sector,
         country=country,
         memo=payload.memo,
@@ -644,6 +652,53 @@ async def create_manual_asset(
     await db.commit()
     await db.refresh(asset)
     return asset
+
+
+@router.post("/manual-assets/batch")
+async def create_manual_assets_batch(
+    payload: BatchManualAssetCreate, db: AsyncSession = Depends(get_db)
+):
+    """여러 수동 자산을 한 번에 일괄 추가"""
+    created_list = []
+    for item in payload.assets:
+        cur_p = item.current_price
+        asset_name = item.asset_name
+        currency = item.currency
+        country = item.country
+
+        if item.ticker:
+            info = await fetch_realtime_stock_info(item.ticker)
+            if info:
+                if cur_p <= 0.0 and info.get("price"):
+                    cur_p = info["price"]
+                if (not asset_name or asset_name.strip() == item.ticker.strip()) and info.get("name"):
+                    asset_name = info["name"]
+                if not currency or currency == "KRW":
+                    currency = info.get("currency", currency)
+                if not country or country == "국내":
+                    country = info.get("country", country)
+
+        asset = ManualAsset(
+            category=CATEGORY_NAME_MAP.get(item.category, "기타투자계좌"),
+            account_name=item.account_name or item.broker,
+            broker=item.broker,
+            asset_name=asset_name or (item.ticker or "미지정 종목"),
+            ticker=item.ticker.strip().upper() if item.ticker else None,
+            currency=currency,
+            purchase_price=item.purchase_price,
+            current_price=cur_p if cur_p > 0 else item.purchase_price,
+            quantity=item.quantity if item.quantity > 0 else 1.0,
+            sector=item.sector or "기타",
+            country=country,
+            memo=item.memo,
+        )
+        db.add(asset)
+        created_list.append(asset)
+
+    await db.commit()
+    for a in created_list:
+        await db.refresh(a)
+    return {"status": "success", "count": len(created_list), "data": created_list}
 
 
 @router.put("/manual-assets/{asset_id}")
@@ -663,6 +718,21 @@ async def update_manual_asset(
         if hasattr(payload, "model_dump")
         else payload.dict(exclude_unset=True)
     )
+
+    # 카테고리 변경 (A 계좌분류 -> B 계좌분류 이동)
+    if "category" in update_data and update_data["category"]:
+        update_data["category"] = CATEGORY_NAME_MAP.get(
+            update_data["category"], update_data["category"]
+        )
+
+    # 종목코드가 입력되어 있고 현재가가 비어있거나 0인 경우 실시간 시세 조회
+    ticker = update_data.get("ticker", asset.ticker)
+    cur_p = update_data.get("current_price")
+    if ticker and (cur_p is None or cur_p <= 0):
+        live_info = await fetch_realtime_stock_info(ticker)
+        if live_info and live_info.get("price"):
+            update_data["current_price"] = live_info["price"]
+
     for field, val in update_data.items():
         if val is not None:
             setattr(asset, field, val)
@@ -671,6 +741,19 @@ async def update_manual_asset(
     await db.commit()
     await db.refresh(asset)
     return asset
+
+
+@router.post("/manual-assets/batch-delete")
+async def batch_delete_manual_assets(
+    payload: BatchManualAssetDelete, db: AsyncSession = Depends(get_db)
+):
+    """여러 수동 자산을 한 번에 삭제"""
+    if not payload.ids:
+        return {"status": "success", "deleted_count": 0}
+    stmt = delete(ManualAsset).where(ManualAsset.id.in_(payload.ids))
+    res = await db.execute(stmt)
+    await db.commit()
+    return {"status": "success", "deleted_count": res.rowcount}
 
 
 @router.delete("/manual-assets/{asset_id}")

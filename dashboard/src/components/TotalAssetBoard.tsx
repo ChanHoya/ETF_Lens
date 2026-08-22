@@ -126,8 +126,20 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
     const [isCashModalOpen, setIsCashModalOpen] = useState(false);
     const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
 
-    // Search / Filter
     const [searchQuery, setSearchQuery] = useState("");
+
+    const handleDeleteManualAsset = async (assetId: number | string, name: string) => {
+        if (!confirm(`[${name}] 자산을 삭제하시겠습니까?`)) return;
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/my/manual-assets/${assetId}`, {
+                method: "DELETE",
+            });
+            if (!res.ok) throw new Error("삭제에 실패했습니다.");
+            fetchIntegratedData(false);
+        } catch (e: any) {
+            alert(e.message || "삭제 중 오류가 발생했습니다.");
+        }
+    };
 
     const fetchIntegratedData = useCallback(async (refreshPrices = false) => {
         if (refreshPrices) setIsRefreshing(true);
@@ -289,7 +301,7 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 hover:scale-105 active:scale-95"
                     >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>타 증권사 자산 추가</span>
+                        <span>+ 타 증권사 다중 자산 추가</span>
                     </button>
 
                     <button
@@ -844,16 +856,25 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                                             {/* 관리 */}
                                             <td className="py-3 px-3 text-center">
                                                 {isManual ? (
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedManualAsset(h);
-                                                            setIsAssetModalOpen(true);
-                                                        }}
-                                                        className="p-1 text-gray-400 hover:text-indigo-300 rounded hover:bg-white/5 transition-colors"
-                                                        title="수정"
-                                                    >
-                                                        <Edit3 className="w-3.5 h-3.5" />
-                                                    </button>
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedManualAsset(h);
+                                                                setIsAssetModalOpen(true);
+                                                            }}
+                                                            className="p-1.5 text-indigo-400 hover:text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-lg transition-colors"
+                                                            title="수정 및 계좌 이동"
+                                                        >
+                                                            <Edit3 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteManualAsset(h.manual_id, h.name)}
+                                                            className="p-1.5 text-rose-400 hover:text-rose-200 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-lg transition-colors"
+                                                            title="해당 분류에서 삭제"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
                                                 ) : h.code && onOpenDetail ? (
                                                     <button
                                                         onClick={() => onOpenDetail(h.code)}
