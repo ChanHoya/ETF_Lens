@@ -161,90 +161,144 @@ async def fetch_realtime_stock_info(ticker: str) -> Optional[Dict[str, Any]]:
     if not clean:
         return None
 
-    # 1. 국내 6자리 주식 / ETF 종목코드 (네이버 모바일 증권)
-    if clean.isdigit() and len(clean) == 6:
+    # Tier 1: Try Naver Domestic Endpoints (supports 6-digit numeric & new alphanumeric ETF codes like 0180V0)
+    async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
+        # 1-1. Naver Mobile Stock API
         try:
-            async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
-                url = f"https://m.stock.naver.com/api/stock/{clean}/basic"
-                res = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                if res.status_code == 200:
-                    data = res.json()
-                    name = data.get("stockName") or clean
-                    cp_str = str(data.get("closePrice", "0")).replace(",", "")
-                    price = float(cp_str)
+            url = f"https://m.stock.naver.com/api/stock/{clean}/basic"
+            res = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            if res.status_code == 200:
+                data = res.json()
+                name = data.get("stockName")
+                cp_str = str(data.get("closePrice", "0")).replace(",", "")
+                if name and cp_str and float(cp_str) > 0:
                     return {
                         "ticker": clean,
                         "name": name,
-                        "price": price,
+                        "price": float(cp_str),
                         "currency": "KRW",
                         "country": "국내",
                         "market": data.get("stockItemTotalInfo", {}).get("marketName") or "국내",
                     }
         except Exception as e:
-            logger.debug(f"Naver domestic stock fetch error for {clean}: {e}")
+            logger.debug(f"Naver mobile API fetch error for {clean}: {e}")
 
-    # 2. 해외/미국 주식 티커 (네이버 글로벌 API)
-    overseas_urls = [
-        f"https://api.stock.naver.com/stock/{clean}/basic",
-        f"https://m.stock.naver.com/api/stock/{clean}.O/basic",
-        f"https://m.stock.naver.com/api/stock/{clean}.K/basic",
-        f"https://m.stock.naver.com/api/stock/{clean}.N/basic",
-    ]
-    try:
-        async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
-            for url in overseas_urls:
-                try:
-                    res = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                    if res.status_code == 200:
-                        data = res.json()
-                        name = data.get("stockName") or clean
-                        cp_str = str(data.get("closePrice", "0")).replace(",", "")
-                        price = float(cp_str)
+        # 1-2. Naver Polling Realtime API
+        try:
+            url = f"https://polling.finance.naver.com/api/realtime/domestic/stock/{clean}"
+            res = await client.get(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "Referer": "https://finance.naver.com/",
+                },
+            )
+            if res.status_code == 200:
+                data = res.json()
+                datas = data.get("datas", [])
+                if datas:
+                    d0 = datas[0]
+                    name = d0.get("stockName") or d0.get("itemname")
+                    cp_str = str(d0.get("closePrice") or d0.get("nowValue") or d0.get("nv") or "0").replace(",", "")
+                    if name and cp_str and float(cp_str) > 0:
+                        return {
+                            "ticker": clean,
+                            "name": name,
+                            "price": float(cp_str),
+                            "currency": "KRW",
+                            "country": "국내",
+                            "market": "국내",
+                        }
+        except Exception as e:
+            logger.debug(f"Naver polling API fetch error for {clean}: {e}")
+
+        # 1-3. Naver Finance Web Scrape Fallback
+        try:
+            url = f"https://finance.naver.com/item/main.naver?code={clean}"
+            res = await client.get(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "Referer": "https://finance.naver.com/",
+                },
+            )
+            if res.status_code == 200:
+                import re
+                html = res.text
+                name_m = re.search(r"wrap_company[\s\S]*?<h2>[\s\S]*?<a[^>]*>([^<]+)</a>", html)
+                price_m = re.search(r"no_today[\s\S]*?blind\">([\d,]+)</span>", html)
+                if name_m and price_m:
+                    name = name_m.group(1).strip()
+                    price = float(price_m.group(1).replace(",", ""))
+                    if price > 0:
+                        return {
+                            "ticker": clean,
+                            "name": name,
+                            "price": price,
+                            "currency": "KRW",
+                            "country": "국내",
+                            "market": "국내",
+                        }
+        except Exception as e:
+            logger.debug(f"Naver web scrape error for {clean}: {e}")
+
+        # Tier 2: Overseas / Global Stock Endpoints (US / Global)
+        overseas_urls = [
+            f"https://api.stock.naver.com/stock/{clean}/basic",
+            f"https://m.stock.naver.com/api/stock/{clean}.O/basic",
+            f"https://m.stock.naver.com/api/stock/{clean}.K/basic",
+            f"https://m.stock.naver.com/api/stock/{clean}.N/basic",
+        ]
+        for url in overseas_urls:
+            try:
+                res = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                if res.status_code == 200:
+                    data = res.json()
+                    name = data.get("stockName")
+                    cp_str = str(data.get("closePrice", "0")).replace(",", "")
+                    if name and cp_str and float(cp_str) > 0:
                         curr_raw = data.get("currencyType")
                         curr = curr_raw if isinstance(curr_raw, str) else (curr_raw.get("code", "USD") if isinstance(curr_raw, dict) else "USD")
                         return {
                             "ticker": clean,
                             "name": name,
-                            "price": price,
+                            "price": float(cp_str),
                             "currency": curr or "USD",
                             "country": "해외" if (curr or "USD") == "USD" else "국내",
                             "market": data.get("stockExchangeName", "해외"),
                         }
-                except Exception:
-                    continue
-    except Exception as e:
-        logger.debug(f"Naver overseas fetch error for {clean}: {e}")
+            except Exception:
+                continue
 
-    # 3. Yahoo Finance Fallback
+    # Tier 3: Yahoo Finance Fallback (both Domestic & Global)
     try:
         import yfinance as yf
 
-        def _get_yf():
-            tk = yf.Ticker(clean)
-            fast = tk.fast_info
-            p = getattr(fast, "last_price", None)
-            if p is None:
-                hist = tk.history(period="1d")
-                if not hist.empty:
-                    p = float(hist["Close"].iloc[-1])
-            curr = getattr(fast, "currency", "USD") or "USD"
-            name = clean
-            try:
-                name = tk.info.get("shortName") or tk.info.get("longName") or clean
-            except Exception:
-                pass
-            return {
-                "ticker": clean,
-                "name": name,
-                "price": float(p) if p else None,
-                "currency": curr,
-                "country": "해외" if curr == "USD" else "국내",
-                "market": "US",
-            }
+        symbols_to_try = [clean]
+        if len(clean) == 6 or clean.isalnum():
+            symbols_to_try.extend([f"{clean}.KS", f"{clean}.KQ"])
 
-        yf_res = await asyncio.to_thread(_get_yf)
-        if yf_res and yf_res.get("price") is not None:
-            return yf_res
+        for sym in symbols_to_try:
+            try:
+                tk = yf.Ticker(sym)
+                fast = getattr(tk, "fast_info", None)
+                p = getattr(fast, "last_price", None)
+                if p is None or p <= 0:
+                    hist = await asyncio.to_thread(lambda: tk.history(period="1d"))
+                    if not hist.empty:
+                        p = float(hist["Close"].iloc[-1])
+                if p and p > 0:
+                    curr = getattr(fast, "currency", "USD") or "USD"
+                    return {
+                        "ticker": clean,
+                        "name": clean,
+                        "price": float(p),
+                        "currency": curr,
+                        "country": "국내" if curr == "KRW" else "해외",
+                        "market": "KRX" if curr == "KRW" else "US",
+                    }
+            except Exception:
+                continue
     except Exception as e:
         logger.debug(f"Yahoo fetch error for {clean}: {e}")
 
