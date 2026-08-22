@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
     Activity,
     Compass,
@@ -19,6 +19,14 @@ import {
     Server,
     Zap,
     Calendar,
+    Play,
+    Pause,
+    RotateCcw,
+    Repeat,
+    X,
+    Info,
+    ChevronRight,
+    ChevronLeft,
 } from "lucide-react";
 import {
     ResponsiveContainer,
@@ -42,13 +50,14 @@ interface SemiCycleDashboardProps {
     onOpenDetail?: (code: string) => void;
 }
 
-const PHASE_COLORS: { [key: number]: { bg: string; text: string; border: string; badge: string; glow: string } } = {
+const PHASE_COLORS: { [key: number]: { bg: string; text: string; border: string; badge: string; glow: string; dot: string } } = {
     1: {
         bg: "bg-rose-500/10",
         text: "text-rose-400",
         border: "border-rose-500/30",
         badge: "bg-rose-500/20 text-rose-300 border-rose-500/40",
         glow: "shadow-rose-500/20",
+        dot: "#ef4444",
     },
     2: {
         bg: "bg-sky-500/10",
@@ -56,6 +65,7 @@ const PHASE_COLORS: { [key: number]: { bg: string; text: string; border: string;
         border: "border-sky-500/30",
         badge: "bg-sky-500/20 text-sky-300 border-sky-500/40",
         glow: "shadow-sky-500/20",
+        dot: "#38bdf8",
     },
     3: {
         bg: "bg-emerald-500/10",
@@ -63,6 +73,7 @@ const PHASE_COLORS: { [key: number]: { bg: string; text: string; border: string;
         border: "border-emerald-500/30",
         badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
         glow: "shadow-emerald-500/20",
+        dot: "#10b981",
     },
     4: {
         bg: "bg-amber-500/10",
@@ -70,6 +81,7 @@ const PHASE_COLORS: { [key: number]: { bg: string; text: string; border: string;
         border: "border-amber-500/30",
         badge: "bg-amber-500/20 text-amber-300 border-amber-500/40",
         glow: "shadow-amber-500/20",
+        dot: "#f59e0b",
     },
 };
 
@@ -112,6 +124,13 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
     const [activeSubTab, setActiveSubTab] = useState<"overview" | "clock" | "capex" | "subsector" | "etf">("overview");
     const [clockPeriod, setClockPeriod] = useState<"5Y" | "3Y" | "1Y">("5Y");
 
+    // 시뮬레이션 애니메이션 상태
+    const [isPlaying, setIsPlaying] = useState<boolean>(false);
+    const [playIndex, setPlayIndex] = useState<number | null>(null);
+    const [selectedPoint, setSelectedPoint] = useState<any | null>(null);
+    const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
+    const [isLooping, setIsLooping] = useState<boolean>(true);
+
     const fetchAllData = async () => {
         setIsLoading(true);
         try {
@@ -148,6 +167,81 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
         return raw; // 5Y Full Cycle
     }, [clockData, clockPeriod]);
 
+    // 기간 변경 시 시뮬레이션 인덱스 초기화
+    useEffect(() => {
+        if (isPlaying) {
+            setPlayIndex(0);
+        }
+    }, [clockPeriod]);
+
+    // 시뮬레이션 타이머 인터벌 로직
+    useEffect(() => {
+        let timer: any = null;
+        if (isPlaying && trajectory.length > 0) {
+            timer = setInterval(() => {
+                setPlayIndex((prev) => {
+                    const current = prev === null ? -1 : prev;
+                    const next = current + 1;
+                    if (next >= trajectory.length) {
+                        if (isLooping) {
+                            return 0;
+                        } else {
+                            setIsPlaying(false);
+                            return current;
+                        }
+                    }
+                    return next;
+                });
+            }, 1200); // 1.2초마다 다음 지점으로 전진
+        }
+        return () => {
+            if (timer) clearInterval(timer);
+        };
+    }, [isPlaying, trajectory.length, isLooping]);
+
+    // playIndex 변화 시 선택 점 및 팝업 상태 갱신
+    useEffect(() => {
+        if (playIndex !== null && trajectory[playIndex]) {
+            setSelectedPoint(trajectory[playIndex]);
+            setIsPopupOpen(true);
+        }
+    }, [playIndex, trajectory]);
+
+    // 재생 토글
+    const handleTogglePlay = () => {
+        if (!isPlaying) {
+            if (playIndex === null || playIndex >= trajectory.length - 1) {
+                setPlayIndex(0);
+            }
+            setIsPlaying(true);
+        } else {
+            setIsPlaying(false);
+        }
+    };
+
+    // 리셋
+    const handleResetPlay = () => {
+        setIsPlaying(false);
+        setPlayIndex(null);
+        setSelectedPoint(null);
+        setIsPopupOpen(false);
+    };
+
+    // 점 클릭 수동 인스펙트
+    const handlePointClick = (pt: any, idx?: number) => {
+        setSelectedPoint(pt);
+        setIsPopupOpen(true);
+        if (typeof idx === "number") {
+            setPlayIndex(idx);
+        }
+    };
+
+    // 시뮬레이션 중 현재까지의 가시 궤적
+    const animatedTrajectory = useMemo(() => {
+        if (playIndex === null) return trajectory;
+        return trajectory.slice(0, playIndex + 1);
+    }, [trajectory, playIndex]);
+
     if (isLoading) {
         return (
             <div className="w-full flex flex-col items-center justify-center p-16 bg-white/[0.02] border border-white/5 rounded-3xl backdrop-blur-xl">
@@ -163,6 +257,13 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
     const currentPhase = clockData?.current_phase || 3;
     const phaseInfo = clockData?.phase_info || {};
     const phaseStyle = PHASE_COLORS[currentPhase] || PHASE_COLORS[3];
+
+    // 선택된 점의 국면 정보
+    const activePointPhase = selectedPoint?.phase || currentPhase;
+    const activePointPhaseInfo = clockData?.quadrants
+        ? Object.values(clockData.quadrants).find((q: any) => q.phase === activePointPhase)
+        : null;
+    const activePointStyle = PHASE_COLORS[activePointPhase] || PHASE_COLORS[3];
 
     return (
         <div className="w-full flex flex-col gap-6 animate-in fade-in duration-300">
@@ -234,8 +335,9 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
             {(activeSubTab === "overview" || activeSubTab === "clock") && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                     {/* 2D Cycle Clock Visualizer (7 Cols) */}
-                    <div className="lg:col-span-7 p-5 rounded-2xl bg-[#161922] border border-white/10 shadow-xl flex flex-col justify-between">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
+                    <div className="lg:col-span-7 p-5 rounded-2xl bg-[#161922] border border-white/10 shadow-xl flex flex-col justify-between relative">
+                        {/* Header & Controls */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-2">
                             <div>
                                 <h4 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
                                     <Compass className="w-4 h-4 text-indigo-400" />
@@ -245,21 +347,68 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                     X축: 재고 건전성 (DOI 역수) · Y축: 출하/수출 모멘텀 · 4사분면 시계방향 회전 궤적
                                 </p>
                             </div>
-                            {/* 기간 선택 토글 */}
-                            <div className="flex items-center bg-black/40 border border-white/10 rounded-lg p-0.5 gap-1">
-                                {(["5Y", "3Y", "1Y"] as const).map((p) => (
+
+                            {/* Simulation Player & Period Controls */}
+                            <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
+                                {/* 재생 컨트롤 바 */}
+                                <div className="flex items-center bg-black/50 border border-white/15 rounded-xl p-1 gap-1 shadow-lg backdrop-blur-md">
                                     <button
-                                        key={p}
-                                        onClick={() => setClockPeriod(p)}
-                                        className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${
-                                            clockPeriod === p
-                                                ? "bg-indigo-600 text-white shadow"
-                                                : "text-gray-400 hover:text-white"
+                                        onClick={handleTogglePlay}
+                                        className={`flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                                            isPlaying
+                                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                                                : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30"
                                         }`}
+                                        title={isPlaying ? "일시정지" : "사이클 이동 궤적 재생 시뮬레이션"}
                                     >
-                                        {p === "5Y" ? "5Y (전체)" : p}
+                                        {isPlaying ? (
+                                            <>
+                                                <Pause className="w-3.5 h-3.5 fill-current" />
+                                                <span>정지</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Play className="w-3.5 h-3.5 fill-current" />
+                                                <span>재생</span>
+                                            </>
+                                        )}
                                     </button>
-                                ))}
+
+                                    <button
+                                        onClick={handleResetPlay}
+                                        className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                                        title="처음부터 리셋"
+                                    >
+                                        <RotateCcw className="w-3.5 h-3.5" />
+                                    </button>
+
+                                    <button
+                                        onClick={() => setIsLooping(!isLooping)}
+                                        className={`p-1 rounded-lg transition-all ${
+                                            isLooping ? "text-indigo-400 bg-indigo-500/20" : "text-gray-500 hover:text-gray-300"
+                                        }`}
+                                        title={isLooping ? "반복 재생 켜짐" : "반복 재생 꺼짐"}
+                                    >
+                                        <Repeat className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+
+                                {/* 기간 선택 토글 */}
+                                <div className="flex items-center bg-black/40 border border-white/10 rounded-lg p-0.5 gap-1">
+                                    {(["5Y", "3Y", "1Y"] as const).map((p) => (
+                                        <button
+                                            key={p}
+                                            onClick={() => setClockPeriod(p)}
+                                            className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${
+                                                clockPeriod === p
+                                                    ? "bg-indigo-600 text-white shadow"
+                                                    : "text-gray-400 hover:text-white"
+                                            }`}
+                                        >
+                                            {p === "5Y" ? "5Y (전체)" : p}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
@@ -282,6 +431,50 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                 <span className="text-xs font-bold text-amber-400/80">Phase 4: 소극적 재고 축적</span>
                                 <p className="text-[9px] text-gray-500">고점경보 · 마진피크 분할차익실현 (2021H2)</p>
                             </div>
+
+                            {/* 활성 지점 플로팅 팝업 정보창 */}
+                            {isPopupOpen && selectedPoint && (
+                                <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 animate-in zoom-in-95 fade-in duration-200">
+                                    <div className="bg-[#12141c]/95 border border-white/20 rounded-2xl p-3.5 shadow-2xl backdrop-blur-2xl text-xs max-w-sm w-[300px]">
+                                        <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                                            <div className="flex items-center gap-1.5 font-black text-white">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                                                <span className="text-sm text-indigo-300 font-extrabold font-mono">
+                                                    {selectedPoint.date}
+                                                </span>
+                                                <span className="text-[10px] text-gray-400 font-normal">({selectedPoint.label})</span>
+                                            </div>
+                                            <button
+                                                onClick={() => setIsPopupOpen(false)}
+                                                className="p-1 rounded-md text-gray-400 hover:text-white hover:bg-white/10"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+
+                                        <div className="mt-2.5 space-y-1.5">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-400 text-[11px]">사이클 국면</span>
+                                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${activePointStyle.badge}`}>
+                                                    Phase {selectedPoint.phase} : {activePointPhaseInfo ? (activePointPhaseInfo as any).name : `Phase ${selectedPoint.phase}`}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-400 text-[11px]">CSCI 종합 지수</span>
+                                                <span className="font-mono font-black text-white text-xs">{selectedPoint.csci}σ</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[11px]">
+                                                <span className="text-gray-400">재고 건전성 (DOI 역수)</span>
+                                                <span className="font-mono text-gray-200">{selectedPoint.x}σ</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[11px]">
+                                                <span className="text-gray-400">수요 / 수출 모멘텀</span>
+                                                <span className="font-mono text-gray-200">{selectedPoint.y}σ</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             <ResponsiveContainer width="100%" height="100%">
                                 <ScatterChart margin={{ top: 30, right: 30, bottom: 30, left: 30 }}>
@@ -322,29 +515,74 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                     {/* 0축 기준선 */}
                                     <ReferenceLine x={0} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3" />
                                     <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3" />
-                                    {/* 이동 궤적 Scatter */}
+
+                                    {/* 배경 가이드라인 (전체 궤적 점선) */}
+                                    <Scatter
+                                        name="Full Cycle Track"
+                                        data={trajectory}
+                                        fill="#4f46e5"
+                                        line={{ stroke: "rgba(99, 102, 241, 0.25)", strokeWidth: 1.5, strokeDasharray: "2 2" }}
+                                        shape={() => null} // 점은 숨기고 가이드 선만 표시
+                                    />
+
+                                    {/* 이동 궤적 애니메이션 Scatter */}
                                     <Scatter
                                         name="Cycle Trajectory"
-                                        data={trajectory}
+                                        data={animatedTrajectory}
                                         fill="#6366f1"
-                                        line={{ stroke: "#6366f1", strokeWidth: 1.8, strokeDasharray: "3 3" }}
+                                        line={{ stroke: "#6366f1", strokeWidth: 2.2, strokeDasharray: "3 3" }}
+                                        onClick={(pt: any) => handlePointClick(pt.payload)}
+                                        className="cursor-pointer"
                                         shape={(props: any) => {
-                                            const { cx, cy, payload } = props;
-                                            const isLast = payload.label?.includes("현재");
+                                            const { cx, cy, payload, index } = props;
+                                            const isSelected = selectedPoint && selectedPoint.date === payload.date;
+                                            const isLastInAnim = index === animatedTrajectory.length - 1;
+                                            const isCurrentFact = payload.label?.includes("현재");
                                             const isBottom = payload.label?.includes("바닥");
+
                                             return (
-                                                <g>
-                                                    {isLast ? (
+                                                <g
+                                                    onClick={() => handlePointClick(payload, index)}
+                                                    className="cursor-pointer transition-transform hover:scale-125"
+                                                >
+                                                    {/* 깜빡깜빡 펄스 링 (선택되었거나 시뮬레이션 현재 지점) */}
+                                                    {(isSelected || (isPlaying && isLastInAnim)) && (
                                                         <>
-                                                            <circle cx={cx} cy={cy} r={10} fill="#10b981" opacity={0.3} className="animate-ping" />
+                                                            <circle
+                                                                cx={cx}
+                                                                cy={cy}
+                                                                r={14}
+                                                                fill="#818cf8"
+                                                                opacity={0.35}
+                                                                className="animate-ping"
+                                                            />
+                                                            <circle
+                                                                cx={cx}
+                                                                cy={cy}
+                                                                r={9}
+                                                                fill="#6366f1"
+                                                                opacity={0.5}
+                                                                className="animate-pulse"
+                                                            />
+                                                        </>
+                                                    )}
+
+                                                    {isCurrentFact ? (
+                                                        <>
+                                                            <circle cx={cx} cy={cy} r={9} fill="#10b981" opacity={0.3} className="animate-ping" />
                                                             <circle cx={cx} cy={cy} r={6.5} fill="#10b981" stroke="#ffffff" strokeWidth={2} />
                                                         </>
                                                     ) : isBottom ? (
-                                                        <>
-                                                            <circle cx={cx} cy={cy} r={5} fill="#ef4444" stroke="#ffffff" strokeWidth={1.5} />
-                                                        </>
+                                                        <circle cx={cx} cy={cy} r={5.5} fill="#ef4444" stroke="#ffffff" strokeWidth={1.5} />
                                                     ) : (
-                                                        <circle cx={cx} cy={cy} r={3.5} fill="#818cf8" opacity={0.8} />
+                                                        <circle
+                                                            cx={cx}
+                                                            cy={cy}
+                                                            r={isSelected ? 6 : 4}
+                                                            fill={isSelected ? "#38bdf8" : "#818cf8"}
+                                                            stroke="#ffffff"
+                                                            strokeWidth={isSelected ? 2 : 0.8}
+                                                        />
                                                     )}
                                                 </g>
                                             );
