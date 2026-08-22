@@ -432,18 +432,18 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                 <p className="text-[9px] text-gray-500">고점경보 · 마진피크 분할차익실현 (2021H2)</p>
                             </div>
 
-                            {/* 활성 지점 플로팅 팝업 정보창 (전반부: 좌측 상단 / 후반부: 우측 하단 스마트 위치 전환) */}
+                            {/* 활성 지점 플로팅 팝업 정보창 (2021.01~2023.08: 좌측 상단 분면 / 2023.10~현재: 우측 하단 분면) */}
                             {isPopupOpen && selectedPoint && (
                                 <div
-                                    className={`absolute z-20 transition-all duration-500 ease-in-out pointer-events-auto ${
-                                        // 전반부(Phase 4, Phase 1 또는 궤적 전반부): 좌측 상단 (Phase 2 영역)
-                                        // 후반부(Phase 2 상단, Phase 3 호황기): 우측 하단 (Phase 4 영역)
-                                        (selectedPoint.phase === 4 || selectedPoint.phase === 1 || selectedPoint.y < 0.6)
-                                            ? "top-10 left-6 animate-in slide-in-from-top-2 fade-in"
-                                            : "bottom-10 right-6 animate-in slide-in-from-bottom-2 fade-in"
+                                    className={`absolute z-20 transition-all duration-700 ease-in-out pointer-events-auto ${
+                                        // 2021년 1월 ~ 2023년 8월: 좌측 상단 4분면 (Phase 2 영역 중앙)
+                                        // 2023년 10월 ~ 현재: 우측 하단 4분면 (Phase 4 영역 중앙)
+                                        (selectedPoint.date <= "2023-08")
+                                            ? "top-14 left-8 sm:left-14 md:left-20 animate-in slide-in-from-top-3 fade-in"
+                                            : "bottom-14 right-8 sm:right-14 md:right-20 animate-in slide-in-from-bottom-3 fade-in"
                                     }`}
                                 >
-                                    <div className="bg-[#12141c]/95 border border-white/20 rounded-2xl p-3 shadow-2xl backdrop-blur-2xl text-xs w-[260px] sm:w-[280px]">
+                                    <div className="bg-[#12141c]/95 border border-white/20 rounded-2xl p-3.5 shadow-2xl backdrop-blur-2xl text-xs w-[250px] sm:w-[270px]">
                                         <div className="flex justify-between items-center pb-1.5 border-b border-white/10">
                                             <div className="flex items-center gap-1.5 font-black text-white">
                                                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
@@ -519,7 +519,7 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                         }}
                                     />
                                     <ZAxis range={[50, 180]} />
-                                    <RechartsTooltip content={<CustomScatterTooltip />} />
+                                    {!isPlaying && <RechartsTooltip content={<CustomScatterTooltip />} />}
                                     {/* 0축 기준선 */}
                                     <ReferenceLine x={0} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3" />
                                     <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3" />
