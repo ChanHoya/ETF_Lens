@@ -376,7 +376,7 @@ export default function ManualAssetModal({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
             <div className={`bg-[#12141a] border border-white/10 rounded-2xl w-full ${
-                isEdit ? "max-w-xl" : "max-w-5xl"
+                isEdit ? "max-w-xl" : "max-w-6xl"
             } overflow-hidden shadow-2xl flex flex-col max-h-[92vh]`}>
                 {/* Header */}
                 <div className="px-5 py-3.5 border-b border-white/10 flex justify-between items-center bg-white/[0.02]">
@@ -642,16 +642,16 @@ export default function ManualAssetModal({
                                     <button
                                         type="button"
                                         onClick={handleAddBatchRow}
-                                        className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold transition-all hover:scale-105"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold transition-all hover:scale-105"
                                     >
                                         <Plus className="w-3.5 h-3.5" />
-                                        <span>+ 행 추가</span>
+                                        <span>행 추가</span>
                                     </button>
 
                                     <button
                                         type="button"
                                         onClick={handleLookupAllBatch}
-                                        className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-semibold transition-all"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-semibold transition-all"
                                     >
                                         <Sparkles className="w-3.5 h-3.5" />
                                         <span>⚡ 전체 실시간 시세 자동 조회</span>
@@ -665,17 +665,17 @@ export default function ManualAssetModal({
 
                             {/* Batch Table */}
                             <div className="overflow-x-auto border border-white/10 rounded-xl bg-black/20">
-                                <table className="w-full text-left text-xs border-collapse min-w-[780px]">
+                                <table className="w-full text-left text-xs border-collapse min-w-[820px]">
                                     <thead>
                                         <tr className="bg-white/[0.04] border-b border-white/10 text-gray-400 font-semibold">
-                                            <th className="py-2.5 px-3 w-32">계좌 분류</th>
-                                            <th className="py-2.5 px-2 w-28">금융사</th>
+                                            <th className="py-2.5 px-3 w-28">계좌 분류</th>
+                                            <th className="py-2.5 px-2 w-24">금융사</th>
                                             <th className="py-2.5 px-2 w-28">종목코드(티커)</th>
-                                            <th className="py-2.5 px-3">종목명/상품명 *</th>
-                                            <th className="py-2.5 px-2 w-20 text-center">통화</th>
+                                            <th className="py-2.5 px-3 min-w-[130px]">종목명/상품명 *</th>
+                                            <th className="py-2.5 px-2 w-16 text-center">통화</th>
                                             <th className="py-2.5 px-2 w-24 text-right">매수단가</th>
-                                            <th className="py-2.5 px-2 w-28 text-right">현재가</th>
-                                            <th className="py-2.5 px-2 w-16 text-right">수량</th>
+                                            <th className="py-2.5 px-2 w-24 text-right">현재가</th>
+                                            <th className="py-2.5 px-2 w-24 text-right">수량</th>
                                             <th className="py-2.5 px-2 w-24">섹터</th>
                                             <th className="py-2.5 px-2 w-10 text-center">삭제</th>
                                         </tr>
