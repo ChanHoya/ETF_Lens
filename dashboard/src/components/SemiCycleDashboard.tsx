@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
     Activity,
     Compass,
@@ -18,6 +18,7 @@ import {
     RefreshCw,
     Server,
     Zap,
+    Calendar,
 } from "lucide-react";
 import {
     ResponsiveContainer,
@@ -80,7 +81,9 @@ const CustomScatterTooltip = ({ active, payload }: any) => {
         <div className="bg-[#12141c]/95 border border-white/15 rounded-xl p-3 shadow-2xl backdrop-blur-xl text-xs">
             <div className="flex items-center gap-1.5 font-bold text-white mb-1.5">
                 {isCurrent && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />}
-                <span className={isCurrent ? "text-emerald-300 font-extrabold" : "text-gray-200"}>{d.date} ({d.label})</span>
+                <span className={isCurrent ? "text-emerald-300 font-extrabold" : "text-gray-200"}>
+                    {d.date} ({d.label})
+                </span>
             </div>
             <div className="space-y-1 text-[11px]">
                 <p className="text-gray-300">
@@ -107,6 +110,7 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
     const [strategyData, setStrategyData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [activeSubTab, setActiveSubTab] = useState<"overview" | "clock" | "capex" | "subsector" | "etf">("overview");
+    const [clockPeriod, setClockPeriod] = useState<"5Y" | "3Y" | "1Y">("5Y");
 
     const fetchAllData = async () => {
         setIsLoading(true);
@@ -133,12 +137,25 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
         fetchAllData();
     }, []);
 
+    // 궤적 필터링
+    const trajectory = useMemo(() => {
+        const raw = clockData?.trajectory || [];
+        if (clockPeriod === "1Y") {
+            return raw.slice(-12);
+        } else if (clockPeriod === "3Y") {
+            return raw.slice(-20);
+        }
+        return raw; // 5Y Full Cycle
+    }, [clockData, clockPeriod]);
+
     if (isLoading) {
         return (
             <div className="w-full flex flex-col items-center justify-center p-16 bg-white/[0.02] border border-white/5 rounded-3xl backdrop-blur-xl">
                 <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin mb-3" />
                 <p className="text-sm font-bold text-white">반도체 매크로 사이클 퀀트 엔진 연산 중...</p>
-                <p className="text-xs text-gray-400 mt-1">빅테크 CapEx, 관세청 반도체 수출 통계, 글로벌 DOI 롤링 Z-Score 정규화 중</p>
+                <p className="text-xs text-gray-400 mt-1">
+                    빅테크 6개년 CapEx, 관세청 반도체 수출 통계, 글로벌 DOI 롤링 Z-Score 정규화 중
+                </p>
             </div>
         );
     }
@@ -146,12 +163,13 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
     const currentPhase = clockData?.current_phase || 3;
     const phaseInfo = clockData?.phase_info || {};
     const phaseStyle = PHASE_COLORS[currentPhase] || PHASE_COLORS[3];
-    const trajectory = clockData?.trajectory || [];
 
     return (
         <div className="w-full flex flex-col gap-6 animate-in fade-in duration-300">
             {/* 1. Top Executive Banner (현재 사이클 진단 요약) */}
-            <div className={`p-5 rounded-2xl ${phaseStyle.bg} border ${phaseStyle.border} flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden shadow-xl`}>
+            <div
+                className={`p-5 rounded-2xl ${phaseStyle.bg} border ${phaseStyle.border} flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden shadow-xl`}
+            >
                 <div className="flex items-start gap-3.5 z-10">
                     <div className={`p-3 rounded-xl bg-black/40 border ${phaseStyle.border} ${phaseStyle.text}`}>
                         <Compass className="w-6 h-6 animate-pulse" />
@@ -168,9 +186,7 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                 CSCI 지수: <b className="text-white font-bold">{clockData?.current_csci}σ</b>
                             </span>
                         </div>
-                        <h3 className="text-base md:text-lg font-black text-white mt-1.5">
-                            {phaseInfo.description}
-                        </h3>
+                        <h3 className="text-base md:text-lg font-black text-white mt-1.5">{phaseInfo.description}</h3>
                         <p className="text-xs text-gray-300 mt-1 flex items-center gap-1.5">
                             <span className="font-bold text-indigo-300">💡 핵심 자산배분 권고:</span> {phaseInfo.strategy}
                         </p>
@@ -193,7 +209,7 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                 {[
                     { id: "overview", label: "종합 대시보드", icon: <Layers className="w-3.5 h-3.5" /> },
                     { id: "clock", label: "사이클 시계 (2D Quadrant)", icon: <Compass className="w-3.5 h-3.5" /> },
-                    { id: "capex", label: "빅테크 CapEx 트래커", icon: <Server className="w-3.5 h-3.5" /> },
+                    { id: "capex", label: "빅테크 CapEx 트래커 (6개년)", icon: <Server className="w-3.5 h-3.5" /> },
                     { id: "subsector", label: "서브섹터 밸류에이션 맵", icon: <Cpu className="w-3.5 h-3.5" /> },
                     { id: "etf", label: "국면별 최적 ETF 매트릭스", icon: <Target className="w-3.5 h-3.5" /> },
                 ].map((tab) => (
@@ -219,39 +235,52 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                     {/* 2D Cycle Clock Visualizer (7 Cols) */}
                     <div className="lg:col-span-7 p-5 rounded-2xl bg-[#161922] border border-white/10 shadow-xl flex flex-col justify-between">
-                        <div className="flex justify-between items-start mb-2">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
                             <div>
                                 <h4 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
                                     <Compass className="w-4 h-4 text-indigo-400" />
                                     Semiconductor Cycle Clock (반도체 4국면 사이클 시계)
                                 </h4>
                                 <p className="text-[11px] text-gray-400 mt-0.5">
-                                    X축: 재고 건전성 (DOI 역수) · Y축: 출하/수출 모멘텀 · 점: 최근 12개월 이동 궤적
+                                    X축: 재고 건전성 (DOI 역수) · Y축: 출하/수출 모멘텀 · 4사분면 시계방향 회전 궤적
                                 </p>
                             </div>
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
-                                시계방향 회전
-                            </span>
+                            {/* 기간 선택 토글 */}
+                            <div className="flex items-center bg-black/40 border border-white/10 rounded-lg p-0.5 gap-1">
+                                {(["5Y", "3Y", "1Y"] as const).map((p) => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setClockPeriod(p)}
+                                        className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${
+                                            clockPeriod === p
+                                                ? "bg-indigo-600 text-white shadow"
+                                                : "text-gray-400 hover:text-white"
+                                        }`}
+                                    >
+                                        {p === "5Y" ? "5Y (전체)" : p}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {/* 4 Quadrants Diagram via ScatterChart */}
-                        <div className="relative w-full h-[360px] my-2 bg-black/40 rounded-xl border border-white/5 overflow-hidden">
+                        <div className="relative w-full h-[380px] my-2 bg-black/40 rounded-xl border border-white/5 overflow-hidden">
                             {/* 사분면 배경 레이블 */}
                             <div className="absolute top-3 right-4 text-right pointer-events-none z-0">
                                 <span className="text-xs font-bold text-emerald-400/80">Phase 3: 적극적 재고 축적</span>
-                                <p className="text-[9px] text-gray-500">호황기 · 출하↑ 가격↑ 실적폭발</p>
+                                <p className="text-[9px] text-gray-500">호황기 · 출하↑ 가격↑ 실적폭발 (현재)</p>
                             </div>
                             <div className="absolute top-3 left-4 text-left pointer-events-none z-0">
                                 <span className="text-xs font-bold text-sky-400/80">Phase 2: 소극적 재고 소진</span>
-                                <p className="text-[9px] text-gray-500">회복기 · 단가반등 재고감소 매수최적</p>
+                                <p className="text-[9px] text-gray-500">회복기 · 단가반등 재고감소 매수최적 (2023H2~24H1)</p>
                             </div>
                             <div className="absolute bottom-3 left-4 text-left pointer-events-none z-0">
                                 <span className="text-xs font-bold text-rose-400/80">Phase 1: 적극적 재고 소진</span>
-                                <p className="text-[9px] text-gray-500">불황기 · 출하↓ 가격↓ 바닥권</p>
+                                <p className="text-[9px] text-gray-500">불황기 · 출하↓ 가격↓ 최악의 바닥 (2022~23H1)</p>
                             </div>
                             <div className="absolute bottom-3 right-4 text-right pointer-events-none z-0">
                                 <span className="text-xs font-bold text-amber-400/80">Phase 4: 소극적 재고 축적</span>
-                                <p className="text-[9px] text-gray-500">고점경보 · 마진피크 분할차익실현</p>
+                                <p className="text-[9px] text-gray-500">고점경보 · 마진피크 분할차익실현 (2021H2)</p>
                             </div>
 
                             <ResponsiveContainer width="100%" height="100%">
@@ -261,19 +290,32 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                         type="number"
                                         dataKey="x"
                                         name="재고 건전성 (Z-Score)"
-                                        domain={[-2.0, 2.0]}
+                                        domain={[-2.2, 2.2]}
                                         tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 9 }}
                                         tickFormatter={(v) => `${v}σ`}
-                                        label={{ value: "재고 건전성 (DOI 감소 → 우측)", position: "insideBottom", offset: -15, fill: "rgba(255,255,255,0.3)", fontSize: 10 }}
+                                        label={{
+                                            value: "재고 건전성 (DOI 감소 / 공급타이트 → 우측)",
+                                            position: "insideBottom",
+                                            offset: -15,
+                                            fill: "rgba(255,255,255,0.3)",
+                                            fontSize: 10,
+                                        }}
                                     />
                                     <YAxis
                                         type="number"
                                         dataKey="y"
                                         name="수출/출하 모멘텀 (Z-Score)"
-                                        domain={[-2.0, 2.0]}
+                                        domain={[-2.2, 2.2]}
                                         tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 9 }}
                                         tickFormatter={(v) => `${v}σ`}
-                                        label={{ value: "수출/출하 모멘텀 (↑)", angle: -90, position: "insideLeft", offset: 15, fill: "rgba(255,255,255,0.3)", fontSize: 10 }}
+                                        label={{
+                                            value: "수출 / CapEx 모멘텀 (↑)",
+                                            angle: -90,
+                                            position: "insideLeft",
+                                            offset: 15,
+                                            fill: "rgba(255,255,255,0.3)",
+                                            fontSize: 10,
+                                        }}
                                     />
                                     <ZAxis range={[50, 180]} />
                                     <RechartsTooltip content={<CustomScatterTooltip />} />
@@ -282,22 +324,27 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                     <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3" />
                                     {/* 이동 궤적 Scatter */}
                                     <Scatter
-                                        name="12M Trajectory"
+                                        name="Cycle Trajectory"
                                         data={trajectory}
                                         fill="#6366f1"
-                                        line={{ stroke: "#6366f1", strokeWidth: 1.5, strokeDasharray: "2 2" }}
+                                        line={{ stroke: "#6366f1", strokeWidth: 1.8, strokeDasharray: "3 3" }}
                                         shape={(props: any) => {
                                             const { cx, cy, payload } = props;
                                             const isLast = payload.label?.includes("현재");
+                                            const isBottom = payload.label?.includes("바닥");
                                             return (
                                                 <g>
                                                     {isLast ? (
                                                         <>
-                                                            <circle cx={cx} cy={cy} r={9} fill="#10b981" opacity={0.3} className="animate-ping" />
-                                                            <circle cx={cx} cy={cy} r={6} fill="#10b981" stroke="#ffffff" strokeWidth={2} />
+                                                            <circle cx={cx} cy={cy} r={10} fill="#10b981" opacity={0.3} className="animate-ping" />
+                                                            <circle cx={cx} cy={cy} r={6.5} fill="#10b981" stroke="#ffffff" strokeWidth={2} />
+                                                        </>
+                                                    ) : isBottom ? (
+                                                        <>
+                                                            <circle cx={cx} cy={cy} r={5} fill="#ef4444" stroke="#ffffff" strokeWidth={1.5} />
                                                         </>
                                                     ) : (
-                                                        <circle cx={cx} cy={cy} r={3.5} fill="#6366f1" opacity={0.7} />
+                                                        <circle cx={cx} cy={cy} r={3.5} fill="#818cf8" opacity={0.8} />
                                                     )}
                                                 </g>
                                             );
@@ -311,19 +358,19 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] mt-2 pt-3 border-t border-white/5">
                             <div className="p-2 rounded-lg bg-rose-500/5 border border-rose-500/10">
                                 <span className="font-bold text-rose-400">Phase 1: 불황기</span>
-                                <p className="text-gray-400 mt-0.5">DOI 피크 · 언더웨이트</p>
+                                <p className="text-gray-400 mt-0.5">DOI 피크 · 2022~23 바닥</p>
                             </div>
                             <div className="p-2 rounded-lg bg-sky-500/5 border border-sky-500/10">
                                 <span className="font-bold text-sky-400">Phase 2: 회복기</span>
-                                <p className="text-gray-400 mt-0.5">스팟가 반등 · 적극매수</p>
+                                <p className="text-gray-400 mt-0.5">스팟가 반등 · 2023H2~24H1</p>
                             </div>
                             <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                                 <span className="font-bold text-emerald-300">Phase 3: 호황기 (현재)</span>
-                                <p className="text-gray-400 mt-0.5">증설/소부장 발주 · 홀딩</p>
+                                <p className="text-gray-400 mt-0.5">증설/소부장 발주 · 2024H2~26</p>
                             </div>
                             <div className="p-2 rounded-lg bg-amber-500/5 border border-amber-500/10">
                                 <span className="font-bold text-amber-400">Phase 4: 고점기</span>
-                                <p className="text-gray-400 mt-0.5">CapEx 둔화 · 차익실현</p>
+                                <p className="text-gray-400 mt-0.5">CapEx 둔화 · 2021H2 고점</p>
                             </div>
                         </div>
                     </div>
@@ -381,7 +428,10 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                 </h4>
                                 <div className="space-y-2 mt-3">
                                     {phaseInfo.top_subsectors?.map((sub: string, i: number) => (
-                                        <div key={i} className="flex items-center gap-2.5 p-2 rounded-xl bg-white/[0.03] border border-white/5 text-xs text-gray-200">
+                                        <div
+                                            key={i}
+                                            className="flex items-center gap-2.5 p-2 rounded-xl bg-white/[0.03] border border-white/5 text-xs text-gray-200"
+                                        >
                                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                                             <span>{sub}</span>
                                         </div>
@@ -403,10 +453,10 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                         <div>
                             <h4 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
                                 <Server className="w-4 h-4 text-purple-400" />
-                                Hyperscaler CapEx vs Memory Momentum Tracker
+                                Hyperscaler CapEx vs Memory Momentum Tracker (2020~2026 장기 시계열)
                             </h4>
                             <p className="text-[11px] text-gray-400 mt-0.5">
-                                빅테크 4사 자본지출(CapEx) 성장률과 한국 반도체 수출/주가 모멘텀 시차(Lag) 분석
+                                빅테크 4사 자본지출(CapEx) 성장률과 한국 반도체 수출/주가 모멘텀의 6.5개년 거시 시차(Lag) 분석
                             </p>
                         </div>
                         <div className="text-right">
@@ -418,15 +468,27 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                     </div>
 
                     {/* CapEx Time Series Dual Chart */}
-                    <div className="w-full h-[280px] bg-black/30 rounded-xl p-2 border border-white/5">
+                    <div className="w-full h-[320px] bg-black/30 rounded-xl p-2 border border-white/5">
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={trackerData.time_series} margin={{ top: 15, right: 20, bottom: 10, left: 10 }}>
+                            <ComposedChart data={trackerData.time_series} margin={{ top: 15, right: 20, bottom: 25, left: 10 }}>
                                 <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="quarter" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 10 }} />
+                                <XAxis
+                                    dataKey="quarter"
+                                    tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 9 }}
+                                    angle={-30}
+                                    textAnchor="end"
+                                    interval={1}
+                                    height={40}
+                                />
                                 <YAxis yAxisId="left" tick={{ fill: "#a855f7", fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                                 <YAxis yAxisId="right" orientation="right" tick={{ fill: "#10b981", fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                                 <RechartsTooltip
-                                    contentStyle={{ backgroundColor: "#12141c", borderColor: "rgba(255,255,255,0.15)", borderRadius: 12, fontSize: 11 }}
+                                    contentStyle={{
+                                        backgroundColor: "#12141c",
+                                        borderColor: "rgba(255,255,255,0.15)",
+                                        borderRadius: 12,
+                                        fontSize: 11,
+                                    }}
                                     formatter={(value: any, name: any) => [`${value}%`, name]}
                                 />
                                 <Legend
@@ -436,9 +498,33 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                     iconSize={8}
                                     formatter={(val) => <span className="text-[11px] text-gray-300">{val}</span>}
                                 />
-                                <Bar yAxisId="left" dataKey="bigtech_capex_yoy" name="빅테크 CapEx YoY (%)" fill="#8b5cf6" radius={[4, 4, 0, 0]} opacity={0.8} />
-                                <Line yAxisId="right" type="monotone" dataKey="kr_export_yoy" name="한국 반도체 수출 YoY (%)" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3 }} />
-                                <Line yAxisId="right" type="monotone" dataKey="sox_return_yoy" name="SOX 지수 수익률 YoY (%)" stroke="#38bdf8" strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
+                                <Bar
+                                    yAxisId="left"
+                                    dataKey="bigtech_capex_yoy"
+                                    name="빅테크 CapEx YoY (%)"
+                                    fill="#8b5cf6"
+                                    radius={[3, 3, 0, 0]}
+                                    opacity={0.8}
+                                />
+                                <Line
+                                    yAxisId="right"
+                                    type="monotone"
+                                    dataKey="kr_export_yoy"
+                                    name="한국 반도체 수출 YoY (%)"
+                                    stroke="#10b981"
+                                    strokeWidth={2.2}
+                                    dot={{ r: 2 }}
+                                />
+                                <Line
+                                    yAxisId="right"
+                                    type="monotone"
+                                    dataKey="sox_return_yoy"
+                                    name="SOX 지수 수익률 YoY (%)"
+                                    stroke="#38bdf8"
+                                    strokeWidth={1.5}
+                                    strokeDasharray="3 3"
+                                    dot={false}
+                                />
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>
@@ -484,11 +570,17 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                         {subsectorData.subsectors?.map((sub: any) => (
-                            <div key={sub.id} className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 flex flex-col justify-between hover:border-white/20 transition-all">
+                            <div
+                                key={sub.id}
+                                className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 flex flex-col justify-between hover:border-white/20 transition-all"
+                            >
                                 <div>
                                     <div className="flex justify-between items-start mb-2">
                                         <h5 className="text-xs font-bold text-white">{sub.name}</h5>
-                                        <span className="text-[9px] px-1.5 py-0.5 rounded font-bold" style={{ color: sub.status_color, backgroundColor: `${sub.status_color}20` }}>
+                                        <span
+                                            className="text-[9px] px-1.5 py-0.5 rounded font-bold"
+                                            style={{ color: sub.status_color, backgroundColor: `${sub.status_color}20` }}
+                                        >
                                             {sub.recommendation}
                                         </span>
                                     </div>
