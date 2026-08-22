@@ -29,6 +29,7 @@ A living document of module relationships. Update whenever modules are added or 
 | Energy ETF Analysis | Presentation | Energy sector ETF performance charts, custom legends, and toggled constituent comparison tables | api/router, EnergyChart | SectorAnalysisTab | Antigravity |
 | Semiconductor ETF Analysis | Presentation | Semiconductor sector ETF performance charts, custom legends, and toggled constituent comparison tables | api/router, SemiChart | SectorAnalysisTab | Antigravity |
 | Brazil Bond Analysis | Presentation | Brazil macro interest rate cycle analysis, historical yield trends, real-time scraping, and portfolio CAGR simulation | api/brazil_bond, core/brazil_fetcher | BrazilBondTab | Antigravity |
+| Integrated Total Asset Board | Presentation | Google Sheets (3. 포트폴리오0822) inspired Account Board, KIS real-time balance merge, and multi-broker manual asset/cash CRUD | api/integrated_assets, db/models, TotalAssetBoard | MyAssetsView | Antigravity |
 <!-- Add new modules above this line -->
 
 
@@ -78,3 +79,4 @@ When modifying a module:
 | 2026-05-28 | ETF Disparity Monitoring | Created /analyze/etf/disparity API & enriched portfolio response | MyDashboard, SpaceChart, BioChart, scheduler | Updated |
 | 2026-06-01 | Asset History Tracking | Added GET /asset-history API & daily snapshot recording to /portfolio | MyAssetsView | Updated |
 | 2026-07-12 | Notification Settings | GET /settings accepts optional chat_id, POST /settings upserts by chat_id | NotificationSettings, BrazilBondTab | Updated |
+| 2026-08-22 | Integrated Total Asset Board | Added GET /integrated-assets, manual-assets CRUD, manual-cash CRUD, kis-mappings | MyAssetsView, TotalAssetBoard | Updated |

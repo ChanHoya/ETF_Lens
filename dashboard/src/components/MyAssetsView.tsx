@@ -3,10 +3,11 @@ import React, { useState, useEffect, useCallback } from "react";
 import MyAuthModal from "@/components/MyAuthModal";
 import MyDashboard from "@/components/MyDashboard";
 import InvestmentReturnCard from "@/components/InvestmentReturnCard";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, LayoutDashboard, PieChart, TrendingUp, Wallet } from "lucide-react";
 import { API_BASE } from "@/lib/apiConfig";
 import RiskBanner from "@/components/RiskBanner";
 import AssetHistoryChart from "@/components/AssetHistoryChart";
+import TotalAssetBoard from "@/components/TotalAssetBoard";
 
 // Render 콜드 스타트 대응: 첫 요청 시 백엔드가 잠들어 있으면 "Failed to fetch"(네트워크 실패)나
 // 502/503(기동 중)이 나므로, 서버가 깨어날 때까지 점진적 backoff로 재시도한다.
@@ -46,6 +47,8 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
     const [error, setError] = useState<string | null>(null);
     const [wakingUp, setWakingUp] = useState(false);
     const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
+
+    const [mainTab, setMainTab] = useState<"total" | "kis" | "history">("total");
 
     const [isSimulatedMode, setIsSimulatedMode] = useState<boolean>(false);
     const [hasSimulated, setHasSimulated] = useState<boolean>(false);
@@ -178,6 +181,7 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
         setLastFetchedAt(null);
         if (typeof window !== "undefined") {
             sessionStorage.removeItem("kis_portfolio_data");
+            sessionStorage.removeItem("integrated_assets_data");
         }
     };
 
@@ -188,7 +192,7 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
     return (
         <div className="w-full xl:max-w-[1400px] mx-auto px-4 lg:px-6 flex flex-col items-center pt-1 pb-32 animate-in fade-in zoom-in-95 duration-500">
             {isAuthorized && (
-                <div className="w-full flex justify-between items-center mb-3 max-w-[95vw] xl:max-w-[1400px]">
+                <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 max-w-[95vw] xl:max-w-[1400px]">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-xl border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
                             <span className="text-xl">💰</span>
@@ -202,8 +206,46 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
                             )}
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        {hasSimulated && (
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {/* Sub-tab Switcher */}
+                        <div className="flex bg-black/40 p-1 rounded-xl border border-white/10">
+                            <button
+                                onClick={() => setMainTab("total")}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                    mainTab === "total"
+                                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                                        : "text-gray-400 hover:text-white"
+                                }`}
+                            >
+                                <Wallet className="w-3.5 h-3.5" />
+                                <span>종합 자산 (Hoya Board)</span>
+                            </button>
+                            <button
+                                onClick={() => setMainTab("kis")}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                    mainTab === "kis"
+                                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                                        : "text-gray-400 hover:text-white"
+                                }`}
+                            >
+                                <LayoutDashboard className="w-3.5 h-3.5" />
+                                <span>KIS 실시간</span>
+                            </button>
+                            <button
+                                onClick={() => setMainTab("history")}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                    mainTab === "history"
+                                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                                        : "text-gray-400 hover:text-white"
+                                }`}
+                            >
+                                <TrendingUp className="w-3.5 h-3.5" />
+                                <span>자산 추이</span>
+                            </button>
+                        </div>
+
+                        {hasSimulated && mainTab === "kis" && (
                             <button
                                 onClick={() => setIsSimulatedMode(!isSimulatedMode)}
                                 className={`px-3 py-1.5 border rounded-xl text-[10px] sm:text-xs font-semibold transition-all ${
@@ -260,42 +302,54 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
                 </div>
             ) : (
                 <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col gap-6">
-                    {isSimulatedMode && (
-                        <div className="w-full bg-gradient-to-r from-purple-500/20 via-indigo-500/20 to-blue-500/20 border border-purple-500/30 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-                            <div className="flex items-center gap-3">
-                                <span className="text-2xl animate-pulse">✨</span>
-                                <div className="text-left">
-                                    <p className="text-sm font-bold text-white">AI 리밸런싱 가상 포트폴리오 적용 중</p>
-                                    <p className="text-xs text-purple-200">현재 보시는 자산 현황과 보유 종목 비중은 AI 제안 주문에 맞춰 가상으로 실시간 매칭된 시뮬레이션 데이터입니다.</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={async () => {
-                                    await fetch(`${API_BASE}/api/v1/order/simulated-portfolio`, { method: "DELETE" });
-                                    setIsSimulatedMode(false);
-                                    fetchPortfolioData(true);
-                                }}
-                                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shrink-0 hover:scale-105"
-                            >
-                                시뮬레이션 초기화
-                            </button>
-                        </div>
+                    {/* Tab 1: Total Asset Board (Hoya Board - inspired by Google Sheet 3. 포트폴리오0822) */}
+                    {mainTab === "total" && (
+                        <TotalAssetBoard onOpenDetail={onOpenDetail} />
                     )}
-                    <RiskBanner isAuthorized={isAuthorized} />
-                    <div className="w-full">
-                        <InvestmentReturnCard
-                            totalEvalAmount={(isSimulatedMode ? simulatedData : kisData)?.kis_raw?.summary?.total_eval_amount ?? 0}
-                            cashBalance={(isSimulatedMode ? simulatedData : kisData)?.kis_raw?.summary?.cash_balance ?? 0}
-                        />
-                    </div>
-                    {!isSimulatedMode && (
+
+                    {/* Tab 2: KIS Realtime Dashboard */}
+                    {mainTab === "kis" && (
+                        <>
+                            {isSimulatedMode && (
+                                <div className="w-full bg-gradient-to-r from-purple-500/20 via-indigo-500/20 to-blue-500/20 border border-purple-500/30 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-2xl animate-pulse">✨</span>
+                                        <div className="text-left">
+                                            <p className="text-sm font-bold text-white">AI 리밸런싱 가상 포트폴리오 적용 중</p>
+                                            <p className="text-xs text-purple-200">현재 보시는 자산 현황과 보유 종목 비중은 AI 제안 주문에 맞춰 가상으로 실시간 매칭된 시뮬레이션 데이터입니다.</p>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={async () => {
+                                            await fetch(`${API_BASE}/api/v1/order/simulated-portfolio`, { method: "DELETE" });
+                                            setIsSimulatedMode(false);
+                                            fetchPortfolioData(true);
+                                        }}
+                                        className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shrink-0 hover:scale-105"
+                                    >
+                                        시뮬레이션 초기화
+                                    </button>
+                                </div>
+                            )}
+                            <RiskBanner isAuthorized={isAuthorized} />
+                            <div className="w-full">
+                                <InvestmentReturnCard
+                                    totalEvalAmount={(isSimulatedMode ? simulatedData : kisData)?.kis_raw?.summary?.total_eval_amount ?? 0}
+                                    cashBalance={(isSimulatedMode ? simulatedData : kisData)?.kis_raw?.summary?.cash_balance ?? 0}
+                                />
+                            </div>
+                            <MyDashboard data={isSimulatedMode ? simulatedData : kisData} tradesData={tradesData} isRefreshing={isRefreshing} onOpenDetail={onOpenDetail} onAnalyzePeers={onAnalyzePeers} />
+                        </>
+                    )}
+
+                    {/* Tab 3: Asset Growth History */}
+                    {mainTab === "history" && (
                         <div className="w-full">
                             <AssetHistoryChart 
                                 accounts={(kisData)?.kis_raw?.accounts ?? []} 
                             />
                         </div>
                     )}
-                    <MyDashboard data={isSimulatedMode ? simulatedData : kisData} tradesData={tradesData} isRefreshing={isRefreshing} onOpenDetail={onOpenDetail} onAnalyzePeers={onAnalyzePeers} />
                 </div>
             )}
         </div>

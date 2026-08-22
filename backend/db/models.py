@@ -306,4 +306,52 @@ class UserAssetSnapshot(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class ManualAsset(Base):
+    """미래에셋/삼성증권/케이뱅크/비상장 등 타 금융사 수동 입력 자산"""
+    __tablename__ = "manual_assets"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    category = Column(String, index=True, nullable=False)  # ISA, 연금저축펀드, 퇴직연금IRP, 기타저축계좌, 일반주식계좌
+    account_name = Column(String, nullable=True)           # e.g. "미래에셋 연금", "삼성증권 일반", "케이뱅크 예적금"
+    broker = Column(String, nullable=False)                 # 미래에셋, 삼성증권, 케이뱅크, 토스증권, 기타
+    asset_name = Column(String, nullable=False)             # 종목/상품명 (e.g. KT, 플러스박스, SpaceX)
+    ticker = Column(String, nullable=True)                  # 티커/종목코드 (e.g. 030200, AAPL)
+    currency = Column(String, default="KRW")                # KRW, USD, JPY
+    purchase_price = Column(Float, nullable=False, default=0.0)  # 매수단가
+    current_price = Column(Float, nullable=False, default=0.0)   # 현재가
+    quantity = Column(Float, nullable=False, default=1.0)        # 수량/좌수/원금
+    sector = Column(String, nullable=True)                  # 섹터/분류 (통신, 반도체, 예적금, 비상장 등)
+    country = Column(String, default="국내")                # 국내, 해외
+    memo = Column(String, nullable=True)                    # 메모/비고
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ManualAccountCash(Base):
+    """타 금융사 또는 계좌별 수동 관리 예수금/현금 잔고"""
+    __tablename__ = "manual_account_cash"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    category = Column(String, index=True, nullable=False)  # ISA, 연금저축펀드, 퇴직연금IRP, 기타저축계좌, 일반주식계좌
+    account_name = Column(String, nullable=False)          # e.g. "케이뱅크", "미래에셋 연금", "삼성증권 일반"
+    broker = Column(String, nullable=False)                # 미래에셋, 삼성증권, 케이뱅크 등
+    cash_krw = Column(Float, default=0.0)                  # 원화 예수금
+    cash_usd = Column(Float, default=0.0)                  # 외화 예수금 (USD)
+    memo = Column(String, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class KisAccountMapping(Base):
+    """한국투자증권(KIS) 연동 계좌를 시트의 5대 카테고리(ISA/연금/IRP/저축/일반)로 분류 매핑"""
+    __tablename__ = "kis_account_mappings"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    account_no = Column(String, unique=True, index=True, nullable=False)  # e.g. "81060777-01"
+    alias = Column(String, nullable=True)                                  # e.g. "한투 ISA"
+    category = Column(String, nullable=False, default="일반주식계좌")      # ISA, 연금저축펀드, 퇴직연금IRP, 기타저축계좌, 일반주식계좌
+    country = Column(String, default="국내")                               # 국내, 해외, 복합
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+
 

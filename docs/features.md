@@ -59,6 +59,7 @@
 | S6-11: 반도체 ETF 구성종목 변동 그래프 및 전문가 리포트 개편 | ✅ done | backend/api/router.py, active_etfs.py, SemiChart.tsx, SectorAnalysisTab.tsx | 12종 반도체 ETF(국내/해외/미국) 3대 탭 개편, 점선 오버레이, 괴리율 및 실시간 프리마켓 예상가 연동, Gemini 반도체 Expert Report 통합 완료 |
 | 텔레그램 개인 알림 수신처 다중화 | ✅ done | backend/core/notifier.py, backend/api/notification_settings.py, NotificationSettings.tsx, BrazilBondTab.tsx | 개인별 텔레그램 봇 토큰 및 Chat ID 등록 지원, 브라우저 localStorage 연동 및 알림 이벤트 발생 시 등록된 모든 사용자 대상 멀티캐스트 알림 발송 |
 | 브라질 채권 분석 (Selic vs Y5) | ✅ done | backend/api/brazil_bond.py, brazil_fetcher.py, scheduler.py, BrazilBondTab.tsx | FRED 10년 역사적 금리/Investing.com 연동 차트, 10Y/1Y/6M/3M 필터, COPOM 기준금리 변경 감지 핫 알림, 접속 시 이전 날짜인 경우 AI 전략리포트 일자별 자동 재생성 및 15분 주기 실시간 동기화 연동 |
+| S6-14: 구글 시트 기반 종합 자산 관리 (Account Board + KIS 연동 + 수동 입력) | ✅ done | backend/api/integrated_assets.py, backend/db/models.py, TotalAssetBoard.tsx, ManualAssetModal.tsx, ManualCashModal.tsx, KisAccountMappingModal.tsx, MyAssetsView.tsx | KIS API 실시간 연동 및 타 증권사(미래에셋/삼성/저축) 수동 자산/예수금 통합 집계, 구글 시트 형태의 Account Board 및 계좌별 상세 종목 뷰 구현 완료 |
 
 
 
