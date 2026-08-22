@@ -78,10 +78,37 @@ const CATEGORY_COLORS: Record<string, { badge: string; border: string; bar: stri
     },
 };
 
+async function fetchWithWake(
+    url: string,
+    opts: RequestInit | undefined,
+    onWaking: () => void,
+    retries = 6,
+): Promise<Response> {
+    for (let attempt = 0; ; attempt++) {
+        try {
+            const res = await fetch(url, opts);
+            if ((res.status === 502 || res.status === 503 || res.status === 404) && attempt < retries) {
+                onWaking();
+                await new Promise((r) => setTimeout(r, Math.min(3000 * (attempt + 1), 8000)));
+                continue;
+            }
+            return res;
+        } catch (e) {
+            if (attempt < retries) {
+                onWaking();
+                await new Promise((r) => setTimeout(r, Math.min(3000 * (attempt + 1), 8000)));
+                continue;
+            }
+            throw e;
+        }
+    }
+}
+
 export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) {
     const [data, setData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [wakingUp, setWakingUp] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Selected tab for holdings table
@@ -100,6 +127,7 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
         if (refreshPrices) setIsRefreshing(true);
         else setIsLoading(true);
         setError(null);
+        setWakingUp(false);
 
         try {
             if (refreshPrices) {
@@ -113,10 +141,20 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                 }
             }
 
-            const res = await fetch(`${API_BASE}/api/v1/my/integrated-assets`);
+            const res = await fetchWithWake(
+                `${API_BASE}/api/v1/my/integrated-assets`,
+                undefined,
+                () => setWakingUp(true)
+            );
             if (!res.ok) {
-                const errJson = await res.json();
-                throw new Error(errJson.detail || "종합 자산 데이터를 불러오지 못했습니다.");
+                let errMsg = "종합 자산 데이터를 불러오지 못했습니다.";
+                try {
+                    const errJson = await res.json();
+                    errMsg = Array.isArray(errJson.detail)
+                        ? errJson.detail.map((e: any) => e.msg).join(", ")
+                        : (errJson.detail || errMsg);
+                } catch (_) {}
+                throw new Error(errMsg);
             }
             const json = await res.json();
             setData(json);
@@ -128,6 +166,7 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
+            setWakingUp(false);
         }
     }, []);
 
@@ -151,10 +190,12 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
             <div className="w-full flex flex-col items-center justify-center p-16 bg-white/[0.02] border border-white/5 rounded-3xl backdrop-blur-xl">
                 <RefreshCw className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
                 <h3 className="text-lg font-bold text-white mb-1">
-                    종합 자산 관리 보드 분석 중
+                    {wakingUp ? "백엔드 서버 연결 중..." : "종합 자산 관리 보드 분석 중"}
                 </h3>
                 <p className="text-xs text-gray-400 text-center max-w-sm">
-                    한국투자증권(KIS) 연동 데이터와 타 증권사(미래에셋/삼성/저축) 수동 자산을 통합 집계하고 있습니다.
+                    {wakingUp
+                        ? "휴면 상태의 백엔드 서버를 깨우고 있습니다 (최대 수십 초 소요될 수 있습니다)."
+                        : "한국투자증권(KIS) 연동 데이터와 타 증권사(미래에셋/삼성/저축) 수동 자산을 통합 집계하고 있습니다."}
                 </p>
             </div>
         );
@@ -167,7 +208,7 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                 <p className="text-xs text-gray-400 mb-4">{error}</p>
                 <button
                     onClick={() => fetchIntegratedData(false)}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl"
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all hover:scale-105 active:scale-95"
                 >
                     다시 시도
                 </button>
