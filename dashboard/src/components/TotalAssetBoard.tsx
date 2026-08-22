@@ -224,15 +224,25 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ [field]: newValue }),
             });
-            if (!res.ok) throw new Error(`${label} 변경에 실패했습니다.`);
-            // Update local data optimistically
+            if (!res.ok) {
+                let detail = `${label} 변경에 실패했습니다.`;
+                try {
+                    const errJson = await res.json();
+                    if (errJson?.detail) detail = String(errJson.detail);
+                } catch (_) {}
+                throw new Error(detail);
+            }
+            // 서버가 실제로 저장한 값을 그대로 반영한다.
+            // 고른 값을 그냥 믿으면 저장이 안 됐을 때 화면만 바뀌었다가 새로고침에서 되돌아간다.
+            const saved = await res.json();
             if (data) {
                 const updated = JSON.parse(JSON.stringify(data));
                 const gh = updated.grouped_holdings || {};
                 for (const cat of Object.keys(gh)) {
                     for (const h of gh[cat]) {
                         if (h.id === holdingId) {
-                            h[field] = newValue;
+                            h.sector = saved.sector ?? h.sector;
+                            h.classification = saved.classification ?? h.classification;
                         }
                     }
                 }

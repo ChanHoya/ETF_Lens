@@ -102,16 +102,38 @@ async def lifespan(app: FastAPI):
             print(f"[Startup] alert_brazil column migration skipped: {_e}")
 
         # ── 2.8. 섹터/분류 분리 마이그레이션 ────────────────────────────────────
-        # 예전에는 sector 한 필드에 자산군(ETF/주식)과 산업(반도체)이 섞여 있었다.
-        # classification 컬럼을 추가하고, 구 값들을 두 축으로 갈라 담는다.
-        # 매핑 키가 전부 구 목록 값이라 재실행해도 두 번 변환되지 않는다.
-        try:
-            from migrate_sector_taxonomy import migrate as _migrate_taxonomy
+        # 스키마(DDL)와 데이터(DML)를 나눠서 돌린다. classification 컬럼이 없으면
+        # ManualAsset 을 읽는 모든 엔드포인트가 500 이 되므로, 스키마는 검증될 때까지 재시도한다.
+        # 이 태스크는 백그라운드라 한 번 놓치면 재배포 전까지 다시 안 돌기 때문이다.
+        from migrate_sector_taxonomy import migrate_data, migrate_schema
 
+        schema_ok = False
+        for attempt in range(5):
+            try:
+                async with engine.begin() as conn:
+                    status = await migrate_schema(conn, _is_sqlite)
+                if all(status.values()):
+                    schema_ok = True
+                    print(f"[Startup] taxonomy schema ready: {status}")
+                    break
+                print(f"[Startup] taxonomy schema incomplete: {status}")
+            except Exception as _e:
+                print(f"[Startup] taxonomy schema attempt {attempt + 1}/5 failed: {_e}")
+            await asyncio.sleep(min(30, 3 * (attempt + 1)))
+
+        if not schema_ok:
+            print(
+                "[Startup] !! taxonomy schema migration FAILED — "
+                "classification 컬럼이 없어 수동자산 조회가 500 을 낸다. "
+                "POST /api/v1/my/schema-repair 로 재시도할 것."
+            )
+
+        # 데이터 정규화는 실패해도 앱 동작에는 지장이 없다.
+        try:
             async with engine.begin() as conn:
-                await _migrate_taxonomy(conn, _is_sqlite)
+                await migrate_data(conn)
         except Exception as _e:
-            print(f"[Startup] sector/classification migration skipped: {_e}")
+            print(f"[Startup] taxonomy data normalization skipped: {_e}")
 
         # ── 3. ETF 성과 및 랭킹 비용 컬럼 마이그레이션 (SQLite 전용 스크립트) ───────
         if _is_sqlite:

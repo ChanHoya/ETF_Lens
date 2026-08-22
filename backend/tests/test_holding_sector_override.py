@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import HTTPException
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -271,5 +272,59 @@ def test_legacy_normalization_splits_and_is_repeatable(db_session):
         await db.commit()
         rows2 = (await db.execute(ManualAsset.__table__.select())).fetchall()
         assert {r.asset_name: (r.sector, r.classification) for r in rows2} == by_name
+
+    loop.run_until_complete(_run())
+
+
+def test_schema_verify_and_repair_are_idempotent(db_session):
+    """컬럼 존재 확인 → 없으면 추가 → 여러 번 돌려도 안전한지 확인한다."""
+    loop, db = db_session
+
+    async def _run():
+        from migrate_sector_taxonomy import migrate_schema, verify
+
+        conn = await db.connection()
+        # create_all 로 이미 만들어진 상태라 컬럼이 있어야 한다
+        assert all((await verify(conn, True)).values())
+
+        # 컬럼을 일부러 지운 옛 스키마를 만들어 복구를 확인한다
+        await conn.execute(text("DROP TABLE manual_assets"))
+        await conn.execute(text(
+            "CREATE TABLE manual_assets (id INTEGER PRIMARY KEY, broker VARCHAR, sector VARCHAR)"
+        ))
+        assert (await verify(conn, True))["manual_assets"] is False
+
+        status = await migrate_schema(conn, True)
+        assert all(status.values()), status
+
+        # 두 번째 실행에도 예외 없이 통과해야 한다
+        status2 = await migrate_schema(conn, True)
+        assert all(status2.values())
+
+    loop.run_until_complete(_run())
+
+
+def test_broker_alias_normalization(db_session):
+    """한국투자(수동) 은 한국투자로 합쳐진다."""
+    loop, db = db_session
+
+    async def _run():
+        from migrate_sector_taxonomy import normalize_broker_names
+        from api.integrated_assets import canonical_broker
+
+        assert canonical_broker("한국투자(수동)") == "한국투자"
+        assert canonical_broker(" 한국투자증권 ") == "한국투자"
+        assert canonical_broker("미래에셋") == "미래에셋"
+        assert canonical_broker(None) is None
+
+        db.add(ManualAsset(category="일반주식계좌", broker="한국투자(수동)", asset_name="삼성전자",
+                           purchase_price=1, current_price=1, quantity=1))
+        await db.commit()
+
+        await normalize_broker_names(await db.connection())
+        await db.commit()
+
+        rows = (await db.execute(ManualAsset.__table__.select())).fetchall()
+        assert rows[0].broker == "한국투자"
 
     loop.run_until_complete(_run())

@@ -344,6 +344,15 @@ ETF_BRAND_TOKENS = (
     "히어로즈", "마이다스", "UNICORN", "FOCUS", "VITA", "마이티", "ITF",
 )
 
+def canonical_broker(broker: Optional[str]) -> Optional[str]:
+    """'한국투자(수동)' 처럼 갈라진 이름을 대표 이름으로 맞춘다. KIS 연동분과 같은 그룹으로 묶기 위함."""
+    from migrate_sector_taxonomy import BROKER_ALIASES
+
+    if not broker:
+        return broker
+    return BROKER_ALIASES.get(broker.strip(), broker.strip())
+
+
 def guess_holding_sector(name: str, code: str, country: str) -> str:
     """종목명/코드로 섹터(자산군) 기본값을 추론한다. 사용자가 지정하면 그 값이 우선한다."""
     upper_name = (name or "").upper()
@@ -730,7 +739,7 @@ async def create_manual_asset(
     asset = ManualAsset(
         category=CATEGORY_NAME_MAP.get(payload.category, "기타투자계좌"),
         account_name=payload.account_name,
-        broker=payload.broker,
+        broker=canonical_broker(payload.broker),
         asset_name=asset_name,
         ticker=payload.ticker.strip().upper() if payload.ticker else None,
         currency=currency,
@@ -775,7 +784,7 @@ async def create_manual_assets_batch(
         asset = ManualAsset(
             category=CATEGORY_NAME_MAP.get(item.category, "기타투자계좌"),
             account_name=item.account_name or item.broker,
-            broker=item.broker,
+            broker=canonical_broker(item.broker),
             asset_name=asset_name or (item.ticker or "미지정 종목"),
             ticker=item.ticker.strip().upper() if item.ticker else None,
             currency=currency,
@@ -813,6 +822,10 @@ async def update_manual_asset(
         if hasattr(payload, "model_dump")
         else payload.dict(exclude_unset=True)
     )
+
+    # 금융사 이름 정규화 (한국투자(수동) → 한국투자)
+    if update_data.get("broker"):
+        update_data["broker"] = canonical_broker(update_data["broker"])
 
     # 카테고리 변경 (A 계좌분류 -> B 계좌분류 이동)
     if "category" in update_data and update_data["category"]:
@@ -1049,4 +1062,53 @@ async def update_holding_sector(
         "holding_id": holding_id,
         "sector": target.sector or "",
         "classification": target.classification or "",
+    }
+
+
+# ── Schema Diagnostics ───────────────────────────────────────────────────────
+# classification 컬럼이 없으면 ManualAsset 을 읽는 모든 엔드포인트가 500 이 된다.
+# 기동 시 마이그레이션은 백그라운드라 놓칠 수 있어, 상태 확인과 수동 재시도 경로를 열어둔다.
+@router.get("/schema-status")
+async def get_schema_status(db: AsyncSession = Depends(get_db)):
+    """섹터/분류 마이그레이션이 실제로 적용됐는지 확인한다."""
+    from db.database import DATABASE_URL
+    from migrate_sector_taxonomy import verify
+
+    is_sqlite = DATABASE_URL.startswith("sqlite")
+    conn = await db.connection()
+    columns = await verify(conn, is_sqlite)
+    return {
+        "backend": "sqlite" if is_sqlite else "postgresql",
+        "classification_columns": columns,
+        "healthy": all(columns.values()),
+    }
+
+
+@router.post("/schema-repair")
+async def repair_schema(db: AsyncSession = Depends(get_db)):
+    """누락된 classification 컬럼을 추가하고 레거시 값을 정규화한다. 여러 번 돌려도 안전하다."""
+    from db.database import DATABASE_URL
+    from migrate_sector_taxonomy import migrate_data, migrate_schema
+
+    is_sqlite = DATABASE_URL.startswith("sqlite")
+    conn = await db.connection()
+    try:
+        columns = await migrate_schema(conn, is_sqlite)
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"스키마 마이그레이션 실패: {type(e).__name__}: {e}"
+        ) from None
+
+    data_error = None
+    try:
+        await migrate_data(conn)
+    except Exception as e:
+        data_error = f"{type(e).__name__}: {e}"
+
+    await db.commit()
+    return {
+        "status": "success" if all(columns.values()) else "incomplete",
+        "classification_columns": columns,
+        "data_normalization_error": data_error,
     }

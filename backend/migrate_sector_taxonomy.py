@@ -1,4 +1,8 @@
 # sector 한 필드에 섞여 있던 자산군/산업 값을 sector + classification 두 축으로 가르는 마이그레이션
+#
+# 주의. 이 마이그레이션은 Render 포트바인딩 타임아웃 때문에 백그라운드 태스크에서 돌아간다.
+# 한 번 실패하면 재배포 전까지 다시 시도되지 않으므로, 각 단계는 개별 트랜잭션으로 나누고
+# 끝나면 반드시 verify() 로 실제 컬럼 존재 여부를 확인해야 한다.
 from sqlalchemy import text
 
 # 섹터/분류 정보를 들고 있는 두 테이블
@@ -23,19 +27,45 @@ LEGACY_SECTOR_MAP = {
     "기타": (None, None),
 }
 
+# 수동 입력 금융사 이름 정리. KIS 연동분과 같은 이름으로 묶어야 금융사별 집계가 갈라지지 않는다.
+BROKER_ALIASES = {
+    "한국투자(수동)": "한국투자",
+    "한국투자증권": "한국투자",
+}
+
+
+async def has_classification_column(conn, table: str, is_sqlite: bool) -> bool:
+    """해당 테이블에 classification 컬럼이 실제로 있는지 확인한다."""
+    if is_sqlite:
+        rows = (await conn.execute(text(f"PRAGMA table_info({table})"))).fetchall()
+        return any(r[1] == "classification" for r in rows)
+    row = (
+        await conn.execute(
+            text(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name = :t AND column_name = 'classification'"
+            ),
+            {"t": table},
+        )
+    ).first()
+    return row is not None
+
+
+async def verify(conn, is_sqlite: bool) -> dict:
+    """테이블별 classification 컬럼 존재 여부를 돌려준다."""
+    return {t: await has_classification_column(conn, t, is_sqlite) for t in TABLES}
+
 
 async def add_classification_columns(conn, is_sqlite: bool) -> None:
-    """classification 컬럼을 두 테이블에 추가한다. 이미 있으면 넘어간다."""
+    """classification 컬럼을 두 테이블에 추가한다.
+
+    이미 있으면 건너뛴다. 존재 여부를 먼저 확인하고 나서 ALTER 하므로,
+    실패한 DDL 이 트랜잭션을 오염시켜 앞서 성공한 ALTER 까지 되돌리는 일이 없다.
+    """
     for table in TABLES:
-        if is_sqlite:
-            try:
-                await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN classification VARCHAR"))
-            except Exception:
-                pass  # 이미 존재
-        else:
-            await conn.execute(
-                text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS classification VARCHAR")
-            )
+        if await has_classification_column(conn, table, is_sqlite):
+            continue
+        await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN classification VARCHAR"))
 
 
 async def normalize_legacy_sectors(conn) -> None:
@@ -52,6 +82,22 @@ async def normalize_legacy_sectors(conn) -> None:
             )
 
 
-async def migrate(conn, is_sqlite: bool) -> None:
+async def normalize_broker_names(conn) -> None:
+    """'한국투자(수동)' 처럼 갈라져 있던 금융사 이름을 대표 이름으로 합친다."""
+    for alias, canonical in BROKER_ALIASES.items():
+        await conn.execute(
+            text("UPDATE manual_assets SET broker = :canonical WHERE broker = :alias"),
+            {"canonical": canonical, "alias": alias},
+        )
+
+
+async def migrate_schema(conn, is_sqlite: bool) -> dict:
+    """스키마(DDL)만 반영하고 결과를 검증해 돌려준다. 앱이 뜨려면 이게 반드시 성공해야 한다."""
     await add_classification_columns(conn, is_sqlite)
+    return await verify(conn, is_sqlite)
+
+
+async def migrate_data(conn) -> None:
+    """데이터 정규화(DML). 실패해도 앱은 뜬다."""
     await normalize_legacy_sectors(conn)
+    await normalize_broker_names(conn)
