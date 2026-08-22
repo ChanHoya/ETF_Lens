@@ -105,14 +105,14 @@ async def lifespan(app: FastAPI):
         # 스키마(DDL)와 데이터(DML)를 나눠서 돌린다. classification 컬럼이 없으면
         # ManualAsset 을 읽는 모든 엔드포인트가 500 이 되므로, 스키마는 검증될 때까지 재시도한다.
         # 이 태스크는 백그라운드라 한 번 놓치면 재배포 전까지 다시 안 돌기 때문이다.
-        from migrate_sector_taxonomy import migrate_data, migrate_schema
+        from migrate_sector_taxonomy import is_healthy, migrate_data, migrate_schema
 
         schema_ok = False
         for attempt in range(5):
             try:
                 async with engine.begin() as conn:
                     status = await migrate_schema(conn, _is_sqlite)
-                if all(status.values()):
+                if is_healthy(status):
                     schema_ok = True
                     print(f"[Startup] taxonomy schema ready: {status}")
                     break
@@ -124,16 +124,14 @@ async def lifespan(app: FastAPI):
         if not schema_ok:
             print(
                 "[Startup] !! taxonomy schema migration FAILED — "
-                "classification 컬럼이 없어 수동자산 조회가 500 을 낸다. "
+                "수동자산 조회와 분류 지정이 실패한다. "
                 "POST /api/v1/my/schema-repair 로 재시도할 것."
             )
 
         # 데이터 정규화는 실패해도 앱 동작에는 지장이 없다.
-        try:
-            async with engine.begin() as conn:
-                await migrate_data(conn)
-        except Exception as _e:
-            print(f"[Startup] taxonomy data normalization skipped: {_e}")
+        _data_errors = await migrate_data(engine)
+        if _data_errors:
+            print(f"[Startup] taxonomy data normalization errors: {_data_errors}")
 
         # ── 3. ETF 성과 및 랭킹 비용 컬럼 마이그레이션 (SQLite 전용 스크립트) ───────
         if _is_sqlite:

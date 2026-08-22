@@ -1072,43 +1072,39 @@ async def update_holding_sector(
 async def get_schema_status(db: AsyncSession = Depends(get_db)):
     """섹터/분류 마이그레이션이 실제로 적용됐는지 확인한다."""
     from db.database import DATABASE_URL
-    from migrate_sector_taxonomy import verify
+    from migrate_sector_taxonomy import is_healthy, verify
 
     is_sqlite = DATABASE_URL.startswith("sqlite")
-    conn = await db.connection()
-    columns = await verify(conn, is_sqlite)
+    status = await verify(await db.connection(), is_sqlite)
     return {
         "backend": "sqlite" if is_sqlite else "postgresql",
-        "classification_columns": columns,
-        "healthy": all(columns.values()),
+        **status,
+        "healthy": is_healthy(status),
     }
 
 
 @router.post("/schema-repair")
 async def repair_schema(db: AsyncSession = Depends(get_db)):
-    """누락된 classification 컬럼을 추가하고 레거시 값을 정규화한다. 여러 번 돌려도 안전하다."""
-    from db.database import DATABASE_URL
-    from migrate_sector_taxonomy import migrate_data, migrate_schema
+    """스키마를 보정하고 레거시 값을 정규화한다. 여러 번 돌려도 안전하다."""
+    from db.database import DATABASE_URL, engine
+    from migrate_sector_taxonomy import is_healthy, migrate_data, migrate_schema
 
     is_sqlite = DATABASE_URL.startswith("sqlite")
-    conn = await db.connection()
     try:
-        columns = await migrate_schema(conn, is_sqlite)
+        status = await migrate_schema(await db.connection(), is_sqlite)
+        await db.commit()
     except Exception as e:
         await db.rollback()
         raise HTTPException(
             status_code=500, detail=f"스키마 마이그레이션 실패: {type(e).__name__}: {e}"
         ) from None
 
-    data_error = None
-    try:
-        await migrate_data(conn)
-    except Exception as e:
-        data_error = f"{type(e).__name__}: {e}"
+    # 데이터 단계는 단계별로 트랜잭션을 따로 연다.
+    data_errors = await migrate_data(engine)
 
-    await db.commit()
     return {
-        "status": "success" if all(columns.values()) else "incomplete",
-        "classification_columns": columns,
-        "data_normalization_error": data_error,
+        "status": "success" if is_healthy(status) and not data_errors else "incomplete",
+        **status,
+        "healthy": is_healthy(status),
+        "data_normalization_errors": data_errors,
     }

@@ -51,9 +51,45 @@ async def has_classification_column(conn, table: str, is_sqlite: bool) -> bool:
     return row is not None
 
 
+async def is_override_sector_nullable(conn, is_sqlite: bool) -> bool:
+    """holding_sector_overrides.sector 가 NULL 을 허용하는지 확인한다.
+
+    섹터 없이 분류만 지정하면 sector 가 NULL 인 행이 생긴다.
+    초기 모델이 nullable=False 였고 create_all 은 기존 컬럼 제약을 바꾸지 않으므로
+    먼저 배포된 DB 에는 NOT NULL 이 남아 있다. 그대로 두면 분류 지정이 실패한다.
+    """
+    if is_sqlite:
+        rows = (
+            await conn.execute(text("PRAGMA table_info(holding_sector_overrides)"))
+        ).fetchall()
+        for r in rows:
+            if r[1] == "sector":
+                return not bool(r[3])  # r[3] = notnull 플래그
+        return True  # 컬럼이 없으면 판단 불가 — 막지 않는다
+    row = (
+        await conn.execute(
+            text(
+                "SELECT is_nullable FROM information_schema.columns "
+                "WHERE table_name = 'holding_sector_overrides' AND column_name = 'sector'"
+            )
+        )
+    ).first()
+    return row is None or row[0] == "YES"
+
+
 async def verify(conn, is_sqlite: bool) -> dict:
-    """테이블별 classification 컬럼 존재 여부를 돌려준다."""
-    return {t: await has_classification_column(conn, t, is_sqlite) for t in TABLES}
+    """마이그레이션이 실제로 적용됐는지 확인한다."""
+    return {
+        "classification_columns": {
+            t: await has_classification_column(conn, t, is_sqlite) for t in TABLES
+        },
+        "override_sector_nullable": await is_override_sector_nullable(conn, is_sqlite),
+    }
+
+
+def is_healthy(status: dict) -> bool:
+    """verify() 결과가 전부 통과인지."""
+    return all(status["classification_columns"].values()) and status["override_sector_nullable"]
 
 
 async def add_classification_columns(conn, is_sqlite: bool) -> None:
@@ -66,6 +102,51 @@ async def add_classification_columns(conn, is_sqlite: bool) -> None:
         if await has_classification_column(conn, table, is_sqlite):
             continue
         await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN classification VARCHAR"))
+
+
+async def drop_override_sector_not_null(conn, is_sqlite: bool) -> None:
+    """holding_sector_overrides.sector 의 NOT NULL 제약을 푼다. 이미 풀려 있으면 아무것도 안 한다."""
+    if await is_override_sector_nullable(conn, is_sqlite):
+        return
+
+    if not is_sqlite:
+        await conn.execute(
+            text("ALTER TABLE holding_sector_overrides ALTER COLUMN sector DROP NOT NULL")
+        )
+        return
+
+    # SQLite 는 컬럼 제약만 떼어낼 수 없어 테이블을 다시 만든다. 오버라이드 테이블이라 행이 적다.
+    await conn.execute(
+        text(
+            "CREATE TABLE holding_sector_overrides_new ("
+            "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
+            "holding_key VARCHAR NOT NULL, "
+            "sector VARCHAR, "
+            "classification VARCHAR, "
+            "updated_at DATETIME)"
+        )
+    )
+    await conn.execute(
+        text(
+            "INSERT INTO holding_sector_overrides_new "
+            "(id, holding_key, sector, classification, updated_at) "
+            "SELECT id, holding_key, sector, classification, updated_at "
+            "FROM holding_sector_overrides"
+        )
+    )
+    await conn.execute(text("DROP TABLE holding_sector_overrides"))
+    await conn.execute(
+        text("ALTER TABLE holding_sector_overrides_new RENAME TO holding_sector_overrides")
+    )
+    await conn.execute(
+        text(
+            "CREATE UNIQUE INDEX ix_holding_sector_overrides_holding_key "
+            "ON holding_sector_overrides (holding_key)"
+        )
+    )
+    await conn.execute(
+        text("CREATE INDEX ix_holding_sector_overrides_id ON holding_sector_overrides (id)")
+    )
 
 
 async def normalize_legacy_sectors(conn) -> None:
@@ -94,10 +175,28 @@ async def normalize_broker_names(conn) -> None:
 async def migrate_schema(conn, is_sqlite: bool) -> dict:
     """스키마(DDL)만 반영하고 결과를 검증해 돌려준다. 앱이 뜨려면 이게 반드시 성공해야 한다."""
     await add_classification_columns(conn, is_sqlite)
+    await drop_override_sector_not_null(conn, is_sqlite)
     return await verify(conn, is_sqlite)
 
 
-async def migrate_data(conn) -> None:
-    """데이터 정규화(DML). 실패해도 앱은 뜬다."""
-    await normalize_legacy_sectors(conn)
-    await normalize_broker_names(conn)
+DATA_STEPS = (
+    ("normalize_legacy_sectors", normalize_legacy_sectors),
+    ("normalize_broker_names", normalize_broker_names),
+)
+
+
+async def migrate_data(engine) -> list:
+    """데이터 정규화(DML). 실패해도 앱은 뜬다. 실패한 단계 목록을 돌려준다.
+
+    단계마다 트랜잭션을 따로 연다. 한 트랜잭션에 묶으면 앞 단계가 죽는 순간
+    트랜잭션이 오염돼 뒤 단계도 같이 죽는다. 실제로 섹터 정규화가 NOT NULL 제약에
+    걸리면서 금융사 이름 정리까지 통째로 건너뛰었다.
+    """
+    errors = []
+    for name, step in DATA_STEPS:
+        try:
+            async with engine.begin() as conn:
+                await step(conn)
+        except Exception as e:
+            errors.append(f"{name}: {type(e).__name__}: {e}")
+    return errors

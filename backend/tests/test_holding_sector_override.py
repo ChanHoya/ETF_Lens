@@ -276,30 +276,68 @@ def test_legacy_normalization_splits_and_is_repeatable(db_session):
     loop.run_until_complete(_run())
 
 
-def test_schema_verify_and_repair_are_idempotent(db_session):
-    """컬럼 존재 확인 → 없으면 추가 → 여러 번 돌려도 안전한지 확인한다."""
+def test_schema_repair_restores_missing_column(db_session):
+    """classification 컬럼이 없는 옛 스키마를 복구하고, 여러 번 돌려도 안전한지 확인한다."""
     loop, db = db_session
 
     async def _run():
-        from migrate_sector_taxonomy import migrate_schema, verify
+        from migrate_sector_taxonomy import is_healthy, migrate_schema, verify
 
         conn = await db.connection()
-        # create_all 로 이미 만들어진 상태라 컬럼이 있어야 한다
-        assert all((await verify(conn, True)).values())
+        assert is_healthy(await verify(conn, True))
 
-        # 컬럼을 일부러 지운 옛 스키마를 만들어 복구를 확인한다
         await conn.execute(text("DROP TABLE manual_assets"))
         await conn.execute(text(
             "CREATE TABLE manual_assets (id INTEGER PRIMARY KEY, broker VARCHAR, sector VARCHAR)"
         ))
-        assert (await verify(conn, True))["manual_assets"] is False
+        assert (await verify(conn, True))["classification_columns"]["manual_assets"] is False
 
-        status = await migrate_schema(conn, True)
-        assert all(status.values()), status
+        assert is_healthy(await migrate_schema(conn, True))
+        assert is_healthy(await migrate_schema(conn, True)), "재실행도 통과해야 한다"
 
-        # 두 번째 실행에도 예외 없이 통과해야 한다
-        status2 = await migrate_schema(conn, True)
-        assert all(status2.values())
+    loop.run_until_complete(_run())
+
+
+def test_schema_repair_drops_sector_not_null(db_session):
+    """구버전의 sector NOT NULL 제약을 풀어, 섹터 없이 분류만 지정할 수 있게 한다."""
+    loop, db = db_session
+
+    async def _run():
+        from migrate_sector_taxonomy import is_healthy, migrate_schema, verify
+
+        conn = await db.connection()
+        # 첫 배포 당시 스키마 재현: sector NOT NULL
+        await conn.execute(text("DROP TABLE holding_sector_overrides"))
+        await conn.execute(text(
+            "CREATE TABLE holding_sector_overrides ("
+            "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
+            "holding_key VARCHAR NOT NULL, "
+            "sector VARCHAR NOT NULL, "
+            "classification VARCHAR, "
+            "updated_at DATETIME)"
+        ))
+        await conn.execute(text(
+            "INSERT INTO holding_sector_overrides (holding_key, sector) VALUES ('kis_1_01','반도체')"
+        ))
+        status = await verify(conn, True)
+        assert status["override_sector_nullable"] is False
+        assert not is_healthy(status)
+
+        assert is_healthy(await migrate_schema(conn, True))
+
+        # 기존 행이 보존돼야 한다
+        rows = (await conn.execute(text("SELECT holding_key, sector FROM holding_sector_overrides"))).fetchall()
+        assert rows == [("kis_1_01", "반도체")], rows
+
+        # 이제 섹터 없이 분류만 저장할 수 있다
+        await db.commit()
+        res = await update_holding_sector(
+            "kis_9_09", SectorUpdatePayload(classification="조선"), db=db
+        )
+        assert res["classification"] == "조선"
+        assert res["sector"] == ""
+
+        assert is_healthy(await migrate_schema(await db.connection(), True)), "재실행도 통과"
 
     loop.run_until_complete(_run())
 
@@ -310,7 +348,7 @@ def test_broker_alias_normalization(db_session):
 
     async def _run():
         from migrate_sector_taxonomy import normalize_broker_names
-        from api.integrated_assets import canonical_broker
+        from api.integrated_assets import canonical_broker  # noqa: F401
 
         assert canonical_broker("한국투자(수동)") == "한국투자"
         assert canonical_broker(" 한국투자증권 ") == "한국투자"

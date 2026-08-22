@@ -234,6 +234,7 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
             }
             // 서버가 실제로 저장한 값을 그대로 반영한다.
             // 고른 값을 그냥 믿으면 저장이 안 됐을 때 화면만 바뀌었다가 새로고침에서 되돌아간다.
+            // 방금 고친 칸만 손댄다. 응답의 다른 칸은 저장값이라 화면의 추론 기본값을 지워버린다.
             const saved = await res.json();
             if (data) {
                 const updated = JSON.parse(JSON.stringify(data));
@@ -241,8 +242,7 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                 for (const cat of Object.keys(gh)) {
                     for (const h of gh[cat]) {
                         if (h.id === holdingId) {
-                            h.sector = saved.sector ?? h.sector;
-                            h.classification = saved.classification ?? h.classification;
+                            h[field] = saved[field] ?? newValue;
                         }
                     }
                 }

@@ -27,6 +27,7 @@ export const CLASSIFICATION_OPTIONS: string[] = [
     "금융지주",
     "통신",
     "바이오",
+    "기타",
 ];
 
 /** 값이 비었을 때 화면에 보여줄 문구 */
