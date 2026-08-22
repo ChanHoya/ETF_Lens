@@ -29,7 +29,7 @@ A living document of module relationships. Update whenever modules are added or 
 | Energy ETF Analysis | Presentation | Energy sector ETF performance charts, custom legends, and toggled constituent comparison tables | api/router, EnergyChart | SectorAnalysisTab | Antigravity |
 | Semiconductor ETF Analysis | Presentation | Semiconductor sector ETF performance charts, custom legends, and toggled constituent comparison tables | api/router, SemiChart | SectorAnalysisTab | Antigravity |
 | Brazil Bond Analysis | Presentation | Brazil macro interest rate cycle analysis, historical yield trends, real-time scraping, and portfolio CAGR simulation | api/brazil_bond, core/brazil_fetcher | BrazilBondTab | Antigravity |
-| Integrated Total Asset Board | Presentation | Google Sheets (3. 포트폴리오0822) inspired Account Board, KIS real-time balance merge, and multi-broker manual asset/cash CRUD | api/integrated_assets, db/models, TotalAssetBoard | MyAssetsView | Antigravity |
+| Semiconductor Macro Cycle & CSCI | Presentation / Core | 5-Year rolling Z-score composite cycle index (CSCI), 4-phase cycle clock, BigTech CapEx tracker, subsector decoupling, and ETF allocation matrix | core/semi_cycle_engine, api/router, SemiCycleDashboard | SemiChart, SectorAnalysisTab | Antigravity |
 <!-- Add new modules above this line -->
 
 

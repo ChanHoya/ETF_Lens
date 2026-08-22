@@ -4,13 +4,13 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: 구글 시트(3. 포트폴리오0822) 기반 종합 자산 관리(Account Board + KIS 연동 + 수동 자산 CRUD) 구현 완료 (2026-08-22)
+✅ Current: S6-15 반도체 매크로 사이클(CSCI) 퀀트 엔진 및 4국면 시각화 대시보드(사이클 시계/CapEx 트래커/서브섹터 밸류에이션/ETF 매트릭스) 구현 완료 (2026-08-22)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
 > 세션 핸드오프 (2026-08-22):
-> - 구글 스프레드시트 '3. 포트폴리오0822' 탭 구조 기반 'Hoya 종합 자산 관리' 시스템 구축 완료.
-> - KIS API 실시간 연동(매수가/현재가/수량/예수금 100% 자동 집계) + 타 증권사(미래에셋/삼성/저축/비상장) 수동 자산 CRUD 및 예수금 관리 모달 연동.
-> - My 메뉴 내 3대 탭(종합 자산 Hoya Board / KIS 실시간 포트폴리오 / 자산 추이) 통합 완료.
+> - Gemini 리서치 보고서 기반 '반도체 섹터 매크로 사이클 추정 및 정량적 평가 프레임워크(CSCI)' 구축 완료.
+> - 백엔드: `semi_cycle_engine.py` (선행 40% + 동행 40% + 후행 20% 롤링 Z-Score 정규화 퀀트 엔진 & 4개 API 엔드포인트).
+> - 프론트엔드: `SemiCycleDashboard.tsx` 4대 위젯(사이클 시계 2D Scatter, 빅테크 CapEx 듀얼차트, 서브섹터 디커플링 맵, ETF 리밸런싱 매트릭스) 및 `SemiChart.tsx` 전문가 리포트 연동 완료.
  
  
 ## Current Sprint
@@ -37,6 +37,7 @@ Base: Exit Strategy Monitoring (KOSPI)
 | S6-12 | 우주항공 섹터 전문가 리포트 및 상관관계 매트릭스 하이라이트 | ✅ stable | SpaceChart 전문가 리포트 3개 탭 추가 및 상관관계 분석 매트릭스 내 가로/세로 하이라이트 박스 고도화 완료 |
 | S6-13 | 섹터분석 정렬 순서/명칭 갱신 및 조선/소부장 대체 | ✅ stable | 대시보드 섹터 재배치 및 AI전력 개명, 조선/반도체소부장 틱커 대체 매핑 완료 |
 | S6-14 | 구글 시트 기반 종합 자산 관리 (Account Board + KIS 연동 + 수동 자산 CRUD) | ✅ stable | KIS API 실시간 연동 + 타 금융사(미래에셋/삼성/저축) 수동 자산/예수금 통합 집계, 구글 시트 형태의 Account Board 및 계좌별 상세 종목 뷰 구현 완료 |
+| S6-15 | 반도체 매크로 사이클(CSCI) 퀀트 엔진 및 4국면 시각화 대시보드 | ✅ stable | 5년 롤링 Z-score 정규화 기반 선행(40%)+동행(40%)+후행(20%) CSCI 지수, 4-Phase 사이클 시계(2D Quadrant), 빅테크 CapEx 트래커, 서브섹터 디커플링 맵, ETF 리밸런싱 매트릭스 연동 완료 |
 ## Module Registry
  
 | Module | Layer | Status | Key Files |

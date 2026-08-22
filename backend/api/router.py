@@ -3608,6 +3608,35 @@ async def get_semi_screener():
     }
 
 
+# ── 반도체 매크로 사이클 & CSCI 퀀트 평가 API ────────────────────────────────
+@router.get("/semi-cycle/clock")
+async def get_semi_cycle_clock():
+    """위젯 1: Semiconductor Cycle Clock (사이클 시계 2D 사분면 궤적 & 국면)"""
+    from core.semi_cycle_engine import SemiCycleEngine
+    return await SemiCycleEngine.get_cycle_clock_data()
+
+
+@router.get("/semi-cycle/tracker")
+async def get_semi_cycle_tracker():
+    """위젯 2: Hyperscaler CapEx vs Memory Momentum Tracker"""
+    from core.semi_cycle_engine import SemiCycleEngine
+    return await SemiCycleEngine.get_capex_momentum_tracker()
+
+
+@router.get("/semi-cycle/subsectors")
+async def get_semi_cycle_subsectors():
+    """위젯 3: Sub-Sector Decoupling Matrix (서브섹터별 밸류에이션 및 EPS 수정)"""
+    from core.semi_cycle_engine import SemiCycleEngine
+    return await SemiCycleEngine.get_subsector_decoupling_matrix()
+
+
+@router.get("/semi-cycle/strategy")
+async def get_semi_cycle_strategy():
+    """위젯 4: Dynamic Semiconductor ETF Rebalancing Matrix (국면별 ETF 배분)"""
+    from core.semi_cycle_engine import SemiCycleEngine
+    return await SemiCycleEngine.get_etf_rebalancing_matrix()
+
+
 @router.get("/space-chart")
 async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_db)):
     """

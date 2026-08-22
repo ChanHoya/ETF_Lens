@@ -98,7 +98,7 @@ export default function SectorInsightReport({
     }, [sector]);
 
     const content = data ?? fallback;
-    const tab1Id = tabs[0]?.id;
+    const tab1Id = tabs.find(t => t.id === 'macro' || t.id === 'trend')?.id || tabs[0]?.id;
 
     return (
         <div className="flex flex-col gap-4">
@@ -159,7 +159,7 @@ export default function SectorInsightReport({
             </div>
 
             {/* Tab Contents */}
-            {activeTab === tab1Id && (
+            {activeTab === tab1Id && activeTab !== 'macro_cycle' && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-1">
                     {(content.tab1?.cards ?? []).slice(0, 3).map((c, i) => (
                         <div key={i} className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">

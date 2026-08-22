@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Activity, ArrowUpRight, TrendingUp, BookOpen, PieChart, Cpu, GitBranch, ArrowRight, Target } from 'lucide-react';
+import { Activity, ArrowUpRight, TrendingUp, BookOpen, PieChart, Cpu, GitBranch, ArrowRight, Target, Compass } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, ReferenceLine, ZAxis } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import SectorInsightReport, { InsightContent } from './SectorInsightReport';
+import SemiCycleDashboard from './SemiCycleDashboard';
 
 interface SemiChartProps {
     onOpenDetail?: (code: string) => void;
@@ -184,7 +185,7 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
     const [holdingsUpdatedAt, setHoldingsUpdatedAt] = useState<string>('');
     const [isMarketOpen, setIsMarketOpen] = useState<boolean>(() => checkIsUsMarketOpenClient());
     const [disparityData, setDisparityData] = useState<{ [key: string]: any }>({});
-    const [activeInsightTab, setActiveInsightTab] = useState<'macro' | 'etfs' | 'strategy' | 'qcycle'>('macro');
+    const [activeInsightTab, setActiveInsightTab] = useState<'macro' | 'etfs' | 'strategy' | 'qcycle' | 'macro_cycle'>('macro_cycle');
 
     // Q-Cycle Screener
     const [screenerData, setScreenerData] = useState<any[]>([]);
@@ -1039,15 +1040,21 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
                 title="AI 패러다임 쉬프트와 글로벌 반도체 공급망 전략"
                 accent="amber"
                 tabs={[
-                    { id: 'macro', label: '1. 매크로 & AI 반도체 트렌드', icon: TrendingUp },
-                    { id: 'etfs', label: '2. 국내외 핵심 ETF 분석', icon: BookOpen },
-                    { id: 'strategy', label: '3. 자산배분 모델 & 가이드', icon: PieChart },
-                    { id: 'qcycle', label: '4. Q-Cycle 퀀트 스크리너', icon: Cpu },
+                    { id: 'macro_cycle', label: '1. 매크로 4국면 퀀트 사이클 (CSCI)', icon: Compass },
+                    { id: 'macro', label: '2. 매크로 & AI 반도체 트렌드', icon: TrendingUp },
+                    { id: 'etfs', label: '3. 국내외 핵심 ETF 분석', icon: BookOpen },
+                    { id: 'strategy', label: '4. 자산배분 모델 & 가이드', icon: PieChart },
+                    { id: 'qcycle', label: '5. Q-Cycle 퀀트 스크리너', icon: Cpu },
                 ]}
                 activeTab={activeInsightTab}
                 onTabChange={(id) => setActiveInsightTab(id as any)}
                 fallback={SEMI_INSIGHT_FALLBACK}
             >
+                {activeInsightTab === 'macro_cycle' && (
+                    <div className="mt-2">
+                        <SemiCycleDashboard onOpenDetail={onOpenDetail} />
+                    </div>
+                )}
                 {activeInsightTab === 'qcycle' && (
                     <div className="flex flex-col gap-6 mt-1">
 
