@@ -353,5 +353,11 @@ class KisAccountMapping(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class HoldingSectorOverride(Base):
+    """KIS 연동 종목의 섹터/분류를 사용자가 커스텀 오버라이드 할 수 있도록 저장"""
+    __tablename__ = "holding_sector_overrides"
 
-
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    holding_key = Column(String, unique=True, index=True, nullable=False)  # e.g. "kis_005930_81060777-01"
+    sector = Column(String, nullable=False, default="기타")                # 사용자가 지정한 섹터
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Plus, Save, Trash2, Loader2, Sparkles, Layers } from "lucide-react";
 import { API_BASE } from "@/lib/apiConfig";
+import { SECTOR_OPTIONS } from "@/lib/sectorOptions";
 
 interface ManualAssetModalProps {
     isOpen: boolean;
@@ -32,19 +33,6 @@ const BROKERS = [
     "기타",
 ];
 
-const SECTORS = [
-    "반도체",
-    "빅테크/성장",
-    "AI전력/인프라",
-    "배당/커버드콜",
-    "통신",
-    "금융/지주",
-    "우주항공",
-    "바이오/헬스",
-    "예적금/현금성",
-    "해외비상장",
-    "기타",
-];
 
 interface BatchRow {
     id: string;
@@ -614,7 +602,7 @@ export default function ManualAssetModal({
                                         onChange={(e) => setSector(e.target.value)}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
                                     >
-                                        {SECTORS.map((s) => (
+                                        {SECTOR_OPTIONS.map((s) => (
                                             <option key={s} value={s} className="bg-[#12141a]">
                                                 {s}
                                             </option>
@@ -822,7 +810,7 @@ export default function ManualAssetModal({
                                                         }
                                                         className="w-full bg-[#161922] border border-white/10 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-indigo-500 text-xs"
                                                     >
-                                                        {SECTORS.map((s) => (
+                                                        {SECTOR_OPTIONS.map((s) => (
                                                             <option key={s} value={s} className="bg-[#12141a]">
                                                                 {s}
                                                             </option>

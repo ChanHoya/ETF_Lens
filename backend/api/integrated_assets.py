@@ -13,7 +13,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.database import get_db
-from db.models import KisAccountMapping, ManualAccountCash, ManualAsset
+from db.models import HoldingSectorOverride, KisAccountMapping, ManualAccountCash, ManualAsset
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +97,10 @@ class ManualCashCreate(BaseModel):
     cash_krw: float = 0.0
     cash_usd: float = 0.0
     memo: Optional[str] = None
+
+
+class SectorUpdatePayload(BaseModel):
+    sector: str
 
 
 class KisMappingItem(BaseModel):
@@ -427,6 +431,11 @@ async def get_integrated_assets(
     res_cash = await db.execute(stmt_cash)
     manual_cash_list = res_cash.scalars().all()
 
+    # 4-b. 섹터 오버라이드 로드
+    stmt_overrides = select(HoldingSectorOverride)
+    res_overrides = await db.execute(stmt_overrides)
+    sector_overrides = {o.holding_key: o.sector for o in res_overrides.scalars().all()}
+
     # 5. 카테고리별 데이터 컨테이너 초기화
     category_data = {
         cat["name"]: {
@@ -496,7 +505,7 @@ async def get_integrated_assets(
             "name": name,
             "code": code,
             "ticker": code,
-            "sector": "ETF/주식",
+            "sector": sector_overrides.get(f"kis_{code}_{acc_no}", "ETF/주식"),
             "broker": "한국투자",
             "source": "KIS",
             "account_no": acc_no,
@@ -938,3 +947,60 @@ async def refresh_manual_prices(db: AsyncSession = Depends(get_db)):
         await db.commit()
 
     return {"status": "success", "updated_count": updated_count}
+
+
+# ── Holding Sector Override ──────────────────────────────────────────────────
+@router.patch("/holdings/{holding_id}/sector")
+async def update_holding_sector(
+    holding_id: str,
+    payload: SectorUpdatePayload,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    보유 종목의 섹터/분류를 사용자 지정값으로 변경.
+    - KIS 종목 (holding_id 형태: kis_CODE_ACCNO): HoldingSectorOverride 테이블에 upsert
+    - MANUAL 종목 (holding_id 형태: manual_ID): ManualAsset.sector 업데이트
+    """
+    new_sector = payload.sector.strip()
+    if not new_sector:
+        raise HTTPException(status_code=400, detail="섹터 값은 비어있을 수 없습니다.")
+
+    if holding_id.startswith("manual_"):
+        # 수동 자산의 섹터 변경
+        try:
+            asset_id = int(holding_id.removeprefix("manual_"))
+        except ValueError:
+            raise HTTPException(
+                status_code=400, detail="잘못된 자산 ID 형식입니다."
+            ) from None
+        stmt = select(ManualAsset).where(ManualAsset.id == asset_id)
+        res = await db.execute(stmt)
+        asset = res.scalars().first()
+        if not asset:
+            raise HTTPException(status_code=404, detail="수동 자산을 찾을 수 없습니다.")
+        asset.sector = new_sector
+        asset.updated_at = datetime.utcnow()
+        await db.commit()
+        return {"status": "success", "holding_id": holding_id, "sector": new_sector}
+
+    elif holding_id.startswith("kis_"):
+        # KIS 연동 종목의 섹터 오버라이드
+        stmt = select(HoldingSectorOverride).where(
+            HoldingSectorOverride.holding_key == holding_id
+        )
+        res = await db.execute(stmt)
+        override = res.scalars().first()
+        if override:
+            override.sector = new_sector
+            override.updated_at = datetime.utcnow()
+        else:
+            override = HoldingSectorOverride(
+                holding_key=holding_id,
+                sector=new_sector,
+            )
+            db.add(override)
+        await db.commit()
+        return {"status": "success", "holding_id": holding_id, "sector": new_sector}
+
+    else:
+        raise HTTPException(status_code=400, detail="알 수 없는 holding_id 형식입니다.")
