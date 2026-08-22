@@ -112,6 +112,7 @@ export default function ManualAssetModal({
     const [isLookingUpPrice, setIsLookingUpPrice] = useState(false);
     const [lookupSuccessMsg, setLookupSuccessMsg] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isDeleteConfirming, setIsDeleteConfirming] = useState(false);
 
     // Initial Load
     useEffect(() => {
@@ -149,6 +150,7 @@ export default function ManualAssetModal({
         }
         setError(null);
         setLookupSuccessMsg(null);
+        setIsDeleteConfirming(false);
     }, [initialData, isOpen]);
 
     if (!isOpen) return null;
@@ -356,7 +358,7 @@ export default function ManualAssetModal({
 
     // Delete Single Asset
     const handleDelete = async () => {
-        if (!isEdit || !confirm(`[${assetName || "선택한 종목"}] 자산을 삭제하시겠습니까?`)) return;
+        if (!isEdit) return;
         setIsLoading(true);
         try {
             const assetId = initialData.manual_id || initialData.id;
@@ -370,6 +372,7 @@ export default function ManualAssetModal({
             setError(err.message || "삭제 실패");
         } finally {
             setIsLoading(false);
+            setIsDeleteConfirming(false);
         }
     };
 
@@ -861,15 +864,38 @@ export default function ManualAssetModal({
                     {/* Bottom Actions */}
                     <div className="flex items-center justify-between pt-3 border-t border-white/10">
                         {isEdit ? (
-                            <button
-                                type="button"
-                                onClick={handleDelete}
-                                disabled={isLoading}
-                                className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 rounded-xl transition-all disabled:opacity-50 text-xs font-semibold hover:scale-105 active:scale-95"
-                            >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>이 분류에서 삭제</span>
-                            </button>
+                            isDeleteConfirming ? (
+                                <div className="flex items-center gap-2 bg-rose-950/70 border border-rose-500/40 rounded-xl px-3 py-1.5 animate-in fade-in zoom-in-95 duration-150">
+                                    <span className="text-rose-200 text-xs font-medium">정말 삭제할까요?</span>
+                                    <button
+                                        type="button"
+                                        onClick={handleDelete}
+                                        disabled={isLoading}
+                                        className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1 shadow-md shadow-rose-600/30"
+                                    >
+                                        {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                                        삭제
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsDeleteConfirming(false)}
+                                        disabled={isLoading}
+                                        className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-gray-300 rounded-lg text-xs font-medium transition-colors"
+                                    >
+                                        취소
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDeleteConfirming(true)}
+                                    disabled={isLoading}
+                                    className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 rounded-xl transition-all disabled:opacity-50 text-xs font-semibold hover:scale-105 active:scale-95"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>이 분류에서 삭제</span>
+                                </button>
+                            )
                         ) : (
                             <div className="text-xs text-gray-400">
                                 {batchRows.filter((r) => r.assetName || r.ticker).length}개 종목 등록 대기

@@ -44,6 +44,8 @@ export default function ManualCashModal({
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [confirmingId, setConfirmingId] = useState<number | null>(null);
 
     const fetchCashList = async () => {
         setIsLoading(true);
@@ -68,6 +70,7 @@ export default function ManualCashModal({
             setCashKrw("");
             setCashUsd("");
             setMemo("");
+            setDeletingId(null);
         }
     }, [isOpen]);
 
@@ -121,17 +124,19 @@ export default function ManualCashModal({
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm("이 예수금 내역을 삭제하시겠습니까?")) return;
+        setDeletingId(id);
         try {
             const res = await fetch(`${API_BASE}/api/v1/my/manual-cash/${id}`, {
                 method: "DELETE",
             });
             if (res.ok) {
+                setDeletingId(null);
                 await fetchCashList();
                 onSuccess();
             }
         } catch (e) {
             console.error("Delete cash error:", e);
+            setDeletingId(null);
         }
     };
 
@@ -204,13 +209,32 @@ export default function ManualCashModal({
                                                 {item.memo && <span className="text-gray-500">· {item.memo}</span>}
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={() => handleDelete(item.id)}
-                                            className="p-1.5 text-gray-500 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition-colors"
-                                            title="삭제"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        {confirmingId === item.id ? (
+                                            <div className="flex items-center gap-1.5 bg-rose-950/70 border border-rose-500/40 rounded-lg px-2 py-1">
+                                                <span className="text-rose-200 text-[10px] font-medium">삭제?</span>
+                                                <button
+                                                    onClick={() => handleDelete(item.id)}
+                                                    disabled={deletingId === item.id}
+                                                    className="px-2 py-0.5 bg-rose-600 hover:bg-rose-500 text-white rounded text-[10px] font-bold shadow transition-colors"
+                                                >
+                                                    {deletingId === item.id ? "삭제중" : "확인"}
+                                                </button>
+                                                <button
+                                                    onClick={() => setConfirmingId(null)}
+                                                    className="px-1.5 py-0.5 bg-white/10 hover:bg-white/20 text-gray-300 rounded text-[10px] transition-colors"
+                                                >
+                                                    취소
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => setConfirmingId(item.id)}
+                                                className="p-1.5 text-gray-500 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition-colors"
+                                                title="삭제"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
                                     </div>
                                 ))}
                             </div>

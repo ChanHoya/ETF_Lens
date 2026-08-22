@@ -19,6 +19,8 @@ import {
     CheckCircle2,
     HelpCircle,
     Building2,
+    Loader2,
+    AlertTriangle,
 } from "lucide-react";
 import { API_BASE } from "@/lib/apiConfig";
 import ManualAssetModal from "./ManualAssetModal";
@@ -126,18 +128,26 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
     const [isCashModalOpen, setIsCashModalOpen] = useState(false);
     const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
 
+    // Delete confirmation state
+    const [assetToDelete, setAssetToDelete] = useState<{ id: number | string; name: string; category?: string } | null>(null);
+    const [isDeletingAsset, setIsDeletingAsset] = useState(false);
+
     const [searchQuery, setSearchQuery] = useState("");
 
-    const handleDeleteManualAsset = async (assetId: number | string, name: string) => {
-        if (!confirm(`[${name}] 자산을 삭제하시겠습니까?`)) return;
+    const handleConfirmDelete = async () => {
+        if (!assetToDelete) return;
+        setIsDeletingAsset(true);
         try {
-            const res = await fetch(`${API_BASE}/api/v1/my/manual-assets/${assetId}`, {
+            const res = await fetch(`${API_BASE}/api/v1/my/manual-assets/${assetToDelete.id}`, {
                 method: "DELETE",
             });
             if (!res.ok) throw new Error("삭제에 실패했습니다.");
+            setAssetToDelete(null);
             fetchIntegratedData(false);
         } catch (e: any) {
             alert(e.message || "삭제 중 오류가 발생했습니다.");
+        } finally {
+            setIsDeletingAsset(false);
         }
     };
 
@@ -868,7 +878,15 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                                                             <Edit3 className="w-3.5 h-3.5" />
                                                         </button>
                                                         <button
-                                                            onClick={() => handleDeleteManualAsset(h.manual_id, h.name)}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                e.preventDefault();
+                                                                setAssetToDelete({
+                                                                    id: h.manual_id,
+                                                                    name: h.name,
+                                                                    category: h.category,
+                                                                });
+                                                            }}
                                                             className="p-1.5 text-rose-400 hover:text-rose-200 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-lg transition-colors"
                                                             title="해당 분류에서 삭제"
                                                         >
@@ -895,6 +913,55 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                     )}
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {assetToDelete && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+                    <div className="bg-[#161922] border border-rose-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-150">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                                <Trash2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-bold text-white">수동 자산 삭제 확인</h3>
+                                <p className="text-xs text-gray-400">등록된 수동 투자 자산을 삭제합니다.</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-black/30 border border-white/5 rounded-xl p-3.5 mb-5 text-sm text-gray-200">
+                            정말로 <span className="font-semibold text-rose-300 font-mono">[{assetToDelete.name}]</span> 자산을 삭제하시겠습니까?
+                            <div className="text-xs text-gray-400 mt-1">삭제된 자산은 복구되지 않으며 종합 자산 현황에서 즉시 제외됩니다.</div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2.5">
+                            <button
+                                disabled={isDeletingAsset}
+                                onClick={() => setAssetToDelete(null)}
+                                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"
+                            >
+                                취소
+                            </button>
+                            <button
+                                disabled={isDeletingAsset}
+                                onClick={handleConfirmDelete}
+                                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-lg shadow-rose-600/30"
+                            >
+                                {isDeletingAsset ? (
+                                    <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        삭제 처리 중...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        삭제하기
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modals */}
             <ManualAssetModal
