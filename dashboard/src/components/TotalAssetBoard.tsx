@@ -26,6 +26,9 @@ import { API_BASE } from "@/lib/apiConfig";
 import ManualAssetModal from "./ManualAssetModal";
 import ManualCashModal from "./ManualCashModal";
 import KisAccountMappingModal from "./KisAccountMappingModal";
+import AccountSummaryDashboard from "./AccountSummaryDashboard";
+import HoldingsDetailDashboard from "./HoldingsDetailDashboard";
+import { SECTOR_OPTIONS } from "@/lib/sectorOptions";
 
 interface TotalAssetBoardProps {
     onOpenDetail?: (code: string) => void;
@@ -133,6 +136,43 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
     const [isDeletingAsset, setIsDeletingAsset] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState("");
+
+    // Dashboard modals
+    const [isAccountDashboardOpen, setIsAccountDashboardOpen] = useState(false);
+    const [isHoldingsDashboardOpen, setIsHoldingsDashboardOpen] = useState(false);
+
+    // Sector editing
+    const [editingSectorId, setEditingSectorId] = useState<string | null>(null);
+
+    const handleSectorChange = async (holdingId: string, newSector: string) => {
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/my/holdings/${holdingId}/sector`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sector: newSector }),
+            });
+            if (!res.ok) throw new Error("섹터 변경에 실패했습니다.");
+            // Update local data optimistically
+            if (data) {
+                const updated = JSON.parse(JSON.stringify(data));
+                const gh = updated.grouped_holdings || {};
+                for (const cat of Object.keys(gh)) {
+                    for (const h of gh[cat]) {
+                        if (h.id === holdingId) {
+                            h.sector = newSector;
+                        }
+                    }
+                }
+                setData(updated);
+                sessionStorage.setItem("integrated_assets_data", JSON.stringify(updated));
+            }
+        } catch (e: any) {
+            console.error(e);
+            alert(e.message || "섹터 변경 오류");
+        } finally {
+            setEditingSectorId(null);
+        }
+    };
 
     const handleConfirmDelete = async () => {
         if (!assetToDelete) return;
@@ -480,6 +520,13 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setIsAccountDashboardOpen(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95"
+                        >
+                            <PieChart className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">대시보드 보기</span>
+                        </button>
                         <span className="text-[11px] text-gray-400 hidden sm:inline">
                             총 {accountBoards.length}개 계좌 분류
                         </span>
@@ -664,6 +711,14 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                     </div>
 
                     <div className="flex items-center gap-2 w-full md:w-auto">
+                        <button
+                            onClick={() => setIsHoldingsDashboardOpen(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95"
+                        >
+                            <PieChart className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">대시보드 보기</span>
+                        </button>
+
                         {/* Search */}
                         <input
                             type="text"
@@ -807,11 +862,33 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                                                 </span>
                                             </td>
 
-                                            {/* 섹터 / 분류 */}
+                                            {/* 섹터 / 분류 (드롭다운 편집) */}
                                             <td className="py-3 px-2 text-center">
-                                                <span className="px-2 py-0.5 rounded text-[10px] bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-                                                    {h.sector || "기타"}
-                                                </span>
+                                                {editingSectorId === h.id ? (
+                                                    <select
+                                                        autoFocus
+                                                        defaultValue={h.sector || "기타"}
+                                                        onChange={(e) => handleSectorChange(h.id, e.target.value)}
+                                                        onBlur={() => setEditingSectorId(null)}
+                                                        className="bg-[#1e2030] border border-indigo-500/40 rounded-lg px-1.5 py-1 text-[10px] text-indigo-200 focus:outline-none focus:border-indigo-400 cursor-pointer appearance-none min-w-[90px]"
+                                                    >
+                                                        {SECTOR_OPTIONS.map((opt) => (
+                                                            <option key={opt} value={opt}>{opt}</option>
+                                                        ))}
+                                                        {h.sector && !SECTOR_OPTIONS.includes(h.sector) && (
+                                                            <option value={h.sector}>{h.sector}</option>
+                                                        )}
+                                                    </select>
+                                                ) : (
+                                                    <span
+                                                        onClick={() => setEditingSectorId(h.id)}
+                                                        className="px-2 py-0.5 rounded text-[10px] bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 cursor-pointer hover:bg-indigo-500/20 hover:border-indigo-400/40 transition-colors inline-flex items-center gap-1"
+                                                        title="클릭하여 섹터 변경"
+                                                    >
+                                                        {h.sector || "기타"}
+                                                        <ChevronDown className="w-2.5 h-2.5 opacity-50" />
+                                                    </span>
+                                                )}
                                             </td>
 
                                             {/* 계좌 구분 */}
@@ -986,6 +1063,27 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                 onSuccess={() => fetchIntegratedData(false)}
                 kisAccounts={kisAccounts}
             />
+
+            {/* 닫혀 있을 때는 아예 마운트하지 않는다 (불필요한 집계 연산 방지) */}
+            {isAccountDashboardOpen && (
+                <AccountSummaryDashboard
+                    isOpen={isAccountDashboardOpen}
+                    onClose={() => setIsAccountDashboardOpen(false)}
+                    accountBoards={accountBoards}
+                    summary={summary}
+                />
+            )}
+
+            {isHoldingsDashboardOpen && (
+                <HoldingsDetailDashboard
+                    isOpen={isHoldingsDashboardOpen}
+                    onClose={() => setIsHoldingsDashboardOpen(false)}
+                    allHoldings={Object.keys(groupedHoldings).reduce(
+                        (acc: any[], cat) => acc.concat(groupedHoldings[cat] || []),
+                        []
+                    )}
+                />
+            )}
         </div>
     );
 }
