@@ -675,7 +675,7 @@ export default function ManualAssetModal({
                                             <th className="py-2.5 px-2 w-16 text-center">통화</th>
                                             <th className="py-2.5 px-2 w-24 text-right">매수단가</th>
                                             <th className="py-2.5 px-2 w-24 text-right">현재가</th>
-                                            <th className="py-2.5 px-2 w-24 text-right">수량</th>
+                                            <th className="py-2.5 px-2 w-28 text-right">수량</th>
                                             <th className="py-2.5 px-2 w-24">섹터</th>
                                             <th className="py-2.5 px-2 w-10 text-center">삭제</th>
                                         </tr>
@@ -778,7 +778,7 @@ export default function ManualAssetModal({
                                                             handleUpdateBatchRow(idx, "purchasePrice", e.target.value)
                                                         }
                                                         placeholder="0"
-                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-right font-mono text-xs focus:outline-none focus:border-indigo-500"
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-white text-right font-mono text-xs focus:outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                     />
                                                 </td>
 
@@ -792,7 +792,7 @@ export default function ManualAssetModal({
                                                             handleUpdateBatchRow(idx, "currentPrice", e.target.value)
                                                         }
                                                         placeholder="자동조회"
-                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-right font-mono text-xs font-semibold focus:outline-none focus:border-indigo-500"
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-white text-right font-mono text-xs font-semibold focus:outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                     />
                                                 </td>
 
@@ -806,7 +806,7 @@ export default function ManualAssetModal({
                                                             handleUpdateBatchRow(idx, "quantity", e.target.value)
                                                         }
                                                         placeholder="1"
-                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-right font-mono text-xs font-semibold focus:outline-none focus:border-indigo-500"
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-white text-right font-mono text-xs font-semibold focus:outline-none focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                     />
                                                 </td>
 
