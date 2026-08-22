@@ -1,7 +1,7 @@
 "use client";
 // 보유 종목을 종목/금융사/섹터 기준으로 집계해 차트와 표로 보여주는 대시보드 모달
 import React, { useMemo, useState } from "react";
-import { X, BarChart3, Building2, Layers, TrendingUp, TrendingDown, PieChart as PieIcon } from "lucide-react";
+import { X, BarChart3, Building2, Layers, Tag, TrendingUp, PieChart as PieIcon } from "lucide-react";
 import {
     PieChart,
     Pie,
@@ -15,6 +15,8 @@ import {
     ResponsiveContainer,
     Legend,
 } from "recharts";
+import { computeDivergingScale } from "@/lib/divergingBar";
+import { UNSET_LABEL } from "@/lib/sectorOptions";
 
 interface HoldingsDetailDashboardProps {
     isOpen: boolean;
@@ -28,13 +30,22 @@ const CHART_COLORS = [
     "#f97316", "#8b5cf6",
 ];
 
-type TabKey = "stock" | "broker" | "sector";
+type TabKey = "stock" | "broker" | "sector" | "classification";
 
-const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
-    { key: "stock", label: "종목별", icon: <BarChart3 className="w-3.5 h-3.5" /> },
-    { key: "broker", label: "금융사별", icon: <Building2 className="w-3.5 h-3.5" /> },
-    { key: "sector", label: "섹터/분류별", icon: <Layers className="w-3.5 h-3.5" /> },
+/** 탭 키 → 집계에 쓸 holding 필드명과 화면 라벨 */
+const TABS: { key: TabKey; field: string; label: string; icon: React.ReactNode }[] = [
+    { key: "stock", field: "name", label: "종목별", icon: <BarChart3 className="w-3.5 h-3.5" /> },
+    { key: "broker", field: "broker", label: "금융사별", icon: <Building2 className="w-3.5 h-3.5" /> },
+    { key: "sector", field: "sector", label: "섹터별", icon: <Layers className="w-3.5 h-3.5" /> },
+    { key: "classification", field: "classification", label: "분류별", icon: <Tag className="w-3.5 h-3.5" /> },
 ];
+
+const TAB_LABELS: Record<TabKey, string> = {
+    stock: "종목",
+    broker: "금융사",
+    sector: "섹터",
+    classification: "분류",
+};
 
 const fmtKRW = (n: number) => {
     if (isNaN(n) || n === null || n === undefined) return "0";
@@ -89,7 +100,7 @@ const BarTooltipContent = ({ active, payload }: any) => {
 function aggregateBy(holdings: any[], key: string) {
     const map: Record<string, { evalAmount: number; purchaseAmount: number; profitLoss: number; count: number }> = {};
     holdings.forEach((h) => {
-        const k = h[key] || "기타";
+        const k = h[key] || UNSET_LABEL;
         if (!map[k]) map[k] = { evalAmount: 0, purchaseAmount: 0, profitLoss: 0, count: 0 };
         map[k].evalAmount += h.eval_amount || 0;
         map[k].purchaseAmount += h.purchase_amount || 0;
@@ -117,18 +128,17 @@ export default function HoldingsDetailDashboard({
 }: HoldingsDetailDashboardProps) {
     const [activeTab, setActiveTab] = useState<TabKey>("stock");
 
-    const stockData = useMemo(() => aggregateBy(allHoldings, "name"), [allHoldings]);
-    const brokerData = useMemo(() => aggregateBy(allHoldings, "broker"), [allHoldings]);
-    const sectorData = useMemo(() => aggregateBy(allHoldings, "sector"), [allHoldings]);
-
-    const currentData = activeTab === "stock" ? stockData : activeTab === "broker" ? brokerData : sectorData;
+    const currentData = useMemo(() => {
+        const field = TABS.find((t) => t.key === activeTab)?.field ?? "name";
+        return aggregateBy(allHoldings, field);
+    }, [allHoldings, activeTab]);
 
     const returnRankData = useMemo(() => {
         return [...currentData].sort((a, b) => b.returnRate - a.returnRate).slice(0, 12);
     }, [currentData]);
 
-    const maxReturnAbs = useMemo(
-        () => Math.max(...returnRankData.map((d) => Math.abs(d.returnRate)), 1),
+    const scale = useMemo(
+        () => computeDivergingScale(returnRankData.map((d) => d.returnRate)),
         [returnRankData]
     );
 
@@ -137,7 +147,6 @@ export default function HoldingsDetailDashboard({
     if (!isOpen) return null;
 
     const pieData = currentData.slice(0, 10);
-    const labelMap = { stock: "종목", broker: "금융사", sector: "섹터" };
 
     return (
         <div
@@ -197,7 +206,7 @@ export default function HoldingsDetailDashboard({
                         <div className="p-5 rounded-2xl bg-[#161922] border border-white/10">
                             <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
                                 <PieIcon className="w-4 h-4 text-indigo-400" />
-                                {labelMap[activeTab]}별 자산 비중 {pieData.length < currentData.length && `(Top ${pieData.length})`}
+                                {TAB_LABELS[activeTab]}별 자산 비중 {pieData.length < currentData.length && `(Top ${pieData.length})`}
                             </h3>
                             <ResponsiveContainer width="100%" height={280}>
                                 <PieChart>
@@ -232,7 +241,7 @@ export default function HoldingsDetailDashboard({
                         <div className="p-5 rounded-2xl bg-[#161922] border border-white/10">
                             <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
                                 <BarChart3 className="w-4 h-4 text-purple-400" />
-                                {labelMap[activeTab]}별 매수 vs 평가
+                                {TAB_LABELS[activeTab]}별 매수 vs 평가
                             </h3>
                             <ResponsiveContainer width="100%" height={280}>
                                 <BarChart data={currentData.slice(0, 8)} barCategoryGap="20%">
@@ -272,12 +281,12 @@ export default function HoldingsDetailDashboard({
                     <div className="p-5 rounded-2xl bg-[#161922] border border-white/10">
                         <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
                             <TrendingUp className="w-4 h-4 text-rose-400" />
-                            {labelMap[activeTab]}별 수익률 랭킹
+                            {TAB_LABELS[activeTab]}별 수익률 랭킹
                         </h3>
                         <div className="flex flex-col gap-2.5">
                             {returnRankData.map((item, idx) => {
                                 const isPositive = item.returnRate >= 0;
-                                const barWidth = Math.min(100, (Math.abs(item.returnRate) / maxReturnAbs) * 100);
+                                const barWidth = scale.widthOf(item.returnRate);
 
                                 return (
                                     <div key={idx} className="flex items-center gap-2">
@@ -287,28 +296,35 @@ export default function HoldingsDetailDashboard({
                                         <span className="text-xs text-gray-300 font-semibold w-32 shrink-0 truncate text-right" title={item.name}>
                                             {item.name}
                                         </span>
-                                        <div className="flex-1 flex items-center gap-2">
-                                            <div className="flex-1 h-5 bg-white/5 rounded-lg overflow-hidden relative">
-                                                <div
-                                                    className={`h-full rounded-lg transition-all duration-500 ${
-                                                        isPositive
-                                                            ? "bg-gradient-to-r from-rose-500/30 to-rose-500"
-                                                            : "bg-gradient-to-r from-blue-500/30 to-blue-500"
-                                                    }`}
-                                                    style={{ width: `${barWidth}%` }}
-                                                />
-                                                <span className={`absolute inset-y-0 right-2 flex items-center text-[10px] font-mono font-bold ${
-                                                    isPositive ? "text-rose-300" : "text-blue-300"
-                                                }`}>
-                                                    {isPositive ? "+" : ""}{item.returnRate.toFixed(2)}%
-                                                </span>
-                                            </div>
-                                            <span className={`text-[10px] font-mono w-16 text-right shrink-0 ${
-                                                isPositive ? "text-rose-400/80" : "text-blue-400/80"
-                                            }`}>
-                                                {isPositive ? "+" : ""}{fmtShort(item.profitLoss)}
-                                            </span>
+                                        <div className="flex-1 h-5 bg-white/5 rounded-lg relative overflow-hidden">
+                                            {/* 0% 기준선 */}
+                                            <div
+                                                className="absolute inset-y-0 w-px bg-white/25"
+                                                style={{ left: `${scale.zeroPct}%` }}
+                                            />
+                                            <div
+                                                className={`absolute inset-y-0 transition-all duration-500 ${
+                                                    isPositive
+                                                        ? "rounded-r bg-gradient-to-r from-rose-500/30 to-rose-500"
+                                                        : "rounded-l bg-gradient-to-l from-blue-500/30 to-blue-500"
+                                                }`}
+                                                style={
+                                                    isPositive
+                                                        ? { left: `${scale.zeroPct}%`, width: `${barWidth}%` }
+                                                        : { right: `${100 - scale.zeroPct}%`, width: `${barWidth}%` }
+                                                }
+                                            />
                                         </div>
+                                        <span className={`text-[10px] font-mono font-bold w-16 text-right shrink-0 ${
+                                            isPositive ? "text-rose-300" : "text-blue-300"
+                                        }`}>
+                                            {isPositive ? "+" : ""}{item.returnRate.toFixed(2)}%
+                                        </span>
+                                        <span className={`text-[10px] font-mono w-16 text-right shrink-0 ${
+                                            isPositive ? "text-rose-400/80" : "text-blue-400/80"
+                                        }`}>
+                                            {isPositive ? "+" : ""}{fmtShort(item.profitLoss)}
+                                        </span>
                                     </div>
                                 );
                             })}
@@ -317,12 +333,12 @@ export default function HoldingsDetailDashboard({
 
                     {/* Full Detail Table */}
                     <div className="p-5 rounded-2xl bg-[#161922] border border-white/10">
-                        <h3 className="text-sm font-bold text-white mb-3">📋 {labelMap[activeTab]}별 상세 수치</h3>
+                        <h3 className="text-sm font-bold text-white mb-3">📋 {TAB_LABELS[activeTab]}별 상세 수치</h3>
                         <div className="overflow-x-auto">
                             <table className="w-full text-xs border-collapse">
                                 <thead>
                                     <tr className="border-b border-white/10 text-gray-400 font-semibold">
-                                        <th className="py-2.5 px-3 text-left">{labelMap[activeTab]}</th>
+                                        <th className="py-2.5 px-3 text-left">{TAB_LABELS[activeTab]}</th>
                                         <th className="py-2.5 px-3 text-right">종목 수</th>
                                         <th className="py-2.5 px-3 text-right">매수총액</th>
                                         <th className="py-2.5 px-3 text-right">평가총액</th>

@@ -63,6 +63,7 @@ class ManualAssetCreate(BaseModel):
     current_price: float = 0.0
     quantity: float = 1.0
     sector: Optional[str] = None
+    classification: Optional[str] = None
     country: str = "국내"
     memo: Optional[str] = None
 
@@ -78,6 +79,7 @@ class ManualAssetUpdate(BaseModel):
     current_price: Optional[float] = None
     quantity: Optional[float] = None
     sector: Optional[str] = None
+    classification: Optional[str] = None
     country: Optional[str] = None
     memo: Optional[str] = None
 
@@ -100,7 +102,10 @@ class ManualCashCreate(BaseModel):
 
 
 class SectorUpdatePayload(BaseModel):
-    sector: str
+    """섹터(자산군)와 분류(산업/테마)를 각각 또는 함께 변경한다. 빈 문자열은 '미지정'으로 지운다는 뜻."""
+
+    sector: Optional[str] = None
+    classification: Optional[str] = None
 
 
 class KisMappingItem(BaseModel):
@@ -331,6 +336,23 @@ def guess_kis_category(acc_no: str, acc_name: Optional[str] = None) -> str:
     return "일반주식계좌"
 
 
+# ── 섹터(자산군) / 분류(산업·테마) ────────────────────────────────────────────
+# 국내 ETF 브랜드 토큰. 종목명이 이 중 하나로 시작하면 개별주가 아니라 ETF 로 본다.
+ETF_BRAND_TOKENS = (
+    "KODEX", "TIGER", "KBSTAR", "ARIRANG", "KINDEX", "HANARO", "KOSEF",
+    "SOL", "ACE", "PLUS", "RISE", "TIMEFOLIO", "KOACT", "WOORI", "BNK",
+    "히어로즈", "마이다스", "UNICORN", "FOCUS", "VITA", "마이티", "ITF",
+)
+
+def guess_holding_sector(name: str, code: str, country: str) -> str:
+    """종목명/코드로 섹터(자산군) 기본값을 추론한다. 사용자가 지정하면 그 값이 우선한다."""
+    upper_name = (name or "").upper()
+    is_etf = any(token in upper_name for token in ETF_BRAND_TOKENS)
+    if country == "해외":
+        return "해외ETF" if is_etf else "해외주식"
+    return "국내ETF" if is_etf else "국내주식"
+
+
 # ── Stock Price Lookup Endpoint ──────────────────────────────────────────────
 @router.get("/stock-price")
 async def get_stock_price(ticker: str):
@@ -431,10 +453,13 @@ async def get_integrated_assets(
     res_cash = await db.execute(stmt_cash)
     manual_cash_list = res_cash.scalars().all()
 
-    # 4-b. 섹터 오버라이드 로드
+    # 4-b. 섹터/분류 오버라이드 로드
     stmt_overrides = select(HoldingSectorOverride)
     res_overrides = await db.execute(stmt_overrides)
-    sector_overrides = {o.holding_key: o.sector for o in res_overrides.scalars().all()}
+    taxonomy_overrides = {
+        o.holding_key: (o.sector, o.classification)
+        for o in res_overrides.scalars().all()
+    }
 
     # 5. 카테고리별 데이터 컨테이너 초기화
     category_data = {
@@ -500,19 +525,23 @@ async def get_integrated_assets(
         code = h.get("code", "")
         name = h.get("name", "")
 
+        country = "해외" if (code.isalpha() or "미국" in name or "글로벌" in name) else "국내"
+        ovr_sector, ovr_classification = taxonomy_overrides.get(f"kis_{code}_{acc_no}", (None, None))
+
         holding_obj = {
             "id": f"kis_{code}_{acc_no}",
             "name": name,
             "code": code,
             "ticker": code,
-            "sector": sector_overrides.get(f"kis_{code}_{acc_no}", "ETF/주식"),
+            "sector": ovr_sector or guess_holding_sector(name, code, country),
+            "classification": ovr_classification or "",
             "broker": "한국투자",
             "source": "KIS",
             "account_no": acc_no,
             "account_name": next((a["alias"] for a in enriched_kis_accounts if a["account_no"] == acc_no), "한투 연동"),
             "category": cat_name,
             "currency": "KRW",
-            "country": "해외" if (code.isalpha() or "미국" in name or "글로벌" in name) else "국내",
+            "country": country,
             "purchase_price": avg_p,
             "current_price": cur_p,
             "quantity": qty,
@@ -553,7 +582,8 @@ async def get_integrated_assets(
             "name": ma.asset_name,
             "code": ma.ticker or "",
             "ticker": ma.ticker or "",
-            "sector": ma.sector or "기타",
+            "sector": ma.sector or "",
+            "classification": ma.classification or "",
             "broker": ma.broker,
             "source": "MANUAL",
             "account_no": ma.account_name or ma.broker,
@@ -708,6 +738,7 @@ async def create_manual_asset(
         current_price=cur_p if cur_p > 0 else payload.purchase_price,
         quantity=payload.quantity if payload.quantity > 0 else 1.0,
         sector=payload.sector,
+        classification=payload.classification,
         country=country,
         memo=payload.memo,
     )
@@ -751,7 +782,8 @@ async def create_manual_assets_batch(
             purchase_price=item.purchase_price,
             current_price=cur_p if cur_p > 0 else item.purchase_price,
             quantity=item.quantity if item.quantity > 0 else 1.0,
-            sector=item.sector or "기타",
+            sector=item.sector or None,
+            classification=item.classification or None,
             country=country,
             memo=item.memo,
         )
@@ -949,7 +981,7 @@ async def refresh_manual_prices(db: AsyncSession = Depends(get_db)):
     return {"status": "success", "updated_count": updated_count}
 
 
-# ── Holding Sector Override ──────────────────────────────────────────────────
+# ── Holding Sector / Classification Override ─────────────────────────────────
 @router.patch("/holdings/{holding_id}/sector")
 async def update_holding_sector(
     holding_id: str,
@@ -957,16 +989,31 @@ async def update_holding_sector(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    보유 종목의 섹터/분류를 사용자 지정값으로 변경.
+    보유 종목의 섹터(자산군)와 분류(산업/테마)를 사용자 지정값으로 변경.
     - KIS 종목 (holding_id 형태: kis_CODE_ACCNO): HoldingSectorOverride 테이블에 upsert
-    - MANUAL 종목 (holding_id 형태: manual_ID): ManualAsset.sector 업데이트
+    - MANUAL 종목 (holding_id 형태: manual_ID): ManualAsset 컬럼 직접 업데이트
+
+    두 필드는 각각 보낼 수 있다. 빈 문자열을 보내면 '미지정'으로 지운다는 뜻이고,
+    아예 생략하면 기존 값을 건드리지 않는다.
     """
-    new_sector = payload.sector.strip()
-    if not new_sector:
-        raise HTTPException(status_code=400, detail="섹터 값은 비어있을 수 없습니다.")
+    # 생략(None)과 지우기("")를 구분해야 하므로 전달된 필드만 골라낸다.
+    provided = payload.model_dump(exclude_unset=True)
+    if not provided:
+        raise HTTPException(
+            status_code=400, detail="sector 또는 classification 중 하나는 보내야 합니다."
+        )
+
+    changes = {
+        field: (value.strip() or None) if isinstance(value, str) else None
+        for field, value in provided.items()
+        if field in ("sector", "classification")
+    }
+    if not changes:
+        raise HTTPException(
+            status_code=400, detail="sector 또는 classification 중 하나는 보내야 합니다."
+        )
 
     if holding_id.startswith("manual_"):
-        # 수동 자산의 섹터 변경
         try:
             asset_id = int(holding_id.removeprefix("manual_"))
         except ValueError:
@@ -975,32 +1022,31 @@ async def update_holding_sector(
             ) from None
         stmt = select(ManualAsset).where(ManualAsset.id == asset_id)
         res = await db.execute(stmt)
-        asset = res.scalars().first()
-        if not asset:
+        target = res.scalars().first()
+        if not target:
             raise HTTPException(status_code=404, detail="수동 자산을 찾을 수 없습니다.")
-        asset.sector = new_sector
-        asset.updated_at = datetime.utcnow()
-        await db.commit()
-        return {"status": "success", "holding_id": holding_id, "sector": new_sector}
 
     elif holding_id.startswith("kis_"):
-        # KIS 연동 종목의 섹터 오버라이드
         stmt = select(HoldingSectorOverride).where(
             HoldingSectorOverride.holding_key == holding_id
         )
         res = await db.execute(stmt)
-        override = res.scalars().first()
-        if override:
-            override.sector = new_sector
-            override.updated_at = datetime.utcnow()
-        else:
-            override = HoldingSectorOverride(
-                holding_key=holding_id,
-                sector=new_sector,
-            )
-            db.add(override)
-        await db.commit()
-        return {"status": "success", "holding_id": holding_id, "sector": new_sector}
+        target = res.scalars().first()
+        if not target:
+            target = HoldingSectorOverride(holding_key=holding_id)
+            db.add(target)
 
     else:
         raise HTTPException(status_code=400, detail="알 수 없는 holding_id 형식입니다.")
+
+    for field, value in changes.items():
+        setattr(target, field, value)
+    target.updated_at = datetime.utcnow()
+    await db.commit()
+
+    return {
+        "status": "success",
+        "holding_id": holding_id,
+        "sector": target.sector or "",
+        "classification": target.classification or "",
+    }

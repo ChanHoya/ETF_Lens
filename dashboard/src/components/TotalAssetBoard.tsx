@@ -28,7 +28,74 @@ import ManualCashModal from "./ManualCashModal";
 import KisAccountMappingModal from "./KisAccountMappingModal";
 import AccountSummaryDashboard from "./AccountSummaryDashboard";
 import HoldingsDetailDashboard from "./HoldingsDetailDashboard";
-import { SECTOR_OPTIONS } from "@/lib/sectorOptions";
+import { SECTOR_OPTIONS, CLASSIFICATION_OPTIONS, UNSET_LABEL } from "@/lib/sectorOptions";
+
+/** 섹터·분류 칩. 클릭하면 드롭다운으로 바뀌고, 값을 고르면 저장한다. */
+function TaxonomyCell({
+    label,
+    accent,
+    value,
+    options,
+    isEditing,
+    onOpen,
+    onCancel,
+    onSelect,
+}: {
+    label: string;
+    accent: "indigo" | "cyan";
+    value?: string;
+    options: string[];
+    isEditing: boolean;
+    onOpen: () => void;
+    onCancel: () => void;
+    onSelect: (value: string) => void;
+}) {
+    // Tailwind 는 클래스 문자열을 정적으로 훑기 때문에 조합해서 만들지 않고 통째로 둔다.
+    const styles =
+        accent === "indigo"
+            ? {
+                  select: "border-indigo-500/40 text-indigo-200 focus:border-indigo-400",
+                  chip: "bg-indigo-500/10 text-indigo-300 border-indigo-500/20 hover:bg-indigo-500/20 hover:border-indigo-400/40",
+              }
+            : {
+                  select: "border-cyan-500/40 text-cyan-200 focus:border-cyan-400",
+                  chip: "bg-cyan-500/10 text-cyan-300 border-cyan-500/20 hover:bg-cyan-500/20 hover:border-cyan-400/40",
+              };
+
+    if (isEditing) {
+        return (
+            <select
+                autoFocus
+                defaultValue={value || ""}
+                onChange={(e) => onSelect(e.target.value)}
+                onBlur={onCancel}
+                className={`bg-[#1e2030] border rounded-lg px-1.5 py-1 text-[10px] focus:outline-none cursor-pointer appearance-none min-w-[90px] ${styles.select}`}
+            >
+                <option value="">— {UNSET_LABEL} —</option>
+                {options.map((opt) => (
+                    <option key={opt} value={opt}>
+                        {opt}
+                    </option>
+                ))}
+                {/* 목록에 없는 기존 값도 고를 수 있게 남겨둔다 */}
+                {value && !options.includes(value) ? <option value={value}>{value}</option> : null}
+            </select>
+        );
+    }
+
+    return (
+        <span
+            onClick={onOpen}
+            className={`px-2 py-0.5 rounded text-[10px] border cursor-pointer transition-colors inline-flex items-center gap-1 ${
+                value ? styles.chip : "bg-white/5 text-gray-500 border-white/10 hover:bg-white/10"
+            }`}
+            title={`클릭하여 ${label} 변경`}
+        >
+            {value || UNSET_LABEL}
+            <ChevronDown className="w-2.5 h-2.5 opacity-50" />
+        </span>
+    );
+}
 
 interface TotalAssetBoardProps {
     onOpenDetail?: (code: string) => void;
@@ -141,17 +208,23 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
     const [isAccountDashboardOpen, setIsAccountDashboardOpen] = useState(false);
     const [isHoldingsDashboardOpen, setIsHoldingsDashboardOpen] = useState(false);
 
-    // Sector editing
-    const [editingSectorId, setEditingSectorId] = useState<string | null>(null);
+    // 섹터/분류 인라인 편집 — 어느 종목의 어느 칸을 여는지 함께 들고 있는다
+    type TaxonomyField = "sector" | "classification";
+    const [editingCell, setEditingCell] = useState<{ id: string; field: TaxonomyField } | null>(null);
 
-    const handleSectorChange = async (holdingId: string, newSector: string) => {
+    const handleTaxonomyChange = async (
+        holdingId: string,
+        field: TaxonomyField,
+        newValue: string
+    ) => {
+        const label = field === "sector" ? "섹터" : "분류";
         try {
             const res = await fetch(`${API_BASE}/api/v1/my/holdings/${holdingId}/sector`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ sector: newSector }),
+                body: JSON.stringify({ [field]: newValue }),
             });
-            if (!res.ok) throw new Error("섹터 변경에 실패했습니다.");
+            if (!res.ok) throw new Error(`${label} 변경에 실패했습니다.`);
             // Update local data optimistically
             if (data) {
                 const updated = JSON.parse(JSON.stringify(data));
@@ -159,7 +232,7 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                 for (const cat of Object.keys(gh)) {
                     for (const h of gh[cat]) {
                         if (h.id === holdingId) {
-                            h.sector = newSector;
+                            h[field] = newValue;
                         }
                     }
                 }
@@ -168,9 +241,9 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
             }
         } catch (e: any) {
             console.error(e);
-            alert(e.message || "섹터 변경 오류");
+            alert(e.message || `${label} 변경 오류`);
         } finally {
-            setEditingSectorId(null);
+            setEditingCell(null);
         }
     };
 
@@ -308,6 +381,7 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                 (h.ticker && h.ticker.toLowerCase().includes(q)) ||
                 (h.broker && h.broker.toLowerCase().includes(q)) ||
                 (h.sector && h.sector.toLowerCase().includes(q)) ||
+                (h.classification && h.classification.toLowerCase().includes(q)) ||
                 (h.account_name && h.account_name.toLowerCase().includes(q))
         );
     }
@@ -787,7 +861,8 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                                 <tr className="border-b border-white/10 bg-white/[0.02] text-gray-400 font-semibold whitespace-nowrap">
                                     <th className="py-3 px-4">종목명 / 상품명</th>
                                     <th className="py-3 px-2 text-center">금융사/출처</th>
-                                    <th className="py-3 px-2 text-center">섹터/분류</th>
+                                    <th className="py-3 px-2 text-center">섹터</th>
+                                    <th className="py-3 px-2 text-center">분류</th>
                                     <th className="py-3 px-2 text-center">계좌</th>
                                     <th className="py-3 px-3 text-right">매수단가</th>
                                     <th className="py-3 px-3 text-right">현재가</th>
@@ -862,33 +937,41 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                                                 </span>
                                             </td>
 
-                                            {/* 섹터 / 분류 (드롭다운 편집) */}
+                                            {/* 섹터 (자산군) */}
                                             <td className="py-3 px-2 text-center">
-                                                {editingSectorId === h.id ? (
-                                                    <select
-                                                        autoFocus
-                                                        defaultValue={h.sector || "기타"}
-                                                        onChange={(e) => handleSectorChange(h.id, e.target.value)}
-                                                        onBlur={() => setEditingSectorId(null)}
-                                                        className="bg-[#1e2030] border border-indigo-500/40 rounded-lg px-1.5 py-1 text-[10px] text-indigo-200 focus:outline-none focus:border-indigo-400 cursor-pointer appearance-none min-w-[90px]"
-                                                    >
-                                                        {SECTOR_OPTIONS.map((opt) => (
-                                                            <option key={opt} value={opt}>{opt}</option>
-                                                        ))}
-                                                        {h.sector && !SECTOR_OPTIONS.includes(h.sector) && (
-                                                            <option value={h.sector}>{h.sector}</option>
-                                                        )}
-                                                    </select>
-                                                ) : (
-                                                    <span
-                                                        onClick={() => setEditingSectorId(h.id)}
-                                                        className="px-2 py-0.5 rounded text-[10px] bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 cursor-pointer hover:bg-indigo-500/20 hover:border-indigo-400/40 transition-colors inline-flex items-center gap-1"
-                                                        title="클릭하여 섹터 변경"
-                                                    >
-                                                        {h.sector || "기타"}
-                                                        <ChevronDown className="w-2.5 h-2.5 opacity-50" />
-                                                    </span>
-                                                )}
+                                                <TaxonomyCell
+                                                    label="섹터"
+                                                    accent="indigo"
+                                                    value={h.sector}
+                                                    options={SECTOR_OPTIONS}
+                                                    isEditing={
+                                                        editingCell?.id === h.id && editingCell?.field === "sector"
+                                                    }
+                                                    onOpen={() => setEditingCell({ id: h.id, field: "sector" })}
+                                                    onCancel={() => setEditingCell(null)}
+                                                    onSelect={(v) => handleTaxonomyChange(h.id, "sector", v)}
+                                                />
+                                            </td>
+
+                                            {/* 분류 (산업/테마) */}
+                                            <td className="py-3 px-2 text-center">
+                                                <TaxonomyCell
+                                                    label="분류"
+                                                    accent="cyan"
+                                                    value={h.classification}
+                                                    options={CLASSIFICATION_OPTIONS}
+                                                    isEditing={
+                                                        editingCell?.id === h.id &&
+                                                        editingCell?.field === "classification"
+                                                    }
+                                                    onOpen={() =>
+                                                        setEditingCell({ id: h.id, field: "classification" })
+                                                    }
+                                                    onCancel={() => setEditingCell(null)}
+                                                    onSelect={(v) =>
+                                                        handleTaxonomyChange(h.id, "classification", v)
+                                                    }
+                                                />
                                             </td>
 
                                             {/* 계좌 구분 */}

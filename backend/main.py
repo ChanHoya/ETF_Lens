@@ -101,6 +101,18 @@ async def lifespan(app: FastAPI):
         except Exception as _e:
             print(f"[Startup] alert_brazil column migration skipped: {_e}")
 
+        # ── 2.8. 섹터/분류 분리 마이그레이션 ────────────────────────────────────
+        # 예전에는 sector 한 필드에 자산군(ETF/주식)과 산업(반도체)이 섞여 있었다.
+        # classification 컬럼을 추가하고, 구 값들을 두 축으로 갈라 담는다.
+        # 매핑 키가 전부 구 목록 값이라 재실행해도 두 번 변환되지 않는다.
+        try:
+            from migrate_sector_taxonomy import migrate as _migrate_taxonomy
+
+            async with engine.begin() as conn:
+                await _migrate_taxonomy(conn, _is_sqlite)
+        except Exception as _e:
+            print(f"[Startup] sector/classification migration skipped: {_e}")
+
         # ── 3. ETF 성과 및 랭킹 비용 컬럼 마이그레이션 (SQLite 전용 스크립트) ───────
         if _is_sqlite:
             try:

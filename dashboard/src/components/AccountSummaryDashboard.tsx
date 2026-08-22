@@ -15,6 +15,7 @@ import {
     ResponsiveContainer,
     Legend,
 } from "recharts";
+import { computeDivergingScale } from "@/lib/divergingBar";
 
 interface AccountSummaryDashboardProps {
     isOpen: boolean;
@@ -125,8 +126,8 @@ export default function AccountSummaryDashboard({
         [accountBoards]
     );
 
-    const maxReturnAbs = useMemo(
-        () => Math.max(...returnData.map((d: any) => Math.abs(d.수익률)), 1),
+    const scale = useMemo(
+        () => computeDivergingScale(returnData.map((d: any) => d.수익률)),
         [returnData]
     );
 
@@ -287,35 +288,42 @@ export default function AccountSummaryDashboard({
                         <div className="flex flex-col gap-3">
                             {returnData.map((item: any, idx: number) => {
                                 const isPositive = item.수익률 >= 0;
-                                const barWidth = Math.min(100, (Math.abs(item.수익률) / maxReturnAbs) * 100);
+                                const barWidth = scale.widthOf(item.수익률);
 
                                 return (
                                     <div key={idx} className="flex items-center gap-3">
                                         <span className="text-xs text-gray-300 font-semibold w-28 shrink-0 text-right">
                                             {item.name}
                                         </span>
-                                        <div className="flex-1 flex items-center gap-2">
-                                            <div className="flex-1 h-6 bg-white/5 rounded-lg overflow-hidden relative">
-                                                <div
-                                                    className={`h-full rounded-lg transition-all duration-500 ${
-                                                        isPositive
-                                                            ? "bg-gradient-to-r from-rose-500/40 to-rose-500"
-                                                            : "bg-gradient-to-r from-blue-500/40 to-blue-500"
-                                                    }`}
-                                                    style={{ width: `${barWidth}%` }}
-                                                />
-                                                <span className={`absolute inset-y-0 right-2 flex items-center text-[11px] font-mono font-bold ${
-                                                    isPositive ? "text-rose-300" : "text-blue-300"
-                                                }`}>
-                                                    {isPositive ? "+" : ""}{item.수익률.toFixed(2)}%
-                                                </span>
-                                            </div>
-                                            <span className={`text-[10px] font-mono w-20 text-right shrink-0 ${
-                                                isPositive ? "text-rose-400" : "text-blue-400"
-                                            }`}>
-                                                {isPositive ? "+" : ""}{fmtShort(item.평가손익)}
-                                            </span>
+                                        <div className="flex-1 h-6 bg-white/5 rounded-lg relative overflow-hidden">
+                                            {/* 0% 기준선 */}
+                                            <div
+                                                className="absolute inset-y-0 w-px bg-white/25"
+                                                style={{ left: `${scale.zeroPct}%` }}
+                                            />
+                                            <div
+                                                className={`absolute inset-y-0 transition-all duration-500 ${
+                                                    isPositive
+                                                        ? "rounded-r bg-gradient-to-r from-rose-500/40 to-rose-500"
+                                                        : "rounded-l bg-gradient-to-l from-blue-500/40 to-blue-500"
+                                                }`}
+                                                style={
+                                                    isPositive
+                                                        ? { left: `${scale.zeroPct}%`, width: `${barWidth}%` }
+                                                        : { right: `${100 - scale.zeroPct}%`, width: `${barWidth}%` }
+                                                }
+                                            />
                                         </div>
+                                        <span className={`text-[11px] font-mono font-bold w-16 text-right shrink-0 ${
+                                            isPositive ? "text-rose-300" : "text-blue-300"
+                                        }`}>
+                                            {isPositive ? "+" : ""}{item.수익률.toFixed(2)}%
+                                        </span>
+                                        <span className={`text-[10px] font-mono w-20 text-right shrink-0 ${
+                                            isPositive ? "text-rose-400" : "text-blue-400"
+                                        }`}>
+                                            {isPositive ? "+" : ""}{fmtShort(item.평가손익)}
+                                        </span>
                                     </div>
                                 );
                             })}

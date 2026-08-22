@@ -320,7 +320,8 @@ class ManualAsset(Base):
     purchase_price = Column(Float, nullable=False, default=0.0)  # 매수단가
     current_price = Column(Float, nullable=False, default=0.0)   # 현재가
     quantity = Column(Float, nullable=False, default=1.0)        # 수량/좌수/원금
-    sector = Column(String, nullable=True)                  # 섹터/분류 (통신, 반도체, 예적금, 비상장 등)
+    sector = Column(String, nullable=True)                  # 섹터 = 자산군 (국내ETF, 해외주식, 채권, 현금성 등)
+    classification = Column(String, nullable=True)          # 분류 = 산업/테마 (반도체, 바이오, 조선 등)
     country = Column(String, default="국내")                # 국내, 해외
     memo = Column(String, nullable=True)                    # 메모/비고
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -359,5 +360,6 @@ class HoldingSectorOverride(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     holding_key = Column(String, unique=True, index=True, nullable=False)  # e.g. "kis_005930_81060777-01"
-    sector = Column(String, nullable=False, default="기타")                # 사용자가 지정한 섹터
+    sector = Column(String, nullable=True)                                 # 섹터 = 자산군. 미지정이면 추론 기본값 사용
+    classification = Column(String, nullable=True)                         # 분류 = 산업/테마
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

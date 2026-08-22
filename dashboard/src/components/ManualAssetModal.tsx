@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Plus, Save, Trash2, Loader2, Sparkles, Layers } from "lucide-react";
 import { API_BASE } from "@/lib/apiConfig";
-import { SECTOR_OPTIONS } from "@/lib/sectorOptions";
+import { SECTOR_OPTIONS, CLASSIFICATION_OPTIONS, UNSET_LABEL } from "@/lib/sectorOptions";
 
 interface ManualAssetModalProps {
     isOpen: boolean;
@@ -46,6 +46,7 @@ interface BatchRow {
     currentPrice: string;
     quantity: string;
     sector: string;
+    classification: string;
     country: string;
     memo: string;
     isLookingUp?: boolean;
@@ -63,7 +64,8 @@ const createEmptyRow = (defaultCategory = "기타투자계좌", defaultBroker = 
     purchasePrice: "",
     currentPrice: "",
     quantity: "1",
-    sector: "기타",
+    sector: "",
+    classification: "",
     country: "국내",
     memo: "",
 });
@@ -86,7 +88,8 @@ export default function ManualAssetModal({
     const [purchasePrice, setPurchasePrice] = useState<string>("");
     const [currentPrice, setCurrentPrice] = useState<string>("");
     const [quantity, setQuantity] = useState<string>("1");
-    const [sector, setSector] = useState("기타");
+    const [sector, setSector] = useState("");
+    const [classification, setClassification] = useState("");
     const [country, setCountry] = useState("국내");
     const [memo, setMemo] = useState("");
 
@@ -115,7 +118,8 @@ export default function ManualAssetModal({
             setPurchasePrice(String(initialData.purchase_price ?? ""));
             setCurrentPrice(String(initialData.current_price ?? ""));
             setQuantity(String(initialData.quantity ?? "1"));
-            setSector(initialData.sector || "기타");
+            setSector(initialData.sector || "");
+            setClassification(initialData.classification || "");
             setCountry(initialData.country || "국내");
             setMemo(initialData.memo || "");
         } else {
@@ -277,6 +281,7 @@ export default function ManualAssetModal({
                     current_price: cPrice,
                     quantity: qty,
                     sector,
+                    classification,
                     country: currency === "USD" ? "해외" : country,
                     memo: memo.trim() || null,
                 };
@@ -317,7 +322,8 @@ export default function ManualAssetModal({
                         purchase_price: pPrice,
                         current_price: cPrice,
                         quantity: qty,
-                        sector: r.sector || "기타",
+                        sector: r.sector || null,
+                        classification: r.classification || null,
                         country: r.currency === "USD" ? "해외" : r.country,
                         memo: r.memo.trim() || null,
                     };
@@ -591,20 +597,39 @@ export default function ManualAssetModal({
                                 </div>
                             </div>
 
-                            {/* Sector & Memo */}
-                            <div className="grid grid-cols-2 gap-3">
+                            {/* Sector / Classification / Memo */}
+                            <div className="grid grid-cols-3 gap-3">
                                 <div>
                                     <label className="block text-gray-400 text-xs font-semibold mb-1">
-                                        섹터 / 분류
+                                        섹터 (자산군)
                                     </label>
                                     <select
                                         value={sector}
                                         onChange={(e) => setSector(e.target.value)}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
                                     >
+                                        <option value="" className="bg-[#12141a]">— {UNSET_LABEL} —</option>
                                         {SECTOR_OPTIONS.map((s) => (
                                             <option key={s} value={s} className="bg-[#12141a]">
                                                 {s}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-gray-400 text-xs font-semibold mb-1">
+                                        분류 (산업/테마)
+                                    </label>
+                                    <select
+                                        value={classification}
+                                        onChange={(e) => setClassification(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                                    >
+                                        <option value="" className="bg-[#12141a]">— {UNSET_LABEL} —</option>
+                                        {CLASSIFICATION_OPTIONS.map((c) => (
+                                            <option key={c} value={c} className="bg-[#12141a]">
+                                                {c}
                                             </option>
                                         ))}
                                     </select>
@@ -668,6 +693,7 @@ export default function ManualAssetModal({
                                             <th className="py-2.5 px-2 w-24 text-right">현재가</th>
                                             <th className="py-2.5 px-2 w-28 text-right">수량</th>
                                             <th className="py-2.5 px-2 w-24">섹터</th>
+                                            <th className="py-2.5 px-2 w-24">분류</th>
                                             <th className="py-2.5 px-2 w-10 text-center">삭제</th>
                                         </tr>
                                     </thead>
@@ -810,9 +836,28 @@ export default function ManualAssetModal({
                                                         }
                                                         className="w-full bg-[#161922] border border-white/10 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-indigo-500 text-xs"
                                                     >
+                                                        <option value="" className="bg-[#12141a]">— {UNSET_LABEL} —</option>
                                                         {SECTOR_OPTIONS.map((s) => (
                                                             <option key={s} value={s} className="bg-[#12141a]">
                                                                 {s}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+
+                                                {/* 분류 */}
+                                                <td className="py-2 px-2">
+                                                    <select
+                                                        value={row.classification}
+                                                        onChange={(e) =>
+                                                            handleUpdateBatchRow(idx, "classification", e.target.value)
+                                                        }
+                                                        className="w-full bg-[#161922] border border-white/10 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-indigo-500 text-xs"
+                                                    >
+                                                        <option value="" className="bg-[#12141a]">— {UNSET_LABEL} —</option>
+                                                        {CLASSIFICATION_OPTIONS.map((c) => (
+                                                            <option key={c} value={c} className="bg-[#12141a]">
+                                                                {c}
                                                             </option>
                                                         ))}
                                                     </select>
