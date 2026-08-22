@@ -432,14 +432,22 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                 <p className="text-[9px] text-gray-500">고점경보 · 마진피크 분할차익실현 (2021H2)</p>
                             </div>
 
-                            {/* 활성 지점 플로팅 팝업 정보창 */}
+                            {/* 활성 지점 플로팅 팝업 정보창 (전반부: 좌측 상단 / 후반부: 우측 하단 스마트 위치 전환) */}
                             {isPopupOpen && selectedPoint && (
-                                <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 animate-in zoom-in-95 fade-in duration-200">
-                                    <div className="bg-[#12141c]/95 border border-white/20 rounded-2xl p-3.5 shadow-2xl backdrop-blur-2xl text-xs max-w-sm w-[300px]">
-                                        <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                                <div
+                                    className={`absolute z-20 transition-all duration-500 ease-in-out pointer-events-auto ${
+                                        // 전반부(Phase 4, Phase 1 또는 궤적 전반부): 좌측 상단 (Phase 2 영역)
+                                        // 후반부(Phase 2 상단, Phase 3 호황기): 우측 하단 (Phase 4 영역)
+                                        (selectedPoint.phase === 4 || selectedPoint.phase === 1 || selectedPoint.y < 0.6)
+                                            ? "top-10 left-6 animate-in slide-in-from-top-2 fade-in"
+                                            : "bottom-10 right-6 animate-in slide-in-from-bottom-2 fade-in"
+                                    }`}
+                                >
+                                    <div className="bg-[#12141c]/95 border border-white/20 rounded-2xl p-3 shadow-2xl backdrop-blur-2xl text-xs w-[260px] sm:w-[280px]">
+                                        <div className="flex justify-between items-center pb-1.5 border-b border-white/10">
                                             <div className="flex items-center gap-1.5 font-black text-white">
-                                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                                                <span className="text-sm text-indigo-300 font-extrabold font-mono">
+                                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                                                <span className="text-xs text-indigo-300 font-extrabold font-mono">
                                                     {selectedPoint.date}
                                                 </span>
                                                 <span className="text-[10px] text-gray-400 font-normal">({selectedPoint.label})</span>
@@ -448,26 +456,26 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                                 onClick={() => setIsPopupOpen(false)}
                                                 className="p-1 rounded-md text-gray-400 hover:text-white hover:bg-white/10"
                                             >
-                                                <X className="w-3.5 h-3.5" />
+                                                <X className="w-3 h-3" />
                                             </button>
                                         </div>
 
-                                        <div className="mt-2.5 space-y-1.5">
+                                        <div className="mt-2 space-y-1 text-[11px]">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-gray-400 text-[11px]">사이클 국면</span>
-                                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${activePointStyle.badge}`}>
+                                                <span className="text-gray-400 text-[10px]">사이클 국면</span>
+                                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${activePointStyle.badge}`}>
                                                     Phase {selectedPoint.phase} : {activePointPhaseInfo ? (activePointPhaseInfo as any).name : `Phase ${selectedPoint.phase}`}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-gray-400 text-[11px]">CSCI 종합 지수</span>
-                                                <span className="font-mono font-black text-white text-xs">{selectedPoint.csci}σ</span>
+                                                <span className="text-gray-400 text-[10px]">CSCI 종합 지수</span>
+                                                <span className="font-mono font-black text-white">{selectedPoint.csci}σ</span>
                                             </div>
-                                            <div className="flex justify-between items-center text-[11px]">
+                                            <div className="flex justify-between items-center text-[10px]">
                                                 <span className="text-gray-400">재고 건전성 (DOI 역수)</span>
                                                 <span className="font-mono text-gray-200">{selectedPoint.x}σ</span>
                                             </div>
-                                            <div className="flex justify-between items-center text-[11px]">
+                                            <div className="flex justify-between items-center text-[10px]">
                                                 <span className="text-gray-400">수요 / 수출 모멘텀</span>
                                                 <span className="font-mono text-gray-200">{selectedPoint.y}σ</span>
                                             </div>
