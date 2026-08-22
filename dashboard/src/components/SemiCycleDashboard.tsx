@@ -436,14 +436,14 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                             {isPopupOpen && selectedPoint && (
                                 <div
                                     className={`absolute z-20 transition-all duration-700 ease-in-out pointer-events-auto ${
-                                        // 2021년 1월 ~ 2023년 8월: 좌측 상단 4분면 (Phase 2 영역 중앙)
-                                        // 2023년 10월 ~ 현재: 우측 하단 4분면 (Phase 4 영역 중앙)
+                                        // 2021년 1월 ~ 2023년 8월: 좌측 상단 분면 (우측 아래 궤적을 피하면서 더 오른쪽으로 이동)
+                                        // 2023년 10월 ~ 현재: 우측 하단 분면 (좌측 위 궤적을 피하면서 더 위로 끌어올림)
                                         (selectedPoint.date <= "2023-08")
-                                            ? "top-14 left-8 sm:left-14 md:left-20 animate-in slide-in-from-top-3 fade-in"
-                                            : "bottom-14 right-8 sm:right-14 md:right-20 animate-in slide-in-from-bottom-3 fade-in"
+                                            ? "top-12 left-[20%] sm:left-[25%] md:left-[28%] animate-in slide-in-from-top-3 fade-in"
+                                            : "bottom-[20%] sm:bottom-[24%] md:bottom-[26%] right-[16%] sm:right-[20%] md:right-[24%] animate-in slide-in-from-bottom-3 fade-in"
                                     }`}
                                 >
-                                    <div className="bg-[#12141c]/95 border border-white/20 rounded-2xl p-3.5 shadow-2xl backdrop-blur-2xl text-xs w-[250px] sm:w-[270px]">
+                                    <div className="bg-[#12141c]/95 border border-white/20 rounded-2xl p-3.5 shadow-2xl backdrop-blur-2xl text-xs w-[240px] sm:w-[260px]">
                                         <div className="flex justify-between items-center pb-1.5 border-b border-white/10">
                                             <div className="flex items-center gap-1.5 font-black text-white">
                                                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
