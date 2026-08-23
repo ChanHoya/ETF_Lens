@@ -153,7 +153,7 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
     const [subsectorData, setSubsectorData] = useState<any>(null);
     const [strategyData, setStrategyData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [activeSubTab, setActiveSubTab] = useState<"signals" | "overview" | "clock" | "capex" | "subsector" | "etf">("signals");
+    const [activeSubTab, setActiveSubTab] = useState<"signals" | "overview" | "capex" | "subsector" | "etf">("signals");
     const [clockPeriod, setClockPeriod] = useState<"5Y" | "3Y" | "1Y">("5Y");
 
     // 시뮬레이션 애니메이션 상태
@@ -344,7 +344,6 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                 {[
                     { id: "signals", label: "7대 실데이터 신호 & 5국면 진단 (LIVE)", icon: <Activity className="w-3.5 h-3.5 text-emerald-400" /> },
                     { id: "overview", label: "종합 대시보드", icon: <Layers className="w-3.5 h-3.5" /> },
-                    { id: "clock", label: "사이클 시계 (2D Quadrant)", icon: <Compass className="w-3.5 h-3.5" /> },
                     { id: "capex", label: "빅테크 CapEx 트래커 (6개년)", icon: <Server className="w-3.5 h-3.5" /> },
                     { id: "subsector", label: "서브섹터 밸류에이션 맵", icon: <Cpu className="w-3.5 h-3.5" /> },
                     { id: "etf", label: "국면별 최적 ETF 매트릭스", icon: <Target className="w-3.5 h-3.5" /> },
@@ -370,11 +369,11 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
 
             {/* TAB: SIGNALS (7대 실데이터 신호등 & 5국면 진단) */}
             {activeSubTab === "signals" && (
-                <SemiFundamentalSignals />
+                <SemiFundamentalSignals industry="semiconductor" />
             )}
 
-            {/* TAB: OVERVIEW & CLOCK */}
-            {(activeSubTab === "overview" || activeSubTab === "clock") && (
+            {/* TAB: OVERVIEW */}
+            {activeSubTab === "overview" && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                     {/* 2D Cycle Clock Visualizer (7 Cols) */}
                     <div className="lg:col-span-7 p-5 rounded-2xl bg-[#161922] border border-white/10 shadow-xl flex flex-col justify-between relative">

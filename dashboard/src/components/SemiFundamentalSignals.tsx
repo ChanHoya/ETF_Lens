@@ -19,19 +19,6 @@ import {
 import { API_BASE } from "../lib/apiConfig";
 
 // 기본 정적 Fallback 데이터 (백엔드 지연/에러 시에도 100% 안전 렌더링)
-const FALLBACK_INDUSTRIES = [
-    { id: "semiconductor", name: "반도체", state: "정상호황", trend: "down", color: "#10b981", is_partial: false },
-    { id: "display", name: "디스플레이", state: "불황입구", trend: "down", color: "#f97316", is_partial: true },
-    { id: "battery", name: "2차전지", state: "불황입구", trend: "up", color: "#f97316", is_partial: false },
-    { id: "auto", name: "자동차", state: "호황둔화", trend: "down", color: "#f59e0b", is_partial: false },
-    { id: "shipbuilding", name: "조선", state: "정상호황", trend: "up", color: "#10b981", is_partial: true },
-    { id: "steel", name: "철강", state: "호황둔화", trend: "up", color: "#f59e0b", is_partial: false },
-    { id: "petrochem", name: "석유화학", state: "호황둔화", trend: "up", color: "#f59e0b", is_partial: false },
-    { id: "refinery", name: "정유", state: "정상호황", trend: "up", color: "#10b981", is_partial: false },
-    { id: "tire", name: "타이어", state: "정상호황", trend: "up", color: "#10b981", is_partial: false },
-    { id: "cosmetics", name: "화장품", state: "강한호황", trend: "up", color: "#10b981", is_partial: true },
-    { id: "bio", name: "제약바이오", state: "정상호황", trend: "up", color: "#10b981", is_partial: true },
-];
 
 const FALLBACK_SIGNALS_DATA: any = {
     industry: "semiconductor",
@@ -302,10 +289,8 @@ const FALLBACK_SIGNALS_DATA: any = {
     footnote: "위 지표는 모두 실데이터 — 대장주 시세(yfinance), 관세청 무역통계(수출액), 한국은행 ECOS(수출단가·물량지수), 통계청 KOSIS(가동률·재고지수). 각 지표를 클릭하면 기간별 실제 시계열과 통계적 진단이 표시됩니다.",
 };
 
-export default function SemiFundamentalSignals() {
+export default function SemiFundamentalSignals({ industry = "semiconductor" }: { industry?: string }) {
     const [signalsData, setSignalsData] = useState<any>(FALLBACK_SIGNALS_DATA);
-    const [industriesData, setIndustriesData] = useState<any>({ industries: FALLBACK_INDUSTRIES });
-    const [selectedIndustry, setSelectedIndustry] = useState<string>("semiconductor");
     const [expandedSignalId, setExpandedSignalId] = useState<string | null>("lead_stock_drawdown");
     const [periodFilter, setPeriodFilter] = useState<{ [key: string]: "1Y" | "3Y" | "5Y" | "10Y" }>({
         lead_stock_drawdown: "5Y",
@@ -319,22 +304,11 @@ export default function SemiFundamentalSignals() {
 
     const fetchData = async () => {
         try {
-            const [sigRes, indRes] = await Promise.allSettled([
-                fetch(`${API_BASE}/api/v1/analyze/semi-cycle/macro-signals?industry=${selectedIndustry}`, { cache: "no-store" }),
-                fetch(`${API_BASE}/api/v1/analyze/semi-cycle/industries-summary`, { cache: "no-store" }),
-            ]);
-
-            if (sigRes.status === "fulfilled" && sigRes.value.ok) {
-                const data = await sigRes.value.json();
+            const res = await fetch(`${API_BASE}/api/v1/analyze/semi-cycle/macro-signals?industry=${industry}`, { cache: "no-store" });
+            if (res.ok) {
+                const data = await res.json();
                 if (data && data.signals && Array.isArray(data.signals)) {
                     setSignalsData(data);
-                }
-            }
-
-            if (indRes.status === "fulfilled" && indRes.value.ok) {
-                const data = await indRes.value.json();
-                if (data && data.industries && Array.isArray(data.industries)) {
-                    setIndustriesData(data);
                 }
             }
         } catch (err) {
@@ -344,7 +318,7 @@ export default function SemiFundamentalSignals() {
 
     useEffect(() => {
         fetchData();
-    }, [selectedIndustry]);
+    }, [industry]);
 
     const toggleAccordion = (id: string) => {
         setExpandedSignalId(expandedSignalId === id ? null : id);
@@ -355,7 +329,6 @@ export default function SemiFundamentalSignals() {
         setPeriodFilter((prev) => ({ ...prev, [signalId]: p }));
     };
 
-    const industries = industriesData?.industries || FALLBACK_INDUSTRIES;
     const currentSignalsData = signalsData || FALLBACK_SIGNALS_DATA;
     const signals = currentSignalsData?.signals || [];
     const stages = currentSignalsData?.stages || [];
@@ -371,43 +344,7 @@ export default function SemiFundamentalSignals() {
 
     return (
         <div className="w-full flex flex-col gap-5 animate-in fade-in duration-300">
-            {/* 1. Top Industry Selector Bar (10대 업종) */}
-            <div className="flex flex-col gap-2">
-                <span className="text-[11px] font-bold text-gray-400">업종 선택 — 현재 {currentSignalsData?.industry_kr || "반도체"}</span>
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                    {industries.map((ind: any) => {
-                        const isSelected = selectedIndustry === ind.id;
-                        return (
-                            <button
-                                key={ind.id}
-                                onClick={() => setSelectedIndustry(ind.id)}
-                                className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border ${
-                                    isSelected
-                                        ? "bg-indigo-600/20 text-indigo-300 border-indigo-500 shadow-md shadow-indigo-500/20"
-                                        : "bg-[#161922] text-gray-300 border-white/10 hover:border-white/25 hover:text-white"
-                                }`}
-                            >
-                                <span className="font-extrabold">{ind.name}</span>
-                                {ind.is_partial && (
-                                    <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                        일부
-                                    </span>
-                                )}
-                                <span
-                                    className="text-[10px] flex items-center gap-0.5 px-1.5 py-0.5 rounded-full font-semibold"
-                                    style={{ color: ind.color, backgroundColor: `${ind.color}15` }}
-                                >
-                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ind.color }} />
-                                    {ind.state}
-                                    {ind.trend === "up" ? " ↗" : " ↘"}
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* 2. Main 2-Split Grid View */}
+            {/* Main 2-Split Grid View */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                 {/* LEFT: 5단계 국면 진단 & 실데이터 종합 스코어카드 (5 Cols) */}
                 <div className="lg:col-span-5 flex flex-col gap-4">
