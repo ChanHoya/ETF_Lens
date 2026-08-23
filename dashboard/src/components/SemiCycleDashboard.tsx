@@ -45,6 +45,7 @@ import {
     Cell,
 } from "recharts";
 import { API_BASE } from "../lib/apiConfig";
+import SemiFundamentalSignals from "./SemiFundamentalSignals";
 
 interface SemiCycleDashboardProps {
     onOpenDetail?: (code: string) => void;
@@ -571,7 +572,7 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                         data={trajectory}
                                         fill="#4f46e5"
                                         line={{ stroke: "rgba(99, 102, 241, 0.25)", strokeWidth: 1.5, strokeDasharray: "2 2" }}
-                                        shape={() => null} // 점은 숨기고 가이드 선만 표시
+                                        shape={() => <g />} // 점은 숨기고 가이드 선만 표시
                                     />
 
                                     {/* 이동 궤적 애니메이션 Scatter */}
@@ -584,7 +585,7 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                         className="cursor-pointer"
                                         shape={(props: any) => {
                                             const { cx, cy, payload, index } = props;
-                                            if (!payload) return null;
+                                            if (!payload) return <g />;
                                             const isSelected = selectedPoint && selectedPoint.date === payload.date;
                                             const isLastInAnim = index === animatedTrajectory.length - 1;
                                             const isCurrentFact = payload.label?.includes("현재");
