@@ -363,6 +363,8 @@ export default function SemiFundamentalSignals() {
 
     const signalsCount = currentSignalsData?.signals_count || { bullish: 2, neutral: 5, bearish: 0, total: 7 };
     const totalCount = signalsCount.total || 7;
+    // 국면 색상은 백엔드 실측 판정 결과를 따른다 (호황이 아닐 수도 있으므로 emerald 고정 금지)
+    const phaseColor = currentSignalsData?.phase_color || "#10b981";
     const bullPct = Math.round((signalsCount.bullish / totalCount) * 100);
     const neutralPct = Math.round((signalsCount.neutral / totalCount) * 100);
     const bearPct = Math.max(0, 100 - bullPct - neutralPct);
@@ -422,14 +424,15 @@ export default function SemiFundamentalSignals() {
                                         key={st.id}
                                         className={`flex flex-col items-center justify-center p-2 rounded-xl text-center border transition-all ${
                                             isCurrent
-                                                ? "bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400/50"
+                                                ? "shadow-md font-bold"
                                                 : "bg-white/[0.02] border-white/5 text-gray-400 hover:text-gray-200"
                                         }`}
+                                        style={isCurrent ? { backgroundColor: `${phaseColor}26`, borderColor: phaseColor, color: phaseColor } : undefined}
                                     >
                                         <span className="text-[10px] font-bold">{st.name}</span>
                                         <span className="text-[9px] text-gray-400">{st.action}</span>
                                         {isCurrent && (
-                                            <span className="mt-1 px-1.5 py-0.2 rounded-full bg-emerald-500 text-black text-[8px] font-black">
+                                            <span className="mt-1 px-1.5 py-0.2 rounded-full text-black text-[8px] font-black" style={{ backgroundColor: phaseColor }}>
                                                 ● 현재
                                             </span>
                                         )}
@@ -445,19 +448,21 @@ export default function SemiFundamentalSignals() {
                     </div>
 
                     {/* 실시간 실데이터 자동 판정 카드 */}
-                    <div className="p-5 rounded-2xl bg-gradient-to-b from-emerald-950/20 to-[#161922] border border-emerald-500/30 shadow-xl flex flex-col gap-3">
-                        <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    <div className="p-5 rounded-2xl bg-[#161922] border shadow-xl flex flex-col gap-3" style={{ borderColor: `${phaseColor}4d` }}>
+                        <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: phaseColor }}>
+                            <span className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: phaseColor }} />
                             <span>실시간 실데이터 자동 판정 · {signalsCount.bullish}/{totalCount} 호황 신호</span>
                         </div>
 
                         <div>
                             <span className="text-[10px] text-gray-400">현재 {currentSignalsData?.industry_kr} 사이클 국면 (실데이터 자동 판정)</span>
                             <div className="flex items-center gap-2 mt-1">
-                                <span className="w-3.5 h-3.5 rounded-full bg-emerald-400" />
+                                <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: phaseColor }} />
                                 <h3 className="text-2xl font-black text-white">{currentSignalsData?.current_state}</h3>
                             </div>
-                            <p className="text-[11px] text-gray-400 mt-0.5">대장주·수출·단가·가동률·재고 실데이터 종합</p>
+                            <p className="text-[11px] text-gray-400 mt-0.5">
+                                연동된 실데이터 {totalCount}개 지표를 가중 합산한 자동 판정 · {currentSignalsData?.current_action}
+                            </p>
                         </div>
 
                         {/* 국면 전환 추세 */}
@@ -503,7 +508,7 @@ export default function SemiFundamentalSignals() {
                                 {bearPct > 0 && <div className="bg-rose-500 h-full rounded-r-full transition-all" style={{ width: `${bearPct}%` }} title={`둔화 ${bearPct}%`} />}
                             </div>
                             <p className="text-[10px] text-gray-500 mt-1">
-                                실데이터 7개 신호를 중요도로 가중 합산 — 카운트는 참고용이며 통계적 확률이 아닙니다
+                                실데이터 {totalCount}개 신호를 중요도로 가중 합산 (3개월 평활) — 카운트는 참고용이며 통계적 확률이 아닙니다
                             </p>
                         </div>
                     </div>
@@ -525,6 +530,24 @@ export default function SemiFundamentalSignals() {
                     {/* Signals Accordion List */}
                     <div className="divide-y divide-white/5">
                         {signals.map((sig: any) => {
+                            // 공표통계가 연동되지 않은 업종의 지표는 다른 업종 수치를 빌려오지 않고
+                            // 미연동 행으로만 표시한다 (차트·기간 필터 없음).
+                            if (sig.available === false) {
+                                return (
+                                    <div key={sig.id} className="py-2.5">
+                                        <div className="flex justify-between items-center p-2 rounded-xl opacity-50">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs md:text-sm font-bold text-gray-400">{sig.name}</span>
+                                                <span className="text-[11px] text-gray-500 font-normal">{sig.sub_name}</span>
+                                            </div>
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-400 border border-white/10 font-bold">
+                                                미연동
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            }
+
                             const isExpanded = expandedSignalId === sig.id;
                             const curPeriod = periodFilter[sig.id] || "5Y";
                             const fullSeries = (sig.series_10y && sig.series_10y.length > 0)
@@ -683,9 +706,12 @@ export default function SemiFundamentalSignals() {
                         })}
                     </div>
 
-                    {/* Summary Footer */}
-                    <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-300">
-                        실데이터 종합: 호황 신호 ( 호황 {signalsCount.bullish} · 중립 {signalsCount.neutral} · 둔화 {signalsCount.bearish} )
+                    {/* Summary Footer — 판정 국면과 색상을 그대로 따른다 */}
+                    <div
+                        className="mt-3 p-3 rounded-xl border text-xs font-bold"
+                        style={{ backgroundColor: `${phaseColor}1a`, borderColor: `${phaseColor}33`, color: phaseColor }}
+                    >
+                        실데이터 종합: {currentSignalsData?.current_state} ( 호황 {signalsCount.bullish} · 중립 {signalsCount.neutral} · 둔화 {signalsCount.bearish} · 종합 {currentSignalsData?.weighted_score} )
                     </div>
                     <p className="text-[10px] text-gray-500 leading-relaxed">
                         {currentSignalsData?.footnote}

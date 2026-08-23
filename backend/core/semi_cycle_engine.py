@@ -38,6 +38,209 @@ _CACHE_DATA: Dict[str, Any] = {}
 _CACHE_TTL = 43200  # 12 hours
 
 
+
+# ────────────────────────────────────────────────────────────
+# 업종별 실데이터 소스 및 5국면 판정 엔진
+# ────────────────────────────────────────────────────────────
+# 업종 지수는 공식 지수가 있으면 그대로 쓰고(반도체=SOX), 없으면 대표주 동일가중
+# 바스켓 지수를 직접 산출한다. 월간 공표통계(수출액·단가·물량·가동률·재고)는 현재
+# 반도체만 시계열을 확보해 두었으므로 그 외 업종은 미연동으로 명시한다.
+INDUSTRY_PROFILES: Dict[str, Dict[str, Any]] = {
+    "semiconductor": {
+        "name_kr": "반도체",
+        "lead": ("MU", "마이크론 테크놀로지(MU)"),
+        "index": {"kind": "official", "ticker": "^SOX", "label": "필라델피아 반도체 지수(SOX)", "unit": "pt"},
+        "has_official_stats": True,
+    },
+    "display": {
+        "name_kr": "디스플레이",
+        "lead": ("034220.KS", "LG디스플레이(034220)"),
+        "index": {"kind": "basket", "tickers": ["034220.KS", "213420.KQ"], "label": "디스플레이 대표주 동일가중 지수", "unit": "pt"},
+        "has_official_stats": False,
+    },
+    "battery": {
+        "name_kr": "2차전지",
+        "lead": ("006400.KS", "삼성SDI(006400)"),
+        "index": {"kind": "basket", "tickers": ["006400.KS", "003670.KS"], "label": "2차전지 대표주 동일가중 지수", "unit": "pt"},
+        "has_official_stats": False,
+    },
+    "auto": {
+        "name_kr": "자동차",
+        "lead": ("005380.KS", "현대차(005380)"),
+        "index": {"kind": "basket", "tickers": ["005380.KS", "000270.KS", "012330.KS"], "label": "자동차 대표주 동일가중 지수", "unit": "pt"},
+        "has_official_stats": False,
+    },
+    "shipbuilding": {
+        "name_kr": "조선",
+        "lead": ("009540.KS", "HD한국조선해양(009540)"),
+        "index": {"kind": "basket", "tickers": ["009540.KS", "010140.KS", "042660.KS"], "label": "조선 대표주 동일가중 지수", "unit": "pt"},
+        "has_official_stats": False,
+    },
+    "steel": {
+        "name_kr": "철강",
+        "lead": ("005490.KS", "POSCO홀딩스(005490)"),
+        "index": {"kind": "basket", "tickers": ["005490.KS", "004020.KS", "103140.KS"], "label": "철강금속 대표주 동일가중 지수", "unit": "pt"},
+        "has_official_stats": False,
+    },
+    "petrochem": {
+        "name_kr": "석유화학",
+        "lead": ("051910.KS", "LG화학(051910)"),
+        "index": {"kind": "basket", "tickers": ["051910.KS", "011170.KS", "011780.KS"], "label": "석유화학 대표주 동일가중 지수", "unit": "pt"},
+        "has_official_stats": False,
+    },
+    "refinery": {
+        "name_kr": "정유",
+        "lead": ("010950.KS", "S-Oil(010950)"),
+        "index": {"kind": "basket", "tickers": ["010950.KS", "078930.KS", "096770.KS"], "label": "정유 대표주 동일가중 지수", "unit": "pt"},
+        "has_official_stats": False,
+    },
+    "tire": {
+        "name_kr": "타이어",
+        "lead": ("161390.KS", "한국타이어앤테크놀로지(161390)"),
+        "index": {"kind": "basket", "tickers": ["161390.KS", "073240.KS", "002350.KS"], "label": "타이어 대표주 동일가중 지수", "unit": "pt"},
+        "has_official_stats": False,
+    },
+    "cosmetics": {
+        "name_kr": "화장품",
+        "lead": ("090430.KS", "아모레퍼시픽(090430)"),
+        "index": {"kind": "basket", "tickers": ["090430.KS", "051900.KS", "192820.KS"], "label": "화장품 대표주 동일가중 지수", "unit": "pt"},
+        "has_official_stats": False,
+    },
+    "bio": {
+        "name_kr": "제약바이오",
+        "lead": ("207940.KS", "삼성바이오로직스(207940)"),
+        "index": {"kind": "basket", "tickers": ["207940.KS", "068270.KS", "000100.KS"], "label": "제약바이오 대표주 동일가중 지수", "unit": "pt"},
+        "has_official_stats": False,
+    },
+}
+
+# 종합 점수(-1 ~ +1) → 5국면. 위에서부터 점수 하한선을 비교한다.
+_PHASE_BANDS: List[Tuple[float, Dict[str, str]]] = [
+    (0.50, {"code": "strong_bull", "state": "강한 호황", "short": "강한호황", "action": "적극", "guide": "적극 비중확대", "color": "#10b981"}),
+    (0.15, {"code": "normal_bull", "state": "정상 호황", "short": "정상호황", "action": "유지", "guide": "매수 유지 구간", "color": "#34d399"}),
+    (-0.15, {"code": "slowing", "state": "호황 둔화", "short": "호황둔화", "action": "경계", "guide": "수익 실현 경계", "color": "#f59e0b"}),
+    (-0.50, {"code": "early_bear", "state": "불황 입구", "short": "불황입구", "action": "비중↓", "guide": "비중 축소 구간", "color": "#f97316"}),
+    (-1.01, {"code": "deep_bear", "state": "심각 불황", "short": "심각불황", "action": "손절", "guide": "손절 및 관망", "color": "#f43f5e"}),
+]
+
+_PHASE_ORDER = [b[1]["code"] for b in _PHASE_BANDS]
+
+
+def _phase_of(score: float) -> Dict[str, str]:
+    """가중 종합 점수를 5국면 중 하나로 매핑한다."""
+    for floor, phase in _PHASE_BANDS:
+        if score >= floor:
+            return phase
+    return _PHASE_BANDS[-1][1]
+
+
+def _score_metric(value: Optional[float], bull_at: float, bear_at: float, higher_is_better: bool = True) -> float:
+    """임계선을 기준으로 실측값을 -1(둔화) ~ +1(호황) 점수로 정규화한다."""
+    if value is None:
+        return 0.0
+    mid = (bull_at + bear_at) / 2
+    half = abs(bull_at - bear_at) / 2 or 1e-6
+    score = (value - mid) / half
+    if not higher_is_better:
+        score = -score
+    return max(-1.0, min(1.0, score))
+
+
+def _status_of(score: float) -> Dict[str, str]:
+    """정규화 점수를 개별 지표의 호황/중립/둔화 배지로 환산한다."""
+    code = "bullish" if score >= 1.0 else ("bearish" if score <= -1.0 else "neutral")
+    label = {"bullish": "호황", "neutral": "중립", "bearish": "둔화"}[code]
+    color = {"bullish": "#10b981", "neutral": "#94a3b8", "bearish": "#f43f5e"}[code]
+    return {"status": code, "status_kr": label, "status_badge": label, "color": color}
+
+
+def _weekly_closes(tickers: List[str]) -> Dict[str, List[Dict[str, Any]]]:
+    """yfinance 배치 호출로 10년 주간 종가를 한 번에 받아 티커별 시계열로 만든다."""
+    import yfinance as yf
+
+    uniq = sorted(set(t for t in tickers if t))
+    if not uniq:
+        return {}
+    try:
+        df = yf.download(uniq, period="10y", interval="1wk", auto_adjust=True, progress=False, threads=True)
+    except Exception as exc:
+        logger.warning("[semi-cycle] yfinance 주간 종가 조회 실패: %s", exc)
+        return {}
+    if df is None or df.empty:
+        return {}
+
+    close = df["Close"] if isinstance(df.columns, pd.MultiIndex) else df[["Close"]].rename(columns={"Close": uniq[0]})
+    if isinstance(close, pd.Series):
+        close = close.to_frame(name=uniq[0])
+
+    out: Dict[str, List[Dict[str, Any]]] = {}
+    for ticker in uniq:
+        if ticker not in close.columns:
+            continue
+        s = close[ticker].dropna()
+        if len(s) < 60:
+            continue
+        out[ticker] = [{"date": idx.strftime("%Y-%m-%d"), "value": round(float(v), 2)} for idx, v in s.items()]
+    return out
+
+
+def _equal_weight_index(members: List[List[Dict[str, Any]]], base: float = 100.0) -> List[Dict[str, Any]]:
+    """대표주 종가들을 동일가중·기준시점 100으로 환산한 바스켓 지수를 만든다."""
+    if not members:
+        return []
+    common = set(p["date"] for p in members[0])
+    for m in members[1:]:
+        common &= set(p["date"] for p in m)
+    dates = sorted(common)
+    if len(dates) < 60:
+        return []
+    firsts = [next(p["value"] for p in m if p["date"] == dates[0]) for m in members]
+    lookup = [{p["date"]: p["value"] for p in m} for m in members]
+    series = []
+    for d in dates:
+        ratio = sum(lookup[i][d] / firsts[i] for i in range(len(members))) / len(members)
+        series.append({"date": d, "value": round(base * ratio, 2)})
+    return series
+
+
+def _drawdown_series(points: List[Dict[str, Any]], window: int = 52) -> List[Dict[str, Any]]:
+    """주간 종가 시계열을 '직전 52주 고점 대비 낙폭(%)' 시계열로 변환한다."""
+    out: List[Dict[str, Any]] = []
+    for i, p in enumerate(points):
+        high = max(q["value"] for q in points[max(0, i - window + 1): i + 1])
+        dd = (p["value"] / high - 1) * 100 if high else 0.0
+        out.append({"date": p["date"], "value": round(dd, 2)})
+    return out
+
+
+def _monthly_from_weekly(points: List[Dict[str, Any]]) -> Dict[str, float]:
+    """주간 시계열을 월말 마지막 값 기준 월별 맵(YYYY-MM → 값)으로 접는다."""
+    monthly: Dict[str, float] = {}
+    for p in points:
+        monthly[p["date"][:7]] = p["value"]
+    return monthly
+
+
+def _yoy(series: List[Dict[str, Any]], months: int = 12) -> Optional[float]:
+    """12개월 전 대비 증감률(%). 데이터가 모자라면 None."""
+    if len(series) <= months:
+        return None
+    prev = series[-1 - months]["value"]
+    if not prev:
+        return None
+    return round((series[-1]["value"] / prev - 1) * 100, 1)
+
+
+def _yoy_at(series: List[Dict[str, Any]], idx: int, months: int = 12) -> Optional[float]:
+    """시계열 idx 시점의 전년 동월 대비 증감률(%)."""
+    if idx < months or idx >= len(series):
+        return None
+    prev = series[idx - months]["value"]
+    if not prev:
+        return None
+    return round((series[idx]["value"] / prev - 1) * 100, 1)
+
+
 def _calc_z_score(series: pd.Series, window: int = 20) -> pd.Series:
     """5년(분기 20개) 롤링 Z-Score 계산: (X - mean) / std"""
     rolling_mean = series.rolling(window=window, min_periods=4).mean()
@@ -45,6 +248,342 @@ def _calc_z_score(series: pd.Series, window: int = 20) -> pd.Series:
     z = (series - rolling_mean) / rolling_std
     return z.fillna(0.0)
 
+
+def _month_add(ym: str, delta: int) -> str:
+    """'YYYY-MM'에 개월 수를 더한다."""
+    total = int(ym[:4]) * 12 + int(ym[5:7]) - 1 + delta
+    return f"{total // 12:04d}-{total % 12 + 1:02d}"
+
+
+def _unavailable_signal(sid: str, name: str, industry_kr: str, chart_color: str = "#475569") -> Dict[str, Any]:
+    """공표통계가 아직 연동되지 않은 지표를 '미연동'으로 명시한다(다른 업종 수치를 재사용하지 않는다)."""
+    return {
+        "id": sid,
+        "name": name,
+        "sub_name": "공표통계 미연동",
+        "available": False,
+        "current_value_formatted": "—",
+        "current_value": None,
+        "status": "unavailable",
+        "status_kr": "미연동",
+        "status_badge": "미연동",
+        "color": "#475569",
+        "chart_color": chart_color,
+        "unit": "",
+        "description": (
+            f"{name}은 관세청·한국은행 ECOS·통계청 KOSIS 공표통계 기반 지표입니다. 현재 반도체 업종만 "
+            f"120개월 시계열을 확보해 두었고 {industry_kr} 업종은 아직 연동되지 않아 국면 판정에서 제외합니다."
+        ),
+        "source": "미연동",
+        "data_points_count": "-",
+        "series_5y": [],
+        "series_10y": [],
+    }
+
+
+def _drawdown_signal(
+    sid: str,
+    name: str,
+    label: str,
+    prices: List[Dict[str, Any]],
+    source: str,
+    weight: float,
+    value_fmt: str,
+    industry_kr: str,
+) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+    """주간 종가 시계열에서 '52주 고점 대비 낙폭' 지표와 소급 판정용 월별 메트릭을 만든다."""
+    if len(prices) < 60:
+        return _unavailable_signal(sid, name, industry_kr, chart_color="#10b981"), None
+
+    dd_series = _drawdown_series(prices)
+    recent = prices[-52:]
+    high52 = max(p["value"] for p in recent)
+    last = prices[-1]["value"]
+    dd = round((last / high52 - 1) * 100, 1) if high52 else 0.0
+    score = _score_metric(dd, bull_at=-10.0, bear_at=-25.0)
+
+    signal = {
+        "id": sid,
+        "name": name,
+        "sub_name": f"{label} · 52주 고점 {value_fmt.format(high52)} · 현재 {value_fmt.format(last)}",
+        "available": True,
+        "current_value_formatted": f"{dd:.1f}%",
+        "current_value": dd,
+        **_status_of(score),
+        "chart_color": "#10b981",
+        "unit": "%",
+        "description": (
+            f"{label}이(가) 최근 52주 최고치({value_fmt.format(high52)})에서 현재 {dd:.1f}% 하락한 상태입니다. "
+            f"−10% 이상이면 호황 고점권, −25% 미만이면 둔화로 판정합니다. "
+            f"차트는 각 시점의 직전 52주 고점 대비 낙폭(%)입니다."
+        ),
+        "source": source,
+        "data_points_count": f"{len(dd_series)}주(≈{len(dd_series) // 52}Y)",
+        "series_5y": dd_series[-260:],
+        "series_10y": dd_series,
+    }
+    # 배지 판정(-10/-25)과 달리 국면 점수는 0 ~ -40% 구간으로 넓게 잡는다.
+    # 좁은 밴드를 그대로 쓰면 낙폭이 조금만 깊어져도 ±1로 포화돼 국면이 매달 뒤집힌다.
+    scored = {
+        "id": sid,
+        "weight": weight,
+        "bull_at": 0.0,
+        "bear_at": -40.0,
+        "higher_is_better": True,
+        "metric_by_month": _monthly_from_weekly(dd_series),
+    }
+    return signal, scored
+
+
+def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]]]):
+    """업종 실데이터 지표 목록과 국면 판정용 점수 정의를 함께 만든다."""
+    from core.macro_historical_data import HISTORICAL_MACRO_SERIES
+
+    profile = INDUSTRY_PROFILES.get(industry, INDUSTRY_PROFILES["semiconductor"])
+    industry_kr = profile["name_kr"]
+    lead_ticker, lead_label = profile["lead"]
+    idx_cfg = profile["index"]
+
+    is_krw = not lead_ticker.isalpha() and not lead_ticker.startswith("^")
+    lead_fmt = "{:,.0f}원" if is_krw else "${:,.2f}"
+
+    signals: List[Dict[str, Any]] = []
+    scored: List[Dict[str, Any]] = []
+
+    lead_sig, lead_scored = _drawdown_signal(
+        "lead_stock_drawdown", "대장주 낙폭", lead_label,
+        closes.get(lead_ticker, []),
+        "yfinance 공개 시세 (주간 종가)",
+        weight=0.20, value_fmt=lead_fmt, industry_kr=industry_kr,
+    )
+    signals.append(lead_sig)
+    if lead_scored:
+        scored.append(lead_scored)
+
+    if idx_cfg["kind"] == "official":
+        index_points = closes.get(idx_cfg["ticker"], [])
+        index_source = "Nasdaq / yfinance 공식 지수 (주간 종가)"
+        index_fmt = "{:,.0f}pt"
+    else:
+        members = [closes[t] for t in idx_cfg["tickers"] if t in closes]
+        index_points = _equal_weight_index(members)
+        index_source = f'yfinance 주간 종가 · {", ".join(idx_cfg["tickers"])} 동일가중 (시작=100)'
+        index_fmt = "{:,.1f}pt"
+
+    index_sig, index_scored = _drawdown_signal(
+        "sector_index", "업종 지수", idx_cfg["label"],
+        index_points, index_source,
+        weight=0.15, value_fmt=index_fmt, industry_kr=industry_kr,
+    )
+    signals.append(index_sig)
+    if index_scored:
+        scored.append(index_scored)
+
+    stat_defs = [
+        ("kr_export_amount", "한국 수출액", "export_amt"),
+        ("export_unit_price", "수출 단가지수", "unit_price"),
+        ("real_export_volume", "실질 수출물량", "volume"),
+        ("capacity_utilization", "가동률지수", "cap_util"),
+        ("inventory_index", "재고지수", "inventory"),
+    ]
+
+    if not profile["has_official_stats"]:
+        signals += [_unavailable_signal(sid, name, industry_kr) for sid, name, _ in stat_defs]
+        return signals, scored
+
+    series_map = {
+        key: [{"date": r["date"], "value": r[key]} for r in HISTORICAL_MACRO_SERIES]
+        for _, _, key in stat_defs
+    }
+    last_month = HISTORICAL_MACRO_SERIES[-1]["date"]
+
+    def _yoy_metrics(series: List[Dict[str, Any]]) -> Dict[str, float]:
+        return {p["date"]: v for i, p in enumerate(series) if (v := _yoy_at(series, i)) is not None}
+
+    def _level_metrics(series: List[Dict[str, Any]]) -> Dict[str, float]:
+        return {p["date"]: p["value"] for p in series}
+
+    def _moving_avg(series: List[Dict[str, Any]], n: int = 3) -> float:
+        vals = [p["value"] for p in series[-n:]]
+        return round(sum(vals) / len(vals), 1)
+
+    def _stat_signal(sid, name, key, sub_name, value_fmt, description, source,
+                     bull_at, bear_at, weight, chart_color="#10b981",
+                     higher_is_better=True, use_yoy=True, badge=True) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        series = series_map[key]
+        cur = series[-1]["value"]
+        yoy = _yoy(series)
+        metric = yoy if use_yoy else cur
+        score = _score_metric(metric, bull_at, bear_at, higher_is_better)
+        sig = {
+            "id": sid,
+            "name": name,
+            "sub_name": sub_name,
+            "available": True,
+            "current_value_formatted": value_fmt.format(cur),
+            "current_value": cur,
+            **_status_of(score),
+            "chart_color": chart_color,
+            "unit": "pt",
+            "description": description,
+            "source": source,
+            "data_points_count": f"{len(series)}개월(≈{len(series) // 12}Y)",
+            "series_5y": series[-60:],
+            "series_10y": series,
+        }
+        if badge:
+            sig["sub_badge"] = f"YoY {yoy:+.1f}%" if yoy is not None else "YoY 산출불가"
+        return sig, {
+            "id": sid,
+            "weight": weight,
+            "bull_at": bull_at,
+            "bear_at": bear_at,
+            "higher_is_better": higher_is_better,
+            "metric_by_month": _yoy_metrics(series) if use_yoy else _level_metrics(series),
+        }
+
+    export_now = series_map["export_amt"][-1]["value"]
+    export_yoy = _yoy(series_map["export_amt"])
+    price_now = series_map["unit_price"][-1]["value"]
+    price_yoy = _yoy(series_map["unit_price"])
+    volume_now = series_map["volume"][-1]["value"]
+    volume_yoy = _yoy(series_map["volume"])
+    cap_now = series_map["cap_util"][-1]["value"]
+    cap_3m = _moving_avg(series_map["cap_util"])
+    inv_now = series_map["inventory"][-1]["value"]
+    inv_3m = _moving_avg(series_map["inventory"])
+    inv_yoy = _yoy(series_map["inventory"])
+    inv_peak = max(p["value"] for p in series_map["inventory"])
+
+    stat_signals = [
+        _stat_signal(
+            "kr_export_amount", "한국 수출액", "export_amt",
+            f"{last_month} (월간 확정치)", "{:.1f}억$",
+            f"관세청이 공식 집계하는 한국 반도체 월간 수출 실적입니다. {last_month} 기준 {export_now:.1f}억 달러로 "
+            f"전년 동월 대비 {export_yoy if export_yoy is not None else 0:+.1f}%입니다. YoY +15% 이상이면 호황, "
+            f"−5% 미만이면 둔화로 판정합니다.",
+            "관세청 무역통계 (K-stat)", bull_at=15.0, bear_at=-5.0, weight=0.20,
+        ),
+        _stat_signal(
+            "export_unit_price", "수출 단가지수", "unit_price",
+            f"{last_month} · 2020=100", "{:.1f}",
+            f"수출 금액을 수출 물량으로 나눈 단가 지표입니다(2020=100). {last_month} 기준 {price_now:.1f}로 전년 "
+            f"동월 대비 {price_yoy if price_yoy is not None else 0:+.1f}%입니다. YoY +10% 이상이면 가격결정력 "
+            f"확대(호황), −5% 미만이면 둔화로 판정합니다.",
+            "한국은행 경제통계시스템 (ECOS)", bull_at=10.0, bear_at=-5.0, weight=0.15,
+        ),
+        _stat_signal(
+            "real_export_volume", "실질 수출물량", "volume",
+            f"{last_month} · 2020=100 · 가격효과 제거", "{:.1f}",
+            f"가격 변동을 제거한 순수 반도체 수출 수량(물량) 지수입니다(2020=100). {last_month} 기준 "
+            f"{volume_now:.1f}로 전년 동월 대비 {volume_yoy if volume_yoy is not None else 0:+.1f}%입니다. "
+            f"YoY +10% 이상이면 출하 확대(호황), −5% 미만이면 둔화로 판정합니다.",
+            "한국은행 무역지수", bull_at=10.0, bear_at=-5.0, weight=0.10,
+        ),
+        _stat_signal(
+            "capacity_utilization", "가동률지수", "cap_util",
+            f"{last_month} · 3M {cap_3m:.1f} · 2020=100", "{:.1f}",
+            f"통계청이 발표하는 반도체 제조공장 가동률 지수(2020=100)입니다. {last_month} 기준 {cap_now:.1f}"
+            f"(3개월 평균 {cap_3m:.1f})입니다. 105 이상이면 풀가동(호황), 95 미만이면 감산 국면(둔화)으로 "
+            f"판정합니다.",
+            "통계청 광업제조업동향조사", bull_at=105.0, bear_at=95.0, weight=0.10,
+            chart_color="#f59e0b", use_yoy=False, badge=False,
+        ),
+        _stat_signal(
+            "inventory_index", "재고지수", "inventory",
+            f"{last_month} · 3M {inv_3m:.1f} · 낮을수록 호황", "{:.1f}",
+            f"제조업 반도체 재고 수준을 나타내며, 낮을수록 재고 소진(호황)을 의미합니다. 10년 내 정점 "
+            f"{inv_peak:.1f}에서 {last_month} 기준 {inv_now:.1f}까지 내려왔고 전년 동월 대비 "
+            f"{inv_yoy if inv_yoy is not None else 0:+.1f}%입니다. 절대 수준보다 방향이 중요해 YoY로 판정하며, "
+            f"−5% 이하면 재고 소진(호황), +10% 초과면 재고 누적(둔화)입니다.",
+            "통계청 제조업재고지수 (KOSIS)", bull_at=-5.0, bear_at=10.0, weight=0.10,
+            higher_is_better=False,
+        ),
+    ]
+
+    for sig, sc in stat_signals:
+        signals.append(sig)
+        scored.append(sc)
+
+    return signals, scored
+
+
+def _score_at(scored: List[Dict[str, Any]], ym: str) -> Optional[float]:
+    """해당 월에 값이 있는 지표만으로 가중 종합 점수를 구한다(가중치는 재정규화)."""
+    acc, total_w = 0.0, 0.0
+    for s in scored:
+        value = s["metric_by_month"].get(ym)
+        if value is None:
+            continue
+        acc += s["weight"] * _score_metric(value, s["bull_at"], s["bear_at"], s["higher_is_better"])
+        total_w += s["weight"]
+    if total_w == 0:
+        return None
+    return round(acc / total_w, 3)
+
+
+def _diagnose_phase(scored: List[Dict[str, Any]], months_back: int = 12) -> Dict[str, Any]:
+    """지표 점수들을 가중 합산해 현재 국면·게이지·13개월 소급 타임라인·전환 문구를 만든다."""
+    if not scored:
+        phase = _phase_of(0.0)
+        return {"score": 0.0, "phase": phase, "gauge": 50, "timeline": [], "transition": "판정 가능한 실데이터 없음", "trend": "down"}
+
+    latest = max(max(s["metric_by_month"]) for s in scored if s["metric_by_month"])
+
+    # 월별 원점수를 먼저 구한 뒤 3개월 이동평균으로 평활한다. 사이클 국면은 주가 한두 주
+    # 움직임으로 뒤집히면 안 되고, 평활 없이는 낙폭 지표만 있는 업종이 매달 요동친다.
+    raw: List[Tuple[str, float]] = []
+    for i in range(months_back + 2, -1, -1):
+        ym = _month_add(latest, -i)
+        score = _score_at(scored, ym)
+        if score is not None:
+            raw.append((ym, score))
+
+    timeline = []
+    for j, (ym, _) in enumerate(raw):
+        window = [sc for _, sc in raw[max(0, j - 2): j + 1]]
+        score = round(sum(window) / len(window), 3)
+        band = _phase_of(score)
+        timeline.append({"month": ym, "state": band["short"], "color": band["color"], "code": band["code"], "score": score})
+    timeline = timeline[-(months_back + 1):]
+
+    if not timeline:
+        phase = _phase_of(0.0)
+        return {"score": 0.0, "phase": phase, "gauge": 50, "timeline": [], "transition": "판정 가능한 실데이터 없음", "trend": "down"}
+
+    cur = timeline[-1]
+    phase = _phase_of(cur["score"])
+
+    # 방향: 3개월 전(없으면 가장 오래된 시점) 점수와 비교
+    ref = timeline[-4] if len(timeline) >= 4 else timeline[0]
+    delta = cur["score"] - ref["score"]
+    if delta > 0.05:
+        direction, trend = "개선 중 ↗", "up"
+    elif delta < -0.05:
+        direction, trend = "악화 중 ↘", "down"
+    else:
+        direction, trend = "횡보 →", "up" if cur["score"] >= 0 else "down"
+
+    prev_diff = None
+    for i in range(len(timeline) - 2, -1, -1):
+        if timeline[i]["code"] != cur["code"]:
+            prev_diff = (timeline[i], len(timeline) - 1 - i)
+            break
+
+    if prev_diff:
+        prev, ago = prev_diff
+        transition = f'직전 국면 {prev["state"]} ({ago}개월 전) ➔ 현재 {cur["state"]} · {direction}'
+    else:
+        transition = f'최근 {len(timeline)}개월 연속 {cur["state"]} · {direction}'
+
+    return {
+        "score": cur["score"],
+        "phase": phase,
+        "gauge": max(0, min(100, round((cur["score"] + 1) / 2 * 100))),
+        "timeline": timeline,
+        "transition": transition,
+        "trend": trend,
+    }
 
 class SemiCycleEngine:
     """반도체 사이클 퀀트 분석 및 4국면 산출 엔진"""
@@ -518,26 +1057,34 @@ class SemiCycleEngine:
     @classmethod
     async def get_industries_summary(cls) -> Dict[str, Any]:
         """
-        10대 주요 업종별 사이클 국면 요약
+        업종별 사이클 국면 요약 — 각 업종의 실데이터 신호를 같은 엔진으로 판정한다.
         """
         now = time.time()
         cache_key = "semi_industries_summary"
         if cache_key in _CACHE_DATA and (now - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
             return _CACHE_DATA[cache_key]["data"]
 
-        industries = [
-            {"id": "semiconductor", "name": "반도체", "state": "정상호황", "trend": "down", "color": "#10b981", "is_partial": False},
-            {"id": "display", "name": "디스플레이", "state": "불황입구", "trend": "down", "color": "#f97316", "is_partial": True},
-            {"id": "battery", "name": "2차전지", "state": "불황입구", "trend": "up", "color": "#f97316", "is_partial": False},
-            {"id": "auto", "name": "자동차", "state": "호황둔화", "trend": "down", "color": "#f59e0b", "is_partial": False},
-            {"id": "shipbuilding", "name": "조선", "state": "정상호황", "trend": "up", "color": "#10b981", "is_partial": True},
-            {"id": "steel", "name": "철강", "state": "호황둔화", "trend": "up", "color": "#f59e0b", "is_partial": False},
-            {"id": "petrochem", "name": "석유화학", "state": "호황둔화", "trend": "up", "color": "#f59e0b", "is_partial": False},
-            {"id": "refinery", "name": "정유", "state": "정상호황", "trend": "up", "color": "#10b981", "is_partial": False},
-            {"id": "tire", "name": "타이어", "state": "정상호황", "trend": "up", "color": "#10b981", "is_partial": False},
-            {"id": "cosmetics", "name": "화장품", "state": "강한호황", "trend": "up", "color": "#10b981", "is_partial": True},
-            {"id": "bio", "name": "제약바이오", "state": "정상호황", "trend": "up", "color": "#10b981", "is_partial": True},
-        ]
+        # 11개 업종의 대장주·바스켓 티커를 한 번에 내려받는다.
+        tickers: List[str] = []
+        for profile in INDUSTRY_PROFILES.values():
+            tickers.append(profile["lead"][0])
+            idx = profile["index"]
+            tickers += [idx["ticker"]] if idx["kind"] == "official" else list(idx["tickers"])
+        closes = _weekly_closes(tickers)
+
+        industries = []
+        for ind_id, profile in INDUSTRY_PROFILES.items():
+            signals, scored = _build_industry_signals(ind_id, closes)
+            diag = _diagnose_phase(scored)
+            industries.append({
+                "id": ind_id,
+                "name": profile["name_kr"],
+                "state": diag["phase"]["short"],
+                "trend": diag["trend"],
+                "color": diag["phase"]["color"],
+                "is_partial": not profile["has_official_stats"],
+                "score": diag["score"],
+            })
 
         result = {"industries": industries, "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M")}
         _CACHE_DATA[cache_key] = {"data": result, "ts": now}
@@ -546,437 +1093,72 @@ class SemiCycleEngine:
     @classmethod
     async def get_macro_signals(cls, industry: str = "semiconductor") -> Dict[str, Any]:
         """
-        7대 실데이터 신호등 및 5단계 국면 진단 데이터셋 (10Y / 5Y / 3Y / 1Y 시계열 완비)
-        - 대장주 낙폭(MU/대장주), 업종지수(SOX), 한국 수출액, 수출 단가지수, 실질 수출물량, 가동률지수, 재고지수
-        - yfinance 및 관세청/한국은행/통계청 국가 공표 통계 기반 정밀 시계열
+        업종별 실데이터 신호등 및 5단계 국면 진단 데이터셋 (10Y 시계열)
+        - 대장주 낙폭 / 업종 지수는 yfinance 주간 종가에서 산출
+        - 수출액·단가·물량·가동률·재고는 국가 공표통계(현재 반도체만 연동)
+        - 국면·종합점수·13개월 타임라인은 위 지표들을 가중 합산해 실측 판정한다
         """
         now = time.time()
         cache_key = f"semi_macro_signals_{industry}"
         if cache_key in _CACHE_DATA and (now - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
             return _CACHE_DATA[cache_key]["data"]
 
-        today = datetime.now()
-        cur_date_full = today.strftime("%Y-%m-%d")
+        if industry not in INDUSTRY_PROFILES:
+            industry = "semiconductor"
+        profile = INDUSTRY_PROFILES[industry]
 
-        # ────────────────────────────────────────────────────
-        # 1 & 2. 대장주 주가(MU) · 업종지수(SOX) — yfinance 실제 주간 종가
-        # ────────────────────────────────────────────────────
-        import yfinance as yf
+        tickers = [profile["lead"][0]]
+        idx = profile["index"]
+        tickers += [idx["ticker"]] if idx["kind"] == "official" else list(idx["tickers"])
+        closes = _weekly_closes(tickers)
 
-        def _fetch_real_weekly(ticker: str) -> List[Dict[str, Any]]:
-            """yfinance 10년 일별 종가를 주 1회(금요일 종가)로 리샘플링한다(≈520pt)."""
-            try:
-                df = yf.Ticker(ticker).history(period="10y")
-                if df.empty:
-                    return []
-                weekly = df["Close"].resample("W-FRI").last().dropna()
-                return [
-                    {"date": dt.strftime("%Y-%m-%d"), "value": round(float(close), 2)}
-                    for dt, close in weekly.items()
-                ]
-            except Exception:
-                return []
+        signals, scored = _build_industry_signals(industry, closes)
+        diag = _diagnose_phase(scored)
+        phase = diag["phase"]
 
-        def _drawdown_series(points: List[Dict[str, Any]], window: int = 52) -> List[Dict[str, Any]]:
-            """주간 종가 시계열을 '직전 52주 고점 대비 낙폭(%)' 시계열로 변환한다."""
-            out: List[Dict[str, Any]] = []
-            for i, p in enumerate(points):
-                high = max(q["value"] for q in points[max(0, i - window + 1): i + 1])
-                dd = (p["value"] / high - 1) * 100 if high else 0.0
-                out.append({"date": p["date"], "value": round(dd, 2)})
-            return out
-
-        def _high_low_now(points: List[Dict[str, Any]], window: int = 52):
-            """최근 window주 고점, 현재값, 고점 대비 낙폭(%)을 반환한다."""
-            recent = points[-window:]
-            high = max(p["value"] for p in recent)
-            last = points[-1]["value"]
-            dd = round((last / high - 1) * 100, 1) if high else 0.0
-            return high, last, dd
-
-        mu_prices = _fetch_real_weekly("MU")
-        sox_prices = _fetch_real_weekly("^SOX")
-
-        # yfinance 실패 시 최소 안전 폴백 (빈 배열 방지)
-        if len(mu_prices) < 10:
-            mu_prices = [{"date": cur_date_full, "value": 125.53}]
-        if len(sox_prices) < 10:
-            sox_prices = [{"date": cur_date_full, "value": 4731.8}]
-
-        mu_high52, mu_last, mu_dd = _high_low_now(mu_prices)
-        sox_high52, sox_last, sox_dd = _high_low_now(sox_prices)
-        mu_dd_series = _drawdown_series(mu_prices)
-        sox_dd_series = _drawdown_series(sox_prices)
-
-        # ────────────────────────────────────────────────────
-        # 3~7. 매크로 5대 지표 — 국가 공표 통계 120개월 실데이터
-        # ────────────────────────────────────────────────────
-        from core.macro_historical_data import HISTORICAL_MACRO_SERIES
-
-        export_series_10y = [{"date": r["date"], "value": r["export_amt"]} for r in HISTORICAL_MACRO_SERIES]
-        unit_price_series_10y = [{"date": r["date"], "value": r["unit_price"]} for r in HISTORICAL_MACRO_SERIES]
-        volume_series_10y = [{"date": r["date"], "value": r["volume"]} for r in HISTORICAL_MACRO_SERIES]
-        cap_util_series_10y = [{"date": r["date"], "value": r["cap_util"]} for r in HISTORICAL_MACRO_SERIES]
-        inventory_series_10y = [{"date": r["date"], "value": r["inventory"]} for r in HISTORICAL_MACRO_SERIES]
-
-        last_stat_month = HISTORICAL_MACRO_SERIES[-1]["date"]
-
-        def _last(series: List[Dict[str, Any]]) -> float:
-            return series[-1]["value"]
-
-        def _yoy(series: List[Dict[str, Any]], months: int = 12):
-            """12개월 전 대비 증감률(%). 데이터가 모자라면 None."""
-            if len(series) <= months:
-                return None
-            prev = series[-1 - months]["value"]
-            if not prev:
-                return None
-            return round((series[-1]["value"] / prev - 1) * 100, 1)
-
-        def _moving_avg(series: List[Dict[str, Any]], n: int = 3) -> float:
-            vals = [p["value"] for p in series[-n:]]
-            return round(sum(vals) / len(vals), 1)
-
-        def _yoy_badge(v) -> str:
-            return f"YoY {v:+.1f}%" if v is not None else "YoY 산출불가"
-
-        def _classify(value: float, bull_at: float, bear_at: float, higher_is_better: bool = True) -> Dict[str, str]:
-            """실측값을 임계선과 비교해 호황/중립/둔화 상태와 배지 색상을 판정한다."""
-            if higher_is_better:
-                code = "bullish" if value >= bull_at else ("bearish" if value < bear_at else "neutral")
-            else:
-                code = "bullish" if value <= bull_at else ("bearish" if value > bear_at else "neutral")
-            label = {"bullish": "호황", "neutral": "중립", "bearish": "둔화"}[code]
-            color = {"bullish": "#10b981", "neutral": "#94a3b8", "bearish": "#f43f5e"}[code]
-            return {"status": code, "status_kr": label, "status_badge": label, "color": color}
-
-        def _weekly_points_label(points: List[Dict[str, Any]]) -> str:
-            return f"{len(points)}주(≈{len(points) // 52}Y)"
-
-        def _monthly_points_label(points: List[Dict[str, Any]]) -> str:
-            return f"{len(points)}개월(≈{len(points) // 12}Y)"
-
-        export_now = _last(export_series_10y)
-        export_yoy = _yoy(export_series_10y)
-        price_now = _last(unit_price_series_10y)
-        price_yoy = _yoy(unit_price_series_10y)
-        volume_now = _last(volume_series_10y)
-        volume_yoy = _yoy(volume_series_10y)
-        cap_now = _last(cap_util_series_10y)
-        cap_3m = _moving_avg(cap_util_series_10y)
-        inv_now = _last(inventory_series_10y)
-        inv_3m = _moving_avg(inventory_series_10y)
-        inv_yoy = _yoy(inventory_series_10y)
-        inv_peak = max(p["value"] for p in inventory_series_10y)
-
-        signals = [
-            {
-                "id": "lead_stock_drawdown",
-                "name": "대장주 낙폭",
-                "sub_name": f"마이크론 테크놀로지(MU) · 52주 고점 ${mu_high52:,.2f} · 현재 ${mu_last:,.2f}",
-                "current_value_formatted": f"{mu_dd:.1f}%",
-                "current_value": mu_dd,
-                **_classify(mu_dd, bull_at=-10.0, bear_at=-25.0),
-                "chart_color": "#10b981",
-                "unit": "%",
-                "description": (
-                    f"대장주 낙폭은 반도체 대표주 마이크론 테크놀로지(MU)가 최근 52주 최고가(${mu_high52:,.2f})에서 "
-                    f"현재 몇 % 하락했는지를 측정합니다. 메모리 3위 기업으로 D램/HBM 업황의 바로미터 역할을 합니다. "
-                    f"−10% 이상이면 호황 고점권(호황), −25% 미만이면 둔화로 판정하며 현재는 {mu_dd:.1f}%입니다. "
-                    f"차트는 각 시점의 직전 52주 고점 대비 낙폭(%)입니다."
-                ),
-                "source": "yfinance 공개 시세 (주간 종가)",
-                "data_points_count": _weekly_points_label(mu_dd_series),
-                "series_5y": mu_dd_series[-260:],
-                "series_10y": mu_dd_series,
-            },
-            {
-                "id": "sector_index",
-                "name": "업종 지수",
-                "sub_name": f"필라델피아 반도체 지수(SOX) · 52주 고점 {sox_high52:,.0f}pt · 현재 {sox_last:,.0f}pt",
-                "current_value_formatted": f"{sox_dd:.1f}%",
-                "current_value": sox_dd,
-                **_classify(sox_dd, bull_at=-10.0, bear_at=-25.0),
-                "chart_color": "#10b981",
-                "unit": "%",
-                "description": (
-                    f"필라델피아 반도체 지수(SOX)는 글로벌 30대 반도체 설계·장비·제조사의 벤치마크 지수입니다. "
-                    f"52주 최고점({sox_high52:,.0f}pt) 대비 현재 {sox_dd:.1f}% 구간에 있습니다. "
-                    f"−10% 이상은 호황 고점권, −25% 미만은 둔화로 판정합니다. "
-                    f"차트는 각 시점의 직전 52주 고점 대비 낙폭(%)입니다."
-                ),
-                "source": "Nasdaq / yfinance 공식 지수 (주간 종가)",
-                "data_points_count": _weekly_points_label(sox_dd_series),
-                "series_5y": sox_dd_series[-260:],
-                "series_10y": sox_dd_series,
-            },
-            {
-                "id": "kr_export_amount",
-                "name": "한국 수출액",
-                "sub_name": f"{last_stat_month} (월간 확정치)",
-                "current_value_formatted": f"{export_now:.1f}억$",
-                "sub_badge": _yoy_badge(export_yoy),
-                "current_value": export_now,
-                **_classify(export_yoy if export_yoy is not None else 0.0, bull_at=15.0, bear_at=-5.0),
-                "chart_color": "#10b981",
-                "unit": "억$",
-                "description": (
-                    f"관세청이 공식 집계하는 한국 반도체 월간 수출 실적입니다. {last_stat_month} 기준 "
-                    f"{export_now:.1f}억 달러로 전년 동월 대비 {export_yoy if export_yoy is not None else 0:+.1f}%입니다. "
-                    f"YoY +15% 이상이면 호황, −5% 미만이면 둔화로 판정합니다."
-                ),
-                "source": "관세청 무역통계 (K-stat)",
-                "data_points_count": _monthly_points_label(export_series_10y),
-                "series_5y": export_series_10y[-60:],
-                "series_10y": export_series_10y,
-            },
-            {
-                "id": "export_unit_price",
-                "name": "수출 단가지수",
-                "sub_name": f"{last_stat_month} · 2020=100",
-                "current_value_formatted": f"{price_now:.1f}",
-                "sub_badge": _yoy_badge(price_yoy),
-                "current_value": price_now,
-                **_classify(price_yoy if price_yoy is not None else 0.0, bull_at=10.0, bear_at=-5.0),
-                "chart_color": "#10b981",
-                "unit": "pt",
-                "description": (
-                    f"수출 금액을 수출 물량으로 나눈 단가 지표입니다(2020=100). {last_stat_month} 기준 "
-                    f"{price_now:.1f}로 전년 동월 대비 {price_yoy if price_yoy is not None else 0:+.1f}%입니다. "
-                    f"YoY +10% 이상이면 가격결정력 확대(호황), −5% 미만이면 둔화로 판정합니다."
-                ),
-                "source": "한국은행 경제통계시스템 (ECOS)",
-                "data_points_count": _monthly_points_label(unit_price_series_10y),
-                "series_5y": unit_price_series_10y[-60:],
-                "series_10y": unit_price_series_10y,
-            },
-            {
-                "id": "real_export_volume",
-                "name": "실질 수출물량",
-                "sub_name": f"{last_stat_month} · 2020=100 · 가격효과 제거",
-                "current_value_formatted": f"{volume_now:.1f}",
-                "sub_badge": _yoy_badge(volume_yoy),
-                "current_value": volume_now,
-                **_classify(volume_yoy if volume_yoy is not None else 0.0, bull_at=10.0, bear_at=-5.0),
-                "chart_color": "#10b981",
-                "unit": "pt",
-                "description": (
-                    f"가격 변동을 제거한 순수 반도체 수출 수량(물량) 지수입니다(2020=100). {last_stat_month} 기준 "
-                    f"{volume_now:.1f}로 전년 동월 대비 {volume_yoy if volume_yoy is not None else 0:+.1f}%입니다. "
-                    f"YoY +10% 이상이면 출하 확대(호황), −5% 미만이면 둔화로 판정합니다."
-                ),
-                "source": "한국은행 무역지수",
-                "data_points_count": _monthly_points_label(volume_series_10y),
-                "series_5y": volume_series_10y[-60:],
-                "series_10y": volume_series_10y,
-            },
-            {
-                "id": "capacity_utilization",
-                "name": "가동률지수",
-                "sub_name": f"{last_stat_month} · 3M {cap_3m:.1f} · 2020=100",
-                "current_value_formatted": f"{cap_now:.1f}",
-                "current_value": cap_now,
-                **_classify(cap_now, bull_at=105.0, bear_at=95.0),
-                "chart_color": "#f59e0b",
-                "unit": "pt",
-                "description": (
-                    f"통계청이 발표하는 반도체 제조공장 가동률 지수(2020=100)입니다. {last_stat_month} 기준 "
-                    f"{cap_now:.1f}(3개월 평균 {cap_3m:.1f})입니다. 105 이상이면 풀가동(호황), 95 미만이면 "
-                    f"감산 국면(둔화)으로 판정합니다."
-                ),
-                "source": "통계청 광업제조업동향조사",
-                "data_points_count": _monthly_points_label(cap_util_series_10y),
-                "series_5y": cap_util_series_10y[-60:],
-                "series_10y": cap_util_series_10y,
-            },
-            {
-                "id": "inventory_index",
-                "name": "재고지수",
-                "sub_name": f"{last_stat_month} · 3M {inv_3m:.1f} · 낮을수록 호황",
-                "current_value_formatted": f"{inv_now:.1f}",
-                "sub_badge": _yoy_badge(inv_yoy),
-                "current_value": inv_now,
-                **_classify(inv_yoy if inv_yoy is not None else 0.0, bull_at=-5.0, bear_at=10.0, higher_is_better=False),
-                "chart_color": "#10b981",
-                "unit": "pt",
-                "description": (
-                    f"제조업 반도체 재고 수준을 나타내며, 낮을수록 재고 소진(호황)을 의미합니다. 10년 내 정점 "
-                    f"{inv_peak:.1f}에서 {last_stat_month} 기준 {inv_now:.1f}까지 내려왔고 전년 동월 대비 "
-                    f"{inv_yoy if inv_yoy is not None else 0:+.1f}%입니다. 절대 수준보다 방향이 중요해 YoY로 "
-                    f"판정하며, −5% 이하면 재고 소진(호황), +10% 초과면 재고 누적(둔화)입니다."
-                ),
-                "source": "통계청 제조업재고지수 (KOSIS)",
-                "data_points_count": _monthly_points_label(inventory_series_10y),
-                "series_5y": inventory_series_10y[-60:],
-                "series_10y": inventory_series_10y,
-            },
-        ]
-
-        # 실측 판정 결과 집계 (반도체 지표만 실데이터이므로 반도체 선택 시에만 사용)
-        measured_counts = {
-            "bullish": sum(1 for s in signals if s["status"] == "bullish"),
-            "neutral": sum(1 for s in signals if s["status"] == "neutral"),
-            "bearish": sum(1 for s in signals if s["status"] == "bearish"),
-            "total": len(signals),
+        available = [s for s in signals if s.get("available", True)]
+        counts = {
+            "bullish": sum(1 for s in available if s["status"] == "bullish"),
+            "neutral": sum(1 for s in available if s["status"] == "neutral"),
+            "bearish": sum(1 for s in available if s["status"] == "bearish"),
+            "total": len(available),
         }
 
-
-        # 업종별 기본 메타데이터 맵
-        industry_meta_map = {
-            "semiconductor": {
-                "name_kr": "반도체",
-                "state": "정상 호황",
-                "state_code": "normal_bull",
-                "action": "매수 유지 구간",
-                "comment": '"아직 타이트하지만 가속은 둔화" — 매수 유지 구간',
-                "transition": "직전 국면 강한호황 (2개월 전) ➔ 현재 정상호황 · 악화 중 ↘",
-                "bullish": 2, "neutral": 5, "bearish": 0, "score": "+0.40", "gauge": 70,
-            },
-            "display": {
-                "name_kr": "디스플레이",
-                "state": "불황 입구",
-                "state_code": "early_bear",
-                "action": "비중 축소 구간",
-                "comment": '"패널 출하 둔화 및 재고 증가" — 점진적 비중 축소 권고',
-                "transition": "직전 국면 호황둔화 (3개월 전) ➔ 현재 불황입구 · 하락 중 ↘",
-                "bullish": 1, "neutral": 2, "bearish": 4, "score": "-0.50", "gauge": 30,
-            },
-            "battery": {
-                "name_kr": "2차전지",
-                "state": "불황 입구",
-                "state_code": "early_bear",
-                "action": "바닥 탐색 및 분할매수",
-                "comment": '"전기차 수요 캐즘 통과 중" — 저점 분할 매수 검토',
-                "transition": "직전 국면 심각불황 (6개월 전) ➔ 현재 불황입구 · 반등 중 ↗",
-                "bullish": 2, "neutral": 2, "bearish": 3, "score": "-0.20", "gauge": 45,
-            },
-            "auto": {
-                "name_kr": "자동차",
-                "state": "호황 둔화",
-                "state_code": "slowing",
-                "action": "수익 실현 경계",
-                "comment": '"피크아웃 우려 속 하이브리드 선방" — 마진 피크 경계',
-                "transition": "직전 국면 정상호황 (1개월 전) ➔ 현재 호황둔화 · 둔화 중 ↘",
-                "bullish": 2, "neutral": 4, "bearish": 1, "score": "+0.15", "gauge": 55,
-            },
-            "shipbuilding": {
-                "name_kr": "조선",
-                "state": "정상 호황",
-                "state_code": "normal_bull",
-                "action": "슈퍼사이클 적극 매수",
-                "comment": '"고선가 수주잔고 본격 매출화" — 적극 비중확대 유지',
-                "transition": "직전 국면 호황회복 (4개월 전) ➔ 현재 정상호황 · 상승 중 ↗",
-                "bullish": 5, "neutral": 2, "bearish": 0, "score": "+0.85", "gauge": 90,
-            },
-            "steel": {
-                "name_kr": "철강",
-                "state": "호황 둔화",
-                "state_code": "slowing",
-                "action": "보수적 접근",
-                "comment": '"중국 내수 부진 속 스프레드 축소" — 업황 반등 대기',
-                "transition": "직전 국면 불황입구 (3개월 전) ➔ 현재 호황둔화 · 횡보 중 ↗",
-                "bullish": 1, "neutral": 4, "bearish": 2, "score": "-0.10", "gauge": 48,
-            },
-            "petrochem": {
-                "name_kr": "석유화학",
-                "state": "호황 둔화",
-                "state_code": "slowing",
-                "action": "점진적 회복 관망",
-                "comment": '"에틸렌 스프레드 저점 통과 중" — 구조조정 모니터링',
-                "transition": "직전 국면 심각불황 (5개월 전) ➔ 현재 호황둔화 · 반등 중 ↗",
-                "bullish": 2, "neutral": 3, "bearish": 2, "score": "+0.05", "gauge": 52,
-            },
-            "refinery": {
-                "name_kr": "정유",
-                "state": "정상 호황",
-                "state_code": "normal_bull",
-                "action": "배당 매력 보유",
-                "comment": '"정제마진 견조 및 유가 안정" — 고배당 포트폴리오 유지',
-                "transition": "직전 국면 호황회복 (2개월 전) ➔ 현재 정상호황 · 안정적 ↗",
-                "bullish": 3, "neutral": 4, "bearish": 0, "score": "+0.60", "gauge": 80,
-            },
-            "tire": {
-                "name_kr": "타이어",
-                "state": "정상 호황",
-                "state_code": "normal_bull",
-                "action": "고수익성 유지",
-                "comment": '"원자재가 안정 및 고인치 타이어 비중확대" — 안정적 매수',
-                "transition": "직전 국면 호황회복 (3개월 전) ➔ 현재 정상호황 · 상승 중 ↗",
-                "bullish": 4, "neutral": 3, "bearish": 0, "score": "+0.75", "gauge": 85,
-            },
-            "cosmetics": {
-                "name_kr": "화장품",
-                "state": "강한 호황",
-                "state_code": "strong_bull",
-                "action": "적극 매수",
-                "comment": '"K-뷰티 미국/글로벌 인디브랜드 수출 대폭발" — 적극 매수 유지',
-                "transition": "직전 국면 정상호황 (2개월 전) ➔ 현재 강한호황 · 가속 중 ↗",
-                "bullish": 6, "neutral": 1, "bearish": 0, "score": "+0.95", "gauge": 95,
-            },
-            "bio": {
-                "name_kr": "제약바이오",
-                "state": "정상 호황",
-                "state_code": "normal_bull",
-                "action": "금리인하 수혜 매수",
-                "comment": '"글로벌 CDMO 수주 및 금리 인하 사이클 도래" — 적극 비중확대',
-                "transition": "직전 국면 호황회복 (1개월 전) ➔ 현재 정상호황 · 상승 중 ↗",
-                "bullish": 4, "neutral": 3, "bearish": 0, "score": "+0.70", "gauge": 82,
-            },
-        }
-
-        ind_info = industry_meta_map.get(industry, industry_meta_map["semiconductor"])
-
-        # 5단계 국면 정의
         stages = [
-            {"id": "strong_bull", "name": "강한호황", "action": "적극", "is_current": ind_info["state_code"] == "strong_bull"},
-            {"id": "normal_bull", "name": "정상호황", "action": "유지", "is_current": ind_info["state_code"] == "normal_bull"},
-            {"id": "slowing", "name": "호황둔화", "action": "경계", "is_current": ind_info["state_code"] == "slowing"},
-            {"id": "early_bear", "name": "불황입구", "action": "비중↓", "is_current": ind_info["state_code"] == "early_bear"},
-            {"id": "deep_bear", "name": "심각불황", "action": "손절", "is_current": ind_info["state_code"] == "deep_bear"},
+            {"id": band["code"], "name": band["short"], "action": band["action"], "is_current": band["code"] == phase["code"]}
+            for _, band in _PHASE_BANDS
         ]
 
-        # 최근 12개월 타임라인 소급 판정 바 (실제 국면 변화 색상 반영)
-        # 예: 2025.08 ~ 2026.05: 강한호황 (#10b981) -> 2026.06 ~ 2026.08: 정상호황/악화중 (#f59e0b 또는 #34d399)
-        timeline_months = [
-            {"month": "2025-08", "state": "강한호황", "color": "#10b981"},
-            {"month": "2025-09", "state": "강한호황", "color": "#10b981"},
-            {"month": "2025-10", "state": "강한호황", "color": "#10b981"},
-            {"month": "2025-11", "state": "강한호황", "color": "#10b981"},
-            {"month": "2025-12", "state": "강한호황", "color": "#10b981"},
-            {"month": "2026-01", "state": "강한호황", "color": "#10b981"},
-            {"month": "2026-02", "state": "강한호황", "color": "#10b981"},
-            {"month": "2026-03", "state": "강한호황", "color": "#10b981"},
-            {"month": "2026-04", "state": "강한호황", "color": "#10b981"},
-            {"month": "2026-05", "state": "강한호황", "color": "#10b981"},
-            {"month": "2026-06", "state": "정상호황 (악화 중)", "color": "#f59e0b"},
-            {"month": "2026-07", "state": "정상호황 (악화 중)", "color": "#f59e0b"},
-            {"month": "2026-08", "state": "정상호황 (현재)", "color": "#34d399"},
-        ]
-
-        # 반도체는 위 7개 지표가 실제 해당 업종 데이터이므로 실측 판정 결과를 그대로 집계한다.
-        # 다른 업종은 아직 전용 시계열이 없어(반도체 지표 공유) 업종 메타의 서술값을 유지한다.
-        signals_count = (
-            measured_counts
-            if industry == "semiconductor"
-            else {"bullish": ind_info["bullish"], "neutral": ind_info["neutral"], "bearish": ind_info["bearish"], "total": 7}
+        summary_comment = (
+            f'{profile["name_kr"]} 실데이터 {counts["total"]}개 판정 — 호황 {counts["bullish"]} · '
+            f'중립 {counts["neutral"]} · 둔화 {counts["bearish"]} · 종합 {diag["score"]:+.2f} → {phase["guide"]}'
         )
+
+        footnote = (
+            "대장주 낙폭·업종 지수는 yfinance 주간 종가에서 직접 산출하고, 수출액·단가·물량·가동률·재고는 "
+            "관세청·한국은행 ECOS·통계청 KOSIS 공표통계를 사용합니다. 국면과 종합 점수는 각 지표를 임계선 "
+            "기준으로 정규화해 가중 합산한 실측 판정입니다."
+        )
+        if not profile["has_official_stats"]:
+            footnote += f' {profile["name_kr"]} 업종은 월간 공표통계가 아직 연동되지 않아 시세 기반 {counts["total"]}개 지표로만 판정합니다.'
 
         result = {
             "industry": industry,
-            "industry_kr": ind_info["name_kr"],
-            "current_state": ind_info["state"],
-            "current_state_code": ind_info["state_code"],
-            "current_action": ind_info["action"],
-            "summary_comment": ind_info["comment"],
-            "state_transition": ind_info["transition"],
-            "signals_count": signals_count,
-            "weighted_score": ind_info["score"],
-            "score_gauge_pct": ind_info["gauge"],
+            "industry_kr": profile["name_kr"],
+            "current_state": phase["state"],
+            "current_state_code": phase["code"],
+            "current_action": phase["guide"],
+            "phase_color": phase["color"],
+            "summary_comment": summary_comment,
+            "state_transition": diag["transition"],
+            "signals_count": counts,
+            "weighted_score": f'{diag["score"]:+.2f}',
+            "score_gauge_pct": diag["gauge"],
             "stages": stages,
-            "timeline": timeline_months,
+            "timeline": diag["timeline"],
             "signals": signals,
-            "footnote": "위 지표는 모두 실데이터 — 대장주 시세(yfinance), 관세청 무역통계(수출액), 한국은행 ECOS(수출단가·물량지수), 통계청 KOSIS(가동률·재고지수). 각 지표를 클릭하면 기간별 실제 시계열과 통계적 진단이 표시됩니다.",
-            "updated_at": today.strftime("%Y-%m-%d %H:%M"),
+            "footnote": footnote,
+            "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
 
         _CACHE_DATA[cache_key] = {"data": result, "ts": now}

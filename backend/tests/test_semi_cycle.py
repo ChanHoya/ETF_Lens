@@ -99,3 +99,53 @@ async def test_macro_signals_count_matches_statuses():
     for code, key in (("bullish", "bullish"), ("neutral", "neutral"), ("bearish", "bearish")):
         assert counts[key] == sum(1 for s in data["signals"] if s["status"] == code)
     assert counts["total"] == len(data["signals"]) == 7
+
+
+@pytest.mark.asyncio
+async def test_non_semi_industry_does_not_reuse_semi_stats():
+    """공표통계 미연동 업종은 반도체 수치를 빌려오지 않고 미연동으로 표시해야 한다."""
+    semi = await SemiCycleEngine.get_macro_signals(industry="semiconductor")
+    other = await SemiCycleEngine.get_macro_signals(industry="shipbuilding")
+    semi_by_id = {s["id"]: s for s in semi["signals"]}
+
+    stat_ids = ["kr_export_amount", "export_unit_price", "real_export_volume",
+                "capacity_utilization", "inventory_index"]
+    for sig in other["signals"]:
+        if sig["id"] in stat_ids:
+            assert sig["available"] is False
+            assert sig["series_10y"] == []
+            assert sig["current_value"] != semi_by_id[sig["id"]]["current_value"]
+        else:
+            assert sig["available"] is True
+            assert len(sig["series_10y"]) > 0
+    assert other["signals_count"]["total"] == 2
+
+
+@pytest.mark.asyncio
+async def test_phase_is_derived_from_score():
+    """국면·게이지·타임라인이 모두 실제 종합 점수에서 유도돼야 한다."""
+    from core.semi_cycle_engine import _phase_of
+
+    data = await SemiCycleEngine.get_macro_signals(industry="semiconductor")
+    score = float(data["weighted_score"])
+    assert data["current_state_code"] == _phase_of(score)["code"]
+    assert data["score_gauge_pct"] == max(0, min(100, round((score + 1) / 2 * 100)))
+
+    assert len(data["timeline"]) > 1
+    for entry in data["timeline"]:
+        assert entry["state"] == _phase_of(entry["score"])["short"]
+        assert entry["color"] == _phase_of(entry["score"])["color"]
+    assert data["timeline"][-1]["code"] == data["current_state_code"]
+
+
+@pytest.mark.asyncio
+async def test_industries_summary_is_measured():
+    """업종 요약도 같은 엔진으로 실측 판정해야 한다."""
+    from core.semi_cycle_engine import INDUSTRY_PROFILES, _phase_of
+
+    data = await SemiCycleEngine.get_industries_summary()
+    assert len(data["industries"]) == len(INDUSTRY_PROFILES)
+    for ind in data["industries"]:
+        assert ind["state"] == _phase_of(ind["score"])["short"]
+        assert ind["trend"] in ("up", "down")
+        assert ind["is_partial"] is not INDUSTRY_PROFILES[ind["id"]]["has_official_stats"]

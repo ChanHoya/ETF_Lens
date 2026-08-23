@@ -32,3 +32,35 @@
 - [x] 7개 지표 헤더값 = 각 차트 마지막 값 일치 확인
 - [x] `pytest` 통과 확인
 - [ ] 시맨틱 커밋
+
+---
+
+# 2차 — 국면 판정 실데이터화 + 업종별 실데이터 분리
+
+## 백엔드
+
+- [x] 업종별 데이터 소스 정의(`INDUSTRY_PROFILES`) — 대장주 티커, 업종 지수(공식/바스켓)
+- [x] yfinance 배치 주간 종가 로더 (`yf.download` 다종목 1회 호출)
+- [x] 대표주 동일가중 바스켓 지수 산출 (공식 지수가 없는 업종용)
+- [x] 지표별 연속 점수화(`_score`) — 임계선 기준 [-1, +1] 정규화
+- [x] 가중 종합 점수 → 5국면 매핑(`_diagnose_phase`)
+- [x] 13개월 소급 판정 타임라인을 실제 과거 데이터로 재계산
+- [x] `state_transition`(직전 국면·전환 시점·방향)을 타임라인에서 유도
+- [x] `current_state`·`weighted_score`·`score_gauge_pct`·`summary_comment`·`current_action` 하드코딩 제거
+- [x] 공표통계 미연동 업종은 해당 지표를 `available: false`로 명시 (반도체 수치 재사용 금지)
+- [x] `get_industries_summary`를 동일 엔진으로 실측 산출 (state/trend/is_partial)
+- [x] `industry_meta_map` 서술형 상수 제거
+
+## 프런트엔드
+
+- [x] `available: false` 지표를 비활성 행으로 렌더 (차트/아코디언 없음)
+- [x] 국면 색상을 백엔드 `phase_color` 기준으로 렌더 (emerald 하드코딩 제거)
+- [x] "실데이터 7개 신호" 문구를 실제 지표 수로 대체
+
+## 검증
+
+- [x] 업종 11개 전부 API 200 및 지표 구성 확인
+- [x] 반도체 외 업종에서 반도체 수치가 노출되지 않는지 확인
+- [x] 타임라인 국면이 실제 점수 시계열과 일치하는지 확인
+- [x] `pytest` 통과
+- [x] 브라우저 확인 및 커밋
