@@ -123,9 +123,6 @@ _PHASE_BANDS: List[Tuple[float, Dict[str, str]]] = [
     (-1.01, {"code": "deep_bear", "state": "심각 불황", "short": "심각불황", "action": "손절", "guide": "손절 및 관망", "color": "#f43f5e"}),
 ]
 
-_PHASE_ORDER = [b[1]["code"] for b in _PHASE_BANDS]
-
-
 def _phase_of(score: float) -> Dict[str, str]:
     """가중 종합 점수를 5국면 중 하나로 매핑한다."""
     for floor, phase in _PHASE_BANDS:
@@ -255,12 +252,18 @@ def _month_add(ym: str, delta: int) -> str:
     return f"{total // 12:04d}-{total % 12 + 1:02d}"
 
 
-def _unavailable_signal(sid: str, name: str, industry_kr: str, chart_color: str = "#475569") -> Dict[str, Any]:
-    """공표통계가 아직 연동되지 않은 지표를 '미연동'으로 명시한다(다른 업종 수치를 재사용하지 않는다)."""
+def _unavailable_signal(
+    sid: str,
+    name: str,
+    reason: str,
+    label: str = "공표통계 미연동",
+    chart_color: str = "#475569",
+) -> Dict[str, Any]:
+    """실데이터를 확보하지 못한 지표를 '미연동'으로 명시한다(다른 업종 수치를 재사용하지 않는다)."""
     return {
         "id": sid,
         "name": name,
-        "sub_name": "공표통계 미연동",
+        "sub_name": label,
         "available": False,
         "current_value_formatted": "—",
         "current_value": None,
@@ -270,10 +273,7 @@ def _unavailable_signal(sid: str, name: str, industry_kr: str, chart_color: str 
         "color": "#475569",
         "chart_color": chart_color,
         "unit": "",
-        "description": (
-            f"{name}은 관세청·한국은행 ECOS·통계청 KOSIS 공표통계 기반 지표입니다. 현재 반도체 업종만 "
-            f"120개월 시계열을 확보해 두었고 {industry_kr} 업종은 아직 연동되지 않아 국면 판정에서 제외합니다."
-        ),
+        "description": reason,
         "source": "미연동",
         "data_points_count": "-",
         "series_5y": [],
@@ -289,11 +289,15 @@ def _drawdown_signal(
     source: str,
     weight: float,
     value_fmt: str,
-    industry_kr: str,
 ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
     """주간 종가 시계열에서 '52주 고점 대비 낙폭' 지표와 소급 판정용 월별 메트릭을 만든다."""
     if len(prices) < 60:
-        return _unavailable_signal(sid, name, industry_kr, chart_color="#10b981"), None
+        return _unavailable_signal(
+            sid, name,
+            reason=f"{label}의 주간 시세를 확보하지 못해(10년 시계열 60주 미만) 이번 판정에서 제외합니다.",
+            label="시세 조회 실패",
+            chart_color="#10b981",
+        ), None
 
     dd_series = _drawdown_series(prices)
     recent = prices[-52:]
@@ -354,7 +358,7 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
         "lead_stock_drawdown", "대장주 낙폭", lead_label,
         closes.get(lead_ticker, []),
         "yfinance 공개 시세 (주간 종가)",
-        weight=0.20, value_fmt=lead_fmt, industry_kr=industry_kr,
+        weight=0.20, value_fmt=lead_fmt,
     )
     signals.append(lead_sig)
     if lead_scored:
@@ -373,7 +377,7 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
     index_sig, index_scored = _drawdown_signal(
         "sector_index", "업종 지수", idx_cfg["label"],
         index_points, index_source,
-        weight=0.15, value_fmt=index_fmt, industry_kr=industry_kr,
+        weight=0.15, value_fmt=index_fmt,
     )
     signals.append(index_sig)
     if index_scored:
@@ -388,7 +392,16 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
     ]
 
     if not profile["has_official_stats"]:
-        signals += [_unavailable_signal(sid, name, industry_kr) for sid, name, _ in stat_defs]
+        signals += [
+            _unavailable_signal(
+                sid, name,
+                reason=(
+                    f"{name}은 관세청·한국은행 ECOS·통계청 KOSIS 공표통계 기반 지표입니다. 현재 반도체 업종만 "
+                    f"120개월 시계열을 확보해 두었고 {industry_kr} 업종은 아직 연동되지 않아 국면 판정에서 제외합니다."
+                ),
+            )
+            for sid, name, _ in stat_defs
+        ]
         return signals, scored
 
     series_map = {
@@ -528,7 +541,10 @@ def _diagnose_phase(scored: List[Dict[str, Any]], months_back: int = 12) -> Dict
         phase = _phase_of(0.0)
         return {"score": 0.0, "phase": phase, "gauge": 50, "timeline": [], "transition": "판정 가능한 실데이터 없음", "trend": "down"}
 
-    latest = max(max(s["metric_by_month"]) for s in scored if s["metric_by_month"])
+    # 기준월은 '모든 연동 지표가 값을 가진 최신 월'이다. max로 잡으면 정적 공표통계가
+    # 실시간 시세보다 뒤처지는 순간(다음 달부터 반드시 발생) 최신 월만 시세 지표로 판정돼
+    # 앞뒤 월과 산출 기준이 달라진다. 국면이 경기가 아니라 지표 구성 때문에 바뀌면 안 된다.
+    latest = min(max(s["metric_by_month"]) for s in scored if s["metric_by_month"])
 
     # 월별 원점수를 먼저 구한 뒤 3개월 이동평균으로 평활한다. 사이클 국면은 주가 한두 주
     # 움직임으로 뒤집히면 안 되고, 평활 없이는 낙폭 지표만 있는 업종이 매달 요동친다.
@@ -1087,7 +1103,9 @@ class SemiCycleEngine:
             })
 
         result = {"industries": industries, "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M")}
-        _CACHE_DATA[cache_key] = {"data": result, "ts": now}
+        # 시세 조회가 통째로 실패한 응답은 캐시에 담지 않는다.
+        if closes:
+            _CACHE_DATA[cache_key] = {"data": result, "ts": now}
         return result
 
     @classmethod
@@ -1161,6 +1179,9 @@ class SemiCycleEngine:
             "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
 
-        _CACHE_DATA[cache_key] = {"data": result, "ts": now}
+        # 판정 지표가 하나도 없으면(시세 조회 실패) 캐시에 담지 않는다. 일시적 장애를
+        # 12시간 동안 붙들고 있으면 그동안 화면이 계속 비어 있게 된다.
+        if counts["total"] > 0:
+            _CACHE_DATA[cache_key] = {"data": result, "ts": now}
         return result
 

@@ -149,3 +149,45 @@ async def test_industries_summary_is_measured():
         assert ind["state"] == _phase_of(ind["score"])["short"]
         assert ind["trend"] in ("up", "down")
         assert ind["is_partial"] is not INDUSTRY_PROFILES[ind["id"]]["has_official_stats"]
+
+
+def test_timeline_anchors_to_slowest_indicator():
+    """정적 공표통계가 실시간 시세보다 뒤처져도 타임라인 전 구간이 같은 지표 조합을 써야 한다."""
+    from core.semi_cycle_engine import _diagnose_phase, _month_add
+
+    def months_through(last: str, n: int = 30):
+        return [_month_add(last, -i) for i in range(n)]
+
+    scored = [
+        {  # 시세: 2026-09까지 (실시간)
+            "id": "fast", "weight": 0.5, "bull_at": 0.0, "bear_at": -40.0, "higher_is_better": True,
+            "metric_by_month": {ym: -8.0 for ym in months_through("2026-09")},
+        },
+        {  # 공표통계: 2026-08까지 (정적)
+            "id": "slow", "weight": 0.5, "bull_at": 15.0, "bear_at": -5.0, "higher_is_better": True,
+            "metric_by_month": {ym: 20.0 for ym in months_through("2026-08")},
+        },
+    ]
+    diag = _diagnose_phase(scored)
+    assert diag["timeline"][-1]["month"] == "2026-08"
+    # 두 지표가 모두 살아 있으면 종합 점수는 양쪽 중간 어딘가여야 한다(한쪽만 쓰면 극단값이 된다)
+    assert -1.0 < diag["timeline"][-1]["score"] < 1.0
+
+
+@pytest.mark.asyncio
+async def test_price_fetch_failure_is_not_cached(monkeypatch):
+    """시세 조회가 통째로 실패한 응답을 12시간 캐시에 눌러 담으면 안 된다."""
+    import core.semi_cycle_engine as engine
+
+    engine._CACHE_DATA.pop("semi_macro_signals_shipbuilding", None)
+    monkeypatch.setattr(engine, "_weekly_closes", lambda tickers: {})
+
+    data = await SemiCycleEngine.get_macro_signals(industry="shipbuilding")
+    assert data["signals_count"]["total"] == 0
+    assert "semi_macro_signals_shipbuilding" not in engine._CACHE_DATA
+
+    # 시세가 돌아오면 정상 판정으로 복구돼야 한다
+    monkeypatch.undo()
+    engine._CACHE_DATA.pop("semi_macro_signals_shipbuilding", None)
+    recovered = await SemiCycleEngine.get_macro_signals(industry="shipbuilding")
+    assert recovered["signals_count"]["total"] == 2
