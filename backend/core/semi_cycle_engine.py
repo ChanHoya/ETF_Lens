@@ -567,96 +567,45 @@ class SemiCycleEngine:
             cur_dt += timedelta(days=31)
             cur_dt = cur_dt.replace(day=1)
 
-        # 10년치 평일 일별 날짜 배열 생성 (약 2500거래일: 2016-09-01 ~ 현재)
-        daily_dates_10y = []
-        cur_d = datetime.strptime("2016-09-01", "%Y-%m-%d")
-        while cur_d <= today:
-            if cur_d.weekday() < 5: # 평일만
-                daily_dates_10y.append(cur_d.strftime("%Y-%m-%d"))
-            cur_d += timedelta(days=1)
+        # ────────────────────────────────────────────────────
+        # 1 & 2. 대장주 주가(MU) · 업종지수(SOX) — yfinance 실제 일별 종가
+        # ────────────────────────────────────────────────────
+        import yfinance as yf
 
-        # 1. 대장주 낙폭 (마이크론 테크놀로지 MU: 실제 10년 주가 시계열 $15~$157, 52주 고점 $157.5 대비 현재 $105.8 -> -32.8% or -20.3%)
-        # 실제 MU 주가 궤적: 2016($16) -> 2018 고점($64) -> 2019 저점($30) -> 2021 슈퍼사이클($96) -> 2022 침체저점($48.4) -> 2024.06 AI고점($157.5) -> 현재($125.6, -20.3%)
-        mu_points_10y = []
-        n_days = len(daily_dates_10y)
-        for i, d_str in enumerate(daily_dates_10y):
-            prog = i / (n_days - 1) if n_days > 1 else 1.0
-            if prog < 0.20: # 2016 ~ 2018
-                base = 16.0 + (prog / 0.20) * 48.0
-            elif prog < 0.35: # 2018 ~ 2019
-                base = 64.0 - ((prog - 0.20) / 0.15) * 34.0
-            elif prog < 0.55: # 2019 ~ 2021
-                base = 30.0 + ((prog - 0.35) / 0.20) * 66.0
-            elif prog < 0.70: # 2021 ~ 2022.12 바닥
-                base = 96.0 - ((prog - 0.55) / 0.15) * 47.6 # 바닥 48.4
-            elif prog < 0.85: # 2023 ~ 2024.06 고점
-                base = 48.4 + ((prog - 0.70) / 0.15) * 109.1 # 고점 157.5
-            else: # 2024.07 ~ 현재 (조정 후 횡보)
-                base = 157.5 - ((prog - 0.85) / 0.15) * 31.9 # 현재 125.6 (-20.3%)
-            
-            noise = np.sin(i * 0.18) * (base * 0.025)
-            val = round(max(15.0, base + noise), 2)
-            if i == n_days - 1:
-                val = 125.53 # 52주 고점 $157.50 대비 정확히 -20.3%
-            mu_points_10y.append({"date": d_str, "value": val})
+        def _fetch_real_daily(ticker: str) -> List[Dict[str, Any]]:
+            """yfinance에서 실제 10년 일별 종가를 가져와 주 1회 샘플링(≈520pt)"""
+            try:
+                df = yf.Ticker(ticker).history(period="10y")
+                if df.empty:
+                    return []
+                # 주간 리샘플링으로 차트 성능 최적화 (약 520 포인트)
+                weekly = df["Close"].resample("W-FRI").last().dropna()
+                series = []
+                for dt, close in weekly.items():
+                    series.append({"date": dt.strftime("%Y-%m-%d"), "value": round(float(close), 2)})
+                return series
+            except Exception:
+                return []
 
-        # 2. 업종 지수 (필라델피아 반도체 지수 SOX: 실제 10년 지수 시계열 780pt ~ 5,900pt, 52주 고점 5,900 대비 현재 4,732 -> -19.8%)
-        # SOX 궤적: 2016(780) -> 2018(1450) -> 2020(1300) -> 2021(4000) -> 2022(2089) -> 2024.07(5900) -> 현재(4732)
-        sox_points_10y = []
-        for i, d_str in enumerate(daily_dates_10y):
-            prog = i / (n_days - 1) if n_days > 1 else 1.0
-            if prog < 0.20:
-                base = 780.0 + (prog / 0.20) * 670.0
-            elif prog < 0.40:
-                base = 1450.0 + ((prog - 0.20) / 0.20) * 450.0
-            elif prog < 0.60:
-                base = 1900.0 + ((prog - 0.40) / 0.20) * 2100.0 # 4000
-            elif prog < 0.75:
-                base = 4000.0 - ((prog - 0.60) / 0.15) * 1911.0 # 2089
-            elif prog < 0.90:
-                base = 2089.0 + ((prog - 0.75) / 0.15) * 3811.0 # 5900
-            else:
-                base = 5900.0 - ((prog - 0.90) / 0.10) * 1168.0 # 4732 (-19.8%)
-            
-            noise = np.sin(i * 0.15) * (base * 0.02)
-            val = round(max(750.0, base + noise), 1)
-            if i == n_days - 1:
-                val = 4731.8 # 52주 고점 대비 -19.8%
-            sox_points_10y.append({"date": d_str, "value": val})
+        mu_points_10y = _fetch_real_daily("MU")
+        sox_points_10y = _fetch_real_daily("^SOX")
 
-        # 월별 스플라인 생성기
-        def _gen_spline(trend: List[float], dates: List[str]) -> List[Dict[str, Any]]:
-            res = []
-            m = len(dates)
-            k = len(trend)
-            for j, dt_str in enumerate(dates):
-                r = j / (m - 1) if m > 1 else 1.0
-                idx = min(int(r * (k - 1)), k - 2)
-                sub_r = (r * (k - 1)) - idx
-                v = trend[idx] * (1 - sub_r) + trend[idx + 1] * sub_r
-                noise = np.sin(j * 0.6) * (v * 0.015)
-                res.append({"date": dt_str, "value": round(v + noise, 1)})
-            return res
+        # yfinance 실패 시 최소 안전 폴백 (빈 배열 방지)
+        if len(mu_points_10y) < 10:
+            mu_points_10y = [{"date": "2026-08-21", "value": 125.53}]
+        if len(sox_points_10y) < 10:
+            sox_points_10y = [{"date": "2026-08-21", "value": 4731.8}]
 
-        # 3. 한국 수출액 (관세청 반도체 월 수출액 $억: 2016년 $60억 ~ 2018년 $110억 -> 2023년 불황 $60억 -> 2025/2026 AI호황 $130억~$150억)
-        export_10y_trend = [62.0, 75.0, 105.0, 115.0, 85.0, 95.0, 115.0, 125.0, 65.0, 85.0, 110.0, 130.0, 148.0, 142.0]
-        export_series_10y = _gen_spline(export_10y_trend, monthly_dates_10y)
+        # ────────────────────────────────────────────────────
+        # 3~7. 매크로 5대 지표 — 국가 공표 통계 120개월 실데이터
+        # ────────────────────────────────────────────────────
+        from core.macro_historical_data import HISTORICAL_MACRO_SERIES
 
-        # 4. 수출 단가지수 (한국은행 수출입물가지수, 2020=100: 최저 56.3 ~ 최고 242.3, 현재 242.3)
-        unit_price_10y_trend = [85.0, 110.0, 135.0, 95.0, 80.0, 105.0, 95.0, 56.3, 75.0, 120.0, 185.0, 230.0, 242.3]
-        unit_price_series_10y = _gen_spline(unit_price_10y_trend, monthly_dates_10y)
-
-        # 5. 실질 수출물량 (한국은행 무역지수, 2020=100: 최저 104.1 ~ 최고 249.5, 현재 213.6)
-        volume_10y_trend = [72.0, 88.0, 105.0, 112.0, 115.0, 125.0, 104.1, 145.0, 185.0, 225.0, 249.5, 230.0, 213.6]
-        volume_series_10y = _gen_spline(volume_10y_trend, monthly_dates_10y)
-
-        # 6. 가동률지수 (통계청 광업제조업동향조사, 2020=100: 최저 63.1 ~ 최고 124.9, 현재 101.7)
-        cap_util_10y_trend = [92.0, 108.0, 115.0, 98.0, 105.0, 124.9, 85.0, 63.1, 88.0, 112.0, 95.5, 101.7]
-        cap_util_series_10y = _gen_spline(cap_util_10y_trend, monthly_dates_10y)
-
-        # 7. 재고지수 (통계청 제조업재고지수, 낮을수록 호황: 최저 75.0 ~ 최고 208.1, 현재 100.1)
-        inventory_10y_trend = [85.0, 75.0, 95.0, 140.0, 110.0, 95.0, 165.0, 208.1, 140.0, 110.0, 93.1, 106.8, 100.1]
-        inventory_series_10y = _gen_spline(inventory_10y_trend, monthly_dates_10y)
+        export_series_10y = [{"date": r["date"], "value": r["export_amt"]} for r in HISTORICAL_MACRO_SERIES]
+        unit_price_series_10y = [{"date": r["date"], "value": r["unit_price"]} for r in HISTORICAL_MACRO_SERIES]
+        volume_series_10y = [{"date": r["date"], "value": r["volume"]} for r in HISTORICAL_MACRO_SERIES]
+        cap_util_series_10y = [{"date": r["date"], "value": r["cap_util"]} for r in HISTORICAL_MACRO_SERIES]
+        inventory_series_10y = [{"date": r["date"], "value": r["inventory"]} for r in HISTORICAL_MACRO_SERIES]
 
         signals = [
             {
