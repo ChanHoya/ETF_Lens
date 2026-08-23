@@ -134,19 +134,19 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
     const fetchAllData = async () => {
         setIsLoading(true);
         try {
-            const [clockRes, trackerRes, subsectorRes, strategyRes] = await Promise.all([
+            const [clockRes, trackerRes, subsectorRes, strategyRes] = await Promise.allSettled([
                 fetch(`${API_BASE}/api/v1/analyze/semi-cycle/clock`, { cache: "no-store" }),
                 fetch(`${API_BASE}/api/v1/analyze/semi-cycle/tracker`, { cache: "no-store" }),
                 fetch(`${API_BASE}/api/v1/analyze/semi-cycle/subsectors`, { cache: "no-store" }),
                 fetch(`${API_BASE}/api/v1/analyze/semi-cycle/strategy`, { cache: "no-store" }),
             ]);
 
-            if (clockRes.ok) setClockData(await clockRes.json());
-            if (trackerRes.ok) setTrackerData(await trackerRes.json());
-            if (subsectorRes.ok) setSubsectorData(await subsectorRes.json());
-            if (strategyRes.ok) setStrategyData(await strategyRes.json());
+            if (clockRes.status === "fulfilled" && clockRes.value.ok) setClockData(await clockRes.value.json());
+            if (trackerRes.status === "fulfilled" && trackerRes.value.ok) setTrackerData(await trackerRes.value.json());
+            if (subsectorRes.status === "fulfilled" && subsectorRes.value.ok) setSubsectorData(await subsectorRes.value.json());
+            if (strategyRes.status === "fulfilled" && strategyRes.value.ok) setStrategyData(await strategyRes.value.json());
         } catch (err) {
-            console.error("Failed to fetch semi cycle data:", err);
+            console.warn("Failed to fetch semi cycle data:", err);
         } finally {
             setIsLoading(false);
         }
@@ -258,8 +258,8 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
     const phaseInfo = clockData?.phase_info || {
         name: "적극적 재고 축적",
         stage_kr: "호황기",
-        description: "글로벌 빅테크 AI CapEx 집행 가속 및 메모리 마진 확장 국면",
-        strategy: "선단공정 파운드리 및 AI 가속기 ETF 적극 비중 확대 (비중 80%+)",
+        description: "수요 폭증 및 설비투자 증설 본격화 국면",
+        strategy: "AI 선단공정 / 핵심 장비 및 K-반도체 대장주 집중 보유 (비중유지)",
     };
     const phaseStyle = PHASE_COLORS[currentPhase] || PHASE_COLORS[3];
 
@@ -289,12 +289,12 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                 Phase {currentPhase} : {phaseInfo.name || "적극적 재고 축적"} ({phaseInfo.stage_kr || "호황기"})
                             </span>
                             <span className="text-[11px] font-mono text-gray-400">
-                                CSCI 지수: <b className="text-white font-bold">{clockData?.current_csci || "+1.35"}σ</b>
+                                CSCI 지수: <b className="text-white font-bold">{clockData?.current_csci ?? "+1.42"}σ</b>
                             </span>
                         </div>
-                        <h3 className="text-base md:text-lg font-black text-white mt-1.5">{phaseInfo.description || "글로벌 빅테크 AI CapEx 집행 가속 및 메모리 마진 확장 국면"}</h3>
+                        <h3 className="text-base md:text-lg font-black text-white mt-1.5">{phaseInfo.description || "수요 폭증 및 설비투자 증설 본격화 국면"}</h3>
                         <p className="text-xs text-gray-300 mt-1 flex items-center gap-1.5">
-                            <span className="font-bold text-indigo-300">💡 핵심 자산배분 권고:</span> {phaseInfo.strategy || "선단공정 파운드리 및 AI 가속기 ETF 적극 비중 확대"}
+                            <span className="font-bold text-indigo-300">💡 핵심 자산배분 권고:</span> {phaseInfo.strategy || "AI 선단공정 / 핵심 장비 및 K-반도체 대장주 집중 보유 (비중유지)"}
                         </p>
                     </div>
                 </div>
