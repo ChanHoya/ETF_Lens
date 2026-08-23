@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Activity, Globe, Zap, Layers } from 'lucide-react';
+import { Activity, Globe, Zap, Layers, Grid } from 'lucide-react';
 import SemiChart from '@/components/SemiChart';
 import SemiPartsChart from '@/components/SemiPartsChart';
 import SpaceChart from '@/components/SpaceChart';
@@ -19,7 +19,7 @@ interface SectorAnalysisTabProps {
 export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabProps) {
     const [region, setRegion] = useState<'KR' | 'US' | 'ALL'>('ALL');
     const [selectedSector, setSelectedSector] = useState<string | null>(null);
-    const [subTab, setSubTab] = useState<'rotation' | 'screener' | 'flow'>('rotation');
+    const [subTab, setSubTab] = useState<'rotation' | 'screener' | 'flow' | 'correlation'>('rotation');
 
     return (
         <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-500 bg-[#121217]/80 p-4 lg:p-6 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
@@ -64,11 +64,11 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                     )}
                 </div>
 
-                {/* Sub-Tabs: Sector Rotation vs Next Leading Sectors */}
-                <div className="flex border-b border-white/10 w-full gap-2">
+                {/* Sub-Tabs: Rotation vs Screener vs Flow vs Correlation */}
+                <div className="flex border-b border-white/10 w-full gap-2 overflow-x-auto no-scrollbar">
                     <button
                         onClick={() => setSubTab('rotation')}
-                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${
+                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 shrink-0 ${
                             subTab === 'rotation'
                             ? 'border-indigo-500 text-indigo-400 font-extrabold'
                             : 'border-transparent text-gray-400 hover:text-gray-200'
@@ -79,7 +79,7 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                     </button>
                     <button
                         onClick={() => setSubTab('screener')}
-                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${
+                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 shrink-0 ${
                             subTab === 'screener'
                             ? 'border-indigo-500 text-indigo-400 font-extrabold'
                             : 'border-transparent text-gray-400 hover:text-gray-200'
@@ -90,7 +90,7 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                     </button>
                     <button
                         onClick={() => setSubTab('flow')}
-                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 ${
+                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 shrink-0 ${
                             subTab === 'flow'
                             ? 'border-indigo-500 text-indigo-400 font-extrabold'
                             : 'border-transparent text-gray-400 hover:text-gray-200'
@@ -99,6 +99,17 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                         <Activity className="w-4 h-4 text-cyan-400" />
                         섹터별 주가 흐름
                     </button>
+                    <button
+                        onClick={() => setSubTab('correlation')}
+                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 shrink-0 ${
+                            subTab === 'correlation'
+                            ? 'border-indigo-500 text-indigo-400 font-extrabold'
+                            : 'border-transparent text-gray-400 hover:text-gray-200'
+                        }`}
+                    >
+                        <Grid className="w-4 h-4 text-emerald-400" />
+                        섹터 간 상관관계 분석
+                    </button>
                 </div>
 
                 {/* Tab Contents */}
@@ -106,6 +117,10 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                     <NextLeaderScreener onOpenDetail={onOpenDetail} />
                 ) : subTab === 'flow' ? (
                     <SectorFlowGrid onOpenDetail={onOpenDetail} />
+                ) : subTab === 'correlation' ? (
+                    <div className="space-y-3 animate-in fade-in duration-300">
+                        <SectorCorrelationHeatmap selectedSector={selectedSector} />
+                    </div>
                 ) : (
                     <>
                         {/* Sector Performance Overview Grid */}
@@ -114,8 +129,6 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                             selectedSector={selectedSector}
                             onSelectSector={setSelectedSector}
                         />
-
-
 
                         {/* SemiChart: Semiconductor Indices (Detailed View) */}
                         {region !== 'US' && selectedSector === '반도체' && (
@@ -171,11 +184,6 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                                 <EnergyChart onOpenDetail={onOpenDetail} />
                             </div>
                         )}
-
-                        {/* Sector Correlation Heatmap */}
-                        <div className="space-y-3">
-                            <SectorCorrelationHeatmap selectedSector={selectedSector} />
-                        </div>
                     </>
                 )}
 
@@ -183,3 +191,4 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
         </div>
     );
 }
+
