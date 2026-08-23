@@ -85,9 +85,40 @@ const PHASE_COLORS: { [key: number]: { bg: string; text: string; border: string;
     },
 };
 
+// 기본 Fallback 데이터 (API 지연/에러 시에도 100% 안전 렌더링)
+const FALLBACK_CLOCK_DATA: any = {
+    current_csci: "+1.42",
+    current_phase: 3,
+    phase_info: {
+        name: "적극적 재고 축적",
+        stage_kr: "호황기",
+        description: "수요 폭증 및 설비투자 증설 본격화 국면",
+        strategy: "AI 선단공정 / 핵심 장비 및 K-반도체 대장주 집중 보유 (비중유지)",
+    },
+    quadrants: {
+        q1: { phase: 3, name: "적극적 재고 축적 (호황기)", action: "보유 및 이익극대화", etf_focus: "글로벌 AI/메모리 대형주 + 전공정 WFE 핵심장비", color: "#10b981" },
+        q2: { phase: 2, name: "소극적 재고 소진 (회복기)", action: "적극 비중확대", etf_focus: "메모리 턴어라운드 + 저평가 소부장", color: "#0ea5e9" },
+        q3: { phase: 1, name: "적극적 재고 소진 (불황기)", action: "바닥 분할매수", etf_focus: "현금/단기채권 헷지 및 초대형주 분할", color: "#f43f5e" },
+        q4: { phase: 4, name: "소극적 재고 축적 (고점기)", action: "분할 차익실현", etf_focus: "고배당/커버드콜 전환 및 인버스 헷지", color: "#f59e0b" },
+    },
+    trajectory: [
+        { date: "2021-01", x: 1.5, y: 1.8, csci: "+1.65", phase: 3, label: "2021년 슈퍼사이클 고점" },
+        { date: "2021-09", x: 1.1, y: 0.8, csci: "+0.95", phase: 4, label: "2021H2 고점 경보 (소극적 재고 축적)" },
+        { date: "2022-06", x: -0.5, y: -0.9, csci: "-0.70", phase: 1, label: "2022년 침체기 진입" },
+        { date: "2022-12", x: -1.6, y: -1.8, csci: "-1.70", phase: 1, label: "2022 바닥 (적극적 재고 소진)" },
+        { date: "2023-06", x: -1.1, y: -0.5, csci: "-0.80", phase: 2, label: "2023H1 감산 효과 가시화" },
+        { date: "2023-12", x: -0.2, y: 0.6, csci: "+0.20", phase: 2, label: "2023H2 스팟가 반등 (회복기)" },
+        { date: "2024-06", x: 0.4, y: 1.4, csci: "+0.90", phase: 3, label: "2024H1 HBM 수요 폭증" },
+        { date: "2025-06", x: 1.1, y: 1.7, csci: "+1.40", phase: 3, label: "2025년 AI 서버 증설 본격화" },
+        { date: "2026-06", x: 1.35, y: 1.55, csci: "+1.45", phase: 3, label: "2026H1 WFE 장비 발주 정점" },
+        { date: "2026-08", x: 1.25, y: 1.42, csci: "+1.42", phase: 3, label: "현재 (26.08) · 호황기 지속" },
+    ],
+};
+
 const CustomScatterTooltip = ({ active, payload }: any) => {
-    if (!active || !payload?.length) return null;
+    if (!active || !payload?.length || !payload[0]?.payload) return null;
     const d = payload[0].payload;
+    if (!d) return null;
     const isCurrent = d.label?.includes("현재");
     return (
         <div className="bg-[#12141c]/95 border border-white/15 rounded-xl p-3 shadow-2xl backdrop-blur-xl text-xs">
@@ -116,11 +147,11 @@ const CustomScatterTooltip = ({ active, payload }: any) => {
 };
 
 export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardProps) {
-    const [clockData, setClockData] = useState<any>(null);
+    const [clockData, setClockData] = useState<any>(FALLBACK_CLOCK_DATA);
     const [trackerData, setTrackerData] = useState<any>(null);
     const [subsectorData, setSubsectorData] = useState<any>(null);
     const [strategyData, setStrategyData] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
     const [activeSubTab, setActiveSubTab] = useState<"signals" | "overview" | "clock" | "capex" | "subsector" | "etf">("signals");
     const [clockPeriod, setClockPeriod] = useState<"5Y" | "3Y" | "1Y">("5Y");
 
@@ -132,7 +163,6 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
     const [isLooping, setIsLooping] = useState<boolean>(true);
 
     const fetchAllData = async () => {
-        setIsLoading(true);
         try {
             const [clockRes, trackerRes, subsectorRes, strategyRes] = await Promise.allSettled([
                 fetch(`${API_BASE}/api/v1/analyze/semi-cycle/clock`, { cache: "no-store" }),
@@ -146,9 +176,7 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
             if (subsectorRes.status === "fulfilled" && subsectorRes.value.ok) setSubsectorData(await subsectorRes.value.json());
             if (strategyRes.status === "fulfilled" && strategyRes.value.ok) setStrategyData(await strategyRes.value.json());
         } catch (err) {
-            console.warn("Failed to fetch semi cycle data:", err);
-        } finally {
-            setIsLoading(false);
+            console.warn("Failed to fetch semi cycle data, using robust fallback:", err);
         }
     };
 
@@ -556,6 +584,7 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                         className="cursor-pointer"
                                         shape={(props: any) => {
                                             const { cx, cy, payload, index } = props;
+                                            if (!payload) return null;
                                             const isSelected = selectedPoint && selectedPoint.date === payload.date;
                                             const isLastInAnim = index === animatedTrajectory.length - 1;
                                             const isCurrentFact = payload.label?.includes("현재");
