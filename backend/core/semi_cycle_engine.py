@@ -556,45 +556,57 @@ class SemiCycleEngine:
             return _CACHE_DATA[cache_key]["data"]
 
         today = datetime.now()
-        cur_date_str = today.strftime("%Y-%m")
         cur_date_full = today.strftime("%Y-%m-%d")
 
-        # 10년치 월별 날짜 배열 생성 (120개월: 2016.09 ~ 현재)
-        monthly_dates_10y = []
-        cur_dt = datetime.strptime("2016-09", "%Y-%m")
-        while cur_dt <= today:
-            monthly_dates_10y.append(cur_dt.strftime("%Y-%m"))
-            cur_dt += timedelta(days=31)
-            cur_dt = cur_dt.replace(day=1)
-
         # ────────────────────────────────────────────────────
-        # 1 & 2. 대장주 주가(MU) · 업종지수(SOX) — yfinance 실제 일별 종가
+        # 1 & 2. 대장주 주가(MU) · 업종지수(SOX) — yfinance 실제 주간 종가
         # ────────────────────────────────────────────────────
         import yfinance as yf
 
-        def _fetch_real_daily(ticker: str) -> List[Dict[str, Any]]:
-            """yfinance에서 실제 10년 일별 종가를 가져와 주 1회 샘플링(≈520pt)"""
+        def _fetch_real_weekly(ticker: str) -> List[Dict[str, Any]]:
+            """yfinance 10년 일별 종가를 주 1회(금요일 종가)로 리샘플링한다(≈520pt)."""
             try:
                 df = yf.Ticker(ticker).history(period="10y")
                 if df.empty:
                     return []
-                # 주간 리샘플링으로 차트 성능 최적화 (약 520 포인트)
                 weekly = df["Close"].resample("W-FRI").last().dropna()
-                series = []
-                for dt, close in weekly.items():
-                    series.append({"date": dt.strftime("%Y-%m-%d"), "value": round(float(close), 2)})
-                return series
+                return [
+                    {"date": dt.strftime("%Y-%m-%d"), "value": round(float(close), 2)}
+                    for dt, close in weekly.items()
+                ]
             except Exception:
                 return []
 
-        mu_points_10y = _fetch_real_daily("MU")
-        sox_points_10y = _fetch_real_daily("^SOX")
+        def _drawdown_series(points: List[Dict[str, Any]], window: int = 52) -> List[Dict[str, Any]]:
+            """주간 종가 시계열을 '직전 52주 고점 대비 낙폭(%)' 시계열로 변환한다."""
+            out: List[Dict[str, Any]] = []
+            for i, p in enumerate(points):
+                high = max(q["value"] for q in points[max(0, i - window + 1): i + 1])
+                dd = (p["value"] / high - 1) * 100 if high else 0.0
+                out.append({"date": p["date"], "value": round(dd, 2)})
+            return out
+
+        def _high_low_now(points: List[Dict[str, Any]], window: int = 52):
+            """최근 window주 고점, 현재값, 고점 대비 낙폭(%)을 반환한다."""
+            recent = points[-window:]
+            high = max(p["value"] for p in recent)
+            last = points[-1]["value"]
+            dd = round((last / high - 1) * 100, 1) if high else 0.0
+            return high, last, dd
+
+        mu_prices = _fetch_real_weekly("MU")
+        sox_prices = _fetch_real_weekly("^SOX")
 
         # yfinance 실패 시 최소 안전 폴백 (빈 배열 방지)
-        if len(mu_points_10y) < 10:
-            mu_points_10y = [{"date": "2026-08-21", "value": 125.53}]
-        if len(sox_points_10y) < 10:
-            sox_points_10y = [{"date": "2026-08-21", "value": 4731.8}]
+        if len(mu_prices) < 10:
+            mu_prices = [{"date": cur_date_full, "value": 125.53}]
+        if len(sox_prices) < 10:
+            sox_prices = [{"date": cur_date_full, "value": 4731.8}]
+
+        mu_high52, mu_last, mu_dd = _high_low_now(mu_prices)
+        sox_high52, sox_last, sox_dd = _high_low_now(sox_prices)
+        mu_dd_series = _drawdown_series(mu_prices)
+        sox_dd_series = _drawdown_series(sox_prices)
 
         # ────────────────────────────────────────────────────
         # 3~7. 매크로 5대 지표 — 국가 공표 통계 120개월 실데이터
@@ -607,130 +619,206 @@ class SemiCycleEngine:
         cap_util_series_10y = [{"date": r["date"], "value": r["cap_util"]} for r in HISTORICAL_MACRO_SERIES]
         inventory_series_10y = [{"date": r["date"], "value": r["inventory"]} for r in HISTORICAL_MACRO_SERIES]
 
+        last_stat_month = HISTORICAL_MACRO_SERIES[-1]["date"]
+
+        def _last(series: List[Dict[str, Any]]) -> float:
+            return series[-1]["value"]
+
+        def _yoy(series: List[Dict[str, Any]], months: int = 12):
+            """12개월 전 대비 증감률(%). 데이터가 모자라면 None."""
+            if len(series) <= months:
+                return None
+            prev = series[-1 - months]["value"]
+            if not prev:
+                return None
+            return round((series[-1]["value"] / prev - 1) * 100, 1)
+
+        def _moving_avg(series: List[Dict[str, Any]], n: int = 3) -> float:
+            vals = [p["value"] for p in series[-n:]]
+            return round(sum(vals) / len(vals), 1)
+
+        def _yoy_badge(v) -> str:
+            return f"YoY {v:+.1f}%" if v is not None else "YoY 산출불가"
+
+        def _classify(value: float, bull_at: float, bear_at: float, higher_is_better: bool = True) -> Dict[str, str]:
+            """실측값을 임계선과 비교해 호황/중립/둔화 상태와 배지 색상을 판정한다."""
+            if higher_is_better:
+                code = "bullish" if value >= bull_at else ("bearish" if value < bear_at else "neutral")
+            else:
+                code = "bullish" if value <= bull_at else ("bearish" if value > bear_at else "neutral")
+            label = {"bullish": "호황", "neutral": "중립", "bearish": "둔화"}[code]
+            color = {"bullish": "#10b981", "neutral": "#94a3b8", "bearish": "#f43f5e"}[code]
+            return {"status": code, "status_kr": label, "status_badge": label, "color": color}
+
+        def _weekly_points_label(points: List[Dict[str, Any]]) -> str:
+            return f"{len(points)}주(≈{len(points) // 52}Y)"
+
+        def _monthly_points_label(points: List[Dict[str, Any]]) -> str:
+            return f"{len(points)}개월(≈{len(points) // 12}Y)"
+
+        export_now = _last(export_series_10y)
+        export_yoy = _yoy(export_series_10y)
+        price_now = _last(unit_price_series_10y)
+        price_yoy = _yoy(unit_price_series_10y)
+        volume_now = _last(volume_series_10y)
+        volume_yoy = _yoy(volume_series_10y)
+        cap_now = _last(cap_util_series_10y)
+        cap_3m = _moving_avg(cap_util_series_10y)
+        inv_now = _last(inventory_series_10y)
+        inv_3m = _moving_avg(inventory_series_10y)
+        inv_yoy = _yoy(inventory_series_10y)
+        inv_peak = max(p["value"] for p in inventory_series_10y)
+
         signals = [
             {
                 "id": "lead_stock_drawdown",
                 "name": "대장주 낙폭",
-                "sub_name": "마이크론 테크놀로지(MU) · 52주 고점 $157.50",
-                "current_value_formatted": "-20.3%",
-                "current_value": -20.3,
-                "status": "neutral",
-                "status_kr": "중립",
-                "status_badge": "중립",
-                "color": "#94a3b8",
+                "sub_name": f"마이크론 테크놀로지(MU) · 52주 고점 ${mu_high52:,.2f} · 현재 ${mu_last:,.2f}",
+                "current_value_formatted": f"{mu_dd:.1f}%",
+                "current_value": mu_dd,
+                **_classify(mu_dd, bull_at=-10.0, bear_at=-25.0),
                 "chart_color": "#10b981",
-                "description": "대장주 낙폭은 반도체 대표주 마이크론 테크놀로지(MU)가 최근 52주 최고가($157.50)에서 현재 몇 % 하락했는지를 측정합니다. 메모리 3위 기업으로 D램/HBM 업황의 바로미터 역할을 합니다. 0% 부근이면 호황 고점권이며, -20% 이하는 단기 조정 및 중립 신호입니다.",
-                "source": "yfinance 공개 시세 (일별 종가)",
-                "data_points_count": "2500거래일(10Y)",
-                "series_5y": mu_points_10y[-1250:],
-                "series_10y": mu_points_10y,
+                "unit": "%",
+                "description": (
+                    f"대장주 낙폭은 반도체 대표주 마이크론 테크놀로지(MU)가 최근 52주 최고가(${mu_high52:,.2f})에서 "
+                    f"현재 몇 % 하락했는지를 측정합니다. 메모리 3위 기업으로 D램/HBM 업황의 바로미터 역할을 합니다. "
+                    f"−10% 이상이면 호황 고점권(호황), −25% 미만이면 둔화로 판정하며 현재는 {mu_dd:.1f}%입니다. "
+                    f"차트는 각 시점의 직전 52주 고점 대비 낙폭(%)입니다."
+                ),
+                "source": "yfinance 공개 시세 (주간 종가)",
+                "data_points_count": _weekly_points_label(mu_dd_series),
+                "series_5y": mu_dd_series[-260:],
+                "series_10y": mu_dd_series,
             },
             {
                 "id": "sector_index",
                 "name": "업종 지수",
-                "sub_name": "필라델피아 반도체 지수 (SOX) · 52주 고점 대비",
-                "current_value_formatted": "-19.8%",
-                "current_value": -19.8,
-                "status": "neutral",
-                "status_kr": "중립",
-                "status_badge": "중립",
-                "color": "#94a3b8",
+                "sub_name": f"필라델피아 반도체 지수(SOX) · 52주 고점 {sox_high52:,.0f}pt · 현재 {sox_last:,.0f}pt",
+                "current_value_formatted": f"{sox_dd:.1f}%",
+                "current_value": sox_dd,
+                **_classify(sox_dd, bull_at=-10.0, bear_at=-25.0),
                 "chart_color": "#10b981",
-                "description": "필라델피아 반도체 지수(SOX)는 글로벌 30대 반도체 설계·장비·제조사의 벤치마크 지수입니다. 52주 최고점(5,900pt) 대비 현재 -19.8% 조정 구간에 위치하여 건전한 숨고르기(중립)를 시사합니다.",
-                "source": "Nasdaq / yfinance 공식 지수",
-                "data_points_count": "2500거래일(10Y)",
-                "series_5y": sox_points_10y[-1250:],
-                "series_10y": sox_points_10y,
+                "unit": "%",
+                "description": (
+                    f"필라델피아 반도체 지수(SOX)는 글로벌 30대 반도체 설계·장비·제조사의 벤치마크 지수입니다. "
+                    f"52주 최고점({sox_high52:,.0f}pt) 대비 현재 {sox_dd:.1f}% 구간에 있습니다. "
+                    f"−10% 이상은 호황 고점권, −25% 미만은 둔화로 판정합니다. "
+                    f"차트는 각 시점의 직전 52주 고점 대비 낙폭(%)입니다."
+                ),
+                "source": "Nasdaq / yfinance 공식 지수 (주간 종가)",
+                "data_points_count": _weekly_points_label(sox_dd_series),
+                "series_5y": sox_dd_series[-260:],
+                "series_10y": sox_dd_series,
             },
             {
                 "id": "kr_export_amount",
                 "name": "한국 수출액",
-                "sub_name": f"{monthly_dates_10y[-1]} (월간 확정치)",
-                "current_value_formatted": "142억$",
-                "sub_badge": "YoY +52.4%",
-                "current_value": 142.0,
-                "status": "bullish",
-                "status_kr": "호황",
-                "status_badge": "호황",
-                "color": "#10b981",
+                "sub_name": f"{last_stat_month} (월간 확정치)",
+                "current_value_formatted": f"{export_now:.1f}억$",
+                "sub_badge": _yoy_badge(export_yoy),
+                "current_value": export_now,
+                **_classify(export_yoy if export_yoy is not None else 0.0, bull_at=15.0, bear_at=-5.0),
                 "chart_color": "#10b981",
-                "description": "관세청이 공식 집계하는 한국 반도체 월간 수출 실적입니다. HBM 및 고부가가치 D램 수출 호조로 월 140억 달러를 상회하며 역대급 호황 레벨을 유지하고 있습니다.",
+                "unit": "억$",
+                "description": (
+                    f"관세청이 공식 집계하는 한국 반도체 월간 수출 실적입니다. {last_stat_month} 기준 "
+                    f"{export_now:.1f}억 달러로 전년 동월 대비 {export_yoy if export_yoy is not None else 0:+.1f}%입니다. "
+                    f"YoY +15% 이상이면 호황, −5% 미만이면 둔화로 판정합니다."
+                ),
                 "source": "관세청 무역통계 (K-stat)",
-                "data_points_count": "120개월(10Y)",
+                "data_points_count": _monthly_points_label(export_series_10y),
                 "series_5y": export_series_10y[-60:],
                 "series_10y": export_series_10y,
             },
             {
                 "id": "export_unit_price",
                 "name": "수출 단가지수",
-                "sub_name": f"{monthly_dates_10y[-1]} · 2020=100",
-                "current_value_formatted": "242.3",
-                "sub_badge": "YoY +183.1%",
-                "current_value": 242.3,
-                "status": "bullish",
-                "status_kr": "호황",
-                "status_badge": "호황",
-                "color": "#10b981",
+                "sub_name": f"{last_stat_month} · 2020=100",
+                "current_value_formatted": f"{price_now:.1f}",
+                "sub_badge": _yoy_badge(price_yoy),
+                "current_value": price_now,
+                **_classify(price_yoy if price_yoy is not None else 0.0, bull_at=10.0, bear_at=-5.0),
                 "chart_color": "#10b981",
-                "description": "수출 금액을 수출 물량으로 나눈 단가 지표입니다(2020=100). HBM 프리미엄 및 서버용 DDR5 가격 상승으로 단가지수가 242.3을 기록하며 강력한 가격결정력(호황)을 나타냅니다.",
+                "unit": "pt",
+                "description": (
+                    f"수출 금액을 수출 물량으로 나눈 단가 지표입니다(2020=100). {last_stat_month} 기준 "
+                    f"{price_now:.1f}로 전년 동월 대비 {price_yoy if price_yoy is not None else 0:+.1f}%입니다. "
+                    f"YoY +10% 이상이면 가격결정력 확대(호황), −5% 미만이면 둔화로 판정합니다."
+                ),
                 "source": "한국은행 경제통계시스템 (ECOS)",
-                "data_points_count": "120개월(10Y)",
+                "data_points_count": _monthly_points_label(unit_price_series_10y),
                 "series_5y": unit_price_series_10y[-60:],
                 "series_10y": unit_price_series_10y,
             },
             {
                 "id": "real_export_volume",
                 "name": "실질 수출물량",
-                "sub_name": f"{monthly_dates_10y[-1]} · 2020=100 · 가격효과 제거",
-                "current_value_formatted": "213.6",
-                "sub_badge": "YoY +0.6%",
-                "current_value": 213.6,
-                "status": "neutral",
-                "status_kr": "중립",
-                "status_badge": "중립",
-                "color": "#94a3b8",
+                "sub_name": f"{last_stat_month} · 2020=100 · 가격효과 제거",
+                "current_value_formatted": f"{volume_now:.1f}",
+                "sub_badge": _yoy_badge(volume_yoy),
+                "current_value": volume_now,
+                **_classify(volume_yoy if volume_yoy is not None else 0.0, bull_at=10.0, bear_at=-5.0),
                 "chart_color": "#10b981",
-                "description": "가격 변동을 제거한 순수 반도체 수출 수량(물량) 지수입니다. 단가 상승세 대비 출하 물량의 증가율은 전년비 +0.6%로 완만한 상태(중립)를 유지하고 있습니다.",
+                "unit": "pt",
+                "description": (
+                    f"가격 변동을 제거한 순수 반도체 수출 수량(물량) 지수입니다(2020=100). {last_stat_month} 기준 "
+                    f"{volume_now:.1f}로 전년 동월 대비 {volume_yoy if volume_yoy is not None else 0:+.1f}%입니다. "
+                    f"YoY +10% 이상이면 출하 확대(호황), −5% 미만이면 둔화로 판정합니다."
+                ),
                 "source": "한국은행 무역지수",
-                "data_points_count": "120개월(10Y)",
+                "data_points_count": _monthly_points_label(volume_series_10y),
                 "series_5y": volume_series_10y[-60:],
                 "series_10y": volume_series_10y,
             },
             {
                 "id": "capacity_utilization",
                 "name": "가동률지수",
-                "sub_name": f"{monthly_dates_10y[-2]} · 3M 95.5 · 2020=100",
-                "current_value_formatted": "101.7",
-                "current_value": 101.7,
-                "status": "neutral",
-                "status_kr": "중립",
-                "status_badge": "중립",
-                "color": "#94a3b8",
+                "sub_name": f"{last_stat_month} · 3M {cap_3m:.1f} · 2020=100",
+                "current_value_formatted": f"{cap_now:.1f}",
+                "current_value": cap_now,
+                **_classify(cap_now, bull_at=105.0, bear_at=95.0),
                 "chart_color": "#f59e0b",
-                "description": "통계청이 발표하는 반도체 제조공장 가동률 지수(2020=100)입니다. 100을 소폭 상회하는 101.7 수준으로 무리한 증설 없이 적정 가동률(중립)을 유지 중입니다.",
+                "unit": "pt",
+                "description": (
+                    f"통계청이 발표하는 반도체 제조공장 가동률 지수(2020=100)입니다. {last_stat_month} 기준 "
+                    f"{cap_now:.1f}(3개월 평균 {cap_3m:.1f})입니다. 105 이상이면 풀가동(호황), 95 미만이면 "
+                    f"감산 국면(둔화)으로 판정합니다."
+                ),
                 "source": "통계청 광업제조업동향조사",
-                "data_points_count": "120개월(10Y)",
+                "data_points_count": _monthly_points_label(cap_util_series_10y),
                 "series_5y": cap_util_series_10y[-60:],
                 "series_10y": cap_util_series_10y,
             },
             {
                 "id": "inventory_index",
                 "name": "재고지수",
-                "sub_name": f"{monthly_dates_10y[-2]} · 3M 106.8 · 낮을수록 호황",
-                "current_value_formatted": "100.1",
-                "current_value": 100.1,
-                "status": "neutral",
-                "status_kr": "중립",
-                "status_badge": "중립",
-                "color": "#94a3b8",
+                "sub_name": f"{last_stat_month} · 3M {inv_3m:.1f} · 낮을수록 호황",
+                "current_value_formatted": f"{inv_now:.1f}",
+                "sub_badge": _yoy_badge(inv_yoy),
+                "current_value": inv_now,
+                **_classify(inv_yoy if inv_yoy is not None else 0.0, bull_at=-5.0, bear_at=10.0, higher_is_better=False),
                 "chart_color": "#10b981",
-                "description": "제조업 반도체 재고 수준을 나타내며, 낮을수록 재고 소진(호황)을 의미합니다. 2023년 불황기 정점(208.1)에서 100.1로 크게 낮아져 정상 재고 범위(중립)에 안착했습니다.",
+                "unit": "pt",
+                "description": (
+                    f"제조업 반도체 재고 수준을 나타내며, 낮을수록 재고 소진(호황)을 의미합니다. 10년 내 정점 "
+                    f"{inv_peak:.1f}에서 {last_stat_month} 기준 {inv_now:.1f}까지 내려왔고 전년 동월 대비 "
+                    f"{inv_yoy if inv_yoy is not None else 0:+.1f}%입니다. 절대 수준보다 방향이 중요해 YoY로 "
+                    f"판정하며, −5% 이하면 재고 소진(호황), +10% 초과면 재고 누적(둔화)입니다."
+                ),
                 "source": "통계청 제조업재고지수 (KOSIS)",
-                "data_points_count": "120개월(10Y)",
+                "data_points_count": _monthly_points_label(inventory_series_10y),
                 "series_5y": inventory_series_10y[-60:],
                 "series_10y": inventory_series_10y,
             },
         ]
+
+        # 실측 판정 결과 집계 (반도체 지표만 실데이터이므로 반도체 선택 시에만 사용)
+        measured_counts = {
+            "bullish": sum(1 for s in signals if s["status"] == "bullish"),
+            "neutral": sum(1 for s in signals if s["status"] == "neutral"),
+            "bearish": sum(1 for s in signals if s["status"] == "bearish"),
+            "total": len(signals),
+        }
 
 
         # 업종별 기본 메타데이터 맵
@@ -865,6 +953,14 @@ class SemiCycleEngine:
             {"month": "2026-08", "state": "정상호황 (현재)", "color": "#34d399"},
         ]
 
+        # 반도체는 위 7개 지표가 실제 해당 업종 데이터이므로 실측 판정 결과를 그대로 집계한다.
+        # 다른 업종은 아직 전용 시계열이 없어(반도체 지표 공유) 업종 메타의 서술값을 유지한다.
+        signals_count = (
+            measured_counts
+            if industry == "semiconductor"
+            else {"bullish": ind_info["bullish"], "neutral": ind_info["neutral"], "bearish": ind_info["bearish"], "total": 7}
+        )
+
         result = {
             "industry": industry,
             "industry_kr": ind_info["name_kr"],
@@ -873,7 +969,7 @@ class SemiCycleEngine:
             "current_action": ind_info["action"],
             "summary_comment": ind_info["comment"],
             "state_transition": ind_info["transition"],
-            "signals_count": {"bullish": ind_info["bullish"], "neutral": ind_info["neutral"], "bearish": ind_info["bearish"], "total": 7},
+            "signals_count": signals_count,
             "weighted_score": ind_info["score"],
             "score_gauge_pct": ind_info["gauge"],
             "stages": stages,

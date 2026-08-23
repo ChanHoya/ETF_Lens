@@ -71,70 +71,70 @@ const FALLBACK_SIGNALS_DATA: any = {
             id: "lead_stock_drawdown",
             name: "대장주 낙폭",
             sub_name: "마이크론 테크놀로지(MU) · 52주 고점 대비",
-            current_value_formatted: "-20.3%",
-            current_value: -20.3,
+            current_value_formatted: "-7.9%",
+            current_value: -7.9,
             status: "neutral",
             status_kr: "중립",
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#10b981",
-            unit: "$",
-            description: "대장주 낙폭은 반도체 대표주 마이크론 테크놀로지(MU)가 최근 52주 최고가에서 현재 몇 % 하락했는지를 측정합니다.",
+            unit: "%",
+            description: "대장주 낙폭은 반도체 대표주 마이크론 테크놀로지(MU)가 최근 52주 최고가에서 현재 몇 % 하락했는지를 측정합니다. 차트는 각 시점의 직전 52주 고점 대비 낙폭(%)입니다.",
             source: "yfinance 공개 시세 (주간 종가)",
             series_10y: [
-                { date: "2016-09-02", value: 16.1 }, { date: "2016-12-30", value: 22.5 },
-                { date: "2017-03-31", value: 28.3 }, { date: "2017-06-30", value: 30.5 },
-                { date: "2017-09-29", value: 36.4 }, { date: "2017-12-29", value: 43.2 },
-                { date: "2018-03-29", value: 55.8 }, { date: "2018-05-30", value: 64.1 },
-                { date: "2018-09-28", value: 42.5 }, { date: "2018-12-28", value: 32.1 },
-                { date: "2019-03-29", value: 38.5 }, { date: "2019-06-28", value: 33.8 },
-                { date: "2019-09-27", value: 43.1 }, { date: "2019-12-27", value: 53.7 },
-                { date: "2020-03-27", value: 39.2 }, { date: "2020-06-26", value: 48.5 },
-                { date: "2020-09-25", value: 46.8 }, { date: "2020-12-31", value: 73.5 },
-                { date: "2021-03-31", value: 88.4 }, { date: "2021-06-30", value: 84.6 },
-                { date: "2021-09-30", value: 72.1 }, { date: "2021-12-31", value: 93.2 },
-                { date: "2022-03-31", value: 77.9 }, { date: "2022-06-30", value: 56.2 },
-                { date: "2022-09-30", value: 50.5 }, { date: "2022-12-30", value: 50.1 },
-                { date: "2023-03-31", value: 61.5 }, { date: "2023-06-30", value: 66.8 },
-                { date: "2023-09-29", value: 69.5 }, { date: "2023-12-29", value: 85.5 },
-                { date: "2024-03-29", value: 122.5 }, { date: "2024-06-18", value: 157.5 },
-                { date: "2024-09-27", value: 103.4 }, { date: "2024-12-27", value: 89.1 },
-                { date: "2025-03-28", value: 105.2 }, { date: "2025-06-27", value: 142.8 },
-                { date: "2025-09-26", value: 185.5 }, { date: "2025-12-26", value: 350.0 },
-                { date: "2026-03-27", value: 620.5 }, { date: "2026-06-27", value: 1050.2 },
-                { date: "2026-08-21", value: 966.8 },
+                { date: "2016-09-02", value: 0.0 }, { date: "2016-12-30", value: 0.0 },
+                { date: "2017-03-31", value: 0.0 }, { date: "2017-06-30", value: 0.0 },
+                { date: "2017-09-29", value: 0.0 }, { date: "2017-12-29", value: 0.0 },
+                { date: "2018-03-29", value: 0.0 }, { date: "2018-05-30", value: 0.0 },
+                { date: "2018-09-28", value: -33.7 }, { date: "2018-12-28", value: -49.9 },
+                { date: "2019-03-29", value: -39.9 }, { date: "2019-06-28", value: -20.5 },
+                { date: "2019-09-27", value: 0.0 }, { date: "2019-12-27", value: 0.0 },
+                { date: "2020-03-27", value: -27.0 }, { date: "2020-06-26", value: -9.7 },
+                { date: "2020-09-25", value: -12.8 }, { date: "2020-12-31", value: 0.0 },
+                { date: "2021-03-31", value: 0.0 }, { date: "2021-06-30", value: -4.3 },
+                { date: "2021-09-30", value: -18.4 }, { date: "2021-12-31", value: 0.0 },
+                { date: "2022-03-31", value: -16.4 }, { date: "2022-06-30", value: -39.7 },
+                { date: "2022-09-30", value: -45.8 }, { date: "2022-12-30", value: -35.7 },
+                { date: "2023-03-31", value: 0.0 }, { date: "2023-06-30", value: 0.0 },
+                { date: "2023-09-29", value: 0.0 }, { date: "2023-12-29", value: 0.0 },
+                { date: "2024-03-29", value: 0.0 }, { date: "2024-06-18", value: 0.0 },
+                { date: "2024-09-27", value: -34.3 }, { date: "2024-12-27", value: -43.4 },
+                { date: "2025-03-28", value: -33.2 }, { date: "2025-06-27", value: 0.0 },
+                { date: "2025-09-26", value: 0.0 }, { date: "2025-12-26", value: 0.0 },
+                { date: "2026-03-27", value: 0.0 }, { date: "2026-06-27", value: 0.0 },
+                { date: "2026-08-21", value: -7.9 },
             ],
         },
         {
             id: "sector_index",
             name: "업종 지수",
             sub_name: "필라델피아 반도체 지수 (SOX) · 52주 고점 대비",
-            current_value_formatted: "-19.8%",
-            current_value: -19.8,
+            current_value_formatted: "-13.0%",
+            current_value: -13.0,
             status: "neutral",
             status_kr: "중립",
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#10b981",
-            unit: "pt",
-            description: "필라델피아 반도체 지수(SOX)는 글로벌 30대 반도체 설계·장비·제조사의 벤치마크 지수입니다.",
+            unit: "%",
+            description: "필라델피아 반도체 지수(SOX)는 글로벌 30대 반도체 설계·장비·제조사의 벤치마크 지수입니다. 차트는 각 시점의 직전 52주 고점 대비 낙폭(%)입니다.",
             source: "Nasdaq / yfinance 공식 지수",
             series_10y: [
-                { date: "2016-09-02", value: 801 }, { date: "2016-12-30", value: 920 },
-                { date: "2017-06-30", value: 1075 }, { date: "2017-12-29", value: 1318 },
-                { date: "2018-03-29", value: 1290 }, { date: "2018-09-28", value: 1337 },
-                { date: "2018-12-28", value: 1065 }, { date: "2019-06-28", value: 1492 },
-                { date: "2019-12-27", value: 1764 }, { date: "2020-03-23", value: 1233 },
-                { date: "2020-09-25", value: 2111 }, { date: "2020-12-31", value: 2912 },
-                { date: "2021-03-31", value: 3050 }, { date: "2021-06-30", value: 3332 },
-                { date: "2021-12-27", value: 4039 }, { date: "2022-03-31", value: 3288 },
-                { date: "2022-06-30", value: 2590 }, { date: "2022-10-14", value: 2089 },
-                { date: "2023-03-31", value: 3097 }, { date: "2023-06-30", value: 3654 },
-                { date: "2023-12-29", value: 4284 }, { date: "2024-03-29", value: 4890 },
-                { date: "2024-07-10", value: 5904 }, { date: "2024-09-27", value: 5125 },
-                { date: "2024-12-27", value: 4869 }, { date: "2025-06-27", value: 6285 },
-                { date: "2025-12-26", value: 8450 }, { date: "2026-03-27", value: 9820 },
-                { date: "2026-06-27", value: 13500 }, { date: "2026-08-21", value: 11740 },
+                { date: "2016-09-02", value: 0.0 }, { date: "2016-12-30", value: 0.0 },
+                { date: "2017-06-30", value: 0.0 }, { date: "2017-12-29", value: 0.0 },
+                { date: "2018-03-29", value: -2.1 }, { date: "2018-09-28", value: 0.0 },
+                { date: "2018-12-28", value: -20.3 }, { date: "2019-06-28", value: 0.0 },
+                { date: "2019-12-27", value: 0.0 }, { date: "2020-03-23", value: -30.1 },
+                { date: "2020-09-25", value: 0.0 }, { date: "2020-12-31", value: 0.0 },
+                { date: "2021-03-31", value: 0.0 }, { date: "2021-06-30", value: 0.0 },
+                { date: "2021-12-27", value: 0.0 }, { date: "2022-03-31", value: -18.6 },
+                { date: "2022-06-30", value: -35.9 }, { date: "2022-10-14", value: -48.3 },
+                { date: "2023-03-31", value: -5.8 }, { date: "2023-06-30", value: 0.0 },
+                { date: "2023-12-29", value: 0.0 }, { date: "2024-03-29", value: 0.0 },
+                { date: "2024-07-10", value: 0.0 }, { date: "2024-09-27", value: -13.2 },
+                { date: "2024-12-27", value: -17.5 }, { date: "2025-06-27", value: 0.0 },
+                { date: "2025-12-26", value: 0.0 }, { date: "2026-03-27", value: 0.0 },
+                { date: "2026-06-27", value: 0.0 }, { date: "2026-08-21", value: -13.0 },
             ],
         },
         {
@@ -533,11 +533,12 @@ export default function SemiFundamentalSignals() {
                                 ? sig.series_5y
                                 : [{ date: "2026-08", value: 100 }];
 
-                            // 기간 필터링 (일별 거래일 또는 월별 데이터 수에 맞춰 정밀 슬라이스)
-                            const isDaily = fullSeries.length > 300;
-                            const sliceCount = isDaily
-                                ? (curPeriod === "1Y" ? 250 : curPeriod === "3Y" ? 750 : curPeriod === "5Y" ? 1250 : 2500)
-                                : (curPeriod === "1Y" ? 12 : curPeriod === "3Y" ? 36 : curPeriod === "5Y" ? 60 : 120);
+                            // 기간 필터링 — 데이터 개수가 아니라 날짜 포맷으로 주기를 판별한다.
+                            // "YYYY-MM"(7자)은 월간 공표통계, "YYYY-MM-DD"(10자)는 주간 종가 시계열이다.
+                            const isMonthly = typeof fullSeries[0]?.date === "string" && fullSeries[0].date.length === 7;
+                            const sliceCount = isMonthly
+                                ? (curPeriod === "1Y" ? 12 : curPeriod === "3Y" ? 36 : curPeriod === "5Y" ? 60 : 120)
+                                : (curPeriod === "1Y" ? 52 : curPeriod === "3Y" ? 156 : curPeriod === "5Y" ? 260 : 520);
 
                             const displaySeries = fullSeries.slice(-sliceCount);
 
@@ -545,7 +546,7 @@ export default function SemiFundamentalSignals() {
                             const numericValues = displaySeries.map((d: any) => d.value).filter((v: any) => typeof v === "number" && !isNaN(v));
                             const dynamicMin = numericValues.length > 0 ? Math.min(...numericValues) : 0;
                             const dynamicMax = numericValues.length > 0 ? Math.max(...numericValues) : 0;
-                            const dataCountLabel = isDaily ? `${displaySeries.length}거래일` : `${displaySeries.length}개월`;
+                            const dataCountLabel = isMonthly ? `${displaySeries.length}개월` : `${displaySeries.length}주`;
 
                             const formatVal = (v: number) => {
                                 if (v >= 1000) return v.toLocaleString();

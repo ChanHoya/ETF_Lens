@@ -72,3 +72,30 @@ async def test_semi_industries_summary():
     data = await SemiCycleEngine.get_industries_summary()
     assert "industries" in data
     assert len(data["industries"]) >= 10
+
+
+@pytest.mark.asyncio
+async def test_macro_signals_header_matches_series():
+    """헤더 수치가 자기 차트의 마지막 값과 일치해야 한다 (하드코딩 상수 회귀 방지)."""
+    data = await SemiCycleEngine.get_macro_signals(industry="semiconductor")
+    for sig in data["signals"]:
+        last = sig["series_10y"][-1]["value"]
+        assert abs(sig["current_value"] - last) < 0.06, f"{sig['id']}: {sig['current_value']} != {last}"
+
+
+@pytest.mark.asyncio
+async def test_macro_signals_period_slices_differ():
+    """5Y 슬라이스는 10Y보다 짧아야 한다 (기간 버튼이 실제로 구간을 바꾸는지)."""
+    data = await SemiCycleEngine.get_macro_signals(industry="semiconductor")
+    for sig in data["signals"]:
+        assert len(sig["series_5y"]) < len(sig["series_10y"]), sig["id"]
+
+
+@pytest.mark.asyncio
+async def test_macro_signals_count_matches_statuses():
+    """반도체 신호 집계는 개별 지표 판정 결과와 일치해야 한다."""
+    data = await SemiCycleEngine.get_macro_signals(industry="semiconductor")
+    counts = data["signals_count"]
+    for code, key in (("bullish", "bullish"), ("neutral", "neutral"), ("bearish", "bearish")):
+        assert counts[key] == sum(1 for s in data["signals"] if s["status"] == code)
+    assert counts["total"] == len(data["signals"]) == 7
