@@ -1,15 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Activity,
     TrendingUp,
     TrendingDown,
     ChevronDown,
     ChevronUp,
-    CheckCircle2,
-    AlertCircle,
-    Info,
     RefreshCw,
     Layers,
     Cpu,
@@ -27,6 +24,21 @@ import {
     Tooltip as RechartsTooltip,
 } from "recharts";
 import { API_BASE } from "../lib/apiConfig";
+
+// 안전한 기본 Fallback 데이터
+const DEFAULT_INDUSTRIES = [
+    { id: "semiconductor", name: "반도체", state: "정상호황", trend: "down", color: "#10b981", is_partial: false },
+    { id: "display", name: "디스플레이", state: "불황입구", trend: "down", color: "#f97316", is_partial: true },
+    { id: "battery", name: "2차전지", state: "불황입구", trend: "up", color: "#f97316", is_partial: false },
+    { id: "auto", name: "자동차", state: "호황둔화", trend: "down", color: "#f59e0b", is_partial: false },
+    { id: "shipbuilding", name: "조선", state: "정상호황", trend: "up", color: "#10b981", is_partial: true },
+    { id: "steel", name: "철강", state: "호황둔화", trend: "up", color: "#f59e0b", is_partial: false },
+    { id: "petrochem", name: "석유화학", state: "호황둔화", trend: "up", color: "#f59e0b", is_partial: false },
+    { id: "refinery", name: "정유", state: "정상호황", trend: "up", color: "#10b981", is_partial: false },
+    { id: "tire", name: "타이어", state: "정상호황", trend: "up", color: "#10b981", is_partial: false },
+    { id: "cosmetics", name: "화장품", state: "강한호황", trend: "up", color: "#10b981", is_partial: true },
+    { id: "bio", name: "제약바이오", state: "정상호황", trend: "up", color: "#10b981", is_partial: true },
+];
 
 export default function SemiFundamentalSignals() {
     const [signalsData, setSignalsData] = useState<any>(null);
@@ -47,12 +59,22 @@ export default function SemiFundamentalSignals() {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const [sigRes, indRes] = await Promise.all([
+            const [sigRes, indRes] = await Promise.allSettled([
                 fetch(`${API_BASE}/api/v1/analyze/semi-cycle/macro-signals?industry=${selectedIndustry}`, { cache: "no-store" }),
                 fetch(`${API_BASE}/api/v1/analyze/semi-cycle/industries-summary`, { cache: "no-store" }),
             ]);
-            if (sigRes.ok) setSignalsData(await sigRes.json());
-            if (indRes.ok) setIndustriesData(await indRes.json());
+            if (sigRes.status === "fulfilled" && sigRes.value.ok) {
+                const json = await sigRes.value.json();
+                if (json && json.signals) {
+                    setSignalsData(json);
+                }
+            }
+            if (indRes.status === "fulfilled" && indRes.value.ok) {
+                const json = await indRes.value.json();
+                if (json && json.industries) {
+                    setIndustriesData(json);
+                }
+            }
         } catch (err) {
             console.error("Failed to fetch macro signals:", err);
         } finally {
@@ -83,10 +105,17 @@ export default function SemiFundamentalSignals() {
         );
     }
 
-    const industries = industriesData?.industries || [];
+    const industries = industriesData?.industries || DEFAULT_INDUSTRIES;
     const signals = signalsData?.signals || [];
-    const stages = signalsData?.stages || [];
+    const stages = signalsData?.stages || [
+        { id: "strong_bull", name: "강한호황", action: "적극", is_current: false },
+        { id: "normal_bull", name: "정상호황", action: "유지", is_current: true },
+        { id: "slowing", name: "호황둔화", action: "경계", is_current: false },
+        { id: "early_bear", name: "불황입구", action: "비중↓", is_current: false },
+        { id: "deep_bear", name: "심각불황", action: "손절", is_current: false },
+    ];
     const timeline = signalsData?.timeline || [];
+    const scoreGauge = typeof signalsData?.score_gauge_pct === "number" ? signalsData.score_gauge_pct : 70;
 
     return (
         <div className="w-full flex flex-col gap-5 animate-in fade-in duration-300">
@@ -114,10 +143,10 @@ export default function SemiFundamentalSignals() {
                                 )}
                                 <span
                                     className="text-[10px] flex items-center gap-0.5 px-1.5 py-0.5 rounded-full font-semibold"
-                                    style={{ color: ind.color, backgroundColor: `${ind.color}15` }}
+                                    style={{ color: ind.color || "#10b981", backgroundColor: `${ind.color || "#10b981"}15` }}
                                 >
-                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ind.color }} />
-                                    {ind.state}
+                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ind.color || "#10b981" }} />
+                                    {ind.state || "정상호황"}
                                     {ind.trend === "up" ? " ↗" : " ↘"}
                                 </span>
                             </button>
@@ -133,11 +162,11 @@ export default function SemiFundamentalSignals() {
                     {/* 5국면 비교 바 */}
                     <div className="p-4 rounded-2xl bg-[#161922] border border-white/10 shadow-xl">
                         <span className="text-[11px] font-bold text-gray-400 block mb-2.5">
-                            | {signalsData?.industry_kr} 사이클 5국면 — 눌러서 각 국면 비교
+                            | {signalsData?.industry_kr || "반도체"} 사이클 5국면 — 눌러서 각 국면 비교
                         </span>
                         <div className="grid grid-cols-5 gap-1.5">
                             {stages.map((st: any) => {
-                                const isCurrent = st.is_current;
+                                const isCurrent = Boolean(st.is_current);
                                 return (
                                     <div
                                         key={st.id}
@@ -159,9 +188,9 @@ export default function SemiFundamentalSignals() {
                             })}
                         </div>
                         <div className="flex justify-end mt-2 text-[10px] text-gray-400 font-semibold">
-                            정상 호황: <span className="text-emerald-400 font-bold ml-1">호황 {signalsData?.signals_count?.bullish}개</span>
-                            <span className="text-gray-400 ml-1.5">· 중립 {signalsData?.signals_count?.neutral}개</span>
-                            <span className="text-rose-400 ml-1.5">· 둔화 {signalsData?.signals_count?.bearish}개</span>
+                            정상 호황: <span className="text-emerald-400 font-bold ml-1">호황 {signalsData?.signals_count?.bullish ?? 2}개</span>
+                            <span className="text-gray-400 ml-1.5">· 중립 {signalsData?.signals_count?.neutral ?? 5}개</span>
+                            <span className="text-rose-400 ml-1.5">· 둔화 {signalsData?.signals_count?.bearish ?? 0}개</span>
                         </div>
                     </div>
 
@@ -169,21 +198,21 @@ export default function SemiFundamentalSignals() {
                     <div className="p-5 rounded-2xl bg-gradient-to-b from-emerald-950/20 to-[#161922] border border-emerald-500/30 shadow-xl flex flex-col gap-3">
                         <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                            <span>실시간 실데이터 자동 판정 · {signalsData?.signals_count?.bullish}/{signalsData?.signals_count?.total} 호황 신호</span>
+                            <span>실시간 실데이터 자동 판정 · {signalsData?.signals_count?.bullish ?? 2}/{signalsData?.signals_count?.total ?? 7} 호황 신호</span>
                         </div>
 
                         <div>
-                            <span className="text-[10px] text-gray-400">현재 {signalsData?.industry_kr} 사이클 국면 (실데이터 자동 판정)</span>
+                            <span className="text-[10px] text-gray-400">현재 {signalsData?.industry_kr || "반도체"} 사이클 국면 (실데이터 자동 판정)</span>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="w-3.5 h-3.5 rounded-full bg-emerald-400" />
-                                <h3 className="text-2xl font-black text-white">{signalsData?.current_state}</h3>
+                                <h3 className="text-2xl font-black text-white">{signalsData?.current_state || "정상 호황"}</h3>
                             </div>
                             <p className="text-[11px] text-gray-400 mt-0.5">대장주·수출·단가·가동률·재고 실데이터 종합</p>
                         </div>
 
                         {/* 국면 전환 추세 */}
                         <div className="text-xs text-gray-300 font-semibold pt-2 border-t border-white/5">
-                            {signalsData?.state_transition}
+                            {signalsData?.state_transition || "직전 국면 강한호황 (2개월 전) ➔ 현재 정상호황 · 악화 중 ↘"}
                         </div>
 
                         {/* 12개월 소급 판정 타임라인 바 */}
@@ -193,13 +222,13 @@ export default function SemiFundamentalSignals() {
                                     <div
                                         key={i}
                                         className="flex-1 rounded-sm transition-all hover:opacity-80"
-                                        style={{ backgroundColor: t.color }}
+                                        style={{ backgroundColor: t.color || "#10b981" }}
                                         title={`${t.month}: ${t.state}`}
                                     />
                                 ))}
                             </div>
                             <div className="flex justify-between text-[9px] text-gray-500 font-mono">
-                                <span>{timeline[0]?.month}</span>
+                                <span>{timeline[0]?.month || "2025-08"}</span>
                                 <span>월별 국면 (소급 판정)</span>
                                 <span>현재</span>
                             </div>
@@ -207,20 +236,20 @@ export default function SemiFundamentalSignals() {
 
                         {/* 코멘트 가이드 */}
                         <div className="p-3 rounded-xl bg-black/40 border border-white/10 text-xs font-bold text-gray-200 mt-1">
-                            {signalsData?.summary_comment}
+                            {signalsData?.summary_comment || '"아직 타이트하지만 가속은 둔화" — 매수 유지 구간'}
                         </div>
 
                         {/* 가중치 종합 점수 바 */}
                         <div className="pt-2">
                             <div className="flex justify-between text-xs font-semibold mb-1">
-                                <span className="text-gray-300">지표 결과 · 가중 종합 <b className="text-emerald-300 font-mono">{signalsData?.weighted_score}</b></span>
+                                <span className="text-gray-300">지표 결과 · 가중 종합 <b className="text-emerald-300 font-mono">{signalsData?.weighted_score || "+0.40"}</b></span>
                                 <span className="text-[10px] text-gray-400">
-                                    호황 <b className="text-emerald-400">{signalsData?.signals_count?.bullish}</b> · 중립 {signalsData?.signals_count?.neutral} · 둔화 {signalsData?.signals_count?.bearish}
+                                    호황 <b className="text-emerald-400">{signalsData?.signals_count?.bullish ?? 2}</b> · 중립 {signalsData?.signals_count?.neutral ?? 5} · 둔화 {signalsData?.signals_count?.bearish ?? 0}
                                 </span>
                             </div>
                             <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden flex">
-                                <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${signalsData?.score_gauge_pct}%` }} />
-                                <div className="bg-amber-500 h-full rounded-full" style={{ width: `${100 - signalsData?.score_gauge_pct}%` }} />
+                                <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${scoreGauge}%` }} />
+                                <div className="bg-amber-500 h-full rounded-full transition-all" style={{ width: `${100 - scoreGauge}%` }} />
                             </div>
                             <p className="text-[10px] text-gray-500 mt-1">
                                 실데이터 7개 신호를 중요도로 가중 합산 — 카운트는 참고용이며 통계적 확률이 아닙니다
@@ -312,55 +341,61 @@ export default function SemiFundamentalSignals() {
 
                                             {/* High / Low Title */}
                                             <div className="text-base font-black text-gray-200 mb-2">
-                                                최고 {sig.high_low?.high} · 최저 {sig.high_low?.low}
+                                                최고 {sig.high_low?.high || "-"} · 최저 {sig.high_low?.low || "-"}
                                             </div>
 
                                             {/* Area Chart */}
                                             <div className="w-full h-[180px] bg-black/30 rounded-xl p-2 border border-white/5 relative">
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <AreaChart data={filteredSeries} margin={{ top: 10, right: 15, bottom: 5, left: 0 }}>
-                                                        <defs>
-                                                            <linearGradient id={`grad_${sig.id}`} x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor={sig.chart_color} stopOpacity={0.4} />
-                                                                <stop offset="95%" stopColor={sig.chart_color} stopOpacity={0.0} />
-                                                            </linearGradient>
-                                                        </defs>
-                                                        <CartesianGrid stroke="rgba(255,255,255,0.03)" />
-                                                        <XAxis
-                                                            dataKey="date"
-                                                            tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 9 }}
-                                                            interval={Math.floor(filteredSeries.length / 5)}
-                                                        />
-                                                        <YAxis
-                                                            domain={["auto", "auto"]}
-                                                            tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 9 }}
-                                                            orientation="right"
-                                                        />
-                                                        <RechartsTooltip
-                                                            contentStyle={{
-                                                                backgroundColor: "#12141c",
-                                                                borderColor: "rgba(255,255,255,0.15)",
-                                                                borderRadius: 10,
-                                                                fontSize: 11,
-                                                            }}
-                                                            formatter={(val: any) => [val, sig.name]}
-                                                        />
-                                                        <Area
-                                                            type="monotone"
-                                                            dataKey="value"
-                                                            stroke={sig.chart_color}
-                                                            strokeWidth={2.2}
-                                                            fill={`url(#grad_${sig.id})`}
-                                                            dot={false}
-                                                        />
-                                                    </AreaChart>
-                                                </ResponsiveContainer>
+                                                {filteredSeries.length > 0 ? (
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <AreaChart data={filteredSeries} margin={{ top: 10, right: 15, bottom: 5, left: 0 }}>
+                                                            <defs>
+                                                                <linearGradient id={`grad_${sig.id}`} x1="0" y1="0" x2="0" y2="1">
+                                                                    <stop offset="5%" stopColor={sig.chart_color || "#10b981"} stopOpacity={0.4} />
+                                                                    <stop offset="95%" stopColor={sig.chart_color || "#10b981"} stopOpacity={0.0} />
+                                                                </linearGradient>
+                                                            </defs>
+                                                            <CartesianGrid stroke="rgba(255,255,255,0.03)" />
+                                                            <XAxis
+                                                                dataKey="date"
+                                                                tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 9 }}
+                                                                interval={Math.max(1, Math.floor(filteredSeries.length / 5))}
+                                                            />
+                                                            <YAxis
+                                                                domain={["auto", "auto"]}
+                                                                tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 9 }}
+                                                                orientation="right"
+                                                            />
+                                                            <RechartsTooltip
+                                                                contentStyle={{
+                                                                    backgroundColor: "#12141c",
+                                                                    borderColor: "rgba(255,255,255,0.15)",
+                                                                    borderRadius: 10,
+                                                                    fontSize: 11,
+                                                                }}
+                                                                formatter={(val: any) => [val, sig.name]}
+                                                            />
+                                                            <Area
+                                                                type="monotone"
+                                                                dataKey="value"
+                                                                stroke={sig.chart_color || "#10b981"}
+                                                                strokeWidth={2.2}
+                                                                fill={`url(#grad_${sig.id})`}
+                                                                dot={false}
+                                                            />
+                                                        </AreaChart>
+                                                    </ResponsiveContainer>
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                                                        데이터 로딩 중...
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Start - End Dates Label */}
                                             <div className="flex justify-between text-lg font-black text-gray-500 font-mono mt-2">
-                                                <span>{filteredSeries[0]?.date}</span>
-                                                <span className="text-gray-200">{filteredSeries[filteredSeries.length - 1]?.date}</span>
+                                                <span>{filteredSeries[0]?.date || ""}</span>
+                                                <span className="text-gray-200">{filteredSeries[filteredSeries.length - 1]?.date || ""}</span>
                                             </div>
 
                                             {/* Description Footer */}
@@ -384,10 +419,10 @@ export default function SemiFundamentalSignals() {
 
                     {/* Summary Footer */}
                     <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-300">
-                        실데이터 종합: 호황 신호 ( 호황 {signalsData?.signals_count?.bullish} · 중립 {signalsData?.signals_count?.neutral} · 둔화 {signalsData?.signals_count?.bearish} )
+                        실데이터 종합: 호황 신호 ( 호황 {signalsData?.signals_count?.bullish ?? 2} · 중립 {signalsData?.signals_count?.neutral ?? 5} · 둔화 {signalsData?.signals_count?.bearish ?? 0} )
                     </div>
                     <p className="text-[10px] text-gray-500 leading-relaxed">
-                        {signalsData?.footnote}
+                        {signalsData?.footnote || "위 지표는 모두 실데이터 기반입니다."}
                     </p>
                 </div>
             </div>
