@@ -57,18 +57,44 @@ const FALLBACK_SIGNALS_DATA: any = {
         {
             id: "lead_stock_drawdown",
             name: "대장주 낙폭",
-            sub_name: "마이크론 테크놀로지(MU) · 52주 고점 대비",
-            current_value_formatted: "-7.9%",
-            current_value: -7.9,
+            sub_name: "마이크론 테크놀로지(MU) · 52주 고점 $1,133.82 · 현재 $966.78",
+            current_value_formatted: "-14.7%",
+            current_value: -14.7,
             status: "neutral",
             status_kr: "중립",
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#10b981",
-            unit: "%",
-            description: "대장주 낙폭은 반도체 대표주 마이크론 테크놀로지(MU)가 최근 52주 최고가에서 현재 몇 % 하락했는지를 측정합니다. 차트는 각 시점의 직전 52주 고점 대비 낙폭(%)입니다.",
+            unit: "$",
+            price_unit: "$",
+            dd_unit: "%",
+            has_drawdown_toggle: true,
+            description: "마이크론 테크놀로지(MU)의 실제 주가 궤적 및 52주 최고가 대비 하락률을 확인합니다. 기본 차트는 실제 주가($)이며, 토글로 고점 대비 낙폭(%)을 볼 수 있습니다.",
             source: "yfinance 공개 시세 (주간 종가)",
             series_10y: [
+                { date: "2016-09-02", value: 16.1 }, { date: "2016-12-30", value: 22.5 },
+                { date: "2017-03-31", value: 28.3 }, { date: "2017-06-30", value: 30.5 },
+                { date: "2017-09-29", value: 36.4 }, { date: "2017-12-29", value: 43.2 },
+                { date: "2018-03-29", value: 55.8 }, { date: "2018-05-30", value: 64.1 },
+                { date: "2018-09-28", value: 42.5 }, { date: "2018-12-28", value: 32.1 },
+                { date: "2019-03-29", value: 38.5 }, { date: "2019-06-28", value: 33.8 },
+                { date: "2019-09-27", value: 43.1 }, { date: "2019-12-27", value: 53.7 },
+                { date: "2020-03-27", value: 39.2 }, { date: "2020-06-26", value: 48.5 },
+                { date: "2020-09-25", value: 46.8 }, { date: "2020-12-31", value: 73.5 },
+                { date: "2021-03-31", value: 88.4 }, { date: "2021-06-30", value: 84.6 },
+                { date: "2021-09-30", value: 72.1 }, { date: "2021-12-31", value: 93.2 },
+                { date: "2022-03-31", value: 77.9 }, { date: "2022-06-30", value: 56.2 },
+                { date: "2022-09-30", value: 50.5 }, { date: "2022-12-30", value: 50.1 },
+                { date: "2023-03-31", value: 61.5 }, { date: "2023-06-30", value: 66.8 },
+                { date: "2023-09-29", value: 69.5 }, { date: "2023-12-29", value: 85.5 },
+                { date: "2024-03-29", value: 122.5 }, { date: "2024-06-18", value: 157.5 },
+                { date: "2024-09-27", value: 103.4 }, { date: "2024-12-27", value: 89.1 },
+                { date: "2025-03-28", value: 105.2 }, { date: "2025-06-27", value: 142.8 },
+                { date: "2025-09-26", value: 185.5 }, { date: "2025-12-26", value: 350.0 },
+                { date: "2026-03-27", value: 620.5 }, { date: "2026-06-27", value: 1050.2 },
+                { date: "2026-08-21", value: 966.8 },
+            ],
+            dd_series_10y: [
                 { date: "2016-09-02", value: 0.0 }, { date: "2016-12-30", value: 0.0 },
                 { date: "2017-03-31", value: 0.0 }, { date: "2017-06-30", value: 0.0 },
                 { date: "2017-09-29", value: 0.0 }, { date: "2017-12-29", value: 0.0 },
@@ -89,7 +115,7 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2025-03-28", value: -33.2 }, { date: "2025-06-27", value: 0.0 },
                 { date: "2025-09-26", value: 0.0 }, { date: "2025-12-26", value: 0.0 },
                 { date: "2026-03-27", value: 0.0 }, { date: "2026-06-27", value: 0.0 },
-                { date: "2026-08-21", value: -7.9 },
+                { date: "2026-08-21", value: -14.7 },
             ],
         },
         {
@@ -103,10 +129,30 @@ const FALLBACK_SIGNALS_DATA: any = {
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#10b981",
-            unit: "%",
-            description: "필라델피아 반도체 지수(SOX)는 글로벌 30대 반도체 설계·장비·제조사의 벤치마크 지수입니다. 차트는 각 시점의 직전 52주 고점 대비 낙폭(%)입니다.",
+            unit: "pt",
+            price_unit: "pt",
+            dd_unit: "%",
+            has_drawdown_toggle: true,
+            description: "필라델피아 반도체 지수(SOX)의 실제 지수 궤적 및 52주 최고가 대비 하락률을 확인합니다.",
             source: "Nasdaq / yfinance 공식 지수",
             series_10y: [
+                { date: "2016-09-02", value: 801 }, { date: "2016-12-30", value: 920 },
+                { date: "2017-06-30", value: 1075 }, { date: "2017-12-29", value: 1318 },
+                { date: "2018-03-29", value: 1290 }, { date: "2018-09-28", value: 1337 },
+                { date: "2018-12-28", value: 1065 }, { date: "2019-06-28", value: 1492 },
+                { date: "2019-12-27", value: 1764 }, { date: "2020-03-23", value: 1233 },
+                { date: "2020-09-25", value: 2111 }, { date: "2020-12-31", value: 2912 },
+                { date: "2021-03-31", value: 3050 }, { date: "2021-06-30", value: 3332 },
+                { date: "2021-12-27", value: 4039 }, { date: "2022-03-31", value: 3288 },
+                { date: "2022-06-30", value: 2590 }, { date: "2022-10-14", value: 2089 },
+                { date: "2023-03-31", value: 3097 }, { date: "2023-06-30", value: 3654 },
+                { date: "2023-12-29", value: 4284 }, { date: "2024-03-29", value: 4890 },
+                { date: "2024-07-10", value: 5904 }, { date: "2024-09-27", value: 5125 },
+                { date: "2024-12-27", value: 4869 }, { date: "2025-06-27", value: 6285 },
+                { date: "2025-12-26", value: 8450 }, { date: "2026-03-27", value: 9820 },
+                { date: "2026-06-27", value: 13500 }, { date: "2026-08-21", value: 11740 },
+            ],
+            dd_series_10y: [
                 { date: "2016-09-02", value: 0.0 }, { date: "2016-12-30", value: 0.0 },
                 { date: "2017-06-30", value: 0.0 }, { date: "2017-12-29", value: 0.0 },
                 { date: "2018-03-29", value: -2.1 }, { date: "2018-09-28", value: 0.0 },
@@ -292,6 +338,7 @@ const FALLBACK_SIGNALS_DATA: any = {
 export default function SemiFundamentalSignals({ industry = "semiconductor" }: { industry?: string }) {
     const [signalsData, setSignalsData] = useState<any>(FALLBACK_SIGNALS_DATA);
     const [expandedSignalId, setExpandedSignalId] = useState<string | null>("lead_stock_drawdown");
+    const [chartModes, setChartModes] = useState<{ [key: string]: "price" | "drawdown" }>({});
     const [periodFilter, setPeriodFilter] = useState<{ [key: string]: "1Y" | "3Y" | "5Y" | "10Y" }>({
         lead_stock_drawdown: "5Y",
         sector_index: "5Y",
@@ -329,6 +376,11 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
         setPeriodFilter((prev) => ({ ...prev, [signalId]: p }));
     };
 
+    const handleChartModeChange = (signalId: string, mode: "price" | "drawdown", e: React.MouseEvent) => {
+        e.stopPropagation();
+        setChartModes((prev) => ({ ...prev, [signalId]: mode }));
+    };
+
     const currentSignalsData = signalsData || FALLBACK_SIGNALS_DATA;
     const signals = currentSignalsData?.signals || [];
     const stages = currentSignalsData?.stages || [];
@@ -336,7 +388,6 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
 
     const signalsCount = currentSignalsData?.signals_count || { bullish: 2, neutral: 5, bearish: 0, total: 7 };
     const totalCount = signalsCount.total || 7;
-    // 국면 색상은 백엔드 실측 판정 결과를 따른다 (호황이 아닐 수도 있으므로 emerald 고정 금지)
     const phaseColor = currentSignalsData?.phase_color || "#10b981";
     const bullPct = Math.round((signalsCount.bullish / totalCount) * 100);
     const neutralPct = Math.round((signalsCount.neutral / totalCount) * 100);
@@ -344,11 +395,8 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
 
     return (
         <div className="w-full flex flex-col gap-5 animate-in fade-in duration-300">
-            {/* Main 2-Split Grid View */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                {/* LEFT: 5단계 국면 진단 & 실데이터 종합 스코어카드 (5 Cols) */}
                 <div className="lg:col-span-5 flex flex-col gap-4">
-                    {/* 5국면 비교 바 */}
                     <div className="p-4 rounded-2xl bg-[#161922] border border-white/10 shadow-xl">
                         <span className="text-[11px] font-bold text-gray-400 block mb-2.5">
                             | {currentSignalsData?.industry_kr} 사이클 5국면 — 각 국면 비교
@@ -377,98 +425,89 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                                 );
                             })}
                         </div>
-                        <div className="flex justify-end mt-2 text-[10px] text-gray-400 font-semibold">
-                            {currentSignalsData?.current_state}: <span className="text-emerald-400 font-bold ml-1">호황 {signalsCount.bullish}개</span>
-                            <span className="text-amber-400 ml-1.5">· 중립 {signalsCount.neutral}개</span>
-                            <span className="text-rose-400 ml-1.5">· 둔화 {signalsCount.bearish}개</span>
-                        </div>
                     </div>
 
-                    {/* 실시간 실데이터 자동 판정 카드 */}
-                    <div className="p-5 rounded-2xl bg-[#161922] border shadow-xl flex flex-col gap-3" style={{ borderColor: `${phaseColor}4d` }}>
-                        <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: phaseColor }}>
-                            <span className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: phaseColor }} />
-                            <span>실시간 실데이터 자동 판정 · {signalsCount.bullish}/{totalCount} 호황 신호</span>
-                        </div>
-
-                        <div>
-                            <span className="text-[10px] text-gray-400">현재 {currentSignalsData?.industry_kr} 사이클 국면 (실데이터 자동 판정)</span>
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: phaseColor }} />
-                                <h3 className="text-2xl font-black text-white">{currentSignalsData?.current_state}</h3>
-                            </div>
-                            <p className="text-[11px] text-gray-400 mt-0.5">
-                                연동된 실데이터 {totalCount}개 지표를 가중 합산한 자동 판정 · {currentSignalsData?.current_action}
-                            </p>
-                        </div>
-
-                        {/* 국면 전환 추세 */}
-                        <div className="text-xs text-gray-300 font-semibold pt-2 border-t border-white/5">
-                            {currentSignalsData?.state_transition}
-                        </div>
-
-                        {/* 12개월 소급 판정 타임라인 바 (국면별 개별 컬러 렌더링) */}
-                        <div className="flex flex-col gap-1">
-                            <div className="flex gap-1 h-3.5 rounded-md overflow-hidden bg-black/40 p-0.5 border border-white/10">
-                                {timeline.map((t: any, i: number) => (
-                                    <div
-                                        key={i}
-                                        className="flex-1 rounded-sm transition-all hover:opacity-80 cursor-pointer"
-                                        style={{ backgroundColor: t.color || "#10b981" }}
-                                        title={`${t.month}: ${t.state}`}
-                                    />
-                                ))}
-                            </div>
-                            <div className="flex justify-between text-[9px] text-gray-500 font-mono">
-                                <span>{timeline[0]?.month || "2025-08"}</span>
-                                <span className="text-gray-400">월별 국면 (소급 판정)</span>
-                                <span className="text-emerald-400 font-bold">현재</span>
-                            </div>
-                        </div>
-
-                        {/* 코멘트 가이드 */}
-                        <div className="p-3 rounded-xl bg-black/40 border border-white/10 text-xs font-bold text-gray-200 mt-1">
-                            {currentSignalsData?.summary_comment}
-                        </div>
-
-                        {/* 가중치 종합 점수 3색 바 */}
-                        <div className="pt-2">
-                            <div className="flex justify-between text-xs font-semibold mb-1">
-                                <span className="text-gray-300">지표 결과 · 가중 종합 <b className="text-emerald-300 font-mono">{currentSignalsData?.weighted_score ?? "+0.40"}</b></span>
-                                <span className="text-[10px] text-gray-400">
-                                    호황 <b className="text-emerald-400">{signalsCount.bullish}</b> · 중립 <b className="text-amber-400">{signalsCount.neutral}</b> · 둔화 <b className="text-rose-400">{signalsCount.bearish}</b>
+                    <div className="p-5 rounded-2xl bg-[#161922] border border-white/10 shadow-xl flex flex-col gap-4">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <span className="text-xs font-bold text-amber-400 tracking-wider">
+                                    실시간 실데이터 자동 판정 · {signalsCount.bullish}/{totalCount} 호황 신호
                                 </span>
+                                <span className="text-[11px] text-gray-400 block mt-1">
+                                    현재 {currentSignalsData?.industry_kr} 사이클 국면 (실데이터 자동 판정)
+                                </span>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: phaseColor }} />
+                                    <h3 className="text-2xl font-black text-white">{currentSignalsData?.current_state}</h3>
+                                </div>
                             </div>
-                            <div className="w-full bg-white/5 h-2.5 rounded-full overflow-hidden flex gap-0.5 p-0.5 bg-black/30 border border-white/10">
-                                {bullPct > 0 && <div className="bg-emerald-500 h-full rounded-l-full transition-all" style={{ width: `${bullPct}%` }} title={`호황 ${bullPct}%`} />}
-                                {neutralPct > 0 && <div className="bg-amber-500 h-full transition-all" style={{ width: `${neutralPct}%` }} title={`중립 ${neutralPct}%`} />}
-                                {bearPct > 0 && <div className="bg-rose-500 h-full rounded-r-full transition-all" style={{ width: `${bearPct}%` }} title={`둔화 ${bearPct}%`} />}
+                            <span
+                                className="px-2.5 py-1 rounded-xl text-xs font-bold border"
+                                style={{ backgroundColor: `${phaseColor}20`, color: phaseColor, borderColor: `${phaseColor}50` }}
+                            >
+                                {currentSignalsData?.current_action}
+                            </span>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5 pt-1 border-t border-white/5">
+                            <div className="flex justify-between text-[11px] font-mono">
+                                <span className="text-emerald-400 font-bold">호황 {signalsCount.bullish}개 ({bullPct}%)</span>
+                                <span className="text-gray-400 font-bold">중립 {signalsCount.neutral}개 ({neutralPct}%)</span>
+                                <span className="text-rose-400 font-bold">둔화 {signalsCount.bearish}개 ({bearPct}%)</span>
                             </div>
-                            <p className="text-[10px] text-gray-500 mt-1">
-                                실데이터 {totalCount}개 신호를 중요도로 가중 합산 (3개월 평활) — 카운트는 참고용이며 통계적 확률이 아닙니다
-                            </p>
+                            <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden flex">
+                                <div style={{ width: `${bullPct}%` }} className="bg-emerald-500 h-full transition-all duration-500" />
+                                <div style={{ width: `${neutralPct}%` }} className="bg-slate-500 h-full transition-all duration-500" />
+                                <div style={{ width: `${bearPct}%` }} className="bg-rose-500 h-full transition-all duration-500" />
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-gray-300 leading-relaxed bg-white/[0.03] p-3 rounded-xl border border-white/5 font-mono">
+                            {currentSignalsData?.summary_comment}
+                        </p>
+
+                        <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
+                            <span className="text-[11px] font-bold text-gray-400 flex items-center justify-between">
+                                <span>최근 13개월 국면 흐름</span>
+                                <span className="text-[10px] text-gray-500">{currentSignalsData?.state_transition}</span>
+                            </span>
+                            <div className="grid grid-cols-13 gap-1">
+                                {timeline.map((tl: any, i: number) => {
+                                    const isLast = i === timeline.length - 1;
+                                    const shortMonth = tl.month ? tl.month.split("-")[1] : `${i + 1}`;
+                                    return (
+                                        <div
+                                            key={tl.month || i}
+                                            className={`flex flex-col items-center p-1 rounded-lg border text-center transition-all ${
+                                                isLast ? "border-amber-400 shadow-md ring-1 ring-amber-400/50" : "border-white/5"
+                                            }`}
+                                            style={{ backgroundColor: `${tl.color}20` }}
+                                            title={`${tl.month}: ${tl.state}`}
+                                        >
+                                            <span className="text-[9px] font-mono text-gray-400">{shortMonth}</span>
+                                            <span className="w-1.5 h-1.5 rounded-full my-0.5" style={{ backgroundColor: tl.color }} />
+                                            {isLast && <span className="text-[7px] text-amber-300 font-bold">현재</span>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* RIGHT: 7대 실데이터 신호 아코디언 및 인터랙티브 차트 (7 Cols) */}
-                <div className="lg:col-span-7 p-5 rounded-2xl bg-[#161922] border border-white/10 shadow-xl flex flex-col gap-3">
-                    {/* Header */}
-                    <div className="flex justify-between items-center pb-2 border-b border-white/10">
-                        <h4 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
-                            <span className="w-1.5 h-4 bg-emerald-400 rounded-full" />
-                            실데이터 신호 (실시간)
-                        </h4>
-                        <span className="px-2 py-0.5 rounded bg-emerald-500 text-black text-[10px] font-black uppercase tracking-wider">
+                <div className="lg:col-span-7 flex flex-col gap-3 p-5 rounded-2xl bg-[#161922] border border-white/10 shadow-xl">
+                    <div className="flex justify-between items-center pb-3 border-b border-white/10">
+                        <div className="flex items-center gap-2">
+                            <span className="w-2 h-4 rounded-full bg-emerald-500" />
+                            <h4 className="text-base font-bold text-white">실데이터 신호 (실시간)</h4>
+                        </div>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold font-mono">
                             LIVE
                         </span>
                     </div>
 
-                    {/* Signals Accordion List */}
                     <div className="divide-y divide-white/5">
                         {signals.map((sig: any) => {
-                            // 공표통계가 연동되지 않은 업종의 지표는 다른 업종 수치를 빌려오지 않고
-                            // 미연동 행으로만 표시한다 (차트·기간 필터 없음).
                             if (sig.available === false) {
                                 return (
                                     <div key={sig.id} className="py-2.5">
@@ -487,35 +526,44 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
 
                             const isExpanded = expandedSignalId === sig.id;
                             const curPeriod = periodFilter[sig.id] || "5Y";
-                            const fullSeries = (sig.series_10y && sig.series_10y.length > 0)
+                            const curMode = chartModes[sig.id] || "price";
+                            const hasToggle = !!(sig.has_drawdown_toggle || sig.dd_series_10y);
+
+                            const priceSeries = (sig.series_10y && sig.series_10y.length > 0)
                                 ? sig.series_10y
                                 : (sig.series_5y && sig.series_5y.length > 0)
                                 ? sig.series_5y
                                 : [{ date: "2026-08", value: 100 }];
 
-                            // 기간 필터링 — 데이터 개수가 아니라 날짜 포맷으로 주기를 판별한다.
-                            // "YYYY-MM"(7자)은 월간 공표통계, "YYYY-MM-DD"(10자)는 주간 종가 시계열이다.
-                            const isMonthly = typeof fullSeries[0]?.date === "string" && fullSeries[0].date.length === 7;
+                            const ddSeries = (sig.dd_series_10y && sig.dd_series_10y.length > 0)
+                                ? sig.dd_series_10y
+                                : (sig.dd_series_5y && sig.dd_series_5y.length > 0)
+                                ? sig.dd_series_5y
+                                : priceSeries;
+
+                            const activeSeries = (curMode === "drawdown" && hasToggle) ? ddSeries : priceSeries;
+                            const activeUnit = (curMode === "drawdown" && hasToggle) ? "%" : (sig.unit || "");
+                            const activeColor = (curMode === "drawdown" && hasToggle) ? "#f59e0b" : (sig.chart_color || "#10b981");
+
+                            const isMonthly = typeof activeSeries[0]?.date === "string" && activeSeries[0].date.length === 7;
                             const sliceCount = isMonthly
                                 ? (curPeriod === "1Y" ? 12 : curPeriod === "3Y" ? 36 : curPeriod === "5Y" ? 60 : 120)
                                 : (curPeriod === "1Y" ? 52 : curPeriod === "3Y" ? 156 : curPeriod === "5Y" ? 260 : 520);
 
-                            const displaySeries = fullSeries.slice(-sliceCount);
+                            const displaySeries = activeSeries.slice(-sliceCount);
 
-                            // 실시간 선택 기간 기반 동적 최고치 / 최저치 연산
                             const numericValues = displaySeries.map((d: any) => d.value).filter((v: any) => typeof v === "number" && !isNaN(v));
                             const dynamicMin = numericValues.length > 0 ? Math.min(...numericValues) : 0;
                             const dynamicMax = numericValues.length > 0 ? Math.max(...numericValues) : 0;
                             const dataCountLabel = isMonthly ? `${displaySeries.length}개월` : `${displaySeries.length}주`;
 
                             const formatVal = (v: number) => {
-                                if (v >= 1000) return v.toLocaleString();
-                                return v.toString();
+                                if (Math.abs(v) >= 1000) return `${v.toLocaleString()} ${activeUnit}`.trim();
+                                return `${v} ${activeUnit}`.trim();
                             };
 
                             return (
                                 <div key={sig.id} className="py-2.5 transition-colors">
-                                    {/* Accordion Header Row */}
                                     <div
                                         onClick={() => toggleAccordion(sig.id)}
                                         className="flex justify-between items-center cursor-pointer p-2 rounded-xl hover:bg-white/[0.03] transition-all"
@@ -529,7 +577,6 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                                                 {isExpanded ? <ChevronUp className="w-3 h-3 text-indigo-400" /> : <ChevronDown className="w-3 h-3 text-gray-500" />}
                                             </span>
                                         </div>
-
                                         <div className="flex items-center gap-2 shrink-0">
                                             <span className="text-sm md:text-base font-mono font-black text-white">
                                                 {sig.current_value_formatted}
@@ -542,16 +589,37 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                                         </div>
                                     </div>
 
-                                    {/* Accordion Expanded Content */}
                                     {isExpanded && (
                                         <div className="mt-3 p-4 rounded-2xl bg-black/40 border border-white/10 animate-in slide-in-from-top-2 fade-in duration-200">
-                                            {/* Top Sub Header & Period Filter */}
                                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
                                                 <span className="text-[11px] text-gray-400 font-mono">
                                                     {sig.sub_name} ({sig.source})
                                                 </span>
-                                                <div className="flex items-center gap-2">
-                                                    {/* Period Selector Toggle */}
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    {hasToggle && (
+                                                        <div className="flex items-center bg-black/60 border border-white/10 rounded-lg p-0.5 gap-0.5">
+                                                            <button
+                                                                onClick={(e) => handleChartModeChange(sig.id, "price", e)}
+                                                                className={`px-2 py-0.5 text-[10px] font-bold rounded transition-all ${
+                                                                    curMode === "price"
+                                                                        ? "bg-emerald-600 text-white shadow"
+                                                                        : "text-gray-400 hover:text-white"
+                                                                }`}
+                                                            >
+                                                                실제 {sig.unit === "pt" ? "지수" : "주가"} ({sig.unit || "$"})
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => handleChartModeChange(sig.id, "drawdown", e)}
+                                                                className={`px-2 py-0.5 text-[10px] font-bold rounded transition-all ${
+                                                                    curMode === "drawdown"
+                                                                        ? "bg-amber-600 text-white shadow"
+                                                                        : "text-gray-400 hover:text-white"
+                                                                }`}
+                                                            >
+                                                                고점대비 낙폭 (%)
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                     <div className="flex items-center bg-black/60 border border-white/10 rounded-lg p-0.5 gap-1">
                                                         {(["1Y", "3Y", "5Y", "10Y"] as const).map((p) => (
                                                             <button
@@ -571,19 +639,17 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                                                 </div>
                                             </div>
 
-                                            {/* Real-time Dynamic High / Low Title */}
                                             <div className="text-base font-black text-gray-200 mb-2">
                                                 최고 {formatVal(dynamicMax)} · 최저 {formatVal(dynamicMin)}
                                             </div>
 
-                                            {/* Area Chart */}
                                             <div className="w-full h-[180px] bg-black/30 rounded-xl p-2 border border-white/5 relative">
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <AreaChart data={displaySeries} margin={{ top: 10, right: 15, bottom: 5, left: 0 }}>
                                                         <defs>
-                                                            <linearGradient id={`grad_${sig.id}`} x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor={sig.chart_color || "#10b981"} stopOpacity={0.4} />
-                                                                <stop offset="95%" stopColor={sig.chart_color || "#10b981"} stopOpacity={0.0} />
+                                                            <linearGradient id={`grad_${sig.id}_${curMode}`} x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor={activeColor} stopOpacity={0.4} />
+                                                                <stop offset="95%" stopColor={activeColor} stopOpacity={0.0} />
                                                             </linearGradient>
                                                         </defs>
                                                         <CartesianGrid stroke="rgba(255,255,255,0.03)" />
@@ -604,12 +670,12 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                                                                 borderRadius: 10,
                                                                 fontSize: 11,
                                                             }}
-                                                            formatter={(val: any) => [`${val} ${sig.unit || ""}`, sig.name]}
+                                                            formatter={(val: any) => [`${val} ${activeUnit}`, sig.name]}
                                                         />
                                                         <Area
                                                             type="monotone"
                                                             dataKey="value"
-                                                            stroke={sig.chart_color || "#10b981"}
+                                                            stroke={activeColor}
                                                             strokeWidth={2.2}
                                                             fill={`url(#grad_${sig.id})`}
                                                             dot={false}

@@ -289,8 +289,9 @@ def _drawdown_signal(
     source: str,
     weight: float,
     value_fmt: str,
+    unit: str = "$",
 ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
-    """주간 종가 시계열에서 '52주 고점 대비 낙폭' 지표와 소급 판정용 월별 메트릭을 만든다."""
+    """주간 종가 시계열에서 '실제 주가/지수' 및 '52주 고점 대비 낙폭' 지표를 모두 제공한다."""
     if len(prices) < 60:
         return _unavailable_signal(
             sid, name,
@@ -315,19 +316,25 @@ def _drawdown_signal(
         "current_value": dd,
         **_status_of(score),
         "chart_color": "#10b981",
-        "unit": "%",
+        "unit": unit,
+        "price_unit": unit,
+        "dd_unit": "%",
+        "has_drawdown_toggle": True,
         "description": (
             f"{label}이(가) 최근 52주 최고치({value_fmt.format(high52)})에서 현재 {dd:.1f}% 하락한 상태입니다. "
             f"−10% 이상이면 호황 고점권, −25% 미만이면 둔화로 판정합니다. "
-            f"차트는 각 시점의 직전 52주 고점 대비 낙폭(%)입니다."
+            f"기본 차트는 실제 주가/지수 궤적이며, 토글 시 직전 52주 고점 대비 낙폭(%)을 확인할 수 있습니다."
         ),
         "source": source,
-        "data_points_count": f"{len(dd_series)}주(≈{len(dd_series) // 52}Y)",
-        "series_5y": dd_series[-260:],
-        "series_10y": dd_series,
+        "data_points_count": f"{len(prices)}주(≈{len(prices) // 52}Y)",
+        # 기본 차트는 실제 주가/지수 궤적
+        "series_5y": prices[-260:],
+        "series_10y": prices,
+        # 토글용 고점 대비 낙폭 궤적
+        "dd_series_5y": dd_series[-260:],
+        "dd_series_10y": dd_series,
     }
     # 배지 판정(-10/-25)과 달리 국면 점수는 0 ~ -40% 구간으로 넓게 잡는다.
-    # 좁은 밴드를 그대로 쓰면 낙폭이 조금만 깊어져도 ±1로 포화돼 국면이 매달 뒤집힌다.
     scored = {
         "id": sid,
         "weight": weight,
@@ -350,6 +357,7 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
 
     is_krw = not lead_ticker.isalpha() and not lead_ticker.startswith("^")
     lead_fmt = "{:,.0f}원" if is_krw else "${:,.2f}"
+    price_unit = "원" if is_krw else "$"
 
     signals: List[Dict[str, Any]] = []
     scored: List[Dict[str, Any]] = []
@@ -359,6 +367,7 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
         closes.get(lead_ticker, []),
         "yfinance 공개 시세 (주간 종가)",
         weight=0.20, value_fmt=lead_fmt,
+        unit=price_unit,
     )
     signals.append(lead_sig)
     if lead_scored:
@@ -378,6 +387,7 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
         "sector_index", "업종 지수", idx_cfg["label"],
         index_points, index_source,
         weight=0.15, value_fmt=index_fmt,
+        unit="pt",
     )
     signals.append(index_sig)
     if index_scored:
