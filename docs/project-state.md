@@ -4,13 +4,14 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: S6-15 반도체 매크로 사이클(CSCI) 퀀트 엔진 및 4국면 시각화 대시보드(사이클 시계/CapEx 트래커/서브섹터 밸류에이션/ETF 매트릭스) 구현 완료 (2026-08-22)
+✅ Current: S6-16 반도체 7대 실데이터 신호(120개월 공표통계 + yfinance 실데이터) 및 실제 주가/지수 ↔ 고점대비 낙폭(%) 듀얼 뷰 토글 고도화 완료 (2026-08-23)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
-> 세션 핸드오프 (2026-08-22):
-> - Gemini 리서치 보고서 기반 '반도체 섹터 매크로 사이클 추정 및 정량적 평가 프레임워크(CSCI)' 구축 완료.
-> - 백엔드: `semi_cycle_engine.py` (선행 40% + 동행 40% + 후행 20% 롤링 Z-Score 정규화 퀀트 엔진 & 4개 API 엔드포인트).
-> - 프론트엔드: `SemiCycleDashboard.tsx` 4대 위젯(사이클 시계 2D Scatter, 빅테크 CapEx 듀얼차트, 서브섹터 디커플링 맵, ETF 리밸런싱 매트릭스) 및 `SemiChart.tsx` 전문가 리포트 연동 완료.
+> 세션 핸드오프 (2026-08-23):
+> - 관세청·한국은행·통계청 120개월 실제 공표통계 시계열 구축(`macro_historical_data.py`).
+> - `semi_cycle_engine.py`: 실제 주간 종가 및 52주 낙폭 동시 연출 API 구축.
+> - `SemiFundamentalSignals.tsx`: 실제 주가/지수($/pt) 기본 뷰 + [실제 가격 | 고점대비 낙폭(%)] 인터랙티브 토글 스위치 제공.
+> - 중복 서브메뉴 탭(사이클 시계) 및 상단 업종 선택 칩 바 제거 완료.
  
  
 ## Current Sprint

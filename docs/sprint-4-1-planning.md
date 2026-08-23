@@ -127,6 +127,6 @@ We will reuse:
 
 ## 6. Verification Checklist
 
-- [ ] Run `pytest backend/tests/test_overlap.py` and ensure pass.
-- [ ] Call `/api/v1/portfolio/overlap` with mocked/live accounts and check response integrity.
-- [ ] Validate that all numeric outputs are free of `NaN` or `None` values (prevent client-side crashes).
+- [x] Run `pytest backend/tests/test_overlap.py` and ensure pass.
+- [x] Call `/api/v1/portfolio/overlap` with mocked/live accounts and check response integrity.
+- [x] Validate that all numeric outputs are free of `NaN` or `None` values (prevent client-side crashes).
