@@ -121,7 +121,7 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
     const [subsectorData, setSubsectorData] = useState<any>(null);
     const [strategyData, setStrategyData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [activeSubTab, setActiveSubTab] = useState<"overview" | "clock" | "capex" | "subsector" | "etf">("overview");
+    const [activeSubTab, setActiveSubTab] = useState<"signals" | "overview" | "clock" | "capex" | "subsector" | "etf">("signals");
     const [clockPeriod, setClockPeriod] = useState<"5Y" | "3Y" | "1Y">("5Y");
 
     // 시뮬레이션 애니메이션 상태
@@ -308,6 +308,7 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
             {/* 2. Sub-Navigation Tabs */}
             <div className="flex gap-2 border-b border-white/10 pb-3 overflow-x-auto">
                 {[
+                    { id: "signals", label: "7대 실데이터 신호 & 5국면 진단 (LIVE)", icon: <Activity className="w-3.5 h-3.5 text-emerald-400" /> },
                     { id: "overview", label: "종합 대시보드", icon: <Layers className="w-3.5 h-3.5" /> },
                     { id: "clock", label: "사이클 시계 (2D Quadrant)", icon: <Compass className="w-3.5 h-3.5" /> },
                     { id: "capex", label: "빅테크 CapEx 트래커 (6개년)", icon: <Server className="w-3.5 h-3.5" /> },
@@ -319,7 +320,9 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                         onClick={() => setActiveSubTab(tab.id as any)}
                         className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                             activeSubTab === tab.id
-                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+                                ? tab.id === "signals"
+                                    ? "bg-emerald-600/30 text-emerald-300 border border-emerald-500/50 shadow-lg shadow-emerald-600/20"
+                                    : "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
                                 : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
                         }`}
                     >
@@ -330,6 +333,11 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
             </div>
 
             {/* 3. Tab Contents */}
+
+            {/* TAB: SIGNALS (7대 실데이터 신호등 & 5국면 진단) */}
+            {activeSubTab === "signals" && (
+                <SemiFundamentalSignals />
+            )}
 
             {/* TAB: OVERVIEW & CLOCK */}
             {(activeSubTab === "overview" || activeSubTab === "clock") && (

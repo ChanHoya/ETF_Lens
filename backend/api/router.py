@@ -3637,6 +3637,20 @@ async def get_semi_cycle_strategy():
     return await SemiCycleEngine.get_etf_rebalancing_matrix()
 
 
+@router.get("/semi-cycle/macro-signals")
+async def get_semi_macro_signals(industry: str = "semiconductor"):
+    """7대 실데이터 신호등(대장주/SOX/수출/단가/물량/가동률/재고 1Y/3Y/5Y/10Y) & 5국면 진단"""
+    from core.semi_cycle_engine import SemiCycleEngine
+    return await SemiCycleEngine.get_macro_signals(industry=industry)
+
+
+@router.get("/semi-cycle/industries-summary")
+async def get_semi_industries_summary():
+    """10대 주요 업종별 사이클 국면 요약 배지 목록"""
+    from core.semi_cycle_engine import SemiCycleEngine
+    return await SemiCycleEngine.get_industries_summary()
+
+
 @router.get("/space-chart")
 async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_db)):
     """

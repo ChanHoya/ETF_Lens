@@ -51,3 +51,24 @@ async def test_semi_etf_matrix():
     for etf in data["etfs"]:
         assert 0 <= etf["fit_score"] <= 100
         assert etf["rating"] in ["STRONG_BUY", "BUY", "HOLD", "REDUCE"]
+
+
+@pytest.mark.asyncio
+async def test_semi_macro_signals():
+    data = await SemiCycleEngine.get_macro_signals(industry="semiconductor")
+    assert "signals" in data
+    assert len(data["signals"]) == 7
+    assert "current_state" in data
+    assert "stages" in data
+    assert len(data["stages"]) == 5
+    for sig in data["signals"]:
+        assert "current_value_formatted" in sig
+        assert "series_5y" in sig
+        assert len(sig["series_5y"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_semi_industries_summary():
+    data = await SemiCycleEngine.get_industries_summary()
+    assert "industries" in data
+    assert len(data["industries"]) >= 10
