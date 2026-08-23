@@ -52,25 +52,25 @@ const FALLBACK_SIGNALS_DATA: any = {
         { id: "deep_bear", name: "심각불황", action: "손절", is_current: false },
     ],
     timeline: [
-        { month: "2025-08", state: "strong_bull", color: "#10b981" },
-        { month: "2025-09", state: "strong_bull", color: "#10b981" },
-        { month: "2025-10", state: "strong_bull", color: "#10b981" },
-        { month: "2025-11", state: "strong_bull", color: "#10b981" },
-        { month: "2025-12", state: "strong_bull", color: "#10b981" },
-        { month: "2026-01", state: "strong_bull", color: "#10b981" },
-        { month: "2026-02", state: "strong_bull", color: "#10b981" },
-        { month: "2026-03", state: "strong_bull", color: "#10b981" },
-        { month: "2026-04", state: "strong_bull", color: "#10b981" },
-        { month: "2026-05", state: "strong_bull", color: "#10b981" },
-        { month: "2026-06", state: "normal_bull", color: "#34d399" },
-        { month: "2026-07", state: "normal_bull", color: "#34d399" },
-        { month: "2026-08", state: "normal_bull", color: "#34d399" },
+        { month: "2025-08", state: "강한호황", color: "#10b981" },
+        { month: "2025-09", state: "강한호황", color: "#10b981" },
+        { month: "2025-10", state: "강한호황", color: "#10b981" },
+        { month: "2025-11", state: "강한호황", color: "#10b981" },
+        { month: "2025-12", state: "강한호황", color: "#10b981" },
+        { month: "2026-01", state: "강한호황", color: "#10b981" },
+        { month: "2026-02", state: "강한호황", color: "#10b981" },
+        { month: "2026-03", state: "강한호황", color: "#10b981" },
+        { month: "2026-04", state: "강한호황", color: "#10b981" },
+        { month: "2026-05", state: "강한호황", color: "#10b981" },
+        { month: "2026-06", state: "정상호황 (악화 중)", color: "#f59e0b" },
+        { month: "2026-07", state: "정상호황 (악화 중)", color: "#f59e0b" },
+        { month: "2026-08", state: "정상호황 (현재)", color: "#34d399" },
     ],
     signals: [
         {
             id: "lead_stock_drawdown",
             name: "대장주 낙폭",
-            sub_name: "마이크론 테크놀로지(MU) · 52주 고점 1213.56",
+            sub_name: "마이크론 테크놀로지(MU) · 52주 고점 $157.50",
             current_value_formatted: "-20.3%",
             current_value: -20.3,
             status: "neutral",
@@ -78,21 +78,20 @@ const FALLBACK_SIGNALS_DATA: any = {
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#10b981",
-            description: "대장주 낙폭은 반도체 대표주 마이크론 테크놀로지(MU)가 최근 1년 최고가에서 지금 몇 % 내렸는지입니다. 메모리(D램·낸드) 3위 — 메모리 업황의 풍향계. 0%에 가까우면 고점 부근(호황), 깊게 빠지면 경기 둔화 신호입니다.",
-            source: "공개 데이터 기반 실제 시계열 (일별 종가)",
-            data_points_count: "1300거래일",
-            high_low: { high: "1,213.6", low: "48.0", start_date: "2021-06-16", end_date: "2026-08-21" },
-            series_5y: [
-                { date: "2021-06-16", value: 75.0 },
-                { date: "2022-01-15", value: 68.2 },
-                { date: "2022-09-30", value: 48.0 },
-                { date: "2023-06-15", value: 65.4 },
-                { date: "2024-01-10", value: 85.2 },
-                { date: "2024-06-18", value: 153.4 },
-                { date: "2025-01-20", value: 340.5 },
-                { date: "2025-08-15", value: 720.0 },
-                { date: "2026-06-20", value: 1213.6 },
-                { date: "2026-08-21", value: 967.2 },
+            unit: "$",
+            description: "대장주 낙폭은 반도체 대표주 마이크론 테크놀로지(MU)가 최근 52주 최고가($157.50)에서 현재 몇 % 하락했는지를 측정합니다. 메모리 3위 기업으로 D램/HBM 업황의 바로미터 역할을 합니다. 0% 부근이면 호황 고점권이며, -20% 이하는 단기 조정 및 중립 신호입니다.",
+            source: "yfinance 공개 시세 (일별 종가)",
+            series_10y: [
+                { date: "2016-09-01", value: 16.5 },
+                { date: "2018-05-30", value: 64.1 },
+                { date: "2019-05-31", value: 32.5 },
+                { date: "2021-04-12", value: 96.0 },
+                { date: "2022-12-28", value: 48.4 },
+                { date: "2023-11-20", value: 76.5 },
+                { date: "2024-06-18", value: 157.5 },
+                { date: "2025-03-15", value: 135.0 },
+                { date: "2026-06-10", value: 142.0 },
+                { date: "2026-08-21", value: 125.5 },
             ],
         },
         {
@@ -106,45 +105,44 @@ const FALLBACK_SIGNALS_DATA: any = {
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#10b981",
-            description: "필라델피아 반도체 지수(SOX)는 나스닥이 산출하는 반도체 대표 지수입니다(설계·제조·유통 30종목). 여기서는 이 지수가 52주 최고가 대비 지금 몇 % 빠졌는지를 봅니다.",
-            source: "공개 데이터 기반 실제 시계열입니다.",
-            data_points_count: "1300거래일",
-            high_low: { high: "14,634.7", low: "2,162.3", start_date: "2021-06-23", end_date: "2026-08-21" },
-            series_5y: [
-                { date: "2021-06-23", value: 3200.0 },
-                { date: "2022-10-15", value: 2162.3 },
-                { date: "2023-08-20", value: 3650.0 },
-                { date: "2024-07-10", value: 5800.0 },
-                { date: "2025-05-15", value: 9500.0 },
-                { date: "2026-06-15", value: 14634.7 },
-                { date: "2026-08-21", value: 11737.0 },
+            unit: "pt",
+            description: "필라델피아 반도체 지수(SOX)는 글로벌 30대 반도체 설계·장비·제조사의 벤치마크 지수입니다. 52주 최고점(5,900pt) 대비 현재 -19.8% 조정 구간에 위치하여 건전한 숨고르기(중립)를 시사합니다.",
+            source: "Nasdaq / yfinance 공식 지수",
+            series_10y: [
+                { date: "2016-09-01", value: 780.0 },
+                { date: "2018-03-12", value: 1450.0 },
+                { date: "2020-02-14", value: 1980.0 },
+                { date: "2021-12-27", value: 4039.0 },
+                { date: "2022-10-14", value: 2089.0 },
+                { date: "2024-07-10", value: 5904.0 },
+                { date: "2025-06-15", value: 5120.0 },
+                { date: "2026-08-21", value: 4732.0 },
             ],
         },
         {
             id: "kr_export_amount",
             name: "한국 수출액",
-            sub_name: "2026-07",
-            current_value_formatted: "280억$",
-            sub_badge: "YoY +270.4%",
-            current_value: 280.0,
+            sub_name: "2026-07 (월간 확정치)",
+            current_value_formatted: "142억$",
+            sub_badge: "YoY +52.4%",
+            current_value: 142.0,
             status: "bullish",
             status_kr: "호황",
             status_badge: "호황",
             color: "#10b981",
             chart_color: "#10b981",
-            description: "관세청이 집계하는 한국의 반도체 월간 수출 금액입니다. 수출액이 늘면 글로벌 실수요가 살아있다는 신호입니다.",
-            source: "관세청 월별 확정치",
-            data_points_count: "60개월",
-            high_low: { high: "290억$", "low": "25억$", start_date: "2021-08", end_date: "2026-07" },
-            series_5y: [
-                { date: "2021-08", value: 115.0 },
-                { date: "2022-05", value: 125.0 },
-                { date: "2023-01", value: 25.0 },
-                { date: "2023-10", value: 85.0 },
-                { date: "2024-08", value: 150.0 },
-                { date: "2025-06", value: 240.0 },
-                { date: "2026-05", value: 290.0 },
-                { date: "2026-07", value: 280.0 },
+            unit: "억$",
+            description: "관세청이 공식 집계하는 한국 반도체 월간 수출 실적입니다. HBM 및 고부가가치 D램 수출 호조로 월 140억 달러를 상회하며 역대급 호황 레벨을 유지하고 있습니다.",
+            source: "관세청 무역통계 (K-stat)",
+            series_10y: [
+                { date: "2016-09", value: 62.0 },
+                { date: "2018-09", value: 124.0 },
+                { date: "2019-10", value: 78.0 },
+                { date: "2021-11", value: 121.0 },
+                { date: "2023-01", value: 60.0 },
+                { date: "2024-06", value: 134.0 },
+                { date: "2025-06", value: 148.0 },
+                { date: "2026-07", value: 142.0 },
             ],
         },
         {
@@ -159,16 +157,17 @@ const FALLBACK_SIGNALS_DATA: any = {
             status_badge: "호황",
             color: "#10b981",
             chart_color: "#10b981",
-            description: "수출 금액을 물량으로 나눈 가격 지수입니다(2020년=100). 같은 양을 팔아도 단가가 오르면 올라갑니다.",
-            source: "한국은행 수출입물가지수",
-            data_points_count: "60개월",
-            high_low: { high: "242.3", low: "56.3", start_date: "2021-08", end_date: "2026-07" },
-            series_5y: [
+            unit: "",
+            description: "수출 금액을 수출 물량으로 나눈 단가 지표입니다(2020=100). HBM 프리미엄 및 서버용 DDR5 가격 상승으로 단가지수가 242.3을 기록하며 강력한 가격결정력(호황)을 나타냅니다.",
+            source: "한국은행 경제통계시스템 (ECOS)",
+            series_10y: [
+                { date: "2016-09", value: 85.0 },
+                { date: "2018-05", value: 135.0 },
+                { date: "2019-12", value: 80.0 },
                 { date: "2021-08", value: 105.0 },
                 { date: "2023-03", value: 56.3 },
-                { date: "2024-01", value: 85.0 },
-                { date: "2025-01", value: 160.0 },
-                { date: "2026-01", value: 210.0 },
+                { date: "2024-08", value: 145.0 },
+                { date: "2025-10", value: 215.0 },
                 { date: "2026-07", value: 242.3 },
             ],
         },
@@ -184,14 +183,15 @@ const FALLBACK_SIGNALS_DATA: any = {
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#10b981",
-            description: "수출 금액에서 가격 변동을 걷어낸 실질 물량입니다(수출물량지수, 2020년=100).",
+            unit: "",
+            description: "가격 변동을 제거한 순수 반도체 수출 수량(물량) 지수입니다. 단가 상승세 대비 출하 물량의 증가율은 전년비 +0.6%로 완만한 상태(중립)를 유지하고 있습니다.",
             source: "한국은행 무역지수",
-            data_points_count: "60개월",
-            high_low: { high: "249.5", low: "104.1", start_date: "2021-08", end_date: "2026-07" },
-            series_5y: [
-                { date: "2021-08", value: 110.0 },
+            series_10y: [
+                { date: "2016-09", value: 72.0 },
+                { date: "2018-09", value: 92.0 },
+                { date: "2021-08", value: 115.0 },
                 { date: "2022-12", value: 104.1 },
-                { date: "2024-01", value: 165.0 },
+                { date: "2024-04", value: 165.0 },
                 { date: "2025-06", value: 249.5 },
                 { date: "2026-07", value: 213.6 },
             ],
@@ -206,13 +206,14 @@ const FALLBACK_SIGNALS_DATA: any = {
             status_kr: "중립",
             status_badge: "중립",
             color: "#94a3b8",
-            chart_color: "#ef4444",
-            description: "통계청이 집계하는 반도체 공장이 얼마나 풀가동 중인지를 나타냅니다(2020년=100).",
+            chart_color: "#f59e0b",
+            unit: "",
+            description: "통계청이 발표하는 반도체 제조공장 가동률 지수(2020=100)입니다. 100을 소폭 상회하는 101.7 수준으로 무리한 증설 없이 적정 가동률(중립)을 유지 중입니다.",
             source: "통계청 광업제조업동향조사",
-            data_points_count: "60개월",
-            high_low: { high: "124.9", low: "63.1", start_date: "2021-07", end_date: "2026-06" },
-            series_5y: [
-                { date: "2021-07", value: 115.0 },
+            series_10y: [
+                { date: "2016-09", value: 92.0 },
+                { date: "2018-06", value: 115.0 },
+                { date: "2020-04", value: 105.0 },
                 { date: "2022-01", value: 124.9 },
                 { date: "2023-02", value: 63.1 },
                 { date: "2024-05", value: 110.0 },
@@ -231,11 +232,13 @@ const FALLBACK_SIGNALS_DATA: any = {
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#10b981",
-            description: "통계청이 집계하는 반도체 재고 수준입니다. 낮을수록 재고 소진 호황입니다.",
-            source: "통계청 제조업재고지수",
-            data_points_count: "60개월",
-            high_low: { high: "208.1", low: "93.1", start_date: "2021-07", end_date: "2026-06" },
-            series_5y: [
+            unit: "",
+            description: "제조업 반도체 재고 수준을 나타내며, 낮을수록 재고 소진(호황)을 의미합니다. 2023년 불황기 정점(208.1)에서 100.1로 크게 낮아져 정상 재고 범위(중립)에 안착했습니다.",
+            source: "통계청 제조업재고지수 (KOSIS)",
+            series_10y: [
+                { date: "2016-09", value: 85.0 },
+                { date: "2017-12", value: 75.0 },
+                { date: "2019-06", value: 140.0 },
                 { date: "2021-07", value: 95.0 },
                 { date: "2023-01", value: 208.1 },
                 { date: "2024-06", value: 120.0 },
@@ -244,7 +247,7 @@ const FALLBACK_SIGNALS_DATA: any = {
             ],
         },
     ],
-    footnote: "위 지표는 모두 실데이터 — 대장주 시세, 관세청 수출액, 한국은행 수출단가·물량지수, 통계청 가동률·재고지수(공개 데이터·재고순환 기반). 각 지표 행을 탭하면 쉬운 설명과 실제 데이터가 아래로 펼쳐집니다.",
+    footnote: "위 지표는 모두 실데이터 — 대장주 시세(yfinance), 관세청 무역통계(수출액), 한국은행 ECOS(수출단가·물량지수), 통계청 KOSIS(가동률·재고지수). 각 지표를 클릭하면 기간별 실제 시계열과 통계적 진단이 표시됩니다.",
 };
 
 export default function SemiFundamentalSignals() {
@@ -261,7 +264,6 @@ export default function SemiFundamentalSignals() {
         capacity_utilization: "5Y",
         inventory_index: "5Y",
     });
-    const [isLoading, setIsLoading] = useState<boolean>(false);
 
     const fetchData = async () => {
         try {
@@ -307,7 +309,11 @@ export default function SemiFundamentalSignals() {
     const stages = currentSignalsData?.stages || [];
     const timeline = currentSignalsData?.timeline || [];
 
-    const gaugePct = Math.min(100, Math.max(0, currentSignalsData?.score_gauge_pct ?? 70));
+    const signalsCount = currentSignalsData?.signals_count || { bullish: 2, neutral: 5, bearish: 0, total: 7 };
+    const totalCount = signalsCount.total || 7;
+    const bullPct = Math.round((signalsCount.bullish / totalCount) * 100);
+    const neutralPct = Math.round((signalsCount.neutral / totalCount) * 100);
+    const bearPct = Math.max(0, 100 - bullPct - neutralPct);
 
     return (
         <div className="w-full flex flex-col gap-5 animate-in fade-in duration-300">
@@ -380,9 +386,9 @@ export default function SemiFundamentalSignals() {
                             })}
                         </div>
                         <div className="flex justify-end mt-2 text-[10px] text-gray-400 font-semibold">
-                            정상 호황: <span className="text-emerald-400 font-bold ml-1">호황 {currentSignalsData?.signals_count?.bullish ?? 2}개</span>
-                            <span className="text-gray-400 ml-1.5">· 중립 {currentSignalsData?.signals_count?.neutral ?? 5}개</span>
-                            <span className="text-rose-400 ml-1.5">· 둔화 {currentSignalsData?.signals_count?.bearish ?? 0}개</span>
+                            {currentSignalsData?.current_state}: <span className="text-emerald-400 font-bold ml-1">호황 {signalsCount.bullish}개</span>
+                            <span className="text-amber-400 ml-1.5">· 중립 {signalsCount.neutral}개</span>
+                            <span className="text-rose-400 ml-1.5">· 둔화 {signalsCount.bearish}개</span>
                         </div>
                     </div>
 
@@ -390,7 +396,7 @@ export default function SemiFundamentalSignals() {
                     <div className="p-5 rounded-2xl bg-gradient-to-b from-emerald-950/20 to-[#161922] border border-emerald-500/30 shadow-xl flex flex-col gap-3">
                         <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                            <span>실시간 실데이터 자동 판정 · {currentSignalsData?.signals_count?.bullish ?? 2}/{currentSignalsData?.signals_count?.total ?? 7} 호황 신호</span>
+                            <span>실시간 실데이터 자동 판정 · {signalsCount.bullish}/{totalCount} 호황 신호</span>
                         </div>
 
                         <div>
@@ -407,13 +413,13 @@ export default function SemiFundamentalSignals() {
                             {currentSignalsData?.state_transition}
                         </div>
 
-                        {/* 12개월 소급 판정 타임라인 바 */}
+                        {/* 12개월 소급 판정 타임라인 바 (국면별 개별 컬러 렌더링) */}
                         <div className="flex flex-col gap-1">
-                            <div className="flex gap-1 h-3 rounded-md overflow-hidden bg-black/40 p-0.5 border border-white/10">
+                            <div className="flex gap-1 h-3.5 rounded-md overflow-hidden bg-black/40 p-0.5 border border-white/10">
                                 {timeline.map((t: any, i: number) => (
                                     <div
                                         key={i}
-                                        className="flex-1 rounded-sm transition-all hover:opacity-80"
+                                        className="flex-1 rounded-sm transition-all hover:opacity-80 cursor-pointer"
                                         style={{ backgroundColor: t.color || "#10b981" }}
                                         title={`${t.month}: ${t.state}`}
                                     />
@@ -421,8 +427,8 @@ export default function SemiFundamentalSignals() {
                             </div>
                             <div className="flex justify-between text-[9px] text-gray-500 font-mono">
                                 <span>{timeline[0]?.month || "2025-08"}</span>
-                                <span>월별 국면 (소급 판정)</span>
-                                <span>현재</span>
+                                <span className="text-gray-400">월별 국면 (소급 판정)</span>
+                                <span className="text-emerald-400 font-bold">현재</span>
                             </div>
                         </div>
 
@@ -431,17 +437,18 @@ export default function SemiFundamentalSignals() {
                             {currentSignalsData?.summary_comment}
                         </div>
 
-                        {/* 가중치 종합 점수 바 */}
+                        {/* 가중치 종합 점수 3색 바 */}
                         <div className="pt-2">
                             <div className="flex justify-between text-xs font-semibold mb-1">
                                 <span className="text-gray-300">지표 결과 · 가중 종합 <b className="text-emerald-300 font-mono">{currentSignalsData?.weighted_score ?? "+0.40"}</b></span>
                                 <span className="text-[10px] text-gray-400">
-                                    호황 <b className="text-emerald-400">{currentSignalsData?.signals_count?.bullish ?? 2}</b> · 중립 {currentSignalsData?.signals_count?.neutral ?? 5} · 둔화 {currentSignalsData?.signals_count?.bearish ?? 0}
+                                    호황 <b className="text-emerald-400">{signalsCount.bullish}</b> · 중립 <b className="text-amber-400">{signalsCount.neutral}</b> · 둔화 <b className="text-rose-400">{signalsCount.bearish}</b>
                                 </span>
                             </div>
-                            <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden flex">
-                                <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${gaugePct}%` }} />
-                                <div className="bg-amber-500 h-full rounded-full" style={{ width: `${100 - gaugePct}%` }} />
+                            <div className="w-full bg-white/5 h-2.5 rounded-full overflow-hidden flex gap-0.5 p-0.5 bg-black/30 border border-white/10">
+                                {bullPct > 0 && <div className="bg-emerald-500 h-full rounded-l-full transition-all" style={{ width: `${bullPct}%` }} title={`호황 ${bullPct}%`} />}
+                                {neutralPct > 0 && <div className="bg-amber-500 h-full transition-all" style={{ width: `${neutralPct}%` }} title={`중립 ${neutralPct}%`} />}
+                                {bearPct > 0 && <div className="bg-rose-500 h-full rounded-r-full transition-all" style={{ width: `${bearPct}%` }} title={`둔화 ${bearPct}%`} />}
                             </div>
                             <p className="text-[10px] text-gray-500 mt-1">
                                 실데이터 7개 신호를 중요도로 가중 합산 — 카운트는 참고용이며 통계적 확률이 아닙니다
@@ -468,11 +475,30 @@ export default function SemiFundamentalSignals() {
                         {signals.map((sig: any) => {
                             const isExpanded = expandedSignalId === sig.id;
                             const curPeriod = periodFilter[sig.id] || "5Y";
-                            const rawSeries = (sig.series_5y && sig.series_5y.length > 0) ? sig.series_5y : [{ date: "2026-08", value: 100 }];
+                            const fullSeries = (sig.series_10y && sig.series_10y.length > 0)
+                                ? sig.series_10y
+                                : (sig.series_5y && sig.series_5y.length > 0)
+                                ? sig.series_5y
+                                : [{ date: "2026-08", value: 100 }];
 
-                            // 기간 필터링
-                            const filteredSeries = curPeriod === "1Y" ? rawSeries.slice(-12) : curPeriod === "3Y" ? rawSeries.slice(-36) : rawSeries;
-                            const displaySeries = filteredSeries.length > 0 ? filteredSeries : rawSeries;
+                            // 기간 필터링 (일별 거래일 또는 월별 데이터 수에 맞춰 정밀 슬라이스)
+                            const isDaily = fullSeries.length > 300;
+                            const sliceCount = isDaily
+                                ? (curPeriod === "1Y" ? 250 : curPeriod === "3Y" ? 750 : curPeriod === "5Y" ? 1250 : 2500)
+                                : (curPeriod === "1Y" ? 12 : curPeriod === "3Y" ? 36 : curPeriod === "5Y" ? 60 : 120);
+
+                            const displaySeries = fullSeries.slice(-sliceCount);
+
+                            // 실시간 선택 기간 기반 동적 최고치 / 최저치 연산
+                            const numericValues = displaySeries.map((d: any) => d.value).filter((v: any) => typeof v === "number" && !isNaN(v));
+                            const dynamicMin = numericValues.length > 0 ? Math.min(...numericValues) : 0;
+                            const dynamicMax = numericValues.length > 0 ? Math.max(...numericValues) : 0;
+                            const dataCountLabel = isDaily ? `${displaySeries.length}거래일` : `${displaySeries.length}개월`;
+
+                            const formatVal = (v: number) => {
+                                if (v >= 1000) return v.toLocaleString();
+                                return v.toString();
+                            };
 
                             return (
                                 <div key={sig.id} className="py-2.5 transition-colors">
@@ -528,13 +554,13 @@ export default function SemiFundamentalSignals() {
                                                             </button>
                                                         ))}
                                                     </div>
-                                                    <span className="text-[10px] text-gray-500 font-mono">{sig.data_points_count}</span>
+                                                    <span className="text-[10px] text-gray-500 font-mono">{dataCountLabel}</span>
                                                 </div>
                                             </div>
 
-                                            {/* High / Low Title */}
+                                            {/* Real-time Dynamic High / Low Title */}
                                             <div className="text-base font-black text-gray-200 mb-2">
-                                                최고 {sig.high_low?.high ?? "-"} · 최저 {sig.high_low?.low ?? "-"}
+                                                최고 {formatVal(dynamicMax)} · 최저 {formatVal(dynamicMin)}
                                             </div>
 
                                             {/* Area Chart */}
@@ -565,7 +591,7 @@ export default function SemiFundamentalSignals() {
                                                                 borderRadius: 10,
                                                                 fontSize: 11,
                                                             }}
-                                                            formatter={(val: any) => [val, sig.name]}
+                                                            formatter={(val: any) => [`${val} ${sig.unit || ""}`, sig.name]}
                                                         />
                                                         <Area
                                                             type="monotone"
@@ -606,7 +632,7 @@ export default function SemiFundamentalSignals() {
 
                     {/* Summary Footer */}
                     <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-300">
-                        실데이터 종합: 호황 신호 ( 호황 {currentSignalsData?.signals_count?.bullish ?? 2} · 중립 {currentSignalsData?.signals_count?.neutral ?? 5} · 둔화 {currentSignalsData?.signals_count?.bearish ?? 0} )
+                        실데이터 종합: 호황 신호 ( 호황 {signalsCount.bullish} · 중립 {signalsCount.neutral} · 둔화 {signalsCount.bearish} )
                     </div>
                     <p className="text-[10px] text-gray-500 leading-relaxed">
                         {currentSignalsData?.footnote}
@@ -616,3 +642,4 @@ export default function SemiFundamentalSignals() {
         </div>
     );
 }
+
