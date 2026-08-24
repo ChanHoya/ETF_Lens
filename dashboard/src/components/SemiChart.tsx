@@ -580,172 +580,440 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
     };
 
     return (
-        <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-indigo-400" />
-                    반도체 주요 종목 현황
-                </h3>
-                <div className="flex items-center gap-2.5">
-                    {/* Market Toggle Button */}
-                    <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
-                        <button
-                            onClick={() => {
-                                setMarketTab('KR');
-                                setSelectedEtf(null);
-                            }}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR'
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                            }`}
-                        >
-                            국내상장 ETF(국내주식)
-                        </button>
-                        <button
-                            onClick={() => {
-                                setMarketTab('KR_US');
-                                setSelectedEtf(null);
-                            }}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR_US'
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                            }`}
-                        >
-                            국내상장 ETF(미국주식)
-                        </button>
-                        <button
-                            onClick={() => {
-                                setMarketTab('US');
-                                setSelectedEtf(null);
-                            }}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'US'
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                            }`}
-                        >
-                            해외상장 ETF
-                        </button>
+        <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0 gap-6">
+            {/* 1. AI 패러다임 쉬프트와 글로벌 반도체 공급망 전략 (Expert Insight Section) */}
+            <SectorInsightReport
+                sector="semi"
+                title="AI 패러다임 쉬프트와 글로벌 반도체 공급망 전략"
+                accent="amber"
+                tabs={[
+                    { id: 'macro_cycle', label: '1. 매크로 4국면 퀀트 사이클 (CSCI)', icon: Compass },
+                    { id: 'macro', label: '2. 매크로 & AI 반도체 트렌드', icon: TrendingUp },
+                    { id: 'etfs', label: '3. 국내외 핵심 ETF 분석', icon: BookOpen },
+                    { id: 'strategy', label: '4. 자산배분 모델 & 가이드', icon: PieChart },
+                    { id: 'qcycle', label: '5. Q-Cycle 퀀트 스크리너', icon: Cpu },
+                ]}
+                activeTab={activeInsightTab}
+                onTabChange={(id) => setActiveInsightTab(id as any)}
+                fallback={SEMI_INSIGHT_FALLBACK}
+            >
+                {activeInsightTab === 'macro_cycle' && (
+                    <div className="mt-2">
+                        <SemiCycleDashboard onOpenDetail={onOpenDetail} />
                     </div>
+                )}
+                {activeInsightTab === 'qcycle' && (
+                    <div className="flex flex-col gap-6 mt-1">
 
-                    {/* Period Selector */}
-                    <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
-                        {periodOptions.map(p => (
+                        {/* 현재 국면 표시 */}
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <div className="flex-1 flex items-center gap-3 bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-3">
+                                <div className="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
+                                <div>
+                                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">현재 Q-Cycle 국면</div>
+                                    <div className="text-sm font-bold text-white">Phase 1 · 전공정(Front-end) 중심</div>
+                                    <div className="text-[11px] text-indigo-300 mt-0.5">삼성 P4 조기 집행 + TSMC CAPEX +62% → 전공정 ETF 비중 구조적 확대 구간</div>
+                                </div>
+                            </div>
+                            <div className="flex-1 flex items-center gap-3 bg-white/[0.02] border border-white/10 rounded-xl p-3 opacity-60">
+                                <div className="w-2.5 h-2.5 rounded-full bg-gray-500 shrink-0" />
+                                <div>
+                                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">다음 국면 (예정)</div>
+                                    <div className="text-sm font-bold text-gray-400">Phase 2 · 후공정(Back-end) 리밸런싱</div>
+                                    <div className="text-[11px] text-gray-500 mt-0.5">OSAT 증설 발표 본격화 시점에 후공정 ETF로 비중 이동</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* WFE 투자 thesis 카드 3개 */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col gap-2">
+                                <div className="flex items-center gap-2 text-violet-400 font-bold text-sm">
+                                    <Target className="w-4 h-4" />
+                                    <span>WFE 병목: AI 자본의 최종 목적지</span>
+                                </div>
+                                <p className="text-xs text-gray-300 leading-relaxed">
+                                    AI 메가 펀딩 → 데이터센터 증설 → 파운드리/메모리 신규 팹 → <span className="text-violet-300 font-bold">전공정 반도체 장비(WFE) 수요 폭발</span>. 자본의 병목 현상이 발생하는 좁은 출구(WFE)에 투자해야 가장 높은 레버리지 효과를 얻을 수 있습니다.
+                                </p>
+                            </div>
+                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col gap-2">
+                                <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                                    <GitBranch className="w-4 h-4" />
+                                    <span>Q사이클: 물량 확대 국면 진입</span>
+                                </div>
+                                <p className="text-xs text-gray-300 leading-relaxed">
+                                    P사이클(감산·ASP 회복)을 넘어 <span className="text-amber-300 font-bold">Q사이클(신규 팹 증설·CAPEX 확대)</span>로 전환. 수혜 섹터도 메모리 IDM 본사 → 증착·식각·세정·검사 장비 및 소재/부품으로 이동합니다.
+                                </p>
+                            </div>
+                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col gap-2">
+                                <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                                    <ArrowRight className="w-4 h-4" />
+                                    <span>승자 독식 리스크 제거 전략</span>
+                                </div>
+                                <p className="text-xs text-gray-300 leading-relaxed">
+                                    TSMC가 이기든, 인텔이 이기든, 삼성이 이기든 — 결국 첨단 팹에는 <span className="text-emerald-300 font-bold">동일한 WFE 장비</span>가 들어갑니다. 개별 칩 메이커의 수율·수주 경쟁 리스크를 피하고 확정된 팹 증설에만 배팅하는 구조적 전략입니다.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* 공정별 6개월 시차 로테이션 타임라인 */}
+                        <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4">
+                            <h5 className="text-xs font-bold text-gray-300 mb-4 flex items-center gap-2">
+                                <Activity className="w-3.5 h-3.5 text-indigo-400" />
+                                공정별 6개월 시차 로테이션 타임라인
+                            </h5>
+                            <div className="flex items-center gap-0 w-full overflow-x-auto">
+                                {/* Step 1: Cleanroom */}
+                                <div className="flex flex-col items-center gap-2 min-w-[110px]">
+                                    <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs font-bold text-gray-400">S1</div>
+                                    <div className="text-center">
+                                        <div className="text-[10px] font-bold text-gray-400">클린룸 구축</div>
+                                        <div className="text-[9px] text-gray-600 mt-0.5">기초 인프라</div>
+                                        <div className="text-[9px] text-gray-600">T+0</div>
+                                    </div>
+                                </div>
+                                <div className="flex-1 flex flex-col items-center gap-1 min-w-[80px]">
+                                    <div className="w-full h-px bg-white/20 relative">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/30" />
+                                    </div>
+                                    <div className="text-[9px] text-gray-500">+6개월</div>
+                                </div>
+                                {/* Step 2: Front-end (CURRENT) */}
+                                <div className="flex flex-col items-center gap-2 min-w-[130px]">
+                                    <div className="relative">
+                                        <div className="w-10 h-10 rounded-full bg-indigo-500/30 border-2 border-indigo-400 flex items-center justify-center text-xs font-bold text-indigo-300">S2</div>
+                                        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-indigo-400 animate-ping" />
+                                        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-indigo-400" />
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-[10px] font-bold text-indigo-300">전공정 장비 발주</div>
+                                        <div className="text-[9px] text-indigo-400/70 mt-0.5">ASML/AMAT/LRCX</div>
+                                        <div className="text-[9px] text-indigo-400/70">유진테크/원익IPS</div>
+                                        <div className="text-[9px] font-bold text-indigo-300 mt-1 px-2 py-0.5 rounded-full border border-indigo-400/50 bg-indigo-400/10">← 현재 국면</div>
+                                    </div>
+                                </div>
+                                <div className="flex-1 flex flex-col items-center gap-1 min-w-[80px]">
+                                    <div className="w-full h-px bg-white/10" />
+                                    <div className="text-[9px] text-gray-600">+6개월</div>
+                                </div>
+                                {/* Step 3: Back-end */}
+                                <div className="flex flex-col items-center gap-2 min-w-[110px] opacity-50">
+                                    <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-gray-600">S3</div>
+                                    <div className="text-center">
+                                        <div className="text-[10px] font-bold text-gray-500">후공정 장비 발주</div>
+                                        <div className="text-[9px] text-gray-600 mt-0.5">OSAT 증설 시점</div>
+                                        <div className="text-[9px] text-gray-600">리밸런싱 타점</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 퀀트 스크리너: OPM vs PER 스캐터 차트 */}
+                        <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4">
+                            <div className="flex items-center justify-between mb-1">
+                                <h5 className="text-xs font-bold text-gray-300 flex items-center gap-2">
+                                    <Target className="w-3.5 h-3.5 text-violet-400" />
+                                    퀀트 스크리너: TTM OPM × Trailing PER 포지셔닝
+                                </h5>
+                                <div className="flex items-center gap-3">
+                                    {screenerUpdatedAt && (
+                                        <span className="text-[9px] text-gray-600">기준: {screenerUpdatedAt} TTM 실제</span>
+                                    )}
+                                    <span className="text-[9px] text-amber-600/80 font-bold px-2 py-0.5 rounded bg-amber-600/10 border border-amber-600/20">컨센서스 미사용</span>
+                                </div>
+                            </div>
+
+                            {/* 그룹 범례 */}
+                            <div className="flex flex-wrap gap-3 mb-4 mt-2">
+                                {Object.entries(GROUP_CONFIG).map(([g, cfg]) => (
+                                    <div key={g} className="flex items-center gap-1.5 text-[10px] text-gray-400">
+                                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cfg.color }} />
+                                        {g}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {screenerLoading ? (
+                                <div className="h-[340px] flex items-center justify-center text-gray-500 text-sm">
+                                    <div className="flex flex-col items-center gap-3">
+                                        <div className="w-6 h-6 border-2 border-violet-500/50 border-t-violet-400 rounded-full animate-spin" />
+                                        Yahoo Finance에서 TTM 재무 데이터 조회 중...
+                                    </div>
+                                </div>
+                            ) : screenerData.length === 0 ? (
+                                <div className="h-[340px] flex items-center justify-center text-gray-500 text-sm">데이터 없음</div>
+                            ) : (
+                                <>
+                                    <div className="relative">
+                                        {/* 사분면 레이블 */}
+                                        <div className="absolute top-2 left-[20%] text-[10px] text-emerald-400/60 font-bold pointer-events-none z-10">안전마진 영역</div>
+                                        <div className="absolute top-2 right-4 text-[10px] text-amber-400/60 font-bold pointer-events-none z-10">독점 해자 영역</div>
+                                        <div className="absolute bottom-10 right-4 text-[10px] text-blue-400/40 font-bold pointer-events-none z-10">사이클 턴어라운드</div>
+                                        <ResponsiveContainer width="100%" height={340}>
+                                            <ScatterChart margin={{ top: 20, right: 40, bottom: 20, left: 20 }}>
+                                                <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+                                                <XAxis
+                                                    dataKey="per"
+                                                    type="number"
+                                                    name="Trailing PER"
+                                                    domain={[0, 'auto']}
+                                                    tickFormatter={(v) => `${v}x`}
+                                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }}
+                                                    label={{ value: 'Trailing PER (배수)', position: 'insideBottom', offset: -10, fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
+                                                />
+                                                <YAxis
+                                                    dataKey="opm"
+                                                    type="number"
+                                                    name="TTM OPM"
+                                                    tickFormatter={(v) => `${v}%`}
+                                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }}
+                                                    label={{ value: 'TTM OPM (%)', angle: -90, position: 'insideLeft', offset: 10, fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
+                                                />
+                                                <ZAxis range={[60, 60]} />
+                                                <RechartsTooltip content={<ScatterTooltip />} />
+                                                {/* 사분면 구분선 */}
+                                                <ReferenceLine y={30} stroke="rgba(255,255,255,0.1)" strokeDasharray="4 4" />
+                                                <ReferenceLine x={25} stroke="rgba(255,255,255,0.1)" strokeDasharray="4 4" />
+                                                {Object.keys(GROUP_CONFIG).map((group) => {
+                                                    const groupData = screenerData
+                                                        .filter((d) => d.group === group && d.opm != null && d.per != null)
+                                                        .map((d) => ({ ...d, x: d.per, y: d.opm }));
+                                                    if (groupData.length === 0) return null;
+                                                    return (
+                                                        <Scatter
+                                                            key={group}
+                                                            name={group}
+                                                            data={groupData}
+                                                            fill={GROUP_CONFIG[group].color}
+                                                            shape={(props: any) => <ScatterDot {...props} fill={GROUP_CONFIG[group].color} />}
+                                                        />
+                                                    );
+                                                })}
+                                            </ScatterChart>
+                                        </ResponsiveContainer>
+                                    </div>
+
+                                    {/* 데이터 테이블 */}
+                                    <div className="mt-4 overflow-x-auto">
+                                        <table className="w-full text-xs">
+                                            <thead>
+                                                <tr className="border-b border-white/10">
+                                                    <th className="px-3 py-2 text-left text-gray-400 font-bold">종목</th>
+                                                    <th className="px-3 py-2 text-center text-gray-400 font-bold">그룹</th>
+                                                    <th className="px-3 py-2 text-right text-gray-400 font-bold">TTM OPM</th>
+                                                    <th className="px-3 py-2 text-right text-gray-400 font-bold">Trailing PER</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {[...screenerData]
+                                                    .sort((a, b) => (b.opm ?? -999) - (a.opm ?? -999))
+                                                    .map((item) => {
+                                                        const cfg = GROUP_CONFIG[item.group] || { color: '#6b7280' };
+                                                        return (
+                                                            <tr key={item.ticker} className="border-b border-white/5 hover:bg-white/[0.02]">
+                                                                <td className="px-3 py-2 font-bold text-gray-200">
+                                                                    {item.name}
+                                                                    <span className="text-gray-600 font-normal ml-1.5 text-[10px]">{item.ticker}</span>
+                                                                </td>
+                                                                <td className="px-3 py-2 text-center">
+                                                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ color: cfg.color, backgroundColor: cfg.color + '20' }}>
+                                                                        {item.group}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-3 py-2 text-right font-mono font-bold" style={{ color: item.opm != null ? (item.opm >= 30 ? '#34d399' : item.opm >= 20 ? '#fbbf24' : '#94a3b8') : '#4b5563' }}>
+                                                                    {item.opm != null ? `${item.opm}%` : '–'}
+                                                                </td>
+                                                                <td className="px-3 py-2 text-right font-mono font-bold text-amber-400">
+                                                                    {item.per != null ? `${item.per}x` : '–'}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        <p className="text-[10px] text-gray-600 leading-relaxed">
+                            * TTM(최근 4분기 합산) 실제 기준 · 컨센서스/FnGuide 미사용 · 출처: Yahoo Finance · 투자 권유 아님. 음수 PER은 표시 제외.
+                        </p>
+                    </div>
+                )}
+            </SectorInsightReport>
+
+            {/* Divider */}
+            <div className="w-full border-t border-white/10 my-1"></div>
+
+            {/* 2. 반도체 주요 종목 현황 (Chart & Selectors) */}
+            <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-1">
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <Activity className="w-5 h-5 text-indigo-400" />
+                        반도체 주요 종목 현황
+                    </h3>
+                    <div className="flex items-center gap-2.5">
+                        {/* Market Toggle Button */}
+                        <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
                             <button
-                                key={p}
-                                onClick={() => setPeriod(p)}
-                                className={`px-2.5 py-1.5 text-xs font-bold rounded-md transition-all ${period === p
+                                onClick={() => {
+                                    setMarketTab('KR');
+                                    setSelectedEtf(null);
+                                }}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR'
                                     ? 'bg-indigo-600 text-white shadow-md'
                                     : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
                                 }`}
                             >
-                                {p}
+                                국내상장 ETF(국내주식)
                             </button>
-                        ))}
+                            <button
+                                onClick={() => {
+                                    setMarketTab('KR_US');
+                                    setSelectedEtf(null);
+                                }}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR_US'
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                }`}
+                            >
+                                국내상장 ETF(미국주식)
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setMarketTab('US');
+                                    setSelectedEtf(null);
+                                }}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'US'
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                }`}
+                            >
+                                해외상장 ETF
+                            </button>
+                        </div>
+
+                        {/* Period Selector */}
+                        <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
+                            {periodOptions.map(p => (
+                                <button
+                                    key={p}
+                                    onClick={() => setPeriod(p)}
+                                    className={`px-2.5 py-1.5 text-xs font-bold rounded-md transition-all ${period === p
+                                        ? 'bg-indigo-600 text-white shadow-md'
+                                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                    }`}
+                                >
+                                    {p}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* ETF Selector Chips */}
-            <div className="flex flex-wrap gap-2 items-center mb-4 bg-black/30 p-2.5 rounded-2xl border border-white/5">
-                <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center">
-                    🔍 구성종목 주가 비교:
-                </span>
-                {etfsToSelect.filter(e => activeTabEtfs.includes(e) || selectedEtf === e).map((etfName, idx) => {
-                    const isSelected = selectedEtf === etfName;
-                    const themeColor = colors[idx % colors.length];
-                    return (
+                {/* ETF Selector Chips */}
+                <div className="flex flex-wrap gap-2 items-center mb-2 bg-black/30 p-2.5 rounded-2xl border border-white/5">
+                    <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center">
+                        🔍 구성종목 주가 비교:
+                    </span>
+                    {etfsToSelect.filter(e => activeTabEtfs.includes(e) || selectedEtf === e).map((etfName, idx) => {
+                        const isSelected = selectedEtf === etfName;
+                        const themeColor = colors[idx % colors.length];
+                        return (
+                            <button
+                                key={etfName}
+                                onClick={() => setSelectedEtf(isSelected ? null : etfName)}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border ${
+                                    isSelected
+                                        ? `bg-indigo-600/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]`
+                                        : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'
+                                }`}
+                                style={{
+                                    borderColor: isSelected ? themeColor : 'rgba(255,255,255,0.06)'
+                                }}
+                            >
+                                {etfName} {isSelected && '✓'}
+                            </button>
+                        );
+                    })}
+                    {selectedEtf && (
                         <button
-                            key={etfName}
-                            onClick={() => setSelectedEtf(isSelected ? null : etfName)}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border ${
-                                isSelected
-                                    ? `bg-indigo-600/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]`
-                                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'
-                            }`}
-                            style={{
-                                borderColor: isSelected ? themeColor : 'rgba(255,255,255,0.06)'
-                            }}
+                            onClick={() => setSelectedEtf(null)}
+                            className="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-auto hover:underline transition-all"
                         >
-                            {etfName} {isSelected && '✓'}
+                            비교 초기화 (X)
                         </button>
-                    );
-                })}
-                {selectedEtf && (
-                    <button
-                        onClick={() => setSelectedEtf(null)}
-                        className="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-auto hover:underline transition-all"
-                    >
-                        비교 초기화 (X)
-                    </button>
-                )}
-            </div>
+                    )}
+                </div>
 
-            <div className="w-full h-[400px]">
-                {isLoading ? (
-                    <ChartLoadingPlaceholder height={400} message="반도체 ETF 데이터 로딩중" />
-                ) : error ? (
-                    <div className="w-full h-full flex items-center justify-center text-rose-400 text-sm">
-                        {error}
-                    </div>
-                ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData} margin={{ top: 10, right: 15, left: 15, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis
-                                dataKey="date"
-                                stroke="rgba(255,255,255,0.2)"
-                                tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
-                                tickMargin={10}
-                                minTickGap={30}
-                            />
-                            <YAxis
-                                orientation="right"
-                                width={55}
-                                domain={['auto', 'auto']}
-                                stroke="rgba(255,255,255,0.2)"
-                                tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
-                                tickFormatter={(val) => `${val.toFixed(0)}%`}
-                            />
-                            <RechartsTooltip content={<CustomTooltip />} />
-                            <Legend
-                                content={renderCustomLegend}
-                            />
-                            {keys.map((k, idx) => {
-                                const isConstituent = !baseEtfKeys.includes(k);
-                                if (!selectedEtf && !isConstituent && !activeTabEtfs.includes(k)) {
-                                    return null;
-                                }
-                                return (
-                                    <Line
-                                        key={k}
-                                        type="monotone"
-                                        dataKey={k}
-                                        stroke={colors[idx % colors.length]}
-                                        strokeWidth={hoveredLine === k ? (isConstituent ? 3 : 4) : hoveredLine ? 1 : (isConstituent ? 1.5 : 2)}
-                                        strokeDasharray={isConstituent ? "4 4" : undefined}
-                                        dot={false}
-                                        activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
-                                        name={k}
-                                        connectNulls={true}
-                                        style={{
-                                            opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8,
-                                            transition: 'all 0.3s ease'
-                                        }}
-                                    />
-                                );
-                            })}
-                        </LineChart>
-                    </ResponsiveContainer>
-                )}
+                <div className="w-full h-[400px]">
+                    {isLoading ? (
+                        <ChartLoadingPlaceholder height={400} message="반도체 ETF 데이터 로딩중" />
+                    ) : error ? (
+                        <div className="w-full h-full flex items-center justify-center text-rose-400 text-sm">
+                            {error}
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData} margin={{ top: 10, right: 15, left: 15, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                <XAxis
+                                    dataKey="date"
+                                    stroke="rgba(255,255,255,0.2)"
+                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
+                                    tickMargin={10}
+                                    minTickGap={30}
+                                />
+                                <YAxis
+                                    orientation="right"
+                                    width={55}
+                                    domain={['auto', 'auto']}
+                                    stroke="rgba(255,255,255,0.2)"
+                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
+                                    tickFormatter={(val) => `${val.toFixed(0)}%`}
+                                />
+                                <RechartsTooltip content={<CustomTooltip />} />
+                                <Legend
+                                    content={renderCustomLegend}
+                                />
+                                {keys.map((k, idx) => {
+                                    const isConstituent = !baseEtfKeys.includes(k);
+                                    if (!selectedEtf && !isConstituent && !activeTabEtfs.includes(k)) {
+                                        return null;
+                                    }
+                                    return (
+                                        <Line
+                                            key={k}
+                                            type="monotone"
+                                            dataKey={k}
+                                            stroke={colors[idx % colors.length]}
+                                            strokeWidth={hoveredLine === k ? (isConstituent ? 3 : 4) : hoveredLine ? 1 : (isConstituent ? 1.5 : 2)}
+                                            strokeDasharray={isConstituent ? "4 4" : undefined}
+                                            dot={false}
+                                            activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
+                                            name={k}
+                                            connectNulls={true}
+                                            style={{
+                                                opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8,
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                        />
+                                    );
+                                })}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    )}
+                </div>
+                <p className="text-[10px] text-gray-500 text-right mt-1 font-mono">
+                    * 기준점 100으로 환산된 지수/주가 추이 (배당/분배금 제외)
+                </p>
             </div>
-            <p className="text-[10px] text-gray-500 text-right mt-2 font-mono">
-                * 기준점 100으로 환산된 지수/주가 추이 (배당/분배금 제외)
-            </p>
 
             {/* Divider */}
-            <div className="w-full border-t border-white/10 my-5"></div>
+            <div className="w-full border-t border-white/10 my-1"></div>
 
-            {/* Holdings Table Section */}
+            {/* 3. 반도체 섹터 주요 ETF 구성종목 및 비중 비교 (%) (Holdings Table Section) */}
             <div className="flex flex-col gap-4">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-3">
                     <h4 className="text-base font-bold text-white flex items-center gap-2">
@@ -1030,271 +1298,6 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
                     </div>
                 )}
             </div>
-
-            {/* Divider */}
-            <div className="w-full border-t border-white/10 my-6"></div>
-
-            {/* Expert Insight Section */}
-            <SectorInsightReport
-                sector="semi"
-                title="AI 패러다임 쉬프트와 글로벌 반도체 공급망 전략"
-                accent="amber"
-                tabs={[
-                    { id: 'macro_cycle', label: '1. 매크로 4국면 퀀트 사이클 (CSCI)', icon: Compass },
-                    { id: 'macro', label: '2. 매크로 & AI 반도체 트렌드', icon: TrendingUp },
-                    { id: 'etfs', label: '3. 국내외 핵심 ETF 분석', icon: BookOpen },
-                    { id: 'strategy', label: '4. 자산배분 모델 & 가이드', icon: PieChart },
-                    { id: 'qcycle', label: '5. Q-Cycle 퀀트 스크리너', icon: Cpu },
-                ]}
-                activeTab={activeInsightTab}
-                onTabChange={(id) => setActiveInsightTab(id as any)}
-                fallback={SEMI_INSIGHT_FALLBACK}
-            >
-                {activeInsightTab === 'macro_cycle' && (
-                    <div className="mt-2">
-                        <SemiCycleDashboard onOpenDetail={onOpenDetail} />
-                    </div>
-                )}
-                {activeInsightTab === 'qcycle' && (
-                    <div className="flex flex-col gap-6 mt-1">
-
-                        {/* 현재 국면 표시 */}
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <div className="flex-1 flex items-center gap-3 bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-3">
-                                <div className="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
-                                <div>
-                                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">현재 Q-Cycle 국면</div>
-                                    <div className="text-sm font-bold text-white">Phase 1 · 전공정(Front-end) 중심</div>
-                                    <div className="text-[11px] text-indigo-300 mt-0.5">삼성 P4 조기 집행 + TSMC CAPEX +62% → 전공정 ETF 비중 구조적 확대 구간</div>
-                                </div>
-                            </div>
-                            <div className="flex-1 flex items-center gap-3 bg-white/[0.02] border border-white/10 rounded-xl p-3 opacity-60">
-                                <div className="w-2.5 h-2.5 rounded-full bg-gray-500 shrink-0" />
-                                <div>
-                                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">다음 국면 (예정)</div>
-                                    <div className="text-sm font-bold text-gray-400">Phase 2 · 후공정(Back-end) 리밸런싱</div>
-                                    <div className="text-[11px] text-gray-500 mt-0.5">OSAT 증설 발표 본격화 시점에 후공정 ETF로 비중 이동</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* WFE 투자 thesis 카드 3개 */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col gap-2">
-                                <div className="flex items-center gap-2 text-violet-400 font-bold text-sm">
-                                    <Target className="w-4 h-4" />
-                                    <span>WFE 병목: AI 자본의 최종 목적지</span>
-                                </div>
-                                <p className="text-xs text-gray-300 leading-relaxed">
-                                    AI 메가 펀딩 → 데이터센터 증설 → 파운드리/메모리 신규 팹 → <span className="text-violet-300 font-bold">전공정 반도체 장비(WFE) 수요 폭발</span>. 자본의 병목 현상이 발생하는 좁은 출구(WFE)에 투자해야 가장 높은 레버리지 효과를 얻을 수 있습니다.
-                                </p>
-                            </div>
-                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col gap-2">
-                                <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-                                    <GitBranch className="w-4 h-4" />
-                                    <span>Q사이클: 물량 확대 국면 진입</span>
-                                </div>
-                                <p className="text-xs text-gray-300 leading-relaxed">
-                                    P사이클(감산·ASP 회복)을 넘어 <span className="text-amber-300 font-bold">Q사이클(신규 팹 증설·CAPEX 확대)</span>로 전환. 수혜 섹터도 메모리 IDM 본사 → 증착·식각·세정·검사 장비 및 소재/부품으로 이동합니다.
-                                </p>
-                            </div>
-                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col gap-2">
-                                <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-                                    <ArrowRight className="w-4 h-4" />
-                                    <span>승자 독식 리스크 제거 전략</span>
-                                </div>
-                                <p className="text-xs text-gray-300 leading-relaxed">
-                                    TSMC가 이기든, 인텔이 이기든, 삼성이 이기든 — 결국 첨단 팹에는 <span className="text-emerald-300 font-bold">동일한 WFE 장비</span>가 들어갑니다. 개별 칩 메이커의 수율·수주 경쟁 리스크를 피하고 확정된 팹 증설에만 배팅하는 구조적 전략입니다.
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* 공정별 6개월 시차 로테이션 타임라인 */}
-                        <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4">
-                            <h5 className="text-xs font-bold text-gray-300 mb-4 flex items-center gap-2">
-                                <Activity className="w-3.5 h-3.5 text-indigo-400" />
-                                공정별 6개월 시차 로테이션 타임라인
-                            </h5>
-                            <div className="flex items-center gap-0 w-full overflow-x-auto">
-                                {/* Step 1: Cleanroom */}
-                                <div className="flex flex-col items-center gap-2 min-w-[110px]">
-                                    <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs font-bold text-gray-400">S1</div>
-                                    <div className="text-center">
-                                        <div className="text-[10px] font-bold text-gray-400">클린룸 구축</div>
-                                        <div className="text-[9px] text-gray-600 mt-0.5">기초 인프라</div>
-                                        <div className="text-[9px] text-gray-600">T+0</div>
-                                    </div>
-                                </div>
-                                <div className="flex-1 flex flex-col items-center gap-1 min-w-[80px]">
-                                    <div className="w-full h-px bg-white/20 relative">
-                                        <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/30" />
-                                    </div>
-                                    <div className="text-[9px] text-gray-500">+6개월</div>
-                                </div>
-                                {/* Step 2: Front-end (CURRENT) */}
-                                <div className="flex flex-col items-center gap-2 min-w-[130px]">
-                                    <div className="relative">
-                                        <div className="w-10 h-10 rounded-full bg-indigo-500/30 border-2 border-indigo-400 flex items-center justify-center text-xs font-bold text-indigo-300">S2</div>
-                                        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-indigo-400 animate-ping" />
-                                        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-indigo-400" />
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="text-[10px] font-bold text-indigo-300">전공정 장비 발주</div>
-                                        <div className="text-[9px] text-indigo-400/70 mt-0.5">ASML/AMAT/LRCX</div>
-                                        <div className="text-[9px] text-indigo-400/70">유진테크/원익IPS</div>
-                                        <div className="text-[9px] font-bold text-indigo-300 mt-1 px-2 py-0.5 rounded-full border border-indigo-400/50 bg-indigo-400/10">← 현재 국면</div>
-                                    </div>
-                                </div>
-                                <div className="flex-1 flex flex-col items-center gap-1 min-w-[80px]">
-                                    <div className="w-full h-px bg-white/10" />
-                                    <div className="text-[9px] text-gray-600">+6개월</div>
-                                </div>
-                                {/* Step 3: Back-end */}
-                                <div className="flex flex-col items-center gap-2 min-w-[110px] opacity-50">
-                                    <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-gray-600">S3</div>
-                                    <div className="text-center">
-                                        <div className="text-[10px] font-bold text-gray-500">후공정 장비 발주</div>
-                                        <div className="text-[9px] text-gray-600 mt-0.5">OSAT 증설 시점</div>
-                                        <div className="text-[9px] text-gray-600">리밸런싱 타점</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 퀀트 스크리너: OPM vs PER 스캐터 차트 */}
-                        <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4">
-                            <div className="flex items-center justify-between mb-1">
-                                <h5 className="text-xs font-bold text-gray-300 flex items-center gap-2">
-                                    <Target className="w-3.5 h-3.5 text-violet-400" />
-                                    퀀트 스크리너: TTM OPM × Trailing PER 포지셔닝
-                                </h5>
-                                <div className="flex items-center gap-3">
-                                    {screenerUpdatedAt && (
-                                        <span className="text-[9px] text-gray-600">기준: {screenerUpdatedAt} TTM 실제</span>
-                                    )}
-                                    <span className="text-[9px] text-amber-600/80 font-bold px-2 py-0.5 rounded bg-amber-600/10 border border-amber-600/20">컨센서스 미사용</span>
-                                </div>
-                            </div>
-
-                            {/* 그룹 범례 */}
-                            <div className="flex flex-wrap gap-3 mb-4 mt-2">
-                                {Object.entries(GROUP_CONFIG).map(([g, cfg]) => (
-                                    <div key={g} className="flex items-center gap-1.5 text-[10px] text-gray-400">
-                                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cfg.color }} />
-                                        {g}
-                                    </div>
-                                ))}
-                            </div>
-
-                            {screenerLoading ? (
-                                <div className="h-[340px] flex items-center justify-center text-gray-500 text-sm">
-                                    <div className="flex flex-col items-center gap-3">
-                                        <div className="w-6 h-6 border-2 border-violet-500/50 border-t-violet-400 rounded-full animate-spin" />
-                                        Yahoo Finance에서 TTM 재무 데이터 조회 중...
-                                    </div>
-                                </div>
-                            ) : screenerData.length === 0 ? (
-                                <div className="h-[340px] flex items-center justify-center text-gray-500 text-sm">데이터 없음</div>
-                            ) : (
-                                <>
-                                    <div className="relative">
-                                        {/* 사분면 레이블 */}
-                                        <div className="absolute top-2 left-[20%] text-[10px] text-emerald-400/60 font-bold pointer-events-none z-10">안전마진 영역</div>
-                                        <div className="absolute top-2 right-4 text-[10px] text-amber-400/60 font-bold pointer-events-none z-10">독점 해자 영역</div>
-                                        <div className="absolute bottom-10 right-4 text-[10px] text-blue-400/40 font-bold pointer-events-none z-10">사이클 턴어라운드</div>
-                                        <ResponsiveContainer width="100%" height={340}>
-                                            <ScatterChart margin={{ top: 20, right: 40, bottom: 20, left: 20 }}>
-                                                <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-                                                <XAxis
-                                                    dataKey="per"
-                                                    type="number"
-                                                    name="Trailing PER"
-                                                    domain={[0, 'auto']}
-                                                    tickFormatter={(v) => `${v}x`}
-                                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }}
-                                                    label={{ value: 'Trailing PER (배수)', position: 'insideBottom', offset: -10, fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
-                                                />
-                                                <YAxis
-                                                    dataKey="opm"
-                                                    type="number"
-                                                    name="TTM OPM"
-                                                    tickFormatter={(v) => `${v}%`}
-                                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }}
-                                                    label={{ value: 'TTM OPM (%)', angle: -90, position: 'insideLeft', offset: 10, fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
-                                                />
-                                                <ZAxis range={[60, 60]} />
-                                                <RechartsTooltip content={<ScatterTooltip />} />
-                                                {/* 사분면 구분선 */}
-                                                <ReferenceLine y={30} stroke="rgba(255,255,255,0.1)" strokeDasharray="4 4" />
-                                                <ReferenceLine x={25} stroke="rgba(255,255,255,0.1)" strokeDasharray="4 4" />
-                                                {Object.keys(GROUP_CONFIG).map((group) => {
-                                                    const groupData = screenerData
-                                                        .filter((d) => d.group === group && d.opm != null && d.per != null)
-                                                        .map((d) => ({ ...d, x: d.per, y: d.opm }));
-                                                    if (groupData.length === 0) return null;
-                                                    return (
-                                                        <Scatter
-                                                            key={group}
-                                                            name={group}
-                                                            data={groupData}
-                                                            fill={GROUP_CONFIG[group].color}
-                                                            shape={(props: any) => <ScatterDot {...props} fill={GROUP_CONFIG[group].color} />}
-                                                        />
-                                                    );
-                                                })}
-                                            </ScatterChart>
-                                        </ResponsiveContainer>
-                                    </div>
-
-                                    {/* 데이터 테이블 */}
-                                    <div className="mt-4 overflow-x-auto">
-                                        <table className="w-full text-xs">
-                                            <thead>
-                                                <tr className="border-b border-white/10">
-                                                    <th className="px-3 py-2 text-left text-gray-400 font-bold">종목</th>
-                                                    <th className="px-3 py-2 text-center text-gray-400 font-bold">그룹</th>
-                                                    <th className="px-3 py-2 text-right text-gray-400 font-bold">TTM OPM</th>
-                                                    <th className="px-3 py-2 text-right text-gray-400 font-bold">Trailing PER</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {[...screenerData]
-                                                    .sort((a, b) => (b.opm ?? -999) - (a.opm ?? -999))
-                                                    .map((item) => {
-                                                        const cfg = GROUP_CONFIG[item.group] || { color: '#6b7280' };
-                                                        return (
-                                                            <tr key={item.ticker} className="border-b border-white/5 hover:bg-white/[0.02]">
-                                                                <td className="px-3 py-2 font-bold text-gray-200">
-                                                                    {item.name}
-                                                                    <span className="text-gray-600 font-normal ml-1.5 text-[10px]">{item.ticker}</span>
-                                                                </td>
-                                                                <td className="px-3 py-2 text-center">
-                                                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ color: cfg.color, backgroundColor: cfg.color + '20' }}>
-                                                                        {item.group}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="px-3 py-2 text-right font-mono font-bold" style={{ color: item.opm != null ? (item.opm >= 30 ? '#34d399' : item.opm >= 20 ? '#fbbf24' : '#94a3b8') : '#4b5563' }}>
-                                                                    {item.opm != null ? `${item.opm}%` : '–'}
-                                                                </td>
-                                                                <td className="px-3 py-2 text-right font-mono font-bold text-amber-400">
-                                                                    {item.per != null ? `${item.per}x` : '–'}
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-
-                        <p className="text-[10px] text-gray-600 leading-relaxed">
-                            * TTM(최근 4분기 합산) 실제 기준 · 컨센서스/FnGuide 미사용 · 출처: Yahoo Finance · 투자 권유 아님. 음수 PER은 표시 제외.
-                        </p>
-                    </div>
-                )}
-            </SectorInsightReport>
         </div>
     );
 }
