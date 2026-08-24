@@ -457,268 +457,7 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
     };
 
     return (
-        <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-indigo-400" />
-                    반도체 소부장 주요 종목 현황
-                </h3>
-                <div className="flex items-center gap-2.5">
-                    <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
-                        {([['KR', '국내상장 ETF(국내주식)'], ['KR_US', '국내상장 ETF(해외주식)'], ['US', '해외상장 ETF']] as const).map(([val, lbl]) => (
-                            <button key={val}
-                                onClick={() => { setMarketTab(val); setSelectedEtf(null); }}
-                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === val ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}>
-                                {lbl}
-                            </button>
-                        ))}
-                    </div>
-                    <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
-                        {periodOptions.map(p => (
-                            <button key={p} onClick={() => setPeriod(p)}
-                                className={`px-2.5 py-1.5 text-xs font-bold rounded-md transition-all ${period === p ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}>
-                                {p}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* ETF Selector Chips */}
-            <div className="flex flex-wrap gap-2 items-center mb-4 bg-black/30 p-2.5 rounded-2xl border border-white/5">
-                <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center">🔍 구성종목 주가 비교:</span>
-                {etfsToSelect.filter(e => activeTabEtfs.includes(e) || selectedEtf === e).map((etfName, idx) => {
-                    const isSelected = selectedEtf === etfName;
-                    const themeColor = colors[idx % colors.length];
-                    return (
-                        <button key={etfName}
-                            onClick={() => setSelectedEtf(isSelected ? null : etfName)}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border ${isSelected ? 'bg-indigo-600/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]' : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'}`}
-                            style={{ borderColor: isSelected ? themeColor : 'rgba(255,255,255,0.06)' }}>
-                            {etfName} {isSelected && '✓'}
-                        </button>
-                    );
-                })}
-                {selectedEtf && (
-                    <button onClick={() => setSelectedEtf(null)}
-                        className="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-auto hover:underline transition-all">
-                        비교 초기화 (X)
-                    </button>
-                )}
-            </div>
-
-            <div className="w-full h-[400px]">
-                {isLoading ? (
-                    <ChartLoadingPlaceholder height={400} message="반도체 소부장 ETF 데이터 로딩중" />
-                ) : error ? (
-                    <div className="w-full h-full flex items-center justify-center text-rose-400 text-sm">{error}</div>
-                ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData} margin={{ top: 10, right: 15, left: 15, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis dataKey="date" stroke="rgba(255,255,255,0.2)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} tickMargin={10} minTickGap={30} />
-                            <YAxis orientation="right" width={55} domain={['auto', 'auto']} stroke="rgba(255,255,255,0.2)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} tickFormatter={(val) => `${val.toFixed(0)}%`} />
-                            <RechartsTooltip content={<CustomTooltip />} />
-                            <Legend content={renderCustomLegend} />
-                            {keys.map((k, idx) => {
-                                const isConstituent = !baseEtfKeys.includes(k);
-                                if (!selectedEtf && !isConstituent && !activeTabEtfs.includes(k)) return null;
-                                return (
-                                    <Line key={k} type="monotone" dataKey={k} stroke={colors[idx % colors.length]}
-                                        strokeWidth={hoveredLine === k ? (isConstituent ? 3 : 4) : hoveredLine ? 1 : (isConstituent ? 1.5 : 2)}
-                                        strokeDasharray={isConstituent ? "4 4" : undefined}
-                                        dot={false} activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
-                                        name={k} connectNulls={true}
-                                        style={{ opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8, transition: 'all 0.3s ease' }} />
-                                );
-                            })}
-                        </LineChart>
-                    </ResponsiveContainer>
-                )}
-            </div>
-            <p className="text-[10px] text-gray-500 text-right mt-2 font-mono">
-                * 기준점 100으로 환산된 지수/주가 추이 (배당/분배금 제외)
-            </p>
-
-            <div className="w-full border-t border-white/10 my-5"></div>
-
-            {/* Holdings Table Section */}
-            <div className="flex flex-col gap-4">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-3">
-                    <h4 className="text-base font-bold text-white flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-emerald-400" />
-                        반도체 소부장 주요 ETF 구성종목 및 비중 비교 (%)
-                    </h4>
-                    <span className="text-[10px] sm:text-xs text-gray-400 font-bold font-mono bg-white/5 px-2 py-1.5 rounded border border-white/5">
-                        {isMarketOpen ? (holdingsUpdatedAt ? `${holdingsUpdatedAt} KST 기준` : 'KST 기준') : '종가기준'}
-                    </span>
-                </div>
-
-                {isHoldingsLoading ? (
-                    <div className="py-8 flex justify-center items-center text-xs text-gray-400 font-medium">구성종목 데이터를 로드하는 중...</div>
-                ) : holdingsData.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-rose-400">구성종목 데이터를 불러오지 못했습니다.</div>
-                ) : (
-                    <div className="overflow-x-auto overflow-y-auto max-h-[600px] w-full rounded-2xl border border-white/10 bg-black/30 shadow-inner">
-                        <table className="w-full text-left border-collapse">
-                            <thead className="sticky top-0 z-10">
-                                <tr className="bg-[#141420]">
-                                    <th className="px-4 py-3 text-xs font-bold text-gray-300 border-b border-white/10">구성종목명</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10 whitespace-nowrap">현재가 / 전일대비</th>
-                                    {displayHoldingsKeys.map((k, idx) => {
-                                        const originalIdx = holdingsKeys.indexOf(k);
-                                        const dotColor = colors[originalIdx >= 0 ? originalIdx : idx % colors.length];
-                                        const etfCode = etfNameToCodeMap[k];
-                                        const dispInfo = etfCode ? disparityData[etfCode] : null;
-
-                                        let weightSum = 0;
-                                        let weightedChangeSum = 0;
-                                        holdingsData.forEach(row => {
-                                            const weight = row[k];
-                                            const change = row.change_pct;
-                                            if (weight !== undefined && weight !== null && weight > 0 && change !== undefined && change !== null) {
-                                                weightSum += weight;
-                                                weightedChangeSum += (change * weight);
-                                            }
-                                        });
-                                        const estChangePct = weightSum > 0 ? (weightedChangeSum / weightSum) : null;
-
-                                        const isKrListed = krEtfs.includes(k) || krUsEtfs.includes(k);
-                                        const isUsListed = usEtfs.includes(k);
-                                        const isBeforeOpen = isBeforeKrMarketOpen();
-                                        const actualPrice = dispInfo ? dispInfo.price : null;
-                                        const actualChangeRate = dispInfo ? dispInfo.change_rate : null;
-
-                                        const estPrice = isKrListed
-                                            ? (isBeforeOpen ? null : actualPrice)
-                                            : ((dispInfo && dispInfo.prev_close && estChangePct !== null) ? dispInfo.prev_close * (1 + estChangePct / 100) : null);
-                                        const displayEstChangePct = isKrListed ? (isBeforeOpen ? null : actualChangeRate) : estChangePct;
-                                        const diffRate = isKrListed
-                                            ? (isBeforeOpen ? null : 0)
-                                            : ((actualPrice !== null && estPrice !== null && estPrice > 0) ? ((actualPrice - estPrice) / estPrice) * 100 : null);
-                                        const showInfo = isKrListed ? (isBeforeOpen ? true : (actualPrice !== null)) : (estChangePct !== null);
-                                        const shouldShowActualPrice = isKrListed ? (!isBeforeOpen && actualPrice !== null) : (actualPrice !== null);
-
-                                        return (
-                                            <th key={k} className="px-3 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10">
-                                                <div className="flex flex-col items-center justify-center gap-1.5 whitespace-nowrap">
-                                                    <div className="flex items-center justify-center gap-1.5">
-                                                        <span style={{ color: dotColor }}>●</span>
-                                                        {k}
-                                                    </div>
-                                                    {showInfo && (
-                                                        <div className="flex flex-col items-center mt-1 text-[11px] font-sans space-y-0.5 leading-normal">
-                                                            <div className="flex items-center gap-1 font-bold text-gray-200">
-                                                                <span className="text-gray-400">예상가격:</span>
-                                                                {estPrice !== null ? (
-                                                                    <span>{isUsListed ? `$${estPrice.toFixed(2)}` : `${new Intl.NumberFormat('ko-KR').format(Math.floor(estPrice))}원`}</span>
-                                                                ) : (
-                                                                    <span>{isUsListed ? '-$' : '-원'}</span>
-                                                                )}
-                                                                {displayEstChangePct !== null && (
-                                                                    <span style={{ color: displayEstChangePct > 0 ? '#60a5fa' : displayEstChangePct < 0 ? '#f87171' : '#94a3b8' }}>
-                                                                        ({displayEstChangePct > 0 ? '+' : ''}{displayEstChangePct.toFixed(2)}%)
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className="flex items-center gap-1 font-bold text-gray-200">
-                                                                <span className="text-gray-400">실제가격:</span>
-                                                                {shouldShowActualPrice ? (
-                                                                    <>
-                                                                        <span>{isUsListed ? `$${actualPrice!.toFixed(2)}` : `${new Intl.NumberFormat('ko-KR').format(Math.floor(actualPrice!))}원`}</span>
-                                                                        {actualChangeRate !== null && (
-                                                                            <span style={{ color: actualChangeRate > 0 ? '#60a5fa' : actualChangeRate < 0 ? '#f87171' : '#94a3b8' }}>
-                                                                                ({actualChangeRate > 0 ? '+' : ''}{actualChangeRate.toFixed(2)}%)
-                                                                            </span>
-                                                                        )}
-                                                                    </>
-                                                                ) : (
-                                                                    <span className="text-gray-500 font-medium">-</span>
-                                                                )}
-                                                            </div>
-                                                            <div className="text-[10px] text-gray-400 font-medium">
-                                                                괴리율:{' '}
-                                                                {(isKrListed ? !isBeforeOpen : true) && diffRate !== null ? (
-                                                                    <span style={{ color: diffRate > 0 ? '#60a5fa' : diffRate < 0 ? '#f87171' : '#94a3b8' }} className="font-semibold">
-                                                                        {diffRate > 0 ? '+' : ''}{diffRate.toFixed(3)}%
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="text-gray-500 font-semibold">-</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </th>
-                                        );
-                                    })}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {displayHoldingsData.map((row) => (
-                                    <tr key={row.constituent} className="hover:bg-white/5 transition-colors">
-                                        <td className="px-4 py-2.5 text-xs font-bold border-b border-white/5 max-w-[200px] truncate">
-                                            {onOpenDetail ? (
-                                                <button
-                                                    onClick={() => onOpenDetail(getTickerFromConstituent(row.constituent))}
-                                                    className="text-gray-200 hover:text-indigo-400 transition-all duration-200 text-left font-bold inline-flex items-center gap-1 group/btn"
-                                                    title={`${row.constituent} 상세 주식 정보 조회`}>
-                                                    <span className="group-hover/btn:underline">{row.constituent}</span>
-                                                    <ArrowUpRight className="w-3.5 h-3.5 text-gray-400 group-hover/btn:text-indigo-400 transition-colors" />
-                                                </button>
-                                            ) : (
-                                                <span className="text-gray-200">{row.constituent}</span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-2.5 text-center text-xs border-b border-white/5 whitespace-nowrap font-mono align-middle">
-                                            {row.price !== undefined && row.price !== null ? (
-                                                <div className="flex flex-col gap-0.5 justify-center items-center">
-                                                    <span className="text-gray-200 font-bold">{formatConstituentPrice(row.constituent, row.price)}</span>
-                                                    {row.change_pct !== undefined && row.change_pct !== null ? (
-                                                        <span className="text-[10px] font-bold" style={{ color: row.change_pct > 0 ? '#60a5fa' : row.change_pct < 0 ? '#f87171' : '#94a3b8' }}>
-                                                            {row.change_pct > 0 ? '+' : ''}{row.change_pct.toFixed(2)}%
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[10px] text-gray-500">-</span>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <span className="text-gray-500 font-bold">-</span>
-                                            )}
-                                        </td>
-                                        {displayHoldingsKeys.map((k) => {
-                                            const val = row[k];
-                                            if (!val || val === 0) {
-                                                return <td key={k} className="px-3 py-2.5 text-center text-xs font-semibold text-gray-600 border-b border-white/5 font-mono">-</td>;
-                                            }
-                                            let cellColor = '#ffffff';
-                                            if (val >= 20) cellColor = '#10b981';
-                                            else if (val >= 10) cellColor = '#84cc16';
-                                            else if (val >= 5) cellColor = '#fbbf24';
-                                            return (
-                                                <td key={k} className="px-3 py-2 border-b border-white/5 align-middle min-w-[125px]">
-                                                    <div className="flex flex-col gap-1 w-full">
-                                                        <div className="flex justify-end w-full">
-                                                            <span className="text-[10.5px] font-bold font-mono" style={{ color: cellColor }}>{val.toFixed(1)}%</span>
-                                                        </div>
-                                                        <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                                            <div className="h-full rounded-full transition-all duration-300" style={{ width: `${Math.min(val, 100)}%`, backgroundColor: cellColor }} />
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
-
-            <div className="w-full border-t border-white/10 my-6"></div>
-
-            {/* Expert Insight Section — 동적 Gemini 리포트 (라이브 시세 그라운딩 + Update 갱신) */}
+        <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0 gap-6">
             <SectorInsightReport
                 sector="semiparts"
                 title="AI 자본지출 사이클과 반도체 소부장(소재·부품·장비) 투자 전략"
@@ -736,7 +475,6 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                 {activeInsightTab === 'qcycle' && (
                     <div className="flex flex-col gap-6 mt-1">
 
-                        {/* 현재 국면 표시 */}
                         <div className="flex flex-col sm:flex-row gap-3">
                             <div className="flex-1 flex items-center gap-3 bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-3">
                                 <div className="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
@@ -756,7 +494,6 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                             </div>
                         </div>
 
-                        {/* WFE 투자 thesis 카드 3개 */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col gap-2">
                                 <div className="flex items-center gap-2 text-violet-400 font-bold text-sm">
@@ -787,14 +524,12 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                             </div>
                         </div>
 
-                        {/* 공정별 6개월 시차 로테이션 타임라인 */}
                         <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4">
                             <h5 className="text-xs font-bold text-gray-300 mb-4 flex items-center gap-2">
                                 <Activity className="w-3.5 h-3.5 text-indigo-400" />
                                 공정별 6개월 시차 로테이션 타임라인
                             </h5>
                             <div className="flex items-center gap-0 w-full overflow-x-auto">
-                                {/* Step 1: Cleanroom */}
                                 <div className="flex flex-col items-center gap-2 min-w-[110px]">
                                     <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs font-bold text-gray-400">S1</div>
                                     <div className="text-center">
@@ -809,7 +544,6 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                                     </div>
                                     <div className="text-[9px] text-gray-500">+6개월</div>
                                 </div>
-                                {/* Step 2: Front-end (CURRENT) */}
                                 <div className="flex flex-col items-center gap-2 min-w-[130px]">
                                     <div className="relative">
                                         <div className="w-10 h-10 rounded-full bg-indigo-500/30 border-2 border-indigo-400 flex items-center justify-center text-xs font-bold text-indigo-300">S2</div>
@@ -827,7 +561,6 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                                     <div className="w-full h-px bg-white/10" />
                                     <div className="text-[9px] text-gray-600">+6개월</div>
                                 </div>
-                                {/* Step 3: Back-end */}
                                 <div className="flex flex-col items-center gap-2 min-w-[110px] opacity-50">
                                     <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-gray-600">S3</div>
                                     <div className="text-center">
@@ -839,7 +572,6 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                             </div>
                         </div>
 
-                        {/* 퀀트 스크리너: OPM vs PER 스캐터 차트 */}
                         <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4">
                             <div className="flex items-center justify-between mb-1">
                                 <h5 className="text-xs font-bold text-gray-300 flex items-center gap-2">
@@ -854,7 +586,6 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                                 </div>
                             </div>
 
-                            {/* 그룹 범례 */}
                             <div className="flex flex-wrap gap-3 mb-4 mt-2">
                                 {Object.entries(GROUP_CONFIG).map(([g, cfg]) => (
                                     <div key={g} className="flex items-center gap-1.5 text-[10px] text-gray-400">
@@ -876,7 +607,6 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                             ) : (
                                 <>
                                     <div className="relative">
-                                        {/* 사분면 레이블 */}
                                         <div className="absolute top-2 left-[20%] text-[10px] text-emerald-400/60 font-bold pointer-events-none z-10">안전마진 영역</div>
                                         <div className="absolute top-2 right-4 text-[10px] text-amber-400/60 font-bold pointer-events-none z-10">독점 해자 영역</div>
                                         <div className="absolute bottom-10 right-4 text-[10px] text-blue-400/40 font-bold pointer-events-none z-10">사이클 턴어라운드</div>
@@ -902,7 +632,6 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                                                 />
                                                 <ZAxis range={[60, 60]} />
                                                 <RechartsTooltip content={<ScatterTooltip />} />
-                                                {/* 사분면 구분선 */}
                                                 <ReferenceLine y={30} stroke="rgba(255,255,255,0.1)" strokeDasharray="4 4" />
                                                 <ReferenceLine x={25} stroke="rgba(255,255,255,0.1)" strokeDasharray="4 4" />
                                                 {Object.keys(GROUP_CONFIG).map((group) => {
@@ -923,8 +652,6 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                                             </ScatterChart>
                                         </ResponsiveContainer>
                                     </div>
-
-                                    {/* 데이터 테이블 */}
                                     <div className="mt-4 overflow-x-auto">
                                         <table className="w-full text-xs">
                                             <thead>
@@ -973,6 +700,233 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                     </div>
                 )}
             </SectorInsightReport>
+
+            <div className="w-full border-t border-white/10 my-1"></div>
+
+            <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-1">
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <Activity className="w-5 h-5 text-indigo-400" />
+                        반도체 소부장 주요 종목 현황
+                    </h3>
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
+                            {([['KR', '국내상장 ETF(국내주식)'], ['KR_US', '국내상장 ETF(해외주식)'], ['US', '해외상장 ETF']] as const).map(([val, lbl]) => (
+                                <button key={val}
+                                    onClick={() => { setMarketTab(val); setSelectedEtf(null); }}
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === val ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}>
+                                    {lbl}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
+                            {periodOptions.map(p => (
+                                <button key={p} onClick={() => setPeriod(p)}
+                                    className={`px-2.5 py-1.5 text-xs font-bold rounded-md transition-all ${period === p ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}>
+                                    {p}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 items-center mb-2 bg-black/30 p-2.5 rounded-2xl border border-white/5">
+                    <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center">🔍 구성종목 주가 비교:</span>
+                    {etfsToSelect.filter(e => activeTabEtfs.includes(e) || selectedEtf === e).map((etfName, idx) => {
+                        const isSelected = selectedEtf === etfName;
+                        const themeColor = colors[idx % colors.length];
+                        return (
+                            <button key={etfName}
+                                onClick={() => setSelectedEtf(isSelected ? null : etfName)}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border ${isSelected ? 'bg-indigo-600/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]' : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'}`}
+                                style={{ borderColor: isSelected ? themeColor : 'rgba(255,255,255,0.06)' }}>
+                                {etfName} {isSelected && '✓'}
+                            </button>
+                        );
+                    })}
+                    {selectedEtf && (
+                        <button onClick={() => setSelectedEtf(null)}
+                            className="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-auto hover:underline transition-all">
+                            비교 초기화 (X)
+                        </button>
+                    )}
+                </div>
+
+                <div className="w-full h-[400px]">
+                    {isLoading ? (
+                        <ChartLoadingPlaceholder height={400} message="반도체 소부장 ETF 데이터 로딩중" />
+                    ) : error ? (
+                        <div className="w-full h-full flex items-center justify-center text-rose-400 text-sm">{error}</div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData} margin={{ top: 10, right: 15, left: 15, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                <XAxis dataKey="date" stroke="rgba(255,255,255,0.2)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} tickMargin={10} minTickGap={30} />
+                                <YAxis orientation="right" width={55} domain={['auto', 'auto']} stroke="rgba(255,255,255,0.2)" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} tickFormatter={(val) => `${val.toFixed(0)}%`} />
+                                <RechartsTooltip content={<CustomTooltip />} />
+                                <Legend content={renderCustomLegend} />
+                                {keys.map((k, idx) => {
+                                    const isConstituent = !baseEtfKeys.includes(k);
+                                    if (!selectedEtf && !isConstituent && !activeTabEtfs.includes(k)) return null;
+                                    return (
+                                        <Line key={k} type="monotone" dataKey={k} stroke={colors[idx % colors.length]}
+                                            strokeWidth={hoveredLine === k ? (isConstituent ? 3 : 4) : hoveredLine ? 1 : (isConstituent ? 1.5 : 2)}
+                                            strokeDasharray={isConstituent ? "4 4" : undefined} dot={false}
+                                            activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
+                                            name={k} connectNulls={true}
+                                            style={{ opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8, transition: 'all 0.3s ease' }} />
+                                    );
+                                })}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    )}
+                </div>
+                <p className="text-[10px] text-gray-500 text-right mt-1 font-mono">* 기준점 100으로 환산된 지수/주가 추이 (배당/분배금 제외)</p>
+            </div>
+
+            <div className="w-full border-t border-white/10 my-1"></div>
+
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-3">
+                    <h4 className="text-base font-bold text-white flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-emerald-400" />
+                        반도체 소부장 섹터 주요 ETF 구성종목 및 비중 비교 (%)
+                    </h4>
+                    <span className="text-[10px] sm:text-xs text-gray-400 font-bold font-mono bg-white/5 px-2 py-1.5 rounded border border-white/5">
+                        {isMarketOpen ? (holdingsUpdatedAt ? `${holdingsUpdatedAt} KST 기준` : 'KST 기준') : 'NASDAQ 종가기준'}
+                    </span>
+                </div>
+                
+                {isHoldingsLoading ? (
+                    <div className="py-8 flex justify-center items-center text-xs text-gray-400 font-medium">
+                        구성종목 데이터를 로드하는 중...
+                    </div>
+                ) : holdingsData.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-rose-400">
+                        구성종목 데이터를 불러오지 못했습니다.
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto overflow-y-auto max-h-[600px] w-full rounded-2xl border border-white/10 bg-black/30 shadow-inner">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="sticky top-0 z-10">
+                                <tr className="bg-[#141420]">
+                                    <th className="px-4 py-3 text-xs font-bold text-gray-300 border-b border-white/10">구성종목명</th>
+                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10 whitespace-nowrap">현재가 / 전일대비</th>
+                                    {displayHoldingsKeys.map((k, idx) => {
+                                        const originalIdx = holdingsKeys.indexOf(k);
+                                        const dotColor = colors[originalIdx >= 0 ? originalIdx : idx % colors.length];
+                                        const etfCode = etfNameToCodeMap[k];
+                                        const dispInfo = etfCode ? disparityData[etfCode] : null;
+                                        let weightSum = 0; let weightedChangeSum = 0;
+                                        holdingsData.forEach(row => {
+                                            const weight = row[k]; const change = row.change_pct;
+                                            if (weight !== undefined && weight !== null && weight > 0 && change !== undefined && change !== null) {
+                                                weightSum += weight; weightedChangeSum += (change * weight);
+                                            }
+                                        });
+                                        const estChangePct = weightSum > 0 ? (weightedChangeSum / weightSum) : null;
+                                        const isKrListed = krEtfs.includes(k) || krUsEtfs.includes(k);
+                                        const isUsListed = usEtfs.includes(k);
+                                        const isBeforeOpen = isBeforeKrMarketOpen();
+                                        const actualPrice = dispInfo ? dispInfo.price : null;
+                                        const actualChangeRate = dispInfo ? dispInfo.change_rate : null;
+                                        const estPrice = isKrListed ? (isBeforeOpen ? null : actualPrice) : ((dispInfo && dispInfo.prev_close && estChangePct !== null) ? dispInfo.prev_close * (1 + estChangePct / 100) : null);
+                                        const displayEstChangePct = isKrListed ? (isBeforeOpen ? null : actualChangeRate) : estChangePct;
+                                        const diffRate = isKrListed ? (isBeforeOpen ? null : 0) : ((actualPrice !== null && estPrice !== null && estPrice > 0) ? ((actualPrice - estPrice) / estPrice) * 100 : null);
+                                        const showInfo = isKrListed ? (isBeforeOpen ? true : (actualPrice !== null)) : (estChangePct !== null);
+                                        const shouldShowActualPrice = isKrListed ? (!isBeforeOpen && actualPrice !== null) : (actualPrice !== null);
+
+                                        return (
+                                            <th key={k} className="px-3 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10">
+                                                <div className="flex flex-col items-center justify-center gap-1.5 whitespace-nowrap">
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <span style={{ color: dotColor }}>●</span>{k}
+                                                    </div>
+                                                    {showInfo && (
+                                                        <div className="flex flex-col items-center mt-1 text-[11px] font-sans space-y-0.5 leading-normal">
+                                                            <div className="flex items-center gap-1 font-bold text-gray-200">
+                                                                <span className="text-gray-400">예상가격:</span>
+                                                                {estPrice !== null ? (<span>{isUsListed ? `$${estPrice.toFixed(2)}` : `${new Intl.NumberFormat('ko-KR').format(Math.floor(estPrice))}원`}</span>) : (<span>{isUsListed ? '-$' : '-원'}</span>)}
+                                                                {displayEstChangePct !== null && (<span style={{ color: displayEstChangePct > 0 ? '#60a5fa' : displayEstChangePct < 0 ? '#f87171' : '#94a3b8' }}>({displayEstChangePct > 0 ? '+' : ''}{displayEstChangePct.toFixed(2)}%)</span>)}
+                                                            </div>
+                                                            <div className="flex items-center gap-1 font-bold text-gray-200">
+                                                                <span className="text-gray-400">실제가격:</span>
+                                                                {shouldShowActualPrice ? (
+                                                                    <><span>{isUsListed ? `$${actualPrice!.toFixed(2)}` : `${new Intl.NumberFormat('ko-KR').format(Math.floor(actualPrice!))}원`}</span>
+                                                                    {actualChangeRate !== null && (<span style={{ color: actualChangeRate > 0 ? '#60a5fa' : actualChangeRate < 0 ? '#f87171' : '#94a3b8' }}>({actualChangeRate > 0 ? '+' : ''}{actualChangeRate.toFixed(2)}%)</span>)}</>
+                                                                ) : (<span className="text-gray-500 font-medium">-</span>)}
+                                                            </div>
+                                                            <div className="text-[10px] text-gray-400 font-medium">
+                                                                괴리율: {(isKrListed ? !isBeforeOpen : true) && diffRate !== null ? (<span style={{ color: diffRate > 0 ? '#60a5fa' : diffRate < 0 ? '#f87171' : '#94a3b8' }} className="font-semibold">{diffRate > 0 ? '+' : ''}{diffRate.toFixed(3)}%</span>) : (<span className="text-gray-500 font-semibold">-</span>)}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </th>
+                                        );
+                                    })}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {displayHoldingsData.map((row) => (
+                                    <tr key={row.constituent} className="hover:bg-white/5 transition-colors">
+                                        <td className="px-4 py-2.5 text-xs font-bold border-b border-white/5 max-w-[200px] truncate">
+                                            {onOpenDetail ? (
+                                                <button onClick={() => { const ticker = getTickerFromConstituent(row.constituent); onOpenDetail(ticker); }}
+                                                    className="text-gray-200 hover:text-indigo-400 transition-all duration-200 text-left font-bold inline-flex items-center gap-1 group/btn"
+                                                    title={`${row.constituent} 상세 주식 정보 조회`}>
+                                                    <span className="group-hover/btn:underline">{row.constituent}</span>
+                                                    <ArrowUpRight className="w-3.5 h-3.5 text-gray-400 group-hover/btn:text-indigo-400 transition-colors" />
+                                                </button>
+                                            ) : (<span className="text-gray-200">{row.constituent}</span>)}
+                                        </td>
+                                        <td className="px-4 py-2.5 text-center text-xs border-b border-white/5 whitespace-nowrap font-mono align-middle">
+                                            {row.price !== undefined && row.price !== null ? (
+                                                <div className="flex flex-col gap-0.5 justify-center items-center">
+                                                    <span className="text-gray-200 font-bold">
+                                                        {(() => {
+                                                            const ticker = constituentTickerMap[row.constituent];
+                                                            const isKrStock = ticker && /^\d+$/.test(ticker);
+                                                            return isKrStock ? `${new Intl.NumberFormat('ko-KR').format(Math.floor(row.price))}원` : `$${row.price.toFixed(2)}`;
+                                                        })()}
+                                                    </span>
+                                                    {row.change_pct !== undefined && row.change_pct !== null ? (
+                                                        <span className="text-[10px] font-bold" style={{ color: row.change_pct > 0 ? '#60a5fa' : row.change_pct < 0 ? '#f87171' : '#94a3b8' }}>
+                                                            {row.change_pct > 0 ? '+' : ''}{row.change_pct.toFixed(2)}%
+                                                        </span>
+                                                    ) : (<span className="text-[10px] text-gray-500">-</span>)}
+                                                </div>
+                                            ) : (<span className="text-gray-500 font-bold">-</span>)}
+                                        </td>
+                                        {displayHoldingsKeys.map((k) => {
+                                            const val = row[k];
+                                            const isZero = !val || val === 0;
+                                            if (isZero) return (<td key={k} className="px-3 py-2.5 text-center text-xs font-semibold text-gray-600 border-b border-white/5 font-mono">-</td>);
+                                            let cellColor = '#ffffff';
+                                            if (val >= 20) cellColor = '#10b981';
+                                            else if (val >= 10) cellColor = '#84cc16';
+                                            else if (val >= 5) cellColor = '#fbbf24';
+
+                                            return (
+                                                <td key={k} className="px-3 py-2 border-b border-white/5 align-middle min-w-[125px]">
+                                                    <div className="flex flex-col gap-1 w-full">
+                                                        <div className="flex justify-end w-full">
+                                                            <span className="text-[10.5px] font-bold font-mono" style={{ color: cellColor }}>{val.toFixed(1)}%</span>
+                                                        </div>
+                                                        <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                            <div className="h-full rounded-full transition-all duration-300" style={{ width: `${Math.min(val, 100)}%`, backgroundColor: cellColor }} />
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

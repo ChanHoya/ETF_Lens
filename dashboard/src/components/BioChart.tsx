@@ -295,140 +295,162 @@ export default function BioChart({ onOpenDetail }: BioChartProps) {
         : holdingsData;
 
     return (
-        <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-indigo-400" />
-                    바이오섹터 주요 종목 현황
-                </h3>
-                <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
-                    {periodOptions.map(p => (
-                        <button
-                            key={p}
-                            onClick={() => setPeriod(p)}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${period === p
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                            }`}
-                        >
-                            {p}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* ETF Selector Chips for Constituent Overlay */}
-            <div className="flex flex-wrap gap-2 items-center mb-4 bg-black/30 p-2.5 rounded-2xl border border-white/5">
-                <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center">
-                    🔍 구성종목 주가 비교:
-                </span>
-                {etfsToSelect.map((etfName, idx) => {
-                    const isSelected = selectedEtf === etfName;
-                    const themeColor = colors[idx % colors.length];
-                    return (
-                        <button
-                            key={etfName}
-                            onClick={() => setSelectedEtf(isSelected ? null : etfName)}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border ${
-                                isSelected
-                                    ? `bg-indigo-600/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]`
-                                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'
-                            }`}
-                            style={{
-                                borderColor: isSelected ? themeColor : 'rgba(255,255,255,0.06)'
-                            }}
-                        >
-                            {etfName} {isSelected && '✓'}
-                        </button>
-                    );
-                })}
-                {selectedEtf && (
-                    <button
-                        onClick={() => setSelectedEtf(null)}
-                        className="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-auto hover:underline transition-all"
-                    >
-                        비교 초기화 (X)
-                    </button>
-                )}
-            </div>
- 
-            <div className="w-full h-[400px]">
-                {isLoading ? (
-                    <ChartLoadingPlaceholder height={400} message="바이오 ETF 데이터 로딩중" />
-                ) : error ? (
-                    <div className="w-full h-full flex items-center justify-center text-rose-400 text-sm">
-                        {error}
-                    </div>
-                ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData} margin={{ top: 10, right: 15, left: 15, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis
-                                dataKey="date"
-                                stroke="rgba(255,255,255,0.2)"
-                                tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
-                                tickMargin={10}
-                                minTickGap={30}
-                            />
-                            <YAxis
-                                orientation="right"
-                                width={55}
-                                domain={['auto', 'auto']}
-                                stroke="rgba(255,255,255,0.2)"
-                                tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
-                                tickFormatter={(val) => `${val.toFixed(0)}%`}
-                            />
-                            <RechartsTooltip content={<CustomTooltip />} />
-                            <Legend
-                                onClick={(o) => {
-                                    const clickedKey = o.dataKey as string;
-                                    if (etfsToSelect.includes(clickedKey)) {
-                                        setSelectedEtf(prev => prev === clickedKey ? null : clickedKey);
-                                    }
-                                }}
-                                onMouseEnter={handleLegendMouseEnter}
-                                onMouseLeave={handleLegendMouseLeave}
-                                wrapperStyle={{ paddingTop: '10px', fontSize: '12px', cursor: 'pointer' }}
-                                iconType="circle"
-                            />
-                            {keys.map((k, idx) => {
-                                const isConstituent = !baseEtfKeys.includes(k);
-                                return (
-                                    <Line
-                                        key={k}
-                                        type="monotone"
-                                        dataKey={k}
-                                        stroke={colors[idx % colors.length]}
-                                        strokeWidth={hoveredLine === k ? (isConstituent ? 3 : 4) : hoveredLine ? 1 : (isConstituent ? 1.5 : 2)}
-                                        strokeDasharray={isConstituent ? "4 4" : undefined}
-                                        dot={false}
-                                        activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
-                                        name={k}
-                                        connectNulls={true}
-                                        style={{
-                                            opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8,
-                                            transition: 'all 0.3s ease'
-                                        }}
-                                    />
-                                );
-                            })}
-                        </LineChart>
-                    </ResponsiveContainer>
-                )}
-            </div>
-            <p className="text-[10px] text-gray-500 text-right mt-2 font-mono">
-                * 기준점 100으로 환산된 지수/주가 추이 (배당/분배금 제외)
-            </p>
+        <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0 gap-6">
+            {/* 1. Expert Insight Section (최상단 배치) */}
+            <SectorInsightReport
+                sector="bio"
+                title="글로벌 제약·바이오 메가 트렌드 & 포트폴리오 전략"
+                accent="emerald"
+                tabs={[
+                    { id: 'cycle', label: '1. 혁신 사이클 & M&A', icon: TrendingUp },
+                    { id: 'etfs', label: '2. 국내외 핵심 ETF 분석', icon: BookOpen },
+                    { id: 'strategy', label: '3. 연금 자산배분 솔루션', icon: PieChart },
+                ]}
+                activeTab={activeInsightTab}
+                onTabChange={(id) => setActiveInsightTab(id as any)}
+                fallback={BIO_INSIGHT_FALLBACK}
+            />
 
             {/* Divider */}
-            <div className="w-full border-t border-white/10 my-5"></div>
+            <div className="w-full border-t border-white/10 my-1"></div>
 
-            {/* Holdings Table Section */}
+            {/* 2. 바이오섹터 주요 종목 현황 (Chart & Selectors) */}
+            <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-1">
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <Activity className="w-5 h-5 text-indigo-400" />
+                        바이오섹터 주요 종목 현황
+                    </h3>
+                    <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
+                        {periodOptions.map(p => (
+                            <button
+                                key={p}
+                                onClick={() => setPeriod(p)}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${period === p
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                }`}
+                            >
+                                {p}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* ETF Selector Chips for Constituent Overlay */}
+                <div className="flex flex-wrap gap-2 items-center mb-2 bg-black/30 p-2.5 rounded-2xl border border-white/5">
+                    <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center">
+                        🔍 구성종목 주가 비교:
+                    </span>
+                    {etfsToSelect.map((etfName, idx) => {
+                        const isSelected = selectedEtf === etfName;
+                        const themeColor = colors[idx % colors.length];
+                        return (
+                            <button
+                                key={etfName}
+                                onClick={() => setSelectedEtf(isSelected ? null : etfName)}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border ${
+                                    isSelected
+                                        ? `bg-indigo-600/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]`
+                                        : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'
+                                }`}
+                                style={{
+                                    borderColor: isSelected ? themeColor : 'rgba(255,255,255,0.06)'
+                                }}
+                            >
+                                {etfName} {isSelected && '✓'}
+                            </button>
+                        );
+                    })}
+                    {selectedEtf && (
+                        <button
+                            onClick={() => setSelectedEtf(null)}
+                            className="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-auto hover:underline transition-all"
+                        >
+                            비교 초기화 (X)
+                        </button>
+                    )}
+                </div>
+
+                {/* Chart Area */}
+                <div className="w-full h-[400px]">
+                    {isLoading ? (
+                        <ChartLoadingPlaceholder height={400} message="바이오 ETF 데이터 로딩중" />
+                    ) : error ? (
+                        <div className="w-full h-full flex items-center justify-center text-rose-400 text-sm">
+                            {error}
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData} margin={{ top: 10, right: 15, left: 15, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                <XAxis
+                                    dataKey="date"
+                                    stroke="rgba(255,255,255,0.2)"
+                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
+                                    tickMargin={10}
+                                    minTickGap={30}
+                                />
+                                <YAxis
+                                    orientation="right"
+                                    width={55}
+                                    domain={['auto', 'auto']}
+                                    stroke="rgba(255,255,255,0.2)"
+                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
+                                    tickFormatter={(val) => `${val.toFixed(0)}%`}
+                                />
+                                <RechartsTooltip content={<CustomTooltip />} />
+                                <Legend
+                                    onClick={(o) => {
+                                        const clickedKey = o.dataKey as string;
+                                        if (etfsToSelect.includes(clickedKey)) {
+                                            setSelectedEtf(prev => prev === clickedKey ? null : clickedKey);
+                                        }
+                                    }}
+                                    onMouseEnter={handleLegendMouseEnter}
+                                    onMouseLeave={handleLegendMouseLeave}
+                                    wrapperStyle={{ paddingTop: '10px', fontSize: '12px', cursor: 'pointer' }}
+                                    iconType="circle"
+                                />
+                                {keys.map((k, idx) => {
+                                    const isConstituent = !baseEtfKeys.includes(k);
+                                    return (
+                                        <Line
+                                            key={k}
+                                            type="monotone"
+                                            dataKey={k}
+                                            stroke={colors[idx % colors.length]}
+                                            strokeWidth={hoveredLine === k ? (isConstituent ? 3 : 4) : hoveredLine ? 1 : (isConstituent ? 1.5 : 2)}
+                                            strokeDasharray={isConstituent ? "4 4" : undefined}
+                                            dot={false}
+                                            activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
+                                            name={k}
+                                            connectNulls={true}
+                                            style={{
+                                                opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8,
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                        />
+                                    );
+                                })}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    )}
+                </div>
+                <p className="text-[10px] text-gray-500 text-right mt-1 font-mono">
+                    * 기준점 100으로 환산된 지수/주가 추이 (배당/분배금 제외)
+                </p>
+            </div>
+
+            {/* Divider */}
+            <div className="w-full border-t border-white/10 my-1"></div>
+
+            {/* 3. 바이오 섹터 주요 ETF 구성종목 및 비중 비교 (%) */}
             <div className="flex flex-col gap-3">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-1">
                     <h4 className="text-base font-bold text-white flex items-center gap-2">
                         <Activity className="w-4 h-4 text-emerald-400" />
-                        바이오섹터 주요 ETF 구성종목 및 비중 비교 (%)
+                        바이오 섹터 주요 ETF 구성종목 및 비중 비교 (%)
                     </h4>
                 </div>
                 
@@ -539,24 +561,6 @@ export default function BioChart({ onOpenDetail }: BioChartProps) {
                     </div>
                 )}
             </div>
-
-            {/* Divider */}
-            <div className="w-full border-t border-white/10 my-6"></div>
-
-            {/* Expert Insight Section */}
-            <SectorInsightReport
-                sector="bio"
-                title="글로벌 제약·바이오 메가 트렌드 & 포트폴리오 전략"
-                accent="emerald"
-                tabs={[
-                    { id: 'cycle', label: '1. 혁신 사이클 & M&A', icon: TrendingUp },
-                    { id: 'etfs', label: '2. 국내외 핵심 ETF 분석', icon: BookOpen },
-                    { id: 'strategy', label: '3. 연금 자산배분 솔루션', icon: PieChart },
-                ]}
-                activeTab={activeInsightTab}
-                onTabChange={(id) => setActiveInsightTab(id as any)}
-                fallback={BIO_INSIGHT_FALLBACK}
-            />
         </div>
     );
 }

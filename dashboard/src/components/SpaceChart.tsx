@@ -512,177 +512,195 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
     };
 
     return (
-        <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-indigo-400" />
-                    우주섹터 주요 종목 현황
-                </h3>
-                <div className="flex items-center gap-2.5">
-                    {/* Market Toggle Button */}
-                    <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner animate-fade-in">
-                        <button
-                            onClick={() => {
-                                setMarketTab('KR');
-                                setSelectedEtf(null); // 탭 전환 시 개별선택 초기화
-                            }}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR'
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                            }`}
-                        >
-                            국내상장 ETF
-                        </button>
-                        <button
-                            onClick={() => {
-                                setMarketTab('US');
-                                setSelectedEtf(null); // 탭 전환 시 개별선택 초기화
-                            }}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'US'
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                            }`}
-                        >
-                            미국상장 ETF
-                        </button>
-                    </div>
+        <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0 gap-6">
+            {/* 1. Expert Insight Section (최상단 배치) */}
+            <SectorInsightReport
+                sector="space"
+                title="AI 패러다임 쉬프트와 글로벌 우주항공 공급망 전략"
+                accent="cyan"
+                tabs={[
+                    { id: 'macro', label: '1. 매크로 & 우주항공 트렌드', icon: TrendingUp },
+                    { id: 'etfs', label: '2. 국내외 핵심 ETF 분석', icon: BookOpen },
+                    { id: 'strategy', label: '3. 자산배분 모델 & 가이드', icon: PieChart },
+                ]}
+                activeTab={activeInsightTab}
+                onTabChange={(id) => setActiveInsightTab(id as any)}
+                fallback={SPACE_INSIGHT_FALLBACK}
+            />
 
-                    {/* Period Selector */}
-                    <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
-                        {periodOptions.map(p => (
+            {/* Divider */}
+            <div className="w-full border-t border-white/10 my-1"></div>
+
+            {/* 2. 우주섹터 주요 종목 현황 (Chart & Selectors) */}
+            <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-1">
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <Activity className="w-5 h-5 text-indigo-400" />
+                        우주섹터 주요 종목 현황
+                    </h3>
+                    <div className="flex items-center gap-2.5">
+                        {/* Market Toggle Button */}
+                        <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner animate-fade-in">
                             <button
-                                key={p}
-                                onClick={() => setPeriod(p)}
-                                className={`px-2.5 py-1.5 text-xs font-bold rounded-md transition-all ${period === p
+                                onClick={() => {
+                                    setMarketTab('KR');
+                                    setSelectedEtf(null); // 탭 전환 시 개별선택 초기화
+                                }}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR'
                                     ? 'bg-indigo-600 text-white shadow-md'
                                     : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
                                 }`}
                             >
-                                {p}
+                                국내상장 ETF
                             </button>
-                        ))}
+                            <button
+                                onClick={() => {
+                                    setMarketTab('US');
+                                    setSelectedEtf(null); // 탭 전환 시 개별선택 초기화
+                                }}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'US'
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                }`}
+                            >
+                                미국상장 ETF
+                            </button>
+                        </div>
+
+                        {/* Period Selector */}
+                        <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
+                            {periodOptions.map(p => (
+                                <button
+                                    key={p}
+                                    onClick={() => setPeriod(p)}
+                                    className={`px-2.5 py-1.5 text-xs font-bold rounded-md transition-all ${period === p
+                                        ? 'bg-indigo-600 text-white shadow-md'
+                                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                    }`}
+                                >
+                                    {p}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* ETF Selector Chips for Constituent Overlay */}
-            <div className="flex flex-wrap gap-2 items-center mb-4 bg-black/30 p-2.5 rounded-2xl border border-white/5">
-                <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center">
-                    🔍 구성종목 주가 비교:
-                </span>
-                {etfsToSelect.filter(e => activeTabEtfs.includes(e) || selectedEtf === e).map((etfName, idx) => {
-                    const isSelected = selectedEtf === etfName;
-                    const themeColor = colors[idx % colors.length];
-                    return (
+                {/* ETF Selector Chips for Constituent Overlay */}
+                <div className="flex flex-wrap gap-2 items-center mb-2 bg-black/30 p-2.5 rounded-2xl border border-white/5">
+                    <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center">
+                        🔍 구성종목 주가 비교:
+                    </span>
+                    {etfsToSelect.filter(e => activeTabEtfs.includes(e) || selectedEtf === e).map((etfName, idx) => {
+                        const isSelected = selectedEtf === etfName;
+                        const themeColor = colors[idx % colors.length];
+                        return (
+                            <button
+                                key={etfName}
+                                onClick={() => setSelectedEtf(isSelected ? null : etfName)}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border ${
+                                    isSelected
+                                        ? `bg-indigo-600/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]`
+                                        : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'
+                                }`}
+                                style={{
+                                    borderColor: isSelected ? themeColor : 'rgba(255,255,255,0.06)'
+                                }}
+                            >
+                                {etfName} {isSelected && '✓'}
+                            </button>
+                        );
+                    })}
+                    {selectedEtf && (
                         <button
-                            key={etfName}
-                            onClick={() => setSelectedEtf(isSelected ? null : etfName)}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border ${
-                                isSelected
-                                    ? `bg-indigo-600/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]`
-                                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'
-                            }`}
-                            style={{
-                                borderColor: isSelected ? themeColor : 'rgba(255,255,255,0.06)'
-                            }}
+                            onClick={() => setSelectedEtf(null)}
+                            className="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-auto hover:underline transition-all"
                         >
-                            {etfName} {isSelected && '✓'}
+                            비교 초기화 (X)
                         </button>
-                    );
-                })}
-                {selectedEtf && (
-                    <button
-                        onClick={() => setSelectedEtf(null)}
-                        className="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-auto hover:underline transition-all"
-                    >
-                        비교 초기화 (X)
-                    </button>
-                )}
-            </div>
- 
-            <div className="w-full h-[400px]">
-                {isLoading ? (
-                    <ChartLoadingPlaceholder height={400} message="우주 ETF 데이터 로딩중" />
-                ) : error ? (
-                    <div className="w-full h-full flex items-center justify-center text-rose-400 text-sm">
-                        {error}
-                    </div>
-                ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData} margin={{ top: 10, right: 15, left: 15, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis
-                                dataKey="date"
-                                stroke="rgba(255,255,255,0.2)"
-                                tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
-                                tickMargin={10}
-                                minTickGap={30}
-                            />
-                            <YAxis
-                                orientation="right"
-                                width={55}
-                                domain={['auto', 'auto']}
-                                stroke="rgba(255,255,255,0.2)"
-                                tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
-                                tickFormatter={(val) => `${val.toFixed(0)}%`}
-                            />
-                            <RechartsTooltip content={<CustomTooltip />} />
-                            <Legend
-                                content={renderCustomLegend}
-                            />
-                            {keys.map((k, idx) => {
-                                const isConstituent = !baseEtfKeys.includes(k);
+                    )}
+                </div>
 
-                                // If in general comparison mode (no selectedEtf), filter out base ETFs that don't belong to the active tab
-                                if (!selectedEtf && !isConstituent && !activeTabEtfs.includes(k)) {
-                                    return null;
-                                }
+                {/* Chart Area */}
+                <div className="w-full h-[400px]">
+                    {isLoading ? (
+                        <ChartLoadingPlaceholder height={400} message="우주 ETF 데이터 로딩중" />
+                    ) : error ? (
+                        <div className="w-full h-full flex items-center justify-center text-rose-400 text-sm">
+                            {error}
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart
+                                data={chartData}
+                                margin={{ top: 10, right: 15, left: 15, bottom: 0 }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                <XAxis
+                                    dataKey="date"
+                                    stroke="rgba(255,255,255,0.2)"
+                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
+                                    tickMargin={10}
+                                    minTickGap={30}
+                                />
+                                <YAxis
+                                    orientation="right"
+                                    width={55}
+                                    domain={['auto', 'auto']}
+                                    stroke="rgba(255,255,255,0.2)"
+                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
+                                    tickFormatter={(val) => `${val.toFixed(0)}%`}
+                                />
+                                <RechartsTooltip content={<CustomTooltip />} />
+                                <Legend content={renderCustomLegend} />
+                                {keys.map((k, idx) => {
+                                    const isConstituent = !baseEtfKeys.includes(k);
+                                    if (!selectedEtf && !isConstituent && !activeTabEtfs.includes(k)) {
+                                        return null;
+                                    }
 
-                                return (
-                                    <Line
-                                        key={k}
-                                        type="monotone"
-                                        dataKey={k}
-                                        stroke={colors[idx % colors.length]}
-                                        strokeWidth={hoveredLine === k ? (isConstituent ? 3 : 4) : hoveredLine ? 1 : (isConstituent ? 1.5 : 2)}
-                                        strokeDasharray={isConstituent ? "4 4" : undefined}
-                                        dot={false}
-                                        activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
-                                        name={k}
-                                        connectNulls={true}
-                                        style={{
-                                            opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8,
-                                            transition: 'all 0.3s ease'
-                                        }}
-                                    />
-                                );
-                            })}
-                        </LineChart>
-                    </ResponsiveContainer>
-                )}
+                                    return (
+                                        <Line
+                                            key={k}
+                                            type="monotone"
+                                            dataKey={k}
+                                            stroke={colors[idx % colors.length]}
+                                            strokeWidth={hoveredLine === k ? (isConstituent ? 3 : 4) : (hoveredLine ? 1 : (isConstituent ? 1.5 : 2))}
+                                            strokeDasharray={isConstituent ? "4 4" : undefined}
+                                            dot={false}
+                                            activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
+                                            name={k}
+                                            connectNulls={true}
+                                            style={{
+                                                opacity: hoveredLine === k ? 1 : (hoveredLine ? 0.3 : 0.8),
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                        />
+                                    );
+                                })}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    )}
+                </div>
+                <p className="text-[10px] text-gray-500 text-right mt-1 font-mono">
+                    * 기준점 100으로 환산된 지수/주가 추이 (배당/분배금 제외)
+                </p>
             </div>
-            <p className="text-[10px] text-gray-500 text-right mt-2 font-mono">
-                * 기준점 100으로 환산된 지수/주가 추이 (배당/분배금 제외)
-            </p>
 
             {/* Divider */}
-            <div className="w-full border-t border-white/10 my-5"></div>
+            <div className="w-full border-t border-white/10 my-1"></div>
 
-            {/* Holdings Table Section */}
+            {/* 3. 우주 섹터 주요 ETF 구성종목 및 비중 비교 (%) */}
             <div className="flex flex-col gap-4">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-3">
                     <h4 className="text-base font-bold text-white flex items-center gap-2">
                         <Activity className="w-4 h-4 text-emerald-400" />
-                        우주섹터 주요 ETF 구성종목 및 비중 비교 (%)
+                        우주 섹터 주요 ETF 구성종목 및 비중 비교 (%)
                     </h4>
-                    
                     <span className="text-[10px] sm:text-xs text-gray-400 font-bold font-mono bg-white/5 px-2 py-1.5 rounded border border-white/5">
-                        {isMarketOpen 
-                            ? (holdingsUpdatedAt ? `${holdingsUpdatedAt} KST 기준` : 'KST 기준') 
-                            : 'NASDAQ 종가기준'}
+                        {isMarketOpen ? (holdingsUpdatedAt ? `${holdingsUpdatedAt} KST 기준` : 'KST 기준') : '종가기준'}
                     </span>
                 </div>
-                
+
                 {isHoldingsLoading ? (
                     <div className="py-8 flex justify-center items-center text-xs text-gray-400 font-medium">
                         구성종목 데이터를 로드하는 중...
@@ -696,42 +714,41 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                         <table className="w-full text-left border-collapse">
                             <thead className="sticky top-0 z-10">
                                 <tr className="bg-[#141420]">
-                                    <th className="px-4 py-3 text-xs font-bold text-gray-300 border-b border-white/10">
-                                        구성종목명
-                                    </th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10 whitespace-nowrap">
-                                        현재가 / 전일대비
-                                    </th>
+                                    <th className="px-4 py-3 text-xs font-bold text-gray-300 border-b border-white/10">구성종목명</th>
+                                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10 whitespace-nowrap">현재가 / 전일대비</th>
                                     {displayHoldingsKeys.map((k, idx) => {
                                         const originalIdx = holdingsKeys.indexOf(k);
                                         const dotColor = colors[originalIdx >= 0 ? originalIdx : idx % colors.length];
                                         const etfCode = etfNameToCodeMap[k];
                                         const dispInfo = etfCode ? disparityData[etfCode] : null;
-                                        
-                                        // Calculate weight-averaged change percentage
+
                                         let weightSum = 0;
                                         let weightedChangeSum = 0;
                                         holdingsData.forEach(row => {
                                             const weight = row[k];
-                                            const change = row.change_pct; // Constituent daily change %
+                                            const change = row.change_pct;
                                             if (weight !== undefined && weight !== null && weight > 0 && change !== undefined && change !== null) {
                                                 weightSum += weight;
                                                 weightedChangeSum += (change * weight);
                                             }
                                         });
                                         const estChangePct = weightSum > 0 ? (weightedChangeSum / weightSum) : null;
-                                        
-                                        // Calculate estimated Korean ETF price: prev_close (yesterday close KST) * (1 + estChangePct/100)
-                                        const estPrice = (dispInfo && dispInfo.prev_close && estChangePct !== null)
-                                            ? dispInfo.prev_close * (1 + estChangePct / 100)
-                                            : null;
 
+                                        const isKrListed = krEtfs.includes(k);
+                                        const isUsListed = usEtfs.includes(k);
                                         const isBeforeOpen = isBeforeKrMarketOpen();
                                         const actualPrice = dispInfo ? dispInfo.price : null;
                                         const actualChangeRate = dispInfo ? dispInfo.change_rate : null;
-                                        const diffRate = (actualPrice !== null && estPrice !== null && estPrice > 0)
-                                            ? ((actualPrice - estPrice) / estPrice) * 100
-                                            : null;
+
+                                        const estPrice = isKrListed
+                                            ? (isBeforeOpen ? null : actualPrice)
+                                            : ((dispInfo && dispInfo.prev_close && estChangePct !== null) ? dispInfo.prev_close * (1 + estChangePct / 100) : null);
+                                        const displayEstChangePct = isKrListed ? (isBeforeOpen ? null : actualChangeRate) : estChangePct;
+                                        const diffRate = isKrListed
+                                            ? (isBeforeOpen ? null : 0)
+                                            : ((actualPrice !== null && estPrice !== null && estPrice > 0) ? ((actualPrice - estPrice) / estPrice) * 100 : null);
+                                        const showInfo = isKrListed ? (isBeforeOpen ? true : (actualPrice !== null)) : (estChangePct !== null);
+                                        const shouldShowActualPrice = isKrListed ? (!isBeforeOpen && actualPrice !== null) : (actualPrice !== null);
 
                                         return (
                                             <th key={k} className="px-3 py-3 text-center text-xs font-bold text-gray-300 border-b border-white/10">
@@ -740,47 +757,28 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                                         <span style={{ color: dotColor }}>●</span>
                                                         {k}
                                                     </div>
-                                                    {estChangePct !== null && (
+                                                    {showInfo && (
                                                         <div className="flex flex-col items-center mt-1 text-[11px] font-sans space-y-0.5 leading-normal">
-                                                            {/* 예상가격 */}
                                                             <div className="flex items-center gap-1 font-bold text-gray-200">
                                                                 <span className="text-gray-400">예상가격:</span>
                                                                 {estPrice !== null ? (
-                                                                    <span>
-                                                                        {new Intl.NumberFormat('ko-KR').format(Math.floor(estPrice))}원
-                                                                    </span>
+                                                                    <span>{isUsListed ? `$${estPrice.toFixed(2)}` : `${new Intl.NumberFormat('ko-KR').format(Math.floor(estPrice))}원`}</span>
                                                                 ) : (
-                                                                    <span>-원</span>
+                                                                    <span>{isUsListed ? '-$' : '-원'}</span>
                                                                 )}
-                                                                <span 
-                                                                    style={{
-                                                                        color: estChangePct > 0 
-                                                                            ? '#60a5fa' 
-                                                                            : estChangePct < 0 
-                                                                                ? '#f87171' 
-                                                                                : '#94a3b8'
-                                                                    }}
-                                                                >
-                                                                    ({estChangePct > 0 ? '+' : ''}{estChangePct.toFixed(2)}%)
-                                                                </span>
+                                                                {displayEstChangePct !== null && (
+                                                                    <span style={{ color: displayEstChangePct > 0 ? '#60a5fa' : displayEstChangePct < 0 ? '#f87171' : '#94a3b8' }}>
+                                                                        ({displayEstChangePct > 0 ? '+' : ''}{displayEstChangePct.toFixed(2)}%)
+                                                                    </span>
+                                                                )}
                                                             </div>
-
-                                                            {/* 실제가격 */}
                                                             <div className="flex items-center gap-1 font-bold text-gray-200">
                                                                 <span className="text-gray-400">실제가격:</span>
-                                                                {!isBeforeOpen && actualPrice !== null ? (
+                                                                {shouldShowActualPrice ? (
                                                                     <>
-                                                                        <span>{new Intl.NumberFormat('ko-KR').format(Math.floor(actualPrice))}원</span>
+                                                                        <span>{isUsListed ? `$${actualPrice!.toFixed(2)}` : `${new Intl.NumberFormat('ko-KR').format(Math.floor(actualPrice!))}원`}</span>
                                                                         {actualChangeRate !== null && (
-                                                                            <span 
-                                                                                style={{
-                                                                                    color: actualChangeRate > 0 
-                                                                                        ? '#60a5fa' 
-                                                                                        : actualChangeRate < 0 
-                                                                                            ? '#f87171' 
-                                                                                            : '#94a3b8'
-                                                                                }}
-                                                                            >
+                                                                            <span style={{ color: actualChangeRate > 0 ? '#60a5fa' : actualChangeRate < 0 ? '#f87171' : '#94a3b8' }}>
                                                                                 ({actualChangeRate > 0 ? '+' : ''}{actualChangeRate.toFixed(2)}%)
                                                                             </span>
                                                                         )}
@@ -789,21 +787,10 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                                                     <span className="text-gray-500 font-medium">-</span>
                                                                 )}
                                                             </div>
-
-                                                            {/* 괴리율 */}
                                                             <div className="text-[10px] text-gray-400 font-medium">
                                                                 괴리율:{' '}
-                                                                {!isBeforeOpen && diffRate !== null ? (
-                                                                    <span 
-                                                                        style={{
-                                                                            color: diffRate > 0 
-                                                                                ? '#60a5fa' 
-                                                                                : diffRate < 0 
-                                                                                    ? '#f87171' 
-                                                                                    : '#94a3b8'
-                                                                        }}
-                                                                        className="font-semibold"
-                                                                    >
+                                                                {(isKrListed ? !isBeforeOpen : true) && diffRate !== null ? (
+                                                                    <span style={{ color: diffRate > 0 ? '#60a5fa' : diffRate < 0 ? '#f87171' : '#94a3b8' }} className="font-semibold">
                                                                         {diffRate > 0 ? '+' : ''}{diffRate.toFixed(3)}%
                                                                     </span>
                                                                 ) : (
@@ -820,17 +807,11 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                             </thead>
                             <tbody>
                                 {displayHoldingsData.map((row) => (
-                                    <tr 
-                                        key={row.constituent} 
-                                        className="hover:bg-white/5 transition-colors"
-                                    >
+                                    <tr key={row.constituent} className="hover:bg-white/5 transition-colors">
                                         <td className="px-4 py-2.5 text-xs font-bold border-b border-white/5 max-w-[200px] truncate">
                                             {onOpenDetail ? (
                                                 <button
-                                                    onClick={() => {
-                                                        const ticker = getTickerFromConstituent(row.constituent);
-                                                        onOpenDetail(ticker);
-                                                    }}
+                                                    onClick={() => onOpenDetail(getTickerFromConstituent(row.constituent))}
                                                     className="text-gray-200 hover:text-indigo-400 transition-all duration-200 text-left font-bold inline-flex items-center gap-1 group/btn"
                                                     title={`${row.constituent} 상세 주식 정보 조회`}
                                                 >
@@ -841,24 +822,12 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                                 <span className="text-gray-200">{row.constituent}</span>
                                             )}
                                         </td>
-                                        {/* 현재가 / 전일대비 가격 열 */}
                                         <td className="px-4 py-2.5 text-center text-xs border-b border-white/5 whitespace-nowrap font-mono align-middle">
                                             {row.price !== undefined && row.price !== null ? (
                                                 <div className="flex flex-col gap-0.5 justify-center items-center">
-                                                    <span className="text-gray-200 font-bold">
-                                                        ${row.price.toFixed(2)}
-                                                    </span>
+                                                    <span className="text-gray-200 font-bold">{formatConstituentPrice(row.constituent, row.price)}</span>
                                                     {row.change_pct !== undefined && row.change_pct !== null ? (
-                                                        <span 
-                                                            className="text-[10px] font-bold"
-                                                            style={{ 
-                                                                color: row.change_pct > 0 
-                                                                    ? '#60a5fa' 
-                                                                    : row.change_pct < 0 
-                                                                        ? '#f87171' 
-                                                                        : '#94a3b8' 
-                                                                }}
-                                                        >
+                                                        <span className="text-[10px] font-bold" style={{ color: row.change_pct > 0 ? '#60a5fa' : row.change_pct < 0 ? '#f87171' : '#94a3b8' }}>
                                                             {row.change_pct > 0 ? '+' : ''}{row.change_pct.toFixed(2)}%
                                                         </span>
                                                     ) : (
@@ -871,36 +840,16 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                                         </td>
                                         {displayHoldingsKeys.map((k) => {
                                             const val = row[k];
-                                            if (val === null) {
-                                                return (
-                                                    <td key={k} className="px-3 py-2.5 text-center text-xs font-semibold border-b border-white/5 font-mono">
-                                                        <span className="text-gray-500 text-[10px] border border-gray-600 rounded px-1 py-0.5">비상장</span>
-                                                    </td>
-                                                );
+                                            if (!val || val === 0) {
+                                                return <td key={k} className="px-3 py-2.5 text-center text-xs font-semibold text-gray-600 border-b border-white/5 font-mono">-</td>;
                                             }
-                                            const isZero = !val || val === 0;
-                                            if (isZero) {
-                                                return (
-                                                    <td key={k} className="px-3 py-2.5 text-center text-xs font-semibold text-gray-600 border-b border-white/5 font-mono">
-                                                        -
-                                                    </td>
-                                                );
-                                            }
-                                            
-                                            // Dynamic coloring based on weight value
-                                            let cellColor = '#ffffff'; // < 5%: 흰색 (white)
-                                            if (val >= 20) {
-                                                cellColor = '#10b981'; // >= 20%: 짙은초록 (emerald-500)
-                                            } else if (val >= 10) {
-                                                cellColor = '#84cc16'; // >= 10%: 연두색 (lime-500)
-                                            } else if (val >= 5) {
-                                                cellColor = '#fbbf24'; // >= 5%: 노란색 (amber-400)
-                                            }
-
+                                            let cellColor = '#ffffff';
+                                            if (val >= 20) cellColor = '#10b981';
+                                            else if (val >= 10) cellColor = '#84cc16';
+                                            else if (val >= 5) cellColor = '#fbbf24';
                                             return (
                                                 <td key={k} className="px-3 py-2 border-b border-white/5 align-middle min-w-[125px]">
                                                     <div className="flex flex-col gap-1 w-full">
-                                                        {/* Value text on top aligned to the right */}
                                                         <div className="flex justify-end w-full">
                                                             <span 
                                                                 className="text-[10.5px] font-bold font-mono"

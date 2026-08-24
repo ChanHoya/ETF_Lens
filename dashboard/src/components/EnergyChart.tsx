@@ -515,177 +515,201 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
     };
 
     return (
-        <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-amber-400" />
-                    전력/에너지 주요 종목 현황
-                </h3>
-                <div className="flex items-center gap-2.5">
-                    {/* Market Toggle Button */}
-                    <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
-                        <button
-                            onClick={() => {
-                                setMarketTab('KR');
-                                setSelectedEtf(null);
-                            }}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR'
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                            }`}
-                        >
-                            국내상장 ETF(국내주식)
-                        </button>
-                        <button
-                            onClick={() => {
-                                setMarketTab('KR_US');
-                                setSelectedEtf(null);
-                            }}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR_US'
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                            }`}
-                        >
-                            국내상장 ETF(해외주식)
-                        </button>
-                        <button
-                            onClick={() => {
-                                setMarketTab('US');
-                                setSelectedEtf(null);
-                            }}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'US'
-                                ? 'bg-indigo-600 text-white shadow-md'
-                                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                            }`}
-                        >
-                            해외상장 ETF
-                        </button>
-                    </div>
+        <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 xl:p-5 backdrop-blur-md shadow-xl flex flex-col mt-0 gap-6">
+            {/* 1. Expert Insight Section (최상단 배치) */}
+            <SectorInsightReport
+                sector="energy"
+                title="AI 패러다임 쉬프트와 글로벌 전력·에너지 인프라 전략"
+                accent="amber"
+                tabs={[
+                    { id: 'macro', label: '1. 매크로 & AI 전력 트렌드', icon: TrendingUp },
+                    { id: 'etfs', label: '2. 국내외 핵심 ETF 분석', icon: BookOpen },
+                    { id: 'strategy', label: '3. 자산배분 모델 & 가이드', icon: PieChart },
+                ]}
+                activeTab={activeInsightTab}
+                onTabChange={(id) => setActiveInsightTab(id as any)}
+                fallback={ENERGY_INSIGHT_FALLBACK}
+            />
 
-                    {/* Period Selector */}
-                    <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
-                        {periodOptions.map(p => (
+            {/* Divider */}
+            <div className="w-full border-t border-white/10 my-1"></div>
+
+            {/* 2. 전력/에너지 주요 종목 현황 (Chart & Selectors) */}
+            <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-1">
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <Activity className="w-5 h-5 text-amber-400" />
+                        전력/에너지 주요 종목 현황
+                    </h3>
+                    <div className="flex items-center gap-2.5">
+                        {/* Market Toggle Button */}
+                        <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
                             <button
-                                key={p}
-                                onClick={() => setPeriod(p)}
-                                className={`px-2.5 py-1.5 text-xs font-bold rounded-md transition-all ${period === p
+                                onClick={() => {
+                                    setMarketTab('KR');
+                                    setSelectedEtf(null);
+                                }}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR'
                                     ? 'bg-indigo-600 text-white shadow-md'
                                     : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
                                 }`}
                             >
-                                {p}
+                                국내상장 ETF(국내주식)
                             </button>
-                        ))}
+                            <button
+                                onClick={() => {
+                                    setMarketTab('KR_US');
+                                    setSelectedEtf(null);
+                                }}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'KR_US'
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                }`}
+                            >
+                                국내상장 ETF(해외주식)
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setMarketTab('US');
+                                    setSelectedEtf(null);
+                                }}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === 'US'
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                }`}
+                            >
+                                해외상장 ETF
+                            </button>
+                        </div>
+
+                        {/* Period Selector */}
+                        <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
+                            {periodOptions.map(p => (
+                                <button
+                                    key={p}
+                                    onClick={() => setPeriod(p)}
+                                    className={`px-2.5 py-1.5 text-xs font-bold rounded-md transition-all ${period === p
+                                        ? 'bg-indigo-600 text-white shadow-md'
+                                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                    }`}
+                                >
+                                    {p}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* ETF Selector Chips */}
-            <div className="flex flex-wrap gap-2 items-center mb-4 bg-black/30 p-2.5 rounded-2xl border border-white/5">
-                <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center">
-                    🔍 구성종목 주가 비교:
-                </span>
-                {etfsToSelect.filter(e => activeTabEtfs.includes(e) || selectedEtf === e).map((etfName, idx) => {
-                    const isSelected = selectedEtf === etfName;
-                    const themeColor = colors[idx % colors.length];
-                    return (
+                {/* ETF Selector Chips for Constituent Overlay */}
+                <div className="flex flex-wrap gap-2 items-center mb-2 bg-black/30 p-2.5 rounded-2xl border border-white/5">
+                    <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center">
+                        🔍 구성종목 주가 비교:
+                    </span>
+                    {etfsToSelect.filter(e => activeTabEtfs.includes(e) || selectedEtf === e).map((etfName, idx) => {
+                        const isSelected = selectedEtf === etfName;
+                        const themeColor = colors[idx % colors.length];
+                        return (
+                            <button
+                                key={etfName}
+                                onClick={() => setSelectedEtf(isSelected ? null : etfName)}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border ${
+                                    isSelected
+                                        ? `bg-indigo-600/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]`
+                                        : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'
+                                }`}
+                                style={{
+                                    borderColor: isSelected ? themeColor : 'rgba(255,255,255,0.06)'
+                                }}
+                            >
+                                {etfName} {isSelected && '✓'}
+                            </button>
+                        );
+                    })}
+                    {selectedEtf && (
                         <button
-                            key={etfName}
-                            onClick={() => setSelectedEtf(isSelected ? null : etfName)}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border ${
-                                isSelected
-                                    ? `bg-indigo-600/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]`
-                                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'
-                            }`}
-                            style={{
-                                borderColor: isSelected ? themeColor : 'rgba(255,255,255,0.06)'
-                            }}
+                            onClick={() => setSelectedEtf(null)}
+                            className="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-auto hover:underline transition-all"
                         >
-                            {etfName} {isSelected && '✓'}
+                            비교 초기화 (X)
                         </button>
-                    );
-                })}
-                {selectedEtf && (
-                    <button
-                        onClick={() => setSelectedEtf(null)}
-                        className="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-auto hover:underline transition-all"
-                    >
-                        비교 초기화 (X)
-                    </button>
-                )}
+                    )}
+                </div>
+
+                {/* Chart Area */}
+                <div className="w-full h-[400px]">
+                    {isLoading ? (
+                        <ChartLoadingPlaceholder height={400} message="전력/에너지 ETF 데이터 로딩중" />
+                    ) : error ? (
+                        <div className="w-full h-full flex items-center justify-center text-rose-400 text-sm">
+                            {error}
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData} margin={{ top: 10, right: 15, left: 15, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                <XAxis
+                                    dataKey="date"
+                                    stroke="rgba(255,255,255,0.2)"
+                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
+                                    tickMargin={10}
+                                    minTickGap={30}
+                                />
+                                <YAxis
+                                    orientation="right"
+                                    width={55}
+                                    domain={['auto', 'auto']}
+                                    stroke="rgba(255,255,255,0.2)"
+                                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
+                                    tickFormatter={(val) => `${val.toFixed(0)}%`}
+                                />
+                                <RechartsTooltip content={<CustomTooltip />} />
+                                <Legend
+                                    content={renderCustomLegend}
+                                />
+                                {keys.map((k, idx) => {
+                                    const isConstituent = !baseEtfKeys.includes(k);
+
+                                    if (!selectedEtf && !isConstituent && !activeTabEtfs.includes(k)) {
+                                        return null;
+                                    }
+
+                                    return (
+                                        <Line
+                                            key={k}
+                                            type="monotone"
+                                            dataKey={k}
+                                            stroke={colors[idx % colors.length]}
+                                            strokeWidth={hoveredLine === k ? (isConstituent ? 3 : 4) : hoveredLine ? 1 : (isConstituent ? 1.5 : 2)}
+                                            strokeDasharray={isConstituent ? "4 4" : undefined}
+                                            dot={false}
+                                            activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
+                                            name={k}
+                                            connectNulls={true}
+                                            style={{
+                                                opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8,
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                        />
+                                    );
+                                })}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    )}
+                </div>
+                <p className="text-[10px] text-gray-500 text-right mt-1 font-mono">
+                    * 기준점 100으로 환산된 지수/주가 추이 (배당/분배금 제외)
+                </p>
             </div>
- 
-            <div className="w-full h-[400px]">
-                {isLoading ? (
-                    <ChartLoadingPlaceholder height={400} message="전력 ETF 데이터 로딩중" />
-                ) : error ? (
-                    <div className="w-full h-full flex items-center justify-center text-rose-400 text-sm">
-                        {error}
-                    </div>
-                ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData} margin={{ top: 10, right: 15, left: 15, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis
-                                dataKey="date"
-                                stroke="rgba(255,255,255,0.2)"
-                                tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
-                                tickMargin={10}
-                                minTickGap={30}
-                            />
-                            <YAxis
-                                orientation="right"
-                                width={55}
-                                domain={['auto', 'auto']}
-                                stroke="rgba(255,255,255,0.2)"
-                                tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
-                                tickFormatter={(val) => `${val.toFixed(0)}%`}
-                            />
-                            <RechartsTooltip content={<CustomTooltip />} />
-                            <Legend
-                                content={renderCustomLegend}
-                            />
-                            {keys.map((k, idx) => {
-                                const isConstituent = !baseEtfKeys.includes(k);
-                                if (!selectedEtf && !isConstituent && !activeTabEtfs.includes(k)) {
-                                    return null;
-                                }
-                                return (
-                                    <Line
-                                        key={k}
-                                        type="monotone"
-                                        dataKey={k}
-                                        stroke={colors[idx % colors.length]}
-                                        strokeWidth={hoveredLine === k ? (isConstituent ? 3 : 4) : hoveredLine ? 1 : (isConstituent ? 1.5 : 2)}
-                                        strokeDasharray={isConstituent ? "4 4" : undefined}
-                                        dot={false}
-                                        activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
-                                        name={k}
-                                        connectNulls={true}
-                                        style={{
-                                            opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8,
-                                            transition: 'all 0.3s ease'
-                                        }}
-                                    />
-                                );
-                            })}
-                        </LineChart>
-                    </ResponsiveContainer>
-                )}
-            </div>
-            <p className="text-[10px] text-gray-500 text-right mt-2 font-mono">
-                * 기준점 100으로 환산된 지수/주가 추이 (배당/분배금 제외)
-            </p>
 
             {/* Divider */}
-            <div className="w-full border-t border-white/10 my-5"></div>
+            <div className="w-full border-t border-white/10 my-1"></div>
 
-            {/* Holdings Table Section */}
+            {/* 3. 전력/에너지 섹터 주요 ETF 구성종목 및 비중 비교 (%) */}
             <div className="flex flex-col gap-4">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-3">
                     <h4 className="text-base font-bold text-white flex items-center gap-2">
                         <Activity className="w-4 h-4 text-emerald-400" />
-                        전력섹터 주요 ETF 구성종목 및 비중 비교 (%)
+                        전력/에너지 섹터 주요 ETF 구성종목 및 비중 비교 (%)
                     </h4>
                     
                     <span className="text-[10px] sm:text-xs text-gray-400 font-bold font-mono bg-white/5 px-2 py-1.5 rounded border border-white/5">
@@ -771,7 +795,6 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                                     </div>
                                                     {showInfo && (
                                                         <div className="flex flex-col items-center mt-1 text-[11px] font-sans space-y-0.5 leading-normal">
-                                                            {/* 예상가격 */}
                                                             <div className="flex items-center gap-1 font-bold text-gray-200">
                                                                 <span className="text-gray-400">예상가격:</span>
                                                                 {estPrice !== null ? (
@@ -799,7 +822,6 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                                                 )}
                                                             </div>
 
-                                                            {/* 실제가격 */}
                                                             <div className="flex items-center gap-1 font-bold text-gray-200">
                                                                 <span className="text-gray-400">실제가격:</span>
                                                                 {shouldShowActualPrice ? (
@@ -829,7 +851,6 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                                                 )}
                                                             </div>
 
-                                                            {/* 괴리율 */}
                                                             <div className="text-[10px] text-gray-400 font-medium">
                                                                  괴리율:{' '}
                                                                  {(isKrListed ? !isBeforeOpen : true) && diffRate !== null ? (
@@ -880,7 +901,6 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                                                 <span className="text-gray-200">{row.constituent}</span>
                                             )}
                                         </td>
-                                        {/* 현재가 / 전일대비 가격 열 */}
                                         <td className="px-4 py-2.5 text-center text-xs border-b border-white/5 whitespace-nowrap font-mono align-middle">
                                             {row.price !== undefined && row.price !== null ? (
                                                 <div className="flex flex-col gap-0.5 justify-center items-center">
@@ -965,24 +985,6 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                     </div>
                 )}
             </div>
-
-            {/* Divider */}
-            <div className="w-full border-t border-white/10 my-6"></div>
-
-            {/* Expert Insight Section */}
-            <SectorInsightReport
-                sector="energy"
-                title="AI 패러다임 쉬프트와 글로벌 전력·에너지 인프라 전략"
-                accent="amber"
-                tabs={[
-                    { id: 'macro', label: '1. 매크로 & AI 전력 트렌드', icon: TrendingUp },
-                    { id: 'etfs', label: '2. 국내외 핵심 ETF 분석', icon: BookOpen },
-                    { id: 'strategy', label: '3. 자산배분 모델 & 가이드', icon: PieChart },
-                ]}
-                activeTab={activeInsightTab}
-                onTabChange={(id) => setActiveInsightTab(id as any)}
-                fallback={ENERGY_INSIGHT_FALLBACK}
-            />
         </div>
     );
 }
