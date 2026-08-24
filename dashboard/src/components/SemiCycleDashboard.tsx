@@ -601,17 +601,19 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                                             <circle
                                                                 cx={cx}
                                                                 cy={cy}
-                                                                r={14}
-                                                                fill="#818cf8"
-                                                                opacity={0.35}
-                                                                className="animate-ping"
+                                                                r={12}
+                                                                fill="none"
+                                                                stroke="#818cf8"
+                                                                strokeWidth={1.5}
+                                                                opacity={0.6}
+                                                                className="animate-pulse"
                                                             />
                                                             <circle
                                                                 cx={cx}
                                                                 cy={cy}
-                                                                r={9}
+                                                                r={8}
                                                                 fill="#6366f1"
-                                                                opacity={0.5}
+                                                                opacity={0.4}
                                                                 className="animate-pulse"
                                                             />
                                                         </>
@@ -619,7 +621,17 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
 
                                                     {isCurrentFact ? (
                                                         <>
-                                                            <circle cx={cx} cy={cy} r={9} fill="#10b981" opacity={0.3} className="animate-ping" />
+                                                            {/* 부드러운 현재 위치 네온 글로우 링 (잔상 버그 제거) */}
+                                                            <circle
+                                                                cx={cx}
+                                                                cy={cy}
+                                                                r={11}
+                                                                fill="none"
+                                                                stroke="#10b981"
+                                                                strokeWidth={1.5}
+                                                                opacity={0.7}
+                                                                className="animate-pulse"
+                                                            />
                                                             <circle cx={cx} cy={cy} r={6.5} fill="#10b981" stroke="#ffffff" strokeWidth={2} />
                                                         </>
                                                     ) : isBottom ? (
