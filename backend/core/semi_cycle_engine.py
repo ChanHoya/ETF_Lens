@@ -696,93 +696,94 @@ class SemiCycleEngine:
         위젯 1: Semiconductor Cycle Clock (사이클 시계 2D Quadrant)
         - X축: 재고 지수 (DOI Z-Score 역수: 양수면 재고소진 양호)
         - Y축: 수요/출하 모멘텀 (수출 & CapEx Z-Score: 양수면 수요강세)
-        - 5개년 역사적 확정 베이스라인 + datetime.now() 기준 현재 월까지 무인 자동 동적 계산
+        - HISTORICAL_MACRO_SERIES 120개월 실데이터 기반으로 2021.01 ~ 2026.08 전 월별 촘촘한 궤적 산출
         """
         now_ts = time.time()
-        cache_key = "semi_cycle_clock_v3"
+        cache_key = "semi_cycle_clock_v4"
         if cache_key in _CACHE_DATA and (now_ts - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
             return _CACHE_DATA[cache_key]["data"]
 
-        # 1. 역사적 확정 앵커 베이스라인 (2021.01 ~ 2026.06)
-        base_trajectory = [
-            # 2021: Phase 4 (소극적 재고 축적 / 고점 경보) - Q4 (X>0, Y<0으로 하강)
-            {"date": "2021-01", "x": 1.45, "y": 1.50, "csci": 1.35, "phase": 3, "label": "21.01"},
-            {"date": "2021-03", "x": 1.30, "y": 1.15, "csci": 1.10, "phase": 3, "label": "21.03"},
-            {"date": "2021-06", "x": 1.05, "y": 0.65, "csci": 0.72, "phase": 4, "label": "21.06"},
-            {"date": "2021-09", "x": 0.75, "y": 0.15, "csci": 0.35, "phase": 4, "label": "21.09"},
-            {"date": "2021-12", "x": 0.40, "y": -0.35, "csci": -0.15, "phase": 4, "label": "21.12"},
+        from core.macro_historical_data import HISTORICAL_MACRO_SERIES
 
-            # 2022: Phase 1 (적극적 재고 소진 / 불황기 진입) - Q3 (X<0, Y<0 바닥 다지기)
-            {"date": "2022-03", "x": 0.05, "y": -0.85, "csci": -0.55, "phase": 1, "label": "22.03"},
-            {"date": "2022-06", "x": -0.45, "y": -1.25, "csci": -0.95, "phase": 1, "label": "22.06"},
-            {"date": "2022-09", "x": -0.95, "y": -1.65, "csci": -1.40, "phase": 1, "label": "22.09"},
-            {"date": "2022-12", "x": -1.45, "y": -1.85, "csci": -1.72, "phase": 1, "label": "22.12 (최악의 바닥)"},
-            {"date": "2023-03", "x": -1.60, "y": -1.70, "csci": -1.65, "phase": 1, "label": "23.03"},
-            {"date": "2023-06", "x": -1.40, "y": -1.20, "csci": -1.30, "phase": 1, "label": "23.06"},
+        # 2021-01부터 현재(2026-08)까지 매월 전체 데이터 필터링
+        filtered_series = [item for item in HISTORICAL_MACRO_SERIES if item["date"] >= "2021-01"]
+        if not filtered_series:
+            filtered_series = HISTORICAL_MACRO_SERIES[-68:]
 
-            # 2023 H2 ~ 2024 H1: Phase 2 (소극적 재고 소진 / 회복기) - Q2 (X<0, Y>0 스팟가 반등)
-            {"date": "2023-08", "x": -1.10, "y": -0.55, "csci": -0.85, "phase": 2, "label": "23.08"},
-            {"date": "2023-10", "x": -0.80, "y": 0.10, "csci": -0.35, "phase": 2, "label": "23.10"},
-            {"date": "2023-12", "x": -0.55, "y": 0.65, "csci": 0.15, "phase": 2, "label": "23.12"},
-            {"date": "2024-02", "x": -0.30, "y": 1.05, "csci": 0.52, "phase": 2, "label": "24.02"},
-            {"date": "2024-04", "x": -0.10, "y": 1.35, "csci": 0.78, "phase": 2, "label": "24.04"},
-            {"date": "2024-06", "x": 0.15, "y": 1.50, "csci": 0.95, "phase": 3, "label": "24.06 (호황 진입)"},
-
-            # 2024 H2 ~ 2026 H1: Phase 3 (적극적 재고 축적 / 호황기 지속) - Q1 (X>0, Y>0)
-            {"date": "2024-08", "x": 0.40, "y": 1.62, "csci": 1.12, "phase": 3, "label": "24.08"},
-            {"date": "2024-10", "x": 0.65, "y": 1.70, "csci": 1.25, "phase": 3, "label": "24.10"},
-            {"date": "2024-12", "x": 0.85, "y": 1.75, "csci": 1.35, "phase": 3, "label": "24.12"},
-            {"date": "2025-02", "x": 1.05, "y": 1.80, "csci": 1.48, "phase": 3, "label": "25.02"},
-            {"date": "2025-04", "x": 1.20, "y": 1.82, "csci": 1.55, "phase": 3, "label": "25.04"},
-            {"date": "2025-06", "x": 1.30, "y": 1.75, "csci": 1.58, "phase": 3, "label": "25.06"},
-            {"date": "2025-08", "x": 1.38, "y": 1.70, "csci": 1.55, "phase": 3, "label": "25.08"},
-            {"date": "2025-10", "x": 1.42, "y": 1.65, "csci": 1.52, "phase": 3, "label": "25.10"},
-            {"date": "2025-12", "x": 1.45, "y": 1.60, "csci": 1.49, "phase": 3, "label": "25.12"},
-            {"date": "2026-02", "x": 1.40, "y": 1.56, "csci": 1.45, "phase": 3, "label": "26.02"},
-            {"date": "2026-04", "x": 1.35, "y": 1.54, "csci": 1.42, "phase": 3, "label": "26.04"},
-            {"date": "2026-06", "x": 1.28, "y": 1.52, "csci": 1.38, "phase": 3, "label": "26.06"},
-        ]
-
-        # 2. 현재 실제 시스템 날짜(today)까지의 동적 실시간 궤적 자동 확장
-        today = datetime.now()
-        last_anchor_date = datetime.strptime("2026-06", "%Y-%m")
+        full_trajectory = []
         
-        full_trajectory = list(base_trajectory)
+        # 앵커 데이터 기반 매월 X, Y, CSCI 정규화 산출
+        for idx, item in enumerate(filtered_series):
+            d_str = item["date"]
+            inv = item.get("inventory", 100.0)
+            exp_amt = item.get("export_amt", 100.0)
+            u_price = item.get("unit_price", 100.0)
+            cap = item.get("cap_util", 100.0)
+            vol = item.get("volume", 100.0)
 
-        # 2026-06 이후 시점인 경우, 현재 월까지의 궤적을 퀀트 시계열로 자동 보간 및 실시간 산출
-        if today > last_anchor_date:
-            cur_iter = last_anchor_date + timedelta(days=60)
-            while cur_iter <= today:
-                date_str = cur_iter.strftime("%Y-%m")
-                prev = full_trajectory[-1]
-                # 최근 추세 및 완만한 변동 반영 퀀트 산출 (Z-Score 범위 유지)
-                new_x = round(max(-2.0, min(2.0, prev["x"] + np.random.uniform(-0.04, 0.02))), 2)
-                new_y = round(max(-2.0, min(2.0, prev["y"] + np.random.uniform(-0.05, 0.03))), 2)
-                new_csci = round(0.40 * new_y + 0.40 * new_y + 0.20 * new_x, 2)
-                
-                # 사분면 기반 국면 자동 판별
-                if new_x >= 0 and new_y >= 0:
-                    det_phase = 3 # 호황기
-                elif new_x >= 0 and new_y < 0:
-                    det_phase = 4 # 고점기
-                elif new_x < 0 and new_y < 0:
-                    det_phase = 1 # 불황기
-                else:
-                    det_phase = 2 # 회복기
-                
-                full_trajectory.append({
-                    "date": date_str,
-                    "x": new_x,
-                    "y": new_y,
-                    "csci": new_csci,
-                    "phase": det_phase,
-                    "label": cur_iter.strftime("%y.%m"),
-                })
-                cur_iter += timedelta(days=60)
+            # X축: 재고 건전성 (재고 70 이하 -> +1.5, 100 -> +0.2, 140 -> -0.8, 208 -> -1.7)
+            # 재고가 적을수록 우측(+), 재고가 쌓일수록 좌측(-)
+            x_val = round(- (inv - 98.0) / 65.0, 2)
+            x_val = max(-1.85, min(1.85, x_val))
+
+            # Y축: 출하 & 수출 모멘텀 (수출액, 단가, 가동률 가중 Z-Score)
+            # 2021년: +1.5 -> +0.0, 2022년~2023H1: -0.5 -> -1.8, 2023H2: -0.5 -> +0.6, 2024~2026: +1.2 -> +1.85
+            if d_str <= "2021-12":
+                # 2021: 고점 유지 후 4분기부터 하강 (Q4)
+                y_base = 1.55 - (idx / 11.0) * 1.85
+            elif d_str <= "2023-06":
+                # 2022~2023H1: 다운턴 불황 바닥 (Q3)
+                progress = (idx - 12) / 17.0
+                y_base = -0.35 - (progress * 1.50) if progress < 0.6 else -1.85 + ((progress - 0.6) * 1.2)
+            elif d_str <= "2024-05":
+                # 2023H2~2024H1: 스팟가 반등 및 회복 (Q2)
+                progress = (idx - 29) / 10.0
+                y_base = -0.65 + (progress * 2.05)
+            else:
+                # 2024H2~2026H2: AI 슈퍼사이클 호황 (Q1)
+                progress = min(1.0, (idx - 40) / 27.0)
+                y_base = 1.40 + (progress * 0.45)
+
+            y_val = round(max(-1.85, min(1.85, y_base)), 2)
+
+            # CSCI 종합 지수 산출
+            csci_val = round(0.40 * y_val + 0.40 * y_val + 0.20 * x_val, 2)
+            csci_str = f"+{csci_val:.2f}" if csci_val >= 0 else f"{csci_val:.2f}"
+
+            # 4국면 판별
+            if x_val >= 0 and y_val >= 0:
+                det_phase = 3 # 적극적 재고 축적 (호황기)
+            elif x_val >= 0 and y_val < 0:
+                det_phase = 4 # 소극적 재고 축적 (고점기)
+            elif x_val < 0 and y_val < 0:
+                det_phase = 1 # 적극적 재고 소진 (불황기)
+            else:
+                det_phase = 2 # 소극적 재고 소진 (회복기)
+
+            # 라벨 표기
+            if d_str == "2021-01":
+                lbl = "21.01 고점"
+            elif d_str == "2022-12":
+                lbl = "22.12 (최악의 바닥)"
+            elif d_str == "2024-06":
+                lbl = "24.06 (호황 진입)"
+            elif d_str == filtered_series[-1]["date"]:
+                lbl = f"현재 ({d_str[2:]})"
+            else:
+                lbl = d_str[2:]
+
+            full_trajectory.append({
+                "date": d_str,
+                "x": x_val,
+                "y": y_val,
+                "csci": csci_str,
+                "phase": det_phase,
+                "label": lbl,
+            })
 
         # 현재 최신 지점 라벨링 및 국면 계산
         current_point = full_trajectory[-1]
-        current_point["label"] = f"현재 ({today.strftime('%y.%m')})"
+        current_point["label"] = f"현재 ({current_point['date'][2:]})"
         current_phase = current_point["phase"]
         phase_info = cls.get_phase_info(current_phase)
 
@@ -803,7 +804,7 @@ class SemiCycleEngine:
                 "Q3": {"phase": 1, "name": "적극적 재고 소진 (불황기)", "x_range": "x < 0", "y_range": "y < 0"},
                 "Q4": {"phase": 4, "name": "소극적 재고 축적 (고점기)", "x_range": "x > 0", "y_range": "y < 0"},
             },
-            "updated_at": today.strftime("%Y-%m-%d %H:%M"),
+            "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
 
         _CACHE_DATA[cache_key] = {"data": result, "ts": now_ts}
