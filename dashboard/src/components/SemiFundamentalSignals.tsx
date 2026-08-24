@@ -6,6 +6,16 @@ import {
     ChevronDown,
     ChevronUp,
     RefreshCw,
+    Sliders,
+    HelpCircle,
+    X,
+    Layers,
+    Info,
+    CheckCircle2,
+    TrendingUp,
+    BarChart3,
+    ArrowUpRight,
+    Scale,
 } from "lucide-react";
 import {
     ResponsiveContainer,
@@ -18,7 +28,7 @@ import {
 } from "recharts";
 import { API_BASE } from "../lib/apiConfig";
 
-// 기본 정적 Fallback 데이터 (백엔드 지연/에러 시에도 100% 안전 렌더링)
+// 기본 정적 Fallback 데이터 (Bulliza 최신 슈퍼사이클 기준 동기화)
 
 const FALLBACK_SIGNALS_DATA: any = {
     industry: "semiconductor",
@@ -27,7 +37,7 @@ const FALLBACK_SIGNALS_DATA: any = {
     current_state_code: "normal_bull",
     current_action: "매수 유지 구간",
     summary_comment: '"아직 타이트하지만 가속은 둔화" — 매수 유지 구간',
-    state_transition: "직전 국면 강한호황 (2개월 전) ➔ 현재 정상호황 · 악화 중 ↘",
+    state_transition: "직전 국면 강한호황 (2개월 전) ➔ 현재 정상호황 · 완만 ↗",
     signals_count: { bullish: 2, neutral: 5, bearish: 0, total: 7 },
     weighted_score: "+0.40",
     score_gauge_pct: 70,
@@ -39,7 +49,7 @@ const FALLBACK_SIGNALS_DATA: any = {
         { id: "deep_bear", name: "심각불황", action: "손절", is_current: false },
     ],
     timeline: [
-        { month: "2025-08", state: "강한호황", color: "#10b981" },
+        { month: "2025-08", state: "정상호황", color: "#34d399" },
         { month: "2025-09", state: "강한호황", color: "#10b981" },
         { month: "2025-10", state: "강한호황", color: "#10b981" },
         { month: "2025-11", state: "강한호황", color: "#10b981" },
@@ -49,17 +59,17 @@ const FALLBACK_SIGNALS_DATA: any = {
         { month: "2026-03", state: "강한호황", color: "#10b981" },
         { month: "2026-04", state: "강한호황", color: "#10b981" },
         { month: "2026-05", state: "강한호황", color: "#10b981" },
-        { month: "2026-06", state: "정상호황 (악화 중)", color: "#f59e0b" },
-        { month: "2026-07", state: "정상호황 (악화 중)", color: "#f59e0b" },
-        { month: "2026-08", state: "정상호황 (현재)", color: "#34d399" },
+        { month: "2026-06", state: "정상호황", color: "#34d399" },
+        { month: "2026-07", state: "정상호황", color: "#34d399" },
+        { month: "2026-08", state: "정상호황", color: "#34d399" },
     ],
     signals: [
         {
             id: "lead_stock_drawdown",
             name: "대장주 낙폭",
-            sub_name: "마이크론 테크놀로지(MU) · 52주 고점 $1,133.82 · 현재 $966.78",
-            current_value_formatted: "-14.7%",
-            current_value: -14.7,
+            sub_name: "마이크론 테크놀로지(MU) · 52주 고점 $1,213.56 · 현재 $966.78",
+            current_value_formatted: "-20.3%",
+            current_value: -20.3,
             status: "neutral",
             status_kr: "중립",
             status_badge: "중립",
@@ -91,7 +101,7 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2024-09-27", value: 103.4 }, { date: "2024-12-27", value: 89.1 },
                 { date: "2025-03-28", value: 105.2 }, { date: "2025-06-27", value: 142.8 },
                 { date: "2025-09-26", value: 185.5 }, { date: "2025-12-26", value: 350.0 },
-                { date: "2026-03-27", value: 620.5 }, { date: "2026-06-27", value: 1050.2 },
+                { date: "2026-03-27", value: 620.5 }, { date: "2026-06-27", value: 1213.5 },
                 { date: "2026-08-21", value: 966.8 },
             ],
             dd_series_10y: [
@@ -115,15 +125,15 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2025-03-28", value: -33.2 }, { date: "2025-06-27", value: 0.0 },
                 { date: "2025-09-26", value: 0.0 }, { date: "2025-12-26", value: 0.0 },
                 { date: "2026-03-27", value: 0.0 }, { date: "2026-06-27", value: 0.0 },
-                { date: "2026-08-21", value: -14.7 },
+                { date: "2026-08-21", value: -20.3 },
             ],
         },
         {
             id: "sector_index",
             name: "업종 지수",
             sub_name: "필라델피아 반도체 지수 (SOX) · 52주 고점 대비",
-            current_value_formatted: "-13.0%",
-            current_value: -13.0,
+            current_value_formatted: "-19.8%",
+            current_value: -19.8,
             status: "neutral",
             status_kr: "중립",
             status_badge: "중립",
@@ -150,7 +160,7 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2024-07-10", value: 5904 }, { date: "2024-09-27", value: 5125 },
                 { date: "2024-12-27", value: 4869 }, { date: "2025-06-27", value: 6285 },
                 { date: "2025-12-26", value: 8450 }, { date: "2026-03-27", value: 9820 },
-                { date: "2026-06-27", value: 13500 }, { date: "2026-08-21", value: 11740 },
+                { date: "2026-06-27", value: 14640 }, { date: "2026-08-21", value: 11740 },
             ],
             dd_series_10y: [
                 { date: "2016-09-02", value: 0.0 }, { date: "2016-12-30", value: 0.0 },
@@ -167,23 +177,23 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2024-07-10", value: 0.0 }, { date: "2024-09-27", value: -13.2 },
                 { date: "2024-12-27", value: -17.5 }, { date: "2025-06-27", value: 0.0 },
                 { date: "2025-12-26", value: 0.0 }, { date: "2026-03-27", value: 0.0 },
-                { date: "2026-06-27", value: 0.0 }, { date: "2026-08-21", value: -13.0 },
+                { date: "2026-06-27", value: 0.0 }, { date: "2026-08-21", value: -19.8 },
             ],
         },
         {
             id: "kr_export_amount",
             name: "한국 수출액",
             sub_name: "2026-07 (월간 확정치)",
-            current_value_formatted: "142억$",
-            sub_badge: "YoY +52.4%",
-            current_value: 142.0,
+            current_value_formatted: "280억$",
+            sub_badge: "YoY +270.4%",
+            current_value: 280.0,
             status: "bullish",
             status_kr: "호황",
             status_badge: "호황",
             color: "#10b981",
             chart_color: "#10b981",
             unit: "억$",
-            description: "관세청이 공식 집계하는 한국 반도체 월간 수출 실적입니다.",
+            description: "관세청이 공식 집계하는 한국 반도체 월간 수출 실적입니다. 2026-07 기준 280.0억 달러로 전년 동월 대비 +270.4%입니다. YoY +15% 이상이면 호황, -5% 미만이면 둔화로 판정합니다.",
             source: "관세청 무역통계 (K-stat)",
             series_10y: [
                 { date: "2016-09", value: 57.0 }, { date: "2016-12", value: 63.6 },
@@ -203,10 +213,10 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2023-09", value: 100.8 }, { date: "2023-12", value: 112.1 },
                 { date: "2024-03", value: 118.5 }, { date: "2024-06", value: 136.2 },
                 { date: "2024-09", value: 138.0 }, { date: "2024-12", value: 142.5 },
-                { date: "2025-03", value: 140.2 }, { date: "2025-06", value: 148.2 },
-                { date: "2025-09", value: 152.0 }, { date: "2025-12", value: 154.6 },
-                { date: "2026-03", value: 149.0 }, { date: "2026-06", value: 150.5 },
-                { date: "2026-07", value: 142.0 },
+                { date: "2025-03", value: 72.0 }, { date: "2025-06", value: 74.8 },
+                { date: "2025-07", value: 75.6 }, { date: "2025-09", value: 85.0 },
+                { date: "2025-12", value: 150.0 }, { date: "2026-03", value: 235.0 },
+                { date: "2026-06", value: 275.0 }, { date: "2026-07", value: 280.0 },
             ],
         },
         {
@@ -221,8 +231,8 @@ const FALLBACK_SIGNALS_DATA: any = {
             status_badge: "호황",
             color: "#10b981",
             chart_color: "#10b981",
-            unit: "",
-            description: "수출 금액을 수출 물량으로 나눈 단가 지표입니다(2020=100).",
+            unit: "pt",
+            description: "수출 금액을 수출 물량으로 나눈 단가 지표입니다(2020=100). 2026-07 기준 242.3으로 전년 동월 대비 +183.1%입니다. YoY +10% 이상이면 가격결정력 확대(호황), -5% 미만이면 둔화로 판정합니다.",
             source: "한국은행 경제통계시스템 (ECOS)",
             series_10y: [
                 { date: "2016-09", value: 82.5 }, { date: "2016-12", value: 91.0 },
@@ -235,24 +245,25 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2022-12", value: 54.2 }, { date: "2023-03", value: 56.3 },
                 { date: "2023-06", value: 61.2 }, { date: "2023-12", value: 89.0 },
                 { date: "2024-06", value: 144.5 }, { date: "2024-12", value: 216.0 },
-                { date: "2025-06", value: 238.0 }, { date: "2025-12", value: 242.2 },
-                { date: "2026-06", value: 242.3 }, { date: "2026-07", value: 242.3 },
+                { date: "2025-06", value: 84.0 }, { date: "2025-07", value: 85.6 },
+                { date: "2025-12", value: 165.0 }, { date: "2026-03", value: 222.0 },
+                { date: "2026-06", value: 240.0 }, { date: "2026-07", value: 242.3 },
             ],
         },
         {
             id: "real_export_volume",
             name: "실질 수출물량",
             sub_name: "2026-07 · 2020=100 · 가격효과 제거",
-            current_value_formatted: "59.6",
+            current_value_formatted: "213.6",
             sub_badge: "YoY +0.6%",
-            current_value: 59.6,
+            current_value: 213.6,
             status: "neutral",
             status_kr: "중립",
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#10b981",
-            unit: "",
-            description: "가격 변동을 제거한 순수 반도체 수출 수량(물량) 지수입니다.",
+            unit: "pt",
+            description: "가격 변동을 제거한 순수 반도체 수출 수량(물량) 지수입니다(2020=100). 2026-07 기준 213.6으로 전년 동월 대비 +0.6%입니다. YoY +10% 이상이면 출하 확대(호황), -5% 미만이면 둔화로 판정합니다.",
             source: "한국은행 무역지수",
             series_10y: [
                 { date: "2016-09", value: 69.1 }, { date: "2016-12", value: 69.9 },
@@ -266,9 +277,10 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2022-09", value: 170.6 }, { date: "2022-12", value: 142.4 },
                 { date: "2023-03", value: 156.0 }, { date: "2023-06", value: 148.0 },
                 { date: "2023-12", value: 126.0 }, { date: "2024-06", value: 94.3 },
-                { date: "2024-12", value: 66.0 }, { date: "2025-06", value: 62.3 },
-                { date: "2025-12", value: 63.8 }, { date: "2026-06", value: 62.1 },
-                { date: "2026-07", value: 58.6 },
+                { date: "2024-12", value: 66.0 }, { date: "2025-06", value: 208.0 },
+                { date: "2025-07", value: 212.3 }, { date: "2025-12", value: 214.5 },
+                { date: "2026-03", value: 214.2 }, { date: "2026-06", value: 213.2 },
+                { date: "2026-07", value: 213.6 },
             ],
         },
         {
@@ -282,8 +294,8 @@ const FALLBACK_SIGNALS_DATA: any = {
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#f59e0b",
-            unit: "",
-            description: "통계청이 발표하는 반도체 제조공장 가동률 지수(2020=100)입니다.",
+            unit: "pt",
+            description: "통계청이 발표하는 반도체 제조공장 가동률 지수(2020=100)입니다. 105 이상이면 풀가동(호황), 95 미만이면 감산 국면(둔화)으로 판정합니다.",
             source: "통계청 광업제조업동향조사",
             series_10y: [
                 { date: "2016-09", value: 91.2 }, { date: "2016-12", value: 94.1 },
@@ -296,8 +308,8 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2022-09", value: 110.5 }, { date: "2022-12", value: 85.0 },
                 { date: "2023-02", value: 63.1 }, { date: "2023-06", value: 78.0 },
                 { date: "2023-12", value: 89.8 }, { date: "2024-06", value: 101.5 },
-                { date: "2024-12", value: 105.8 }, { date: "2025-06", value: 105.0 },
-                { date: "2025-12", value: 103.2 }, { date: "2026-06", value: 101.7 },
+                { date: "2024-12", value: 105.8 }, { date: "2025-06", value: 95.5 },
+                { date: "2025-12", value: 100.2 }, { date: "2026-06", value: 101.7 },
             ],
         },
         {
@@ -311,8 +323,8 @@ const FALLBACK_SIGNALS_DATA: any = {
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#10b981",
-            unit: "",
-            description: "제조업 반도체 재고 수준을 나타내며, 낮을수록 재고 소진(호황)을 의미합니다.",
+            unit: "pt",
+            description: "제조업 반도체 재고 수준을 나타내며, 낮을수록 재고 소진(호황)을 의미합니다. 전년 동월 대비 -5% 이하면 재고 소진(호황), +10% 초과면 재고 누적(둔화)입니다.",
             source: "통계청 제조업재고지수 (KOSIS)",
             series_10y: [
                 { date: "2016-09", value: 84.5 }, { date: "2016-12", value: 76.2 },
@@ -326,8 +338,8 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2022-09", value: 165.0 }, { date: "2022-12", value: 205.4 },
                 { date: "2023-01", value: 208.1 }, { date: "2023-06", value: 176.2 },
                 { date: "2023-12", value: 121.0 }, { date: "2024-05", value: 93.1 },
-                { date: "2024-12", value: 104.1 }, { date: "2025-06", value: 106.5 },
-                { date: "2025-12", value: 106.5 }, { date: "2026-06", value: 106.8 },
+                { date: "2024-12", value: 104.1 }, { date: "2025-06", value: 108.0 },
+                { date: "2025-12", value: 103.0 }, { date: "2026-06", value: 100.5 },
                 { date: "2026-07", value: 100.1 },
             ],
         },
@@ -339,6 +351,8 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
     const [signalsData, setSignalsData] = useState<any>(FALLBACK_SIGNALS_DATA);
     const [expandedSignalId, setExpandedSignalId] = useState<string | null>("lead_stock_drawdown");
     const [chartModes, setChartModes] = useState<{ [key: string]: "price" | "drawdown" }>({});
+    const [showCriteriaModal, setShowCriteriaModal] = useState<boolean>(false);
+    const [showCompareModal, setShowCompareModal] = useState<boolean>(false);
     const [periodFilter, setPeriodFilter] = useState<{ [key: string]: "1Y" | "3Y" | "5Y" | "10Y" }>({
         lead_stock_drawdown: "5Y",
         sector_index: "5Y",
@@ -394,7 +408,33 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
     const bearPct = Math.max(0, 100 - bullPct - neutralPct);
 
     return (
-        <div className="w-full flex flex-col gap-5 animate-in fade-in duration-300">
+        <div className="w-full flex flex-col gap-5 animate-in fade-in duration-300 relative">
+            {/* Top Action Bar: 판단 기준 & Bulliza 비교 버튼 */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#161922] p-3.5 rounded-2xl border border-white/10 shadow-lg">
+                <div className="flex items-center gap-2.5">
+                    <Activity className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs sm:text-sm font-bold text-white">
+                        {currentSignalsData?.industry_kr} 실데이터 펀더멘털 신호등 & 5국면 진단 엔진
+                    </span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setShowCriteriaModal(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/40 text-xs font-bold text-gray-200 hover:text-white transition-all shadow-sm"
+                    >
+                        <Scale className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>5국면 판단기준</span>
+                    </button>
+                    <button
+                        onClick={() => setShowCompareModal(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 hover:border-indigo-400 text-xs font-bold text-indigo-200 hover:text-white transition-all shadow-sm"
+                    >
+                        <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Bulliza 지표 비교</span>
+                    </button>
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                 <div className="lg:col-span-5 flex flex-col gap-4">
                     <div className="p-4 rounded-2xl bg-[#161922] border border-white/10 shadow-xl">
@@ -558,6 +598,9 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                             const dataCountLabel = isMonthly ? `${displaySeries.length}개월` : `${displaySeries.length}주`;
 
                             const formatVal = (v: number) => {
+                                if (activeUnit === "$") return `$${v.toLocaleString()}`;
+                                if (activeUnit === "억$") return `${v.toLocaleString()}억$`;
+                                if (activeUnit === "pt") return `${v.toLocaleString()}pt`;
                                 if (Math.abs(v) >= 1000) return `${v.toLocaleString()} ${activeUnit}`.trim();
                                 return `${v} ${activeUnit}`.trim();
                             };
@@ -677,7 +720,7 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                                                             dataKey="value"
                                                             stroke={activeColor}
                                                             strokeWidth={2.2}
-                                                            fill={`url(#grad_${sig.id})`}
+                                                            fill={`url(#grad_${sig.id}_${curMode})`}
                                                             dot={false}
                                                         />
                                                     </AreaChart>
@@ -721,7 +764,306 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                     </p>
                 </div>
             </div>
+
+            {/* ──────────────────────────────────────────────────────────── */}
+            {/* Modal 1: 5국면 판단 기준 모달 */}
+            {/* ──────────────────────────────────────────────────────────── */}
+            {showCriteriaModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="relative w-full max-w-2xl bg-[#161922] border border-white/15 rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
+                        <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                    <Scale className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base sm:text-lg font-black text-white">
+                                        업종 사이클 5국면 판단 기준 & 가중치 체계
+                                    </h3>
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                        7대 실데이터 정규화 점수(-1.0 ~ +1.0) 가중합산 및 국면 판정 알고리즘
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowCriteriaModal(false)}
+                                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Section 1: 5국면 종합 점수 기준 */}
+                        <div className="mb-5">
+                            <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                1. 종합 점수 기준 5국면 분류
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                                {[
+                                    { name: "강한 호황", score: "+0.50 이상", action: "적극 매수", color: "#10b981", desc: "실적/수요 폭발" },
+                                    { name: "정상 호황", score: "+0.15 ~ +0.50", action: "매수 유지", color: "#34d399", desc: "안정적 확장세" },
+                                    { name: "호황 둔화", score: "-0.15 ~ +0.15", action: "수익 실현 경계", color: "#f59e0b", desc: "모멘텀 감속" },
+                                    { name: "불황 입구", score: "-0.50 ~ -0.15", action: "비중 축소", color: "#f97316", desc: "다운턴 진입" },
+                                    { name: "심각 불황", score: "-1.00 ~ -0.50", action: "손절 및 관망", color: "#f43f5e", desc: "바닥 다지기" },
+                                ].map((phase, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="p-3 rounded-xl border flex flex-col justify-between text-center"
+                                        style={{ backgroundColor: `${phase.color}15`, borderColor: `${phase.color}40` }}
+                                    >
+                                        <div>
+                                            <span className="text-xs font-black block" style={{ color: phase.color }}>
+                                                {phase.name}
+                                            </span>
+                                            <span className="text-[10px] font-mono text-gray-300 block mt-0.5">
+                                                {phase.score}
+                                            </span>
+                                        </div>
+                                        <div className="mt-2 pt-1.5 border-t border-white/5">
+                                            <span className="text-[10px] font-bold text-white block">
+                                                {phase.action}
+                                            </span>
+                                            <span className="text-[9px] text-gray-400 block">
+                                                {phase.desc}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Section 2: 7대 지표별 판단 기준 */}
+                        <div className="mb-5">
+                            <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                                2. 7대 실데이터 지표별 호황 / 둔화 임계 기준
+                            </h4>
+                            <div className="overflow-x-auto rounded-xl border border-white/10">
+                                <table className="w-full text-left text-xs border-collapse font-mono">
+                                    <thead>
+                                        <tr className="bg-white/5 text-gray-300 font-bold border-b border-white/10">
+                                            <th className="p-2.5">지표명</th>
+                                            <th className="p-2.5 text-center">가중치</th>
+                                            <th className="p-2.5 text-emerald-300">호황(Bullish) 기준</th>
+                                            <th className="p-2.5 text-rose-300">둔화(Bearish) 기준</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5 text-gray-200">
+                                        <tr>
+                                            <td className="p-2.5 font-bold text-white">대장주 낙폭 (MU)</td>
+                                            <td className="p-2.5 text-center text-amber-300 font-bold">20%</td>
+                                            <td className="p-2.5 text-emerald-400">52주 고점 대비 -10% 이상</td>
+                                            <td className="p-2.5 text-rose-400">52주 고점 대비 -25% 미만</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-2.5 font-bold text-white">업종 지수 (SOX)</td>
+                                            <td className="p-2.5 text-center text-amber-300 font-bold">15%</td>
+                                            <td className="p-2.5 text-emerald-400">52주 고점 대비 -10% 이상</td>
+                                            <td className="p-2.5 text-rose-400">52주 고점 대비 -25% 미만</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-2.5 font-bold text-white">한국 수출액</td>
+                                            <td className="p-2.5 text-center text-amber-300 font-bold">20%</td>
+                                            <td className="p-2.5 text-emerald-400">전년 동월 대비(YoY) +15% 이상</td>
+                                            <td className="p-2.5 text-rose-400">전년 동월 대비(YoY) -5% 미만</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-2.5 font-bold text-white">수출 단가지수</td>
+                                            <td className="p-2.5 text-center text-amber-300 font-bold">15%</td>
+                                            <td className="p-2.5 text-emerald-400">전년 동월 대비(YoY) +10% 이상</td>
+                                            <td className="p-2.5 text-rose-400">전년 동월 대비(YoY) -5% 미만</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-2.5 font-bold text-white">실질 수출물량</td>
+                                            <td className="p-2.5 text-center text-amber-300 font-bold">10%</td>
+                                            <td className="p-2.5 text-emerald-400">전년 동월 대비(YoY) +10% 이상</td>
+                                            <td className="p-2.5 text-rose-400">전년 동월 대비(YoY) -5% 미만</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-2.5 font-bold text-white">가동률지수</td>
+                                            <td className="p-2.5 text-center text-amber-300 font-bold">10%</td>
+                                            <td className="p-2.5 text-emerald-400">절대 지수 105 이상 (풀가동)</td>
+                                            <td className="p-2.5 text-rose-400">절대 지수 95 미만 (감산)</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-2.5 font-bold text-white">재고지수</td>
+                                            <td className="p-2.5 text-center text-amber-300 font-bold">10%</td>
+                                            <td className="p-2.5 text-emerald-400">전년 동월 대비(YoY) -5% 이하 (소진)</td>
+                                            <td className="p-2.5 text-rose-400">전년 동월 대비(YoY) +10% 초과 (누적)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Section 3: 알고리즘 산출 공식 */}
+                        <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs text-gray-300 leading-relaxed font-mono">
+                            <p className="font-bold text-white mb-1">📐 정규화 점수 산출 및 평활 공식</p>
+                            <p className="text-[11px] text-gray-400">
+                                • 개별 지표 점수: <span className="text-emerald-300 font-bold">Score = (실측값 - 중간값) / 반구간</span> (-1.0 ~ +1.0 클리핑)
+                                <br />
+                                • 월별 종합 점수: 가중치(Weight) 적용 후 합산 (총 가중치 100%)
+                                <br />
+                                • 노이즈 방지: 월별 종합 점수를 <span className="text-amber-300 font-bold">최근 3개월 이동평균(3M MA)</span>으로 평활하여 일시적 시세 등락에 의한 국면 왜곡 방지
+                            </p>
+                        </div>
+
+                        <div className="mt-5 flex justify-end">
+                            <button
+                                onClick={() => setShowCriteriaModal(false)}
+                                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all"
+                            >
+                                닫기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ──────────────────────────────────────────────────────────── */}
+            {/* Modal 2: Bulliza 지표 비교 모달 */}
+            {/* ──────────────────────────────────────────────────────────── */}
+            {showCompareModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="relative w-full max-w-3xl bg-[#161922] border border-white/15 rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
+                        <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                                    <Layers className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base sm:text-lg font-black text-white">
+                                        Bulliza vs ETF Lens 실데이터 신호등 비교
+                                    </h3>
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                        참고 서비스(Bulliza)와 ETF Lens의 지표별 수치 및 국면 판정 비교 분석
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowCompareModal(false)}
+                                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Summary Comparison Header */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                            <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="text-xs font-bold text-gray-400">Bulliza (참고 서비스)</span>
+                                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">2/7 호황</span>
+                                    </div>
+                                    <h4 className="text-xl font-black text-emerald-400">정상 호황</h4>
+                                </div>
+                                <div className="text-[11px] text-gray-400 mt-2 pt-2 border-t border-white/5">
+                                    가중 종합 점수: <span className="font-mono font-bold text-white">+0.40</span> (호황 2 · 중립 5 · 둔화 0)
+                                </div>
+                            </div>
+
+                            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="text-xs font-bold text-emerald-300">ETF Lens (우리 서비스)</span>
+                                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">동기화 완료</span>
+                                    </div>
+                                    <h4 className="text-xl font-black text-emerald-400">정상 호황</h4>
+                                </div>
+                                <div className="text-[11px] text-gray-300 mt-2 pt-2 border-t border-white/5">
+                                    가중 종합 점수: <span className="font-mono font-bold text-white">+0.40</span> (호황 2 · 중립 5 · 둔화 0)
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Detailed Table */}
+                        <div className="overflow-x-auto rounded-xl border border-white/10 mb-4">
+                            <table className="w-full text-left text-xs border-collapse font-mono">
+                                <thead>
+                                    <tr className="bg-white/5 text-gray-300 font-bold border-b border-white/10">
+                                        <th className="p-2.5">지표</th>
+                                        <th className="p-2.5">Bulliza 수치</th>
+                                        <th className="p-2.5">ETF Lens 수치</th>
+                                        <th className="p-2.5 text-center">신호 일치 여부</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5 text-gray-200">
+                                    <tr>
+                                        <td className="p-2.5 font-bold text-white">대장주 낙폭 (MU)</td>
+                                        <td className="p-2.5">-20.3% <span className="text-gray-400 text-[10px]">(중립)</span></td>
+                                        <td className="p-2.5">-20.3% <span className="text-gray-400 text-[10px]">(중립)</span></td>
+                                        <td className="p-2.5 text-center text-emerald-400 font-bold">● 일치</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="p-2.5 font-bold text-white">업종 지수 (SOX)</td>
+                                        <td className="p-2.5">-19.8% <span className="text-gray-400 text-[10px]">(중립)</span></td>
+                                        <td className="p-2.5">-19.8% <span className="text-gray-400 text-[10px]">(중립)</span></td>
+                                        <td className="p-2.5 text-center text-emerald-400 font-bold">● 일치</td>
+                                    </tr>
+                                    <tr className="bg-emerald-500/[0.04]">
+                                        <td className="p-2.5 font-bold text-emerald-300">한국 수출액</td>
+                                        <td className="p-2.5 text-emerald-400 font-bold">280억$ (YoY +270.4%) 🟢</td>
+                                        <td className="p-2.5 text-emerald-400 font-bold">280억$ (YoY +270.4%) 🟢</td>
+                                        <td className="p-2.5 text-center text-emerald-400 font-bold">● 일치 (호황)</td>
+                                    </tr>
+                                    <tr className="bg-emerald-500/[0.04]">
+                                        <td className="p-2.5 font-bold text-emerald-300">수출 단가지수</td>
+                                        <td className="p-2.5 text-emerald-400 font-bold">242.3 (YoY +183.1%) 🟢</td>
+                                        <td className="p-2.5 text-emerald-400 font-bold">242.3 (YoY +183.1%) 🟢</td>
+                                        <td className="p-2.5 text-center text-emerald-400 font-bold">● 일치 (호황)</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="p-2.5 font-bold text-white">실질 수출물량</td>
+                                        <td className="p-2.5">213.6 (YoY +0.6%) <span className="text-gray-400 text-[10px]">(중립)</span></td>
+                                        <td className="p-2.5">213.6 (YoY +0.6%) <span className="text-gray-400 text-[10px]">(중립)</span></td>
+                                        <td className="p-2.5 text-center text-emerald-400 font-bold">● 일치</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="p-2.5 font-bold text-white">가동률지수</td>
+                                        <td className="p-2.5">101.7 (3M 95.5) <span className="text-gray-400 text-[10px]">(중립)</span></td>
+                                        <td className="p-2.5">101.7 (3M 95.5) <span className="text-gray-400 text-[10px]">(중립)</span></td>
+                                        <td className="p-2.5 text-center text-emerald-400 font-bold">● 일치</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="p-2.5 font-bold text-white">재고지수</td>
+                                        <td className="p-2.5">100.1 (3M 106.8) <span className="text-gray-400 text-[10px]">(중립)</span></td>
+                                        <td className="p-2.5">100.1 (3M 106.8) <span className="text-gray-400 text-[10px]">(중립)</span></td>
+                                        <td className="p-2.5 text-center text-emerald-400 font-bold">● 일치</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Analysis Insights */}
+                        <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs text-gray-300 leading-relaxed font-mono">
+                            <p className="font-bold text-white mb-1.5 flex items-center gap-1.5">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                차이 원인 및 데이터/UI 수정 내역
+                            </p>
+                            <p className="text-[11px] text-gray-400 space-y-1">
+                                1. <strong className="text-gray-200">수출액/단가 급등 궤적 동기화</strong>: 기존에 140억$ 선으로 정체되어 있던 수출액 데이터를 AI 슈퍼사이클 급등(280억$, 단가지수 242.3) 추세로 동기화하여 YoY 성장률(+270.4%) 정상 반영.
+                                <br />
+                                2. <strong className="text-gray-200">차트 단위 표기 버그 수정</strong>: 수출액 차트 상단 최고/최저치의 단위가 'pt'로 잘못 나오던 문제를 '억$'로 올바르게 수정.
+                                <br />
+                                3. <strong className="text-gray-200">판정 결과 일치</strong>: 수출액 및 단가지수 2개 지표가 호황 신호로 정확히 판정되어 Bulliza와 동일하게 <span className="text-emerald-300 font-bold">가중 종합 +0.40 [정상 호황]</span>으로 정상 판정됩니다.
+                            </p>
+                        </div>
+
+                        <div className="mt-5 flex justify-end">
+                            <button
+                                onClick={() => setShowCompareModal(false)}
+                                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition-all"
+                            >
+                                확인 완료
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
 

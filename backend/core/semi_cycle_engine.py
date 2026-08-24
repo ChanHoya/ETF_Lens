@@ -432,7 +432,7 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
 
     def _stat_signal(sid, name, key, sub_name, value_fmt, description, source,
                      bull_at, bear_at, weight, chart_color="#10b981",
-                     higher_is_better=True, use_yoy=True, badge=True) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+                     higher_is_better=True, use_yoy=True, badge=True, unit="pt") -> Tuple[Dict[str, Any], Dict[str, Any]]:
         series = series_map[key]
         cur = series[-1]["value"]
         yoy = _yoy(series)
@@ -447,7 +447,7 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
             "current_value": cur,
             **_status_of(score),
             "chart_color": chart_color,
-            "unit": "pt",
+            "unit": unit,
             "description": description,
             "source": source,
             "data_points_count": f"{len(series)}개월(≈{len(series) // 12}Y)",
@@ -486,6 +486,7 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
             f"전년 동월 대비 {export_yoy if export_yoy is not None else 0:+.1f}%입니다. YoY +15% 이상이면 호황, "
             f"−5% 미만이면 둔화로 판정합니다.",
             "관세청 무역통계 (K-stat)", bull_at=15.0, bear_at=-5.0, weight=0.20,
+            unit="억$",
         ),
         _stat_signal(
             "export_unit_price", "수출 단가지수", "unit_price",
@@ -494,6 +495,7 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
             f"동월 대비 {price_yoy if price_yoy is not None else 0:+.1f}%입니다. YoY +10% 이상이면 가격결정력 "
             f"확대(호황), −5% 미만이면 둔화로 판정합니다.",
             "한국은행 경제통계시스템 (ECOS)", bull_at=10.0, bear_at=-5.0, weight=0.15,
+            unit="pt",
         ),
         _stat_signal(
             "real_export_volume", "실질 수출물량", "volume",
@@ -502,6 +504,7 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
             f"{volume_now:.1f}로 전년 동월 대비 {volume_yoy if volume_yoy is not None else 0:+.1f}%입니다. "
             f"YoY +10% 이상이면 출하 확대(호황), −5% 미만이면 둔화로 판정합니다.",
             "한국은행 무역지수", bull_at=10.0, bear_at=-5.0, weight=0.10,
+            unit="pt",
         ),
         _stat_signal(
             "capacity_utilization", "가동률지수", "cap_util",
@@ -510,7 +513,7 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
             f"(3개월 평균 {cap_3m:.1f})입니다. 105 이상이면 풀가동(호황), 95 미만이면 감산 국면(둔화)으로 "
             f"판정합니다.",
             "통계청 광업제조업동향조사", bull_at=105.0, bear_at=95.0, weight=0.10,
-            chart_color="#f59e0b", use_yoy=False, badge=False,
+            chart_color="#f59e0b", use_yoy=False, badge=False, unit="pt",
         ),
         _stat_signal(
             "inventory_index", "재고지수", "inventory",
@@ -520,7 +523,7 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
             f"{inv_yoy if inv_yoy is not None else 0:+.1f}%입니다. 절대 수준보다 방향이 중요해 YoY로 판정하며, "
             f"−5% 이하면 재고 소진(호황), +10% 초과면 재고 누적(둔화)입니다.",
             "통계청 제조업재고지수 (KOSIS)", bull_at=-5.0, bear_at=10.0, weight=0.10,
-            higher_is_better=False,
+            higher_is_better=False, unit="pt",
         ),
     ]
 
