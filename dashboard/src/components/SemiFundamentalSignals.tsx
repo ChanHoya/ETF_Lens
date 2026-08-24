@@ -421,55 +421,44 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
 
     return (
         <div className="w-full flex flex-col gap-4 animate-in fade-in duration-300 relative">
-            {/* Top Action Bar: 판단 기준 & Bulliza 비교 버튼 */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 bg-[#161922] p-3 rounded-2xl border border-white/10 shadow-lg">
-                <div className="flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs sm:text-sm font-bold text-white">
-                        {currentSignalsData?.industry_kr} 실데이터 펀더멘털 신호등 & 5국면 진단 엔진
-                    </span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setShowCriteriaModal(true)}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/40 text-xs font-bold text-gray-200 hover:text-white transition-all shadow-sm"
-                    >
-                        <Scale className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>5국면 판단기준</span>
-                    </button>
-                    <button
-                        onClick={() => setShowCompareModal(true)}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 hover:border-indigo-400 text-xs font-bold text-indigo-200 hover:text-white transition-all shadow-sm"
-                    >
-                        <Layers className="w-3.5 h-3.5 text-indigo-400" />
-                        <span>Bulliza 지표 비교</span>
-                    </button>
-                </div>
-            </div>
-
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                {/* Left Dashboard Column (5국면 & 종합 진단) */}
                 <div className="lg:col-span-5 flex flex-col gap-3">
                     <div className="p-3.5 rounded-2xl bg-[#161922] border border-white/10 shadow-xl">
-                        <span className="text-[11px] font-bold text-gray-400 block mb-2">
-                            | {currentSignalsData?.industry_kr} 사이클 5국면 — 각 국면 비교
-                        </span>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-bold text-gray-400">
+                                | {currentSignalsData?.industry_kr} 사이클 5국면 — 각 국면 비교
+                            </span>
+                            <button
+                                onClick={() => setShowCriteriaModal(true)}
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/40 text-xs font-bold text-gray-200 hover:text-white transition-all shadow-sm"
+                            >
+                                <Scale className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>5국면 판단기준</span>
+                            </button>
+                        </div>
                         <div className="grid grid-cols-5 gap-1.5">
                             {stages.map((st: any) => {
                                 const isCurrent = st.is_current;
+                                const isStageBull = st.name.includes("호황") && !st.name.includes("둔화");
+                                const isStageNeutral = st.name.includes("둔화") || st.name.includes("중립");
+                                const stageColor = isStageBull ? "#10b981" : isStageNeutral ? "#f59e0b" : "#f43f5e";
+                                const stageTextColorClass = isStageBull ? "text-emerald-400" : isStageNeutral ? "text-amber-400" : "text-rose-400";
+
                                 return (
                                     <div
                                         key={st.id}
                                         className={`flex flex-col items-center justify-center p-1.5 rounded-xl text-center border transition-all ${
                                             isCurrent
                                                 ? "shadow-md font-bold"
-                                                : "bg-white/[0.02] border-white/5 text-gray-400 hover:text-gray-200"
+                                                : "bg-white/[0.02] border-white/5 hover:bg-white/[0.04]"
                                         }`}
-                                        style={isCurrent ? { backgroundColor: `${phaseColor}26`, borderColor: phaseColor, color: phaseColor } : undefined}
+                                        style={isCurrent ? { backgroundColor: `${stageColor}26`, borderColor: stageColor, color: stageColor } : undefined}
                                     >
-                                        <span className="text-[10px] font-bold">{st.name}</span>
+                                        <span className={`text-[10px] font-bold ${isCurrent ? "" : stageTextColorClass}`}>{st.name}</span>
                                         <span className="text-[8px] text-gray-400">{st.action}</span>
                                         {isCurrent && (
-                                            <span className="mt-0.5 px-1.5 py-0.2 rounded-full text-black text-[7px] font-black" style={{ backgroundColor: phaseColor }}>
+                                            <span className="mt-0.5 px-1.5 py-0.2 rounded-full text-black text-[7px] font-black" style={{ backgroundColor: stageColor }}>
                                                 ● 현재
                                             </span>
                                         )}
@@ -482,15 +471,25 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                     <div className="p-4 rounded-2xl bg-[#161922] border border-white/10 shadow-xl flex flex-col gap-3">
                         <div className="flex justify-between items-start">
                             <div>
-                                <span className="text-xs font-bold text-amber-400 tracking-wider">
-                                    실시간 실데이터 자동 판정 · {signalsCount.bullish}/{totalCount} 호황 신호
+                                <span className="text-xs font-bold tracking-wider flex items-center gap-1.5">
+                                    <span className="text-emerald-400">호황 {signalsCount.bullish}</span>
+                                    <span className="text-gray-500">·</span>
+                                    <span className="text-white">중립 {signalsCount.neutral}</span>
+                                    <span className="text-gray-500">·</span>
+                                    <span className="text-amber-400">둔화 {signalsCount.bearish}</span>
+                                    <span className="text-gray-400 text-[10px]">({totalCount}대 지표)</span>
                                 </span>
                                 <span className="text-[10px] text-gray-400 block mt-0.5">
                                     현재 {currentSignalsData?.industry_kr} 사이클 국면 (실데이터 자동 판정)
                                 </span>
                                 <div className="flex items-center gap-2 mt-1">
                                     <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: phaseColor }} />
-                                    <h3 className="text-xl font-black text-white">{currentSignalsData?.current_state}</h3>
+                                    <h3 
+                                        className="text-xl font-black"
+                                        style={{ color: phaseColor }}
+                                    >
+                                        {currentSignalsData?.current_state}
+                                    </h3>
                                 </div>
                             </div>
                             <span
@@ -504,13 +503,13 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                         <div className="flex flex-col gap-1 pt-1 border-t border-white/5">
                             <div className="flex justify-between text-[10px] font-mono">
                                 <span className="text-emerald-400 font-bold">호황 {signalsCount.bullish}개 ({bullPct}%)</span>
-                                <span className="text-gray-400 font-bold">중립 {signalsCount.neutral}개 ({neutralPct}%)</span>
-                                <span className="text-rose-400 font-bold">둔화 {signalsCount.bearish}개 ({bearPct}%)</span>
+                                <span className="text-white font-bold">중립 {signalsCount.neutral}개 ({neutralPct}%)</span>
+                                <span className="text-amber-400 font-bold">둔화 {signalsCount.bearish}개 ({bearPct}%)</span>
                             </div>
                             <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden flex">
                                 <div style={{ width: `${bullPct}%` }} className="bg-emerald-500 h-full transition-all duration-500" />
-                                <div style={{ width: `${neutralPct}%` }} className="bg-slate-500 h-full transition-all duration-500" />
-                                <div style={{ width: `${bearPct}%` }} className="bg-rose-500 h-full transition-all duration-500" />
+                                <div style={{ width: `${neutralPct}%` }} className="bg-slate-300 h-full transition-all duration-500" />
+                                <div style={{ width: `${bearPct}%` }} className="bg-amber-500 h-full transition-all duration-500" />
                             </div>
                         </div>
 
@@ -547,15 +546,25 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                     </div>
                 </div>
 
+                {/* Right Column: 7대 실데이터 신호 (실시간) */}
                 <div className="lg:col-span-7 flex flex-col gap-2 p-4 rounded-2xl bg-[#161922] border border-white/10 shadow-xl">
                     <div className="flex justify-between items-center pb-2.5 border-b border-white/10">
                         <div className="flex items-center gap-2">
                             <span className="w-1.5 h-3.5 rounded-full bg-emerald-500" />
                             <h4 className="text-sm md:text-base font-bold text-white">실데이터 신호 (실시간)</h4>
                         </div>
-                        <span className="text-[10px] px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold font-mono">
-                            LIVE
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setShowCompareModal(true)}
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 hover:border-indigo-400 text-xs font-bold text-indigo-200 hover:text-white transition-all shadow-sm"
+                            >
+                                <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                                <span>Bulliza 지표 비교</span>
+                            </button>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold font-mono">
+                                LIVE
+                            </span>
+                        </div>
                     </div>
 
                     <div className="divide-y divide-white/5">
@@ -580,6 +589,17 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                             const curPeriod = periodFilter[sig.id] || "5Y";
                             const curMode = chartModes[sig.id] || "price";
                             const hasToggle = !!(sig.has_drawdown_toggle || sig.dd_series_10y);
+
+                            const isBullish = sig.status === "bullish";
+                            const isBearish = sig.status === "bearish";
+                            const nameColorClass = isBullish ? "text-emerald-400" : isBearish ? "text-amber-400" : "text-white";
+                            const valueColor = isBullish ? "#34d399" : isBearish ? "#fbbf24" : "#ffffff";
+                            const statusBadgeClass = isBullish
+                                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                                : isBearish
+                                ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                                : "bg-white/10 text-gray-200 border-white/20";
+                            const statusText = sig.status_kr || (isBullish ? "호황" : isBearish ? "둔화" : "중립");
 
                             const priceSeries = (sig.series_10y && sig.series_10y.length > 0)
                                 ? sig.series_10y
@@ -625,7 +645,7 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                                     >
                                         <div className="flex flex-col">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-xs md:text-sm font-bold text-white">{sig.name}</span>
+                                                <span className={`text-xs md:text-sm font-bold ${nameColorClass}`}>{sig.name}</span>
                                                 <span className="text-[10px] text-gray-400 font-normal">{sig.sub_name}</span>
                                             </div>
                                             <span className="text-[9px] text-gray-500 flex items-center gap-1">
@@ -633,14 +653,17 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2 shrink-0">
-                                            <span className="text-xs md:text-sm font-mono font-black text-white">
+                                            <span className="text-xs md:text-sm font-mono font-black" style={{ color: valueColor }}>
                                                 {sig.current_value_formatted}
                                             </span>
                                             {sig.sub_badge && (
-                                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-bold">
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-bold font-mono">
                                                     {sig.sub_badge}
                                                 </span>
                                             )}
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-md font-black border ${statusBadgeClass}`}>
+                                                {statusText}
+                                            </span>
                                         </div>
                                     </div>
 
