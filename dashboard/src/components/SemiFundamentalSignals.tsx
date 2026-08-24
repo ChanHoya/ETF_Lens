@@ -778,11 +778,16 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
             </div>
 
             {/* ──────────────────────────────────────────────────────────── */}
-            {/* Modal 1: 5국면 판단 기준 모달 (중앙 안정적 팝업 & 스크롤 완비) */}
+            {/* Modal 1: 5국면 판단 기준 모달 (상단 안정적 팝업 & 스크롤 완비) */}
             {/* ──────────────────────────────────────────────────────────── */}
             {showCriteriaModal && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200">
-                    <div className="relative w-full max-w-2xl bg-[#161922] border border-white/15 rounded-2xl shadow-2xl p-5 my-auto max-h-[85vh] flex flex-col">
+                <div 
+                    className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm p-4 sm:p-6 flex items-start justify-center pt-8 sm:pt-14 pb-12 animate-in fade-in duration-200"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setShowCriteriaModal(false);
+                    }}
+                >
+                    <div className="relative w-full max-w-2xl bg-[#161922] border border-white/20 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] p-5 max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-150">
                         <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3 shrink-0">
                             <div className="flex items-center gap-2">
                                 <div className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
@@ -936,11 +941,16 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
             )}
 
             {/* ──────────────────────────────────────────────────────────── */}
-            {/* Modal 2: Bulliza 지표 비교 모달 (실시간 데이터 동적 연동) */}
+            {/* Modal 2: Bulliza 지표 비교 모달 (상단 안정적 팝업 & 실시간 데이터 동적 연동) */}
             {/* ──────────────────────────────────────────────────────────── */}
             {showCompareModal && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200">
-                    <div className="relative w-full max-w-3xl bg-[#161922] border border-white/15 rounded-2xl shadow-2xl p-5 my-auto max-h-[85vh] flex flex-col">
+                <div 
+                    className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm p-4 sm:p-6 flex items-start justify-center pt-8 sm:pt-14 pb-12 animate-in fade-in duration-200"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setShowCompareModal(false);
+                    }}
+                >
+                    <div className="relative w-full max-w-3xl bg-[#161922] border border-white/20 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] p-5 max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-150">
                         <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3 shrink-0">
                             <div className="flex items-center gap-2">
                                 <div className="p-1.5 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
