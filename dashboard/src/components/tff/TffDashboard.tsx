@@ -32,6 +32,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
     const [isParsing, setIsParsing] = useState(false);
     const [activeSubTab, setActiveSubTab] = useState<'overview'|'cumulative'|'assets'|'ytm'|'monthly'>('overview');
     const [selectedMonth, setSelectedMonth] = useState<string>(''); // For monthly view filter
+    const [showUploadModal, setShowUploadModal] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // 현 시점 추정 시뮬레이션 상태
@@ -230,6 +231,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
             const result = await res.json();
             if (result.status === 'ok') {
                 alert('성공적으로 중앙 공유 데이터베이스에 저장되었습니다.');
+                setShowUploadModal(false);
                 await fetchLatestData();
                 await loadHistory();
             } else {
@@ -488,9 +490,9 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                     {isAdmin && (
                         <>
                             <button
-                                onClick={() => fileInputRef.current?.click()}
+                                onClick={() => setShowUploadModal(true)}
                                 className="flex flex-row items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-300 hover:text-emerald-200 bg-emerald-950/30 hover:bg-emerald-900/40 rounded-xl transition-colors border border-emerald-900/50 backdrop-blur-md shadow-sm"
-                                title="새 엑셀 파일 업로드"
+                                title="새 엑셀 파일 업로드 화면 열기"
                             >
                                 <UploadCloud className="w-4 h-4" /> 업로드
                             </button>
@@ -593,14 +595,6 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                 onDrop={handleDrop}
                                 onClick={() => fileInputRef.current?.click()}
                             >
-                                <input 
-                                    type="file" 
-                                    accept=".xlsx" 
-                                    ref={fileInputRef} 
-                                    className="hidden" 
-                                    onChange={handleFileChange}
-                                />
-                                
                                 {isParsing ? (
                                     <div className="flex flex-col items-center gap-4 text-sky-400">
                                         <Loader2 className="w-12 h-12 animate-spin" />
@@ -644,15 +638,6 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                 </button>
                             </div>
                         )}
-
-                        {/* 숨겨진 파일 인풋 (마스터용) */}
-                        <input 
-                            type="file" 
-                            accept=".xlsx" 
-                            ref={fileInputRef} 
-                            className="hidden" 
-                            onChange={handleFileChange}
-                        />
 
                         {historyRecords.length > 0 && (
                             <button
@@ -1006,6 +991,93 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                     </div>
                 </div>
             )}
+
+            {/* 마스터 전용 엑셀 업로드 모달 */}
+            {showUploadModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="w-full max-w-lg bg-slate-950/95 border border-emerald-500/20 rounded-3xl overflow-hidden shadow-2xl relative p-6 space-y-4">
+                        {/* 모달 헤더 */}
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <UploadCloud className="w-5 h-5 text-emerald-400" /> TFF 펀드 현황 자료 업로드
+                            </h3>
+                            <button
+                                onClick={() => { if (!isParsing) setShowUploadModal(false); }}
+                                disabled={isParsing}
+                                className="p-1 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors disabled:opacity-50"
+                                title="닫기"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            새로운 월별 운용보고서 엑셀(<code className="text-emerald-400 font-mono">.xlsx</code>) 파일을 업로드하면 최신 데이터로 대시보드가 갱신되며, 중앙 데이터베이스에 즉시 동기화되어 모든 참여자가 조회할 수 있습니다.
+                        </p>
+
+                        {/* 업로드 드래그앤드롭 박스 */}
+                        <div
+                            className={`w-full p-8 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer bg-white/[0.02]
+                            ${isDragging ? 'border-emerald-400 bg-emerald-950/30 scale-[1.01] shadow-[0_0_30px_rgba(16,185,129,0.2)]' : 'border-white/15 hover:border-emerald-500/50 hover:bg-white/[0.04]'}
+                            ${isParsing ? 'pointer-events-none opacity-80' : ''}`}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            {isParsing ? (
+                                <div className="flex flex-col items-center gap-3 py-6 text-emerald-400">
+                                    <Loader2 className="w-12 h-12 animate-spin" />
+                                    <p className="font-bold text-sm text-white">엑셀 데이터 파싱 및 중앙 서버 저장 중...</p>
+                                    <p className="text-xs text-gray-400">데이터를 검증하고 동기화하고 있습니다. 잠시만 기다려 주세요.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4 shadow-lg group">
+                                        <FileSpreadsheet className="w-8 h-8 text-emerald-400" />
+                                    </div>
+                                    <h4 className="text-base font-bold text-white mb-1">엑셀 파일 선택 또는 드래그앤드롭</h4>
+                                    <p className="text-gray-400 text-xs text-center mb-4 leading-relaxed">
+                                        이곳을 클릭하거나 <span className="text-emerald-400 font-semibold">TFF 펀드 현황.xlsx</span> 파일을 <br />
+                                        마우스로 끌어서 놓으세요.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            fileInputRef.current?.click();
+                                        }}
+                                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center gap-1.5"
+                                    >
+                                        <UploadCloud className="w-3.5 h-3.5" /> 파일 찾아보기
+                                    </button>
+                                    <p className="text-[11px] text-gray-500 mt-4">데이터는 중앙 PostgreSQL 데이터베이스에 안전하게 보관됩니다.</p>
+                                </>
+                            )}
+                        </div>
+
+                        {/* 모달 푸터 */}
+                        <div className="flex justify-end pt-2">
+                            <button
+                                onClick={() => setShowUploadModal(false)}
+                                disabled={isParsing}
+                                className="px-5 py-2.5 border border-white/10 text-gray-400 hover:text-white rounded-xl text-xs font-bold transition-all hover:bg-white/5 disabled:opacity-50"
+                            >
+                                닫기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 항시 마운트되는 숨겨진 파일 인풋 */}
+            <input 
+                type="file" 
+                accept=".xlsx" 
+                ref={fileInputRef} 
+                className="hidden" 
+                onChange={handleFileChange}
+            />
         </div>
     );
 }
