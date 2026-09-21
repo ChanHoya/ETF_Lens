@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, BarChart, Bar, Cell, PieChart, Pie, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
-import { Search, Loader2, Plus, X, ChevronDown, ChevronLeft, ChevronRight, Aperture, Star, Trash2, Edit2, Check, Share2, RefreshCw, BarChart2, Minus, Zap, Crown, Target, Layers, BookOpen, AlertCircle, ArrowUpRight, ArrowDownRight, Clock, ShieldAlert, Cpu, Maximize2, Minimize2 } from "lucide-react";
+import { Search, Loader2, Plus, X, ChevronDown, ChevronLeft, ChevronRight, Aperture, Star, Trash2, Edit2, Check, Share2, RefreshCw, BarChart2, Minus, Zap, Crown, Target, Layers, BookOpen, AlertCircle, ArrowUpRight, ArrowDownRight, Clock, ShieldAlert, Cpu, Maximize2, Minimize2, Building2, Flame } from "lucide-react";
 import { API_BASE } from '@/lib/apiConfig';
 import { prefetchMonitorData } from '@/lib/monitorPrefetch';
 import CompareChart from "@/components/CompareChart";
@@ -1142,32 +1142,6 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
 
           {/* 우측 툴버튼 + 버전/연동 상태 정보 */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* 버전 및 연동 상태 정보 (메뉴바 오른쪽/우측 영역 배치) */}
-            <div className="hidden sm:flex flex-col gap-0.5 items-end shrink-0">
-              <span className={`text-[10px] sm:text-[11px] font-mono font-medium px-2 py-0.5 rounded-md uppercase tracking-widest whitespace-nowrap ${dbVersion === 'VER --'
-                ? "text-rose-400 bg-rose-400/10 border border-rose-400/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] animate-pulse"
-                : "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
-                }`}>
-                {dbVersion}
-              </span>
-              {healthStatus === 'pending' && (
-                <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-gray-400 bg-gray-400/10 border border-gray-400/20 animate-pulse flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-ping" />
-                  외부연동 체크중...
-                </span>
-              )}
-              {healthStatus === 'ok' && (
-                <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-sky-400 bg-sky-400/10 border border-sky-400/20 animate-pulse shadow-[0_0_10px_rgba(56,189,248,0.2)]">
-                  모든 연동기능이 정상작동중 입니다.
-                </span>
-              )}
-              {healthStatus === 'error' && (
-                <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap text-rose-500 bg-rose-500/10 border border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.15)] flex items-center gap-1">
-                  <AlertCircle size={12} /> {failedServices.length > 0 ? `${failedServices.join(', ')} 오류 체크바람` : '현재 연동에 문제가 있습니다. 체크바람'}
-                </span>
-              )}
-            </div>
-
             {/* 전체화면 확대 버튼 */}
             <button
               onClick={toggleFullscreen}
@@ -1324,17 +1298,13 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
 
         {activeTab === 'select' && (
           <div className="flex-1 flex flex-col items-center justify-start pt-4 w-full relative z-10 min-h-0 animate-in fade-in zoom-in-95 duration-500">
-            <div className="text-center mb-4">
-              <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-white drop-shadow-md">데이터 기반의 ETF 투자</h2>
-              <p className="text-gray-400 text-sm md:text-base">최대 10개의 ETF를 선택하여 다각도로 성과와 포트폴리오를 비교 분석합니다.</p>
-            </div>
             <section className="w-full max-w-[95vw] xl:max-w-[1400px] bg-white/[0.03] backdrop-blur-3xl rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] px-5 py-6 md:px-8 md:py-8 border border-white/10 transition-all hover:border-white/20 duration-500">
               <div className="flex flex-col gap-4 mb-2.5 relative z-50 border-b border-white/10 pb-4">
                 {/* 🚀 Quick Filters (Brands & Themes Stacked Vertically) */}
                 <div className="flex flex-col gap-2 w-full">
                   {/* 1층: 운용사 */}
                   <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
-                    <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400 mr-1 flex items-center min-w-[50px]"><span className="mr-1">🏢</span> 운용사:</span>
+                    <span className="text-xs font-semibold text-gray-400 mr-1 flex items-center gap-1.5 min-w-[50px]"><Building2 className="w-3.5 h-3.5 shrink-0" /> 운용사</span>
                     {BRAND_KEYWORDS.map(brand => {
                       const isActive = globalSearch.split(' ').includes(brand);
                       return (
@@ -1358,7 +1328,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                   </div>
                   {/* 2층: HOT 테마 */}
                   <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
-                    <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 mr-1 flex items-center min-w-[50px]"><span className="mr-1">🔥</span> HOT:</span>
+                    <span className="text-xs font-semibold text-gray-400 mr-1 flex items-center gap-1.5 min-w-[50px]"><Flame className="w-3.5 h-3.5 shrink-0" /> HOT</span>
 
                     {/* AND / OR 토글 버튼 */}
                     <button
@@ -1533,7 +1503,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                   <div className="flex items-center gap-2 w-full md:w-auto flex-shrink-0">
                     <button
                       onClick={() => setIsFavModalOpen(true)}
-                      className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 border border-slate-600/50 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 text-sm"
+                      className="flex-1 md:flex-none bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-medium py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
                     >
                       <Star className="w-5 h-5 text-yellow-400" /> 즐겨찾기
                     </button>
@@ -1541,14 +1511,14 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                     <button
                       onClick={() => fetchComparison()}
                       disabled={loading || slots.map(s => s.code || s.search).filter(Boolean).length < 2}
-                      className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none active:scale-95 text-sm whitespace-nowrap"
+                      className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-7 rounded-xl transition-colors shadow-lg shadow-indigo-950/50 flex items-center justify-center gap-2 disabled:opacity-40 disabled:shadow-none active:scale-95 text-sm whitespace-nowrap"
                     >
                       {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "비교하기"}
                     </button>
 
                     <button
                       onClick={clearAllSlots}
-                      className="flex-1 md:flex-none bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/20 font-bold py-3 px-4 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 text-sm whitespace-nowrap"
+                      className="flex-1 md:flex-none bg-transparent hover:bg-rose-500/10 text-gray-400 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 font-medium py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-1.5 text-sm whitespace-nowrap"
                       title="모든 종목 지우기"
                     >
                       <Trash2 className="w-4 h-4" /> 초기화
@@ -1561,10 +1531,10 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-y-4 gap-x-3 relative z-40">
                   {slots.map((slot, index) => (
                     <div key={index} className="flex-1 group relative">
-                      <label className="block text-[10px] font-medium text-indigo-300/80 mb-0.5 uppercase tracking-widest pl-1">
-                        ETF Ticker {index + 1}
-                      </label>
                       <div className="flex items-center gap-1.5 relative">
+                        <span className="w-4 shrink-0 text-right text-[11px] font-mono tabular-nums text-gray-400">
+                          {index + 1}
+                        </span>
                         <div className="relative w-full">
                           <input
                             value={slot.search}
@@ -1856,9 +1826,20 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
 
 
       {/* Copyright */}
-      <div className="flex mt-auto w-full text-center text-xs sm:text-sm text-gray-500/80 font-medium items-center justify-center gap-3 py-3">
+      <div className="flex mt-auto w-full flex-wrap text-xs text-gray-400 font-medium items-center justify-center gap-x-3 gap-y-1 py-3">
         <span>Copyright &copy; Hoya 2026</span>
-        <span className="text-[10px] text-gray-500 font-medium tracking-wider border-l border-white/10 pl-3">v.20260531_2310</span>
+        <span className="text-[11px] font-mono uppercase tracking-widest text-gray-400 border-l border-white/10 pl-3">
+          {dbVersion}
+        </span>
+        {healthStatus === 'pending' && (
+          <span className="text-[11px] text-gray-400 border-l border-white/10 pl-3">외부연동 확인 중</span>
+        )}
+        {healthStatus === 'error' && (
+          <span className="text-[11px] text-rose-400 border-l border-white/10 pl-3 flex items-center gap-1.5">
+            <AlertCircle size={12} />
+            {failedServices.length > 0 ? `${failedServices.join(', ')} 연동 오류` : '외부연동 오류'}
+          </span>
+        )}
       </div>
 
       {/* Global Loading Overlay */}
