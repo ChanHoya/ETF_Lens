@@ -10,6 +10,7 @@ import {
     Flag, TrendingDown, Gauge, AlertTriangle, Target, CalendarClock,
     Sparkles, RefreshCw, Layers, ShieldCheck, ArrowDownRight, Info, CheckCircle2,
     Newspaper, Bell, ExternalLink, Send, Settings, Play, RotateCcw, ZoomIn, ZoomOut,
+    Vote, Landmark, Scale, DollarSign, Percent, Award, ChevronRight, Zap,
 } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
 
@@ -27,6 +28,62 @@ interface CarryPoint {
     fx_end: number; fx_change_pct: number; total_return_pct: number; cagr_pct: number; is_breakeven: boolean;
 }
 interface Catalyst { date: string; key: string; title: string; note: string; impact: string; d_day: number; actual?: string | null; outlook?: string | null; }
+
+export interface ElectionScenario {
+    id: string;
+    title: string;
+    subtitle: string;
+    color: string;
+    verdict: string;
+    political_landscape: string;
+    fiscal_policy: string;
+    bcb_relationship: string;
+    rate_10y: string;
+    rate_change_num: number;
+    brl_fx: string;
+    fx_change_str: string;
+    market_reaction: string;
+    bond_price: string;
+    fx_impact: string;
+    action_guide: string;
+}
+
+export interface RecommendedBond {
+    id: string;
+    name: string;
+    code_example: string;
+    currency: string;
+    maturity_years: string;
+    target_horizon: string;
+    coupon_rate: string;
+    current_ytm: string;
+    tax_benefit: string;
+    risk_level: string;
+    best_for: string;
+    pros: string[];
+    cons: string[];
+    allocation_tranche3: string;
+}
+
+export interface ElectionStrategy {
+    principles: { title: string; body: string; tag: string }[];
+    checkpoints: { name: string; focus: string }[];
+}
+
+export interface ElectionPulse {
+    headline: string;
+    market_mood: string;
+    convergence_scenario: {
+        primary: string;
+        probabilities: { A: number; B: number; C: number };
+        reasoning: string;
+    };
+    live_analysis: string;
+    tranche3_action: string;
+    recommended_bond_guide: string;
+    monitoring_points: string[];
+}
+
 interface Summary {
     as_of: string;
     indicators: Indicator[];
@@ -48,6 +105,9 @@ interface Summary {
     current_tranche_id?: number;
     tranches: { id: number; weight: string; timing: string; trigger: string; rationale: string }[];
     due_diligence: { title: string; body: string }[];
+    election_scenarios?: ElectionScenario[];
+    recommended_bonds?: RecommendedBond[];
+    election_strategy?: ElectionStrategy;
 }
 interface AiInsight {
     verdict?: { grade: string; summary: string };
@@ -116,6 +176,11 @@ export default function BrazilBondTab() {
     const [news, setNews] = useState<NewsItem[]>([]);
     const [newsLoading, setNewsLoading] = useState(true);
 
+    const [electionPulse, setElectionPulse] = useState<ElectionPulse | null>(null);
+    const [electionPulseAt, setElectionPulseAt] = useState<string | null>(null);
+    const [electionPulseGenLoading, setElectionPulseGenLoading] = useState(false);
+    const autoGenPulseAttemptedRef = useRef(false);
+
     useEffect(() => {
         // 1. Try to load cached data from localStorage for instant 0ms load
         try {
@@ -123,6 +188,7 @@ export default function BrazilBondTab() {
             const cachedHistory = localStorage.getItem('brazil_bond_history');
             const cachedInsight = localStorage.getItem('brazil_bond_insight');
             const cachedNews = localStorage.getItem('brazil_bond_news');
+            const cachedPulse = localStorage.getItem('brazil_bond_election_pulse');
 
             if (cachedSummary) setSummary(JSON.parse(cachedSummary));
             if (cachedHistory) setHistory(JSON.parse(cachedHistory));
@@ -135,6 +201,11 @@ export default function BrazilBondTab() {
                 }
             }
             if (cachedNews) setNews(JSON.parse(cachedNews));
+            if (cachedPulse) {
+                const pj = JSON.parse(cachedPulse);
+                setElectionPulse(pj.content || null);
+                setElectionPulseAt(pj.generated_at || null);
+            }
 
             if (cachedSummary && cachedHistory) {
                 setLoading(false); // disable loading spinner immediately!
@@ -153,10 +224,11 @@ export default function BrazilBondTab() {
                 if (!localStorage.getItem('brazil_bond_summary') || !localStorage.getItem('brazil_bond_history')) {
                     setLoading(true);
                 }
-                const [sRes, hRes, iRes] = await Promise.all([
+                const [sRes, hRes, iRes, pRes] = await Promise.all([
                     fetch(`${API_BASE}/api/v1/brazil-bond/summary`, { cache: 'no-store' }),
                     fetch(`${API_BASE}/api/v1/brazil-bond/history?series=selic_target,y5,y5_fred,ipca_12m,brl_krw,usd_brl,focus_selic_eoy&years=10`, { cache: 'no-store' }),
                     fetch(`${API_BASE}/api/v1/brazil-bond/insight`, { cache: 'no-store' }),
+                    fetch(`${API_BASE}/api/v1/brazil-bond/election-pulse`, { cache: 'no-store' }),
                 ]);
                 if (!sRes.ok) throw new Error(`summary ${sRes.status}`);
 
@@ -182,6 +254,13 @@ export default function BrazilBondTab() {
                         autoGenAttemptedRef.current = true;
                         generateReport(true);
                     }
+                }
+
+                if (pRes && pRes.ok) {
+                    const pj = await pRes.json();
+                    setElectionPulse(pj.content || null);
+                    setElectionPulseAt(pj.generated_at || null);
+                    localStorage.setItem('brazil_bond_election_pulse', JSON.stringify(pj));
                 }
 
                 // 2.1 지나간 이벤트 중 실제 발표 내용이 누락되었거나 '집계 대기'인 경우 자동 백그라운드 갱신
@@ -270,6 +349,36 @@ export default function BrazilBondTab() {
             }
         } finally {
             setGenLoading(false);
+        }
+    };
+
+    const generateElectionPulse = async (silent = false) => {
+        try {
+            if (!silent) setElectionPulseGenLoading(true);
+            const res = await fetch(`${API_BASE}/api/v1/brazil-bond/election-pulse/generate`, { method: 'POST' });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || `대선 정세 분석 생성 실패 (${res.status})`);
+            }
+            const j = await res.json();
+            setElectionPulse(j.content || null);
+            setElectionPulseAt(j.generated_at || null);
+            localStorage.setItem('brazil_bond_election_pulse', JSON.stringify(j));
+            if (!silent) {
+                setCatalystToast({
+                    ok: true,
+                    msg: "실시간 대선 정세 및 시장 향배(Live Pulse) 분석이 갱신되었습니다.",
+                });
+                setTimeout(() => setCatalystToast(null), 4000);
+            }
+        } catch (e: any) {
+            console.error("대선 정세 생성 오류:", e);
+            if (!silent) {
+                setCatalystToast({ ok: false, msg: String(e?.message || e) });
+                setTimeout(() => setCatalystToast(null), 5000);
+            }
+        } finally {
+            if (!silent) setElectionPulseGenLoading(false);
         }
     };
 
@@ -505,6 +614,17 @@ export default function BrazilBondTab() {
                     <Info className="w-3 h-3" /> 비중은 유동 금융자산의 최대 5~10% 이내(위성 포지션), 만기 3~5년 스위트스팟 권장.
                 </p>
             </section>
+
+            {/* ── 10월 대선 3대 시나리오 & Tranche 3 실시간 투자 가이드 ─────── */}
+            <ElectionPlaybookSection
+                scenarios={s.election_scenarios}
+                recommendedBonds={s.recommended_bonds}
+                strategy={s.election_strategy}
+                pulse={electionPulse}
+                pulseAt={electionPulseAt}
+                pulseGenLoading={electionPulseGenLoading}
+                onGeneratePulse={() => generateElectionPulse(false)}
+            />
 
             {/* ── 매크로 캘린더 (시계열 타임라인) ──────────────────── */}
             <section>
@@ -2032,6 +2152,658 @@ function SliderRow({ label, value, children }: { label: string; value: string; c
             </div>
             {children}
         </div>
+    );
+}
+
+// ── 10월 대선 3대 시나리오 & Tranche 3 실시간 투자 가이드 ────────────────────────────
+const DEFAULT_SCENARIOS: ElectionScenario[] = [
+    {
+        id: "A",
+        title: "중도·우파 정권 교체 (시장 친화적)",
+        subtitle: "Market-Friendly Transition",
+        color: "emerald",
+        verdict: "Best (자본차익 + 환차익 극대화)",
+        political_landscape: "우파/중도 후보 승리 (시장 친화적 연합 결성)",
+        fiscal_policy: "지출 축소, 민영화 추진, 재정준칙(Fiscal Anchor) 강화",
+        bcb_relationship: "중앙은행 제도적 독립성 지지, 디스인플레이션 신뢰 강화",
+        rate_10y: "100~200bp 하락 (금리 급락, 채권 가격 급등)",
+        rate_change_num: -1.5,
+        brl_fx: "헤알화 강세 (외국인 자금 대규모 유입)",
+        fx_change_str: "원/헤알 280~300원대 회복 강세",
+        market_reaction: "글로벌 금융시장 및 외인이 가장 선호하는 구도. 국가위험 프리미엄(CDS) 급락 및 안도 랠리 촉발.",
+        bond_price: "장기물 국채 금리 하향 안정화로 대규모 자본차익(Capital Gain) 확보.",
+        fx_impact: "포트폴리오 자금 유입으로 헤알화 평가절상 → 비과세 이자와 환차익 결합으로 토탈 리턴 극대화.",
+        action_guide: "5~10년물 장기채 비중 확대. 잔여 40% 전량 적극 집행 및 자본차익 극대화 노림.",
+    },
+    {
+        id: "B",
+        title: "현 좌파 정권 연임 (온건·실용 연합)",
+        subtitle: "Pragmatic Continuity (Base Case)",
+        color: "cyan",
+        verdict: "Neutral (이자 수익 중심 안정 운영)",
+        political_landscape: "룰라/좌파 진영 연임 + 의회 중도파(Centrão) 연정 유지",
+        fiscal_policy: "현 신재정프레임워크 유지, 지출 통제 속 세수 확충 집중",
+        bcb_relationship: "금리 인하 정치적 압박은 있으나 제도적 독립성 인정 및 타협",
+        rate_10y: "중립 / 완만한 하락 (박스권 내 13.5~14.2% 소폭 등락)",
+        rate_change_num: -0.3,
+        brl_fx: "보합 / 완만한 흐름 (경상수지 및 원자재 가격 연동)",
+        fx_change_str: "원/헤알 250~270원 박스권 횡보",
+        market_reaction: "대선 전 정치 불확실성(Election Discount) 해소로 단기 안도 랠리. 의회 견제로 급격한 정책 변동 제한.",
+        bond_price: "기준금리(Selic) 완만한 인하 사이클 속 국채 금리 박스권. 연 10%대 중반 표면이자에 초점.",
+        fx_impact: "환율 급변동 제한적으로 환손익 중립적. 안정적 비과세 쿠폰 현금흐름 락인.",
+        action_guide: "단기 2~3년물(인컴 방어) 50% + 5년물 30% + 달러채 20% 바벨 분할 매수. 금리 14%대 이상 튈 때 분할 진입.",
+    },
+    {
+        id: "C",
+        title: "좌파 정권 강경화 (확장 재정 포퓰리즘)",
+        subtitle: "Fiscal Populism (Tail Risk)",
+        color: "rose",
+        verdict: "Worst (원금 손실 + 환손실 위험)",
+        political_landscape: "룰라/좌파 진영 연임 + 좌파 포퓰리즘 강화 (의회 갈등 심화)",
+        fiscal_policy: "복지·공공지출 확대, 부채한도 완화 압박, 재정준칙 무력화",
+        bcb_relationship: "기준금리(Selic) 급격한 인하 강요, 중앙은행 독립성 훼손 갈등",
+        rate_10y: "150~250bp 급등 (금리 폭등, 15% 이상 터치)",
+        rate_change_num: 2.0,
+        brl_fx: "헤알화 급락 / 약세 (외국인 자본 이탈)",
+        fx_change_str: "원/헤알 240원 이하 하락 위험",
+        market_reaction: "재정 신뢰도 붕괴, CDS 프리미엄 폭등 및 브라질 국가 신용등급 강등 경고.",
+        bond_price: "인플레이션 재점화 및 재정적자 확대로 국채 금리 급등, 채권 가격 급락(자본손실).",
+        fx_impact: "외인 자금 이탈로 헤알화 가치 급락(평가절하) → 원/헤알 환손실이 이자 수익 잠식 가능.",
+        action_guide: "장기채 매수 전면 보류. 대선 노이즈로 15% 초과 폭등 시 진정 확인 후 초단기물 또는 달러채권으로만 제한 진입.",
+    },
+];
+
+const DEFAULT_RECOMMENDED_BONDS: RecommendedBond[] = [
+    {
+        id: "brl_short",
+        name: "헤알화 표시 단기 국채 (2~3년물)",
+        code_example: "NTN-F 2027~2028 (고정금리)",
+        currency: "BRL (브라질 헤알)",
+        maturity_years: "2~3년",
+        target_horizon: "1~3년 (안정 인컴 추구형)",
+        coupon_rate: "연 10.00% (반기 지급, 매년 1월/7월)",
+        current_ytm: "약 13.5~14.2% (YTM 만기수익률)",
+        tax_benefit: "한-브라질 조세조약에 따른 이자소득세 0% 비과세 (종합과세 제외)",
+        risk_level: "중립 (낮은 듀레이션, 환율 변동 노출)",
+        best_for: "대선 정치적 노이즈를 방어하며 연 13%대 고금리 비과세 이자만 확실히 수취하고자 하는 보수적 투자자",
+        pros: ["낮은 듀레이션(1.8~2.5년)으로 금리 급등 시에도 채권 가격 하락폭 극히 제한적", "연 13%대 높은 실효 쿠폰 락인"],
+        cons: ["원/헤알 환율 하락 시 환손실 발생 가능", "금리 인하 시 자본차익 폭이 장기채 대비 작음"],
+        allocation_tranche3: "권장 비중 40~50%",
+    },
+    {
+        id: "brl_midlong",
+        name: "헤알화 표시 중장기 국채 (5~10년물)",
+        code_example: "NTN-F 2031 / 2033 / 2035 (고정금리)",
+        currency: "BRL (브라질 헤알)",
+        maturity_years: "5~10년 (스위트스팟)",
+        target_horizon: "3~5년 이상 (자본차익 극대화형)",
+        coupon_rate: "연 10.00% (반기 지급, 매년 1월/7월)",
+        current_ytm: "약 14.1~14.6% (YTM 만기수익률)",
+        tax_benefit: "이자소득세 0% 전액 비과세 + 채권 자본차익 비과세",
+        risk_level: "적극투자 (듀레이션 4.5~6.5년, 금리·환율 레버리지)",
+        best_for: "Selic 금리 인하 사이클 본격화 및 대선 불확실성 해소 후 막대한 채권 자본차익(Capital Gain)을 노리는 투자자",
+        pros: ["금리 100bp 인하 시 채권 가격 약 4~6% 상승 자본차익", "복리 재투자 시 최고의 토탈 리턴 달성 가능"],
+        cons: ["시나리오 C(좌파 강경화) 시 국채 금리 스파이크로 단기 평가손실 위험 상대적 큼"],
+        allocation_tranche3: "권장 비중 30~40%",
+    },
+    {
+        id: "usd_sovereign",
+        name: "달러 표시 브라질 외화국채 (10년물)",
+        code_example: "Brazil Sovereign Global Bond 2033~2035 (USD)",
+        currency: "USD (미국 달러)",
+        maturity_years: "7~10년",
+        target_horizon: "3년 이상 (통화 안정 & 달러 고수익형)",
+        coupon_rate: "연 5.75% ~ 6.50% (USD 반기 지급)",
+        current_ytm: "약 6.2~6.8% (USD 기준 만기수익률)",
+        tax_benefit: "해외채권 기본 과세 규정 적용 (외화채권 세제 및 조세협정 사전 확인 권장)",
+        risk_level: "중립 (헤알화 위험 완전 차단, 미국 금리 연동)",
+        best_for: "헤알화의 급락 위험을 원천 차단하고 기축통화인 '달러(USD)'로 미국 국채 대비 200~300bp 프리미엄을 락인하려는 투자자",
+        pros: ["헤알화 정치 리스크 완벽 헤지", "달러 자산 확보 및 미 국채 대비 높은 캐리 수율"],
+        cons: ["원/달러 환율에 연동", "헤알화 채권 대비 표면금리(6%대 vs 13%대) 상대적 낮음"],
+        allocation_tranche3: "권장 비중 10~20%",
+    },
+    {
+        id: "barbell_strategy",
+        name: "💡 대선 대응 최적 바벨(Barbell) 혼합 포트폴리오",
+        code_example: "단기 헤알채(50%) + 장기 헤알채(30%) + 달러 국채(20%)",
+        currency: "BRL 80% + USD 20%",
+        maturity_years: "2년 ~ 10년 분산",
+        target_horizon: "2~4년 (대선 변동성 극복형)",
+        coupon_rate: "가중평균 약 연 9.2% (BRL 10% + USD 6%)",
+        current_ytm: "가중평균 약 12.5~13.2%",
+        tax_benefit: "헤알화 자산 전액 비과세 + 달러 분산",
+        risk_level: "균형잡힌 리스크 관리 (대선 올인 방지)",
+        best_for: "대선 결과에 구애받지 않고 시나리오 A·B·C 모든 상황에서 하방을 방어하면서 상방 자본차익을 향유하려는 투자자",
+        pros: ["시나리오 C(급락) 시 단기채와 달러채가 원금 방어", "시나리오 A(급등) 시 장기채가 자본차익 견인"],
+        cons: ["단일 종목 집중 대비 최대 수익률은 다소 완화"],
+        allocation_tranche3: "★ Tranche 3 기본 권장 모델",
+    },
+];
+
+const DEFAULT_STRATEGY: ElectionStrategy = {
+    principles: [
+        {
+            title: "대선 직전 불확실성 정점 대응 (듀레이션 바벨화)",
+            body: "여론조사 격차가 오차범위 내 초박빙일 경우 헤알화 변동성과 장기채 금리 스프레드가 급확대됩니다. 듀레이션이 긴 10년물 단독 매수보다는 만기가 상대적으로 짧은 2~3년물 비중을 50% 이상 섞어 금리 변동 리스크를 헤지하는 것이 안전합니다.",
+            tag: "듀레이션 관리",
+        },
+        {
+            title: "금리 수준 기반 분할 매수 (스파이크 낚아채기)",
+            body: "정치적 노이즈로 5~10년물 금리가 고점(14.5% 이상, 15% 접근)으로 튀는 구간은 시나리오 A 또는 B로 수렴할 경우 매력적인 역사적 진입 기회입니다. 공포가 극대화되는 시점에 잔여 40%를 분할 집행하십시오.",
+            tag: "분할 매수",
+        },
+        {
+            title: "핵심 2대 모니터링 지표 추적",
+            body: "① 차기 경제·재무장관 내정자의 시장 친화성(Fiscal Discipline 유지 여부), ② 의회(상·하원) 내 중도·우파 연합(Centrão)의 과반 의석 확보 여부(행정부의 독주 견제 능력)를 핵심 모니터링하십시오.",
+            tag: "체크리스트",
+        },
+    ],
+    checkpoints: [
+        { name: "차기 재무장관 성향", focus: "시장 신뢰형(페르난두 아다지 유임 or 온건 실용파) vs 급진 포퓰리스트" },
+        { name: "의회 Centrão 의석수", focus: "하원 513석 중 중도·보수 300석 이상 확보 시 좌파 포퓰리즘 법안 완벽 저지" },
+        { name: "신재정준칙 준수 여부", focus: "Primary Deficit(기본재정적자) GDP 0% 목표 유지 선언 여부" },
+        { name: "BCB 중앙은행 독립성", focus: "임기 보장된 BCB 총재 체제 및 기준금리 인하의 자율적 통화정책" },
+    ],
+};
+
+function ElectionPlaybookSection({
+    scenarios,
+    recommendedBonds,
+    strategy,
+    pulse,
+    pulseAt,
+    pulseGenLoading,
+    onGeneratePulse,
+}: {
+    scenarios?: ElectionScenario[];
+    recommendedBonds?: RecommendedBond[];
+    strategy?: ElectionStrategy;
+    pulse: ElectionPulse | null;
+    pulseAt: string | null;
+    pulseGenLoading: boolean;
+    onGeneratePulse: () => void;
+}) {
+    const scenarioList = scenarios?.length ? scenarios : DEFAULT_SCENARIOS;
+    const bondList = recommendedBonds?.length ? recommendedBonds : DEFAULT_RECOMMENDED_BONDS;
+    const strat = strategy?.principles?.length ? strategy : DEFAULT_STRATEGY;
+
+    const [activeTab, setActiveTab] = useState<'scenarios' | 'bonds' | 'strategy'>('scenarios');
+    const [selectedScenarioId, setSelectedScenarioId] = useState<'A' | 'B' | 'C'>('B');
+    const [selectedBondId, setSelectedBondId] = useState<string>('barbell_strategy');
+
+    const curScenario = scenarioList.find(s => s.id === selectedScenarioId) || scenarioList[1];
+    const probs = pulse?.convergence_scenario?.probabilities || { A: 25, B: 60, C: 15 };
+
+    return (
+        <section className="bg-gradient-to-br from-amber-950/20 via-black/40 to-emerald-950/20 rounded-3xl border border-amber-500/20 p-5 md:p-6 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+            {/* Ambient background glow */}
+            <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+
+            {/* 1. Header */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-5 relative z-10">
+                <div className="flex items-center gap-2.5">
+                    <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shadow-inner">
+                        <Vote className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-base md:text-lg font-black text-white tracking-tight">10월 대선 3대 시나리오 & Tranche 3 실시간 투자 가이드</h3>
+                            <span className="bg-amber-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow">
+                                D-3 SPECIAL
+                            </span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            대선 결과별 금리·환율 영향도 · 조건별 추천 국채 라인업(헤알/달러) · 실시간 현지 정세(AI Live Pulse)
+                        </p>
+                    </div>
+                </div>
+
+                <button
+                    onClick={onGeneratePulse}
+                    disabled={pulseGenLoading}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-500 to-emerald-500 text-black hover:brightness-110 transition shadow-lg shadow-amber-500/20 disabled:opacity-50 cursor-pointer font-black"
+                >
+                    <RefreshCw className={`w-3.5 h-3.5 ${pulseGenLoading ? 'animate-spin' : ''}`} />
+                    {pulseGenLoading ? '정세 분석 생성 중…' : '대선 정세 AI 실시간 분석'}
+                </button>
+            </div>
+
+            {/* 2. AI Live Pulse 실시간 현지 브리핑 카드 */}
+            {pulse && (
+                <div className="bg-black/30 rounded-2xl border border-amber-500/30 p-4 md:p-5 mb-5 relative z-10 shadow-lg">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                            <span className="flex h-2 w-2 relative">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span className="text-[11px] font-black tracking-wider uppercase text-amber-300 flex items-center gap-1">
+                                <Sparkles className="w-3.5 h-3.5 text-amber-400" /> 실시간 현지 브리핑 & 시장 향배 분석 (AI Live Pulse)
+                            </span>
+                        </div>
+                        {pulseAt && (
+                            <span className="text-[10px] text-gray-500 font-mono">
+                                최근 분석: {new Date(pulseAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 기준
+                            </span>
+                        )}
+                    </div>
+
+                    <h4 className="text-sm md:text-base font-black text-amber-100 leading-snug mb-1.5">
+                        {pulse.headline}
+                    </h4>
+                    <p className="text-xs text-gray-300 leading-relaxed mb-4">
+                        {pulse.market_mood}
+                    </p>
+
+                    {/* 시나리오 수렴도 프로그레스 바 */}
+                    <div className="bg-black/40 rounded-xl p-3 border border-white/5 mb-4">
+                        <div className="flex items-center justify-between text-[11px] font-bold mb-2">
+                            <span className="text-gray-400 flex items-center gap-1.5">
+                                <Scale className="w-3.5 h-3.5 text-cyan-400" /> 시나리오별 시장 반영 확률 (Convergence Probability)
+                            </span>
+                            <div className="flex items-center gap-3">
+                                <span className="text-emerald-400">A (우파교체): {probs.A}%</span>
+                                <span className="text-cyan-400 font-black">B (온건연임): {probs.B}% ★기본선</span>
+                                <span className="text-rose-400">C (강경화): {probs.C}%</span>
+                            </div>
+                        </div>
+                        <div className="w-full h-3 bg-gray-800 rounded-full overflow-hidden flex shadow-inner">
+                            <div style={{ width: `${probs.A}%` }} className="bg-emerald-500 transition-all duration-500" title={`시나리오 A: ${probs.A}%`} />
+                            <div style={{ width: `${probs.B}%` }} className="bg-cyan-500 transition-all duration-500" title={`시나리오 B: ${probs.B}%`} />
+                            <div style={{ width: `${probs.C}%` }} className="bg-rose-500 transition-all duration-500" title={`시나리오 C: ${probs.C}%`} />
+                        </div>
+                        {pulse.convergence_scenario?.reasoning && (
+                            <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
+                                <span className="text-cyan-300 font-semibold">시장 판단 요약: </span>
+                                {pulse.convergence_scenario.reasoning}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* 2단 실시간 분석 그리드 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        <div className="bg-black/25 rounded-xl p-3.5 border border-white/5">
+                            <p className="text-xs font-bold text-amber-300 mb-1 flex items-center gap-1.5">
+                                <Landmark className="w-3.5 h-3.5" /> 현지 정치 & 의회(Centrão) 구도 실시간 분석
+                            </p>
+                            <p className="text-xs text-gray-300 leading-relaxed font-normal">
+                                {pulse.live_analysis}
+                            </p>
+                        </div>
+                        <div className="bg-black/25 rounded-xl p-3.5 border border-white/5 space-y-2">
+                            <div>
+                                <p className="text-xs font-bold text-emerald-300 mb-1 flex items-center gap-1.5">
+                                    <Target className="w-3.5 h-3.5" /> Tranche 3 (잔여 40%) 분할 매수 실행 권고
+                                </p>
+                                <p className="text-xs text-gray-300 leading-relaxed font-normal">
+                                    {pulse.tranche3_action}
+                                </p>
+                            </div>
+                            <div className="pt-2 border-t border-white/5">
+                                <p className="text-xs font-bold text-cyan-300 mb-1 flex items-center gap-1.5">
+                                    <Award className="w-3.5 h-3.5" /> 최우선 추천 포트폴리오 픽
+                                </p>
+                                <p className="text-xs text-gray-300 leading-relaxed font-normal">
+                                    {pulse.recommended_bond_guide}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 3. 탭 내비게이션 */}
+            <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-white/10 pb-3 relative z-10">
+                <button
+                    onClick={() => setActiveTab('scenarios')}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                        activeTab === 'scenarios'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                    <Layers className="w-3.5 h-3.5" /> 📊 3대 대선 시나리오 비교 매트릭스
+                </button>
+                <button
+                    onClick={() => setActiveTab('bonds')}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                        activeTab === 'bonds'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                    <DollarSign className="w-3.5 h-3.5" /> 🎯 추천 브라질 국채 라인업 (헤알/달러)
+                </button>
+                <button
+                    onClick={() => setActiveTab('strategy')}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                        activeTab === 'strategy'
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                    <ShieldCheck className="w-3.5 h-3.5" /> 🧭 Tranche 3 실행 전략 & 체크리스트
+                </button>
+            </div>
+
+            {/* 4. 탭 1: 대선 3대 시나리오 비교 */}
+            {activeTab === 'scenarios' && (
+                <div className="space-y-4 relative z-10">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {scenarioList.map((sc) => {
+                            const isSelected = sc.id === selectedScenarioId;
+                            const isBest = sc.id === 'A';
+                            const isNeutral = sc.id === 'B';
+                            return (
+                                <div
+                                    key={sc.id}
+                                    onClick={() => setSelectedScenarioId(sc.id as any)}
+                                    className={`rounded-2xl p-4 transition-all duration-300 cursor-pointer relative border ${
+                                        isSelected
+                                            ? isBest
+                                                ? 'bg-gradient-to-br from-emerald-950/40 to-black/30 border-emerald-400 ring-2 ring-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.2)]'
+                                                : isNeutral
+                                                    ? 'bg-gradient-to-br from-cyan-950/40 to-black/30 border-cyan-400 ring-2 ring-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.2)]'
+                                                    : 'bg-gradient-to-br from-rose-950/40 to-black/30 border-rose-400 ring-2 ring-rose-400/50 shadow-[0_0_20px_rgba(244,63,94,0.2)]'
+                                            : 'bg-black/20 hover:bg-black/30 border-white/5 hover:border-white/10 opacity-80'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                            isBest
+                                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                                                : isNeutral
+                                                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'
+                                                    : 'bg-rose-500/20 text-rose-300 border border-rose-400/30'
+                                        }`}>
+                                            {sc.verdict}
+                                        </span>
+                                        {isNeutral && (
+                                            <span className="text-[10px] font-bold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                                                ★ 기본선
+                                            </span>
+                                        )}
+                                    </div>
+                                    <h4 className="text-sm font-black text-white mb-0.5">{sc.title}</h4>
+                                    <p className="text-[11px] text-gray-400 mb-3">{sc.subtitle}</p>
+
+                                    <div className="space-y-1.5 text-xs">
+                                        <div className="flex items-center justify-between bg-black/30 px-2.5 py-1.5 rounded-lg border border-white/5">
+                                            <span className="text-gray-400">10년물 국채금리</span>
+                                            <span className={`font-bold ${isBest ? 'text-emerald-300' : isNeutral ? 'text-cyan-300' : 'text-rose-300'}`}>
+                                                {sc.rate_10y}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between bg-black/30 px-2.5 py-1.5 rounded-lg border border-white/5">
+                                            <span className="text-gray-400">헤알화 (BRL)</span>
+                                            <span className={`font-bold ${isBest ? 'text-emerald-300' : isNeutral ? 'text-cyan-300' : 'text-rose-300'}`}>
+                                                {sc.brl_fx}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[11px]">
+                                        <span className="text-gray-400">{isSelected ? '▼ 상세 분석 선택됨' : '클릭하여 세부 영향도 확인'}</span>
+                                        <ChevronRight className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isSelected ? 'rotate-90' : ''}`} />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* 선택된 시나리오 상세 영향도 패널 */}
+                    {curScenario && (
+                        <div className="bg-black/30 rounded-2xl border border-white/10 p-5 space-y-4">
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+                                <div>
+                                    <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">선택된 시나리오 심층 영향도 분석</span>
+                                    <h4 className="text-base font-black text-white flex items-center gap-2 mt-0.5">
+                                        {curScenario.title}
+                                        <span className="text-xs font-normal text-gray-400">({curScenario.subtitle})</span>
+                                    </h4>
+                                </div>
+                                <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                                    curScenario.id === 'A'
+                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40'
+                                        : curScenario.id === 'B'
+                                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40'
+                                            : 'bg-rose-500/20 text-rose-300 border border-rose-400/40'
+                                }`}>
+                                    종합 판정: {curScenario.verdict}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                                <div className="bg-black/25 rounded-xl p-3.5 border border-white/5 space-y-1">
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase">정치 구도 & 재정 정책 기조</span>
+                                    <p className="text-xs text-gray-200 font-medium">정치: {curScenario.political_landscape}</p>
+                                    <p className="text-xs text-gray-400 mt-1 leading-relaxed">재정: {curScenario.fiscal_policy}</p>
+                                </div>
+                                <div className="bg-black/25 rounded-xl p-3.5 border border-white/5 space-y-1">
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase">중앙은행(BCB) 관계 & 독립성</span>
+                                    <p className="text-xs text-gray-200 font-medium">{curScenario.bcb_relationship}</p>
+                                    <p className="text-xs text-gray-400 mt-1 leading-relaxed">기준금리 및 디스인플레이션 정책의 자율성 보장 여부</p>
+                                </div>
+                                <div className="bg-black/25 rounded-xl p-3.5 border border-white/5 space-y-1">
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase">시장 반응 & 채권 가격 (자본손익)</span>
+                                    <p className="text-xs text-gray-200 font-medium">{curScenario.market_reaction}</p>
+                                    <p className="text-xs text-gray-400 mt-1 leading-relaxed">{curScenario.bond_price}</p>
+                                </div>
+                                <div className="bg-black/25 rounded-xl p-3.5 border border-white/5 space-y-1">
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase">환율(헤알화/원화) 및 토탈 리턴</span>
+                                    <p className="text-xs text-gray-200 font-medium">{curScenario.fx_change_str}</p>
+                                    <p className="text-xs text-gray-400 mt-1 leading-relaxed">{curScenario.fx_impact}</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-gradient-to-r from-emerald-950/30 to-black/30 rounded-xl p-4 border border-emerald-500/30">
+                                <p className="text-xs font-bold text-emerald-300 mb-1 flex items-center gap-1.5">
+                                    <Award className="w-3.5 h-3.5" /> 실전 채권 투자 액션 가이드
+                                </p>
+                                <p className="text-xs text-gray-200 leading-relaxed font-medium">
+                                    {curScenario.action_guide}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 3대 시나리오 한눈에 비교 종합 테이블 */}
+                    <div className="bg-black/20 rounded-2xl border border-white/5 p-4 overflow-x-auto">
+                        <p className="text-xs font-bold text-white mb-2.5 flex items-center gap-1.5">
+                            <Layers className="w-3.5 h-3.5 text-amber-400" /> 3대 시나리오 핵심 비교 종합표
+                        </p>
+                        <table className="w-full text-xs text-left">
+                            <thead>
+                                <tr className="border-b border-white/10 text-gray-400">
+                                    <th className="py-2 px-3 font-semibold">구분</th>
+                                    <th className="py-2 px-3 font-semibold text-emerald-300">시나리오 A: 중도·우파 정권 교체</th>
+                                    <th className="py-2 px-3 font-semibold text-cyan-300">시나리오 B: 현 좌파 연임 (온건·실용)</th>
+                                    <th className="py-2 px-3 font-semibold text-rose-300">시나리오 C: 좌파 강경화 (확장 재정)</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                <tr>
+                                    <td className="py-2 px-3 text-gray-400 font-medium">정치 구도</td>
+                                    <td className="py-2 px-3 text-gray-200">우파/중도 후보 승리 (시장 친화적 연합)</td>
+                                    <td className="py-2 px-3 text-gray-200 font-semibold text-cyan-200">룰라 연임 + 의회 중도파(Centrão) 연정</td>
+                                    <td className="py-2 px-3 text-gray-300">룰라 연임 + 좌파 포퓰리즘 강화</td>
+                                </tr>
+                                <tr>
+                                    <td className="py-2 px-3 text-gray-400 font-medium">재정 정책</td>
+                                    <td className="py-2 px-3 text-gray-200">지출 축소, 민영화, 재정준칙 강화</td>
+                                    <td className="py-2 px-3 text-gray-200">현 신재정프레임워크 유지, 세수 확충</td>
+                                    <td className="py-2 px-3 text-gray-300">복지·공공지출 확대, 부채한도 완화</td>
+                                </tr>
+                                <tr>
+                                    <td className="py-2 px-3 text-gray-400 font-medium">중앙은행 관계</td>
+                                    <td className="py-2 px-3 text-gray-200">중앙은행 독립성 적극 지지</td>
+                                    <td className="py-2 px-3 text-gray-200">금리 인하 압박 있으나 독립성 인정</td>
+                                    <td className="py-2 px-3 text-gray-300">Selic 급격한 인하 강요, 독립성 훼손 갈등</td>
+                                </tr>
+                                <tr>
+                                    <td className="py-2 px-3 text-gray-400 font-medium">10년물 국채금리</td>
+                                    <td className="py-2 px-3 text-emerald-400 font-bold">100~200bp 하락 (자본차익 극대화)</td>
+                                    <td className="py-2 px-3 text-cyan-400 font-bold">중립 / 완만한 하락 (소폭 등락)</td>
+                                    <td className="py-2 px-3 text-rose-400 font-bold">150~250bp 급등 (15% 이상 폭등)</td>
+                                </tr>
+                                <tr>
+                                    <td className="py-2 px-3 text-gray-400 font-medium">헤알화 (BRL)</td>
+                                    <td className="py-2 px-3 text-emerald-400 font-bold">강세 (외인 자금 대규모 유입)</td>
+                                    <td className="py-2 px-3 text-cyan-400 font-bold">보합 / 완만한 흐름</td>
+                                    <td className="py-2 px-3 text-rose-400 font-bold">약세 / 급락 (외인 자본 유출)</td>
+                                </tr>
+                                <tr>
+                                    <td className="py-2 px-3 text-gray-400 font-medium">채권 종합 판정</td>
+                                    <td className="py-2 px-3 text-emerald-300 font-black">★ Best (자본차익 + 환차익)</td>
+                                    <td className="py-2 px-3 text-cyan-300 font-black">● Neutral (이자 수익 중심)</td>
+                                    <td className="py-2 px-3 text-rose-300 font-black">▲ Worst (원금 + 환손실 위험)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* 5. 탭 2: 추천 브라질 국채 라인업 (헤알/달러) */}
+            {activeTab === 'bonds' && (
+                <div className="space-y-4 relative z-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {bondList.map((bond) => {
+                            const isSelected = bond.id === selectedBondId;
+                            const isBarbell = bond.id === 'barbell_strategy';
+                            const isUsd = bond.id === 'usd_sovereign';
+                            return (
+                                <div
+                                    key={bond.id}
+                                    onClick={() => setSelectedBondId(bond.id)}
+                                    className={`rounded-2xl p-4 md:p-5 transition-all duration-300 border cursor-pointer relative ${
+                                        isSelected
+                                            ? isBarbell
+                                                ? 'bg-gradient-to-br from-amber-950/40 via-emerald-950/30 to-black/40 border-amber-400 ring-2 ring-amber-400/50 shadow-[0_0_25px_rgba(245,158,11,0.25)]'
+                                                : isUsd
+                                                    ? 'bg-gradient-to-br from-indigo-950/40 to-black/30 border-indigo-400 ring-2 ring-indigo-400/50 shadow-[0_0_20px_rgba(99,102,241,0.2)]'
+                                                    : 'bg-gradient-to-br from-emerald-950/40 to-black/30 border-emerald-400 ring-2 ring-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.2)]'
+                                            : 'bg-black/25 hover:bg-black/35 border-white/5 hover:border-white/10 opacity-85'
+                                    }`}
+                                >
+                                    <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2.5">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-gray-300 font-mono">
+                                                {bond.currency}
+                                            </span>
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-gray-300">
+                                                {bond.maturity_years}
+                                            </span>
+                                        </div>
+                                        <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                                            isBarbell
+                                                ? 'bg-amber-400 text-black shadow-md'
+                                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                                        }`}>
+                                            {bond.allocation_tranche3}
+                                        </span>
+                                    </div>
+
+                                    <h4 className="text-sm md:text-base font-black text-white mb-0.5">{bond.name}</h4>
+                                    <p className="text-xs text-gray-400 font-mono mb-3">{bond.code_example}</p>
+
+                                    {/* 주요 스펙 박스 */}
+                                    <div className="grid grid-cols-2 gap-2 bg-black/40 rounded-xl p-3 border border-white/5 mb-3 text-xs">
+                                        <div>
+                                            <span className="text-gray-500 block text-[10px]">만기수익률 (YTM)</span>
+                                            <span className="font-bold text-emerald-300">{bond.current_ytm}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500 block text-[10px]">표면이율 (쿠폰)</span>
+                                            <span className="font-bold text-white">{bond.coupon_rate}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500 block text-[10px]">권장 투자기간</span>
+                                            <span className="font-medium text-gray-200">{bond.target_horizon}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500 block text-[10px]">세제 혜택</span>
+                                            <span className="font-bold text-cyan-300">{bond.tax_benefit.includes('비과세') ? '0% 전액 비과세' : '해외과세 적용'}</span>
+                                        </div>
+                                    </div>
+
+                                    <p className="text-xs text-gray-300 leading-relaxed mb-3">
+                                        <span className="text-amber-300 font-semibold">추천 대상: </span>
+                                        {bond.best_for}
+                                    </p>
+
+                                    {/* 장점 & 주의점 */}
+                                    <div className="space-y-1 pt-2 border-t border-white/5 text-[11px]">
+                                        <div className="text-emerald-400 flex items-start gap-1">
+                                            <span>✓</span>
+                                            <span>{bond.pros.join(' · ')}</span>
+                                        </div>
+                                        <div className="text-gray-400 flex items-start gap-1">
+                                            <span>△</span>
+                                            <span>{bond.cons.join(' · ')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* 6. 탭 3: Tranche 3 실행 전략 & 체크리스트 */}
+            {activeTab === 'strategy' && (
+                <div className="space-y-4 relative z-10">
+                    {/* 3대 핵심 투자 원칙 */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {strat.principles.map((pr, i) => (
+                            <div key={i} className="bg-black/25 rounded-2xl p-4 border border-white/5">
+                                <span className="text-[10px] font-bold text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                    원칙 {i + 1} · {pr.tag}
+                                </span>
+                                <h4 className="text-sm font-bold text-white mt-2 mb-1.5">{pr.title}</h4>
+                                <p className="text-xs text-gray-300 leading-relaxed font-normal">{pr.body}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* 핵심 모니터링 체크포인트 테이블 */}
+                    <div className="bg-black/30 rounded-2xl border border-white/10 p-5">
+                        <p className="text-xs font-bold text-amber-300 mb-3 flex items-center gap-1.5">
+                            <ShieldCheck className="w-4 h-4 text-amber-400" /> 실시간 핵심 모니터링 체크포인트 (대선 전후 확인 필수)
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            {strat.checkpoints.map((cp, i) => (
+                                <div key={i} className="bg-black/30 p-3 rounded-xl border border-white/5 flex items-start gap-2.5">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                    <div>
+                                        <span className="font-bold text-white block">{cp.name}</span>
+                                        <span className="text-gray-400 mt-0.5 block leading-relaxed">{cp.focus}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 관전 포인트 */}
+                    {pulse?.monitoring_points && pulse.monitoring_points.length > 0 && (
+                        <div className="bg-gradient-to-r from-amber-950/20 to-black/20 rounded-2xl p-4 border border-amber-500/20">
+                            <p className="text-xs font-bold text-amber-300 mb-2 flex items-center gap-1.5">
+                                <CalendarClock className="w-3.5 h-3.5" /> 이번 주말 / 대선 당일 집중 관전 포인트 3선
+                            </p>
+                            <ul className="space-y-1.5">
+                                {pulse.monitoring_points.map((mp, i) => (
+                                    <li key={i} className="text-xs text-gray-200 flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                                        <span>{mp}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            )}
+        </section>
     );
 }
 

@@ -92,6 +92,159 @@ DUE_DILIGENCE = [
     {"title": "유동성 (Liquidity)", "body": "단기 6~12개월 필요 자금인가? 비상장 직접 채권은 유동성 매우 제한적 → 만기 보유 혹은 최소 3년 이상 인내 필수."},
 ]
 
+# ── 10월 대선 3대 시나리오 비교 체계 (Tranche 3 특화) ──────────────────────────
+ELECTION_SCENARIOS = [
+    {
+        "id": "A",
+        "title": "중도·우파 정권 교체 (시장 친화적)",
+        "subtitle": "Market-Friendly Transition",
+        "color": "emerald",
+        "verdict": "Best (자본차익 + 환차익 극대화)",
+        "political_landscape": "우파/중도 후보 승리 (시장 친화적 연합 결성)",
+        "fiscal_policy": "지출 축소, 민영화 추진, 재정준칙(Fiscal Anchor) 강화",
+        "bcb_relationship": "중앙은행 제도적 독립성 지지, 디스인플레이션 신뢰 강화",
+        "rate_10y": "100~200bp 하락 (금리 급락, 채권 가격 급등)",
+        "rate_change_num": -1.5,
+        "brl_fx": "헤알화 강세 (외국인 자금 대규모 유입)",
+        "fx_change_str": "원/헤알 280~300원대 회복 강세",
+        "market_reaction": "글로벌 금융시장 및 외인이 가장 선호하는 구도. 국가위험 프리미엄(CDS) 급락 및 안도 랠리 촉발.",
+        "bond_price": "장기물 국채 금리 하향 안정화로 대규모 자본차익(Capital Gain) 확보.",
+        "fx_impact": "포트폴리오 자금 유입으로 헤알화 평가절상 → 비과세 이자와 환차익 결합으로 토탈 리턴 극대화.",
+        "action_guide": "5~10년물 장기채 비중 확대. 잔여 40% 전량 적극 집행 및 자본차익 극대화 노림.",
+    },
+    {
+        "id": "B",
+        "title": "현 좌파 정권 연임 (온건·실용 연합)",
+        "subtitle": "Pragmatic Continuity (Base Case)",
+        "color": "cyan",
+        "verdict": "Neutral (이자 수익 중심 안정 운영)",
+        "political_landscape": "룰라/좌파 진영 연임 + 의회 중도파(Centrão) 연정 유지",
+        "fiscal_policy": "현 신재정프레임워크 유지, 지출 통제 속 세수 확충 집중",
+        "bcb_relationship": "금리 인하 정치적 압박은 있으나 제도적 독립성 인정 및 타협",
+        "rate_10y": "중립 / 완만한 하락 (박스권 내 13.5~14.2% 소폭 등락)",
+        "rate_change_num": -0.3,
+        "brl_fx": "보합 / 완만한 흐름 (경상수지 및 원자재 가격 연동)",
+        "fx_change_str": "원/헤알 250~270원 박스권 횡보",
+        "market_reaction": "대선 전 정치 불확실성(Election Discount) 해소로 단기 안도 랠리. 의회 견제로 급격한 정책 변동 제한.",
+        "bond_price": "기준금리(Selic) 완만한 인하 사이클 속 국채 금리 박스권. 연 10%대 중반 표면이자에 초점.",
+        "fx_impact": "환율 급변동 제한적으로 환손익 중립적. 안정적 비과세 쿠폰 현금흐름 락인.",
+        "action_guide": "단기 2~3년물(인컴 방어) 50% + 5년물 30% + 달러채 20% 바벨 분할 매수. 금리 14%대 이상 튈 때 분할 진입.",
+    },
+    {
+        "id": "C",
+        "title": "좌파 정권 강경화 (확장 재정 포퓰리즘)",
+        "subtitle": "Fiscal Populism (Tail Risk)",
+        "color": "rose",
+        "verdict": "Worst (원금 손실 + 환손실 위험)",
+        "political_landscape": "룰라/좌파 진영 연임 + 좌파 포퓰리즘 강화 (의회 갈등 심화)",
+        "fiscal_policy": "복지·공공지출 확대, 부채한도 완화 압박, 재정준칙 무력화",
+        "bcb_relationship": "기준금리(Selic) 급격한 인하 강요, 중앙은행 독립성 훼손 갈등",
+        "rate_10y": "150~250bp 급등 (금리 폭등, 15% 이상 터치)",
+        "rate_change_num": 2.0,
+        "brl_fx": "헤알화 급락 / 약세 (외국인 자본 이탈)",
+        "fx_change_str": "원/헤알 240원 이하 하락 위험",
+        "market_reaction": "재정 신뢰도 붕괴, CDS 프리미엄 폭등 및 브라질 국가 신용등급 강등 경고.",
+        "bond_price": "인플레이션 재점화 및 재정적자 확대로 국채 금리 급등, 채권 가격 급락(자본손실).",
+        "fx_impact": "외인 자금 이탈로 헤알화 가치 급락(평가절하) → 원/헤알 환손실이 이자 수익 잠식 가능.",
+        "action_guide": "장기채 매수 전면 보류. 대선 노이즈로 15% 초과 폭등 시 진정 확인 후 초단기물 또는 달러채권으로만 제한 진입.",
+    },
+]
+
+# ── 추천 브라질 국채 유니버스 (통화/만기/조건별 라인업) ───────────────────────
+RECOMMENDED_BONDS = [
+    {
+        "id": "brl_short",
+        "name": "헤알화 표시 단기 국채 (2~3년물)",
+        "code_example": "NTN-F 2027~2028 (고정금리)",
+        "currency": "BRL (브라질 헤알)",
+        "maturity_years": "2~3년",
+        "target_horizon": "1~3년 (안정 인컴 추구형)",
+        "coupon_rate": "연 10.00% (반기 지급, 매년 1월/7월)",
+        "current_ytm": "약 13.5~14.2% (YTM 만기수익률)",
+        "tax_benefit": "한-브라질 조세조약에 따른 이자소득세 0% 비과세 (종합과세 제외)",
+        "risk_level": "중립 (낮은 듀레이션, 환율 변동 노출)",
+        "best_for": "대선 정치적 노이즈를 방어하며 연 13%대 고금리 비과세 이자만 확실히 수취하고자 하는 보수적 투자자",
+        "pros": ["낮은 듀레이션(1.8~2.5년)으로 금리 급등 시에도 채권 가격 하락폭 극히 제한적", "연 13%대 높은 실효 쿠폰 락인"],
+        "cons": ["원/헤알 환율 하락 시 환손실 발생 가능", "금리 인하 시 자본차익 폭이 장기채 대비 작음"],
+        "allocation_tranche3": "권장 비중 40~50%",
+    },
+    {
+        "id": "brl_midlong",
+        "name": "헤알화 표시 중장기 국채 (5~10년물)",
+        "code_example": "NTN-F 2031 / 2033 / 2035 (고정금리)",
+        "currency": "BRL (브라질 헤알)",
+        "maturity_years": "5~10년 (스위트스팟)",
+        "target_horizon": "3~5년 이상 (자본차익 극대화형)",
+        "coupon_rate": "연 10.00% (반기 지급, 매년 1월/7월)",
+        "current_ytm": "약 14.1~14.6% (YTM 만기수익률)",
+        "tax_benefit": "이자소득세 0% 전액 비과세 + 채권 자본차익 비과세",
+        "risk_level": "적극투자 (듀레이션 4.5~6.5년, 금리·환율 레버리지)",
+        "best_for": "Selic 금리 인하 사이클 본격화 및 대선 불확실성 해소 후 막대한 채권 자본차익(Capital Gain)을 노리는 투자자",
+        "pros": ["금리 100bp 인하 시 채권 가격 약 4~6% 상승 자본차익", "복리 재투자 시 최고의 토탈 리턴 달성 가능"],
+        "cons": ["시나리오 C(좌파 강경화) 시 국채 금리 스파이크로 단기 평가손실 위험 상대적 큼"],
+        "allocation_tranche3": "권장 비중 30~40%",
+    },
+    {
+        "id": "usd_sovereign",
+        "name": "달러 표시 브라질 외화국채 (10년물)",
+        "code_example": "Brazil Sovereign Global Bond 2033~2035 (USD)",
+        "currency": "USD (미국 달러)",
+        "maturity_years": "7~10년",
+        "target_horizon": "3년 이상 (통화 안정 & 달러 고수익형)",
+        "coupon_rate": "연 5.75% ~ 6.50% (USD 반기 지급)",
+        "current_ytm": "약 6.2~6.8% (USD 기준 만기수익률)",
+        "tax_benefit": "해외채권 기본 과세 규정 적용 (외화채권 세제 및 조세협정 사전 확인 권장)",
+        "risk_level": "중립 (헤알화 위험 완전 차단, 미국 금리 연동)",
+        "best_for": "헤알화의 급락 위험을 원천 차단하고 기축통화인 '달러(USD)'로 미국 국채 대비 200~300bp 프리미엄을 락인하려는 투자자",
+        "pros": ["헤알화 정치 리스크 완벽 헤지", "달러 자산 확보 및 미 국채 대비 높은 캐리 수율"],
+        "cons": ["원/달러 환율에 연동", "헤알화 채권 대비 표면금리(6%대 vs 13%대) 상대적 낮음"],
+        "allocation_tranche3": "권장 비중 10~20%",
+    },
+    {
+        "id": "barbell_strategy",
+        "name": "💡 대선 대응 최적 바벨(Barbell) 혼합 포트폴리오",
+        "code_example": "단기 헤알채(50%) + 장기 헤알채(30%) + 달러 국채(20%)",
+        "currency": "BRL 80% + USD 20%",
+        "maturity_years": "2년 ~ 10년 분산",
+        "target_horizon": "2~4년 (대선 변동성 극복형)",
+        "coupon_rate": "가중평균 약 연 9.2% (BRL 10% + USD 6%)",
+        "current_ytm": "가중평균 약 12.5~13.2%",
+        "tax_benefit": "헤알화 자산 전액 비과세 + 달러 분산",
+        "risk_level": "균형잡힌 리스크 관리 (대선 올인 방지)",
+        "best_for": "대선 결과에 구애받지 않고 시나리오 A·B·C 모든 상황에서 하방을 방어하면서 상방 자본차익을 향유하려는 투자자",
+        "pros": ["시나리오 C(급락) 시 단기채와 달러채가 원금 방어", "시나리오 A(급등) 시 장기채가 자본차익 견인"],
+        "cons": ["단일 종목 집중 대비 최대 수익률은 다소 완화"],
+        "allocation_tranche3": "★ Tranche 3 기본 권장 모델",
+    },
+]
+
+# ── 10월 대선 투자 의사결정 전략 권고 (플레이북 §7) ─────────────────────────
+ELECTION_STRATEGY = {
+    "principles": [
+        {
+            "title": "대선 직전 불확실성 정점 대응 (듀레이션 바벨화)",
+            "body": "여론조사 격차가 오차범위 내 초박빙일 경우 헤알화 변동성과 장기채 금리 스프레드가 급확대됩니다. 듀레이션이 긴 10년물 단독 매수보다는 만기가 상대적으로 짧은 2~3년물 비중을 50% 이상 섞어 금리 변동 리스크를 헤지하는 것이 안전합니다.",
+            "tag": "듀레이션 관리",
+        },
+        {
+            "title": "금리 수준 기반 분할 매수 (스파이크 낚아채기)",
+            "body": "정치적 노이즈로 5~10년물 금리가 고점(14.5% 이상, 15% 접근)으로 튀는 구간은 시나리오 A 또는 B로 수렴할 경우 매력적인 역사적 진입 기회입니다. 공포가 극대화되는 시점에 잔여 40%를 분할 집행하십시오.",
+            "tag": "분할 매수",
+        },
+        {
+            "title": "핵심 2대 모니터링 지표 추적",
+            "body": "① 차기 경제·재무장관 내정자의 시장 친화성(Fiscal Discipline 유지 여부), ② 의회(상·하원) 내 중도·우파 연합(Centrão)의 과반 의석 확보 여부(행정부의 독주 견제 능력)를 핵심 모니터링하십시오.",
+            "tag": "체크리스트",
+        },
+    ],
+    "checkpoints": [
+        {"name": "차기 재무장관 성향", "focus": "시장 신뢰형(페르난두 아다지 유임 or 온건 실용파) vs 급진 포퓰리스트"},
+        {"name": "의회 Centrão 의석수", "focus": "하원 513석 중 중도·보수 300석 이상 확보 시 좌파 포퓰리즘 법안 완벽 저지"},
+        {"name": "신재정준칙 준수 여부", "focus": "Primary Deficit(기본재정적자) GDP 0% 목표 유지 선언 여부"},
+        {"name": "BCB 중앙은행 독립성", "focus": "임기 보장된 BCB 총재 체제 및 기준금리 인하의 자율적 통화정책"},
+    ],
+}
+
 
 # ══════════════════════════════════════════════════════════════════════════
 # 신호 엔진 (순수 함수 — 유닛 테스트 대상)
@@ -412,10 +565,12 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
         "carry_cushion": carry_cushion_curve(entry_fx=fx if fx else 294.0),
         "timeline": timeline,
         "next_catalyst": upcoming[0] if upcoming else None,
-        "aug_scenarios": AUG_SCENARIOS,
         "current_tranche_id": current_tranche_id,
         "tranches": TRANCHES,
         "due_diligence": DUE_DILIGENCE,
+        "election_scenarios": ELECTION_SCENARIOS,
+        "recommended_bonds": RECOMMENDED_BONDS,
+        "election_strategy": ELECTION_STRATEGY,
     }
 
 
@@ -748,6 +903,142 @@ async def generate_insight(db: AsyncSession = Depends(get_db)):
         row.generated_at = naive_now
     else:
         db.add(SectorInsight(sector="brazil_bond", content=payload, generated_at=naive_now))
+    await db.commit()
+
+    gen_at = now.isoformat()
+    if not gen_at.endswith("Z") and "+" not in gen_at:
+        gen_at += "Z"
+    return InsightResponse(content=content, generated_at=gen_at)
+
+
+# ── 10월 대선 실시간 정세 & Tranche 3 AI Live Pulse ────────────────────────────
+_DEFAULT_ELECTION_PULSE = {
+    "headline": "대선 D-3 불확실성 정점… 의회 Centrão 견제 속 시나리오 B(온건 연임) 베이스라인 우세",
+    "market_mood": "여론조사 초박빙 접전으로 장기물 금리(5년물 14.28%)가 높은 레벨을 유지하고 있으나, 의회 보수·중도파의 재정 독주 견제 능력에 신뢰를 두며 차분한 관망세를 유지하고 있습니다.",
+    "convergence_scenario": {
+        "primary": "B",
+        "probabilities": {"A": 25, "B": 60, "C": 15},
+        "reasoning": "현 금융시장은 룰라 연임 시에도 의회의 Centrão(중도·우파 연합)가 과반 의석으로 급격한 재정 팽창을 저지할 것으로 보아 시나리오 B를 기본 가격에 반영하고 있습니다."
+    },
+    "live_analysis": "대선 1차 투표(10/5)를 앞두고 정치 테마 노이즈가 고조되고 있습니다. 시장의 최대 관심사는 페르난두 아다지 재무장관의 유임 여부와 신재정프레임워크(Fiscal Anchor)의 준수 의지입니다. 상·하원 선거에서 중도·보수 연합의 과반 유지가 확실시됨에 따라 극단적 좌파 포퓰리즘(시나리오 C)으로 직행할 확률은 15% 수준으로 제한적입니다.",
+    "tranche3_action": "잔여 40% 중 20%는 대선 직전 5년물 14.2% 이상 + 환율 260원대 구간에서 1차 선진입하고, 나머지 20%는 1차 투표 결과 확인 후 단기 금리 스파이크(14.5%↑) 또는 불확실성 해소 랠리 확인 시 2차 집행 권장.",
+    "recommended_bond_guide": "대선 전후 변동성 방어를 위해 '바벨(Barbell) 전략'을 최우선 추천합니다: 헤알화 2~3년물(NTN-F 2027/2028) 50%로 연 13%대 비과세 쿠폰을 단단히 락인하고, 헤알화 5~10년물(NTN-F 2031/2033) 30%로 대선 후 금리 인하 사이클 자본차익을 노리며, 달러 외화국채 20%로 헤알화 급락 꼬리위험을 차단하십시오.",
+    "monitoring_points": [
+        "10/5 1차 투표 득표율 격차 및 10/26 결선투표(Runoff) 진출 여부",
+        "의회(상·하원) 내 중도·우파 연합(Centrão) 과반 의석(하원 300석↑) 확보율",
+        "차기 경제팀(재무장관) 인선에 대한 시장의 재정 규율 신뢰도"
+    ]
+}
+
+
+def _build_election_prompt(ctx: str, news_titles: list[str]) -> str:
+    news_text = "\n".join([f"- {t}" for t in news_titles[:6]]) if news_titles else "- 수집된 최근 정치/대선 뉴스 없음 (시장 지표 중심 평가)"
+    return f"""너는 브라질 국채 및 매크로 정치 리스크 전문 수석 스트래티지스트다.
+현재 시점은 2026년 10월 초, 브라질 대통령 선거 1차 투표(10월 5일)를 불과 D-2~D-3일 앞둔 시점이며, 한국인 투자자들은 브라질 국채 3단계 분할 매수의 마지막 단계인 'Tranche 3 (잔여 40% 대선 전후 집행)' 구간에 진입해 있다.
+
+[현재 실시간 브라질 시장 지표]
+{ctx}
+
+[최근 브라질 현지 및 글로벌 주요 뉴스]
+{news_text}
+
+[브라질 대선 3대 시나리오 체계]
+1. 시나리오 A: 중도·우파 정권 교체 (시장 친화적, 금리 100~200bp 하락, 헤알 강세, 채권 판정: Best)
+2. 시나리오 B: 현 좌파 온건·실용 연임 (신재정준칙 유지, 금리 중립/완만 하락, 헤알 보합, 채권 판정: Neutral - 기본선)
+3. 시나리오 C: 좌파 정권 강경화 (확장 재정 포퓰리즘, 금리 150~250bp 급등, 헤알 약세, 채권 판정: Worst - Tail Risk)
+
+[추천 브라질 국채 라인업]
+- 헤알화 2~3년물 (NTN-F 2027~2028): 비과세 연 13~14%대 고금리 쿠폰 락인, 낮은 듀레이션으로 대선 변동성 방어
+- 헤알화 5~10년물 (NTN-F 2031~2035): 비과세, 금리 인하 사이클 자본차익(Capital Gain) 극대화 스위트스팟
+- 달러화 외화국채 10년물 (Global Bond USD): 헤알화 환율 위험 완전 차단, 미국 국채 대비 200~300bp 스프레드(연 6%대)
+- 최적 바벨 전략: 단기 헤알채(50%) + 장기 헤알채(30%) + 달러 국채(20%)
+
+너의 임무는 현재 시장 지표와 최신 뉴스, 여론조사 동향을 바탕으로 '현재 실시간 브라질 대선 정세 브리핑 및 Tranche 3 투자자 가이드'를 전문적이고 명쾌하게 작성하는 것이다.
+
+반드시 아래 JSON 포맷으로만 응답하라 (추가 설명이나 마크다운 코드블록 금지):
+{{
+  "headline": "실시간 정세 핵심 한 줄 요약",
+  "market_mood": "현재 금융시장 분위기 1~2문장",
+  "convergence_scenario": {{
+    "primary": "B",
+    "probabilities": {{"A": 25, "B": 60, "C": 15}},
+    "reasoning": "왜 현재 시장이 이 시나리오에 무게를 두고 있는지 분석 2문장"
+  }},
+  "live_analysis": "현재 브라질 현지 정치 상황, 의회 구도(Centrão), 재무장관 거취, 재정 프레임워크 유지 가능성에 대한 심층 분석 (3~4문장)",
+  "tranche3_action": "Tranche 3(잔여 40%)에 대한 구체적 실행 액션플랜 (대선 직전 매수 vs 1차 투표 직후 매수 타이밍, 금리 스파이크 14.5% 이상 터치 시 대응법)",
+  "recommended_bond_guide": "투자 성향별 최우선 추천 채권 조합 및 비중 (단기채 중심 인컴형 vs 장기채 자본차익형 vs 바벨 분산형 추천 이유)",
+  "monitoring_points": [
+    "핵심 점검 포인트 1",
+    "핵심 점검 포인트 2",
+    "핵심 점검 포인트 3"
+  ]
+}}
+"""
+
+
+@router.get("/election-pulse", response_model=InsightResponse)
+async def get_election_pulse(auto_generate: bool = True, db: AsyncSession = Depends(get_db)):
+    row = (await db.execute(
+        select(SectorInsight).where(SectorInsight.sector == "brazil_election_pulse")
+    )).scalar_one_or_none()
+
+    if auto_generate and (not row or not row.content or not _is_same_date_kst(row.generated_at)):
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if api_key:
+            try:
+                return await generate_election_pulse(db)
+            except Exception as e:
+                print(f"[brazil_bond] auto-generate election pulse on GET failed: {e}")
+
+    if not row or not row.content:
+        return InsightResponse(content=_DEFAULT_ELECTION_PULSE, generated_at=datetime.now(timezone.utc).isoformat())
+    try:
+        content = json.loads(row.content)
+    except Exception:
+        content = _DEFAULT_ELECTION_PULSE
+
+    gen_at = row.generated_at.isoformat() if row.generated_at else None
+    if gen_at and not gen_at.endswith("Z") and "+" not in gen_at and "-" not in gen_at[10:]:
+        gen_at += "Z"
+    return InsightResponse(content=content, generated_at=gen_at)
+
+
+@router.post("/election-pulse/generate", response_model=InsightResponse)
+async def generate_election_pulse(db: AsyncSession = Depends(get_db)):
+    api_key = os.environ.get("GEMINI_API_KEY")
+    ctx = await _build_live_ctx(db)
+    
+    news_titles = []
+    try:
+        from core.brazil_news import get_recent_news
+        news_items = await get_recent_news(limit=6)
+        news_titles = [n.get("title", "") for n in news_items if n.get("title")]
+    except Exception as e:
+        print(f"[brazil_bond] news fetch for election pulse failed: {e}")
+
+    content = None
+    if api_key:
+        prompt = _build_election_prompt(ctx, news_titles)
+        try:
+            raw = await asyncio.to_thread(_call_gemini_sync, api_key, prompt)
+            content = _extract_json(raw)
+        except Exception as e:
+            print(f"[brazil_bond] election pulse generate error: {e}")
+
+    if not content:
+        content = _DEFAULT_ELECTION_PULSE
+
+    now = datetime.now(timezone.utc)
+    row = (await db.execute(
+        select(SectorInsight).where(SectorInsight.sector == "brazil_election_pulse")
+    )).scalar_one_or_none()
+    payload = json.dumps(content, ensure_ascii=False)
+    naive_now = now.replace(tzinfo=None)
+    if row:
+        row.content = payload
+        row.generated_at = naive_now
+    else:
+        db.add(SectorInsight(sector="brazil_election_pulse", content=payload, generated_at=naive_now))
     await db.commit()
 
     gen_at = now.isoformat()

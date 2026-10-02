@@ -4,25 +4,24 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 브라질 국채 9월 Copom(25bp 인하, 13.75%) 이벤트 결과 반영, 서비스 진입 시 경과 이벤트 자동 평가/영속화 및 프론트엔드 [이벤트 결과 AI 자동 갱신] 연동 완료 (2026-10-02)
+✅ Current: 브라질 대선 3대 시나리오 분석 매트릭스, 조건/기간별 추천 국채 라인업(헤알화 단기/장기, 달러 10년물, 바벨 5:3:2) 및 AI Live Pulse 실시간 정세/시장 수렴도 가이드 구현 완료 (S6-17, 2026-10-03)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
-> 세션 핸드오프 (2026-10-02):
-> - 브라질 국채 9월 17일 Copom 금리 인하(14.00% ➔ 13.75%) 실제 결과 및 10월 대선 D-3 매크로 타임라인/로드맵 반영.
-> - 서비스 진입(`GET /api/v1/brazil-bond/summary`) 시 경과 이벤트의 누락 여부를 자동 점검하고 DB(`SectorInsight`)에 안전하게 영속화(`_auto_evaluate_past_catalysts`).
-> - `POST /api/v1/brazil-bond/catalysts/sync` 신설: 최신 실시간 지표 및 Gemini AI를 통한 매크로 이벤트 수동/강제 갱신 API 구축.
-> - `BrazilBondTab.tsx`: [이벤트 결과 AI 자동 갱신] 버튼, 로딩 스피너 및 Toast 알림, Tranche 1~2 실행완료 / Tranche 3 현재 실행구간 배지 UI 구현.
-> - `get_summary` 내부 기존 8-space 들여쓰기 버그(return 누락 위험) 교정 및 IPCA 동적 월 라벨링 완료.
- 
- 
+> 세션 핸드오프 (2026-10-03):
+> - 브라질 대선 3대 시나리오(시나리오 A: 중도·우파 교체 - Best, 시나리오 B: 현 좌파 온건·실용 연임 - Neutral, 시나리오 C: 좌파 강경화 포퓰리즘 - Worst) 상세 매트릭스 구조화 및 대시보드 뷰 제공.
+> - 투자자 성향/조건별 추천 국채 4종 라인업 완비: 헤알화 2~3년물 (NTN-F 2027~2028, 1~3년 안정 인컴형), 헤알화 5~10년물 (NTN-F 2031~2035, 3~5년+ 자본차익 극대화형), 달러 외화국채 10년물 (Global Bond USD 6~7%, 환위험 차단), 대선 대응 최적 바벨 전략 (단기 50% + 장기 30% + 달러 20%, Tranche 3 기본 권장 모델).
+> - Gemini AI 기반 `GET /election-pulse` 및 `POST /election-pulse/generate` 엔드포인트 개설: 실시간 뉴스 헤드라인 및 시장 지표(Selic 13.75%, Y5 14.28%, 환율) 기반 시나리오별 수렴도(A 25%, B 60%, C 15%) 및 3색 프로그레스 바 연동.
+> - `BrazilBondTab.tsx`: Tranche 3 진입 시점 맞춤 '브라질 대선 시나리오 & 국채 투자 플레이북' 섹션 신설, 0ms SWR 로컬 캐싱 및 실시간 재생성 트리거 지원.
+
+
 ## Current Sprint
- 
+
 - Sprint: 6 — Centralized TFF Dashboard, Efficient Frontier, Dividend Calendar, & Custom Disparity Alerts
 - Started: 2026-05-31
 - Branch: main
- 
+
 ## Story Status
- 
+
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
 | S6-1 | TFF 엑셀 업로드 데이터 PostgreSQL 저장 및 중앙 공유형 대시보드 | ✅ stable | 파일 데이터 PostgreSQL 저장, 마스터 인증 패스코드 및 뷰어/마스터 권한 격리 구현 완료 |
@@ -40,6 +39,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 | S6-13 | 섹터분석 정렬 순서/명칭 갱신 및 조선/소부장 대체 | ✅ stable | 대시보드 섹터 재배치 및 AI전력 개명, 조선/반도체소부장 틱커 대체 매핑 완료 |
 | S6-14 | 구글 시트 기반 종합 자산 관리 (Account Board + KIS 연동 + 수동 자산 CRUD) | ✅ stable | KIS API 실시간 연동 + 타 금융사(미래에셋/삼성/저축) 수동 자산/예수금 통합 집계, 구글 시트 형태의 Account Board 및 계좌별 상세 종목 뷰 구현 완료 |
 | S6-15 | 반도체 매크로 사이클(CSCI) 퀀트 엔진 및 4국면 시각화 대시보드 | ✅ stable | 5년 롤링 Z-score 정규화 기반 선행(40%)+동행(40%)+후행(20%) CSCI 지수, 4-Phase 사이클 시계(2D Quadrant), 빅테크 CapEx 트래커, 서브섹터 디커플링 맵, ETF 리밸런싱 매트릭스 연동 완료 |
+| S6-17 | 브라질 대선 시나리오 분석 및 조건별 추천 국채 라인업 (헤알화/달러 기반) | ✅ stable | 3대 대선 시나리오 비교, 조건별 국채 4종 라인업, Tranche 3 투자 원칙/체크리스트, Gemini AI Live Pulse 실시간 정세 연동 완료 |
 ## Module Registry
  
 | Module | Layer | Status | Key Files |
