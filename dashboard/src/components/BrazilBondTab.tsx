@@ -284,16 +284,45 @@ export default function BrazilBondTab() {
                 throw new Error(err.detail || `이벤트 갱신 실패 (${res.status})`);
             }
             const data = await res.json();
-            setSummary((prev) => {
-                if (!prev) return prev;
-                const updated = { ...prev, timeline: data.timeline };
-                localStorage.setItem('brazil_bond_summary', JSON.stringify(updated));
-                return updated;
-            });
+
+            // 캘린더 타임라인뿐 아니라 트랜치 및 전체 요약 데이터를 함께 갱신
+            try {
+                const sRes = await fetch(`${API_BASE}/api/v1/brazil-bond/summary`, { cache: 'no-store' });
+                if (sRes.ok) {
+                    const freshSummary = await sRes.json();
+                    setSummary(freshSummary);
+                    localStorage.setItem('brazil_bond_summary', JSON.stringify(freshSummary));
+                } else {
+                    setSummary((prev) => {
+                        if (!prev) return prev;
+                        const updated = {
+                            ...prev,
+                            timeline: data.timeline,
+                            current_tranche_id: data.current_tranche_id ?? 3,
+                            tranches: data.tranches?.length ? data.tranches : prev.tranches,
+                        };
+                        localStorage.setItem('brazil_bond_summary', JSON.stringify(updated));
+                        return updated;
+                    });
+                }
+            } catch {
+                setSummary((prev) => {
+                    if (!prev) return prev;
+                    const updated = {
+                        ...prev,
+                        timeline: data.timeline,
+                        current_tranche_id: data.current_tranche_id ?? 3,
+                        tranches: data.tranches?.length ? data.tranches : prev.tranches,
+                    };
+                    localStorage.setItem('brazil_bond_summary', JSON.stringify(updated));
+                    return updated;
+                });
+            }
+
             if (!silent) {
                 setCatalystToast({
                     ok: true,
-                    msg: `매크로 캘린더 이벤트가 최신 지표로 갱신되었습니다. (${data.updated_count}건 반영)`,
+                    msg: `매크로 캘린더 및 분할 매수 로드맵(Tranche 3)이 최신 지표로 갱신되었습니다. (${data.updated_count}건 반영)`,
                 });
                 setTimeout(() => setCatalystToast(null), 4000);
             }
@@ -1434,10 +1463,20 @@ function TrancheCard({ t, currentTrancheId }: {
     t: { id: number; weight: string; timing: string; trigger: string; rationale: string };
     currentTrancheId?: number;
 }) {
-    // 10월 대선 전후(10/1~) default=3, 8/6 Copom 이후 default=2 (Tranche 2)
-    const activeId = currentTrancheId ?? (new Date() >= new Date("2026-10-01") ? 3 : (new Date() >= new Date("2026-08-06") ? 2 : 1));
+    // 10월 대선 전후(10/1~) 시점이면 과거 캐시(2)를 넘어서 최소 3단계로 강제 상향 보정
+    const dateBasedId = new Date() >= new Date("2026-10-01") ? 3 : (new Date() >= new Date("2026-08-06") ? 2 : 1);
+    const activeId = Math.max(currentTrancheId ?? 1, dateBasedId);
     const isCurrent = t.id === activeId;
     const isCompleted = t.id < activeId;
+
+    // 과거 캐시로 인해 타이밍 텍스트가 과거 시점으로 남아있는 경우 실시간 최신 텍스트로 보정
+    let displayTiming = t.timing;
+    if (t.id === 2 && displayTiming.includes("8월 초")) {
+        displayTiming = "8~9월 (Copom 8·9월 후 완료)";
+    } else if (t.id === 3 && displayTiming === "10월 대선 전후") {
+        displayTiming = "10월 대선 전후 (D-3 진입 중)";
+    }
+
     return (
         <div className={`rounded-2xl p-4 transition-all duration-300 relative ${
             isCurrent
@@ -1460,7 +1499,7 @@ function TrancheCard({ t, currentTrancheId }: {
                 <span className={`font-black ${isCurrent ? 'text-emerald-300 text-base' : 'text-white'}`}>Tranche {t.id}</span>
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isCurrent ? 'bg-emerald-400 text-black font-black' : isCompleted ? 'text-emerald-300 bg-emerald-500/20' : 'text-emerald-300 bg-emerald-500/15'}`}>{t.weight}</span>
             </div>
-            <p className="text-xs text-gray-400 mb-1">{t.timing}</p>
+            <p className="text-xs text-gray-400 mb-1">{displayTiming}</p>
             <p className="text-xs text-gray-200"><span className="text-emerald-400 font-bold">Trigger · </span>{t.trigger}</p>
             <p className="text-xs text-gray-400 mt-1"><span className="text-gray-500">Rationale · </span>{t.rationale}</p>
         </div>

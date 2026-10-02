@@ -423,6 +423,8 @@ class CatalystSyncResponse(BaseModel):
     status: str
     updated_count: int
     timeline: list[dict]
+    current_tranche_id: int
+    tranches: list[dict]
     synced_at: str
 
 
@@ -507,10 +509,18 @@ async def sync_catalysts(force: bool = False, db: AsyncSession = Depends(get_db)
         key=lambda x: x["date"],
     )
 
+    current_tranche_id = 1
+    if today >= date(2026, 10, 1):
+        current_tranche_id = 3
+    elif today >= date(2026, 8, 6):
+        current_tranche_id = 2
+
     return CatalystSyncResponse(
         status="success",
         updated_count=updated_count,
         timeline=timeline,
+        current_tranche_id=current_tranche_id,
+        tranches=TRANCHES,
         synced_at=datetime.now(_KST).isoformat(),
     )
 
