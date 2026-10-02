@@ -80,3 +80,4 @@ When modifying a module:
 | 2026-06-01 | Asset History Tracking | Added GET /asset-history API & daily snapshot recording to /portfolio | MyAssetsView | Updated |
 | 2026-07-12 | Notification Settings | GET /settings accepts optional chat_id, POST /settings upserts by chat_id | NotificationSettings, BrazilBondTab | Updated |
 | 2026-08-22 | Integrated Total Asset Board | Added GET /integrated-assets, manual-assets CRUD, manual-cash CRUD, kis-mappings | MyAssetsView, TotalAssetBoard | Updated |
+| 2026-10-02 | Brazil Bond Analysis | Added POST /api/v1/brazil-bond/catalysts/sync & catalyst state persistence/evaluation in /summary | BrazilBondTab | Updated |

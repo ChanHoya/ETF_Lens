@@ -858,5 +858,57 @@
   "broadcom ltd": {
     "symbol": "AVGO",
     "display_name": "Broadcom Inc."
+  },
+  "asml holding nv-ny reg shs": {
+    "symbol": null,
+    "display_name": "ASML HOLDING NV-NY REG SHS"
+  },
+  "coherent corp": {
+    "symbol": "COHR",
+    "display_name": "Coherent Corp."
+  },
+  "qorvo inc": {
+    "symbol": "QRVO",
+    "display_name": "Qorvo, Inc."
+  },
+  "macom technology solutions h": {
+    "symbol": "MTSI",
+    "display_name": "MACOM Technology Solutions Holdings, Inc."
+  },
+  "arm holdings plc-adr": {
+    "symbol": null,
+    "display_name": "ARM HOLDINGS PLC-ADR"
+  },
+  "credo technology group holdi": {
+    "symbol": "CRDO",
+    "display_name": "Credo Technology Group Holding Ltd"
+  },
+  "rambus inc": {
+    "symbol": "RMBS",
+    "display_name": "Rambus Inc."
+  },
+  "nova ltd": {
+    "symbol": "NVAX",
+    "display_name": "Novavax, Inc."
+  },
+  "astera labs inc": {
+    "symbol": "ALAB",
+    "display_name": "Astera Labs, Inc."
+  },
+  "cadence design sys inc": {
+    "symbol": "CDNS",
+    "display_name": "Cadence Design Systems, Inc."
+  },
+  "amkor technology inc": {
+    "symbol": "AMKR",
+    "display_name": "Amkor Technology, Inc."
+  },
+  "lattice semiconductor corp": {
+    "symbol": "LSCC",
+    "display_name": "Lattice Semiconductor Corporation"
+  },
+  "acm research inc-class a": {
+    "symbol": null,
+    "display_name": "ACM RESEARCH INC-CLASS A"
   }
 }

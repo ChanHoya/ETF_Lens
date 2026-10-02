@@ -109,6 +109,10 @@ export default function BrazilBondTab() {
     const [genLoading, setGenLoading] = useState(false);
     const autoGenAttemptedRef = useRef(false);
 
+    const [catalystSyncing, setCatalystSyncing] = useState(false);
+    const [catalystToast, setCatalystToast] = useState<{ ok: boolean; msg: string } | null>(null);
+    const autoSyncCatalystAttemptedRef = useRef(false);
+
     const [news, setNews] = useState<NewsItem[]>([]);
     const [newsLoading, setNewsLoading] = useState(true);
 
@@ -177,6 +181,17 @@ export default function BrazilBondTab() {
                     if (!autoGenAttemptedRef.current && (!j.generated_at || !isSameDate(j.generated_at))) {
                         autoGenAttemptedRef.current = true;
                         generateReport(true);
+                    }
+                }
+
+                // 2.1 지나간 이벤트 중 실제 발표 내용이 누락되었거나 '집계 대기'인 경우 자동 백그라운드 갱신
+                if (sData) {
+                    const hasMissingActual = (sData.timeline || []).some(
+                        (c: Catalyst) => c.d_day < 0 && (!c.actual || c.actual.includes('집계 대기'))
+                    );
+                    if (hasMissingActual && !autoSyncCatalystAttemptedRef.current) {
+                        autoSyncCatalystAttemptedRef.current = true;
+                        syncCatalysts(true);
                     }
                 }
             } catch (e: any) {
@@ -257,6 +272,41 @@ export default function BrazilBondTab() {
             setGenLoading(false);
         }
     };
+
+    const syncCatalysts = useCallback(async (silent = false) => {
+        try {
+            if (!silent) setCatalystSyncing(true);
+            const res = await fetch(`${API_BASE}/api/v1/brazil-bond/catalysts/sync?force=true`, {
+                method: 'POST',
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || `이벤트 갱신 실패 (${res.status})`);
+            }
+            const data = await res.json();
+            setSummary((prev) => {
+                if (!prev) return prev;
+                const updated = { ...prev, timeline: data.timeline };
+                localStorage.setItem('brazil_bond_summary', JSON.stringify(updated));
+                return updated;
+            });
+            if (!silent) {
+                setCatalystToast({
+                    ok: true,
+                    msg: `매크로 캘린더 이벤트가 최신 지표로 갱신되었습니다. (${data.updated_count}건 반영)`,
+                });
+                setTimeout(() => setCatalystToast(null), 4000);
+            }
+        } catch (e: any) {
+            console.error("이벤트 동기화 오류:", e);
+            if (!silent) {
+                setCatalystToast({ ok: false, msg: String(e?.message || e) });
+                setTimeout(() => setCatalystToast(null), 5000);
+            }
+        } finally {
+            if (!silent) setCatalystSyncing(false);
+        }
+    }, []);
 
     if (loading) {
         return (
@@ -429,7 +479,25 @@ export default function BrazilBondTab() {
 
             {/* ── 매크로 캘린더 (시계열 타임라인) ──────────────────── */}
             <section>
-                <SectionTitle icon={<CalendarClock className="w-5 h-5 text-cyan-400" />} title="Macro Catalyst Timeline" sub="Q3-Q4 핵심 관전 캘린더 · 이벤트 시점의 지표 발표 일정" />
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                    <SectionTitle icon={<CalendarClock className="w-5 h-5 text-cyan-400" />} title="Macro Catalyst Timeline" sub="Q3-Q4 핵심 관전 캘린더 · 이벤트 시점의 지표 발표 일정" />
+                    <button
+                        onClick={() => syncCatalysts(false)}
+                        disabled={catalystSyncing}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition shadow-sm disabled:opacity-50 cursor-pointer"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${catalystSyncing ? 'animate-spin' : ''}`} />
+                        {catalystSyncing ? '이벤트 결과 갱신 중…' : '이벤트 결과 AI 자동 갱신'}
+                    </button>
+                </div>
+                {catalystToast && (
+                    <div className={`mb-3 p-3 rounded-xl text-xs font-semibold border flex items-center justify-between transition-all ${
+                        catalystToast.ok ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-200' : 'bg-rose-950/60 border-rose-500/40 text-rose-200'
+                    }`}>
+                        <span>{catalystToast.msg}</span>
+                        <button onClick={() => setCatalystToast(null)} className="text-gray-400 hover:text-white ml-2">✕</button>
+                    </div>
+                )}
                 <MacroTimeline timeline={s.timeline} augScenarios={s.aug_scenarios} />
             </section>
 
@@ -1366,23 +1434,31 @@ function TrancheCard({ t, currentTrancheId }: {
     t: { id: number; weight: string; timing: string; trigger: string; rationale: string };
     currentTrancheId?: number;
 }) {
-    // 8/6 Copom 이후 default=2 (Tranche 2)
-    const activeId = currentTrancheId ?? (new Date() >= new Date("2026-08-06") ? 2 : 1);
+    // 10월 대선 전후(10/1~) default=3, 8/6 Copom 이후 default=2 (Tranche 2)
+    const activeId = currentTrancheId ?? (new Date() >= new Date("2026-10-01") ? 3 : (new Date() >= new Date("2026-08-06") ? 2 : 1));
     const isCurrent = t.id === activeId;
+    const isCompleted = t.id < activeId;
     return (
         <div className={`rounded-2xl p-4 transition-all duration-300 relative ${
             isCurrent
                 ? 'bg-gradient-to-br from-emerald-900/40 via-emerald-950/30 to-black/40 border-2 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.25)] ring-1 ring-emerald-400/50 animate-pulse'
-                : 'bg-gradient-to-br from-emerald-950/20 to-black/20 border border-emerald-500/20 opacity-80'
+                : isCompleted
+                    ? 'bg-gradient-to-br from-emerald-950/10 to-black/20 border border-emerald-500/30 opacity-90'
+                    : 'bg-gradient-to-br from-emerald-950/10 to-black/20 border border-white/5 opacity-60'
         }`}>
             {isCurrent && (
                 <span className="absolute -top-2.5 right-4 bg-emerald-400 text-black text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-md">
                     🎯 CURRENT STAGE (현재 실행 구간)
                 </span>
             )}
+            {isCompleted && (
+                <span className="absolute -top-2.5 right-4 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    ✓ 실행 완료
+                </span>
+            )}
             <div className="flex items-center justify-between mb-2">
                 <span className={`font-black ${isCurrent ? 'text-emerald-300 text-base' : 'text-white'}`}>Tranche {t.id}</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isCurrent ? 'bg-emerald-400 text-black font-black' : 'text-emerald-300 bg-emerald-500/15'}`}>{t.weight}</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isCurrent ? 'bg-emerald-400 text-black font-black' : isCompleted ? 'text-emerald-300 bg-emerald-500/20' : 'text-emerald-300 bg-emerald-500/15'}`}>{t.weight}</span>
             </div>
             <p className="text-xs text-gray-400 mb-1">{t.timing}</p>
             <p className="text-xs text-gray-200"><span className="text-emerald-400 font-bold">Trigger · </span>{t.trigger}</p>

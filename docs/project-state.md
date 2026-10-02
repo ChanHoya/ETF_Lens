@@ -3,15 +3,16 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
  
-Base: Exit Strategy Monitoring (KOSPI)
-✅ Current: S6-16 반도체 7대 실데이터 신호(120개월 공표통계 + yfinance 실데이터) 및 실제 주가/지수 ↔ 고점대비 낙폭(%) 듀얼 뷰 토글 고도화 완료 (2026-08-23)
+Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
+✅ Current: 브라질 국채 9월 Copom(25bp 인하, 13.75%) 이벤트 결과 반영, 서비스 진입 시 경과 이벤트 자동 평가/영속화 및 프론트엔드 [이벤트 결과 AI 자동 갱신] 연동 완료 (2026-10-02)
 ➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
 
-> 세션 핸드오프 (2026-08-23):
-> - 관세청·한국은행·통계청 120개월 실제 공표통계 시계열 구축(`macro_historical_data.py`).
-> - `semi_cycle_engine.py`: 실제 주간 종가 및 52주 낙폭 동시 연출 API 구축.
-> - `SemiFundamentalSignals.tsx`: 실제 주가/지수($/pt) 기본 뷰 + [실제 가격 | 고점대비 낙폭(%)] 인터랙티브 토글 스위치 제공.
-> - 중복 서브메뉴 탭(사이클 시계) 및 상단 업종 선택 칩 바 제거 완료.
+> 세션 핸드오프 (2026-10-02):
+> - 브라질 국채 9월 17일 Copom 금리 인하(14.00% ➔ 13.75%) 실제 결과 및 10월 대선 D-3 매크로 타임라인/로드맵 반영.
+> - 서비스 진입(`GET /api/v1/brazil-bond/summary`) 시 경과 이벤트의 누락 여부를 자동 점검하고 DB(`SectorInsight`)에 안전하게 영속화(`_auto_evaluate_past_catalysts`).
+> - `POST /api/v1/brazil-bond/catalysts/sync` 신설: 최신 실시간 지표 및 Gemini AI를 통한 매크로 이벤트 수동/강제 갱신 API 구축.
+> - `BrazilBondTab.tsx`: [이벤트 결과 AI 자동 갱신] 버튼, 로딩 스피너 및 Toast 알림, Tranche 1~2 실행완료 / Tranche 3 현재 실행구간 배지 UI 구현.
+> - `get_summary` 내부 기존 8-space 들여쓰기 버그(return 누락 위험) 교정 및 IPCA 동적 월 라벨링 완료.
  
  
 ## Current Sprint

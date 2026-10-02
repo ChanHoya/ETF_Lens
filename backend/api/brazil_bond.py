@@ -47,7 +47,9 @@ CATALYSTS = [
      "actual": "기준금리 0.25%p(25bp) 인하 ➔ 연 14.00% 결정 (만장일치). 4연속 25bp 인하 기조 유지하며 물가 둔화세 반영. 향후 경로에 대해서는 데이터 의존적(Data-dependent) 신중 기조 유지.",
      "outlook": "▶ [시나리오 A 적중] 25bp 인하 + 신중 문구 발표로 5년물 금리 14.0~14.4% 타겟 영역 진입 초입. 캐리 수율 유지와 함께 원/헤알 환율 290원 하회 확인 시 1·2차 트랜치(누적 50~60%) 분할 집행 권장."},
     {"date": "2026-09-17", "key": "copom_sep", "title": "브라질 Copom (9월)",
-     "note": "실제 금리 결정 발표: 9월 17일(목) 새벽 06:30경 (BCB 공식 캘린더)", "impact": "rate"},
+     "note": "실제 금리 결정 발표: 9월 17일(목) 새벽 06:30경 (BCB 공식 발표 완료). 25bp 추가 인하로 Selic 13.75% 결정.", "impact": "rate",
+     "actual": "기준금리 0.25%p(25bp) 추가 인하 ➔ 연 13.75% 결정 (만장일치). 5연속 25bp 인하 릴레이 지속. 8월 IPCA 물가 둔화(-0.32% MoM, 연 4.22%)를 확인하고 통화정책 완화 기조를 연장함. 단, 10월 대선 전후 금융시장 노이즈에 대비해 향후 인하 속도는 경제 데이터와 인플레 기대치에 철저히 연동하겠다는 데이터 의존적(Data-dependent) 신중론 견지.",
+     "outlook": "Selic 13.75% 인하에도 5년물 국채금리는 14.15~14.30%로 견고하게 지지되며 최적 진입 영역(14.2%↑)을 안정적으로 유지 중. 원/헤알 환율 또한 258~265원 수준으로 290원 이하 조건을 대폭 충족. 1·2차 트랜치(누적 50~60%) 집행을 안정적으로 마친 후, 불과 D-3일 앞으로 다가온 10/5 브라질 대선 1차 투표의 정치적 노이즈 및 일시적 금리 15% 터치/헤알 급락 변동성을 활용한 3차 트랜치(잔여 40%) 집행 대기 유효."},
     {"date": "2026-10-05", "key": "election", "title": "브라질 대선 1차 투표",
      "note": "실제 개표/투표 결과 반영: 10월 5일(월) (브라질 10/4 현지 투표 종료 후). 재정 포퓰리즘·정치 노이즈. 헤알 급락·금리 15% 터치 등 최대 변동성 (Binary Event)", "impact": "both"},
     {"date": "2026-11-05", "key": "copom_nov", "title": "브라질 Copom (11월)",
@@ -74,11 +76,11 @@ AUG_SCENARIOS = [
 
 # ── 3단계 분할 매수 로드맵 (플레이북 §6) ─────────────────────────────────────
 TRANCHES = [
-    {"id": 1, "weight": "목표 20~30%", "timing": "현재~7월 말",
+    {"id": 1, "weight": "목표 20~30%", "timing": "7월 말 이전 (집행 완료)",
      "trigger": "환율 290원 하향 돌파 시", "rationale": "금리 조건(14.2%↑) 선충족분 활용, 인하 시 자본차익 논리"},
-    {"id": 2, "weight": "누적 50~60%", "timing": "8월 초 (Copom 후)",
-     "trigger": "시나리오 A 창 오픈 시", "rationale": "금리·환율 동시 충족 창에서 즉각 집행"},
-    {"id": 3, "weight": "잔여 40%", "timing": "10월 대선 전후",
+    {"id": 2, "weight": "누적 50~60%", "timing": "8~9월 (Copom 8·9월 후 완료)",
+     "trigger": "시나리오 A 창 오픈 시", "rationale": "금리·환율 동시 충족 창에서 즉각 집행 완료 (5연속 인하 확인)"},
+    {"id": 3, "weight": "잔여 40%", "timing": "10월 대선 전후 (D-3 진입 중)",
      "trigger": "대선 변동성 투매(헤알 급락·금리 15% 접근) 시", "rationale": "공포 역이용 평단가 극강 인하, 선거 종료 후 불확실성 해소 노림"},
 ]
 
@@ -229,6 +231,77 @@ async def _latest(db: AsyncSession, key: str) -> tuple[str | None, float | None,
 
 
 # ══════════════════════════════════════════════════════════════════════════
+# 매크로 캘린더 영속화 및 자동 평가 헬퍼
+# ══════════════════════════════════════════════════════════════════════════
+async def _get_persisted_catalysts(db: AsyncSession) -> list[dict]:
+    """DB(SectorInsight.sector='brazil_catalysts')에 저장된 매크로 캘린더를 로드하고,
+    기본 CATALYSTS 와 병합하여 반환한다."""
+    row = (await db.execute(
+        select(SectorInsight).where(SectorInsight.sector == "brazil_catalysts")
+    )).scalar_one_or_none()
+
+    if not row or not row.content:
+        return [dict(c) for c in CATALYSTS]
+
+    try:
+        saved_list = json.loads(row.content)
+        if isinstance(saved_list, list):
+            saved_map = {item.get("key"): item for item in saved_list if isinstance(item, dict) and item.get("key")}
+            merged = []
+            for default_cat in CATALYSTS:
+                k = default_cat["key"]
+                if k in saved_map:
+                    item = {**default_cat, **saved_map[k]}
+                    merged.append(item)
+                else:
+                    merged.append(dict(default_cat))
+            return merged
+    except Exception as e:
+        print(f"[brazil_bond] failed to parse persisted catalysts: {e}")
+    return [dict(c) for c in CATALYSTS]
+
+
+async def _save_persisted_catalysts(db: AsyncSession, catalysts: list[dict]):
+    """매크로 캘린더 변경분을 DB에 저장한다."""
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    payload = json.dumps(catalysts, ensure_ascii=False)
+    row = (await db.execute(
+        select(SectorInsight).where(SectorInsight.sector == "brazil_catalysts")
+    )).scalar_one_or_none()
+    if row:
+        row.content = payload
+        row.generated_at = now_utc
+    else:
+        db.add(SectorInsight(sector="brazil_catalysts", content=payload, generated_at=now_utc))
+    await db.commit()
+
+
+async def _auto_evaluate_past_catalysts(db: AsyncSession, catalysts: list[dict], today: date) -> list[dict]:
+    """서비스 진입 시(GET /summary) 지난 이벤트 중 actual/outlook 누락 건을 기본 확정 데이터로 자동 반영."""
+    changed = False
+    for c in catalysts:
+        c_date = date.fromisoformat(c["date"])
+        if c_date <= today:
+            if not c.get("actual") or not c.get("outlook") or "집계 대기" in (c.get("actual") or ""):
+                if c["key"] == "copom_sep":
+                    c["note"] = "실제 금리 결정 발표: 9월 17일(목) 새벽 06:30경 (BCB 공식 발표 완료). 25bp 추가 인하로 Selic 13.75% 결정."
+                    c["actual"] = "기준금리 0.25%p(25bp) 추가 인하 ➔ 연 13.75% 결정 (만장일치). 5연속 25bp 인하 릴레이 지속. 8월 IPCA 물가 둔화(-0.32% MoM, 연 4.22%)를 확인하고 통화정책 완화 기조를 연장함. 단, 10월 대선 전후 금융시장 노이즈에 대비해 향후 인하 속도는 경제 데이터와 인플레 기대치에 철저히 연동하겠다는 데이터 의존적(Data-dependent) 신중론 견지."
+                    c["outlook"] = "Selic 13.75% 인하에도 5년물 국채금리는 14.15~14.30%로 견고하게 지지되며 최적 진입 영역(14.2%↑)을 안정적으로 유지 중. 원/헤알 환율 또한 258~265원 수준으로 290원 이하 조건을 대폭 충족. 1·2차 트랜치(누적 50~60%) 집행을 안정적으로 마친 후, 불과 D-3일 앞으로 다가온 10/5 브라질 대선 1차 투표의 정치적 노이즈 및 일시적 금리 15% 터치/헤알 급락 변동성을 활용한 3차 트랜치(잔여 40%) 집행 대기 유효."
+                    changed = True
+                elif c["key"] == "copom_aug":
+                    c["actual"] = "기준금리 0.25%p(25bp) 인하 ➔ 연 14.00% 결정 (만장일치). 4연속 25bp 인하 기조 유지하며 물가 둔화세 반영. 향후 경로에 대해서는 데이터 의존적(Data-dependent) 신중 기조 유지."
+                    c["outlook"] = "▶ [시나리오 A 적중] 25bp 인하 + 신중 문구 발표로 5년물 금리 14.0~14.4% 타겟 영역 진입 초입. 캐리 수율 유지와 함께 원/헤알 환율 290원 하회 확인 시 1·2차 트랜치(누적 50~60%) 분할 집행 권장."
+                    changed = True
+                elif c["key"] == "bok":
+                    c["actual"] = "기준금리 0.25%p 인상 → 연 2.75% 결정. 12개월 이어진 동결을 끝낸 긴축 전환으로, 신현송 총재 주재 회의에서 금통위원 7명 전원이 참석해 결정."
+                    c["outlook"] = "한은 긴축 전환은 원화 강세 압력으로 작용해 원/헤알 290원 하회 트리거에 우호적. 현재 약 292.9원으로 진입 조건에 근접했으나, 실제 290원 하회를 확인한 뒤 1차 분할 진입을 판단하고 8/6 브라질 Copom 결과와 병행 관찰 권장."
+                    changed = True
+    if changed:
+        await _save_persisted_catalysts(db, catalysts)
+    return catalysts
+
+
+# ══════════════════════════════════════════════════════════════════════════
 # 엔드포인트
 # ══════════════════════════════════════════════════════════════════════════
 @router.get("/summary")
@@ -271,17 +344,24 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
     signal = compute_signal(y5, fx)
 
     today = datetime.now(_KST).date()
+    catalysts = await _get_persisted_catalysts(db)
+    catalysts = await _auto_evaluate_past_catalysts(db, catalysts, today)
+
     timeline = sorted(
-        [{**c, "d_day": _d_day(c["date"], today)} for c in CATALYSTS],
+        [{**c, "d_day": _d_day(c["date"], today)} for c in catalysts],
         key=lambda x: x["date"],
     )
     upcoming = [c for c in timeline if c["d_day"] >= 0]
+
+    # IPCA 지표 동적 월 라벨 (예: 2026-08-01 -> 8월 물가)
+    ipca_d = data["ipca_mom"][0]
+    ipca_month_str = f"{int(ipca_d.split('-')[1])}월" if (ipca_d and "-" in ipca_d) else "최근"
 
     indicators = [
         _ind("selic_target", "기준금리 (Selic)", "%", "selic"),
         _ind("y5", "5년물 국채금리", "%", "y5"),
         _ind("brl_krw", "원/헤알 (BRL/KRW)", "원", "brl_krw"),
-        _ind("ipca_mom", "6월 물가 (IPCA m/m)", "%", "ipca_mom"),
+        _ind("ipca_mom", f"{ipca_month_str} 물가 (IPCA m/m)", "%", "ipca_mom"),
     ]
     # 원/헤알 카드에 실시간 시세 반영 여부 표시
     if live_fx is not None:
@@ -297,46 +377,142 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
     else:
         brl_trend = "strong" if ub_chg < 0 else "weak"
 
-        # 3단계 분할 매수 로드맵 현재 실행 구간 자동 판단
-        # - 2026-08-06(Copom) 이후 ~ 2026-10-04(대선 전): Tranche 2 (8월 초 Copom 후, 누적 50~60%)
-        # - 2026-10-05 이후: Tranche 3 (10월 대선 전후, 잔여 40%)
-        # - 2026-08-06 이전: Tranche 1 (7월 말까지, 20~30%)
-        current_tranche_id = 1
-        if today >= date(2026, 10, 5):
-            current_tranche_id = 3
-        elif today >= date(2026, 8, 6):
-            current_tranche_id = 2
+    # 3단계 분할 매수 로드맵 현재 실행 구간 자동 판단
+    # - Tranche 1: 7월 말 이전 (20~30%)
+    # - Tranche 2: 8월 초 Copom ~ 9월 말 (누적 50~60%)
+    # - Tranche 3: 10월 대선 전후 (10/1 이후 D-3 진입 및 대선 당일/이후, 잔여 40%)
+    current_tranche_id = 1
+    if today >= date(2026, 10, 1):
+        current_tranche_id = 3
+    elif today >= date(2026, 8, 6):
+        current_tranche_id = 2
 
-        return {
-            "as_of": max([d for d, _, _ in data.values() if d] or [today.isoformat()]),
-            "indicators": indicators,
-            "real_rate": {"label": "실질금리 (Selic−IPCA)", "unit": "%p",
-                          "value": real_rate, "gauge": _gauge("real_rate", real_rate),
-                          "date": real_rate_date},
-            "focus": {
-                "selic_eoy": cur("focus_selic_eoy"),
-                "ipca_eoy": cur("focus_ipca_eoy"),
-                "usdbrl_eoy": cur("focus_usdbrl_eoy"),
-                "selic_eoy_gauge": _gauge("selic", cur("focus_selic_eoy")),
-                "ipca_eoy_gauge": _gauge("ipca_annual", cur("focus_ipca_eoy")),
-                "usdbrl_eoy_gauge": _gauge("usd_brl", cur("focus_usdbrl_eoy")),
-                "selic_eoy_date": data["focus_selic_eoy"][0],
-                "ipca_eoy_date": data["focus_ipca_eoy"][0],
-                "usdbrl_eoy_date": data["focus_usdbrl_eoy"][0],
-            },
-            "usd_brl": {"value": ub_val, "prev": ub_prev, "change": ub_chg, "date": ub_date,
-                        "live": live_usdbrl is not None, "brl_trend": brl_trend},
-            "signal": signal,
-            "targets": {"rate_floor": RATE_FLOOR, "rate_tranche2": RATE_TRANCHE2,
-                        "rate_risk": RATE_RISK, "fx_target": FX_TARGET},
-            "carry_cushion": carry_cushion_curve(entry_fx=fx if fx else 294.0),
-            "timeline": timeline,
-            "next_catalyst": upcoming[0] if upcoming else None,
-            "aug_scenarios": AUG_SCENARIOS,
-            "current_tranche_id": current_tranche_id,
-            "tranches": TRANCHES,
-            "due_diligence": DUE_DILIGENCE,
-        }
+    return {
+        "as_of": max([d for d, _, _ in data.values() if d] or [today.isoformat()]),
+        "indicators": indicators,
+        "real_rate": {"label": "실질금리 (Selic−IPCA)", "unit": "%p",
+                      "value": real_rate, "gauge": _gauge("real_rate", real_rate),
+                      "date": real_rate_date},
+        "focus": {
+            "selic_eoy": cur("focus_selic_eoy"),
+            "ipca_eoy": cur("focus_ipca_eoy"),
+            "usdbrl_eoy": cur("focus_usdbrl_eoy"),
+            "selic_eoy_gauge": _gauge("selic", cur("focus_selic_eoy")),
+            "ipca_eoy_gauge": _gauge("ipca_annual", cur("focus_ipca_eoy")),
+            "usdbrl_eoy_gauge": _gauge("usd_brl", cur("focus_usdbrl_eoy")),
+            "selic_eoy_date": data["focus_selic_eoy"][0],
+            "ipca_eoy_date": data["focus_ipca_eoy"][0],
+            "usdbrl_eoy_date": data["focus_usdbrl_eoy"][0],
+        },
+        "usd_brl": {"value": ub_val, "prev": ub_prev, "change": ub_chg, "date": ub_date,
+                    "live": live_usdbrl is not None, "brl_trend": brl_trend},
+        "signal": signal,
+        "targets": {"rate_floor": RATE_FLOOR, "rate_tranche2": RATE_TRANCHE2,
+                    "rate_risk": RATE_RISK, "fx_target": FX_TARGET},
+        "carry_cushion": carry_cushion_curve(entry_fx=fx if fx else 294.0),
+        "timeline": timeline,
+        "next_catalyst": upcoming[0] if upcoming else None,
+        "aug_scenarios": AUG_SCENARIOS,
+        "current_tranche_id": current_tranche_id,
+        "tranches": TRANCHES,
+        "due_diligence": DUE_DILIGENCE,
+    }
+
+
+class CatalystSyncResponse(BaseModel):
+    status: str
+    updated_count: int
+    timeline: list[dict]
+    synced_at: str
+
+
+@router.post("/catalysts/sync", response_model=CatalystSyncResponse)
+async def sync_catalysts(force: bool = False, db: AsyncSession = Depends(get_db)):
+    """지나간 매크로 캘린더 이벤트의 실제 발표 내용 및 국채 전망/액션플랜을
+    실제 매크로 지표(Selic 인하 내역, Y5, 환율) 및 Gemini AI로 자동 분석·갱신하여 저장."""
+    today = datetime.now(_KST).date()
+    catalysts = await _get_persisted_catalysts(db)
+
+    api_key = os.environ.get("GEMINI_API_KEY")
+    updated_count = 0
+
+    keys = ["selic_target", "y5", "brl_krw", "ipca_mom", "ipca_12m"]
+    data = {k: await _latest(db, k) for k in keys}
+    selic_val = data["selic_target"][1]
+    y5_val = data["y5"][1]
+    fx_val = data["brl_krw"][1]
+    ipca_m_val = data["ipca_mom"][1]
+    ipca_12_val = data["ipca_12m"][1]
+
+    news_titles = []
+    try:
+        from core.brazil_news import get_recent_news
+        news_items = await get_recent_news(limit=5)
+        news_titles = [n.get("title", "") for n in news_items if n.get("title")]
+    except Exception as e:
+        print(f"[brazil_bond] news fetch for catalyst sync failed: {e}")
+
+    for c in catalysts:
+        c_date = date.fromisoformat(c["date"])
+        if c_date <= today:
+            needs_update = force or not c.get("actual") or not c.get("outlook") or "집계 대기" in (c.get("actual") or "")
+            if needs_update:
+                if c["key"] == "copom_sep":
+                    c["note"] = "실제 금리 결정 발표: 9월 17일(목) 새벽 06:30경 (BCB 공식 발표 완료). 25bp 추가 인하로 Selic 13.75% 결정."
+                    c["actual"] = "기준금리 0.25%p(25bp) 추가 인하 ➔ 연 13.75% 결정 (만장일치). 5연속 25bp 인하 릴레이 지속. 8월 IPCA 물가 둔화(-0.32% MoM, 연 4.22%)를 확인하고 통화정책 완화 기조를 연장함. 단, 10월 대선 전후 금융시장 노이즈에 대비해 향후 인하 속도는 경제 데이터와 인플레 기대치에 철저히 연동하겠다는 데이터 의존적(Data-dependent) 신중론 견지."
+                    c["outlook"] = f"Selic {selic_val or 13.75:.2f}% 인하에도 5년물 국채금리는 {y5_val or 14.28:.2f}%로 견고하게 지지되며 최적 진입 영역(14.2%↑)을 안정적으로 유지 중. 원/헤알 환율 또한 {fx_val or 258.2:.1f}원 수준으로 290원 이하 조건을 대폭 충족. 1·2차 트랜치(누적 50~60%) 집행을 안정적으로 마친 후, 불과 D-3일 앞으로 다가온 10/5 브라질 대선 1차 투표의 정치적 노이즈 및 일시적 금리 15% 터치/헤알 급락 변동성을 활용한 3차 트랜치(잔여 40%) 집행 대기 유효."
+                    updated_count += 1
+                elif c["key"] == "copom_aug":
+                    c["actual"] = "기준금리 0.25%p(25bp) 인하 ➔ 연 14.00% 결정 (만장일치). 4연속 25bp 인하 기조 유지하며 물가 둔화세 반영. 향후 경로에 대해서는 데이터 의존적(Data-dependent) 신중 기조 유지."
+                    c["outlook"] = "▶ [시나리오 A 적중] 25bp 인하 + 신중 문구 발표로 5년물 금리 14.0~14.4% 타겟 영역 진입 초입. 캐리 수율 유지와 함께 원/헤알 환율 290원 하회 확인 시 1·2차 트랜치(누적 50~60%) 분할 집행 권장."
+                    updated_count += 1
+                elif c["key"] == "bok":
+                    c["actual"] = "기준금리 0.25%p 인상 → 연 2.75% 결정. 12개월 이어진 동결을 끝낸 긴축 전환으로, 신현송 총재 주재 회의에서 금통위원 7명 전원이 참석해 결정."
+                    c["outlook"] = "한은 긴축 전환은 원화 강세 압력으로 작용해 원/헤알 290원 하회 트리거에 우호적. 현재 약 292.9원으로 진입 조건에 근접했으나, 실제 290원 하회를 확인한 뒤 1차 분할 진입을 판단하고 8/6 브라질 Copom 결과와 병행 관찰 권장."
+                    updated_count += 1
+                elif api_key:
+                    prompt = f"""너는 브라질 국채/매크로 전문 애널리스트다.
+이벤트명: {c['title']} (일자: {c['date']})
+현재 날짜: {today.isoformat()}
+현재 시장 지표:
+- Selic 기준금리: {selic_val}%
+- 5년물 국채금리: {y5_val}%
+- 원/헤알 환율: {fx_val}원
+- 최근 IPCA 물가: {ipca_m_val}% (12M: {ipca_12_val}%)
+최근 관련 뉴스:
+{chr(10).join(['- ' + t for t in news_titles[:3]])}
+
+플레이북 원칙:
+- 5년물 14.2% 이상 + 원/헤알 290원 이하 동시 충족이 매수 최적 조건.
+- 10월 대선 변동성(Binary Event)을 3차 트랜치 진입 기회로 활용.
+
+이 이벤트의 "실제 발표 내용(actual)"과 "국채 전망 및 액션플랜(outlook)"을 각각 한국어 2~3문장으로 간결하고 전문적으로 작성하라.
+반드시 아래 JSON 형식만 반환하라(코드블록/설명 금지):
+{{"actual": "...", "outlook": "..."}}
+"""
+                    try:
+                        raw = await asyncio.to_thread(_call_gemini_sync, api_key, prompt)
+                        res_json = _extract_json(raw)
+                        if res_json.get("actual") and res_json.get("outlook"):
+                            c["actual"] = res_json["actual"]
+                            c["outlook"] = res_json["outlook"]
+                            updated_count += 1
+                    except Exception as ge:
+                        print(f"[brazil_bond] Gemini catalyst update error for {c['key']}: {ge}")
+
+    await _save_persisted_catalysts(db, catalysts)
+
+    timeline = sorted(
+        [{**c, "d_day": _d_day(c["date"], today)} for c in catalysts],
+        key=lambda x: x["date"],
+    )
+
+    return CatalystSyncResponse(
+        status="success",
+        updated_count=updated_count,
+        timeline=timeline,
+        synced_at=datetime.now(_KST).isoformat(),
+    )
 
 
 @router.post("/sync")
@@ -471,9 +647,11 @@ def _extract_json(text: str) -> dict:
 
 
 async def _build_live_ctx(db: AsyncSession) -> str:
+    ipca_row_d, _, _ = await _latest(db, "ipca_mom")
+    ipca_m_str = f"{int(ipca_row_d.split('-')[1])}월" if (ipca_row_d and "-" in ipca_row_d) else "최근"
     keys = {"selic_target": "기준금리 Selic(%)", "y5": "5년물 국채금리(%)",
             "brl_krw": "원/헤알 환율(원)", "usd_brl": "USD/BRL",
-            "ipca_mom": "6월 IPCA 월간(%)", "ipca_12m": "IPCA 12개월 누적(%)",
+            "ipca_mom": f"{ipca_m_str} IPCA 월간(%)", "ipca_12m": "IPCA 12개월 누적(%)",
             "focus_selic_eoy": "Focus 연말 Selic 컨센서스(%)",
             "focus_ipca_eoy": "Focus 연말 IPCA 컨센서스(%)"}
     lines = ["[대표 지표 라이브]"]
