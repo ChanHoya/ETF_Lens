@@ -363,3 +363,38 @@ class HoldingSectorOverride(Base):
     sector = Column(String, nullable=True)                                 # 섹터 = 자산군. 미지정이면 추론 기본값 사용
     classification = Column(String, nullable=True)                         # 분류 = 산업/테마
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ETFDividendHistory(Base):
+    """ETF 분배금(배당금) 개별 지급 이력 시계열"""
+    __tablename__ = "etf_dividend_history"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    code = Column(String, index=True, nullable=False)          # e.g. "069500", "453850", "SCHD"
+    ex_date = Column(String, index=True, nullable=False)       # 배당락일 / 기준일 (YYYY-MM-DD)
+    payment_date = Column(String, nullable=True)               # 실제 지급일 (YYYY-MM-DD)
+    dividend_amount = Column(Float, nullable=False)            # 주당 분배금 단가
+    currency = Column(String, default="KRW")                   # KRW, USD
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("code", "ex_date", name="uq_etf_dividend_history_code_ex_date"),
+    )
+
+
+class ETFDividendSummary(Base):
+    """ETF별 분배금(배당금) 집계 지표 및 주기 요약 캐시"""
+    __tablename__ = "etf_dividend_summary"
+
+    code = Column(String, primary_key=True, index=True)        # 종목코드
+    name = Column(String, nullable=True)                       # 종목명
+    dividend_frequency = Column(String, default="UNKNOWN")      # MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL, IRREGULAR
+    dividend_yield_ttm = Column(Float, default=0.0)            # 최근 1년 누적 배당수익률 (%)
+    last_dividend_amount = Column(Float, default=0.0)          # 직전 주당 분배금
+    last_ex_date = Column(String, nullable=True)               # 직전 배당락일
+    annual_dividend_amount = Column(Float, default=0.0)        # 최근 1년 연간 누적 분배금
+    dividend_count_1y = Column(Integer, default=0)             # 최근 1년 분배 횟수
+    dividend_months = Column(String, nullable=True)            # 분배금 지급 월 (예: "1,2,3,4,5,6,7,8,9,10,11,12" or "1,4,7,10")
+    currency = Column(String, default="KRW")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+

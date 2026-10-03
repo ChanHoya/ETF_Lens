@@ -30,6 +30,7 @@ A living document of module relationships. Update whenever modules are added or 
 | Semiconductor ETF Analysis | Presentation | Semiconductor sector ETF performance charts, custom legends, and toggled constituent comparison tables | api/router, SemiChart | SectorAnalysisTab | Antigravity |
 | Brazil Bond Analysis | Presentation | Brazil macro interest rate cycle analysis, historical yield trends, real-time scraping, and portfolio CAGR simulation | api/brazil_bond, core/brazil_fetcher | BrazilBondTab | Antigravity |
 | Semiconductor Macro Cycle & CSCI | Presentation / Core | 5-Year rolling Z-score composite cycle index (CSCI), 4-phase cycle clock, BigTech CapEx tracker, subsector decoupling, and ETF allocation matrix | core/semi_cycle_engine, api/router, SemiCycleDashboard | SemiChart, SectorAnalysisTab | Antigravity |
+| ETF Dividend Analysis | Application / Core | ETF dividend history scraping, payout frequency analysis, and portfolio monthly cashflow simulation | core/dividend_scraper, api/dividends | - | Antigravity |
 <!-- Add new modules above this line -->
 
 
@@ -82,3 +83,4 @@ When modifying a module:
 | 2026-08-22 | Integrated Total Asset Board | Added GET /integrated-assets, manual-assets CRUD, manual-cash CRUD, kis-mappings | MyAssetsView, TotalAssetBoard | Updated |
 | 2026-10-02 | Brazil Bond Analysis | Added POST /api/v1/brazil-bond/catalysts/sync & catalyst state persistence/evaluation in /summary | BrazilBondTab | Updated |
 | 2026-10-03 | Brazil Bond Analysis | Added GET/POST /api/v1/brazil-bond/election-pulse, added election_scenarios, recommended_bonds, election_strategy to /summary | BrazilBondTab | Updated |
+| 2026-10-03 | ETF Dividend Analysis | Added GET /api/v1/dividends/{code}, POST /api/v1/dividends/sync, POST /api/v1/dividends/portfolio-cashflow, GET /api/v1/dividends/rankings | - | Updated |

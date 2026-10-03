@@ -4,15 +4,15 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 브라질 대선 3대 시나리오 분석 매트릭스, 조건/기간별 추천 국채 라인업(헤알화 단기/장기, 달러 10년물, 바벨 5:3:2) 및 AI Live Pulse 실시간 정세/시장 수렴도 가이드 구현 완료 (S6-17, 2026-10-03)
-➡️ Next: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API
+✅ Current: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API 구축 완료 (2026-10-03)
+➡️ Next: S6-5 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드
 
 > 세션 핸드오프 (2026-10-03):
-> - 브라질 대선 3대 시나리오(시나리오 A: 중도·우파 교체 - Best, 시나리오 B: 현 좌파 온건·실용 연임 - Neutral, 시나리오 C: 좌파 강경화 포퓰리즘 - Worst) 상세 매트릭스 구조화 및 대시보드 뷰 제공.
-> - 투자자 성향/조건별 추천 국채 4종 라인업 완비: 헤알화 2~3년물 (NTN-F 2027~2028, 1~3년 안정 인컴형), 헤알화 5~10년물 (NTN-F 2031~2035, 3~5년+ 자본차익 극대화형), 달러 외화국채 10년물 (Global Bond USD 6~7%, 환위험 차단), 대선 대응 최적 바벨 전략 (단기 50% + 장기 30% + 달러 20%, Tranche 3 기본 권장 모델).
-> - Gemini AI 기반 `GET /election-pulse` 및 `POST /election-pulse/generate` 엔드포인트 개설: 실시간 뉴스 헤드라인 및 시장 지표(Selic 13.75%, Y5 14.28%, 환율) 기반 시나리오별 수렴도(A 25%, B 60%, C 15%) 및 3색 프로그레스 바 연동.
-> - `BrazilBondTab.tsx`: Tranche 3 진입 시점 맞춤 '브라질 대선 시나리오 & 국채 투자 플레이북' 섹션 신설, 0ms SWR 로컬 캐싱 및 실시간 재생성 트리거 지원.
-> - 탭 전환 UX 개선: 3가지 기능 탭 클릭 시 화면 최상단으로 탭 메뉴 바를 일관되게 정렬 이동(`requestAnimationFrame` + `setTimeout` 기반 스무스 스크롤) 및 `sticky top-0 z-30` 다크 글래스모피즘 고정 적용 완료.
+> - S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API 구축 완료:
+>   - `ETFDividendHistory`, `ETFDividendSummary` DB 모델 추가 및 테이블 마이그레이션.
+>   - `core/dividend_scraper.py`: yfinance 및 네이버 모바일 증권 API 연동, 월배당/분기/반기/연배당 주기 자동 판정 알고리즘, TTM 배당수익률 산출 및 포트폴리오 1~12월 월별 배당 캐시플로우 연산 엔진 구현.
+>   - `api/dividends.py`: `GET /{code}` (상세 및 이력), `POST /sync` (배치 동기화), `POST /portfolio-cashflow` (월별 예상 배당금 계산), `GET /rankings` (고배당/월배당 상위 랭킹) 엔드포인트 제공.
+>   - `tests/test_dividends.py`: 6개 유닛 테스트 100% 통과 (월배당, 분기배당, 미국 ETF, 캐시플로우 연산, API 종합).
 
 
 ## Current Sprint
@@ -28,7 +28,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 | S6-1 | TFF 엑셀 업로드 데이터 PostgreSQL 저장 및 중앙 공유형 대시보드 | ✅ stable | 파일 데이터 PostgreSQL 저장, 마스터 인증 패스코드 및 뷰어/마스터 권한 격리 구현 완료 |
 | S6-2 | 포트폴리오 Efficient Frontier 최적화 백엔드 API | ✅ stable | yfinance/pykrx 연동 기대수익률, 공분산 및 몬테카를로 포트폴리오 변동성 최적화 연산 모듈 및 유닛 테스트 구현 완료 |
 | S6-3 | Efficient Frontier 시각화 및 최적 비중 연동 | ✅ stable | Recharts ComposedChart 산점도/효율전선 커브, Max Sharpe/MinVar/현재 Bento 카드, 최적 비중 BarChart 및 인사이트 요약 구현 완료 |
-| S6-4 | ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API | ⬜ planned | Seibro/네이버페이 기반 과거 분배금 단가 및 배당 지급일/주기 크롤링 API 연산 모듈 구현 |
+| S6-4 | ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API | ✅ stable | yfinance/네이버 API 연동 분배금 수집, 배당주기 자동 판별, 포트폴리오 월별 Cashflow 연산 및 고배당 랭킹 API 구축 완료 |
 | S6-5 | 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드 | ⬜ planned | 월별 배당금 캘린더 달력 뷰, 연간 누적 Cashflow 바 차트 및 총 예상 배당 수익률 카드 연동 |
 | S6-6 | 괴리율 개인화 알림 설정 및 알림 채널 확장 | ⬜ planned | Disparity 임계치 설정 Slider UI 및 Slack/Discord 웹훅 발송 즉시 테스트 연동 |
 | S6-7 | 계좌별 자산 증감(추이) 시각화 및 분석 | ✅ stable | KIS 일별 계좌 자산 DB 적재 및 거래내역 기반 90일 역산 복원 차트 시각화 완료 |
