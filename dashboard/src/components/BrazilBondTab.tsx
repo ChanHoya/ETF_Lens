@@ -2230,15 +2230,15 @@ const DEFAULT_SCENARIOS: ElectionScenario[] = [
         verdict: "Worst (원금 손실 + 환손실 위험)",
         political_landscape: "룰라/좌파 진영 연임 + 좌파 포퓰리즘 강화 (의회 갈등 심화)",
         fiscal_policy: "복지·공공지출 확대, 부채한도 완화 압박, 재정준칙 무력화",
-        bcb_relationship: "기준금리(Selic) 급격한 인하 강요, 중앙은행 독립성 훼손 갈등",
+        bcb_relationship: "기준금리(Selic) 급격한 인하 강요, 중앙은행 독립성 훼손 갈등 (단, 2021년 제정된 BCB 자율성 보장법으로 인해 통화정책의 일방적 훼손은 상방 제한)",
         rate_10y: "150~250bp 급등 (금리 폭등, 15% 이상 터치)",
         rate_change_num: 2.0,
         brl_fx: "헤알화 급락 / 약세 (외국인 자본 이탈)",
         fx_change_str: "원/헤알 240원 이하 하락 위험",
-        market_reaction: "재정 신뢰도 붕괴, CDS 프리미엄 폭등 및 브라질 국가 신용등급 강등 경고.",
+        market_reaction: "재정 신뢰도 붕괴 우려, CDS 프리미엄 급등 경고. 단, 의회(Centrão) 과반 견제 및 중앙은행(BCB) 법적 독립성이 제도적 최후 방파제로 작동.",
         bond_price: "인플레이션 재점화 및 재정적자 확대로 국채 금리 급등, 채권 가격 급락(자본손실).",
         fx_impact: "외인 자금 이탈로 헤알화 가치 급락(평가절하) → 원/헤알 환손실이 이자 수익 잠식 가능.",
-        action_guide: "장기채 매수 전면 보류. 대선 노이즈로 15% 초과 폭등 시 진정 확인 후 초단기물 또는 달러채권으로만 제한 진입.",
+        action_guide: "장기채 신규 매수 보류. 단, BCB 독립성으로 인한 하방 브레이크가 존재하므로 공포로 15% 초과 폭등 시 패닉셀 지양 및 진정 확인 후 단기물·달러채 중심으로만 제한 진입.",
     },
 ];
 
@@ -2293,7 +2293,7 @@ const DEFAULT_RECOMMENDED_BONDS: RecommendedBond[] = [
     },
     {
         id: "barbell_strategy",
-        name: "💡 대선 대응 최적 바벨(Barbell) 혼합 포트폴리오",
+        name: "💡 [안정 방어형] 밸런스 바벨 혼합 포트폴리오",
         code_example: "단기 헤알채(50%) + 장기 헤알채(30%) + 달러 국채(20%)",
         currency: "BRL 80% + USD 20%",
         maturity_years: "2년 ~ 10년 분산",
@@ -2302,36 +2302,64 @@ const DEFAULT_RECOMMENDED_BONDS: RecommendedBond[] = [
         current_ytm: "가중평균 약 12.5~13.2%",
         tax_benefit: "헤알화 자산 전액 비과세 + 달러 분산",
         risk_level: "균형잡힌 리스크 관리 (대선 올인 방지)",
-        best_for: "대선 결과에 구애받지 않고 시나리오 A·B·C 모든 상황에서 하방을 방어하면서 상방 자본차익을 향유하려는 투자자",
+        best_for: "대선 결과에 구애받지 않고 시나리오 A·B·C 모든 상황에서 하방을 방어하면서 상방 자본차익을 향유하려는 안정지향 투자자",
         pros: ["시나리오 C(급락) 시 단기채와 달러채가 원금 방어", "시나리오 A(급등) 시 장기채가 자본차익 견인"],
         cons: ["단일 종목 집중 대비 최대 수익률은 다소 완화"],
-        allocation_tranche3: "★ Tranche 3 기본 권장 모델",
+        allocation_tranche3: "★ Tranche 3 기본 권장 (안정형)",
+    },
+    {
+        id: "aggressive_barbell",
+        name: "🚀 [적극 고수익·여유자금형] 캡/인컴 바벨 포트폴리오",
+        code_example: "장기 헤알채(50%) + 중기 헤알채(30%) + 달러 장기채(20%)",
+        currency: "BRL 80% + USD 20%",
+        maturity_years: "5년 ~ 10년 (중장기 듀레이션 확대)",
+        target_horizon: "3~5년 이상 (장기 여유자금 투자형)",
+        coupon_rate: "가중평균 약 연 9.2% (BRL 10% + USD 6.2%)",
+        current_ytm: "가중평균 약 13.8~14.4% (고수익 YTM)",
+        tax_benefit: "헤알화 80% 전액 비과세(이자+매매차익) + 달러 분산",
+        risk_level: "적극투자 (듀레이션 5.5~7.0년, 자본차익 레버리지)",
+        best_for: "3~5년 이상 여유자금으로, 금리 어깨/고점(14.0%~14.5% 이상) 구간에서 듀레이션을 적극 늘려 금리 인하 사이클 도래 시 막대한 자본차익(Capital Gain)과 연 14%대 고쿠폰 인컴을 극대화하려는 적극투자자",
+        pros: [
+            "금리 100bp 인하 시 장기채(50%) 레버리지로 포트폴리오 자본차익 극대화",
+            "중기채(30%)의 14%대 고쿠폰 비과세 인컴을 확정 수취하여 현금흐름 강화",
+            "달러 장기채(20%) 편입으로 헤알화 급변동 및 국가위험 테일 리스크 헷지",
+        ],
+        cons: [
+            "단기채 비중이 없어 금리 단기 스파이크 시 평가손실 변동성 노출",
+            "최소 3년 이상 인출 필요 없는 여유자금 운용 필수",
+        ],
+        allocation_tranche3: "★ Tranche 3 적극 추천 (고수익·여유자금형)",
     },
 ];
 
 const DEFAULT_STRATEGY: ElectionStrategy = {
     principles: [
         {
-            title: "대선 직전 불확실성 정점 대응 (듀레이션 바벨화)",
-            body: "여론조사 격차가 오차범위 내 초박빙일 경우 헤알화 변동성과 장기채 금리 스프레드가 급확대됩니다. 듀레이션이 긴 10년물 단독 매수보다는 만기가 상대적으로 짧은 2~3년물 비중을 50% 이상 섞어 금리 변동 리스크를 헤지하는 것이 안전합니다.",
-            tag: "듀레이션 관리",
+            title: "금리 레벨 기반 듀레이션 기술적 배분 원칙 (금리 고점 = 장기채 확대)",
+            body: "채권 투자의 교과서적 기술 원칙은 '금리가 높은 수준이면 듀레이션을 늘려 장기채를 매수(고쿠폰 장기 락인 + 향후 금리 인하 시 자본차익 극대화)'하고, '금리가 낮은 수준이면 듀레이션을 줄여 단기채를 매수(금리 상승 리스크 방어)'하는 것입니다. 현재 브라질 10년물 금리는 '어깨' 수준으로 역사적 고점에 근접해 있으며, 대선 노이즈로 14.5% 이상 스파이크 시 장기채 비중을 50%까지 적극 확대하는 것이 기술적으로 최적입니다.",
+            tag: "듀레이션 기술원칙",
         },
         {
-            title: "금리 수준 기반 분할 매수 (스파이크 낚아채기)",
-            body: "정치적 노이즈로 5~10년물 금리가 고점(14.5% 이상, 15% 접근)으로 튀는 구간은 시나리오 A 또는 B로 수렴할 경우 매력적인 역사적 진입 기회입니다. 공포가 극대화되는 시점에 잔여 40%를 분할 집행하십시오.",
+            title: "대선 직전 불확실성 정점 대응 (성향별 듀레이션 바벨화)",
+            body: "여론조사 격차가 오차범위 내 초박빙일 경우 헤알화 변동성과 장기채 금리 스프레드가 급확대됩니다. 보수적 투자자는 2~3년물 단기채 50%를 섞어 안정성을 방어하고, 고수익 추구 여유자금 투자자는 장기채 50% + 중기채 30% + 달러채 20% 바벨로 자본차익과 환헷지를 동시에 공략하십시오.",
+            tag: "바벨 포트폴리오",
+        },
+        {
+            title: "금리 수준 기반 분할 매수 (14.5% 스파이크 낚아채기)",
+            body: "정치적 노이즈로 5~10년물 금리가 고점(14.5% 이상, 15% 접근)으로 튀는 구간은 시나리오 A 또는 B로 수렴할 경우 매력적인 역사적 진입 기회입니다. 공포가 극대화되는 시점에 Tranche 3 잔여 40%를 분할 집행하십시오.",
             tag: "분할 매수",
         },
         {
-            title: "핵심 2대 모니터링 지표 추적",
-            body: "① 차기 경제·재무장관 내정자의 시장 친화성(Fiscal Discipline 유지 여부), ② 의회(상·하원) 내 중도·우파 연합(Centrão)의 과반 의석 확보 여부(행정부의 독주 견제 능력)를 핵심 모니터링하십시오.",
-            tag: "체크리스트",
+            title: "BCB 중앙은행 독립성 방파제 및 의회 구도 추적",
+            body: "2021년 제정된 중앙은행 독립법(LC 179)으로 인해 총재 임기가 보장되어 있어 정권의 극단적 포퓰리즘에 대한 제도적 브레이크가 작동합니다. 의회(상·하원) 내 중도·우파 연합(Centrão)의 과반 의석 확보 여부와 함께 최후 방파제를 확인하십시오.",
+            tag: "제도적 방파제",
         },
     ],
     checkpoints: [
         { name: "차기 재무장관 성향", focus: "시장 신뢰형(페르난두 아다지 유임 or 온건 실용파) vs 급진 포퓰리스트" },
         { name: "의회 Centrão 의석수", focus: "하원 513석 중 중도·보수 300석 이상 확보 시 좌파 포퓰리즘 법안 완벽 저지" },
+        { name: "BCB 중앙은행 법적 독립성", focus: "2021년 법제화된 임기 보장 총재 체제로 Worst 시나리오의 통화정책 훼손 상방 차단" },
         { name: "신재정준칙 준수 여부", focus: "Primary Deficit(기본재정적자) GDP 0% 목표 유지 선언 여부" },
-        { name: "BCB 중앙은행 독립성", focus: "임기 보장된 BCB 총재 체제 및 기준금리 인하의 자율적 통화정책" },
     ],
 };
 
@@ -2692,7 +2720,7 @@ function ElectionPlaybookSection({
                                     <td className="py-2 px-3 text-gray-400 font-medium">중앙은행 관계</td>
                                     <td className="py-2 px-3 text-gray-200">중앙은행 독립성 적극 지지</td>
                                     <td className="py-2 px-3 text-gray-200">금리 인하 압박 있으나 독립성 인정</td>
-                                    <td className="py-2 px-3 text-gray-300">Selic 급격한 인하 강요, 독립성 훼손 갈등</td>
+                                    <td className="py-2 px-3 text-gray-300">Selic 인하 압박 (단, 2021년 BCB 독립법으로 통화정책 훼손 상방 차단)</td>
                                 </tr>
                                 <tr>
                                     <td className="py-2 px-3 text-gray-400 font-medium">10년물 국채금리</td>
@@ -2710,7 +2738,7 @@ function ElectionPlaybookSection({
                                     <td className="py-2 px-3 text-gray-400 font-medium">채권 종합 판정</td>
                                     <td className="py-2 px-3 text-emerald-300 font-black">★ Best (자본차익 + 환차익)</td>
                                     <td className="py-2 px-3 text-cyan-300 font-black">● Neutral (이자 수익 중심)</td>
-                                    <td className="py-2 px-3 text-rose-300 font-black">▲ Worst (원금 + 환손실 위험)</td>
+                                    <td className="py-2 px-3 text-rose-300 font-black">▲ Worst (원금 + 환손실 위험, 단 BCB 독립성으로 하방 제한)</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2725,6 +2753,7 @@ function ElectionPlaybookSection({
                         {bondList.map((bond) => {
                             const isSelected = bond.id === selectedBondId;
                             const isBarbell = bond.id === 'barbell_strategy';
+                            const isAggressiveBarbell = bond.id === 'aggressive_barbell';
                             const isUsd = bond.id === 'usd_sovereign';
                             return (
                                 <div
@@ -2732,11 +2761,13 @@ function ElectionPlaybookSection({
                                     onClick={() => setSelectedBondId(bond.id)}
                                     className={`rounded-2xl p-4 md:p-5 transition-all duration-300 border cursor-pointer relative ${
                                         isSelected
-                                            ? isBarbell
-                                                ? 'bg-gradient-to-br from-amber-950/40 via-emerald-950/30 to-black/40 border-amber-400 ring-2 ring-amber-400/50 shadow-[0_0_25px_rgba(245,158,11,0.25)]'
-                                                : isUsd
-                                                    ? 'bg-gradient-to-br from-indigo-950/40 to-black/30 border-indigo-400 ring-2 ring-indigo-400/50 shadow-[0_0_20px_rgba(99,102,241,0.2)]'
-                                                    : 'bg-gradient-to-br from-emerald-950/40 to-black/30 border-emerald-400 ring-2 ring-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.2)]'
+                                            ? isAggressiveBarbell
+                                                ? 'bg-gradient-to-br from-rose-950/40 via-amber-950/30 to-black/40 border-rose-400 ring-2 ring-rose-400/50 shadow-[0_0_25px_rgba(244,63,94,0.25)]'
+                                                : isBarbell
+                                                    ? 'bg-gradient-to-br from-amber-950/40 via-emerald-950/30 to-black/40 border-amber-400 ring-2 ring-amber-400/50 shadow-[0_0_25px_rgba(245,158,11,0.25)]'
+                                                    : isUsd
+                                                        ? 'bg-gradient-to-br from-indigo-950/40 to-black/30 border-indigo-400 ring-2 ring-indigo-400/50 shadow-[0_0_20px_rgba(99,102,241,0.2)]'
+                                                        : 'bg-gradient-to-br from-emerald-950/40 to-black/30 border-emerald-400 ring-2 ring-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.2)]'
                                             : 'bg-black/25 hover:bg-black/35 border-white/5 hover:border-white/10 opacity-85'
                                     }`}
                                 >
@@ -2750,9 +2781,11 @@ function ElectionPlaybookSection({
                                             </span>
                                         </div>
                                         <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                                            isBarbell
-                                                ? 'bg-amber-400 text-black shadow-md'
-                                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                                            isAggressiveBarbell
+                                                ? 'bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-md'
+                                                : isBarbell
+                                                    ? 'bg-amber-400 text-black shadow-md'
+                                                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
                                         }`}>
                                             {bond.allocation_tranche3}
                                         </span>

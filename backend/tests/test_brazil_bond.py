@@ -37,3 +37,34 @@ async def test_get_recent_news_since_yesterday():
     assert isinstance(news, list)
 
 
+def test_recommended_bonds_and_strategy_structure():
+    from api.brazil_bond import RECOMMENDED_BONDS, ELECTION_STRATEGY, ELECTION_SCENARIOS
+
+    # Check RECOMMENDED_BONDS contains aggressive_barbell and barbell_strategy
+    bond_ids = [b["id"] for b in RECOMMENDED_BONDS]
+    assert "brl_short" in bond_ids
+    assert "brl_midlong" in bond_ids
+    assert "usd_sovereign" in bond_ids
+    assert "barbell_strategy" in bond_ids
+    assert "aggressive_barbell" in bond_ids
+
+    # Find aggressive_barbell and verify allocation and specs
+    agg = next(b for b in RECOMMENDED_BONDS if b["id"] == "aggressive_barbell")
+    assert "50%" in agg["code_example"]  # 장기 50%
+    assert "30%" in agg["code_example"]  # 중기 30%
+    assert "20%" in agg["code_example"]  # 달러 20%
+    assert "여유자금" in agg["target_horizon"]
+
+    # Verify duration principle in ELECTION_STRATEGY
+    principles = ELECTION_STRATEGY["principles"]
+    tags = [p["tag"] for p in principles]
+    assert "듀레이션 기술원칙" in tags
+    assert "제도적 방파제" in tags
+
+    # Verify scenario C mentions BCB independence safeguard
+    sc_c = next(s for s in ELECTION_SCENARIOS if s["id"] == "C")
+    assert "BCB" in sc_c["bcb_relationship"]
+    assert "상방 제한" in sc_c["bcb_relationship"] or "하방" in sc_c["action_guide"]
+
+
+

@@ -61,10 +61,11 @@
 | 브라질 채권 분석 (Selic vs Y5) | ✅ done | backend/api/brazil_bond.py, brazil_fetcher.py, scheduler.py, BrazilBondTab.tsx | FRED 10년 역사적 금리/Investing.com 연동 차트, 10Y/1Y/6M/3M 필터, COPOM 기준금리 변경 감지 핫 알림, 접속 시 이전 날짜인 경우 AI 전략리포트 일자별 자동 재생성 및 15분 주기 실시간 동기화 연동, 매크로 캘린더 지난 이벤트(9월 Copom 등) 자동 평가/DB 영속화 및 [이벤트 결과 AI 자동 갱신] 버튼 지원 |
 | S6-14: 구글 시트 기반 종합 자산 관리 (Account Board + KIS 연동 + 수동 입력) | ✅ done | backend/api/integrated_assets.py, backend/db/models.py, TotalAssetBoard.tsx, ManualAssetModal.tsx, ManualCashModal.tsx, KisAccountMappingModal.tsx, MyAssetsView.tsx | KIS API 실시간 연동 및 타 증권사(미래에셋/삼성/저축) 수동 자산/예수금 통합 집계, 구글 시트 형태의 Account Board 및 계좌별 상세 종목 뷰 구현 완료 |
 | S6-15: 반도체 매크로 사이클(CSCI) 퀀트 엔진 및 4국면 시각화 대시보드 | ✅ done | backend/core/semi_cycle_engine.py, backend/api/router.py, SemiCycleDashboard.tsx, SemiChart.tsx, SectorInsightReport.tsx | 5년 롤링 Z-score 정규화 기반 선행(40%)+동행(40%)+후행(20%) CSCI 지수, 4-Phase 사이클 시계(2D Quadrant), 빅테크 CapEx 트래커, 서브섹터 디커플링 맵, ETF 리밸런싱 매트릭스 연동 완료 |
-| S6-17: 브라질 대선 시나리오 분석 및 조건별 추천 국채 라인업 | ✅ done | backend/api/brazil_bond.py, dashboard/src/components/BrazilBondTab.tsx | 대선 3대 시나리오(중도우파/온건실용연임/강경좌파) 비교 매트릭스, 조건/기간별 추천 국채 4종 라인업(헤알화 단기/장기, 달러 10년물, 바벨 5:3:2 전략), Tranche 3 실시간 체크리스트 및 Gemini AI Live Pulse 실시간 정세 브리핑 연동 완료 |
+| S6-17: 브라질 대선 시나리오 분석 및 조건별 추천 국채 라인업 | ✅ done | backend/api/brazil_bond.py, dashboard/src/components/BrazilBondTab.tsx | 대선 3대 시나리오 비교 매트릭스(BCB 법적 독립성 하방 방파제 보강), 금리 레벨별 듀레이션 기술적 배분 원칙(금리 고점=장기채 확대), 조건/기간별 추천 국채 5종 라인업(헤알 단기/장기, 달러 10년, 안정 방어형 바벨 5:3:2, 적극 고수익·여유자금형 바벨 장기50:중기30:달러20), Tranche 3 실시간 체크리스트 및 Gemini AI Live Pulse 실시간 정세 브리핑 연동 완료 |
 | S6-4: ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API | ✅ done | backend/core/dividend_scraper.py, backend/api/dividends.py, backend/db/models.py | yfinance 및 네이버 모바일 API 연동 분배금 시계열 수집, 배당주기(월/분기/연) 자동 판별, 포트폴리오 월별 배당 Cashflow 시뮬레이션 및 고배당 랭킹 API 구축 완료 |
 | S6-5: 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드 화면 | ✅ done | dashboard/src/components/DividendDashboard.tsx, MyAssetsView.tsx, MainApp.tsx | 1~12월 월별 예상 배당금 차트(Recharts Bar), 12개월 배당 캘린더 매트릭스 뷰, 보유 수량 실시간 +/- 조절 및 재계산, /my 계좌 접근 한정 활성화 및 실계좌 자동 연동, 고배당&월배당 ETF 랭킹 연동 완료 |
 | S6-6: 괴리율 개인화 알림 설정 및 알림 채널 확장 | ✅ done | backend/core/notifier.py, backend/api/notification_settings.py, backend/core/scheduler.py, NotificationSettings.tsx | Telegram, Discord, Slack 멀티채널 웹훅 연동 및 실시간 테스트 발송, ETF 괴리율 임계치 슬라이더(0.5%~5.0%) 및 대상 범위(내 보유 vs 전체) 개인화 경보 시스템 구축 완료 |
+
 
 
 
