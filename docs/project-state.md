@@ -2,24 +2,34 @@
 
 > **Keep this file under 200 lines.**
 ## Quick Summary
- 
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S6-6 괴리율 개인화 알림 설정 및 알림 채널 확장 완료 (2026-10-03)
-➡️ Next: Sprint 6 완료 검토 및 세션 마무리 / 차기 스프린트 계획
+✅ Current: 브라질 국채 적극 고수익 바벨 포트폴리오 & BCB 독립성·듀레이션 원칙 반영 완료 (2026-10-03)
+➡️ Next: Sprint 6 완료 검토 및 차기 스프린트(Sprint 7) 백로그 이슈 점검
 
 > 세션 핸드오프 (2026-10-03):
+> - 🇧🇷 브라질 채권 투자 가이드 고도화 (지인 제언 반영):
+>   - 🚀 신규 포트폴리오: `aggressive_barbell` (헤알 장기 50% + 헤알 중기 30% + 달러 장기 20%) 5번째 라인업 탑재 (여유자금 금리 피크아웃 시 자본차익+고쿠폰+달러환헷지).
+>   - 🧭 듀레이션 기술 원칙 명문화: "금리 고점(어깨/14.5%↑) = 듀레이션 확대(장기채), 금리 저점 = 듀레이션 축소(단기채)" 원칙 수립.
+>   - 🛡️ BCB 독립성 방파제 보강: 2021년 제정된 브라질 중앙은행 자율성 보장법(LC 179) 및 의회 Centrão 견제로 인해 Worst 시나리오(시나리오 C)의 현실적 하방이 제한됨을 명시.
+>   - Gemini AI Live Pulse 프롬프트 및 대시보드 비교 종합표 실시간 동기화 완료.
 > - 🚨 핫픽스: 브라질채권 탭 런타임 크래시(React Error #31) 및 대시보드 SSR 안정성 강화 완료:
 >   - 원인: Gemini가 생성한 `brazil_election_pulse`의 `recommended_bond_guide` 필드가 단일 텍스트가 아닌 세부 항목 객체(`{"단기채 중심 인컴형": "...", ...}`)로 생성되어 JSX 자식 노드 직접 렌더링 시 React 19 객체 렌더링 에러(#31) 유발.
 >   - 조치: `BrazilBondTab.tsx`에 `renderFlexibleContent` 헬퍼 함수를 구축하여 문자열/객체/배열 자동 파싱 렌더링 적용, 백엔드(`brazil_bond.py`)에서도 `_normalize_pulse_content`로 사전 정규화 제공(2중 방어).
 >   - 추가 조치: `MainApp.tsx`에서 `DividendDashboard`를 `next/dynamic`(`ssr: false`)으로 격리 로딩하고 널가드를 보강하여 SSR Recharts hydration 충돌 및 초기 번들 크기 최적화.
 > - S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API 구축 완료:
 >   - `ETFDividendHistory`, `ETFDividendSummary` DB 모델 추가 및 테이블 마이그레이션.
->   - `core/dividend_scraper.py`: yfinance 및 네이버 모바일 증권 API 연동, 배당주기 자동 판정, TTM 배당수익률 및 월별 캐시플로우 연산 모듈 구현.
+>   - `core/dividend_scraper.py`: yfinance 및 네이버 모바일 증권 API 연동, 배당주기 자동 판별, TTM 배당수익률 및 월별 캐시플로우 연산 모듈 구현.
 >   - `api/dividends.py`: `GET /{code}`, `POST /sync`, `POST /portfolio-cashflow`, `GET /rankings` 엔드포인트 제공.
 > - S6-5 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드 화면 구축 완료:
 >   - `DividendDashboard.tsx`: 4대 요약 Bento 카드, 1~12월 월별 배당금 Bar 차트(월평균 기준선), 12개월 매트릭스 캘린더(NOW 배지), 수량 실시간 +/- 조절 및 즉시 재계산 시뮬레이터, 실계좌 자동 불러오기/프리셋/종목추가 모달, 시장 고배당 & 월배당 ETF 랭킹 보드 연동.
 >   - `MyAssetsView.tsx`: /my 전용 '💰 배당 캘린더' 서브탭 추가 및 계좌 접속 시 실보유 종목 자동 연동(`autoLoadMyAssets`).
 >   - `MainApp.tsx`: 일반 경로(/) 접속 시 배당 캘린더 서브탭 완전 제외 및 /my(showMyTab=true) 접속 시에만 한정 활성화하는 라우트 가드 적용.
+> - S6-6 괴리율 개인화 알림 설정 및 알림 채널 확장 완료:
+>   - `NotificationSettings` DB 모델 및 스키마 마이그레이션: `discord_webhook_url`, `slack_webhook_url`, `channel_telegram`, `channel_discord`, `channel_slack`, `alert_disparity`, `disparity_threshold`, `disparity_target_scope` 컬럼 추가.
+>   - `backend/core/notifier.py`: Discord / Slack 웹훅 비동기 전송 함수 및 통합 `broadcast_notification` 멀티캐스트 엔진 구축 (HTML -> Markdown/mrkdwn 자동 변환).
+>   - `backend/api/notification_settings.py`: `/settings` 및 `/test` 엔드포인트에 멀티채널 및 채널별 즉시 테스트 발송 기능 탑재.
+>   - `backend/core/scheduler.py`: `check_etf_disparity_and_alert`에 사용자별 개인화 임계치(0.5%~5.0%) 및 범위(내 보유 vs 전체), 1시간 쿨다운 캐시 적용.
+>   - `dashboard/src/components/NotificationSettings.tsx`: Telegram, Discord, Slack 3대 채널 탭 및 즉시 테스트 버튼, 괴리율 실시간 경보 Bento 카드 (임계치 슬라이더 및 프리셋, 대상 범위 선택기) UI 완성.속 시 배당 캘린더 서브탭 완전 제외 및 /my(showMyTab=true) 접속 시에만 한정 활성화하는 라우트 가드 적용.
 > - S6-6 괴리율 개인화 알림 설정 및 알림 채널 확장 완료:
 >   - `NotificationSettings` DB 모델 및 스키마 마이그레이션: `discord_webhook_url`, `slack_webhook_url`, `channel_telegram`, `channel_discord`, `channel_slack`, `alert_disparity`, `disparity_threshold`, `disparity_target_scope` 컬럼 추가.
 >   - `backend/core/notifier.py`: Discord / Slack 웹훅 비동기 전송 함수 및 통합 `broadcast_notification` 멀티캐스트 엔진 구축 (HTML -> Markdown/mrkdwn 자동 변환).
@@ -53,7 +63,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 | S6-13 | 섹터분석 정렬 순서/명칭 갱신 및 조선/소부장 대체 | ✅ stable | 대시보드 섹터 재배치 및 AI전력 개명, 조선/반도체소부장 틱커 대체 매핑 완료 |
 | S6-14 | 구글 시트 기반 종합 자산 관리 (Account Board + KIS 연동 + 수동 자산 CRUD) | ✅ stable | KIS API 실시간 연동 + 타 금융사(미래에셋/삼성/저축) 수동 자산/예수금 통합 집계, 구글 시트 형태의 Account Board 및 계좌별 상세 종목 뷰 구현 완료 |
 | S6-15 | 반도체 매크로 사이클(CSCI) 퀀트 엔진 및 4국면 시각화 대시보드 | ✅ stable | 5년 롤링 Z-score 정규화 기반 선행(40%)+동행(40%)+후행(20%) CSCI 지수, 4-Phase 사이클 시계(2D Quadrant), 빅테크 CapEx 트래커, 서브섹터 디커플링 맵, ETF 리밸런싱 매트릭스 연동 완료 |
-| S6-17 | 브라질 대선 시나리오 분석 및 조건별 추천 국채 라인업 (헤알화/달러 기반) | ✅ stable | 3대 대선 시나리오 비교, 조건별 국채 4종 라인업, Tranche 3 투자 원칙/체크리스트, Gemini AI Live Pulse 실시간 정세 연동 완료 |
+| S6-17 | 브라질 대선 시나리오 분석 및 조건별 추천 국채 라인업 (헤알화/달러 기반) | ✅ stable | 3대 대선 시나리오 비교(BCB 독립성 하방 방파제), 금리 고점 듀레이션 확대 원칙, 조건별 국채 5종 라인업(적극 고수익 바벨 포함), Tranche 3 체크리스트 및 Gemini Live Pulse 연동 완료 |
 ## Module Registry
  
 | Module | Layer | Status | Key Files |
