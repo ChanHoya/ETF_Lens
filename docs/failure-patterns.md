@@ -280,6 +280,18 @@
   2. 사용자 및 관리자가 최신 뉴스와 시장 지표를 반영할 수 있는 수동 `[이벤트 결과 AI 자동 갱신]` API 및 UI 버튼 제공.
   3. 모든 분기 이후의 반환문 및 공통 로직이 최상위 함수 스코프(4 spaces)에서 안정적으로 실행되도록 들여쓰기 정비.
 
+### [FP-034] AnyIO 테스트 실행 시 trio 누락 오류 및 테스트 모듈 간 drop_all DB 간섭
+- **증상**: 
+  1. `pytest` 비동기 테스트 실행 시 `ModuleNotFoundError: No module named 'trio'` 발생으로 테스트 실패.
+  2. 여러 테스트 파일을 일괄 실행할 때 선행 테스트 모듈 이후 다른 테스트에서 `sqlite3.OperationalError: no such table` 오류 발생.
+- **원인**:
+  1. `pytest-anyio` 플러그인은 기본적으로 `asyncio`와 `trio` 매개변수를 모두 순회하며 실행하는데, 가상환경에 `trio`가 설치되지 않은 경우 실패.
+  2. 선행 테스트의 `setup_db`/`teardown_db` fixture에서 `Base.metadata.drop_all`을 호출하여 세션 전체에서 공유하는 SQLite 인메모리/임시 테이블을 완전히 삭제해버림.
+- **해결**:
+  1. 비동기 테스트 모듈 상단에 `@pytest.fixture def anyio_backend(): return "asyncio"`를 선언하여 `asyncio` 백엔드만 단독 실행하도록 제한.
+  2. 테스트 모듈의 fixture에서 전역 파괴적인 `drop_all` 호출을 제거하고, 필요한 경우 개별 테스트 대상 테이블의 레코드만 선별 정리(truncate/delete)하도록 개선.
+
+
 
 
 
