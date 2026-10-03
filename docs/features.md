@@ -66,6 +66,8 @@
 | S6-4: ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API | ✅ done | backend/core/dividend_scraper.py, backend/api/dividends.py, backend/db/models.py | yfinance 및 네이버 모바일 API 연동 분배금 시계열 수집, 배당주기(월/분기/연) 자동 판별, 포트폴리오 월별 배당 Cashflow 시뮬레이션 및 고배당 랭킹 API 구축 완료 |
 | S6-5: 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드 화면 | ✅ done | dashboard/src/components/DividendDashboard.tsx, MyAssetsView.tsx, MainApp.tsx | 1~12월 월별 예상 배당금 차트(Recharts Bar), 12개월 배당 캘린더 매트릭스 뷰, 보유 수량 실시간 +/- 조절 및 재계산, /my 계좌 접근 한정 활성화 및 실계좌 자동 연동, 고배당&월배당 ETF 랭킹 연동 완료 |
 | S6-6: 괴리율 개인화 알림 설정 및 알림 채널 확장 | ✅ done | backend/core/notifier.py, backend/api/notification_settings.py, backend/core/scheduler.py, NotificationSettings.tsx | Telegram, Discord, Slack 멀티채널 웹훅 연동 및 실시간 테스트 발송, ETF 괴리율 임계치 슬라이더(0.5%~5.0%) 및 대상 범위(내 보유 vs 전체) 개인화 경보 시스템 구축 완료 |
+| S6-19: 브라질 국채 토탈리턴(Total Return) 시뮬레이터 & 대선 1차 투표 결과/이벤트 실시간 업데이트 | ✅ done | backend/core/brazil_total_return.py, backend/api/brazil_total_return.py, backend/api/brazil_election_intel.py, BrazilTotalReturnSimulator.tsx, BrazilBondTab.tsx | NTN-F 10% 반기이표 및 LTN 할인채 더티 프라이스·듀레이션·반기 복리 재투자·만기보유 vs 조기매도 자본차익·손익분기 환율·7x6(금리±300bp × 환율-30%~+20%) 시나리오 매트릭스, 1차 투표 개표 결과(룰라/플라비우/기타 득표율 및 10/25 결선 확정 뱃지) 실시간 시각화, Gemini AI 대선 뉴스 실시간 갱신 및 수동 결과/이벤트 등록 영속화 API 연동 완료 |
+
 
 
 

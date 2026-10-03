@@ -15,7 +15,7 @@ import re
 from datetime import datetime, date, timezone, timedelta
 
 from dotenv import load_dotenv
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -437,7 +437,8 @@ async def _get_persisted_catalysts(db: AsyncSession) -> list[dict]:
                     item = {**default_cat, **saved_map[k]}
                     item["title"] = default_cat["title"]
                     item["date"] = default_cat["date"]
-                    item["note"] = default_cat["note"]
+                    if not saved_map[k].get("note_manual"):
+                        item["note"] = default_cat["note"]
                     merged.append(item)
                 else:
                     merged.append(dict(default_cat))
@@ -646,6 +647,8 @@ async def sync_catalysts(force: bool = False, db: AsyncSession = Depends(get_db)
         c_date = date.fromisoformat(c["date"])
         if c_date <= today:
             needs_update = force or not c.get("actual") or not c.get("outlook") or "집계 대기" in (c.get("actual") or "")
+            if c.get("manual_updated_at") and not force:
+                needs_update = False
             if needs_update:
                 if c["key"] == "copom_sep":
                     c["note"] = "실제 금리 결정 발표: 9월 17일(목) 새벽 06:30경 (BCB 공식 발표 완료). 25bp 추가 인하로 Selic 13.75% 결정."
@@ -661,9 +664,19 @@ async def sync_catalysts(force: bool = False, db: AsyncSession = Depends(get_db)
                     c["outlook"] = "한은 긴축 전환은 원화 강세 압력으로 작용해 원/헤알 290원 하회 트리거에 우호적. 현재 약 292.9원으로 진입 조건에 근접했으나, 실제 290원 하회를 확인한 뒤 1차 분할 진입을 판단하고 8/6 브라질 Copom 결과와 병행 관찰 권장."
                     updated_count += 1
                 elif api_key:
+                    election_ctx = ""
+                    if c["key"] in ("election", "election_runoff"):
+                        try:
+                            from api.brazil_election_intel import _load_row, _unpack
+                            intel, _ = _unpack(await _load_row(db))
+                            election_ctx = ("\n대선 인텔리전스(최신 저장본):\n" + json.dumps(
+                                {k: intel.get(k) for k in ("phase", "headline", "first_round", "runoff")}, ensure_ascii=False)
+                                + "\n근거 없는 득표율은 절대 지어내지 말 것.")
+                        except Exception as ie:
+                            print(f"[brazil_bond] election intel ctx failed: {ie}")
                     prompt = f"""너는 브라질 국채/매크로 전문 애널리스트다.
 이벤트명: {c['title']} (일자: {c['date']})
-현재 날짜: {today.isoformat()}
+현재 날짜: {today.isoformat()}{election_ctx}
 현재 시장 지표:
 - Selic 기준금리: {selic_val}%
 - 5년물 국채금리: {y5_val}%
@@ -711,6 +724,37 @@ async def sync_catalysts(force: bool = False, db: AsyncSession = Depends(get_db)
         tranches=TRANCHES,
         synced_at=datetime.now(_KST).isoformat(),
     )
+
+
+class CatalystEdit(BaseModel):
+    actual: str | None = None
+    outlook: str | None = None
+    note: str | None = None
+
+
+@router.put("/catalysts/{key}")
+async def edit_catalyst(key: str, body: CatalystEdit, x_edit_pin: str | None = Header(default=None),
+                        db: AsyncSession = Depends(get_db)):
+    """매크로 캘린더 이벤트의 실제 발표/전망/설명을 수동으로 갱신 (AI 갱신이 어려운 경우 대비).
+    빈 문자열을 보내면 해당 필드를 초기화한다. env BRAZIL_EDIT_PIN 설정 시 X-Edit-Pin 필수."""
+    expected = os.environ.get("BRAZIL_EDIT_PIN")
+    if expected and x_edit_pin != expected:
+        raise HTTPException(status_code=401, detail="편집 PIN이 올바르지 않습니다.")
+    catalysts = await _get_persisted_catalysts(db)
+    target = next((c for c in catalysts if c["key"] == key), None)
+    if not target:
+        raise HTTPException(status_code=404, detail=f"알 수 없는 이벤트 키: {key}")
+    if body.actual is not None:
+        target["actual"] = body.actual.strip() or None
+    if body.outlook is not None:
+        target["outlook"] = body.outlook.strip() or None
+    if body.note is not None and body.note.strip():
+        target["note"] = body.note.strip()
+        target["note_manual"] = True
+    target["manual_updated_at"] = datetime.now(_KST).isoformat()
+    await _save_persisted_catalysts(db, catalysts)
+    today = datetime.now(_KST).date()
+    return {"status": "success", "catalyst": {**target, "d_day": _d_day(target["date"], today)}}
 
 
 @router.post("/sync")

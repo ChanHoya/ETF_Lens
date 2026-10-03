@@ -3,25 +3,31 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 브라질 대선 2차 결선투표 Timeline 추가, 완료 이벤트 1줄 최소화 및 대선 종합 인텔리전스 팝업 완료 (2026-10-03)
-➡️ Next: 브라질 국채 토탈리턴 시뮬레이터 개발 (쿠폰 복리/단리, 금리 변동 시 자본차익, 환율 시나리오 종합)
+✅ Current: 브라질 국채 토탈리턴(Total Return) 시뮬레이터 & 대선 1차 투표 결과/이벤트 실시간 업데이트 연동 완료 (2026-10-03)
+➡️ Next: 실서버 배포(Vercel/Render) 검증 및 브라질 대선 1차/2차 투표 후속 동향 모니터링
 
 > 세션 핸드오프 (2026-10-03):
-> - 🇧🇷 브라질 대선 2차 결선투표(10/25) 타임라인 추가 및 완료 이벤트 1줄 최소화:
->   - `backend/api/brazil_bond.py`: `CATALYSTS`에 `election_runoff` (2026-10-26, 현지 10/25) 추가 및 metadata 병합 지원.
+> - 🇧🇷 브라질 국채 토탈리턴(Total Return) 정밀 시뮬레이터 구축 (S6-19):
+>   - `backend/core/brazil_total_return.py` & `backend/api/brazil_total_return.py`:
+>     - NTN-F(10% 반기 이표채) 및 LTN(할인채) dirty price / Mac/Mod 듀레이션 / BPV 산출.
+>     - 반기별 복리 재투자(이자소득), 매도 시점 금리 변동에 따른 가격 변동(자본차익/손실), 원/헤알 환율 변동 결합.
+>     - 원화 기준 손익분기 환율(Breakeven FX) 자동 도출 및 7x6 2차원 시나리오 매트릭스(금리 ±300bp × 환율 -30%~+20%).
+>     - 5대 추천 프리셋 제공: 만기보유 인컴형, 금리 피크아웃 자본차익형, 환율 스트레스 테스트형, 14.5% 어깨 바벨형, LTN 할인채형.
+>   - `dashboard/src/components/BrazilTotalReturnSimulator.tsx`:
+>     - 4대 요약 Bento 카드 (최종 원화 수령액/수익률, 연환산 CAGR, 환율 손익분기점, 수익 분해).
+>     - 2열 슬라이더 컨트롤러 (투자원금, 만기/보유기간, 매수/매도금리, 환율/변동률, 재투자율, 수수료/비과세 토글).
+>     - Recharts AreaChart 반기별 누적 가치 추이 및 7x6 컬러 히트맵 매트릭스.
+>     - 프론트엔드 실시간 useMemo 로컬 계산 엔진 탑재로 슬라이더 드래그 60fps 무지연 반응.
+>   - `dashboard/src/components/BrazilBondTab.tsx`: 기존 단순 Carry 계산기를 `BrazilTotalReturnSimulator`로 전면 교체 연동.
+> - 🗳️ 브라질 대선 실시간 인텔리전스 & 수동 결과/이벤트 업데이트 (S6-19):
+>   - `backend/api/brazil_election_intel.py`:
+>     - `GET /election-intel`: 1차 투표 결과, 후보별 득표율, 결선투표 여부, 여론조사, 타임라인 이벤트 반환 (자동 AI 리프레시 지원).
+>     - `POST /election-intel/refresh`: Gemini AI 기반 최신 뉴스 및 선거 결과 자동 크롤링/갱신.
+>     - `PUT /election-intel`: 수동 개표 결과 및 판세 강제 덮어쓰기 (24시간 AI 자동 덮어쓰기 방어 lock 플래그 지원).
+>     - `POST /election-intel/events`: 현장 속보 등 단일 타임라인 이벤트 즉시 추가.
 >   - `dashboard/src/components/BrazilBondTab.tsx`:
->     - `MacroTimeline`: 완료된 이벤트(3건: 한은 금통위, Copom 8월, Copom 9월)를 1줄 요약 바(`✅ 완료된 매크로 이벤트 (3건)`)로 최소화하여 시각적 공간 최적화, 필요 시 '지난 이벤트 상세 보기/접기' 토글 제공.
->     - `BrazilElectionDetailModal`: React `createPortal` 기반 고대비 네온 모달 구현.
->       1) 선거 제도 및 공식 일정 요약표 (1차 10/4, 2차 결선 10/25, 전자투표 100%, 과반 결선 조건, 백지표 제외 유효표 다수결).
->       2) 현재 판세: 룰라(PT, 온건 좌파) vs 플라비우 보우소나루(PL, 우파 보수) 맞대결 구도 및 정책/채권 영향.
->       3) 최신 여론조사 시각화 바 차트: Quaest (룰라 42% vs 플라비우 42% 동률), AtlasIntel (룰라 47.6% vs 플라비우 47.7% 동률) 시각화.
->       4) 국채 투자 전략 액션 가이드: 14.5% 어깨 금리 스파이크 시 헤알 장기채 50% 분할 매수 찬스 및 중앙은행 독립성 방파제.
->       5) 공식 출처 링크 (Reuters, AA, Valor Econômico, 연합뉴스, Democrata).
-> - 🇧🇷 브라질 채권 투자 가이드 고도화 (지인 제언 반영):
->   - 🚀 신규 포트폴리오: `aggressive_barbell` (헤알 장기 50% + 헤알 중기 30% + 달러 장기 20%) 5번째 라인업 탑재 (여유자금 금리 피크아웃 시 자본차익+고쿠폰+달러환헷지).
->   - 🧭 듀레이션 기술 원칙 명문화: "금리 고점(어깨/14.5%↑) = 듀레이션 확대(장기채), 금리 저점 = 듀레이션 축소(단기채)" 원칙 수립.
->   - 🛡️ BCB 독립성 방파제 보강: 2021년 제정된 브라질 중앙은행 자율성 보장법(LC 179) 및 의회 Centrão 견제로 인해 Worst 시나리오(시나리오 C)의 현실적 하방이 제한됨을 명시.
->   - Gemini AI Live Pulse 프롬프트 및 대시보드 비교 종합표 실시간 동기화 완료.
+>     - `BrazilElectionDetailModal` 내 실시간 1차 투표 개표 결과 배너(룰라 vs 플라비우 득표율 프로그레스 바 및 10/25 결선 확정 뱃지) 연동.
+>     - `[🔄 최신 뉴스·결과 AI 갱신]` 및 `[✏️ 수동 결과·이벤트 입력]` 드로어 탑재 (득표율, 투표율, 결선 여부, 신규 속보 입력 폼 완비).
 > - 🚨 핫픽스: 브라질채권 탭 런타임 크래시(React Error #31) 및 대시보드 SSR 안정성 강화 완료:
 >   - 원인: Gemini가 생성한 `brazil_election_pulse`의 `recommended_bond_guide` 필드가 단일 텍스트가 아닌 세부 항목 객체(`{"단기채 중심 인컴형": "...", ...}`)로 생성되어 JSX 자식 노드 직접 렌더링 시 React 19 객체 렌더링 에러(#31) 유발.
 >   - 조치: `BrazilBondTab.tsx`에 `renderFlexibleContent` 헬퍼 함수를 구축하여 문자열/객체/배열 자동 파싱 렌더링 적용, 백엔드(`brazil_bond.py`)에서도 `_normalize_pulse_content`로 사전 정규화 제공(2중 방어).
@@ -75,6 +81,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 | S6-15 | 반도체 매크로 사이클(CSCI) 퀀트 엔진 및 4국면 시각화 대시보드 | ✅ stable | 5년 롤링 Z-score 정규화 기반 선행(40%)+동행(40%)+후행(20%) CSCI 지수, 4-Phase 사이클 시계(2D Quadrant), 빅테크 CapEx 트래커, 서브섹터 디커플링 맵, ETF 리밸런싱 매트릭스 연동 완료 |
 | S6-17 | 브라질 대선 시나리오 분석 및 조건별 추천 국채 라인업 (헤알화/달러 기반) | ✅ stable | 3대 대선 시나리오 비교(BCB 독립성 하방 방파제), 금리 고점 듀레이션 확대 원칙, 조건별 국채 5종 라인업(적극 고수익 바벨 포함), Tranche 3 체크리스트 및 Gemini Live Pulse 연동 완료 |
 | S6-18 | 브라질 대선 2차 결선투표 추가, 타임라인 1줄 최소화 및 대선 종합 인텔리전스 팝업 | ✅ stable | 2026-10-26 결선투표 추가, 완료 이벤트 1줄 접기/펼치기 아코디언, 선거 일정/제도 요약표, 룰라 vs 플라비우 판세 및 Quaest·AtlasIntel 여론조사 시각화 바 차트, 국채 투자 액션 가이드 및 출처 팝업 모달 구현 완료 |
+| S6-19 | 브라질 국채 토탈리턴(Total Return) 시뮬레이터 & 대선 1차 투표 결과/이벤트 실시간 업데이트 | ✅ stable | NTN-F/LTN 더티프라이스, 복리 재투자, 만기보유 vs 조기매도 자본차익, 환율 손익분기점, 7x6 시나리오 매트릭스, 대선 1차 투표 결과 시각화(결선 뱃지) 및 Gemini AI 뉴스 동적 갱신/수동 입력 지원 완료 |
 ## Module Registry
  
 | Module | Layer | Status | Key Files |

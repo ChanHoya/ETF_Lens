@@ -21,6 +21,8 @@ from api.efficient_frontier import router as efficient_frontier_router
 from api.next_leader import router as next_leader_router
 from api.sector_insight import router as sector_insight_router
 from api.brazil_bond import router as brazil_bond_router
+from api.brazil_election_intel import router as brazil_election_intel_router
+from api.brazil_total_return import router as brazil_total_return_router
 from api.integrated_assets import router as integrated_assets_router
 from api.dividends import router as dividends_router
 from fastapi.middleware.cors import CORSMiddleware
@@ -282,6 +284,8 @@ app.include_router(efficient_frontier_router, prefix="/api/v1/analyze")
 app.include_router(next_leader_router, prefix="/api/v1/analyze")
 app.include_router(sector_insight_router, prefix="/api/v1/sector-insight")
 app.include_router(brazil_bond_router, prefix="/api/v1/brazil-bond")
+app.include_router(brazil_election_intel_router, prefix="/api/v1/brazil-bond")
+app.include_router(brazil_total_return_router, prefix="/api/v1/brazil-bond")
 app.include_router(integrated_assets_router, prefix="/api/v1/my")
 app.include_router(dividends_router)
 

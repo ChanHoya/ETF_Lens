@@ -12,8 +12,9 @@ import {
     Sparkles, RefreshCw, Layers, ShieldCheck, ArrowDownRight, Info, CheckCircle2,
     Newspaper, Bell, ExternalLink, Send, Settings, Play, RotateCcw, ZoomIn, ZoomOut,
     Vote, Landmark, Scale, DollarSign, Percent, Award, ChevronRight, Zap,
-    ChevronDown, ChevronUp, X,
+    ChevronDown, ChevronUp, X, Edit3, Plus,
 } from 'lucide-react';
+import BrazilTotalReturnSimulator from './BrazilTotalReturnSimulator';
 import { API_BASE } from '@/lib/apiConfig';
 
 // ── 타입 ────────────────────────────────────────────────────────────────────
@@ -632,8 +633,11 @@ export default function BrazilBondTab() {
             {/* ── AI 전략 리포트 ───────────────────────────────────── */}
             <AiReportSection insight={insight} insightAt={insightAt} genLoading={genLoading} onGenerate={generateReport} />
 
-            {/* ── 수익 시뮬레이터 ──────────────────────────────────── */}
-            <CarrySimulator summary={s} />
+            {/* ── 브라질 국채 토탈리턴(Total Return) 정밀 시뮬레이터 ───────── */}
+            <BrazilTotalReturnSimulator
+                initialFx={s.indicators.find(i => i.key === 'brl_krw')?.value ?? 260.0}
+                initialYield={s.indicators.find(i => i.key === 'y5')?.value ?? 14.0}
+            />
 
             {/* ── 3단계 분할 매수 로드맵 ───────────────────────────── */}
             <section>
@@ -1661,6 +1665,45 @@ function TrancheCard({ t, currentTrancheId }: {
 
 // ── 🇧🇷 2026 브라질 대선 종합 인텔리전스 팝업 모달 ──────────────────────────────
 function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+    const [intel, setIntel] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
+    const [aiRefreshing, setAiRefreshing] = useState(false);
+    const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+    const [showManualEditor, setShowManualEditor] = useState(false);
+    const [editMode, setEditMode] = useState<'first_round' | 'event'>('first_round');
+
+    // 1차 투표 결과 폼
+    const [frStatus, setFrStatus] = useState('개표 완료');
+    const [frLula, setFrLula] = useState<number>(48.2);
+    const [frFlavio, setFrFlavio] = useState<number>(43.5);
+    const [frOthers, setFrOthers] = useState<number>(8.3);
+    const [frTurnout, setFrTurnout] = useState<number>(81.2);
+    const [frRunoff, setFrRunoff] = useState<boolean>(true);
+    const [frSummary, setFrSummary] = useState('과반 득표자 부재로 룰라와 플라비우 보우소나루 2인의 10월 25일 결선 대결 확정');
+
+    // 신규 이벤트 폼
+    const [evDate, setEvDate] = useState('2026-10-05');
+    const [evTitle, setEvTitle] = useState('');
+    const [evDetail, setEvDetail] = useState('');
+    const [savingManual, setSavingManual] = useState(false);
+
+    const fetchIntel = useCallback(async () => {
+        try {
+            setLoading(true);
+            const res = await fetch(`${API_BASE}/api/v1/brazil-bond/election-intel?auto_refresh=false`, { cache: 'no-store' });
+            if (res.ok) {
+                const data = await res.json();
+                if (data?.content) {
+                    setIntel(data.content);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load election intel:', e);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
         if (!isOpen) return;
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -1668,14 +1711,117 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
         };
         document.body.style.overflow = 'hidden';
         window.addEventListener('keydown', handleKeyDown);
+        fetchIntel();
         return () => {
             document.body.style.overflow = 'unset';
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose, fetchIntel]);
+
+    const handleAiRefresh = async () => {
+        try {
+            setAiRefreshing(true);
+            const res = await fetch(`${API_BASE}/api/v1/brazil-bond/election-intel/refresh`, { method: 'POST' });
+            if (res.ok) {
+                const data = await res.json();
+                if (data?.content) {
+                    setIntel(data.content);
+                }
+                setToast({ msg: '최신 뉴스와 시장 지표를 기반으로 대선 인텔리전스가 AI 자동 갱신되었습니다!', ok: true });
+            } else {
+                const err = await res.json().catch(() => ({}));
+                setToast({ msg: `AI 갱신 실패: ${err.detail || '오류 발생'}`, ok: false });
+            }
+        } catch (e: any) {
+            setToast({ msg: `네트워크 오류: ${e.message}`, ok: false });
+        } finally {
+            setAiRefreshing(false);
+            setTimeout(() => setToast(null), 5000);
+        }
+    };
+
+    const handleSaveFirstRound = async () => {
+        try {
+            setSavingManual(true);
+            const payload = {
+                ...(intel || {}),
+                phase: frRunoff ? 'runoff_campaign' : 'decided',
+                first_round: {
+                    status: frStatus,
+                    lula_pct: Number(frLula),
+                    flavio_pct: Number(frFlavio),
+                    others_pct: Number(frOthers),
+                    turnout_pct: Number(frTurnout),
+                    runoff: frRunoff,
+                    summary: frSummary,
+                },
+            };
+            const res = await fetch(`${API_BASE}/api/v1/brazil-bond/election-intel`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data?.content) {
+                    setIntel(data.content);
+                }
+                setShowManualEditor(false);
+                setToast({ msg: '1차 투표 공식 결과가 수동 반영되었습니다!', ok: true });
+            } else {
+                const err = await res.json().catch(() => ({}));
+                setToast({ msg: `저장 실패: ${err.detail || '오류'}`, ok: false });
+            }
+        } catch (e: any) {
+            setToast({ msg: `오류: ${e.message}`, ok: false });
+        } finally {
+            setSavingManual(false);
+            setTimeout(() => setToast(null), 5000);
+        }
+    };
+
+    const handleAddEvent = async () => {
+        if (!evTitle.trim()) return;
+        try {
+            setSavingManual(true);
+            const res = await fetch(`${API_BASE}/api/v1/brazil-bond/election-intel/events`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date: evDate, title: evTitle.trim(), detail: evDetail.trim() }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data?.content) {
+                    setIntel(data.content);
+                }
+                setEvTitle('');
+                setEvDetail('');
+                setShowManualEditor(false);
+                setToast({ msg: '신규 이벤트가 타임라인에 등록되었습니다!', ok: true });
+            } else {
+                const err = await res.json().catch(() => ({}));
+                setToast({ msg: `저장 실패: ${err.detail || '오류'}`, ok: false });
+            }
+        } catch (e: any) {
+            setToast({ msg: `오류: ${e.message}`, ok: false });
+        } finally {
+            setSavingManual(false);
+            setTimeout(() => setToast(null), 5000);
+        }
+    };
 
     if (!isOpen) return null;
     if (typeof document === 'undefined') return null;
+
+    const polls = intel?.polls || [
+        { pollster: 'Quaest', date: '2026-09-28', lula: 42.0, flavio: 42.0, other: 16.0, margin: '±2.0%p', note: '결선 가상대결 42% 완전 동률', url: 'https://valorinternational.globo.com/politics/news/2026/09/28/new-quaest-poll-shows-lula-and-flavio-tied-at-42percent-in-runoff.ghtml' },
+        { pollster: 'AtlasIntel', date: '2026-10-01', lula: 47.6, flavio: 47.7, other: 4.7, margin: '±1.5%p', note: '0.1%p 차 사실상 동률', url: 'https://www.reuters.com/world/americas/brazil-vote-approaches-with-lula-and-bolsonaro-polling-close-race-2026-10-01/' },
+    ];
+
+    const events = intel?.events || [
+        { date: '2026-09-28', title: 'Quaest 결선 가상대결 42% 동률', detail: '표본오차 ±2%p 내 완전 동률' },
+        { date: '2026-10-01', title: 'AtlasIntel 47.6% vs 47.7%', detail: '로이터: 룰라·보우소나루 초접전 속 투표 임박' },
+    ];
 
     return createPortal(
         <div
@@ -1713,6 +1859,209 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
                     </button>
                 </div>
 
+                {/* 1-1) 실시간 액션 바 (AI 자동 갱신 + 수동 결과 입력) */}
+                <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 bg-white/[0.03] border-b border-white/10">
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>기준일: <strong className="text-gray-200">{intel?.as_of || '2026-10-03'}</strong></span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-amber-300">
+                            {intel?.phase === 'runoff_campaign' ? '2차 결선 선거전' : intel?.phase === 'decided' ? '당선 확정' : '1차 투표 진행/집계'}
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleAiRefresh}
+                            disabled={aiRefreshing}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 transition disabled:opacity-50 cursor-pointer shadow-sm"
+                        >
+                            <RefreshCw className={`w-3.5 h-3.5 ${aiRefreshing ? 'animate-spin' : ''}`} />
+                            {aiRefreshing ? '뉴스·결과 분석 중…' : '최신 뉴스·결과 AI 갱신'}
+                        </button>
+                        <button
+                            onClick={() => setShowManualEditor(!showManualEditor)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition cursor-pointer shadow-sm"
+                        >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            {showManualEditor ? '입력창 닫기' : '수동 결과·이벤트 입력'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* 알림 토스트 */}
+                {toast && (
+                    <div className={`mx-6 mt-4 p-3 rounded-xl text-xs font-semibold flex items-center justify-between border ${
+                        toast.ok ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-200' : 'bg-rose-950/60 border-rose-500/40 text-rose-200'
+                    }`}>
+                        <span>{toast.msg}</span>
+                        <button onClick={() => setToast(null)} className="text-gray-400 hover:text-white">✕</button>
+                    </div>
+                )}
+
+                {/* 1-2) 수동 입력 패널 (Drawer) */}
+                {showManualEditor && (
+                    <div className="mx-6 mt-4 p-5 rounded-2xl bg-[#0b121e] border border-amber-500/40 space-y-4 animate-in slide-in-from-top duration-200">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setEditMode('first_round')}
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold border transition ${
+                                        editMode === 'first_round'
+                                            ? 'bg-amber-500 text-black border-amber-400'
+                                            : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
+                                    }`}
+                                >
+                                    🗳️ 1차 투표 공식 집계 결과 입력
+                                </button>
+                                <button
+                                    onClick={() => setEditMode('event')}
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold border transition ${
+                                        editMode === 'event'
+                                            ? 'bg-cyan-500 text-black border-cyan-400'
+                                            : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
+                                    }`}
+                                >
+                                    📰 신규 이벤트·뉴스 1건 추가
+                                </button>
+                            </div>
+                            <span className="text-[11px] text-gray-400">수동 입력 시 24시간 동안 AI 자동 덮어쓰기 방지</span>
+                        </div>
+
+                        {editMode === 'first_round' ? (
+                            <div className="space-y-3 text-xs">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div>
+                                        <label className="text-gray-400 block mb-1">개표 상태</label>
+                                        <input
+                                            type="text"
+                                            value={frStatus}
+                                            onChange={e => setFrStatus(e.target.value)}
+                                            className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-white font-semibold"
+                                            placeholder="예: 개표 완료 (99.8%)"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-rose-400 block mb-1">룰라 득표율 (%)</label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            value={frLula}
+                                            onChange={e => setFrLula(Number(e.target.value))}
+                                            className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-rose-300 font-mono font-bold"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-blue-400 block mb-1">플라비우 득표율 (%)</label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            value={frFlavio}
+                                            onChange={e => setFrFlavio(Number(e.target.value))}
+                                            className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-blue-300 font-mono font-bold"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-gray-400 block mb-1">기타 후보군 (%)</label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            value={frOthers}
+                                            onChange={e => setFrOthers(Number(e.target.value))}
+                                            className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-gray-300 font-mono"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-gray-400 block mb-1">전국 투표율 (%)</label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            value={frTurnout}
+                                            onChange={e => setFrTurnout(Number(e.target.value))}
+                                            className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-white font-mono"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-2 pt-5">
+                                        <input
+                                            type="checkbox"
+                                            id="runoffCheck"
+                                            checked={frRunoff}
+                                            onChange={e => setFrRunoff(e.target.checked)}
+                                            className="accent-amber-400 w-4 h-4 cursor-pointer"
+                                        />
+                                        <label htmlFor="runoffCheck" className="text-amber-300 font-bold cursor-pointer">
+                                            과반 득표자 부재로 10월 25일 2차 결선투표 확정
+                                        </label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-gray-400 block mb-1">결과 총평 요약</label>
+                                    <input
+                                        type="text"
+                                        value={frSummary}
+                                        onChange={e => setFrSummary(e.target.value)}
+                                        className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-white"
+                                        placeholder="1차 개표 결과 및 시장 영향 한 줄 요약"
+                                    />
+                                </div>
+                                <div className="flex justify-end pt-2">
+                                    <button
+                                        onClick={handleSaveFirstRound}
+                                        disabled={savingManual}
+                                        className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold disabled:opacity-50 cursor-pointer shadow-md"
+                                    >
+                                        {savingManual ? '반영 중...' : '1차 투표 결과 저장 및 적용'}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-3 text-xs">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <label className="text-gray-400 block mb-1">일자 (YYYY-MM-DD)</label>
+                                        <input
+                                            type="text"
+                                            value={evDate}
+                                            onChange={e => setEvDate(e.target.value)}
+                                            className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-white font-mono"
+                                        />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <label className="text-gray-400 block mb-1">이벤트 제목 / 속보</label>
+                                        <input
+                                            type="text"
+                                            value={evTitle}
+                                            onChange={e => setEvTitle(e.target.value)}
+                                            className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-white font-semibold"
+                                            placeholder="예: 1차 투표 공식 결과 발표: 룰라 48.2% vs 플라비우 43.5%"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-gray-400 block mb-1">상세 내용 / 시장 영향</label>
+                                    <textarea
+                                        rows={2}
+                                        value={evDetail}
+                                        onChange={e => setEvDetail(e.target.value)}
+                                        className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-white"
+                                        placeholder="상세 판세, 지지 선언, 국채 금리 반응 등"
+                                    />
+                                </div>
+                                <div className="flex justify-end pt-2">
+                                    <button
+                                        onClick={handleAddEvent}
+                                        disabled={savingManual || !evTitle.trim()}
+                                        className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold disabled:opacity-50 cursor-pointer shadow-md"
+                                    >
+                                        {savingManual ? '추가 중...' : '신규 이벤트 타임라인에 추가'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* 2) 모달 본문 (스크롤) */}
                 <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6 text-sm">
                     {/* 상단 브리핑 요약 배너 */}
@@ -1721,14 +2070,56 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
                             <Info className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                             <div className="space-y-1 text-xs sm:text-sm text-gray-200 leading-relaxed">
                                 <p className="font-bold text-amber-300">
-                                    "결선 진출 후보 확정 vs 부동층 16%의 표심 이동과 결선 투표율이 승부를 가르는 초박빙 선거전"
+                                    "{intel?.headline || '결선 진출 후보 확정 vs 부동층 16%의 표심 이동과 결선 투표율이 승부를 가르는 초박빙 선거전'}"
                                 </p>
                                 <p className="text-gray-300 text-xs">
-                                    브라질 대통령선거 2차 투표(결선투표)는 <span className="text-white font-semibold">2026년 10월 25일 일요일</span>에 실시될 예정입니다. 다만 1차 투표가 10월 4일이므로, 어느 후보도 유효표 과반을 얻지 못할 경우에만 상위 2명이 결선에 진출합니다.
+                                    {intel?.summary || '브라질 대통령선거 2차 투표(결선투표)는 2026년 10월 25일 일요일에 실시될 예정입니다. 다만 1차 투표가 10월 4일이므로, 어느 후보도 유효표 과반을 얻지 못할 경우에만 상위 2명이 결선에 진출합니다.'}
                                 </p>
                             </div>
                         </div>
                     </div>
+
+                    {/* 🗳️ 1차 투표 공식 결과 배너 (저장된 경우 표시) */}
+                    {intel?.first_round && (
+                        <div className="p-5 rounded-2xl bg-gradient-to-r from-cyan-950/50 via-[#0e1b2e] to-purple-950/50 border-2 border-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.3)] space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="flex items-center gap-2 text-sm font-black text-cyan-300">
+                                    <Vote className="w-5 h-5 text-cyan-400 animate-pulse" />
+                                    🗳️ 1차 투표 공식 집계 결과 (2026.10.04)
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                                        {intel.first_round.status || '개표 완료'}
+                                    </span>
+                                    {intel.first_round.turnout_pct && (
+                                        <span className="text-xs text-gray-400 font-mono">
+                                            투표율: {intel.first_round.turnout_pct}%
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-xs font-bold">
+                                    <span className="text-rose-400">룰라 {intel.first_round.lula_pct}%</span>
+                                    <span className="text-gray-400">기타 후보군 {intel.first_round.others_pct}%</span>
+                                    <span className="text-blue-400">플라비우 {intel.first_round.flavio_pct}%</span>
+                                </div>
+                                <div className="h-4 w-full bg-gray-800 rounded-full overflow-hidden flex shadow-inner">
+                                    <div className="bg-rose-500 h-full transition-all" style={{ width: `${intel.first_round.lula_pct}%` }} title={`룰라 ${intel.first_round.lula_pct}%`} />
+                                    <div className="bg-gray-600 h-full transition-all" style={{ width: `${intel.first_round.others_pct}%` }} title={`기타 ${intel.first_round.others_pct}%`} />
+                                    <div className="bg-blue-500 h-full transition-all" style={{ width: `${intel.first_round.flavio_pct}%` }} title={`플라비우 ${intel.first_round.flavio_pct}%`} />
+                                </div>
+                            </div>
+                            <div className="p-3 rounded-xl bg-black/40 border border-white/10 text-xs text-gray-200 flex flex-wrap items-center justify-between gap-2">
+                                <span>{intel.first_round.summary}</span>
+                                {intel.first_round.runoff && (
+                                    <span className="px-2.5 py-1 rounded bg-amber-400 text-black font-black text-xs shadow-md">
+                                        2차 결선 진출 확정 (10월 25일)
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* 섹션 1: 제도와 공식 일정 */}
                     <div className="space-y-3">
@@ -1841,72 +2232,72 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
                             </div>
                         </div>
                         <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 text-xs text-gray-300 leading-relaxed">
-                            💡 <span className="font-bold text-amber-300">판세 분석 결론:</span> 현 시점에서는 <span className="text-white font-semibold">"누가 결선에 진출하느냐"</span>보다도, 결선이 치러질 경우 <span className="text-amber-400 font-bold">부동층·군소후보 표의 이동과 투표율이 승부를 좌우하는 초접전 구도</span>입니다. 
-                            <a href="https://www.reuters.com/world/americas/brazil-vote-approaches-with-lula-and-bolsonaro-polling-close-race-2026-10-01/" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[reuters]</a>
-                            <a href="https://www.yna.co.kr/view/AKR20260929001400087" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[yna.co]</a>
+                            💡 <span className="font-bold text-amber-300">판세 분석 결론:</span> {intel?.outlook || '현 시점에서는 "누가 결선에 진출하느냐"보다도, 결선이 치러질 경우 부동층·군소후보 표의 이동과 투표율이 승부를 좌우하는 초접전 구도입니다.'}
                         </div>
                     </div>
 
-                    {/* 섹션 3: 최신 여론조사 (Polls) 결과 종합 대조 */}
+                    {/* 섹션 3: 최신 여론조사 (Polls) 결과 대조 */}
                     <div className="space-y-3">
                         <div className="flex items-center gap-2">
                             <Gauge className="w-4 h-4 text-emerald-400" />
                             <h3 className="font-bold text-white text-base">최신 주요 여론조사 결과 대조</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Quaest 조사 */}
-                            <div className="p-4 rounded-2xl bg-black/30 border border-white/10 space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <span className="font-bold text-amber-300 text-sm">Quaest 결선 가상대결 조사</span>
-                                    <span className="text-[11px] text-gray-400">9/28 발표 · 표본오차 ±2.0%p</span>
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-xs font-semibold">
-                                        <span className="text-rose-400">룰라 42.0%</span>
-                                        <span className="text-gray-400">부동층 16.0%</span>
-                                        <span className="text-blue-400">플라비우 42.0%</span>
+                            {polls.map((p: any, idx: number) => (
+                                <div key={idx} className="p-4 rounded-2xl bg-black/30 border border-white/10 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-bold text-amber-300 text-sm">{p.pollster} {p.scope || '결선 가상대결'}</span>
+                                        <span className="text-[11px] text-gray-400">{p.date} {p.margin ? `· ${p.margin}` : ''}</span>
                                     </div>
-                                    {/* 게이지 바 */}
-                                    <div className="h-3 w-full bg-gray-800 rounded-full overflow-hidden flex">
-                                        <div className="bg-rose-500 h-full transition-all" style={{ width: '42%' }} title="룰라 42%" />
-                                        <div className="bg-gray-600 h-full transition-all" style={{ width: '16%' }} title="부동층 16%" />
-                                        <div className="bg-blue-500 h-full transition-all" style={{ width: '42%' }} title="플라비우 42%" />
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-xs font-semibold">
+                                            <span className="text-rose-400">룰라 {p.lula}%</span>
+                                            <span className="text-gray-400">{p.other_label || '기타/부동'} {p.other}%</span>
+                                            <span className="text-blue-400">플라비우 {p.flavio}%</span>
+                                        </div>
+                                        <div className="h-3 w-full bg-gray-800 rounded-full overflow-hidden flex">
+                                            <div className="bg-rose-500 h-full transition-all" style={{ width: `${p.lula}%` }} />
+                                            <div className="bg-gray-600 h-full transition-all" style={{ width: `${p.other}%` }} />
+                                            <div className="bg-blue-500 h-full transition-all" style={{ width: `${p.flavio}%` }} />
+                                        </div>
                                     </div>
+                                    <p className="text-xs text-gray-300 leading-relaxed">
+                                        {p.note}
+                                        {p.url && (
+                                            <a href={p.url} target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">
+                                                [출처]
+                                            </a>
+                                        )}
+                                    </p>
                                 </div>
-                                <p className="text-xs text-gray-300 leading-relaxed">
-                                    최근 Quaest 조사에서는 두 후보가 결선 가상대결에서 각각 <span className="text-white font-bold">42%로 동률</span>이었으며, 표본오차는 ±2%포인트였습니다.
-                                    <a href="https://valorinternational.globo.com/politics/news/2026/09/28/new-quaest-poll-shows-lula-and-flavio-tied-at-42percent-in-runoff.ghtml" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[valorinternational.globo]</a>
-                                </p>
-                            </div>
-
-                            {/* AtlasIntel 조사 */}
-                            <div className="p-4 rounded-2xl bg-black/30 border border-white/10 space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <span className="font-bold text-emerald-300 text-sm">AtlasIntel 전국 지지율 조사</span>
-                                    <span className="text-[11px] text-gray-400">10/1 발표 · 표본오차 ±1.5%p</span>
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-xs font-semibold">
-                                        <span className="text-rose-400">룰라 47.6%</span>
-                                        <span className="text-gray-400">기타 4.7%</span>
-                                        <span className="text-blue-400">플라비우 47.7%</span>
-                                    </div>
-                                    {/* 게이지 바 */}
-                                    <div className="h-3 w-full bg-gray-800 rounded-full overflow-hidden flex">
-                                        <div className="bg-rose-500 h-full transition-all" style={{ width: '47.6%' }} title="룰라 47.6%" />
-                                        <div className="bg-gray-600 h-full transition-all" style={{ width: '4.7%' }} title="기타 4.7%" />
-                                        <div className="bg-blue-500 h-full transition-all" style={{ width: '47.7%' }} title="플라비우 47.7%" />
-                                    </div>
-                                </div>
-                                <p className="text-xs text-gray-300 leading-relaxed">
-                                    AtlasIntel 조사도 <span className="text-white font-bold">룰라 47.6%, 플라비우 47.7%</span>로 사실상 동률(0.1%p 차)을 제시하여 초접전 양상을 재확인했습니다.
-                                    <a href="https://www.reuters.com/world/americas/brazil-vote-approaches-with-lula-and-bolsonaro-polling-close-race-2026-10-01/" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[reuters]</a>
-                                </p>
-                            </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* 섹션 4: 브라질 국채 투자 전략적 시사점 & 액션 플랜 */}
+                    {/* 섹션 4: 실시간 선거·시장 사건 타임라인 로그 */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-cyan-400" />
+                                <h3 className="font-bold text-white text-base">실시간 선거·시장 타임라인 로그 ({events.length}건)</h3>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            {events.map((ev: any, idx: number) => (
+                                <div key={idx} className="p-3 rounded-xl bg-black/30 border border-white/5 flex items-start gap-3">
+                                    <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-mono text-[11px] font-bold shrink-0 mt-0.5">
+                                        {ev.date}
+                                    </span>
+                                    <div>
+                                        <p className="font-bold text-white text-xs">{ev.title}</p>
+                                        {ev.detail && <p className="text-gray-400 text-xs mt-0.5">{ev.detail}</p>}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 섹션 5: 브라질 국채 투자 전략적 시사점 & 액션 플랜 */}
                     <div className="space-y-3">
                         <div className="flex items-center gap-2">
                             <Target className="w-4 h-4 text-cyan-400" />
@@ -1942,7 +2333,7 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
                         </div>
                     </div>
 
-                    {/* 섹션 5: 보도 출처 및 레퍼런스 */}
+                    {/* 섹션 6: 보도 출처 및 레퍼런스 */}
                     <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
                         <span className="font-bold text-gray-500 uppercase tracking-wider text-[10px]">
                             Reference Citations:
