@@ -2,6 +2,7 @@
 // 브라질 국채 매크로 대시보드·Activation Zone 신호·AI 전략 리포트·캐리 쿠션 시뮬레이터 뷰
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
     ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, ReferenceArea, ReferenceLine, ZAxis,
@@ -11,6 +12,7 @@ import {
     Sparkles, RefreshCw, Layers, ShieldCheck, ArrowDownRight, Info, CheckCircle2,
     Newspaper, Bell, ExternalLink, Send, Settings, Play, RotateCcw, ZoomIn, ZoomOut,
     Vote, Landmark, Scale, DollarSign, Percent, Award, ChevronRight, Zap,
+    ChevronDown, ChevronUp, X,
 } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
 
@@ -219,7 +221,9 @@ export default function BrazilBondTab() {
             const cachedNews = localStorage.getItem('brazil_bond_news');
             const cachedPulse = localStorage.getItem('brazil_bond_election_pulse');
 
-            if (cachedSummary) setSummary(JSON.parse(cachedSummary));
+            if (cachedSummary && cachedSummary.includes('election_runoff')) {
+                setSummary(JSON.parse(cachedSummary));
+            }
             if (cachedHistory) setHistory(JSON.parse(cachedHistory));
             if (cachedInsight) {
                 const j = JSON.parse(cachedInsight);
@@ -1655,107 +1659,530 @@ function TrancheCard({ t, currentTrancheId }: {
     );
 }
 
-// 시계열 세로 타임라인: 좌측 레일 + 마커. 과거는 흐리게, 다음 이벤트(D-day)는 강렬하게 점등 애니메이션.
+// ── 🇧🇷 2026 브라질 대선 종합 인텔리전스 팝업 모달 ──────────────────────────────
+function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.body.style.overflow = 'unset';
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
+    if (typeof document === 'undefined') return null;
+
+    return createPortal(
+        <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+            onClick={onClose}
+        >
+            <div
+                className="relative w-full max-w-4xl max-h-[92vh] flex flex-col bg-gradient-to-b from-[#0e1726] via-[#090e17] to-[#04070d] border border-amber-500/40 rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.25)] overflow-hidden text-white my-auto"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* 1) 헤더 */}
+                <div className="flex items-center justify-between px-6 py-5 border-b border-white/10 bg-white/[0.02]">
+                    <div className="flex items-center gap-3">
+                        <span className="p-2.5 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                            <Vote className="w-6 h-6" />
+                        </span>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-black px-2.5 py-0.5 rounded-md bg-amber-400 text-black uppercase tracking-wider">
+                                    Special Intelligence
+                                </span>
+                                <span className="text-xs text-amber-400 font-mono">1차: 2026.10.04 · 2차 결선: 2026.10.25</span>
+                            </div>
+                            <h2 className="text-lg sm:text-xl font-black text-white mt-1">
+                                🇧🇷 2026 브라질 대통령 선거 종합 브리핑 & 채권 시장 영향
+                            </h2>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2 rounded-xl bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white border border-white/10 transition-all cursor-pointer"
+                        title="닫기 (ESC)"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                {/* 2) 모달 본문 (스크롤) */}
+                <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6 text-sm">
+                    {/* 상단 브리핑 요약 배너 */}
+                    <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-500/15 border border-amber-400/30">
+                        <div className="flex items-start gap-3">
+                            <Info className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                            <div className="space-y-1 text-xs sm:text-sm text-gray-200 leading-relaxed">
+                                <p className="font-bold text-amber-300">
+                                    "결선 진출 후보 확정 vs 부동층 16%의 표심 이동과 결선 투표율이 승부를 가르는 초박빙 선거전"
+                                </p>
+                                <p className="text-gray-300 text-xs">
+                                    브라질 대통령선거 2차 투표(결선투표)는 <span className="text-white font-semibold">2026년 10월 25일 일요일</span>에 실시될 예정입니다. 다만 1차 투표가 10월 4일이므로, 어느 후보도 유효표 과반을 얻지 못할 경우에만 상위 2명이 결선에 진출합니다.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 섹션 1: 제도와 공식 일정 */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <CalendarClock className="w-4 h-4 text-cyan-400" />
+                            <h3 className="font-bold text-white text-base">선거 제도 및 주요 일정</h3>
+                        </div>
+                        <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+                            <table className="w-full text-left text-xs sm:text-sm">
+                                <thead>
+                                    <tr className="border-b border-white/10 bg-white/5 text-gray-400">
+                                        <th className="py-2.5 px-4 font-bold w-1/3">항목</th>
+                                        <th className="py-2.5 px-4 font-bold">내용 및 규정</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5 text-gray-200">
+                                    <tr>
+                                        <td className="py-3 px-4 font-semibold text-cyan-300">1차 투표</td>
+                                        <td className="py-3 px-4">
+                                            <span className="font-bold text-white">2026년 10월 4일 (일)</span>
+                                            <span className="text-xs text-gray-400 ml-2">
+                                                (현지 기준 08:00 ~ 17:00 진행, 전자투표 기반으로 개표 및 당선 윤곽 신속 발표)
+                                            </span>
+                                            <a href="https://www.aa.com.tr/en/politics/explainer-what-to-know-about-brazils-2026-presidential-election/4074737" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[aa.com]</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-3 px-4 font-semibold text-amber-300">결선투표 (2차 투표)</td>
+                                        <td className="py-3 px-4">
+                                            <span className="font-bold text-white">2026년 10월 25일 (일)</span>
+                                            <span className="text-xs text-gray-400 ml-2">(1차에서 과반 미달 시 필요에 따라 실시)</span>
+                                            <a href="https://www.aa.com.tr/en/politics/explainer-what-to-know-about-brazils-2026-presidential-election/4074737" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[aa.com]</a>
+                                            <a href="https://www.reuters.com/world/americas/brazil-vote-approaches-with-lula-and-bolsonaro-polling-close-race-2026-10-01/" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[reuters]</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-3 px-4 font-semibold text-gray-300">결선 조건</td>
+                                        <td className="py-3 px-4 text-xs sm:text-sm">
+                                            1차 투표에서 유효표의 과반(50% + 1표)을 얻은 후보가 없을 때 결선투표 진행
+                                            <a href="https://www.democrata.es/en/center-of-surveys-and-electoral-polls/surveys-brazil-elections-lula-leads-bolsonaro-in-the-first-round-but-the-result-evens-out-in-the-second/" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[democrata]</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-3 px-4 font-semibold text-gray-300">결선 진출자</td>
+                                        <td className="py-3 px-4 text-xs sm:text-sm">
+                                            1차 득표 상위 1위 및 2위 후보 맞대결 (군소후보 탈락)
+                                            <a href="https://www.democrata.es/en/center-of-surveys-and-electoral-polls/surveys-brazil-elections-lula-leads-bolsonaro-in-the-first-round-but-the-result-evens-out-in-the-second/" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[democrata]</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-3 px-4 font-semibold text-gray-300">승리 기준</td>
+                                        <td className="py-3 px-4 text-xs sm:text-sm">
+                                            결선의 유효표 최다 득표자 당선 (백지표 및 무효표는 모수에서 완전 제외)
+                                            <a href="https://www.democrata.es/en/center-of-surveys-and-electoral-polls/surveys-brazil-elections-lula-leads-bolsonaro-in-the-first-round-but-the-result-evens-out-in-the-second/" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[democrata]</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-3 px-4 font-semibold text-gray-300">투표 방식</td>
+                                        <td className="py-3 px-4 text-xs sm:text-sm">
+                                            전면 <span className="font-bold text-emerald-400">전자투표 시스템(Urna Eletrônica)</span> 기반 전국 집계
+                                            <a href="https://www.aa.com.tr/en/politics/explainer-what-to-know-about-brazils-2026-presidential-election/4074737" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[aa.com]</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* 섹션 2: 현재 판세 및 양강 후보 비교 */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <Scale className="w-4 h-4 text-amber-400" />
+                            <h3 className="font-bold text-white text-base">현재 대선 판세 & 후보 대결 구도</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* 룰라 카드 */}
+                            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-rose-950/40 via-black/40 to-black/60 border border-rose-500/30 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="w-3 h-3 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                                        <span className="font-black text-white text-base">루이스 이나시우 룰라 다시우바</span>
+                                    </div>
+                                    <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                        노동자당 (PT) · 현직
+                                    </span>
+                                </div>
+                                <div className="space-y-2 text-xs text-gray-300">
+                                    <p><strong className="text-gray-200">정치 성향:</strong> 온건 좌파, 복지 확대 및 사회 재정 지출 우선</p>
+                                    <p><strong className="text-gray-200">경제 기조:</strong> 포용적 성장, 빈곤층 지원(Bolsa Família), 국영 기업 역할 중시</p>
+                                    <p><strong className="text-gray-200">채권 시장 영향:</strong> 재정 준칙 완화 우려로 금리 상방 압력 가능성 있으나, 중앙은행(BCB) 독립성 견지로 시스템 리스크는 방어선 형성</p>
+                                </div>
+                            </div>
+
+                            {/* 플라비우 보우소나루 카드 */}
+                            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-blue-950/40 via-black/40 to-black/60 border border-blue-500/30 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
+                                        <span className="font-black text-white text-base">플라비우 보우소나루</span>
+                                    </div>
+                                    <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                        자유당 (PL) · 상원의원
+                                    </span>
+                                </div>
+                                <div className="space-y-2 text-xs text-gray-300">
+                                    <p><strong className="text-gray-200">정치 성향:</strong> 우파 보수 (자이르 보우소나루 전 대통령 장남 및 정치적 계승자)</p>
+                                    <p><strong className="text-gray-200">경제 기조:</strong> 친기업·친시장, 민영화 추진, 공공 지출 축소 및 감세</p>
+                                    <p><strong className="text-gray-200">채권 시장 영향:</strong> 재정 건전화 기대로 당선 시 단기 금리 급락(13.2% 이하) 및 헤알화 강세 랠리 가능성, 반면 정치적 대립 리스크</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 text-xs text-gray-300 leading-relaxed">
+                            💡 <span className="font-bold text-amber-300">판세 분석 결론:</span> 현 시점에서는 <span className="text-white font-semibold">"누가 결선에 진출하느냐"</span>보다도, 결선이 치러질 경우 <span className="text-amber-400 font-bold">부동층·군소후보 표의 이동과 투표율이 승부를 좌우하는 초접전 구도</span>입니다. 
+                            <a href="https://www.reuters.com/world/americas/brazil-vote-approaches-with-lula-and-bolsonaro-polling-close-race-2026-10-01/" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[reuters]</a>
+                            <a href="https://www.yna.co.kr/view/AKR20260929001400087" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[yna.co]</a>
+                        </div>
+                    </div>
+
+                    {/* 섹션 3: 최신 여론조사 (Polls) 결과 종합 대조 */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <Gauge className="w-4 h-4 text-emerald-400" />
+                            <h3 className="font-bold text-white text-base">최신 주요 여론조사 결과 대조</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Quaest 조사 */}
+                            <div className="p-4 rounded-2xl bg-black/30 border border-white/10 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-bold text-amber-300 text-sm">Quaest 결선 가상대결 조사</span>
+                                    <span className="text-[11px] text-gray-400">9/28 발표 · 표본오차 ±2.0%p</span>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-xs font-semibold">
+                                        <span className="text-rose-400">룰라 42.0%</span>
+                                        <span className="text-gray-400">부동층 16.0%</span>
+                                        <span className="text-blue-400">플라비우 42.0%</span>
+                                    </div>
+                                    {/* 게이지 바 */}
+                                    <div className="h-3 w-full bg-gray-800 rounded-full overflow-hidden flex">
+                                        <div className="bg-rose-500 h-full transition-all" style={{ width: '42%' }} title="룰라 42%" />
+                                        <div className="bg-gray-600 h-full transition-all" style={{ width: '16%' }} title="부동층 16%" />
+                                        <div className="bg-blue-500 h-full transition-all" style={{ width: '42%' }} title="플라비우 42%" />
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-300 leading-relaxed">
+                                    최근 Quaest 조사에서는 두 후보가 결선 가상대결에서 각각 <span className="text-white font-bold">42%로 동률</span>이었으며, 표본오차는 ±2%포인트였습니다.
+                                    <a href="https://valorinternational.globo.com/politics/news/2026/09/28/new-quaest-poll-shows-lula-and-flavio-tied-at-42percent-in-runoff.ghtml" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[valorinternational.globo]</a>
+                                </p>
+                            </div>
+
+                            {/* AtlasIntel 조사 */}
+                            <div className="p-4 rounded-2xl bg-black/30 border border-white/10 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-bold text-emerald-300 text-sm">AtlasIntel 전국 지지율 조사</span>
+                                    <span className="text-[11px] text-gray-400">10/1 발표 · 표본오차 ±1.5%p</span>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-xs font-semibold">
+                                        <span className="text-rose-400">룰라 47.6%</span>
+                                        <span className="text-gray-400">기타 4.7%</span>
+                                        <span className="text-blue-400">플라비우 47.7%</span>
+                                    </div>
+                                    {/* 게이지 바 */}
+                                    <div className="h-3 w-full bg-gray-800 rounded-full overflow-hidden flex">
+                                        <div className="bg-rose-500 h-full transition-all" style={{ width: '47.6%' }} title="룰라 47.6%" />
+                                        <div className="bg-gray-600 h-full transition-all" style={{ width: '4.7%' }} title="기타 4.7%" />
+                                        <div className="bg-blue-500 h-full transition-all" style={{ width: '47.7%' }} title="플라비우 47.7%" />
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-300 leading-relaxed">
+                                    AtlasIntel 조사도 <span className="text-white font-bold">룰라 47.6%, 플라비우 47.7%</span>로 사실상 동률(0.1%p 차)을 제시하여 초접전 양상을 재확인했습니다.
+                                    <a href="https://www.reuters.com/world/americas/brazil-vote-approaches-with-lula-and-bolsonaro-polling-close-race-2026-10-01/" target="_blank" rel="noopener noreferrer" className="ml-1 text-[11px] text-cyan-400 underline hover:text-cyan-300">[reuters]</a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 섹션 4: 브라질 국채 투자 전략적 시사점 & 액션 플랜 */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <Target className="w-4 h-4 text-cyan-400" />
+                            <h3 className="font-bold text-white text-base">브라질 국채 투자자를 위한 시장 파급효과 & 액션 가이드</h3>
+                        </div>
+                        <div className="p-4 sm:p-5 rounded-2xl bg-cyan-950/20 border border-cyan-500/30 space-y-3 text-xs sm:text-sm text-gray-300 leading-relaxed">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                                <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1">
+                                    <span className="font-bold text-amber-300 flex items-center gap-1">
+                                        <Zap className="w-3.5 h-3.5" /> 10월 5일 단기 변동성
+                                    </span>
+                                    <p className="text-gray-300">
+                                        1차 투표 결과 결선 대결 확정 시 양 후보 간 포퓰리즘 공약 경쟁으로 10년 국채 금리가 일시적으로 <strong className="text-amber-400">14.5% 수준까지 스파이크</strong>할 가능성 상존.
+                                    </p>
+                                </div>
+                                <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1">
+                                    <span className="font-bold text-emerald-300 flex items-center gap-1">
+                                        <Award className="w-3.5 h-3.5" /> 바벨 포트폴리오 가이드
+                                    </span>
+                                    <p className="text-gray-300">
+                                        14.5% 어깨 고금리 도달 시 <strong className="text-emerald-400">헤알화 장기채(2033/2035) 50%</strong> 비중으로 확대하여 고쿠폰(10%+) 락인 및 자본차익 도모. 달러 장기채 20%로 환율 변동성 완충.
+                                    </p>
+                                </div>
+                                <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1">
+                                    <span className="font-bold text-cyan-300 flex items-center gap-1">
+                                        <ShieldCheck className="w-3.5 h-3.5" /> 중앙은행 중립성 방파제
+                                    </span>
+                                    <p className="text-gray-300">
+                                        가브리엘 갈리폴로 차기 총재 체제에서도 법제화된 중앙은행 독립성으로 인해 무분별한 금리 인하나 시스템 붕괴(Worst 시나리오)는 제도적으로 차단됨.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 섹션 5: 보도 출처 및 레퍼런스 */}
+                    <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
+                        <span className="font-bold text-gray-500 uppercase tracking-wider text-[10px]">
+                            Reference Citations:
+                        </span>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <a href="https://www.reuters.com/world/americas/brazil-vote-approaches-with-lula-and-bolsonaro-polling-close-race-2026-10-01/" target="_blank" rel="noopener noreferrer" className="hover:text-amber-300 underline flex items-center gap-1">
+                                <span>Reuters (2026.10.01)</span>
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                            <a href="https://www.aa.com.tr/en/politics/explainer-what-to-know-about-brazils-2026-presidential-election/4074737" target="_blank" rel="noopener noreferrer" className="hover:text-amber-300 underline flex items-center gap-1">
+                                <span>Anadolu Agency Explainer</span>
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                            <a href="https://valorinternational.globo.com/politics/news/2026/09/28/new-quaest-poll-shows-lula-and-flavio-tied-at-42percent-in-runoff.ghtml" target="_blank" rel="noopener noreferrer" className="hover:text-amber-300 underline flex items-center gap-1">
+                                <span>Valor Econômico (Quaest)</span>
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                            <a href="https://www.yna.co.kr/view/AKR20260929001400087" target="_blank" rel="noopener noreferrer" className="hover:text-amber-300 underline flex items-center gap-1">
+                                <span>연합뉴스 (2026.09.29)</span>
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                            <a href="https://www.democrata.es/en/center-of-surveys-and-electoral-polls/surveys-brazil-elections-lula-leads-bolsonaro-in-the-first-round-but-the-result-evens-out-in-the-second/" target="_blank" rel="noopener noreferrer" className="hover:text-amber-300 underline flex items-center gap-1">
+                                <span>Democrata Polls Center</span>
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3) 푸터 버튼 */}
+                <div className="px-6 py-4 border-t border-white/10 bg-white/[0.02] flex justify-end">
+                    <button
+                        onClick={onClose}
+                        className="px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black shadow-md hover:shadow-amber-500/30 transition-all cursor-pointer"
+                    >
+                        확인 완료 및 창 닫기
+                    </button>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+}
+
+// 시계열 세로 타임라인: 좌측 레일 + 마커. 완료된 과거 이벤트는 1줄 최소화(접기/펼치기), 다가오는 이벤트 상시 노출 및 대선 상세 팝업 연동.
 function MacroTimeline({ timeline, augScenarios }: {
     timeline: Catalyst[];
     augScenarios?: { id: string; title: string; color: string; logic: string; action: string }[];
 }) {
     const impactColor = (impact: string) => impact === 'fx' ? 'amber' : impact === 'rate' ? 'cyan' : 'rose';
     
-    // 가장 가까운 다음 미완료 이벤트의 key 찾기 (예: D-11 Copom 8월)
-    const nextEventKey = timeline.find(c => c.d_day >= 0)?.key;
+    // election_runoff 결선투표가 누락된 경우 자동 보강 및 날짜순 정렬
+    const activeTimeline = useMemo(() => {
+        if (!timeline) return [];
+        const hasRunoff = timeline.some(c => c.key === 'election_runoff');
+        if (!hasRunoff) {
+            const runoff: Catalyst = {
+                date: "2026-10-26",
+                key: "election_runoff",
+                title: "브라질 대선 2차 결선투표",
+                impact: "both",
+                d_day: getDynamicDDay("2026-10-26"),
+                note: "1차 투표 과반 득표자 부재 시 상위 2명 결선 진출. 룰라(PT) vs 플라비우 보우소나루(PL) 결선 초접전 구도. 부동층/군소후보 표심 이동 및 투표율이 승부 좌우.",
+                actual: null,
+                outlook: "결선 판세에 따른 금리 스파이크 시(14.5% 어깨 고금리) 장기채(2033/2035) 50% 분할 매수 기회 활용. 중앙은행 독립성 견지로 극단적 완화는 차단.",
+            };
+            const updated = [...timeline, runoff];
+            updated.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            return updated;
+        }
+        return timeline;
+    }, [timeline]);
 
-    return (
-        <div className="relative pl-6">
-            <div className="absolute left-2 top-1 bottom-1 w-px bg-gradient-to-b from-white/20 via-white/10 to-transparent" />
-            <div className="flex flex-col gap-3">
-                {timeline.map((c) => {
-                    const past = c.d_day < 0;
-                    const isNext = c.key === nextEventKey;
-                    const col = impactColor(c.impact);
-                    const dot = past
-                        ? 'bg-gray-600'
+    // 가장 가까운 다음 미완료 이벤트의 key 찾기
+    const nextEventKey = activeTimeline.find(c => c.d_day >= 0)?.key;
+
+    // 과거 이벤트와 다가오는 이벤트 분리
+    const pastEvents = activeTimeline.filter(c => c.d_day < 0);
+    const upcomingEvents = activeTimeline.filter(c => c.d_day >= 0);
+
+    const [isPastExpanded, setIsPastExpanded] = useState(false);
+    const [isElectionModalOpen, setIsElectionModalOpen] = useState(false);
+
+    const renderCard = (c: Catalyst, isPastCard: boolean) => {
+        const isNext = c.key === nextEventKey;
+        const col = impactColor(c.impact);
+        const dot = isPastCard
+            ? 'bg-gray-600'
+            : isNext
+                ? 'bg-amber-400 ring-4 ring-amber-400/40 animate-pulse'
+                : col === 'amber' ? 'bg-amber-400' : col === 'cyan' ? 'bg-cyan-400' : 'bg-rose-400';
+
+        const isCopomAug = c.key === 'copom_aug';
+        const isElection = c.key === 'election' || c.key === 'election_runoff';
+
+        return (
+            <div key={c.key} className="relative">
+                <span className={`absolute -left-[18px] top-4 w-3 h-3 rounded-full ${dot}`} />
+                <div className={`rounded-2xl border transition-all duration-300 ${
+                    isPastCard
+                        ? 'border-white/5 bg-black/10 opacity-70 hover:opacity-100 p-4'
                         : isNext
-                            ? 'bg-amber-400 ring-4 ring-amber-400/40 animate-pulse'
-                            : col === 'amber' ? 'bg-amber-400' : col === 'cyan' ? 'bg-cyan-400' : 'bg-rose-400';
-
-                    const isCopomAug = c.key === 'copom_aug';
-
-                    return (
-                        <div key={c.key} className="relative">
-                            <span className={`absolute -left-[18px] top-4 w-3 h-3 rounded-full ${dot}`} />
-                            <div className={`rounded-2xl border transition-all duration-300 ${
-                                past
-                                    ? 'border-white/5 bg-black/10 opacity-60 p-4'
-                                    : isNext
-                                        ? 'border-amber-400/80 bg-gradient-to-r from-amber-500/20 via-yellow-500/10 to-amber-500/20 shadow-[0_0_25px_rgba(245,158,11,0.25)] animate-pulse p-4 ring-1 ring-amber-400/50'
-                                        : 'border-white/10 bg-black/20 p-4'
-                            }`}>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {/* 1) 왼쪽: Timeline 상의 이벤트 명 및 세부정보 */}
-                                    <div className="space-y-1.5 pr-2 md:border-r md:border-white/10 flex flex-col justify-between">
-                                        <div>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                {isNext && (
-                                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-400 text-black uppercase tracking-wider animate-bounce">
-                                                        NEXT EVENT
-                                                    </span>
-                                                )}
-                                                <span className={`text-base font-black ${past ? 'text-gray-500' : isNext ? 'text-amber-300 text-lg' : 'text-gray-200'}`}>
-                                                    {past ? '완료' : `D-${c.d_day}`}
-                                                </span>
-                                                <span className={`text-sm font-bold ${past ? 'text-gray-400' : isNext ? 'text-white text-base' : 'text-white'}`}>{c.title}</span>
-                                                <span className="text-xs text-gray-400 font-mono">{c.date}</span>
-                                            </div>
-                                            <div className="mt-1.5 flex items-center gap-2">
-                                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                                                    col === 'amber' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                                    : col === 'cyan' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                                                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                                                }`}>
-                                                    {c.impact === 'fx' ? '환율 변수' : c.impact === 'rate' ? '금리 변수' : '금리·환율 이중 변수'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <p className="text-xs text-gray-300 mt-1 leading-relaxed">{c.note}</p>
-                                    </div>
-                                    
-                                    {/* 2) 중간: 실제 해당 시점에서의 발표 내용 */}
-                                    <div className="space-y-1 md:border-r md:border-white/10 md:px-2 flex flex-col justify-start">
-                                        <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">실제 발표 내용</span>
-                                        {c.actual
-                                            ? <p className="text-xs text-gray-200 mt-1 leading-relaxed font-medium">{c.actual}</p>
-                                            : <p className="text-xs text-gray-500 italic mt-1">{past ? '발표 내용 집계 대기' : '— (이벤트 대기 중)'}</p>}
-                                    </div>
-
-                                    {/* 3) 오른쪽: 국채 전망 및 액션플랜 */}
-                                    <div className="space-y-1 md:pl-2 flex flex-col justify-start">
-                                        <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">국채 전망 및 액션플랜</span>
-                                        {c.outlook
-                                            ? <p className="text-xs text-gray-200 mt-1 leading-relaxed font-medium">{c.outlook}</p>
-                                            : <p className="text-xs text-gray-500 italic mt-1">— (이벤트 대기 중)</p>}
-                                    </div>
+                            ? 'border-amber-400/80 bg-gradient-to-r from-amber-500/20 via-yellow-500/10 to-amber-500/20 shadow-[0_0_25px_rgba(245,158,11,0.25)] animate-pulse p-4 ring-1 ring-amber-400/50'
+                            : 'border-white/10 bg-black/20 p-4'
+                }`}>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* 1) 왼쪽: Timeline 상의 이벤트 명 및 세부정보 */}
+                        <div className="space-y-1.5 pr-2 md:border-r md:border-white/10 flex flex-col justify-between">
+                            <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {isNext && (
+                                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-400 text-black uppercase tracking-wider animate-bounce">
+                                            NEXT EVENT
+                                        </span>
+                                    )}
+                                    <span className={`text-base font-black ${isPastCard ? 'text-gray-500' : isNext ? 'text-amber-300 text-lg' : 'text-gray-200'}`}>
+                                        {isPastCard ? '완료' : `D-${c.d_day}`}
+                                    </span>
+                                    <span className={`text-sm font-bold ${isPastCard ? 'text-gray-400' : isNext ? 'text-white text-base' : 'text-white'}`}>{c.title}</span>
+                                    <span className="text-xs text-gray-400 font-mono">{c.date}</span>
                                 </div>
+                                <div className="mt-1.5 flex items-center gap-2">
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                                        col === 'amber' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                        : col === 'cyan' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                        : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                    }`}>
+                                        {c.impact === 'fx' ? '환율 변수' : c.impact === 'rate' ? '금리 변수' : '금리·환율 이중 변수'}
+                                    </span>
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-300 mt-1 leading-relaxed">{c.note}</p>
+                        </div>
+                        
+                        {/* 2) 중간: 실제 해당 시점에서의 발표 내용 */}
+                        <div className="space-y-1 md:border-r md:border-white/10 md:px-2 flex flex-col justify-start">
+                            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">실제 발표 내용</span>
+                            {c.actual
+                                ? <p className="text-xs text-gray-200 mt-1 leading-relaxed font-medium">{c.actual}</p>
+                                : <p className="text-xs text-gray-500 italic mt-1">{isPastCard ? '발표 내용 집계 대기' : '— (이벤트 대기 중)'}</p>}
+                        </div>
 
-                                {/* 8월 Copom 이벤트 카드인 경우 A, B, C 시나리오를 카드 하단에 들여쓰기로 렌더링 */}
-                                {isCopomAug && augScenarios && augScenarios.length > 0 && (
-                                    <div className="mt-4 pt-3.5 border-t border-amber-500/30">
-                                        <p className="text-xs font-bold text-amber-300 mb-2 flex items-center gap-1.5">
-                                            <Layers className="w-3.5 h-3.5" /> 8월 Copom 금리 결정 시나리오별 대응 플레이북
-                                        </p>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                                            {augScenarios.map((sc) => (
-                                                <ScenarioCard key={sc.id} sc={sc} />
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                        {/* 3) 오른쪽: 국채 전망 및 액션플랜 */}
+                        <div className="space-y-1 md:pl-2 flex flex-col justify-start">
+                            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">국채 전망 및 액션플랜</span>
+                            {c.outlook
+                                ? <p className="text-xs text-gray-200 mt-1 leading-relaxed font-medium">{c.outlook}</p>
+                                : <p className="text-xs text-gray-500 italic mt-1">— (이벤트 대기 중)</p>}
+                        </div>
+                    </div>
+
+                    {/* 대선 이벤트(1차 및 2차) 카드인 경우 상세 인텔리전스 팝업 버튼 노출 */}
+                    {isElection && (
+                        <div className="mt-3.5 pt-3 border-t border-amber-500/30 flex flex-wrap items-center justify-between gap-2 bg-amber-500/5 -mx-4 -mb-4 p-3 rounded-b-2xl">
+                            <div className="flex items-center gap-2 text-xs text-amber-200">
+                                <Vote className="w-4 h-4 text-amber-400 shrink-0" />
+                                <span className="font-semibold">
+                                    {c.key === 'election' ? '1차 투표(10/4) 결과에 따른 결선(10/25) 진출 및 여론조사 판세 분석' : '2차 결선투표(10/25) 룰라 vs 플라비우 초접전 및 국채 영향'}
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsElectionModalOpen(true)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black shadow-md hover:shadow-amber-500/40 transition-all cursor-pointer shrink-0"
+                            >
+                                <span>🇧🇷 대선 종합 인텔리전스 팝업 보기</span>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* 8월 Copom 이벤트 카드인 경우 A, B, C 시나리오를 카드 하단에 들여쓰기로 렌더링 */}
+                    {isCopomAug && augScenarios && augScenarios.length > 0 && (
+                        <div className="mt-4 pt-3.5 border-t border-amber-500/30">
+                            <p className="text-xs font-bold text-amber-300 mb-2 flex items-center gap-1.5">
+                                <Layers className="w-3.5 h-3.5" /> 8월 Copom 금리 결정 시나리오별 대응 플레이북
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                                {augScenarios.map((sc) => (
+                                    <ScenarioCard key={sc.id} sc={sc} />
+                                ))}
                             </div>
                         </div>
-                    );
-                })}
+                    )}
+                </div>
             </div>
-        </div>
+        );
+    };
+
+    return (
+        <>
+            {/* 팝업 모달 */}
+            <BrazilElectionDetailModal
+                isOpen={isElectionModalOpen}
+                onClose={() => setIsElectionModalOpen(false)}
+            />
+
+            {/* 1. 지나간 (완료) Timeline 1줄 최소화 (접기/펼치기 아코디언) */}
+            {pastEvents.length > 0 && (
+                <div className="mb-4">
+                    <button
+                        type="button"
+                        onClick={() => setIsPastExpanded(!isPastExpanded)}
+                        className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl bg-black/30 hover:bg-black/50 border border-white/10 hover:border-white/20 transition-all text-xs group cursor-pointer"
+                    >
+                        <div className="flex items-center gap-2.5 overflow-hidden">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
+                            <span className="font-bold text-gray-300 group-hover:text-white shrink-0">
+                                ✅ 완료된 매크로 이벤트 ({pastEvents.length}건)
+                            </span>
+                            <span className="text-[11px] text-gray-400 truncate hidden sm:inline">
+                                · {pastEvents.map(e => `${e.title.replace('브라질 ', '')} (${e.date})`).join('  |  ')}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 group-hover:text-cyan-300 shrink-0 ml-2">
+                            <span>{isPastExpanded ? '지난 이벤트 접기' : '지난 이벤트 상세 보기'}</span>
+                            {isPastExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </div>
+                    </button>
+
+                    {/* 펼쳐졌을 때만 과거 이벤트 리스트 렌더링 */}
+                    {isPastExpanded && (
+                        <div className="mt-3 relative pl-6">
+                            <div className="absolute left-2 top-1 bottom-1 w-px bg-white/10" />
+                            <div className="flex flex-col gap-3">
+                                {pastEvents.map(c => renderCard(c, true))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* 2. 다가오는(미완료) Timeline: 상시 노출 세로 레일 */}
+            <div className="relative pl-6">
+                <div className="absolute left-2 top-1 bottom-1 w-px bg-gradient-to-b from-amber-400/40 via-cyan-400/20 to-transparent" />
+                <div className="flex flex-col gap-3">
+                    {upcomingEvents.map(c => renderCard(c, false))}
+                </div>
+            </div>
+        </>
     );
 }
 

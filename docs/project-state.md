@@ -3,10 +3,20 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 브라질 국채 적극 고수익 바벨 포트폴리오 & BCB 독립성·듀레이션 원칙 반영 완료 (2026-10-03)
-➡️ Next: Sprint 6 완료 검토 및 차기 스프린트(Sprint 7) 백로그 이슈 점검
+✅ Current: 브라질 대선 2차 결선투표 Timeline 추가, 완료 이벤트 1줄 최소화 및 대선 종합 인텔리전스 팝업 완료 (2026-10-03)
+➡️ Next: 브라질 국채 토탈리턴 시뮬레이터 개발 (쿠폰 복리/단리, 금리 변동 시 자본차익, 환율 시나리오 종합)
 
 > 세션 핸드오프 (2026-10-03):
+> - 🇧🇷 브라질 대선 2차 결선투표(10/25) 타임라인 추가 및 완료 이벤트 1줄 최소화:
+>   - `backend/api/brazil_bond.py`: `CATALYSTS`에 `election_runoff` (2026-10-26, 현지 10/25) 추가 및 metadata 병합 지원.
+>   - `dashboard/src/components/BrazilBondTab.tsx`:
+>     - `MacroTimeline`: 완료된 이벤트(3건: 한은 금통위, Copom 8월, Copom 9월)를 1줄 요약 바(`✅ 완료된 매크로 이벤트 (3건)`)로 최소화하여 시각적 공간 최적화, 필요 시 '지난 이벤트 상세 보기/접기' 토글 제공.
+>     - `BrazilElectionDetailModal`: React `createPortal` 기반 고대비 네온 모달 구현.
+>       1) 선거 제도 및 공식 일정 요약표 (1차 10/4, 2차 결선 10/25, 전자투표 100%, 과반 결선 조건, 백지표 제외 유효표 다수결).
+>       2) 현재 판세: 룰라(PT, 온건 좌파) vs 플라비우 보우소나루(PL, 우파 보수) 맞대결 구도 및 정책/채권 영향.
+>       3) 최신 여론조사 시각화 바 차트: Quaest (룰라 42% vs 플라비우 42% 동률), AtlasIntel (룰라 47.6% vs 플라비우 47.7% 동률) 시각화.
+>       4) 국채 투자 전략 액션 가이드: 14.5% 어깨 금리 스파이크 시 헤알 장기채 50% 분할 매수 찬스 및 중앙은행 독립성 방파제.
+>       5) 공식 출처 링크 (Reuters, AA, Valor Econômico, 연합뉴스, Democrata).
 > - 🇧🇷 브라질 채권 투자 가이드 고도화 (지인 제언 반영):
 >   - 🚀 신규 포트폴리오: `aggressive_barbell` (헤알 장기 50% + 헤알 중기 30% + 달러 장기 20%) 5번째 라인업 탑재 (여유자금 금리 피크아웃 시 자본차익+고쿠폰+달러환헷지).
 >   - 🧭 듀레이션 기술 원칙 명문화: "금리 고점(어깨/14.5%↑) = 듀레이션 확대(장기채), 금리 저점 = 듀레이션 축소(단기채)" 원칙 수립.
@@ -64,6 +74,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 | S6-14 | 구글 시트 기반 종합 자산 관리 (Account Board + KIS 연동 + 수동 자산 CRUD) | ✅ stable | KIS API 실시간 연동 + 타 금융사(미래에셋/삼성/저축) 수동 자산/예수금 통합 집계, 구글 시트 형태의 Account Board 및 계좌별 상세 종목 뷰 구현 완료 |
 | S6-15 | 반도체 매크로 사이클(CSCI) 퀀트 엔진 및 4국면 시각화 대시보드 | ✅ stable | 5년 롤링 Z-score 정규화 기반 선행(40%)+동행(40%)+후행(20%) CSCI 지수, 4-Phase 사이클 시계(2D Quadrant), 빅테크 CapEx 트래커, 서브섹터 디커플링 맵, ETF 리밸런싱 매트릭스 연동 완료 |
 | S6-17 | 브라질 대선 시나리오 분석 및 조건별 추천 국채 라인업 (헤알화/달러 기반) | ✅ stable | 3대 대선 시나리오 비교(BCB 독립성 하방 방파제), 금리 고점 듀레이션 확대 원칙, 조건별 국채 5종 라인업(적극 고수익 바벨 포함), Tranche 3 체크리스트 및 Gemini Live Pulse 연동 완료 |
+| S6-18 | 브라질 대선 2차 결선투표 추가, 타임라인 1줄 최소화 및 대선 종합 인텔리전스 팝업 | ✅ stable | 2026-10-26 결선투표 추가, 완료 이벤트 1줄 접기/펼치기 아코디언, 선거 일정/제도 요약표, 룰라 vs 플라비우 판세 및 Quaest·AtlasIntel 여론조사 시각화 바 차트, 국채 투자 액션 가이드 및 출처 팝업 모달 구현 완료 |
 ## Module Registry
  
 | Module | Layer | Status | Key Files |

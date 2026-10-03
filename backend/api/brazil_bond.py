@@ -51,7 +51,9 @@ CATALYSTS = [
      "actual": "기준금리 0.25%p(25bp) 추가 인하 ➔ 연 13.75% 결정 (만장일치). 5연속 25bp 인하 릴레이 지속. 8월 IPCA 물가 둔화(-0.32% MoM, 연 4.22%)를 확인하고 통화정책 완화 기조를 연장함. 단, 10월 대선 전후 금융시장 노이즈에 대비해 향후 인하 속도는 경제 데이터와 인플레 기대치에 철저히 연동하겠다는 데이터 의존적(Data-dependent) 신중론 견지.",
      "outlook": "Selic 13.75% 인하에도 5년물 국채금리는 14.15~14.30%로 견고하게 지지되며 최적 진입 영역(14.2%↑)을 안정적으로 유지 중. 원/헤알 환율 또한 258~265원 수준으로 290원 이하 조건을 대폭 충족. 1·2차 트랜치(누적 50~60%) 집행을 안정적으로 마친 후, 불과 D-3일 앞으로 다가온 10/5 브라질 대선 1차 투표의 정치적 노이즈 및 일시적 금리 15% 터치/헤알 급락 변동성을 활용한 3차 트랜치(잔여 40%) 집행 대기 유효."},
     {"date": "2026-10-05", "key": "election", "title": "브라질 대선 1차 투표",
-     "note": "실제 개표/투표 결과 반영: 10월 5일(월) (브라질 10/4 현지 투표 종료 후). 재정 포퓰리즘·정치 노이즈. 헤알 급락·금리 15% 터치 등 최대 변동성 (Binary Event)", "impact": "both"},
+     "note": "실제 개표/투표 결과 반영: 10월 5일(월) (브라질 10/4 현지 투표 종료 후). 과반 득표자 부재 시 상위 2명 10/25 결선 진출. 재정 포퓰리즘·정치 노이즈. 헤알 급락·금리 15% 터치 등 최대 변동성 (클릭 시 대선 종합 인텔리전스 팝업)", "impact": "both"},
+    {"date": "2026-10-26", "key": "election_runoff", "title": "브라질 대선 2차 결선투표",
+     "note": "실제 개표/투표 결과 반영: 10월 26일(월) (브라질 10/25 현지 투표 종료 후). 1차 유효표 과반 부재 시 1·2위 후보 맞대결 (유효표 다수결 당선 확정). 대선 정치 불확실성 완전 소멸 (안도 랠리 vs 정책 피벗)", "impact": "both"},
     {"date": "2026-11-05", "key": "copom_nov", "title": "브라질 Copom (11월)",
      "note": "실제 금리 결정 발표: 11월 5일(목) 새벽 06:30경 (BCB 공식 캘린더)", "impact": "rate"},
     {"date": "2026-12-10", "key": "copom_dec", "title": "브라질 Copom (12월)",
@@ -433,6 +435,9 @@ async def _get_persisted_catalysts(db: AsyncSession) -> list[dict]:
                 k = default_cat["key"]
                 if k in saved_map:
                     item = {**default_cat, **saved_map[k]}
+                    item["title"] = default_cat["title"]
+                    item["date"] = default_cat["date"]
+                    item["note"] = default_cat["note"]
                     merged.append(item)
                 else:
                     merged.append(dict(default_cat))
