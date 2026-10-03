@@ -102,6 +102,41 @@ async def lifespan(app: FastAPI):
         except Exception as _e:
             print(f"[Startup] alert_brazil column migration skipped: {_e}")
 
+        # ── 2.75. notification_settings 멀티채널(Discord/Slack) 및 괴리율 개인화 알림 컬럼 추가 ──
+        try:
+            async with engine.begin() as conn:
+                if _is_sqlite:
+                    cols_sqlite = [
+                        ("discord_webhook_url", "TEXT"),
+                        ("slack_webhook_url", "TEXT"),
+                        ("channel_telegram", "INTEGER DEFAULT 1"),
+                        ("channel_discord", "INTEGER DEFAULT 0"),
+                        ("channel_slack", "INTEGER DEFAULT 0"),
+                        ("alert_disparity", "INTEGER DEFAULT 1"),
+                        ("disparity_threshold", "REAL DEFAULT 2.0"),
+                        ("disparity_target_scope", "TEXT DEFAULT 'PORTFOLIO'")
+                    ]
+                    for col_name, col_type in cols_sqlite:
+                        try:
+                            await conn.execute(text(f"ALTER TABLE notification_settings ADD COLUMN {col_name} {col_type}"))
+                        except Exception:
+                            pass
+                else:
+                    cols_pg = [
+                        ("discord_webhook_url", "VARCHAR"),
+                        ("slack_webhook_url", "VARCHAR"),
+                        ("channel_telegram", "INTEGER DEFAULT 1"),
+                        ("channel_discord", "INTEGER DEFAULT 0"),
+                        ("channel_slack", "INTEGER DEFAULT 0"),
+                        ("alert_disparity", "INTEGER DEFAULT 1"),
+                        ("disparity_threshold", "DOUBLE PRECISION DEFAULT 2.0"),
+                        ("disparity_target_scope", "VARCHAR DEFAULT 'PORTFOLIO'")
+                    ]
+                    for col_name, col_type in cols_pg:
+                        await conn.execute(text(f"ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
+        except Exception as _e:
+            print(f"[Startup] notification_settings multi-channel columns migration skipped: {_e}")
+
         # ── 2.8. 섹터/분류 분리 마이그레이션 ────────────────────────────────────
         # 스키마(DDL)와 데이터(DML)를 나눠서 돌린다. classification 컬럼이 없으면
         # ManualAsset 을 읽는 모든 엔드포인트가 500 이 되므로, 스키마는 검증될 때까지 재시도한다.

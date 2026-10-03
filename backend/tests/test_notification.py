@@ -4,6 +4,10 @@ from httpx import AsyncClient, ASGITransport
 from db.database import engine, Base
 from main import app
 
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
 @pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.new_event_loop()
@@ -23,10 +27,6 @@ def setup_db(event_loop):
                 pass
     event_loop.run_until_complete(_setup_db())
     yield
-    async def _teardown_db():
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-    event_loop.run_until_complete(_teardown_db())
 
 @pytest.mark.anyio
 async def test_notification_settings_flow():
@@ -83,10 +83,10 @@ async def test_scheduler_alerting_and_rebalance(monkeypatch):
         return {
             "current_status": {"vix": 15.5, "fgi": 62.0, "cli": 100.8, "per": 11.2},
             "risk": {
-                "level": "safe",
-                "label": "안전",
-                "color": "green",
-                "score": 1
+                "level": "danger",
+                "label": "위험",
+                "color": "red",
+                "score": 3
             }
         }
         

@@ -64,6 +64,7 @@
 | S6-17: 브라질 대선 시나리오 분석 및 조건별 추천 국채 라인업 | ✅ done | backend/api/brazil_bond.py, dashboard/src/components/BrazilBondTab.tsx | 대선 3대 시나리오(중도우파/온건실용연임/강경좌파) 비교 매트릭스, 조건/기간별 추천 국채 4종 라인업(헤알화 단기/장기, 달러 10년물, 바벨 5:3:2 전략), Tranche 3 실시간 체크리스트 및 Gemini AI Live Pulse 실시간 정세 브리핑 연동 완료 |
 | S6-4: ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API | ✅ done | backend/core/dividend_scraper.py, backend/api/dividends.py, backend/db/models.py | yfinance 및 네이버 모바일 API 연동 분배금 시계열 수집, 배당주기(월/분기/연) 자동 판별, 포트폴리오 월별 배당 Cashflow 시뮬레이션 및 고배당 랭킹 API 구축 완료 |
 | S6-5: 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드 화면 | ✅ done | dashboard/src/components/DividendDashboard.tsx, MyAssetsView.tsx, MainApp.tsx | 1~12월 월별 예상 배당금 차트(Recharts Bar), 12개월 배당 캘린더 매트릭스 뷰, 보유 수량 실시간 +/- 조절 및 재계산, /my 계좌 접근 한정 활성화 및 실계좌 자동 연동, 고배당&월배당 ETF 랭킹 연동 완료 |
+| S6-6: 괴리율 개인화 알림 설정 및 알림 채널 확장 | ✅ done | backend/core/notifier.py, backend/api/notification_settings.py, backend/core/scheduler.py, NotificationSettings.tsx | Telegram, Discord, Slack 멀티채널 웹훅 연동 및 실시간 테스트 발송, ETF 괴리율 임계치 슬라이더(0.5%~5.0%) 및 대상 범위(내 보유 vs 전체) 개인화 경보 시스템 구축 완료 |
 
 
 

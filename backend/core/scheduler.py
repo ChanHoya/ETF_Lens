@@ -454,19 +454,33 @@ async def check_exit_signal_and_alert() -> None:
         print(f"[ExitSignalAlert] Failed to run exit signal check and notification: {e}")
 
 
+_disparity_alert_cache = {}  # dict[str, float] -> code: last_alerted_timestamp
+
+
 async def check_etf_disparity_and_alert() -> None:
     """
-    모니터링 대상 ETF(보유 종목 + 우주/바이오 주요 ETF)의 실시간 괴리율을 체크하고,
-    괴리율 절대값이 1.0% 이상인 경우 텔레그램 알림을 전송합니다.
+    모니터링 대상 ETF의 실시간 괴리율을 체크하고,
+    사용자별 개인화 괴리율 임계치를 초과한 경우 멀티채널(Telegram, Discord, Slack) 알림을 전송합니다.
+    (동일 종목 1시간 쿨다운 적용)
     """
+    import time
     from core.disparity_analyzer import fetch_etf_disparity_list
-    from core.notifier import send_telegram_message
+    from core.notifier import broadcast_notification, get_all_notification_settings
     from api.my_assets import get_my_portfolio
     from db.database import AsyncSessionLocal
     import pytz
     
-    print("[DisparityAlert] Checking ETF disparity rates...")
+    print("[DisparityAlert] Checking ETF disparity rates with personalized thresholds...")
     
+    # 0. 사용자 알림 설정 확인 (알림 활성화 여부 및 최소 임계치 산출)
+    all_settings = await get_all_notification_settings()
+    active_settings = [s for s in all_settings if getattr(s, "alert_disparity", 1) == 1]
+    
+    # 활성화된 설정의 임계치 중 최소값 적용 (기본 2.0%)
+    thresholds = [getattr(s, "disparity_threshold", 2.0) or 2.0 for s in active_settings]
+    min_threshold = min(thresholds) if thresholds else 2.0
+    check_all_scope = any(getattr(s, "disparity_target_scope", "PORTFOLIO") == "ALL" for s in active_settings)
+
     # 1. 모니터링 대상 ETF 코드 모으기
     # 기본 모니터링 대상 (우주 & 바이오 핵심 ETF)
     monitored_codes = {
@@ -501,55 +515,81 @@ async def check_etf_disparity_and_alert() -> None:
         print(f"[DisparityAlert] Failed to fetch disparity list: {e}")
         return
         
-    # 3. 임계치 초과 종목 판별 (|disparity_rate| >= 1.0%)
+    # 3. 대상 종목 판별 (PORTFOLIO vs ALL)
+    target_items = {}
+    if check_all_scope:
+        for code, info in disparity_map.items():
+            target_items[code] = info.get("name", code)
+    else:
+        target_items = monitored_codes
+
+    now_ts = time.time()
+    COOLDOWN_SECONDS = 3600  # 1시간 쿨다운
+
+    # 4. 임계치 초과 종목 판별 (|disparity_rate| >= min_threshold) 및 쿨다운 필터
     alert_items = []
-    for code, name in monitored_codes.items():
+    for code, name in target_items.items():
         etf_info = disparity_map.get(code)
         if not etf_info:
             continue
         
         disparity_rate = etf_info.get("disparity_rate", 0.0)
-        if abs(disparity_rate) >= 1.0:
+        if abs(disparity_rate) >= min_threshold:
+            # 쿨다운 체크
+            last_alert = _disparity_alert_cache.get(code, 0)
+            if now_ts - last_alert < COOLDOWN_SECONDS:
+                continue
+            
             alert_items.append({
                 "code": code,
-                "name": name,
+                "name": etf_info.get("name") or name,
                 "price": etf_info.get("price"),
                 "nav": etf_info.get("nav"),
                 "disparity_rate": disparity_rate
             })
             
     if not alert_items:
-        print("[DisparityAlert] No ETFs exceeded the disparity threshold (1.0%).")
+        print(f"[DisparityAlert] No ETFs exceeded disparity threshold (>= {min_threshold}% or in cooldown).")
         return
+
+    # 쿨다운 갱신
+    for item in alert_items:
+        _disparity_alert_cache[item["code"]] = now_ts
         
-    # 4. 텔레그램 메시지 발송
+    # 5. 메시지 생성 및 멀티채널 발송
     now_kst = datetime.now(pytz.timezone('Asia/Seoul'))
     time_str = now_kst.strftime("%Y-%m-%d %H:%M")
     
     is_open = now_kst.hour == 9
-    timing_label = "장초반 (09:10)" if is_open else "장마감 (15:15)"
+    timing_label = "장초반 (09:10)" if is_open else "장중 실시간"
     
     header = f"🚨 <b>[ETF 실시간 괴리율 경보 - {timing_label}]</b>\n"
     header += f"조회 시점: {time_str} KST\n\n"
-    header += f"괴리율 임계치(±1.0%)를 초과한 종목이 감지되었습니다. 매매 시 주의하시기 바랍니다.\n\n"
+    header += f"설정 임계치(±{min_threshold:.1f}%)를 초과한 종목이 감지되었습니다. 매매 시 주의하시기 바랍니다.\n\n"
     
     body = ""
     for item in alert_items:
         rate = item["disparity_rate"]
-        status_badge = f"🔴 <b>할인 (Discount {rate:.3f}%)</b>" if rate < 0 else f"🔵 <b>할증 (Premium +{rate:.3f}%)</b>"
+        status_badge = f"🔴 <b>할인 (Discount {rate:.2f}%)</b>" if rate < 0 else f"🔵 <b>할증 (Premium +{rate:.2f}%)</b>"
+        price_val = item.get("price")
+        nav_val = item.get("nav")
+        price_str = f"{int(price_val):,}원" if price_val else "N/A"
+        nav_str = f"{int(nav_val):,}원" if nav_val else "N/A"
         body += (
             f"▪️ <b>{item['name']}</b> ({item['code']})\n"
-            f"  - 현재가: <code>{int(item['price']):,}원</code> | NAV: <code>{int(item['nav']):,}원</code>\n"
+            f"  - 현재가: <code>{price_str}</code> | NAV: <code>{nav_str}</code>\n"
             f"  - 상태: {status_badge}\n\n"
         )
         
-    footer = f"💡 <i>괴리율이 큰 상태에서 시장가 주문을 넣을 경우 불리한 가격에 체결될 수 있으므로, 지정가 주문을 활용하거나 괴리율 안정화 후 매매하는 것을 권장합니다.</i>"
+    footer = "💡 <i>괴리율이 큰 상태에서 시장가 주문을 넣을 경우 불리한 가격에 체결될 수 있으므로, 지정가 주문을 활용하거나 괴리율 안정화 후 매매하는 것을 권장합니다.</i>"
     
-    success, _ = await send_telegram_message(header + body + footer, category="exit_signal")
-    if success:
-        print(f"[DisparityAlert] Sent disparity alert for {len(alert_items)} items.")
-    else:
-        print("[DisparityAlert] Failed to send Telegram alert.")
+    full_message = header + body + footer
+    results = await broadcast_notification(
+        full_message, 
+        category="disparity", 
+        title=f"🚨 [ETF 괴리율 경보] {len(alert_items)}개 종목 감지"
+    )
+    print(f"[DisparityAlert] Sent disparity alert for {len(alert_items)} items: {results}")
 
 
 def setup_scheduler():

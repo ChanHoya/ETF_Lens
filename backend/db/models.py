@@ -217,16 +217,28 @@ class UserPrincipal(Base):
 
 
 class NotificationSettings(Base):
-    """실시간 전략/신호 텔레그램 알림 설정"""
+    """실시간 전략/신호 텔레그램/디스코드/슬랙 알림 설정"""
     __tablename__ = "notification_settings"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    # 텔레그램
     telegram_token = Column(String, nullable=True)
     telegram_chat_id = Column(String, nullable=True)
+    # 디스코드 & 슬랙 웹훅
+    discord_webhook_url = Column(String, nullable=True)
+    slack_webhook_url = Column(String, nullable=True)
+    # 채널별 활성화 토글 (0: 비활성, 1: 활성)
+    channel_telegram = Column(Integer, default=1)
+    channel_discord = Column(Integer, default=0)
+    channel_slack = Column(Integer, default=0)
+    # 알림 카테고리
     alert_exit_signal = Column(Integer, default=1)  # 0: 비활성, 1: 활성
     alert_rebalance = Column(Integer, default=1)
     alert_daily_summary = Column(Integer, default=0)
     alert_brazil = Column(Integer, default=1)  # 브라질 국채 이벤트/신호/뉴스 알림
+    alert_disparity = Column(Integer, default=1) # 괴리율 실시간 경보
+    disparity_threshold = Column(Float, default=2.0) # 괴리율 절대값 임계치 (%) 기본 2.0%
+    disparity_target_scope = Column(String, default="PORTFOLIO") # 'PORTFOLIO' vs 'ALL'
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 

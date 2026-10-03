@@ -32,6 +32,7 @@ A living document of module relationships. Update whenever modules are added or 
 | Semiconductor Macro Cycle & CSCI | Presentation / Core | 5-Year rolling Z-score composite cycle index (CSCI), 4-phase cycle clock, BigTech CapEx tracker, subsector decoupling, and ETF allocation matrix | core/semi_cycle_engine, api/router, SemiCycleDashboard | SemiChart, SectorAnalysisTab | Antigravity |
 | ETF Dividend Analysis | Application / Core | ETF dividend history scraping, payout frequency analysis, and portfolio monthly cashflow simulation | core/dividend_scraper, api/dividends | DividendDashboard | Antigravity |
 | Dividend Calendar & Cashflow Dashboard | Presentation | Monthly dividend cashflow visualization, 12-month dividend calendar matrix, dynamic portfolio share adjustment, and high-yield ETF rankings board | api/dividends, api/integrated_assets | MyAssetsView, MainApp | Antigravity |
+| Multi-Channel Notifications & Custom Disparity Alerts | Presentation / Shared | Telegram, Discord, Slack multi-channel webhook dispatch, per-channel instant testing, and personalized ETF disparity threshold scheduling | core/notifier, api/notification_settings, core/scheduler | NotificationSettings, MyDashboard | Antigravity |
 <!-- Add new modules above this line -->
 
 

@@ -4,8 +4,8 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S6-5 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드 화면 구축 완료 (2026-10-03)
-➡️ Next: S6-6 괴리율 개인화 알림 설정 및 알림 채널 확장
+✅ Current: S6-6 괴리율 개인화 알림 설정 및 알림 채널 확장 완료 (2026-10-03)
+➡️ Next: Sprint 6 완료 검토 및 세션 마무리 / 차기 스프린트 계획
 
 > 세션 핸드오프 (2026-10-03):
 > - S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API 구축 완료:
@@ -16,6 +16,12 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 >   - `DividendDashboard.tsx`: 4대 요약 Bento 카드, 1~12월 월별 배당금 Bar 차트(월평균 기준선), 12개월 매트릭스 캘린더(NOW 배지), 수량 실시간 +/- 조절 및 즉시 재계산 시뮬레이터, 실계좌 자동 불러오기/프리셋/종목추가 모달, 시장 고배당 & 월배당 ETF 랭킹 보드 연동.
 >   - `MyAssetsView.tsx`: /my 전용 '💰 배당 캘린더' 서브탭 추가 및 계좌 접속 시 실보유 종목 자동 연동(`autoLoadMyAssets`).
 >   - `MainApp.tsx`: 일반 경로(/) 접속 시 배당 캘린더 서브탭 완전 제외 및 /my(showMyTab=true) 접속 시에만 한정 활성화하는 라우트 가드 적용.
+> - S6-6 괴리율 개인화 알림 설정 및 알림 채널 확장 완료:
+>   - `NotificationSettings` DB 모델 및 스키마 마이그레이션: `discord_webhook_url`, `slack_webhook_url`, `channel_telegram`, `channel_discord`, `channel_slack`, `alert_disparity`, `disparity_threshold`, `disparity_target_scope` 컬럼 추가.
+>   - `backend/core/notifier.py`: Discord / Slack 웹훅 비동기 전송 함수 및 통합 `broadcast_notification` 멀티캐스트 엔진 구축 (HTML -> Markdown/mrkdwn 자동 변환).
+>   - `backend/api/notification_settings.py`: `/settings` 및 `/test` 엔드포인트에 멀티채널 및 채널별 즉시 테스트 발송 기능 탑재.
+>   - `backend/core/scheduler.py`: `check_etf_disparity_and_alert`에 사용자별 개인화 임계치(0.5%~5.0%) 및 범위(내 보유 vs 전체), 1시간 쿨다운 캐시 적용.
+>   - `dashboard/src/components/NotificationSettings.tsx`: Telegram, Discord, Slack 3대 채널 탭 및 즉시 테스트 버튼, 괴리율 실시간 경보 Bento 카드 (임계치 슬라이더 및 프리셋, 대상 범위 선택기) UI 완성.
 
 
 ## Current Sprint
@@ -33,7 +39,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 | S6-3 | Efficient Frontier 시각화 및 최적 비중 연동 | ✅ stable | Recharts ComposedChart 산점도/효율전선 커브, Max Sharpe/MinVar/현재 Bento 카드, 최적 비중 BarChart 및 인사이트 요약 구현 완료 |
 | S6-4 | ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API | ✅ stable | yfinance/네이버 API 연동 분배금 수집, 배당주기 자동 판별, 포트폴리오 월별 Cashflow 연산 및 고배당 랭킹 API 구축 완료 |
 | S6-5 | 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드 | ✅ stable | 1~12월 월별 예상 배당금 차트(Recharts Bar), 12개월 배당 캘린더 매트릭스 뷰, 보유 수량 실시간 +/- 조절 및 재계산, /my 계좌 접근 한정 활성화 및 실계좌 자동 연동, 고배당&월배당 ETF 랭킹 연동 완료 |
-| S6-6 | 괴리율 개인화 알림 설정 및 알림 채널 확장 | ⬜ planned | Disparity 임계치 설정 Slider UI 및 Slack/Discord 웹훅 발송 즉시 테스트 연동 |
+| S6-6 | 괴리율 개인화 알림 설정 및 알림 채널 확장 | ✅ stable | Disparity 임계치 설정 Slider UI, 범위(내 보유 vs 전체) 설정, Telegram/Discord/Slack 웹훅 및 채널별 즉시 테스트 연동 완료 |
 | S6-7 | 계좌별 자산 증감(추이) 시각화 및 분석 | ✅ stable | KIS 일별 계좌 자산 DB 적재 및 거래내역 기반 90일 역산 복원 차트 시각화 완료 |
 | S6-8 | 전력/에너지 섹터 주요 종목 현황 및 구성종목 비중 비교 | ✅ stable | 3분할 탭 개편(국내주식/해외주식/해외상장) 및 GRID 등 미국 상장 6종 추가, 통화 분기 표기 연동 완료 |
 | S6-9 | 차기 주도주 발굴 및 10대 대안 섹터 퀀트 스크리너 | ✅ stable | 양극화 지수, M7 CAPEX, 반도체 이격 신호등 및 10대 테마 퀀트 스크리너 구현 완료 |
