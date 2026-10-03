@@ -12,6 +12,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 > - 투자자 성향/조건별 추천 국채 4종 라인업 완비: 헤알화 2~3년물 (NTN-F 2027~2028, 1~3년 안정 인컴형), 헤알화 5~10년물 (NTN-F 2031~2035, 3~5년+ 자본차익 극대화형), 달러 외화국채 10년물 (Global Bond USD 6~7%, 환위험 차단), 대선 대응 최적 바벨 전략 (단기 50% + 장기 30% + 달러 20%, Tranche 3 기본 권장 모델).
 > - Gemini AI 기반 `GET /election-pulse` 및 `POST /election-pulse/generate` 엔드포인트 개설: 실시간 뉴스 헤드라인 및 시장 지표(Selic 13.75%, Y5 14.28%, 환율) 기반 시나리오별 수렴도(A 25%, B 60%, C 15%) 및 3색 프로그레스 바 연동.
 > - `BrazilBondTab.tsx`: Tranche 3 진입 시점 맞춤 '브라질 대선 시나리오 & 국채 투자 플레이북' 섹션 신설, 0ms SWR 로컬 캐싱 및 실시간 재생성 트리거 지원.
+> - 탭 전환 UX 개선: 3가지 기능 탭 클릭 시 화면 최상단으로 탭 메뉴 바를 일관되게 정렬 이동(`requestAnimationFrame` + `setTimeout` 기반 스무스 스크롤) 및 `sticky top-0 z-30` 다크 글래스모피즘 고정 적용 완료.
 
 
 ## Current Sprint

@@ -2330,15 +2330,36 @@ function ElectionPlaybookSection({
     const [activeTab, setActiveTab] = useState<'scenarios' | 'bonds' | 'strategy'>('scenarios');
     const [selectedScenarioId, setSelectedScenarioId] = useState<'A' | 'B' | 'C'>('B');
     const [selectedBondId, setSelectedBondId] = useState<string>('barbell_strategy');
+    const tabNavRef = useRef<HTMLDivElement>(null);
+
+    const handleTabClick = (tab: 'scenarios' | 'bonds' | 'strategy') => {
+        setActiveTab(tab);
+        const alignTabToTop = () => {
+            if (tabNavRef.current) {
+                const rect = tabNavRef.current.getBoundingClientRect();
+                const targetY = window.scrollY + rect.top;
+                window.scrollTo({
+                    top: Math.max(0, targetY),
+                    behavior: 'smooth'
+                });
+            }
+        };
+        requestAnimationFrame(() => {
+            alignTabToTop();
+            setTimeout(alignTabToTop, 50);
+        });
+    };
 
     const curScenario = scenarioList.find(s => s.id === selectedScenarioId) || scenarioList[1];
     const probs = pulse?.convergence_scenario?.probabilities || { A: 25, B: 60, C: 15 };
 
     return (
-        <section className="bg-gradient-to-br from-amber-950/20 via-black/40 to-emerald-950/20 rounded-3xl border border-amber-500/20 p-5 md:p-6 backdrop-blur-xl shadow-2xl relative overflow-hidden">
-            {/* Ambient background glow */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+        <section className="bg-gradient-to-br from-amber-950/20 via-black/40 to-emerald-950/20 rounded-3xl border border-amber-500/20 p-5 md:p-6 backdrop-blur-xl shadow-2xl relative">
+            {/* Ambient background glow (overflow-hidden isolated so sticky works) */}
+            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl" />
+            </div>
 
             {/* 1. Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-5 relative z-10">
@@ -2453,11 +2474,14 @@ function ElectionPlaybookSection({
                 </div>
             )}
 
-            {/* 3. 탭 내비게이션 */}
-            <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-white/10 pb-3 relative z-10">
+            {/* 3. 탭 내비게이션 (화면 최상단 sticky 고정 & 일관된 배치) */}
+            <div
+                ref={tabNavRef}
+                className="sticky top-0 z-30 flex flex-wrap items-center gap-2 mb-4 border-b border-white/10 pb-3 pt-3 bg-[#0a0f1d]/90 backdrop-blur-xl -mx-3 px-3 md:-mx-4 md:px-4 rounded-xl shadow-lg transition-all"
+            >
                 <button
-                    onClick={() => setActiveTab('scenarios')}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                    onClick={() => handleTabClick('scenarios')}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                         activeTab === 'scenarios'
                             ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                             : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -2466,8 +2490,8 @@ function ElectionPlaybookSection({
                     <Layers className="w-3.5 h-3.5" /> 📊 3대 대선 시나리오 비교 매트릭스
                 </button>
                 <button
-                    onClick={() => setActiveTab('bonds')}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                    onClick={() => handleTabClick('bonds')}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                         activeTab === 'bonds'
                             ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
                             : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -2476,8 +2500,8 @@ function ElectionPlaybookSection({
                     <DollarSign className="w-3.5 h-3.5" /> 🎯 추천 브라질 국채 라인업 (헤알/달러)
                 </button>
                 <button
-                    onClick={() => setActiveTab('strategy')}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                    onClick={() => handleTabClick('strategy')}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                         activeTab === 'strategy'
                             ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
                             : 'text-gray-400 hover:text-white hover:bg-white/5'
