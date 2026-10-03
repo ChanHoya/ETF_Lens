@@ -4,15 +4,17 @@
 ## Quick Summary
  
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API 구축 완료 (2026-10-03)
-➡️ Next: S6-5 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드
+✅ Current: S6-5 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드 화면 구축 완료 (2026-10-03)
+➡️ Next: S6-6 괴리율 개인화 알림 설정 및 알림 채널 확장
 
 > 세션 핸드오프 (2026-10-03):
 > - S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API 구축 완료:
 >   - `ETFDividendHistory`, `ETFDividendSummary` DB 모델 추가 및 테이블 마이그레이션.
->   - `core/dividend_scraper.py`: yfinance 및 네이버 모바일 증권 API 연동, 월배당/분기/반기/연배당 주기 자동 판정 알고리즘, TTM 배당수익률 산출 및 포트폴리오 1~12월 월별 배당 캐시플로우 연산 엔진 구현.
->   - `api/dividends.py`: `GET /{code}` (상세 및 이력), `POST /sync` (배치 동기화), `POST /portfolio-cashflow` (월별 예상 배당금 계산), `GET /rankings` (고배당/월배당 상위 랭킹) 엔드포인트 제공.
->   - `tests/test_dividends.py`: 6개 유닛 테스트 100% 통과 (월배당, 분기배당, 미국 ETF, 캐시플로우 연산, API 종합).
+>   - `core/dividend_scraper.py`: yfinance 및 네이버 모바일 증권 API 연동, 배당주기 자동 판정, TTM 배당수익률 및 월별 캐시플로우 연산 모듈 구현.
+>   - `api/dividends.py`: `GET /{code}`, `POST /sync`, `POST /portfolio-cashflow`, `GET /rankings` 엔드포인트 제공.
+> - S6-5 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드 화면 구축 완료:
+>   - `DividendDashboard.tsx`: 4대 요약 Bento 카드, 1~12월 월별 배당금 Bar 차트(월평균 기준선), 12개월 매트릭스 캘린더(NOW 배지), 수량 실시간 +/- 조절 및 즉시 재계산 시뮬레이터, 실계좌 자동 불러오기/프리셋/종목추가 모달, 시장 고배당 & 월배당 ETF 랭킹 보드 연동.
+>   - `MainApp.tsx`: 서브탭 '💰 배당 캘린더' 등록 및 종목 미선택 상태에서도 원클릭 독립 진입 지원.
 
 
 ## Current Sprint
@@ -29,7 +31,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 | S6-2 | 포트폴리오 Efficient Frontier 최적화 백엔드 API | ✅ stable | yfinance/pykrx 연동 기대수익률, 공분산 및 몬테카를로 포트폴리오 변동성 최적화 연산 모듈 및 유닛 테스트 구현 완료 |
 | S6-3 | Efficient Frontier 시각화 및 최적 비중 연동 | ✅ stable | Recharts ComposedChart 산점도/효율전선 커브, Max Sharpe/MinVar/현재 Bento 카드, 최적 비중 BarChart 및 인사이트 요약 구현 완료 |
 | S6-4 | ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API | ✅ stable | yfinance/네이버 API 연동 분배금 수집, 배당주기 자동 판별, 포트폴리오 월별 Cashflow 연산 및 고배당 랭킹 API 구축 완료 |
-| S6-5 | 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드 | ⬜ planned | 월별 배당금 캘린더 달력 뷰, 연간 누적 Cashflow 바 차트 및 총 예상 배당 수익률 카드 연동 |
+| S6-5 | 배당 캘린더 및 배당 Cashflow 시뮬레이션 대시보드 | ✅ stable | 1~12월 월별 예상 배당금 차트(Recharts Bar), 12개월 배당 캘린더 매트릭스 뷰, 보유 수량 실시간 +/- 조절 및 재계산, 실계좌/프리셋 원클릭 불러오기, 고배당&월배당 ETF 랭킹 연동 완료 |
 | S6-6 | 괴리율 개인화 알림 설정 및 알림 채널 확장 | ⬜ planned | Disparity 임계치 설정 Slider UI 및 Slack/Discord 웹훅 발송 즉시 테스트 연동 |
 | S6-7 | 계좌별 자산 증감(추이) 시각화 및 분석 | ✅ stable | KIS 일별 계좌 자산 DB 적재 및 거래내역 기반 90일 역산 복원 차트 시각화 완료 |
 | S6-8 | 전력/에너지 섹터 주요 종목 현황 및 구성종목 비중 비교 | ✅ stable | 3분할 탭 개편(국내주식/해외주식/해외상장) 및 GRID 등 미국 상장 6종 추가, 통화 분기 표기 연동 완료 |

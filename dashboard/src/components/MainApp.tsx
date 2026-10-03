@@ -12,6 +12,7 @@ import Modals from "@/components/Modals";
 import DiscoverTab from "@/components/DiscoverTab";
 import CoveredCallTab from "@/components/CoveredCallTab";
 import BrazilBondTab from "@/components/BrazilBondTab";
+import DividendDashboard from "@/components/DividendDashboard";
 import ChatBot from "@/components/ChatBot";
 import { useRouter } from "next/navigation";
 import MyAssetsView from "./MyAssetsView";
@@ -23,7 +24,7 @@ type FavGroup = { id: string; name: string; items: { code: string; name: string 
 const BRAND_KEYWORDS = ['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'];
 const THEME_KEYWORDS = ['커버드콜', '배당', '액티브', 'AI', '반도체', '로봇', '원자력', '2차전지', '조선', '방산', '금융', '바이오'];
 
-export default function MainApp({ initialTab = 'select', showMyTab = false, showTffTab = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff' | 'sector' | 'brazil', showMyTab?: boolean, showTffTab?: boolean }) {
+export default function MainApp({ initialTab = 'select', showMyTab = false, showTffTab = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil', showMyTab?: boolean, showTffTab?: boolean }) {
   const router = useRouter();
   const [slots, setSlots] = useState<{ search: string, code: string }[]>([
     { search: "", code: "" },
@@ -40,7 +41,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
   const [globalSearch, setGlobalSearch] = useState("");
   const [globalActive, setGlobalActive] = useState(false);
   const [period, setPeriod] = useState<string>('6M');
-  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff' | 'sector' | 'brazil'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil'>(initialTab);
 
   const [etfDictionary, setEtfDictionary] = useState<{ code: string, name: string }[]>([]);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState<number | null>(null);
@@ -1188,7 +1189,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
               { id: 'etftracker', label: 'ETF추적기', isExternal: true },
               { id: 'etfcheck', label: 'ETF Check', isExternal: true },
             ].map(tab => {
-              const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call', 'brazil'].includes(activeTab);
+              const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call', 'dividend', 'brazil'].includes(activeTab);
               const isActive = (tab.id === 'etfcheck' && isEtfCheckModalOpen) ||
                 (tab.id === 'analysis' && isAnalysisActive && !isEtfCheckModalOpen) ||
                 (activeTab === tab.id && !isEtfCheckModalOpen);
@@ -1226,7 +1227,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                         setIsEtfCheckModalOpen(false);
                         return;
                       }
-                      setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'my' | 'tff' | 'sector' | 'brazil');
+                      setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil');
                       setIsEtfCheckModalOpen(false);
                       setNaverEtfCode(null);
                       setSelectedDetailEtf(null);
@@ -1258,7 +1259,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
       </header>
 
       {/* 서브탭: 종목분석 탭 선택시만 헤더 아래에 표시 */}
-      {['select', 'info', 'chart', 'holdings', 'covered_call', 'brazil'].includes(activeTab) && !isEtfCheckModalOpen && (
+      {['select', 'info', 'chart', 'holdings', 'covered_call', 'dividend', 'brazil'].includes(activeTab) && !isEtfCheckModalOpen && (
         <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-50">
           {/* 모바일: 수평 스크롤 가능한 서브탭 */}
           <nav className="flex items-center gap-2 md:gap-4 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 shadow-sm backdrop-blur-md overflow-x-auto scrollbar-hide">
@@ -1268,17 +1269,18 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
               { id: 'chart', label: '차트' },
               { id: 'holdings', label: '구성종목' },
               { id: 'covered_call', label: '커버드콜' },
+              { id: 'dividend', label: '💰 배당 캘린더' },
               { id: 'brazil', label: '🇧🇷 브라질채권' },
             ].map(subTab => (
               <button
                 key={subTab.id}
                 onClick={() => {
-                  // 브라질채권은 종목 선택 없이 독립 진입 가능 (매크로 분석 뷰)
-                  if (subTab.id !== 'select' && subTab.id !== 'brazil' && !data) {
+                  // 브라질채권과 배당 캘린더는 종목 선택 없이 독립 진입 가능 (시뮬레이터 / 매크로 뷰)
+                  if (subTab.id !== 'select' && subTab.id !== 'brazil' && subTab.id !== 'dividend' && !data) {
                     alert('먼저 종목을 선택하고 비교를 실행해주세요.');
                     return;
                   }
-                  setActiveTab(subTab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'brazil');
+                  setActiveTab(subTab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'brazil');
                   setNaverEtfCode(null);
                   setSelectedDetailEtf(null);
                 }}
@@ -1658,7 +1660,15 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
         }
 
         {
-          data && data.data_payload && activeTab !== 'select' && activeTab !== 'covered_call' && activeTab !== 'brazil' && (
+          activeTab === 'dividend' && (
+            <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col relative z-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
+              <DividendDashboard />
+            </div>
+          )
+        }
+
+        {
+          data && data.data_payload && activeTab !== 'select' && activeTab !== 'covered_call' && activeTab !== 'brazil' && activeTab !== 'dividend' && (
             <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col relative z-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
 
               {activeTab === 'info' && (
