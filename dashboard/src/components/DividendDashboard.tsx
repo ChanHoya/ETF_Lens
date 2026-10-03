@@ -64,7 +64,7 @@ const MONTH_NAMES = [
     "7월", "8월", "9월", "10월", "11월", "12월"
 ];
 
-export default function DividendDashboard() {
+export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLoadMyAssets?: boolean }) {
     const [holdings, setHoldings] = useState<PortfolioItem[]>(DEFAULT_PRESET);
     const [cashflow, setCashflow] = useState<CashflowResult | null>(null);
     const [loading, setLoading] = useState(false);
@@ -131,19 +131,8 @@ export default function DividendDashboard() {
         }
     }, []);
 
-    // 초기 마운트 시 실행
-    useEffect(() => {
-        calculateCashflow(holdings);
-        fetchRankings(rankingFilter);
-    }, []);
-
-    // 랭킹 필터 변경 시
-    useEffect(() => {
-        fetchRankings(rankingFilter);
-    }, [rankingFilter, fetchRankings]);
-
     // ── 3. 내 실제 보유 계좌 불러오기 ────────────────────────────────────────
-    const handleImportUserAssets = async () => {
+    const handleImportUserAssets = useCallback(async () => {
         setImportingAssets(true);
         setStatusMsg("내 계좌 자산 조회 중…");
         try {
@@ -197,19 +186,37 @@ export default function DividendDashboard() {
                     calculateCashflow(finalItems);
                     setStatusMsg(`총 ${finalItems.length}개 보유 종목을 불러왔습니다!`);
                 } else {
-                    setStatusMsg("연동된 보유 주식/ETF 자산이 없습니다.");
+                    setStatusMsg("연동된 보유 주식/ETF 자산이 없습니다. 기본 프리셋을 유지합니다.");
+                    calculateCashflow(DEFAULT_PRESET);
                 }
             } else {
-                setStatusMsg("자산 정보를 불러오지 못했습니다.");
+                setStatusMsg("자산 정보를 불러오지 못했습니다. 기본 프리셋을 유지합니다.");
+                calculateCashflow(DEFAULT_PRESET);
             }
         } catch (e) {
             console.error("Import error", e);
             setStatusMsg("계좌 연동 통신 오류가 발생했습니다.");
+            calculateCashflow(DEFAULT_PRESET);
         } finally {
             setImportingAssets(false);
             setTimeout(() => setStatusMsg(null), 4000);
         }
-    };
+    }, [calculateCashflow]);
+
+    // 초기 마운트 시 실행
+    useEffect(() => {
+        if (autoLoadMyAssets) {
+            handleImportUserAssets();
+        } else {
+            calculateCashflow(holdings);
+        }
+        fetchRankings(rankingFilter);
+    }, [autoLoadMyAssets, handleImportUserAssets, calculateCashflow, fetchRankings]);
+
+    // 랭킹 필터 변경 시
+    useEffect(() => {
+        fetchRankings(rankingFilter);
+    }, [rankingFilter, fetchRankings]);
 
     // ── 4. 종목 수량 변경 핸들러 ─────────────────────────────────────────────
     const handleUpdateShares = (code: string, newShares: number) => {

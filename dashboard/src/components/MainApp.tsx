@@ -83,6 +83,13 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
     return () => clearTimeout(timer);
   }, []);
 
+  // 배당 캘린더는 내 계좌정보 기반 서비스로 /my 접속(showMyTab=true) 시에만 허용
+  useEffect(() => {
+    if (!showMyTab && activeTab === 'dividend') {
+      setActiveTab('select');
+    }
+  }, [showMyTab, activeTab]);
+
   useEffect(() => {
 
     fetch(`${API_BASE}/api/v1/analyze/db-version`)
@@ -1189,7 +1196,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
               { id: 'etftracker', label: 'ETF추적기', isExternal: true },
               { id: 'etfcheck', label: 'ETF Check', isExternal: true },
             ].map(tab => {
-              const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call', 'dividend', 'brazil'].includes(activeTab);
+              const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call', ...(showMyTab ? ['dividend'] : []), 'brazil'].includes(activeTab);
               const isActive = (tab.id === 'etfcheck' && isEtfCheckModalOpen) ||
                 (tab.id === 'analysis' && isAnalysisActive && !isEtfCheckModalOpen) ||
                 (activeTab === tab.id && !isEtfCheckModalOpen);
@@ -1259,7 +1266,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
       </header>
 
       {/* 서브탭: 종목분석 탭 선택시만 헤더 아래에 표시 */}
-      {['select', 'info', 'chart', 'holdings', 'covered_call', 'dividend', 'brazil'].includes(activeTab) && !isEtfCheckModalOpen && (
+      {['select', 'info', 'chart', 'holdings', 'covered_call', ...(showMyTab ? ['dividend'] : []), 'brazil'].includes(activeTab) && !isEtfCheckModalOpen && (
         <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-50">
           {/* 모바일: 수평 스크롤 가능한 서브탭 */}
           <nav className="flex items-center gap-2 md:gap-4 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 shadow-sm backdrop-blur-md overflow-x-auto scrollbar-hide">
@@ -1269,7 +1276,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
               { id: 'chart', label: '차트' },
               { id: 'holdings', label: '구성종목' },
               { id: 'covered_call', label: '커버드콜' },
-              { id: 'dividend', label: '💰 배당 캘린더' },
+              ...(showMyTab ? [{ id: 'dividend', label: '💰 배당 캘린더' }] : []),
               { id: 'brazil', label: '🇧🇷 브라질채권' },
             ].map(subTab => (
               <button
@@ -1660,9 +1667,9 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
         }
 
         {
-          activeTab === 'dividend' && (
+          showMyTab && activeTab === 'dividend' && (
             <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col relative z-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
-              <DividendDashboard />
+              <DividendDashboard autoLoadMyAssets={true} />
             </div>
           )
         }

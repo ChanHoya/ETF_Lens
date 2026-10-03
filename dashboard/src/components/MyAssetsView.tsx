@@ -3,11 +3,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import MyAuthModal from "@/components/MyAuthModal";
 import MyDashboard from "@/components/MyDashboard";
 import InvestmentReturnCard from "@/components/InvestmentReturnCard";
-import { Loader2, RefreshCw, LayoutDashboard, PieChart, TrendingUp, Wallet } from "lucide-react";
+import { Loader2, RefreshCw, LayoutDashboard, PieChart, TrendingUp, Wallet, Coins } from "lucide-react";
 import { API_BASE } from "@/lib/apiConfig";
 import RiskBanner from "@/components/RiskBanner";
 import AssetHistoryChart from "@/components/AssetHistoryChart";
 import TotalAssetBoard from "@/components/TotalAssetBoard";
+import DividendDashboard from "@/components/DividendDashboard";
 
 // Render 콜드 스타트 대응: 첫 요청 시 백엔드가 잠들어 있으면 "Failed to fetch"(네트워크 실패)나
 // 502/503(기동 중)이 나므로, 서버가 깨어날 때까지 점진적 backoff로 재시도한다.
@@ -48,7 +49,7 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
     const [wakingUp, setWakingUp] = useState(false);
     const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
 
-    const [mainTab, setMainTab] = useState<"total" | "kis" | "history">("total");
+    const [mainTab, setMainTab] = useState<"total" | "kis" | "history" | "dividend">("total");
 
     const [isSimulatedMode, setIsSimulatedMode] = useState<boolean>(false);
     const [hasSimulated, setHasSimulated] = useState<boolean>(false);
@@ -243,6 +244,17 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
                                 <TrendingUp className="w-3.5 h-3.5" />
                                 <span>자산 추이</span>
                             </button>
+                            <button
+                                onClick={() => setMainTab("dividend")}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                    mainTab === "dividend"
+                                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                                        : "text-gray-400 hover:text-white"
+                                }`}
+                            >
+                                <Coins className="w-3.5 h-3.5 text-amber-400" />
+                                <span>💰 배당 캘린더</span>
+                            </button>
                         </div>
 
                         {hasSimulated && mainTab === "kis" && (
@@ -348,6 +360,13 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
                             <AssetHistoryChart 
                                 accounts={(kisData)?.kis_raw?.accounts ?? []} 
                             />
+                        </div>
+                    )}
+
+                    {/* Tab 4: Dividend Calendar & Cashflow Dashboard */}
+                    {mainTab === "dividend" && (
+                        <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <DividendDashboard autoLoadMyAssets={true} />
                         </div>
                     )}
                 </div>
