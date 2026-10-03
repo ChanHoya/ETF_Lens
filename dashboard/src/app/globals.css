@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+html {
+  font-size: 17.5px; /* 기본 16px(12pt) 대비 +1.5px(+1.1pt) 전체 스케일업 (가독성 향상) */
+}
+
 html,
 body {
   margin: 0;
@@ -10,6 +14,36 @@ body {
   /* gray-950 */
   /* iOS Safari: 스크롤 관성 */
   -webkit-overflow-scrolling: touch;
+}
+
+/* 임의 픽셀(px) 지정 텍스트 1~1.5pt(+1.5px) 비례 보정 (모든 화면/메뉴 가독성 향상) */
+[class*="text-[7px]"]  { font-size: 9px !important;    line-height: 1.35 !important; }
+[class*="text-[8px]"]  { font-size: 9.5px !important;  line-height: 1.35 !important; }
+[class*="text-[9px]"]  { font-size: 10.5px !important; line-height: 1.35 !important; }
+[class*="text-[10px]"] { font-size: 11.5px !important; line-height: 1.35 !important; }
+[class*="text-[11px]"] { font-size: 12.5px !important; line-height: 1.35 !important; }
+[class*="text-[12px]"] { font-size: 13.5px !important; line-height: 1.35 !important; }
+[class*="text-[13px]"] { font-size: 14.5px !important; line-height: 1.35 !important; }
+[class*="text-[14px]"] { font-size: 15.5px !important; line-height: 1.35 !important; }
+[class*="text-[15px]"] { font-size: 16.5px !important; line-height: 1.35 !important; }
+[class*="text-[16px]"] { font-size: 17.5px !important; line-height: 1.35 !important; }
+
+/* 폼 요소 및 버튼 기본 글꼴/크기 상속 보장 */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* 차트 SVG 축 눈금 및 범례 텍스트 가독성 최적화 */
+.recharts-cartesian-axis-tick text,
+.recharts-cartesian-axis-tick-value {
+  font-size: 11.5px !important;
+}
+.recharts-legend-item-text {
+  font-size: 12.5px !important;
 }
 
 /* iOS Safari: 버튼/링크 터치 시 파란 하이라이트 제거 */
