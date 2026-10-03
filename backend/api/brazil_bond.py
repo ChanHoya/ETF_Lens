@@ -976,6 +976,20 @@ def _build_election_prompt(ctx: str, news_titles: list[str]) -> str:
 """
 
 
+def _normalize_pulse_content(content: dict) -> dict:
+    """LLM이 dict로 응답한 텍스트 필드를 문자열로 안전하게 정규화하여 React Error #31 방지"""
+    if not isinstance(content, dict):
+        return content
+    res = dict(content)
+    for key in ["recommended_bond_guide", "tranche3_action", "live_analysis", "headline", "market_mood"]:
+        val = res.get(key)
+        if isinstance(val, dict):
+            res[key] = " / ".join(f"[{k}] {v}" for k, v in val.items())
+        elif isinstance(val, list):
+            res[key] = " / ".join(str(item) for item in val)
+    return res
+
+
 @router.get("/election-pulse", response_model=InsightResponse)
 async def get_election_pulse(auto_generate: bool = True, db: AsyncSession = Depends(get_db)):
     row = (await db.execute(
@@ -996,6 +1010,8 @@ async def get_election_pulse(auto_generate: bool = True, db: AsyncSession = Depe
         content = json.loads(row.content)
     except Exception:
         content = _DEFAULT_ELECTION_PULSE
+
+    content = _normalize_pulse_content(content)
 
     gen_at = row.generated_at.isoformat() if row.generated_at else None
     if gen_at and not gen_at.endswith("Z") and "+" not in gen_at and "-" not in gen_at[10:]:

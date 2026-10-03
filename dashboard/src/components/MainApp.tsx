@@ -12,12 +12,22 @@ import Modals from "@/components/Modals";
 import DiscoverTab from "@/components/DiscoverTab";
 import CoveredCallTab from "@/components/CoveredCallTab";
 import BrazilBondTab from "@/components/BrazilBondTab";
-import DividendDashboard from "@/components/DividendDashboard";
+import dynamic from "next/dynamic";
 import ChatBot from "@/components/ChatBot";
 import { useRouter } from "next/navigation";
 import MyAssetsView from "./MyAssetsView";
 import SectorAnalysisTab from "./SectorAnalysisTab";
 import TffGateWrapper from "./tff/TffGateWrapper";
+
+const DividendDashboard = dynamic(() => import("@/components/DividendDashboard"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center p-12 text-emerald-400 gap-2">
+      <Loader2 className="w-6 h-6 animate-spin" />
+      <span>배당 캘린더 로딩 중...</span>
+    </div>
+  ),
+});
 
 type FavGroup = { id: string; name: string; items: { code: string; name: string }[] };
 

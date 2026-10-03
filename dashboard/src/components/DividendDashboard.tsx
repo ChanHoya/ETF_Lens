@@ -260,8 +260,8 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
     const chartData = useMemo(() => {
         if (!cashflow) return [];
         return MONTH_NAMES.map((name, idx) => {
-            const krw = cashflow.monthly_cashflow_krw[idx] || 0;
-            const usd = cashflow.monthly_cashflow_usd[idx] || 0;
+            const krw = cashflow?.monthly_cashflow_krw?.[idx] || 0;
+            const usd = cashflow?.monthly_cashflow_usd?.[idx] || 0;
             // USD 환산 가중 (환율 약 1,350원 기준 시각화)
             const approxKrwTotal = Math.round(krw + (usd * 1350));
             return {
@@ -374,11 +374,11 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
                         </div>
                     </div>
                     <div className="text-xl md:text-2xl font-black text-white">
-                        {cashflow ? `${cashflow.total_annual_krw.toLocaleString()}원` : '—'}
+                        {cashflow ? `${(cashflow.total_annual_krw ?? 0).toLocaleString()}원` : '—'}
                     </div>
-                    {cashflow && cashflow.total_annual_usd > 0 && (
+                    {cashflow && (cashflow.total_annual_usd ?? 0) > 0 && (
                         <div className="text-xs text-cyan-300 font-mono mt-1">
-                            + ${cashflow.total_annual_usd.toLocaleString()} USD
+                            + ${(cashflow.total_annual_usd ?? 0).toLocaleString()} USD
                         </div>
                     )}
                     <span className="text-[11px] text-gray-500 mt-2 block">
@@ -395,7 +395,7 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
                         </div>
                     </div>
                     <div className="text-xl md:text-2xl font-black text-cyan-200">
-                        {avgMonthlyKrw > 0 ? `약 ${avgMonthlyKrw.toLocaleString()}원` : '—'}
+                        {(avgMonthlyKrw ?? 0) > 0 ? `약 ${(avgMonthlyKrw ?? 0).toLocaleString()}원` : '—'}
                     </div>
                     <span className="text-[11px] text-gray-400 mt-2 block">
                         은퇴 및 재투자 가용 월평균 캐시
@@ -448,7 +448,7 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
                                 </h3>
                             </div>
                             <span className="text-xs text-gray-400">
-                                월평균: <span className="text-cyan-300 font-bold">{avgMonthlyKrw.toLocaleString()}원</span> 기준
+                                월평균: <span className="text-cyan-300 font-bold">{(avgMonthlyKrw ?? 0).toLocaleString()}원</span> 기준
                             </span>
                         </div>
 
@@ -476,17 +476,17 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
                                                 return (
                                                     <div className="bg-[#12121a] border border-white/15 p-3 rounded-xl shadow-xl text-xs space-y-1">
                                                         <div className="font-bold text-white flex items-center justify-between gap-4">
-                                                            <span>{data.month} 배당금</span>
-                                                            {data.isCurrent && (
+                                                            <span>{data?.month} 배당금</span>
+                                                            {data?.isCurrent && (
                                                                 <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">이번 달</span>
                                                             )}
                                                         </div>
                                                         <div className="text-emerald-300 font-black text-sm">
-                                                            약 {data.totalKrw.toLocaleString()}원
+                                                            약 {(data?.totalKrw ?? 0).toLocaleString()}원
                                                         </div>
-                                                        {data.usd > 0 && (
+                                                        {(data?.usd ?? 0) > 0 && (
                                                             <div className="text-cyan-300 text-[11px]">
-                                                                (원화 {data.krw.toLocaleString()}원 + ${data.usd} USD)
+                                                                (원화 {(data?.krw ?? 0).toLocaleString()}원 + ${data?.usd ?? 0} USD)
                                                             </div>
                                                         )}
                                                     </div>
@@ -547,7 +547,7 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
 
                                 // 해당 월에 배당을 지급하는 종목 목록 추출
                                 const payingHoldings = cashflow?.holdings?.filter(h =>
-                                    h.active_months.includes(cd.monthNum)
+                                    h?.active_months?.includes(cd.monthNum)
                                 ) || [];
 
                                 return (
@@ -577,9 +577,9 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
                                                 <span className="text-[10px] text-gray-500 italic block">배당 없음</span>
                                             ) : (
                                                 <span className="text-xs font-black text-white block">
-                                                    {cd.totalKrw >= 10000
-                                                        ? `${(cd.totalKrw / 10000).toFixed(1)}만원`
-                                                        : `${cd.totalKrw.toLocaleString()}원`}
+                                                    {(cd?.totalKrw ?? 0) >= 10000
+                                                        ? `${((cd?.totalKrw ?? 0) / 10000).toFixed(1)}만원`
+                                                        : `${(cd?.totalKrw ?? 0).toLocaleString()}원`}
                                                 </span>
                                             )}
                                         </div>
@@ -588,10 +588,10 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
                                             {payingHoldings.slice(0, 2).map((h, i) => (
                                                 <span
                                                     key={i}
-                                                    title={`${h.name}: ${h.currency === 'USD' ? '$' + h.per_payout_amount * h.shares : (h.per_payout_amount * h.shares).toLocaleString() + '원'}`}
+                                                    title={`${h?.name || ''}: ${h?.currency === 'USD' ? '$' + (h?.per_payout_amount ?? 0) * (h?.shares ?? 0) : (((h?.per_payout_amount ?? 0) * (h?.shares ?? 0))).toLocaleString() + '원'}`}
                                                     className="text-[9px] px-1 py-0.2 rounded bg-white/5 text-gray-400 truncate max-w-[65px]"
                                                 >
-                                                    {h.name.replace(/ACE|TIGER|KODEX|SOL/g, '').trim()}
+                                                    {(h?.name || '').replace(/ACE|TIGER|KODEX|SOL/g, '').trim()}
                                                 </span>
                                             ))}
                                             {payingHoldings.length > 2 && (
@@ -664,13 +664,13 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
                                                 </span>
                                             </td>
                                             <td className="py-3 px-3 text-center font-bold text-amber-300">
-                                                {item.yield_ttm > 0 ? `${item.yield_ttm.toFixed(2)}%` : '—'}
+                                                {(item?.yield_ttm ?? 0) > 0 ? `${(item?.yield_ttm ?? 0).toFixed(2)}%` : '—'}
                                             </td>
                                             <td className="py-3 px-3 text-center text-gray-300 font-mono">
-                                                {isUsd ? `$${item.per_payout_amount}` : `${item.per_payout_amount.toLocaleString()}원`}
+                                                {isUsd ? `$${item?.per_payout_amount ?? 0}` : `${(item?.per_payout_amount ?? 0).toLocaleString()}원`}
                                             </td>
                                             <td className="py-3 px-3 text-center text-gray-400 text-[11px]">
-                                                {item.active_months.join(', ')}월
+                                                {(item?.active_months || []).join(', ')}월
                                             </td>
                                             <td className="py-3 px-3 text-center">
                                                 <div className="inline-flex items-center border border-white/15 rounded-xl overflow-hidden bg-black/40">
@@ -696,8 +696,8 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
                                             </td>
                                             <td className="py-3 px-3 text-right font-black text-emerald-400 text-sm">
                                                 {isUsd
-                                                    ? `$${item.annual_expected_total.toLocaleString()}`
-                                                    : `${Math.round(item.annual_expected_total).toLocaleString()}원`}
+                                                    ? `$${(item?.annual_expected_total ?? 0).toLocaleString()}`
+                                                    : `${Math.round(item?.annual_expected_total ?? 0).toLocaleString()}원`}
                                             </td>
                                             <td className="py-3 px-3 text-center">
                                                 <button
@@ -788,12 +788,12 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
                                 <div className="grid grid-cols-2 gap-2 mt-3 pt-2.5 border-t border-white/5 text-xs">
                                     <div>
                                         <span className="text-gray-400 block text-[10px]">배당수익률</span>
-                                        <span className="text-amber-300 font-black text-sm">{r.yield_ttm.toFixed(2)}%</span>
+                                        <span className="text-amber-300 font-black text-sm">{((r?.yield_ttm ?? 0)).toFixed(2)}%</span>
                                     </div>
                                     <div>
                                         <span className="text-gray-400 block text-[10px]">직전 분배금</span>
                                         <span className="text-gray-200 font-mono font-bold">
-                                            {r.currency === 'USD' ? `$${r.last_amount}` : `${r.last_amount.toLocaleString()}원`}
+                                            {r?.currency === 'USD' ? `$${r?.last_amount ?? 0}` : `${(r?.last_amount ?? 0).toLocaleString()}원`}
                                         </span>
                                     </div>
                                 </div>

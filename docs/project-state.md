@@ -8,6 +8,10 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 ➡️ Next: Sprint 6 완료 검토 및 세션 마무리 / 차기 스프린트 계획
 
 > 세션 핸드오프 (2026-10-03):
+> - 🚨 핫픽스: 브라질채권 탭 런타임 크래시(React Error #31) 및 대시보드 SSR 안정성 강화 완료:
+>   - 원인: Gemini가 생성한 `brazil_election_pulse`의 `recommended_bond_guide` 필드가 단일 텍스트가 아닌 세부 항목 객체(`{"단기채 중심 인컴형": "...", ...}`)로 생성되어 JSX 자식 노드 직접 렌더링 시 React 19 객체 렌더링 에러(#31) 유발.
+>   - 조치: `BrazilBondTab.tsx`에 `renderFlexibleContent` 헬퍼 함수를 구축하여 문자열/객체/배열 자동 파싱 렌더링 적용, 백엔드(`brazil_bond.py`)에서도 `_normalize_pulse_content`로 사전 정규화 제공(2중 방어).
+>   - 추가 조치: `MainApp.tsx`에서 `DividendDashboard`를 `next/dynamic`(`ssr: false`)으로 격리 로딩하고 널가드를 보강하여 SSR Recharts hydration 충돌 및 초기 번들 크기 최적화.
 > - S6-4 ETF 배당(분배금) 정보 수집 백엔드 스크래퍼 및 API 구축 완료:
 >   - `ETFDividendHistory`, `ETFDividendSummary` DB 모델 추가 및 테이블 마이그레이션.
 >   - `core/dividend_scraper.py`: yfinance 및 네이버 모바일 증권 API 연동, 배당주기 자동 판정, TTM 배당수익률 및 월별 캐시플로우 연산 모듈 구현.

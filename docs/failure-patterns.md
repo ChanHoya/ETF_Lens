@@ -291,9 +291,11 @@
   1. 비동기 테스트 모듈 상단에 `@pytest.fixture def anyio_backend(): return "asyncio"`를 선언하여 `asyncio` 백엔드만 단독 실행하도록 제한.
   2. 테스트 모듈의 fixture에서 전역 파괴적인 `drop_all` 호출을 제거하고, 필요한 경우 개별 테스트 대상 테이블의 레코드만 선별 정리(truncate/delete)하도록 개선.
 
-
-
-
-
-
-
+### [FP-035] LLM 동적 생성 응답(Dict/Object)을 JSX 자식 노드로 직접 렌더링 시 React Error #31 크래시 발생 패턴
+- **증상**: 브라우저에서 메뉴(예: 브라질채권 탭) 진입 시 `Application error: a client-side exception has occurred` 화면이 나타나며 앱 전체가 중단됨. DevTools 콘솔에 `Minified React error #31; Objects are not valid as a React child (found: object with keys {...})` 기록.
+- **원인**:
+  1. 백엔드에서 Gemini/LLM 모델이 프롬프트의 JSON 포맷 지시를 따를 때, 특정 문자열 필드(예: `recommended_bond_guide`)를 단일 텍스트가 아닌 세부 항목 객체(`{"단기채 중심 인컴형": "...", "장기채 자본차익형": "...", "최적 바벨 분산형": "..."}`) 형태로 생성하여 DB에 저장함.
+  2. 프론트엔드 React 컴포넌트(`BrazilBondTab.tsx`)에서 해당 필드를 `{pulse.recommended_bond_guide}`와 같이 자식 노드로 직접 렌더링을 시도하면서 React 19의 객체 자식 노드 금지 제약(Error #31)에 걸려 컴포넌트 트리가 언마운트됨.
+- **해결**:
+  1. **프론트엔드 유연 렌더링 헬퍼(`renderFlexibleContent`)**: 값이 문자열일 경우 그대로 출력하고, 객체(`Record<string, any>`)일 경우 key-value를 구조화된 카드/뱃지 목록으로 파싱하여 렌더링하도록 안전 처리.
+  2. **백엔드 정규화 헬퍼(`_normalize_pulse_content`)**: API 응답 전 텍스트성 필드가 dict/list로 저장되어 있을 경우 `"[키] 내용"` 형태의 문자열로 안전하게 변환하여 구버전 프론트엔드 캐시 접속자에게도 즉각적인 호환성 보장.

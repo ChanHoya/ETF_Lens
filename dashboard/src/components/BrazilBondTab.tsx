@@ -78,10 +78,10 @@ export interface ElectionPulse {
         probabilities: { A: number; B: number; C: number };
         reasoning: string;
     };
-    live_analysis: string;
-    tranche3_action: string;
-    recommended_bond_guide: string;
-    monitoring_points: string[];
+    live_analysis: string | Record<string, any>;
+    tranche3_action: string | Record<string, any>;
+    recommended_bond_guide: string | Record<string, any>;
+    monitoring_points: (string | Record<string, any>)[];
 }
 
 interface Summary {
@@ -137,6 +137,35 @@ const ZONE_STYLE: Record<string, { from: string; to: string; badge: string }> = 
 
 const fmt = (v: number | null | undefined, d = 2) =>
     v === null || v === undefined ? '—' : v.toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+const renderFlexibleContent = (val: any) => {
+    if (!val) return null;
+    if (typeof val === 'string') return val;
+    if (Array.isArray(val)) {
+        return (
+            <ul className="space-y-1 mt-1">
+                {val.map((item, i) => (
+                    <li key={i} className="text-xs text-gray-300">
+                        • {typeof item === 'object' ? JSON.stringify(item) : String(item)}
+                    </li>
+                ))}
+            </ul>
+        );
+    }
+    if (typeof val === 'object') {
+        return (
+            <div className="space-y-2 mt-1.5">
+                {Object.entries(val).map(([k, v]) => (
+                    <div key={k} className="p-2.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-cyan-500/30 transition">
+                        <span className="font-bold text-cyan-300 block text-xs mb-1">[{k}]</span>
+                        <span className="text-gray-300 text-xs leading-relaxed block">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+    return String(val);
+};
 
 const isSameDate = (dateStr: string | null | undefined): boolean => {
     if (!dateStr) return false;
@@ -2411,11 +2440,11 @@ function ElectionPlaybookSection({
                     </div>
 
                     <h4 className="text-sm md:text-base font-black text-amber-100 leading-snug mb-1.5">
-                        {pulse.headline}
+                        {renderFlexibleContent(pulse.headline)}
                     </h4>
-                    <p className="text-xs text-gray-300 leading-relaxed mb-4">
-                        {pulse.market_mood}
-                    </p>
+                    <div className="text-xs text-gray-300 leading-relaxed mb-4">
+                        {renderFlexibleContent(pulse.market_mood)}
+                    </div>
 
                     {/* 시나리오 수렴도 프로그레스 바 */}
                     <div className="bg-black/40 rounded-xl p-3 border border-white/5 mb-4">
@@ -2435,10 +2464,10 @@ function ElectionPlaybookSection({
                             <div style={{ width: `${probs.C}%` }} className="bg-rose-500 transition-all duration-500" title={`시나리오 C: ${probs.C}%`} />
                         </div>
                         {pulse.convergence_scenario?.reasoning && (
-                            <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
+                            <div className="text-[11px] text-gray-400 mt-2 leading-relaxed">
                                 <span className="text-cyan-300 font-semibold">시장 판단 요약: </span>
-                                {pulse.convergence_scenario.reasoning}
-                            </p>
+                                {renderFlexibleContent(pulse.convergence_scenario.reasoning)}
+                            </div>
                         )}
                     </div>
 
@@ -2448,26 +2477,26 @@ function ElectionPlaybookSection({
                             <p className="text-xs font-bold text-amber-300 mb-1 flex items-center gap-1.5">
                                 <Landmark className="w-3.5 h-3.5" /> 현지 정치 & 의회(Centrão) 구도 실시간 분석
                             </p>
-                            <p className="text-xs text-gray-300 leading-relaxed font-normal">
-                                {pulse.live_analysis}
-                            </p>
+                            <div className="text-xs text-gray-300 leading-relaxed font-normal">
+                                {renderFlexibleContent(pulse.live_analysis)}
+                            </div>
                         </div>
                         <div className="bg-black/25 rounded-xl p-3.5 border border-white/5 space-y-2">
                             <div>
                                 <p className="text-xs font-bold text-emerald-300 mb-1 flex items-center gap-1.5">
                                     <Target className="w-3.5 h-3.5" /> Tranche 3 (잔여 40%) 분할 매수 실행 권고
                                 </p>
-                                <p className="text-xs text-gray-300 leading-relaxed font-normal">
-                                    {pulse.tranche3_action}
-                                </p>
+                                <div className="text-xs text-gray-300 leading-relaxed font-normal">
+                                    {renderFlexibleContent(pulse.tranche3_action)}
+                                </div>
                             </div>
                             <div className="pt-2 border-t border-white/5">
                                 <p className="text-xs font-bold text-cyan-300 mb-1 flex items-center gap-1.5">
                                     <Award className="w-3.5 h-3.5" /> 최우선 추천 포트폴리오 픽
                                 </p>
-                                <p className="text-xs text-gray-300 leading-relaxed font-normal">
-                                    {pulse.recommended_bond_guide}
-                                </p>
+                                <div className="text-xs text-gray-300 leading-relaxed font-normal">
+                                    {renderFlexibleContent(pulse.recommended_bond_guide)}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2819,7 +2848,7 @@ function ElectionPlaybookSection({
                                 {pulse.monitoring_points.map((mp, i) => (
                                     <li key={i} className="text-xs text-gray-200 flex items-center gap-2">
                                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                                        <span>{mp}</span>
+                                        <span>{renderFlexibleContent(mp)}</span>
                                     </li>
                                 ))}
                             </ul>

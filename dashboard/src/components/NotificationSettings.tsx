@@ -64,7 +64,8 @@ export default function NotificationSettings() {
                     setAlertBrazil(data.alert_brazil !== 0);
 
                     setAlertDisparity(data.alert_disparity !== 0);
-                    setDisparityThreshold(data.disparity_threshold ? parseFloat(data.disparity_threshold) : 2.0);
+                    const parsedThreshold = data.disparity_threshold ? parseFloat(data.disparity_threshold) : 2.0;
+                    setDisparityThreshold(!isNaN(parsedThreshold) && parsedThreshold > 0 ? parsedThreshold : 2.0);
                     setDisparityTargetScope(data.disparity_target_scope === 'ALL' ? 'ALL' : 'PORTFOLIO');
                 }
             } catch (err) {
@@ -251,7 +252,7 @@ export default function NotificationSettings() {
                                                 <div className="flex items-center gap-2">
                                                     <h4 className="text-sm font-bold text-white">ETF 실시간 괴리율(NAV 차이) 경보</h4>
                                                     <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                                        ±{disparityThreshold.toFixed(1)}% 기준
+                                                        ±{(typeof disparityThreshold === 'number' && !isNaN(disparityThreshold) ? disparityThreshold : 2.0).toFixed(1)}% 기준
                                                     </span>
                                                 </div>
                                                 <p className="text-[11px] text-gray-400 mt-0.5">
@@ -278,7 +279,7 @@ export default function NotificationSettings() {
                                                 <div className="flex items-center justify-between text-xs">
                                                     <span className="text-gray-300 font-medium">괴리율 절대값 임계치 (Threshold)</span>
                                                     <span className="font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                                                        ±{disparityThreshold.toFixed(1)}% 이상
+                                                        ±{(typeof disparityThreshold === 'number' && !isNaN(disparityThreshold) ? disparityThreshold : 2.0).toFixed(1)}% 이상
                                                     </span>
                                                 </div>
                                                 <input
@@ -286,8 +287,11 @@ export default function NotificationSettings() {
                                                     min="0.5"
                                                     max="5.0"
                                                     step="0.1"
-                                                    value={disparityThreshold}
-                                                    onChange={(e) => setDisparityThreshold(parseFloat(e.target.value))}
+                                                    value={typeof disparityThreshold === 'number' && !isNaN(disparityThreshold) ? disparityThreshold : 2.0}
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value);
+                                                        setDisparityThreshold(!isNaN(val) ? val : 2.0);
+                                                    }}
                                                     className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-amber-500 focus:outline-none"
                                                 />
                                                 {/* 슬라이더 프리셋 칩 */}
@@ -303,7 +307,7 @@ export default function NotificationSettings() {
                                                             type="button"
                                                             onClick={() => setDisparityThreshold(preset.val)}
                                                             className={`flex-1 py-1 text-[10px] font-medium rounded-lg border transition-all ${
-                                                                disparityThreshold === preset.val
+                                                                (typeof disparityThreshold === 'number' && !isNaN(disparityThreshold) ? disparityThreshold : 2.0) === preset.val
                                                                     ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold'
                                                                     : 'bg-white/[0.02] text-gray-400 border-white/5 hover:border-white/20'
                                                             }`}
