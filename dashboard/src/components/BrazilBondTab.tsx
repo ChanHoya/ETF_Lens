@@ -190,6 +190,19 @@ const getDynamicDDay = (targetDateStr: string): number => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
+// 대선 일정(한국시간 결과 반영일) 기준 현재 국면 D-day 라벨
+const ELECTION_FIRST_DATE = "2026-10-05";
+const ELECTION_RUNOFF_DATE = "2026-10-26";
+const getElectionDDayLabel = (): string => {
+    const dFirst = getDynamicDDay(ELECTION_FIRST_DATE);
+    if (dFirst > 0) return `1차 투표 D-${dFirst}`;
+    if (dFirst === 0) return "1차 투표 D-DAY";
+    const dRunoff = getDynamicDDay(ELECTION_RUNOFF_DATE);
+    if (dRunoff > 0) return `결선 D-${dRunoff}`;
+    if (dRunoff === 0) return "결선 D-DAY";
+    return "대선 종료";
+};
+
 export default function BrazilBondTab() {
     const [summary, setSummary] = useState<Summary | null>(null);
     const [history, setHistory] = useState<Record<string, { date: string; value: number }[]>>({});
@@ -1631,7 +1644,7 @@ function TrancheCard({ t, currentTrancheId }: {
     if (t.id === 2 && displayTiming.includes("8월 초")) {
         displayTiming = "8~9월 (Copom 8·9월 후 완료)";
     } else if (t.id === 3 && displayTiming === "10월 대선 전후") {
-        displayTiming = "10월 대선 전후 (D-3 진입 중)";
+        displayTiming = `10월 대선 전후 (${getElectionDDayLabel()})`;
     }
 
     return (
@@ -3246,7 +3259,7 @@ function ElectionPlaybookSection({
                         <div className="flex items-center gap-2">
                             <h3 className="text-base md:text-lg font-black text-white tracking-tight">10월 대선 3대 시나리오 & Tranche 3 실시간 투자 가이드</h3>
                             <span className="bg-amber-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow">
-                                D-3 SPECIAL
+                                {getElectionDDayLabel()} SPECIAL
                             </span>
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5">

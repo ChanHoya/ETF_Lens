@@ -68,3 +68,17 @@ def test_recommended_bonds_and_strategy_structure():
 
 
 
+
+
+def test_election_prompt_uses_dynamic_dday():
+    from datetime import date
+    from api.brazil_bond import _build_election_prompt, _election_phase_text
+
+    # 하드코딩된 "D-2~D-3" 문구 없이 오늘 날짜 기준 D-day가 들어가야 한다
+    prompt = _build_election_prompt("ctx", [], today=date(2026, 10, 4))
+    assert "D-2~D-3" not in prompt
+    assert "D-1" in prompt and "2026-10-04" in prompt
+
+    assert "D-Day" in _election_phase_text(date(2026, 10, 5))
+    assert "결선" in _election_phase_text(date(2026, 10, 6)) and "D-20" in _election_phase_text(date(2026, 10, 6))
+    assert "이후" in _election_phase_text(date(2026, 10, 27))

@@ -990,7 +990,7 @@ async def generate_insight(db: AsyncSession = Depends(get_db)):
 
 # ── 10월 대선 실시간 정세 & Tranche 3 AI Live Pulse ────────────────────────────
 _DEFAULT_ELECTION_PULSE = {
-    "headline": "대선 D-3 불확실성 정점… 의회 Centrão 견제 속 시나리오 B(온건 연임) 베이스라인 우세",
+    "headline": "대선 전후 불확실성 정점… 의회 Centrão 견제 속 시나리오 B(온건 연임) 베이스라인 우세",
     "market_mood": "여론조사 초박빙 접전으로 장기물 금리(5년물 14.28%)가 높은 레벨을 유지하고 있으나, 의회 보수·중도파의 재정 독주 견제 능력에 신뢰를 두며 차분한 관망세를 유지하고 있습니다.",
     "convergence_scenario": {
         "primary": "B",
@@ -1008,10 +1008,30 @@ _DEFAULT_ELECTION_PULSE = {
 }
 
 
-def _build_election_prompt(ctx: str, news_titles: list[str]) -> str:
+def _election_phase_text(today: date) -> str:
+    """CATALYSTS의 대선 일정(한국시간 결과 반영일) 기준으로 오늘이 어느 국면인지 D-day 문장으로 반환"""
+    dates = {c["key"]: date.fromisoformat(c["date"]) for c in CATALYSTS}
+    first, runoff = dates["election"], dates["election_runoff"]
+    d_first = (first - today).days
+    d_runoff = (runoff - today).days
+    if d_first > 0:
+        return f"브라질 대통령 선거 1차 투표 결과 반영일({first.isoformat()}, 한국시간)까지 D-{d_first}인 시점"
+    if d_first == 0:
+        return f"브라질 대통령 선거 1차 투표 결과가 반영되는 당일(D-Day, {first.isoformat()})"
+    if d_runoff > 0:
+        return f"브라질 대선 1차 투표가 끝났고 2차 결선투표 결과 반영일({runoff.isoformat()}, 한국시간)까지 D-{d_runoff}인 시점"
+    if d_runoff == 0:
+        return f"브라질 대선 2차 결선투표 결과가 반영되는 당일(D-Day, {runoff.isoformat()})"
+    return f"브라질 대선 일정(결선 {runoff.isoformat()})이 모두 끝나 당선자가 확정된 이후 시점"
+
+
+def _build_election_prompt(ctx: str, news_titles: list[str], today: date | None = None) -> str:
     news_text = "\n".join([f"- {t}" for t in news_titles[:6]]) if news_titles else "- 수집된 최근 정치/대선 뉴스 없음 (시장 지표 중심 평가)"
+    today = today or datetime.now(_KST).date()
+    phase = _election_phase_text(today)
     return f"""너는 브라질 국채 및 매크로 정치 리스크 전문 수석 스트래티지스트다.
-현재 시점은 2026년 10월 초, 브라질 대통령 선거 1차 투표(10월 5일)를 불과 D-2~D-3일 앞둔 시점이며, 한국인 투자자들은 브라질 국채 3단계 분할 매수의 마지막 단계인 'Tranche 3 (잔여 40% 대선 전후 집행)' 구간에 진입해 있다.
+오늘은 {today.isoformat()}(한국시간)이며, {phase}이다. 한국인 투자자들은 브라질 국채 3단계 분할 매수의 마지막 단계인 'Tranche 3 (잔여 40% 대선 전후 집행)' 구간에 진입해 있다.
+headline 등 본문에서 D-day를 언급할 때는 반드시 위 날짜 기준 값을 그대로 쓰고, 임의로 다른 D-day를 만들지 마라.
 
 [현재 실시간 브라질 시장 지표]
 {ctx}
