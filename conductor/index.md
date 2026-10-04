@@ -1,3 +1,5 @@
+> ⚠️ 이 문서는 갱신이 멈춘 과거 기록이다(2026-10-04 확인). 현재 상태의 기준 문서는 `docs/project-state.md`다.
+
 # ETF Lens — Conductor Index
 
 > **프로젝트 지식 허브.** 모든 Agent가 작업 전 이 파일부터 읽습니다.

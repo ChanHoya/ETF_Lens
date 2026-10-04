@@ -1,3 +1,5 @@
+> ⚠️ 이 문서는 갱신이 멈춘 과거 기록이다(2026-10-04 확인). 현재 상태의 기준 문서는 `docs/project-state.md`다.
+
 # S6-3 Task: Efficient Frontier 시각화 및 최적 비중 연동
 
 ## 체크리스트

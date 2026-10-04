@@ -10,3 +10,7 @@ backend/__pycache__/
 *.pyc
 backend/pw-browsers/
 .vercel
+
+# 일회성 진단 스크립트 (정리 2026-10-04)
+scratch/
+backend/scratch/

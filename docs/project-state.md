@@ -3,8 +3,13 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 브라질 국채 토탈리턴(Total Return) 시뮬레이터 & 대선 1차 투표 결과/이벤트 실시간 업데이트 연동 완료 (2026-10-03)
-➡️ Next: 실서버 배포(Vercel/Render) 검증 및 브라질 대선 1차/2차 투표 후속 동향 모니터링
+✅ Current: 대선 D-day 라벨·AI Pulse 프롬프트의 하드코딩된 "D-3" 제거(d8118497) + 저장소 정리 (2026-10-04)
+➡️ Next: 브라질 대선 1차(현지 10/4 · 결과 반영 10/5 KST)·결선(현지 10/25 · 결과 반영 10/26 KST) 후속 동향 반영
+➡️ 다음 신규 스토리 ID는 **S6-20**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+
+> 세션 핸드오프 (2026-10-04, Claude Code):
+> - 🐛 대선 D-day 고정값 버그 수정: `ElectionPlaybookSection`의 `D-3 SPECIAL` 라벨과 Tranche 3 카드의 "(D-3 진입 중)"이 JSX에 하드코딩돼 있었고, `_build_election_prompt`도 "D-2~D-3일 앞둔 시점"으로 고정돼 있어 AI 재생성 시에도 같은 D-day가 나왔다. 이제 프론트는 `getElectionDDayLabel()`, 백엔드는 `_election_phase_text()`가 오늘 날짜(KST)와 `CATALYSTS` 대선 일정으로 계산한다. 회귀 테스트는 `test_election_prompt_uses_dynamic_dday`.
+> - 🧹 저장소 정리: 체크리스트 `docs/housekeeping-2026-10-checklist.md`, 결정 근거 `docs/housekeeping-2026-10-context-notes.md`. 배포본은 `dashboard/`이고 `frontend/`는 2026-02 이후 미사용이다.
 
 > 세션 핸드오프 (2026-10-03):
 > - 🇧🇷 브라질 국채 토탈리턴(Total Return) 정밀 시뮬레이터 구축 (S6-19):
@@ -45,12 +50,6 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 >   - `backend/core/notifier.py`: Discord / Slack 웹훅 비동기 전송 함수 및 통합 `broadcast_notification` 멀티캐스트 엔진 구축 (HTML -> Markdown/mrkdwn 자동 변환).
 >   - `backend/api/notification_settings.py`: `/settings` 및 `/test` 엔드포인트에 멀티채널 및 채널별 즉시 테스트 발송 기능 탑재.
 >   - `backend/core/scheduler.py`: `check_etf_disparity_and_alert`에 사용자별 개인화 임계치(0.5%~5.0%) 및 범위(내 보유 vs 전체), 1시간 쿨다운 캐시 적용.
->   - `dashboard/src/components/NotificationSettings.tsx`: Telegram, Discord, Slack 3대 채널 탭 및 즉시 테스트 버튼, 괴리율 실시간 경보 Bento 카드 (임계치 슬라이더 및 프리셋, 대상 범위 선택기) UI 완성.속 시 배당 캘린더 서브탭 완전 제외 및 /my(showMyTab=true) 접속 시에만 한정 활성화하는 라우트 가드 적용.
-> - S6-6 괴리율 개인화 알림 설정 및 알림 채널 확장 완료:
->   - `NotificationSettings` DB 모델 및 스키마 마이그레이션: `discord_webhook_url`, `slack_webhook_url`, `channel_telegram`, `channel_discord`, `channel_slack`, `alert_disparity`, `disparity_threshold`, `disparity_target_scope` 컬럼 추가.
->   - `backend/core/notifier.py`: Discord / Slack 웹훅 비동기 전송 함수 및 통합 `broadcast_notification` 멀티캐스트 엔진 구축 (HTML -> Markdown/mrkdwn 자동 변환).
->   - `backend/api/notification_settings.py`: `/settings` 및 `/test` 엔드포인트에 멀티채널 및 채널별 즉시 테스트 발송 기능 탑재.
->   - `backend/core/scheduler.py`: `check_etf_disparity_and_alert`에 사용자별 개인화 임계치(0.5%~5.0%) 및 범위(내 보유 vs 전체), 1시간 쿨다운 캐시 적용.
 >   - `dashboard/src/components/NotificationSettings.tsx`: Telegram, Discord, Slack 3대 채널 탭 및 즉시 테스트 버튼, 괴리율 실시간 경보 Bento 카드 (임계치 슬라이더 및 프리셋, 대상 범위 선택기) UI 완성.
 
 
@@ -80,8 +79,26 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 | S6-14 | 구글 시트 기반 종합 자산 관리 (Account Board + KIS 연동 + 수동 자산 CRUD) | ✅ stable | KIS API 실시간 연동 + 타 금융사(미래에셋/삼성/저축) 수동 자산/예수금 통합 집계, 구글 시트 형태의 Account Board 및 계좌별 상세 종목 뷰 구현 완료 |
 | S6-15 | 반도체 매크로 사이클(CSCI) 퀀트 엔진 및 4국면 시각화 대시보드 | ✅ stable | 5년 롤링 Z-score 정규화 기반 선행(40%)+동행(40%)+후행(20%) CSCI 지수, 4-Phase 사이클 시계(2D Quadrant), 빅테크 CapEx 트래커, 서브섹터 디커플링 맵, ETF 리밸런싱 매트릭스 연동 완료 |
 | S6-17 | 브라질 대선 시나리오 분석 및 조건별 추천 국채 라인업 (헤알화/달러 기반) | ✅ stable | 3대 대선 시나리오 비교(BCB 독립성 하방 방파제), 금리 고점 듀레이션 확대 원칙, 조건별 국채 5종 라인업(적극 고수익 바벨 포함), Tranche 3 체크리스트 및 Gemini Live Pulse 연동 완료 |
-| S6-18 | 브라질 대선 2차 결선투표 추가, 타임라인 1줄 최소화 및 대선 종합 인텔리전스 팝업 | ✅ stable | 2026-10-26 결선투표 추가, 완료 이벤트 1줄 접기/펼치기 아코디언, 선거 일정/제도 요약표, 룰라 vs 플라비우 판세 및 Quaest·AtlasIntel 여론조사 시각화 바 차트, 국채 투자 액션 가이드 및 출처 팝업 모달 구현 완료 |
+| S6-18 | 브라질 대선 2차 결선투표 추가, 타임라인 1줄 최소화 및 대선 종합 인텔리전스 팝업 | ✅ stable | 결선투표(현지 10/25 · 결과 반영 10/26 KST) 추가, 완료 이벤트 1줄 접기/펼치기 아코디언, 선거 일정/제도 요약표, 룰라 vs 플라비우 판세 및 Quaest·AtlasIntel 여론조사 시각화 바 차트, 국채 투자 액션 가이드 및 출처 팝업 모달 구현 완료 |
 | S6-19 | 브라질 국채 토탈리턴(Total Return) 시뮬레이터 & 대선 1차 투표 결과/이벤트 실시간 업데이트 | ✅ stable | NTN-F/LTN 더티프라이스, 복리 재투자, 만기보유 vs 조기매도 자본차익, 환율 손익분기점, 7x6 시나리오 매트릭스, 대선 1차 투표 결과 시각화(결선 뱃지) 및 Gemini AI 뉴스 동적 갱신/수동 입력 지원 완료 |
+
+### 스토리 ID 충돌 대응표
+
+7월 브라질채권 작업이 S6-3~S6-18 번호를 하위 단계 번호처럼 쓴 뒤, 8~10월의 정식 스토리가 같은 번호를
+다시 받았다. 커밋은 고치지 않고 아래 표로 구분한다. 위 Story Status 표의 의미가 정식이다.
+
+| ID | 정식 스토리 (Story Status 기준) | 같은 번호를 쓴 다른 커밋 |
+|----|----|----|
+| S6-3 | Efficient Frontier 시각화 (05-31) | 브라질채권 시계열·판정기준·타임라인·캐싱 (07-12~13), 반도체 7대 실데이터 교체 (08-23) |
+| S6-4 | ETF 배당 수집 API (10-03) | 서버 시작 시 ETF 마스터 동기화 OOM 방지 (07-13) |
+| S6-13 | 섹터분석 정렬/명칭 (06-12) | 브라질 Activation Zone 1주 궤적·상단 탭 순서·자산추이 수익률 (08-12) |
+| S6-14 | 구글 시트형 종합 자산 관리 (08-22) | COPOM 발표 15분 주기 텔레그램 모니터링 (07-25) |
+| S6-15 | 반도체 매크로 사이클(CSCI) (08-22) | 브라질 대시보드 범례 슬림화·종합판정 카드 (07-25) |
+| S6-16 | 10대 업종 7대 실데이터 신호등 (08-23) | COPOM D-day 타임라인 하이라이트 (07-25) |
+| S6-17 | 브라질 대선 시나리오·국채 라인업 (10-03) | Copom 시나리오 D-11 이벤트 카드 (07-25) |
+| S6-18 | 대선 결선·인텔리전스 팝업 (10-03) | Copom 깜짝 인상 시나리오 D (07-25) |
+| S7-* | (Sprint 7 미개설) | S7-BrazilBond·S7-Notify·S7-PeerAnalysis (07-23~25, Claude Code)는 Sprint 6 기간 작업 |
+
 ## Module Registry
  
 | Module | Layer | Status | Key Files |
