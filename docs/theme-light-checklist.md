@@ -8,7 +8,7 @@
 - [x] 첫 화면 깜빡임 방지: layout `<head>`에서 저장된 테마를 그리기 전에 적용
 - [x] 상단 바 Dark / Light 토글 스위치(전체화면 버튼 옆), localStorage `iprism-theme` 저장
 - [x] 주요 탭(종목선택·섹터분석·시장동향·브라질채권) 라이트 캡처로 눈에 띄는 깨짐 수정 — My·TFF·데이터가 채워진 차트 화면은 미확인
-- [ ] push 후 실서버 확인
+- [x] push 후 실서버 확인 (Vercel success, 라이브 HTML에 테마 스크립트·CSS에 html.light 규칙 확인)
 
 검증: `npm run build` 성공, 새 빌드를 3100 포트로 띄워 라이트·다크 캡처(종목선택·섹터분석·시장동향·브라질채권) 확인.
 라이트에서 사라졌던 종합 위험지수 게이지 바탕 호(흰색 rgba 고정)를 currentColor로 바꿔 수정.
