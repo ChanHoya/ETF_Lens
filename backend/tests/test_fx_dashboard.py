@@ -1,7 +1,8 @@
 # 환율 탭 계산 로직(build_overview) 단위 테스트 — 네트워크 없이 가짜 시계열로 검증
+import math
 from datetime import date, timedelta
 
-from api.fx_dashboard import REGIMES, _verdict, build_overview
+from api.fx_dashboard import REGIMES, _hedge_judgment, _verdict, build_overview
 
 TODAY = date(2026, 10, 5)
 
@@ -89,3 +90,48 @@ def test_missing_sources_degrade_gracefully():
     assert "krw" in out["snapshot"] and "dxy" not in out["snapshot"] and "reer" not in out["snapshot"]
     assert out["weekly"] and out["weekly"][0]["dxy"] is None
     assert out["snapshot"]["verdict"]["level"] == "neutral"
+
+
+# ── 2단계 분석 블록 ─────────────────────────────────────────────
+
+def _tracking_raw(shock_from: date | None = None, shock: float = 0.0):
+    """원/달러 = 14 × DXY (탄력성 1). shock_from 이후에는 원화 고유 약세 shock만큼 더 오른다."""
+    s, e = date(2005, 1, 1), date(2026, 9, 25)
+    dxy = lambda d: 95 + 10 * math.sin(d.toordinal() / 90)
+    krw = lambda d: 14 * dxy(d) * (1 + shock if shock_from and d >= shock_from else 1)
+    raw = _raw()
+    raw.update(krw=_daily(s, e, krw), dxy=_daily(s, e, dxy), krw_live={},
+               vix=_daily(s, e, lambda d: 20 + 5 * math.sin(d.toordinal() / 7)))
+    return raw
+
+
+def test_analysis_tracks_dollar_when_krw_follows_dxy():
+    an = build_overview(_tracking_raw(), TODAY)["analysis"]
+    assert an["corr_now"]["dxy"] > 0.99
+    assert abs(an["fair"]["elasticity"] - 1) < 0.01 and an["fair"]["r2"] > 0.99
+    assert abs(an["fair"]["now"]["gap_pct"]) < 0.5
+    assert abs(an["beta"]["value"] - 1) < 0.01
+    d = an["decomp_1y"]
+    assert abs(d["krw_part"]) < 0.5  # 전부 달러 몫
+    assert abs(d["dollar_part"] - d["krw_chg"]) < 0.5
+
+
+def test_analysis_isolates_krw_specific_shock():
+    an = build_overview(_tracking_raw(date(2026, 6, 1), 0.10), TODAY)["analysis"]
+    assert an["fair"]["now"]["gap_pct"] > 8          # 달러로 설명되지 않는 원화 고유 약세
+    assert an["decomp_1y"]["krw_part"] > 8
+    assert an["hedge"]["pick"] in ("H", "MIX") and any("원화 고유 약세" in r["text"] for r in an["hedge"]["reasons"])
+
+
+def test_reer_band_rows_and_stats():
+    an = build_overview(_raw(), TODAY)["analysis"]
+    assert an["reer"]["rows"][-1] == {"date": "2026-07", "reer": 85.0}
+    assert an["reer"]["avg"] > 95 and an["reer"]["std"] > 0
+
+
+def test_hedge_judgment_scoring():
+    assert _hedge_judgment(85, -15, 0.3, 6)["pick"] == "H"
+    assert _hedge_judgment(20, 8, 2.0, None)["pick"] == "UH"
+    mixed = _hedge_judgment(73, -14, 0.91, 1.0)
+    assert mixed["pick"] == "MIX" and mixed["score_h"] == 1
+    assert _hedge_judgment(None, None, None, None)["reasons"][0]["side"] == "MIX"
