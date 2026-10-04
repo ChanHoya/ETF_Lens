@@ -13,6 +13,7 @@ import MarqueeText from "@/components/MarqueeText";
 import Modals from "@/components/Modals";
 import DiscoverTab from "@/components/DiscoverTab";
 import FxTab from "@/components/FxTab";
+import TodayMarketButton from "@/components/TodayMarketButton";
 import CoveredCallTab from "@/components/CoveredCallTab";
 import BrazilBondTab from "@/components/BrazilBondTab";
 import dynamic from "next/dynamic";
@@ -1332,6 +1333,8 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                 {subTab.label}
               </button>
             ))}
+            <div className="h-4 w-[1px] bg-white/20 shrink-0" />
+            <TodayMarketButton />
           </nav>
         </div>
       )}
