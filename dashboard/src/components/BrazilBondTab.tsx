@@ -89,6 +89,7 @@ export interface ElectionPulse {
 
 interface Summary {
     as_of: string;
+    catalysts_synced_at?: string | null; // 이벤트 캘린더 마지막 동기화(서버 저장) 시각
     indicators: Indicator[];
     real_rate: { label: string; unit: string; value: number | null; gauge: string; date?: string | null };
     focus: {
@@ -171,14 +172,12 @@ const renderFlexibleContent = (val: any) => {
     return String(val);
 };
 
-const isSameDate = (dateStr: string | null | undefined): boolean => {
-    if (!dateStr) return false;
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return false;
-    const today = new Date();
-    return d.getFullYear() === today.getFullYear() &&
-           d.getMonth() === today.getMonth() &&
-           d.getDate() === today.getDate();
+// 자동 갱신 기준: 콘텐츠 기준 시각이 1시간보다 오래되면 수동 갱신 버튼과 같은 경로로 자동 갱신한다.
+const STALE_MS = 60 * 60 * 1000;
+const AUTO_RETRY_MS = 10 * 60 * 1000; // 자동 갱신이 실패해도 같은 항목은 10분 뒤에만 다시 시도
+const isStale = (iso: string | null | undefined): boolean => {
+    const t = iso ? Date.parse(iso) : NaN;
+    return Number.isNaN(t) || Date.now() - t > STALE_MS;
 };
 
 const getDynamicDDay = (targetDateStr: string): number => {
@@ -213,7 +212,6 @@ export default function BrazilBondTab() {
     const [insight, setInsight] = useState<AiInsight | null>(null);
     const [insightAt, setInsightAt] = useState<string | null>(null);
     const [genLoading, setGenLoading] = useState(false);
-    const autoGenAttemptedRef = useRef(false);
 
     const [catalystSyncing, setCatalystSyncing] = useState(false);
     const [catalystToast, setCatalystToast] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -222,7 +220,16 @@ export default function BrazilBondTab() {
     const [news, setNews] = useState<NewsItem[]>([]);
     const [newsLoading, setNewsLoading] = useState(true);
     const [newsRefreshing, setNewsRefreshing] = useState(false);
-    const [newsUpdatedAt, setNewsUpdatedAt] = useState<Date | null>(null);
+    const [newsUpdatedAt, setNewsUpdatedAt] = useState<Date | null>(null); // 서버 마지막 수집 시각
+    const autoAttemptRef = useRef<Record<string, number>>({});
+    // 기준 시각이 1시간 넘었고 최근 10분 안에 자동 시도한 적 없으면 true (시도 시각 기록)
+    const shouldAutoRefresh = (key: string, iso: string | null | undefined): boolean => {
+        if (!isStale(iso)) return false;
+        const last = autoAttemptRef.current[key] || 0;
+        if (Date.now() - last < AUTO_RETRY_MS) return false;
+        autoAttemptRef.current[key] = Date.now();
+        return true;
+    };
 
     // [뉴스 업데이트] 버튼: 서버에 라이브 재수집(refresh=true)을 요청해 현재까지의 기사로 리스트를 다시 채운다.
     const refreshNews = async () => {
@@ -230,9 +237,10 @@ export default function BrazilBondTab() {
         try {
             const r = await fetch(`${API_BASE}/api/v1/brazil-bond/news?limit=${NEWS_LIMIT}&refresh=true`, { cache: 'no-store' });
             if (r.ok) {
-                const nData = (await r.json()).items || [];
+                const j = await r.json();
+                const nData = j.items || [];
                 setNews(nData);
-                setNewsUpdatedAt(new Date());
+                setNewsUpdatedAt(j.synced_at ? new Date(j.synced_at) : new Date());
                 localStorage.setItem('brazil_bond_news', JSON.stringify(nData));
             }
         } catch (e) {
@@ -264,9 +272,6 @@ export default function BrazilBondTab() {
                 const j = JSON.parse(cachedInsight);
                 setInsight(j.content || null);
                 setInsightAt(j.generated_at || null);
-                if (!isSameDate(j.generated_at)) {
-                    setGenLoading(true);
-                }
             }
             if (cachedNews) setNews(JSON.parse(cachedNews));
             if (cachedPulse) {
@@ -317,9 +322,8 @@ export default function BrazilBondTab() {
                     setInsightAt(j.generated_at || null);
                     localStorage.setItem('brazil_bond_insight', JSON.stringify(j));
 
-                    // 기 생성된 리포트가 이전 날짜이거나 없으면 자동 재생성 (동일 날짜면 skip)
-                    if (!autoGenAttemptedRef.current && (!j.generated_at || !isSameDate(j.generated_at))) {
-                        autoGenAttemptedRef.current = true;
+                    // 리포트가 없거나 1시간 넘게 지났으면 재생성 버튼과 같은 경로로 자동 재생성
+                    if (shouldAutoRefresh('insight', j.generated_at)) {
                         generateReport(true);
                     }
                 }
@@ -329,6 +333,9 @@ export default function BrazilBondTab() {
                     setElectionPulse(pj.content || null);
                     setElectionPulseAt(pj.generated_at || null);
                     localStorage.setItem('brazil_bond_election_pulse', JSON.stringify(pj));
+                    if (shouldAutoRefresh('pulse', pj.generated_at)) {
+                        generateElectionPulse(true);
+                    }
                 }
 
                 // 2.1 지나간 이벤트 중 실제 발표 내용이 누락되었거나 '집계 대기'인 경우 자동 백그라운드 갱신
@@ -336,7 +343,11 @@ export default function BrazilBondTab() {
                     const hasMissingActual = (sData.timeline || []).some(
                         (c: Catalyst) => c.d_day < 0 && (!c.actual || c.actual.includes('집계 대기'))
                     );
-                    if (hasMissingActual && !autoSyncCatalystAttemptedRef.current) {
+                    // 마지막 동기화가 1시간 넘었으면 최근 7일 이벤트를 자동 재분석(수동 편집본 보존).
+                    // 그렇지 않아도 발표값 누락 이벤트가 있으면 한 번은 채운다.
+                    if (shouldAutoRefresh('catalysts', sData.catalysts_synced_at)) {
+                        syncCatalysts(true, 7);
+                    } else if (hasMissingActual && !autoSyncCatalystAttemptedRef.current) {
                         autoSyncCatalystAttemptedRef.current = true;
                         syncCatalysts(true);
                     }
@@ -362,10 +373,15 @@ export default function BrazilBondTab() {
                 }
                 const r = await fetch(`${API_BASE}/api/v1/brazil-bond/news?limit=${NEWS_LIMIT}&refresh=false`, { cache: 'no-store' });
                 if (r.ok) {
-                    const nData = (await r.json()).items || [];
+                    const j = await r.json();
+                    const nData = j.items || [];
                     setNews(nData);
-                    setNewsUpdatedAt(new Date());
+                    setNewsUpdatedAt(j.synced_at ? new Date(j.synced_at) : null);
                     localStorage.setItem('brazil_bond_news', JSON.stringify(nData));
+                    // 서버 마지막 수집이 1시간 넘었으면(또는 재시작 후 미수집) [뉴스 업데이트]와 같은 라이브 재수집
+                    if (shouldAutoRefresh('news', j.synced_at)) {
+                        refreshNews();
+                    }
                 }
             } catch (e) {
                 console.error("Background news refresh failed:", e);
@@ -376,6 +392,7 @@ export default function BrazilBondTab() {
 
         // 4. D-day/지표/뉴스는 서버에서 요청 시점 기준으로 실시간 계산되므로,
         // 탭을 리로드하지 않아도 반영되도록 주기적 폴링 + 탭 복귀 시 재조회를 건다.
+        // 매 조회 후 각 콘텐츠 기준 시각이 1시간을 넘었으면 shouldAutoRefresh로 자동 갱신된다.
         let lastRefreshAt = Date.now();
         const refreshAll = () => {
             lastRefreshAt = Date.now();
@@ -423,7 +440,7 @@ export default function BrazilBondTab() {
 
     const generateElectionPulse = async (silent = false) => {
         try {
-            if (!silent) setElectionPulseGenLoading(true);
+            setElectionPulseGenLoading(true);
             const res = await fetch(`${API_BASE}/api/v1/brazil-bond/election-pulse/generate`, { method: 'POST' });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
@@ -447,14 +464,15 @@ export default function BrazilBondTab() {
                 setTimeout(() => setCatalystToast(null), 5000);
             }
         } finally {
-            if (!silent) setElectionPulseGenLoading(false);
+            setElectionPulseGenLoading(false);
         }
     };
 
-    const syncCatalysts = useCallback(async (silent = false) => {
+    // recentDays: 자동 갱신용 — 최근 N일 이벤트만 강제 재분석하고 수동 편집본은 보존 (수동 버튼은 전체)
+    const syncCatalysts = useCallback(async (silent = false, recentDays?: number) => {
         try {
-            if (!silent) setCatalystSyncing(true);
-            const res = await fetch(`${API_BASE}/api/v1/brazil-bond/catalysts/sync?force=true`, {
+            setCatalystSyncing(true);
+            const res = await fetch(`${API_BASE}/api/v1/brazil-bond/catalysts/sync?force=true${recentDays ? `&recent_days=${recentDays}` : ''}`, {
                 method: 'POST',
             });
             if (!res.ok) {
@@ -511,7 +529,7 @@ export default function BrazilBondTab() {
                 setTimeout(() => setCatalystToast(null), 5000);
             }
         } finally {
-            if (!silent) setCatalystSyncing(false);
+            setCatalystSyncing(false);
         }
     }, []);
 
@@ -1717,8 +1735,10 @@ function TrancheCard({ t, currentTrancheId }: {
 // ── 🇧🇷 2026 브라질 대선 종합 인텔리전스 팝업 모달 ──────────────────────────────
 function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
     const [intel, setIntel] = useState<any>(null);
+    const [intelAt, setIntelAt] = useState<string | null>(null); // AI/수동 갱신 시각(서버 generated_at)
     const [loading, setLoading] = useState(false);
     const [aiRefreshing, setAiRefreshing] = useState(false);
+    const autoIntelAttemptRef = useRef(0);
     const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
     const [showManualEditor, setShowManualEditor] = useState(false);
     const [editMode, setEditMode] = useState<'first_round' | 'event'>('first_round');
@@ -1747,12 +1767,15 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
                 if (data?.content) {
                     setIntel(data.content);
                 }
+                setIntelAt(data?.generated_at || null);
+                return data as { generated_at?: string | null; source?: string };
             }
         } catch (e) {
             console.error('Failed to load election intel:', e);
         } finally {
             setLoading(false);
         }
+        return null;
     }, []);
 
     useEffect(() => {
@@ -1762,14 +1785,23 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
         };
         document.body.style.overflow = 'hidden';
         window.addEventListener('keydown', handleKeyDown);
-        fetchIntel();
+        fetchIntel().then((d) => {
+            if (!d || !isStale(d.generated_at)) return;
+            // 수동 편집본은 서버 규칙과 같이 24시간 동안 AI가 덮어쓰지 않는다
+            const age = d.generated_at ? Date.now() - Date.parse(d.generated_at) : Infinity;
+            if (d.source === 'manual' && age < 24 * 60 * 60 * 1000) return;
+            if (Date.now() - autoIntelAttemptRef.current < AUTO_RETRY_MS) return;
+            autoIntelAttemptRef.current = Date.now();
+            handleAiRefresh(true);
+        });
         return () => {
             document.body.style.overflow = 'unset';
             window.removeEventListener('keydown', handleKeyDown);
         };
     }, [isOpen, onClose, fetchIntel]);
 
-    const handleAiRefresh = async () => {
+    // silent: 팝업을 열 때 1시간 경과로 자동 실행한 경우 — 성공 토스트는 생략(실패는 표시)
+    const handleAiRefresh = async (silent = false) => {
         try {
             setAiRefreshing(true);
             const res = await fetch(`${API_BASE}/api/v1/brazil-bond/election-intel/refresh`, { method: 'POST' });
@@ -1778,7 +1810,8 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
                 if (data?.content) {
                     setIntel(data.content);
                 }
-                setToast({ msg: '최신 뉴스와 시장 지표를 기반으로 대선 인텔리전스가 AI 자동 갱신되었습니다!', ok: true });
+                setIntelAt(data?.generated_at || null);
+                if (!silent) setToast({ msg: '최신 뉴스와 시장 지표를 기반으로 대선 인텔리전스가 AI 자동 갱신되었습니다!', ok: true });
             } else {
                 const err = await res.json().catch(() => ({}));
                 setToast({ msg: `AI 갱신 실패: ${err.detail || '오류 발생'}`, ok: false });
@@ -1915,6 +1948,7 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
                     <div className="flex items-center gap-2 text-xs text-gray-400">
                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                         <span>기준일: <strong className="text-gray-200">{intel?.as_of || '2026-10-03'}</strong></span>
+                        {intelAt && <span className="text-gray-500">· AI 갱신 {new Date(intelAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-amber-300">
                             {intel?.phase === 'runoff_campaign' ? '2차 결선 선거전' : intel?.phase === 'decided' ? '당선 확정' : '1차 투표 진행/집계'}
                         </span>
@@ -1922,7 +1956,7 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
 
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={handleAiRefresh}
+                            onClick={() => handleAiRefresh(false)}
                             disabled={aiRefreshing}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 transition disabled:opacity-50 cursor-pointer shadow-sm"
                         >
