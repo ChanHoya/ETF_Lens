@@ -120,6 +120,7 @@ interface AiInsight {
     risk_footnote?: string;
 }
 interface NewsItem { title: string; source: string; link: string; published: string | null; }
+const NEWS_LIMIT = 30; // 리스트는 5건 높이로 보이고 나머지는 스크롤
 
 // ── 색 유틸 ──────────────────────────────────────────────────────────────────
 const GAUGE_STYLE: Record<string, { dot: string; text: string; ring: string; label: string }> = {
@@ -220,6 +221,26 @@ export default function BrazilBondTab() {
 
     const [news, setNews] = useState<NewsItem[]>([]);
     const [newsLoading, setNewsLoading] = useState(true);
+    const [newsRefreshing, setNewsRefreshing] = useState(false);
+    const [newsUpdatedAt, setNewsUpdatedAt] = useState<Date | null>(null);
+
+    // [뉴스 업데이트] 버튼: 서버에 라이브 재수집(refresh=true)을 요청해 현재까지의 기사로 리스트를 다시 채운다.
+    const refreshNews = async () => {
+        setNewsRefreshing(true);
+        try {
+            const r = await fetch(`${API_BASE}/api/v1/brazil-bond/news?limit=${NEWS_LIMIT}&refresh=true`, { cache: 'no-store' });
+            if (r.ok) {
+                const nData = (await r.json()).items || [];
+                setNews(nData);
+                setNewsUpdatedAt(new Date());
+                localStorage.setItem('brazil_bond_news', JSON.stringify(nData));
+            }
+        } catch (e) {
+            console.error("News refresh failed:", e);
+        } finally {
+            setNewsRefreshing(false);
+        }
+    };
 
     const [electionPulse, setElectionPulse] = useState<ElectionPulse | null>(null);
     const [electionPulseAt, setElectionPulseAt] = useState<string | null>(null);
@@ -339,10 +360,11 @@ export default function BrazilBondTab() {
                 if (!localStorage.getItem('brazil_bond_news')) {
                     setNewsLoading(true);
                 }
-                const r = await fetch(`${API_BASE}/api/v1/brazil-bond/news?limit=12&refresh=false`, { cache: 'no-store' });
+                const r = await fetch(`${API_BASE}/api/v1/brazil-bond/news?limit=${NEWS_LIMIT}&refresh=false`, { cache: 'no-store' });
                 if (r.ok) {
                     const nData = (await r.json()).items || [];
                     setNews(nData);
+                    setNewsUpdatedAt(new Date());
                     localStorage.setItem('brazil_bond_news', JSON.stringify(nData));
                 }
             } catch (e) {
@@ -703,7 +725,7 @@ export default function BrazilBondTab() {
             {/* ── 관련 뉴스 피드 ───────────────────────────────────── */}
             <section>
                 <SectionTitle icon={<Newspaper className="w-5 h-5 text-amber-400" />} title="관련 뉴스 & 정보" sub="브라질 국채·헤알·금리 관련 최신 뉴스 (자동 수집)" />
-                <NewsFeed news={news} loading={newsLoading} />
+                <NewsFeed news={news} loading={newsLoading} refreshing={newsRefreshing} updatedAt={newsUpdatedAt} onRefresh={refreshNews} />
             </section>
 
             {/* ── 실행 전 최종 체크리스트 ──────────────────────────── */}
@@ -2590,37 +2612,94 @@ function MacroTimeline({ timeline, augScenarios }: {
     );
 }
 
-function NewsFeed({ news, loading }: { news: NewsItem[]; loading: boolean }) {
-    if (loading) {
-        return (
-            <div className="bg-black/20 rounded-2xl border border-white/5 p-6 text-center">
-                <RefreshCw className="w-5 h-5 text-amber-400 animate-spin mx-auto" />
-                <p className="text-xs text-gray-500 mt-2">최신 뉴스를 수집하는 중…</p>
-            </div>
-        );
-    }
-    if (!news.length) {
-        return <p className="text-xs text-gray-500 bg-black/20 rounded-2xl border border-white/5 p-4">표시할 뉴스가 없습니다.</p>;
-    }
+function NewsFeed({ news, loading, refreshing, updatedAt, onRefresh }: {
+    news: NewsItem[]; loading: boolean; refreshing: boolean; updatedAt: Date | null; onRefresh: () => void;
+}) {
+    const [selected, setSelected] = useState<NewsItem | null>(null);
+
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {news.map((n, i) => (
-                <a key={i} href={n.link} target="_blank" rel="noopener noreferrer"
-                    className="group flex items-center justify-between gap-2.5 bg-black/20 hover:bg-black/40 rounded-xl border border-white/5 hover:border-amber-500/40 px-3.5 py-2.5 transition text-xs">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <Newspaper className="w-4 h-4 text-amber-400/80 shrink-0" />
-                        <div className="min-w-0 flex-1 flex items-center gap-2 overflow-hidden">
-                            <span className="font-semibold text-gray-200 group-hover:text-white truncate transition-colors shrink min-w-0">
-                                {n.title}
-                            </span>
-                            <span className="text-[11px] text-gray-400 whitespace-nowrap shrink-0">
-                                ({n.source}{n.published ? ` · ${n.published}` : ''})
-                            </span>
+        <div className="bg-black/20 rounded-2xl border border-white/5">
+            <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-white/5">
+                <span className="text-[11px] text-gray-500">
+                    {news.length ? `최신순 ${news.length}건` : '뉴스 없음'}
+                    {updatedAt ? ` · ${updatedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 갱신` : ''}
+                </span>
+                <button
+                    onClick={onRefresh}
+                    disabled={refreshing}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20 transition disabled:opacity-50 cursor-pointer"
+                >
+                    <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                    {refreshing ? '수집 중…' : '뉴스 업데이트'}
+                </button>
+            </div>
+
+            {loading ? (
+                <div className="p-6 text-center">
+                    <RefreshCw className="w-5 h-5 text-amber-400 animate-spin mx-auto" />
+                    <p className="text-xs text-gray-500 mt-2">최신 뉴스를 수집하는 중…</p>
+                </div>
+            ) : !news.length ? (
+                <p className="text-xs text-gray-500 p-4">표시할 뉴스가 없습니다.</p>
+            ) : (
+                // 한 줄 약 44px × 5건 높이만 보이고 나머지는 스크롤
+                <ul className="max-h-[222px] overflow-y-auto divide-y divide-white/5">
+                    {news.map((n, i) => (
+                        <li key={n.link || i}>
+                            <button
+                                onClick={() => setSelected(n)}
+                                className="group w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[0.04] transition cursor-pointer"
+                            >
+                                <span className="text-[11px] font-mono text-gray-500 w-[88px] shrink-0">
+                                    {n.published ? n.published.slice(5) : '-'}
+                                </span>
+                                <span className="flex-1 min-w-0 text-[13px] font-semibold text-gray-200 group-hover:text-white truncate">
+                                    {n.title}
+                                </span>
+                                <span className="text-[11px] text-gray-500 shrink-0 hidden sm:inline">{n.source}</span>
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
+
+            {selected && createPortal(
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                    onClick={() => setSelected(null)}
+                >
+                    <div
+                        className="relative w-full max-w-lg bg-gradient-to-b from-[#0e1726] to-[#04070d] border border-amber-500/40 rounded-2xl shadow-[0_0_40px_rgba(245,158,11,0.2)] p-5 text-white"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => setSelected(null)}
+                            className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 cursor-pointer"
+                            aria-label="닫기"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                        <div className="flex items-center gap-2 text-xs text-amber-400 mb-2">
+                            <Newspaper className="w-4 h-4" />
+                            <span className="font-bold">{selected.source}</span>
+                            {selected.published && <span className="text-gray-500 font-mono">· {selected.published} (KST)</span>}
                         </div>
+                        <h4 className="text-base font-extrabold leading-snug pr-6">{selected.title}</h4>
+                        <p className="text-[11px] text-gray-500 mt-3">
+                            Google News 검색 결과로 수집한 기사입니다. 본문은 언론사 원문에서 확인할 수 있습니다.
+                        </p>
+                        <a
+                            href={selected.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black bg-amber-500 text-black hover:brightness-110 transition"
+                        >
+                            원문 기사 열기 <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
                     </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-gray-500 group-hover:text-amber-400 shrink-0 ml-1" />
-                </a>
-            ))}
+                </div>,
+                document.body
+            )}
         </div>
     );
 }

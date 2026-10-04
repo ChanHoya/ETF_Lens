@@ -20,13 +20,15 @@ _KST = timezone(timedelta(hours=9))
 # 한국어 브라질 국채 관련 검색어.
 # Google News RSS 는 복잡한 OR/구문 쿼리에서 결과가 급감·정체된다(실측: OR 결합 10건/구문 0건).
 # 단순 단어 쿼리는 각 100건·당일 기사까지 정상 반환하므로, 여러 단순 쿼리를 병합·중복제거한다.
-_QUERIES = ["브라질 국채", "헤알", "브라질 기준금리"]
+# 대선 국면 기사(제목에 금리·환율 단어가 없는 경우가 많음)를 놓치지 않도록 "브라질 대선"을 함께 조회한다.
+_QUERIES = ["브라질 국채", "헤알", "브라질 기준금리", "브라질 대선"]
 
 # 관련성 필터: '헤알'이 금액 단위로만 쓰인 비금융 기사(예: 'LG전자…20억 헤알 공장')를 걸러낸다.
 # 아래 토큰 중 하나라도 제목에 있으면 국채·환율·통화정책 관련으로 간주. (필터 후 0건이면 원본 유지)
 _RELEVANT_TOKENS = [
     "증시", "국채", "금리", "셀릭", "Selic", "환율", "헤알 강세", "헤알 약세", "헤알화",
     "중앙은행", "기준금리", "채권", "이보베스파", "물가", "인플레", "Copom", "달러채", "외환",
+    "대선", "선거", "변동성",
 ]
 
 
@@ -135,9 +137,16 @@ async def get_recent_news(limit: int = 12) -> list[dict]:
             rows = (await db.execute(
                 select(BrazilNews.title, BrazilNews.source, BrazilNews.link, BrazilNews.published, BrazilNews.published_ts)
                 .order_by(BrazilNews.published_ts.desc().nullslast())
-                .limit(limit)
+                .limit(limit * 2)
             )).all()
-        return [{"title": t, "source": s, "link": l, "published": p} for t, s, l, p, _ in rows]
+        # 같은 기사가 수집 시점마다 다른 Google News 링크로 저장되므로 제목 기준으로 한 번 더 중복제거
+        out, seen = [], set()
+        for t, s, l, p, _ in rows:
+            if t in seen:
+                continue
+            seen.add(t)
+            out.append({"title": t, "source": s, "link": l, "published": p})
+        return out[:limit]
     except Exception as e:
         print(f"[brazil_news] get_recent_news failed: {e}")
         return []

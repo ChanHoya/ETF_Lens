@@ -82,3 +82,15 @@ def test_election_prompt_uses_dynamic_dday():
     assert "D-Day" in _election_phase_text(date(2026, 10, 5))
     assert "결선" in _election_phase_text(date(2026, 10, 6)) and "D-20" in _election_phase_text(date(2026, 10, 6))
     assert "이후" in _election_phase_text(date(2026, 10, 27))
+
+
+def test_news_filter_keeps_election_headlines():
+    from core.brazil_news import _is_relevant, _QUERIES
+
+    # 금리·환율 단어 없이 대선만 다루는 기사도 통과해야 한다(10/3 "헤알 변동성 최고치" 누락 재현)
+    assert _is_relevant("브라질 선거 불확실성에 헤알 변동성 최고치")
+    assert _is_relevant("브라질 대통령선거 1차투표…룰라 대 아들 보우소나루 대접전")
+    assert "브라질 대선" in _QUERIES
+    assert _is_relevant("룰라·보우소나루 아들, 브라질 대선 격돌")
+    # 금액 단위로만 '헤알'이 쓰인 비금융 기사는 여전히 제외
+    assert not _is_relevant("하루 6억 헤알이 베팅으로 향했다.")
