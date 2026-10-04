@@ -25,6 +25,7 @@ from api.brazil_election_intel import router as brazil_election_intel_router
 from api.brazil_total_return import router as brazil_total_return_router
 from api.integrated_assets import router as integrated_assets_router
 from api.dividends import router as dividends_router
+from api.fx_dashboard import router as fx_dashboard_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -288,6 +289,7 @@ app.include_router(brazil_election_intel_router, prefix="/api/v1/brazil-bond")
 app.include_router(brazil_total_return_router, prefix="/api/v1/brazil-bond")
 app.include_router(integrated_assets_router, prefix="/api/v1/my")
 app.include_router(dividends_router)
+app.include_router(fx_dashboard_router, prefix="/api/v1/fx")
 
 
 @app.get("/health")
