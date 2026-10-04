@@ -724,8 +724,24 @@ export default function BrazilBondTab() {
 
             {/* ── 관련 뉴스 피드 ───────────────────────────────────── */}
             <section>
-                <SectionTitle icon={<Newspaper className="w-5 h-5 text-amber-400" />} title="관련 뉴스 & 정보" sub="브라질 국채·헤알·금리 관련 최신 뉴스 (자동 수집)" />
-                <NewsFeed news={news} loading={newsLoading} refreshing={newsRefreshing} updatedAt={newsUpdatedAt} onRefresh={refreshNews} />
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                    <SectionTitle icon={<Newspaper className="w-5 h-5 text-amber-400" />} title="관련 뉴스 & 정보" sub="브라질 국채·헤알·금리 관련 최신 뉴스 (자동 수집)" />
+                    <div className="flex items-center gap-2.5">
+                        <span className="text-[11px] text-gray-500">
+                            {news.length ? `최신순 ${news.length}건` : '뉴스 없음'}
+                            {newsUpdatedAt ? ` · ${newsUpdatedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 갱신` : ''}
+                        </span>
+                        <button
+                            onClick={refreshNews}
+                            disabled={newsRefreshing}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20 transition disabled:opacity-50 cursor-pointer"
+                        >
+                            <RefreshCw className={`w-3.5 h-3.5 ${newsRefreshing ? 'animate-spin' : ''}`} />
+                            {newsRefreshing ? '수집 중…' : '뉴스 업데이트'}
+                        </button>
+                    </div>
+                </div>
+                <NewsFeed news={news} loading={newsLoading} />
             </section>
 
             {/* ── 실행 전 최종 체크리스트 ──────────────────────────── */}
@@ -2612,95 +2628,49 @@ function MacroTimeline({ timeline, augScenarios }: {
     );
 }
 
-function NewsFeed({ news, loading, refreshing, updatedAt, onRefresh }: {
-    news: NewsItem[]; loading: boolean; refreshing: boolean; updatedAt: Date | null; onRefresh: () => void;
-}) {
-    const [selected, setSelected] = useState<NewsItem | null>(null);
+// 기사 원문을 별도 팝업 창으로 연다. 언론사·Google News는 iframe 삽입을 막아 모달 안에 띄울 수 없다.
+const openNewsPopup = (link: string) => {
+    const w = Math.min(1100, window.screen.availWidth - 80);
+    const h = Math.min(900, window.screen.availHeight - 80);
+    const left = Math.round((window.screen.availWidth - w) / 2);
+    const top = Math.round((window.screen.availHeight - h) / 2);
+    const win = window.open(link, 'brazil_news_article', `popup=yes,width=${w},height=${h},left=${left},top=${top}`);
+    if (!win) window.open(link, '_blank', 'noopener'); // 팝업 차단 시 새 탭으로
+};
 
-    return (
-        <div className="bg-black/20 rounded-2xl border border-white/5">
-            <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-white/5">
-                <span className="text-[11px] text-gray-500">
-                    {news.length ? `최신순 ${news.length}건` : '뉴스 없음'}
-                    {updatedAt ? ` · ${updatedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 갱신` : ''}
-                </span>
-                <button
-                    onClick={onRefresh}
-                    disabled={refreshing}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20 transition disabled:opacity-50 cursor-pointer"
-                >
-                    <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-                    {refreshing ? '수집 중…' : '뉴스 업데이트'}
-                </button>
+function NewsFeed({ news, loading }: { news: NewsItem[]; loading: boolean }) {
+    if (loading) {
+        return (
+            <div className="bg-black/20 rounded-2xl border border-white/5 p-6 text-center">
+                <RefreshCw className="w-5 h-5 text-amber-400 animate-spin mx-auto" />
+                <p className="text-xs text-gray-500 mt-2">최신 뉴스를 수집하는 중…</p>
             </div>
-
-            {loading ? (
-                <div className="p-6 text-center">
-                    <RefreshCw className="w-5 h-5 text-amber-400 animate-spin mx-auto" />
-                    <p className="text-xs text-gray-500 mt-2">최신 뉴스를 수집하는 중…</p>
-                </div>
-            ) : !news.length ? (
-                <p className="text-xs text-gray-500 p-4">표시할 뉴스가 없습니다.</p>
-            ) : (
-                // 한 줄 약 44px × 5건 높이만 보이고 나머지는 스크롤
-                <ul className="max-h-[222px] overflow-y-auto divide-y divide-white/5">
-                    {news.map((n, i) => (
-                        <li key={n.link || i}>
-                            <button
-                                onClick={() => setSelected(n)}
-                                className="group w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[0.04] transition cursor-pointer"
-                            >
-                                <span className="text-[11px] font-mono text-gray-500 w-[88px] shrink-0">
-                                    {n.published ? n.published.slice(5) : '-'}
-                                </span>
-                                <span className="flex-1 min-w-0 text-[13px] font-semibold text-gray-200 group-hover:text-white truncate">
-                                    {n.title}
-                                </span>
-                                <span className="text-[11px] text-gray-500 shrink-0 hidden sm:inline">{n.source}</span>
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            )}
-
-            {selected && createPortal(
-                <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-                    onClick={() => setSelected(null)}
-                >
-                    <div
-                        className="relative w-full max-w-lg bg-gradient-to-b from-[#0e1726] to-[#04070d] border border-amber-500/40 rounded-2xl shadow-[0_0_40px_rgba(245,158,11,0.2)] p-5 text-white"
-                        onClick={(e) => e.stopPropagation()}
+        );
+    }
+    if (!news.length) {
+        return <p className="text-xs text-gray-500 bg-black/20 rounded-2xl border border-white/5 p-4">표시할 뉴스가 없습니다.</p>;
+    }
+    return (
+        // 5건 높이(줄 = 13px 글자 leading-tight 16.25px + py-1.5 + 구분선 1px)만 보이고 나머지는 스크롤
+        <ul className="bg-black/20 rounded-2xl border border-white/5 max-h-[calc(5*(16.25px_+_0.75rem_+_1px)_+_2px)] overflow-y-auto divide-y divide-white/5 [scrollbar-width:thin] [scrollbar-color:rgba(245,158,11,0.35)_transparent]">
+            {news.map((n, i) => (
+                <li key={n.link || i}>
+                    <button
+                        onClick={() => openNewsPopup(n.link)}
+                        title={n.title}
+                        className="group w-full flex items-center gap-3 px-4 py-1.5 text-left leading-tight hover:bg-white/[0.04] transition cursor-pointer"
                     >
-                        <button
-                            onClick={() => setSelected(null)}
-                            className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 cursor-pointer"
-                            aria-label="닫기"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                        <div className="flex items-center gap-2 text-xs text-amber-400 mb-2">
-                            <Newspaper className="w-4 h-4" />
-                            <span className="font-bold">{selected.source}</span>
-                            {selected.published && <span className="text-gray-500 font-mono">· {selected.published} (KST)</span>}
-                        </div>
-                        <h4 className="text-base font-extrabold leading-snug pr-6">{selected.title}</h4>
-                        <p className="text-[11px] text-gray-500 mt-3">
-                            Google News 검색 결과로 수집한 기사입니다. 본문은 언론사 원문에서 확인할 수 있습니다.
-                        </p>
-                        <a
-                            href={selected.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black bg-amber-500 text-black hover:brightness-110 transition"
-                        >
-                            원문 기사 열기 <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
-                    </div>
-                </div>,
-                document.body
-            )}
-        </div>
+                        <span className="text-[11px] font-mono text-gray-500 w-[88px] shrink-0">
+                            {n.published ? n.published.slice(5) : '-'}
+                        </span>
+                        <span className="flex-1 min-w-0 text-[13px] font-semibold text-gray-200 group-hover:text-amber-300 truncate">
+                            {n.title}
+                        </span>
+                        <span className="text-[11px] text-gray-500 shrink-0 hidden sm:inline">{n.source}</span>
+                    </button>
+                </li>
+            ))}
+        </ul>
     );
 }
 

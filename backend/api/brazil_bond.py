@@ -792,18 +792,21 @@ _NEWS_SYNC_TTL = 20 * 60  # 20분
 async def get_news(refresh: bool = False, limit: int = 12):
     """브라질 국채 관련 최신 뉴스(Google News RSS).
     refresh=True 또는 마지막 수집 후 20분 경과 시 라이브 수집 후 저장."""
-    from core.brazil_news import sync_brazil_news, get_recent_news
+    from core.brazil_news import sync_brazil_news, get_recent_news, last_fetch_diag
     import time
     global _last_news_sync_ts
     now = time.time()
+    sync = None
     if refresh or (now - _last_news_sync_ts > _NEWS_SYNC_TTL):
         try:
-            await sync_brazil_news(alert_new=False)
+            res = await sync_brazil_news(alert_new=False)
             _last_news_sync_ts = now
+            sync = {"stored": res.get("stored"), "queries": list(last_fetch_diag)}
         except Exception as e:
             print(f"[brazil_bond] news refresh failed: {e}")
+            sync = {"error": f"{type(e).__name__}: {e}"[:200], "queries": list(last_fetch_diag)}
     items = await get_recent_news(limit)
-    return {"items": items}
+    return {"items": items, "sync": sync}
 
 
 @router.get("/history")

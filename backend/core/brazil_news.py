@@ -32,6 +32,10 @@ _RELEVANT_TOKENS = [
 ]
 
 
+# 마지막 라이브 수집의 검색어별 결과(HTTP 코드·파싱 건수·오류). Render 로그 없이 수집 실패를 진단하는 용도.
+last_fetch_diag: list[dict] = []
+
+
 def _is_relevant(title: str) -> bool:
     return any(tok in title for tok in _RELEVANT_TOKENS)
 
@@ -77,13 +81,17 @@ async def fetch_brazil_news(limit: int = 25) -> list[dict]:
     from urllib.parse import quote
     merged: dict[str, dict] = {}
     seen_titles: set[str] = set()
+    last_fetch_diag.clear()
     async with httpx.AsyncClient(follow_redirects=True) as client:
         for q in _QUERIES:
             url = f"https://news.google.com/rss/search?q={quote(q)}&hl=ko&gl=KR&ceid=KR:ko"
             try:
                 r = await client.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0"})
                 r.raise_for_status()
-                for it in _parse_rss(r.text):
+                parsed = _parse_rss(r.text)
+                last_fetch_diag.append({"q": q, "status": r.status_code, "parsed": len(parsed),
+                                        "newest": max((x["published"] for x in parsed), default=None)})
+                for it in parsed:
                     # link + 제목 이중 중복제거(같은 기사가 쿼리별로 다른 Google News 링크를 가짐)
                     tkey = it["title"].strip()
                     if it["link"] in merged or tkey in seen_titles:
@@ -92,6 +100,7 @@ async def fetch_brazil_news(limit: int = 25) -> list[dict]:
                     seen_titles.add(tkey)
             except Exception as e:
                 print(f"[brazil_news] fetch failed for '{q}': {e}")
+                last_fetch_diag.append({"q": q, "error": f"{type(e).__name__}: {e}"[:200]})
                 continue
     items = list(merged.values())
     # 관련성 필터(필터 결과가 비면 원본 유지 → 안전 폴백)
