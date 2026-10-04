@@ -533,6 +533,10 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
     today = datetime.now(_KST).date()
     catalysts = await _get_persisted_catalysts(db)
     catalysts = await _auto_evaluate_past_catalysts(db, catalysts, today)
+    # 이벤트 캘린더 마지막 저장(=동기화) 시각 — 프론트가 1시간 경과 여부로 자동 동기화를 판단
+    cat_synced = (await db.execute(
+        select(SectorInsight.generated_at).where(SectorInsight.sector == "brazil_catalysts")
+    )).scalar_one_or_none()
 
     timeline = sorted(
         [{**c, "d_day": _d_day(c["date"], today)} for c in catalysts],
@@ -598,6 +602,7 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
                     "rate_risk": RATE_RISK, "fx_target": FX_TARGET},
         "carry_cushion": carry_cushion_curve(entry_fx=fx if fx else 294.0),
         "timeline": timeline,
+        "catalysts_synced_at": cat_synced.replace(tzinfo=timezone.utc).isoformat() if cat_synced else None,
         "next_catalyst": upcoming[0] if upcoming else None,
         "current_tranche_id": current_tranche_id,
         "tranches": TRANCHES,
@@ -617,10 +622,26 @@ class CatalystSyncResponse(BaseModel):
     synced_at: str
 
 
+def _catalyst_needs_update(c: dict, c_date: date, today: date, force: bool, recent_days: int | None) -> bool:
+    """지난 이벤트를 재분석할지 판단.
+    - 수동 버튼(force, recent_days 없음): 지난 이벤트 전부 재분석, 수동 편집본도 덮음(기존 동작).
+    - 프론트 자동 갱신(force + recent_days): 최근 N일 이벤트만 강제, 수동 편집본은 보존.
+    - 그 외: 발표값·전망이 비었거나 '집계 대기'인 것만."""
+    if c_date > today:
+        return False
+    missing = not c.get("actual") or not c.get("outlook") or "집계 대기" in (c.get("actual") or "")
+    full_force = force and recent_days is None
+    recent_force = force and recent_days is not None and (today - c_date).days <= recent_days
+    if c.get("manual_updated_at") and not full_force:
+        return False
+    return full_force or recent_force or missing
+
+
 @router.post("/catalysts/sync", response_model=CatalystSyncResponse)
-async def sync_catalysts(force: bool = False, db: AsyncSession = Depends(get_db)):
+async def sync_catalysts(force: bool = False, recent_days: int | None = None, db: AsyncSession = Depends(get_db)):
     """지나간 매크로 캘린더 이벤트의 실제 발표 내용 및 국채 전망/액션플랜을
-    실제 매크로 지표(Selic 인하 내역, Y5, 환율) 및 Gemini AI로 자동 분석·갱신하여 저장."""
+    실제 매크로 지표(Selic 인하 내역, Y5, 환율) 및 Gemini AI로 자동 분석·갱신하여 저장.
+    recent_days: 프론트 자동 갱신용 — force와 함께 최근 N일 이벤트만 강제 재분석(_catalyst_needs_update)."""
     today = datetime.now(_KST).date()
     catalysts = await _get_persisted_catalysts(db)
 
@@ -646,9 +667,7 @@ async def sync_catalysts(force: bool = False, db: AsyncSession = Depends(get_db)
     for c in catalysts:
         c_date = date.fromisoformat(c["date"])
         if c_date <= today:
-            needs_update = force or not c.get("actual") or not c.get("outlook") or "집계 대기" in (c.get("actual") or "")
-            if c.get("manual_updated_at") and not force:
-                needs_update = False
+            needs_update = _catalyst_needs_update(c, c_date, today, force, recent_days)
             if needs_update:
                 if c["key"] == "copom_sep":
                     c["note"] = "실제 금리 결정 발표: 9월 17일(목) 새벽 06:30경 (BCB 공식 발표 완료). 25bp 추가 인하로 Selic 13.75% 결정."
@@ -806,7 +825,9 @@ async def get_news(refresh: bool = False, limit: int = 12):
             print(f"[brazil_bond] news refresh failed: {e}")
             sync = {"error": f"{type(e).__name__}: {e}"[:200], "queries": list(last_fetch_diag)}
     items = await get_recent_news(limit)
-    return {"items": items, "sync": sync}
+    # 서버 마지막 라이브 수집 시각(재시작 후 미수집이면 None) — 프론트 1시간 경과 자동 갱신·"갱신" 표시용
+    synced_at = datetime.fromtimestamp(_last_news_sync_ts, _KST).isoformat() if _last_news_sync_ts else None
+    return {"items": items, "sync": sync, "synced_at": synced_at}
 
 
 @router.get("/history")

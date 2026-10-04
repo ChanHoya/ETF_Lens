@@ -94,3 +94,42 @@ def test_news_filter_keeps_election_headlines():
     assert _is_relevant("룰라·보우소나루 아들, 브라질 대선 격돌")
     # 금액 단위로만 '헤알'이 쓰인 비금융 기사는 여전히 제외
     assert not _is_relevant("하루 6억 헤알이 베팅으로 향했다.")
+
+
+def test_catalyst_update_rules_manual_button_vs_auto_refresh():
+    from datetime import date
+    from api.brazil_bond import _catalyst_needs_update
+    today = date(2026, 10, 5)
+    done = {"actual": "발표 완료", "outlook": "전망"}
+    old, recent, future = date(2026, 8, 6), date(2026, 10, 4), date(2026, 10, 25)
+    # 수동 버튼(force): 지난 이벤트 전부, 수동 편집본도 덮음 — 기존 동작 유지
+    assert _catalyst_needs_update(done, old, today, True, None)
+    assert _catalyst_needs_update({**done, "manual_updated_at": "x"}, old, today, True, None)
+    # 자동 갱신(force + recent_days=7): 최근 7일만, 수동 편집본 보존
+    assert _catalyst_needs_update(done, recent, today, True, 7)
+    assert not _catalyst_needs_update(done, old, today, True, 7)
+    assert not _catalyst_needs_update({**done, "manual_updated_at": "x"}, recent, today, True, 7)
+    # 비강제: 발표값 누락·집계 대기만, 미래 이벤트는 항상 제외
+    assert _catalyst_needs_update({"actual": "집계 대기", "outlook": "o"}, old, today, False, None)
+    assert not _catalyst_needs_update(done, old, today, False, None)
+    assert not _catalyst_needs_update({}, future, today, True, None)
+
+
+def test_news_response_exposes_server_sync_time(monkeypatch):
+    import asyncio
+    import time
+    import api.brazil_bond as bb
+    import core.brazil_news as bn
+
+    async def fake_sync(alert_new=False):
+        return {"stored": 0}
+
+    async def fake_recent(limit):
+        return [{"title": "t"}]
+
+    monkeypatch.setattr(bn, "sync_brazil_news", fake_sync)
+    monkeypatch.setattr(bn, "get_recent_news", fake_recent)
+    monkeypatch.setattr(bb, "_last_news_sync_ts", 0.0)
+    out = asyncio.run(bb.get_news(refresh=False, limit=1))  # 미수집 상태 → TTL 경과로 라이브 수집
+    assert out["synced_at"] is not None and out["sync"] == {"stored": 0, "queries": list(bn.last_fetch_diag)}
+    assert abs(bb._last_news_sync_ts - time.time()) < 5
