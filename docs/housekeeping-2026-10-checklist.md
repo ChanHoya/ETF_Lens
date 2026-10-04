@@ -13,5 +13,5 @@
 - [x] `scratch/`, `backend/scratch/`의 새 파일이 다시 쌓이지 않게 .gitignore에 추가
 - [x] 루트의 추적 중인 일회성 스크립트(test_*.py, test_*.js, patch_*, check_*, commit_diff.txt, response.json 등) `git rm`
 - [x] 배포본 확인: Vercel 프로젝트는 `dashboard/` (frontend/는 2026-02-23 이후 미사용)
-- [ ] Vercel·Render 배포 후 D-day 수정이 실서버에 반영됐는지 확인
+- [x] Vercel·Render 배포 확인 (2026-10-04 22:36, a56b2994 — Vercel success, Render /news 4개 검색어 모두 200·10/4 기사 반영)
 - [ ] 브라질 대선 결선(현지 10/25, 결과 반영 10/26 KST) 이후 동향 반영 — 결선 이후 수행
