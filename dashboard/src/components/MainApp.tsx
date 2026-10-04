@@ -5,6 +5,7 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { Search, Loader2, Plus, X, ChevronDown, ChevronLeft, ChevronRight, Star, Trash2, Edit2, Check, Share2, RefreshCw, BarChart2, Minus, Zap, Crown, Target, Layers, BookOpen, AlertCircle, ArrowUpRight, ArrowDownRight, Clock, ShieldAlert, Cpu, Maximize2, Minimize2, Building2, Flame } from "lucide-react";
 import { API_BASE } from '@/lib/apiConfig';
 import { IPrismLogo } from './brand/IPrismLogo';
+import ThemeToggle from './ThemeToggle';
 import { prefetchMonitorData } from '@/lib/monitorPrefetch';
 import CompareChart from "@/components/CompareChart";
 import CompareTable from "@/components/CompareTable";
@@ -1161,6 +1162,9 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
 
           {/* 우측 툴버튼 + 버전/연동 상태 정보 */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Dark / Light 화면 모드 토글 */}
+            <ThemeToggle />
+
             {/* 전체화면 확대 버튼 */}
             <button
               onClick={toggleFullscreen}

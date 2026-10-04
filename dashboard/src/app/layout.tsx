@@ -23,7 +23,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className="overflow-y-scroll">
+    <html lang="ko" className="overflow-y-scroll" suppressHydrationWarning>
+      <head>
+        {/* 저장된 화면 모드를 첫 화면 그리기 전에 적용해 다크→라이트 깜빡임을 막는다 (ThemeToggle과 같은 키) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "try{if(localStorage.getItem('iprism-theme')==='light')document.documentElement.classList.add('light')}catch(e){}",
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./theme-light.css"; /* 라이트 모드 팔레트(html.light) */
 
 html {
   font-size: 17.5px; /* 기본 16px(12pt) 대비 +1.5px(+1.1pt) 전체 스케일업 (가독성 향상) */

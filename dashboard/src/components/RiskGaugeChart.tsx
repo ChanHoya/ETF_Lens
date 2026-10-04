@@ -141,7 +141,7 @@ export default function RiskGaugeChart({
             <div className="flex flex-col lg:flex-row items-stretch lg:justify-between gap-4 relative z-10 mt-1 flex-1">
                 {/* Visual Gauge Column */}
                 <div className="relative flex-1 min-w-[280px] flex items-end justify-center select-none -ml-4 pl-4 pb-4">
-                    <svg className="w-full max-w-[360px]" viewBox="0 0 100 55">
+                    <svg className="w-full max-w-[360px] text-white" viewBox="0 0 100 55">
                         <defs>
                             {/* Track Gradients */}
                             <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -161,7 +161,7 @@ export default function RiskGaugeChart({
                         <path 
                             d="M 10 50 A 40 40 0 0 1 90 50" 
                             fill="none" 
-                            stroke="rgba(255,255,255,0.06)" 
+                            stroke="currentColor" strokeOpacity={0.08} 
                             strokeWidth="9" 
                             strokeLinecap="round"
                         />
@@ -180,7 +180,7 @@ export default function RiskGaugeChart({
                         />
 
                         {/* Needle cap center */}
-                        <circle cx="50" cy="50" r="4.5" fill="#12121e" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+                        <circle cx="50" cy="50" r="4.5" fill="#12121e" stroke="currentColor" strokeOpacity={0.2} strokeWidth="1" />
                         <circle cx="50" cy="50" r="2" fill={config.color} style={{ filter: 'url(#neonGlow)' }} />
 
                         {/* Premium needle (with bouncy transition using zero-origin wrapper) */}
@@ -220,7 +220,7 @@ export default function RiskGaugeChart({
                                     key={idx} 
                                     x1={x1} y1={y1} 
                                     x2={x2} y2={y2} 
-                                    stroke="rgba(255,255,255,0.2)" 
+                                    stroke="currentColor" strokeOpacity={0.2} 
                                     strokeWidth="0.5" 
                                 />
                             );

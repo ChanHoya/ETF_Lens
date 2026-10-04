@@ -8,6 +8,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 ➡️ 다음 신규 스토리 ID는 **S6-20**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-04, Claude Code):
+> - 🌗 Dark / Light 토글(상단 바, `ThemeToggle`) 추가. Tailwind v4 색 변수를 `html.light`에서 반전하는 방식(`scripts/generate-light-theme.py` → `app/theme-light.css`). 근거 `docs/theme-light-context-notes.md`. 시장동향 '오늘의 시장' 임베드 주소를 bulliza.com으로 교체(finance.richgo.ai 404).
 > - 🔷 서비스명 ETF Lens → **i-Prism**(Investment Prism) 리브랜딩. 로고는 역삼각형 프리즘 i + 부채꼴 스펙트럼 광선 + 그라데이션 PRISM(시안 H2). 로고·아이콘·파비콘은 `dashboard/scripts/generate-brand.py`로 생성하며 생성물(`components/brand/IPrismLogo.tsx`, `public/brand/*`, `app/icon.svg`, `app/apple-icon.png`, `app/favicon.ico`)은 직접 고치지 않는다. 결정 근거 `docs/iprism-rebrand-context-notes.md`. 도메인(etf-lens.*)과 User-Agent는 유지.
 > - 🐛 대선 D-day 고정값 버그 수정: `ElectionPlaybookSection`의 `D-3 SPECIAL` 라벨과 Tranche 3 카드의 "(D-3 진입 중)"이 JSX에 하드코딩돼 있었고, `_build_election_prompt`도 "D-2~D-3일 앞둔 시점"으로 고정돼 있어 AI 재생성 시에도 같은 D-day가 나왔다. 이제 프론트는 `getElectionDDayLabel()`, 백엔드는 `_election_phase_text()`가 오늘 날짜(KST)와 `CATALYSTS` 대선 일정으로 계산한다. 회귀 테스트는 `test_election_prompt_uses_dynamic_dday`.
 > - 📰 관련 뉴스 피드 개편: 2열 박스 → 최신순 리스트(5건 높이, 최대 30건 스크롤), 항목 클릭 시 팝업(언론사·발행시각·원문 링크), [뉴스 업데이트] 버튼(`refresh=true` 라이브 재수집). 뉴스가 10/2에 멈춰 보이던 원인은 관련성 필터(`_RELEVANT_TOKENS`)가 대선 기사를 떨어뜨리고 검색어에 대선이 없던 것이었다. "브라질 대선" 검색어와 "대선·선거·변동성" 토큰을 추가했고, `get_recent_news`에서 제목 기준 중복을 제거한다. Google News RSS는 본문을 주지 않아 팝업에는 요약 없이 원문 링크만 둔다.
