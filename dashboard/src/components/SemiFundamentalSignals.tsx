@@ -981,10 +981,10 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                                 </div>
                                 <div>
                                     <h3 className="text-base font-black text-white">
-                                        Bulliza vs ETF Lens 실데이터 신호등 비교
+                                        Bulliza vs i-Prism 실데이터 신호등 비교
                                     </h3>
                                     <p className="text-[11px] text-gray-400">
-                                        참고 서비스(Bulliza)와 ETF Lens의 실제 화면 실데이터 및 국면 판정 1:1 비교
+                                        참고 서비스(Bulliza)와 i-Prism의 실제 화면 실데이터 및 국면 판정 1:1 비교
                                     </p>
                                 </div>
                             </div>
@@ -1015,7 +1015,7 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                                 <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col justify-between">
                                     <div>
                                         <div className="flex justify-between items-center mb-1">
-                                            <span className="text-[11px] font-bold text-emerald-300">ETF Lens (현재 실시간 데이터)</span>
+                                            <span className="text-[11px] font-bold text-emerald-300">i-Prism (현재 실시간 데이터)</span>
                                             <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-bold">
                                                 {signalsCount.bullish}/{totalCount} 호황
                                             </span>
@@ -1035,7 +1035,7 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                                         <tr className="bg-white/5 text-gray-300 font-bold border-b border-white/10">
                                             <th className="p-2">지표</th>
                                             <th className="p-2">Bulliza 수치 (참고)</th>
-                                            <th className="p-2">ETF Lens 실제 수치</th>
+                                            <th className="p-2">i-Prism 실제 수치</th>
                                             <th className="p-2 text-center">판정 결과</th>
                                         </tr>
                                     </thead>

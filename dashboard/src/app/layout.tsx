@@ -6,7 +6,7 @@ import PasswordGate from "../components/PasswordGate";
 import PortraitLockScreen from "../components/PortraitLockScreen";
 
 export const metadata: Metadata = {
-  title: "ETF Lens — 데이터 기반 ETF 분석",
+  title: "i-Prism — 데이터 기반 ETF 분석",
   description: "최대 10개 ETF를 다각도로 비교 분석. 경기선행지수·VIX·FGI 기반 매크로 나침반 제공.",
 };
 

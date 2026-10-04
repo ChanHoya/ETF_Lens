@@ -105,7 +105,7 @@ async def _send_single_discord_message(text: str, webhook_url: str, title: str =
         md_text = md_text[:1900] + "\n...(내용이 길어 생략되었습니다)"
 
     payload = {
-        "username": "ETF Lens Intelligence",
+        "username": "i-Prism Intelligence",
         "content": md_text
     }
 

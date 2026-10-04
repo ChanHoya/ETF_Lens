@@ -1,7 +1,7 @@
 import MainApp from '../../components/MainApp';
 
 export const metadata = {
-  title: 'TFF 펀드 현황 대시보드 - ETF Lens',
+  title: 'TFF 펀드 현황 대시보드 - i-Prism',
   description: 'TFF (Time Future Forum) 펀드 투자 현황 및 수익률 대시보드',
 };
 

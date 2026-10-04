@@ -216,7 +216,7 @@ async def test_notification(data: TestSchema, db: AsyncSession = Depends(get_db)
         matched_s = all_s[0]
 
     test_message_html = (
-        "<b>✨ [ETF Lens] 실시간 알림 채널 검증 완료</b>\n\n"
+        "<b>✨ [i-Prism] 실시간 알림 채널 검증 완료</b>\n\n"
         "알림 수신 채널이 성공적으로 연결되었습니다!\n"
         "앞으로 <b>손절(Exit) 시그널</b>, <b>AI 포트폴리오 리밸런싱</b>, <b>ETF 괴리율 실시간 경보</b>가 발생하면 "
         "이 채널로 즉시 상세 브리핑을 전달해 드립니다. 📈"
@@ -260,7 +260,7 @@ async def test_notification(data: TestSchema, db: AsyncSession = Depends(get_db)
             raise HTTPException(status_code=400, detail="Discord Webhook URL을 입력해 주세요.")
 
         try:
-            ok, err = await _send_single_discord_message(test_message_html, url, title="ETF Lens 알림 채널 검증")
+            ok, err = await _send_single_discord_message(test_message_html, url, title="i-Prism 알림 채널 검증")
             if not ok:
                 raise HTTPException(status_code=400, detail=f"Discord 전송 실패: {err}")
         except HTTPException:
@@ -283,7 +283,7 @@ async def test_notification(data: TestSchema, db: AsyncSession = Depends(get_db)
             raise HTTPException(status_code=400, detail="Slack Webhook URL을 입력해 주세요.")
 
         try:
-            ok, err = await _send_single_slack_message(test_message_html, url, title="ETF Lens 알림 채널 검증")
+            ok, err = await _send_single_slack_message(test_message_html, url, title="i-Prism 알림 채널 검증")
             if not ok:
                 raise HTTPException(status_code=400, detail=f"Slack 전송 실패: {err}")
         except HTTPException:

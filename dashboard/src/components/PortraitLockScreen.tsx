@@ -61,7 +61,7 @@ export default function PortraitLockScreen() {
                 <div>
                     <p className="text-xl font-black text-white mb-2">가로 모드로 회전해 주세요</p>
                     <p className="text-sm text-gray-400 leading-relaxed">
-                        ETF Lens는 가로 모드에서 최적화된<br />화면을 제공합니다
+                        i-Prism은 가로 모드에서 최적화된<br />화면을 제공합니다
                     </p>
                 </div>
 

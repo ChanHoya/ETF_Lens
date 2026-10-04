@@ -97,13 +97,13 @@ async def test_multichannel_test_endpoint(monkeypatch):
     async def mock_discord(text, webhook_url, title=None):
         nonlocal discord_called
         discord_called = True
-        assert "ETF Lens" in text
+        assert "i-Prism" in text
         return True, "성공"
 
     async def mock_slack(text, webhook_url, title=None):
         nonlocal slack_called
         slack_called = True
-        assert "ETF Lens" in text
+        assert "i-Prism" in text
         return True, "성공"
 
     monkeypatch.setattr("api.notification_settings._send_single_discord_message", mock_discord)

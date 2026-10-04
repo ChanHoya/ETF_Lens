@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { IPrismLogo } from './brand/IPrismLogo';
 
 const CORRECT_PASSWORD = '00700';
 const SESSION_KEY = 'etf_lens_auth';
@@ -60,13 +61,11 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
             <div className="relative z-10 flex flex-col items-center gap-8 px-6 w-full max-w-sm">
                 {/* 로고 */}
                 <div className="flex flex-col items-center gap-3">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-[0_0_40px_rgba(99,102,241,0.4)]">
-                        <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                    </div>
-                    <div className="text-center">
-                        <h1 className="text-2xl font-black text-white tracking-tight">ETF Lens</h1>
+                    <div className="text-center flex flex-col items-center">
+                        <h1 className="text-white">
+                            <span className="sr-only">i-Prism</span>
+                            <IPrismLogo className="h-12 w-auto" />
+                        </h1>
                         <p className="text-sm text-gray-500 mt-1">데이터 기반 ETF 분석 서비스</p>
                     </div>
                 </div>

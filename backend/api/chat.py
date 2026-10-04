@@ -1,5 +1,5 @@
 """
-ETF Lens AI Chatbot endpoint.
+i-Prism AI Chatbot endpoint.
 Uses Gemini AI (google.genai SDK) with live ETF performance data
 from FinanceDataReader and yfinance.
 """
@@ -285,7 +285,7 @@ async def chat_with_etf_assistant(request: ChatRequest):
             portfolio_context = "사용자의 포트폴리오 데이터를 파싱하는 데 실패했습니다."
 
     # --- Build prompt ---
-    prompt = f"""당신은 'ETF Lens' 서비스의 친절하고 전문적인 AI 어시스턴트입니다.
+    prompt = f"""당신은 'i-Prism' 서비스의 친절하고 전문적인 AI 어시스턴트입니다.
 사용자의 질문에 답변할 때, 아래의 **실시간 시스템 데이터** 및 **사용자 포트폴리오 데이터**를 최우선으로 참고하여 정확한 수치를 기반으로 대답하세요.
 데이터에 없는 내용은 일반 금융 지식으로 보완하되, 출처(시스템 데이터 vs 외부 지식)를 명확히 밝혀주세요.
 질문이 사용자의 보유 자산이나 포트폴리오에 관한 것이라면, 제공된 사용자 포트폴리오 데이터를 가공하여 분석 및 답변을 제공해 주세요.

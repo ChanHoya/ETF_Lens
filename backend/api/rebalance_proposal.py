@@ -148,7 +148,7 @@ async def notify_rebalance_proposal(proposal_data: dict) -> None:
             f"<i>{overall_summary}</i>\n\n"
             f"📋 <b>핵심 리밸런싱 권고:</b>\n"
             f"{recs_html}\n\n"
-            f"🔗 <a href='https://etf-lens.vercel.app'>ETF Lens 대시보드</a>에서 가상 주문 체결 시뮬레이션을 실행해 보세요!"
+            f"🔗 <a href='https://etf-lens.vercel.app'>i-Prism 대시보드</a>에서 가상 주문 체결 시뮬레이션을 실행해 보세요!"
         )
         
         success, _ = await send_telegram_message(html_msg, category="rebalance")

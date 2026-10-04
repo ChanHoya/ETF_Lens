@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, BarChart, Bar, Cell, PieChart, Pie, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
-import { Search, Loader2, Plus, X, ChevronDown, ChevronLeft, ChevronRight, Aperture, Star, Trash2, Edit2, Check, Share2, RefreshCw, BarChart2, Minus, Zap, Crown, Target, Layers, BookOpen, AlertCircle, ArrowUpRight, ArrowDownRight, Clock, ShieldAlert, Cpu, Maximize2, Minimize2, Building2, Flame } from "lucide-react";
+import { Search, Loader2, Plus, X, ChevronDown, ChevronLeft, ChevronRight, Star, Trash2, Edit2, Check, Share2, RefreshCw, BarChart2, Minus, Zap, Crown, Target, Layers, BookOpen, AlertCircle, ArrowUpRight, ArrowDownRight, Clock, ShieldAlert, Cpu, Maximize2, Minimize2, Building2, Flame } from "lucide-react";
 import { API_BASE } from '@/lib/apiConfig';
+import { IPrismLogo } from './brand/IPrismLogo';
 import { prefetchMonitorData } from '@/lib/monitorPrefetch';
 import CompareChart from "@/components/CompareChart";
 import CompareTable from "@/components/CompareTable";
@@ -1152,9 +1153,9 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
         <div className="flex items-center justify-between gap-2 shrink-0">
           {/* 좌측 로고 */}
           <div className="flex flex-col items-start cursor-pointer group shrink-0" onClick={handleReset}>
-            <h1 className="text-xl sm:text-2xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 drop-shadow-sm flex items-center gap-1.5 sm:gap-2 group-hover:opacity-80 transition-opacity">
-              <Aperture className="w-6 h-6 md:w-10 md:h-10 text-indigo-400 group-hover:rotate-180 transition-transform duration-700" />
-              ETF Lens
+            <h1 className="text-white group-hover:opacity-80 transition-opacity">
+              <span className="sr-only">i-Prism</span>
+              <IPrismLogo className="h-7 sm:h-8 md:h-11 w-auto" />
             </h1>
           </div>
 

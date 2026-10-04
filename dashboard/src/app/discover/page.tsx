@@ -77,7 +77,7 @@ export default function DiscoverPage() {
             <header className="max-w-7xl mx-auto flex justify-between items-center mb-8 border-b border-white/10 pb-6 mt-4">
                 <div className="flex items-end gap-3">
                     <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-400 via-indigo-400 to-cyan-400">
-                        ETF Lens <span className="text-white font-medium text-2xl">Discover</span>
+                        i-Prism <span className="text-white font-medium text-2xl">Discover</span>
                     </h1>
                     <span className="text-gray-400 text-sm font-medium pb-1.5 hidden sm:inline-block">
                         AI-Driven ETF Evaluation System
