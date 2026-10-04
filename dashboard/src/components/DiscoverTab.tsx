@@ -31,7 +31,7 @@ export default function DiscoverTab() {
     const [activeModal, setActiveModal] = useState<'inflation' | null>(null);
     const [showTodayMarket, setShowTodayMarket] = useState<boolean>(false);
     const [todayMarketBlocked, setTodayMarketBlocked] = useState<boolean>(false);
-    const TODAY_MARKET_URL = 'https://finance.richgo.ai/';
+    const TODAY_MARKET_URL = 'https://bulliza.com/'; // 2026-10 finance.richgo.ai(404)에서 이전
 
     useEffect(() => {
         // 1. Load from cache
@@ -537,7 +537,7 @@ export default function DiscoverTab() {
 
             </div>
 
-            {/* 오늘의 시장 모달 (finance.richgo.ai 임베드) */}
+            {/* 오늘의 시장 모달 (bulliza.com 임베드) */}
             {showTodayMarket && (
                 <div
                     className="fixed inset-0 z-[200] flex items-start justify-center bg-black/70 backdrop-blur-sm p-2 md:p-3 animate-in fade-in duration-200"
@@ -552,7 +552,7 @@ export default function DiscoverTab() {
                             <div className="flex items-center gap-2 text-white font-bold">
                                 <Activity className="w-4 h-4 text-emerald-400" />
                                 오늘의 시장
-                                <span className="text-[11px] font-medium text-gray-500 ml-1">finance.richgo.ai</span>
+                                <span className="text-[11px] font-medium text-gray-500 ml-1">bulliza.com</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <a
