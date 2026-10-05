@@ -5,6 +5,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { ResponsiveContainer, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { Compass, RefreshCw, Sparkles, PieChart, History, Network, CalendarClock, Info, Plus, Minus, Circle } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
+import { yearTicks } from '@/lib/chartTicks';
 import { dataAgeMs, useCachedOverview } from '@/lib/useCachedOverview';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 
@@ -204,19 +205,14 @@ function LaneTimeline({ t }: { t: Overview['timeline'] }) {
     });
     const tMin = series[0]?.t ?? 0, tMax = series[series.length - 1]?.t ?? 1;
     const pct = (d: string) => Math.min(100, Math.max(0, ((ts(d) - tMin) / (tMax - tMin || 1)) * 100));
-    const years = useMemo(() => {
-        const out: number[] = [];
-        const y0 = new Date(tMin).getUTCFullYear() + 1, y1 = new Date(tMax).getUTCFullYear();
-        for (let y = y0; y <= y1; y += 2) out.push(Date.UTC(y, 0, 1));
-        return out;
-    }, [tMin, tMax]);
+    const years = useMemo(() => yearTicks(series), [series]);
     const s = sel ? t.lanes[sel.lane]?.segments[sel.seg] : null;
     return (
         <div>
             <ResponsiveContainer width="100%" height={220}>
                 <ComposedChart data={series} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} ticks={years} tickFormatter={(x: number) => String(new Date(x).getUTCFullYear())} tick={axisTick} />
+                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} ticks={years} tickFormatter={(x: number) => String(new Date(x).getUTCFullYear())} interval={0} tick={axisTick} />
                     <YAxis yAxisId="k" width={L_W} tick={axisTick} domain={['auto', 'auto']} />
                     <YAxis yAxisId="w" orientation="right" width={R_W} tick={axisTick} domain={['auto', 'auto']} />
                     <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(x) => new Date(Number(x)).toISOString().slice(0, 10)} />

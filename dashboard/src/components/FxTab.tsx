@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { DollarSign, Globe2, Landmark, RefreshCw, Scale, TrendingDown, TrendingUp, History, Info, Link2, Gauge, ArrowDownUp } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
+import { yearTick, yearTicks } from '@/lib/chartTicks';
 import { useCachedOverview } from '@/lib/useCachedOverview';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import FxFinder from './FxFinder';
@@ -212,7 +213,7 @@ function BalanceSection({ s }: { s: Snapshot }) {
                         <ResponsiveContainer width="100%" height={220}>
                             <ComposedChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} stackOffset="sign">
                                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                                 <YAxis tick={axisTick} width={48} tickFormatter={(x: number) => x.toLocaleString('ko-KR')} />
                                 <ReferenceLine y={0} stroke="#ffffff40" />
                                 <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t)).slice(0, 7)}
@@ -250,7 +251,6 @@ function RangeButtons({ range, setRange }: { range: Range; setRange: (r: Range) 
     );
 }
 
-const yearTick = (t: number) => String(new Date(t).getFullYear());
 const axisTick = { fill: '#9ca3af', fontSize: 11 };
 
 function KrwDxyChart({ data, regimes, selected }: { data: (Row & { t: number })[]; regimes: Regime[]; selected: number | null }) {
@@ -262,7 +262,7 @@ function KrwDxyChart({ data, regimes, selected }: { data: (Row & { t: number })[
                     <ReferenceArea key={g.start} yAxisId="krw" x1={ts(g.start)} x2={g.end ? ts(g.end) : (data[data.length - 1]?.t ?? ts(g.start))} ifOverflow="hidden"
                         fill={KIND_STYLE[g.kind].fill} fillOpacity={selected === i ? 0.25 : 0.08} />
                 ))}
-                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(data)} interval={0} tick={axisTick} />
                 <YAxis yAxisId="dxy" tick={axisTick} domain={['auto', 'auto']} width={44} />
                 <YAxis yAxisId="krw" orientation="right" tick={axisTick} domain={['auto', 'auto']} width={48} />
                 <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))}
@@ -280,7 +280,7 @@ function SpreadChart({ data }: { data: (Row & { t: number })[] }) {
         <ResponsiveContainer width="100%" height={320}>
             <ComposedChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(data)} interval={0} tick={axisTick} />
                 <YAxis yAxisId="sp" tick={axisTick} domain={['auto', 'auto']} width={48} tickFormatter={(v: number) => `${v}%p`} />
                 <YAxis yAxisId="krw" orientation="right" tick={axisTick} domain={['auto', 'auto']} width={48} />
                 <ReferenceLine yAxisId="sp" y={0} stroke="#f59e0b" strokeDasharray="4 4" />
@@ -336,7 +336,7 @@ function OverlayChart({ rows }: { rows: (Row & { t: number })[] }) {
             <ResponsiveContainer width="100%" height={260}>
                 <ComposedChart data={rows} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                     <YAxis yAxisId="cmp" tick={axisTick} domain={['auto', 'auto']} width={48} reversed={flip}
                         tickFormatter={(v: number) => `${v.toLocaleString('ko-KR')}${o.unit}`} />
                     <YAxis yAxisId="krw" orientation="right" tick={axisTick} domain={['auto', 'auto']} width={48} />
@@ -364,7 +364,7 @@ function CorrChart({ rows, now }: { rows: (Analysis['corr'][number] & { t: numbe
             <ResponsiveContainer width="100%" height={260}>
                 <ComposedChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                     <YAxis domain={[-1, 1]} ticks={[-1, -0.5, 0, 0.5, 1]} tick={axisTick} width={36} />
                     <ReferenceLine y={0} stroke="#ffffff30" />
                     <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
@@ -384,7 +384,7 @@ function FairChart({ fair }: { fair: NonNullable<Analysis['fair']> }) {
         <ResponsiveContainer width="100%" height={260}>
             <ComposedChart data={rows} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                 <YAxis yAxisId="gap" tick={axisTick} width={44} tickFormatter={(v: number) => `${v}%`} />
                 <YAxis yAxisId="krw" orientation="right" tick={axisTick} domain={['auto', 'auto']} width={48} />
                 <ReferenceLine yAxisId="gap" y={0} stroke="#ffffff30" />
@@ -527,7 +527,7 @@ function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row 
                             <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                             <ReferenceArea y1={rr.avg - rr.std} y2={rr.avg + rr.std} fill="#94a3b8" fillOpacity={0.12} />
                             <ReferenceLine y={rr.avg} stroke="#9ca3af" strokeDasharray="5 3" />
-                            <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                            <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(reerRows)} interval={0} tick={axisTick} />
                             <YAxis tick={axisTick} domain={['auto', 'auto']} width={40} />
                             <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t)).slice(0, 7)} />
                             <Line dataKey="reer" name="실질실효환율" stroke="#38bdf8" dot={false} strokeWidth={2} isAnimationActive={false} />
@@ -560,7 +560,7 @@ function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row 
                     <ComposedChart data={asia} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                         <ReferenceLine y={100} stroke="#ffffff30" />
-                        <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                        <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(asia)} interval={0} tick={axisTick} />
                         <YAxis tick={axisTick} domain={['auto', 'auto']} width={40} />
                         <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
                         <Legend wrapperStyle={{ fontSize: 12 }} />

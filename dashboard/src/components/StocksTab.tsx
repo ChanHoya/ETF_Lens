@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { BarChart3, RefreshCw, TrendingDown, Gauge, Link2, History, Info, Scale, DollarSign } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
+import { yearTick, yearTicks } from '@/lib/chartTicks';
 import { useCachedOverview } from '@/lib/useCachedOverview';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import RegimeMilestones, { type Milestone } from './RegimeMilestones';
@@ -50,16 +51,6 @@ const KIND = {
 
 const ts = (d: string) => Date.parse(d);
 const fmtDate = (t: number) => new Date(t).toISOString().slice(0, 10);
-const yearTick = (t: number) => String(new Date(t).getUTCFullYear());
-// 1월 1일 고정 눈금(자동 눈금은 같은 연도가 두 번 찍힌다). 기간이 길면 2년 간격
-function yearTicks(rows: { t: number }[]): number[] {
-    if (rows.length < 2) return [];
-    const y0 = new Date(rows[0].t).getUTCFullYear() + 1, y1 = new Date(rows[rows.length - 1].t).getUTCFullYear();
-    const step = y1 - y0 > 12 ? 2 : 1;
-    const out: number[] = [];
-    for (let y = y0; y <= y1; y += step) out.push(Date.UTC(y, 0, 1));
-    return out;
-}
 const num = (v: number | null | undefined, d = 0) => (v == null ? '-' : v.toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d }));
 const signed = (v: number, d = 1, unit = '%') => `${v > 0 ? '+' : ''}${v.toFixed(d)}${unit}`;
 
@@ -209,7 +200,7 @@ function RelativeChart({ rows, usd }: { rows: (Row & { t: number })[]; usd: bool
             <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                 <ReferenceLine y={100} stroke="#ffffff30" />
-                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} ticks={yearTicks(rows)} tickFormatter={yearTick} tick={axisTick} />
+                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(data)} interval={0} tick={axisTick} />
                 <YAxis tick={axisTick} width={44} domain={['auto', 'auto']} />
                 <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -227,7 +218,7 @@ function DrawdownChart({ rows }: { rows: (Row & { t: number })[] }) {
             <LineChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                 <ReferenceLine y={-20} stroke="#f59e0b" strokeDasharray="4 4" />
-                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} ticks={yearTicks(rows)} tickFormatter={yearTick} tick={axisTick} />
+                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                 <YAxis tick={axisTick} width={44} tickFormatter={(v: number) => `${v}%`} />
                 <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -245,7 +236,7 @@ function ValuationChart({ v }: { v: NonNullable<Overview['valuation']> }) {
         <ResponsiveContainer width="100%" height={300}>
             <ComposedChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} ticks={yearTicks(data)} tickFormatter={yearTick} tick={axisTick} />
+                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(data)} interval={0} tick={axisTick} />
                 {/* 2009년 PER은 이익 급감으로 120 넘게 치솟아 축을 망가뜨리므로 60에서 자른다(툴팁에는 실제 값) */}
                 <YAxis yAxisId="x" tick={axisTick} width={40} domain={[0, 60]} allowDataOverflow />
                 <YAxis yAxisId="erp" orientation="right" tick={axisTick} width={44} tickFormatter={(x: number) => `${x}%p`} />

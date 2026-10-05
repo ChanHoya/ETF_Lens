@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { Landmark, RefreshCw, TrendingUp, Activity, History, Info, CalendarClock, Scale, Percent, Waves } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
+import { yearTick, yearTicks } from '@/lib/chartTicks';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import RegimeMilestones, { type Milestone } from './RegimeMilestones';
 import { useCachedOverview } from '@/lib/useCachedOverview';
@@ -67,7 +68,6 @@ const STATUS: Record<Inversion['status'], { label: string; cls: string }> = {
 
 const ts = (d: string) => Date.parse(d);
 const fmtDate = (t: number) => new Date(t).toISOString().slice(0, 10);
-const yearTick = (t: number) => String(new Date(t).getFullYear());
 const pct = (v: number | null | undefined, d = 2) => (v == null ? '-' : `${v.toFixed(d)}%`);
 const signed = (v: number, d = 2, unit = '%p') => `${v > 0 ? '+' : ''}${v.toFixed(d)}${unit}`;
 const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
@@ -220,7 +220,7 @@ function PolicyChart({ rows, regimes, selected }: { rows: (Row & { t: number })[
                     <ReferenceArea key={g.start} x1={Math.max(ts(g.start), from)} x2={g.end ? ts(g.end) : to}
                         ifOverflow="hidden" fill={KIND[g.kind].fill} fillOpacity={selected === i ? 0.25 : 0.08} />
                 ))}
-                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                 <YAxis tick={axisTick} width={40} tickFormatter={(v: number) => `${v}%`} />
                 <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -240,7 +240,7 @@ function MarketChart({ rows, country }: { rows: (Row & { t: number })[]; country
         <ResponsiveContainer width="100%" height={300}>
             <LineChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                 <YAxis tick={axisTick} width={40} tickFormatter={(v: number) => `${v}%`} />
                 <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -264,7 +264,7 @@ function SpreadChart({ rows, recessions }: { rows: (Row & { t: number })[]; rece
                     <ReferenceArea key={r.start} x1={Math.max(ts(r.start), from)} x2={r.end ? ts(r.end) : to} ifOverflow="hidden" fill="#94a3b8" fillOpacity={0.2} />
                 ))}
                 <ReferenceLine y={0} stroke="#f59e0b" strokeDasharray="4 4" />
-                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                 <YAxis tick={axisTick} width={44} tickFormatter={(v: number) => `${v}%p`} />
                 <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -380,7 +380,7 @@ function TermSection({ terms, rows, range, setRange }: { terms: NonNullable<Term
                             <ResponsiveContainer width="100%" height={170}>
                                 <LineChart data={rows} margin={{ top: 6, right: 6, bottom: 0, left: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                                     <YAxis tick={axisTick} width={36} domain={['auto', 'auto']} tickFormatter={(v: number) => `${v}%`} />
                                     <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
                                     <Line dataKey={L.kr as string} name="한국" stroke="#6366f1" dot={false} strokeWidth={1.8} connectNulls isAnimationActive={false} />
