@@ -185,11 +185,11 @@ def diagnosis(fx, rates, stocks) -> dict:
     else:
         word, tone = ("달러 강세", 1) if dxy > 3 else ("달러 약세", -1) if dxy < -3 else ("달러 보합", 0)
         dollar = {"axis": "달러", "status": f"{word} (달러지수 1년 {dxy:+.1f}%)", "tone": tone}
-    rows.append(dollar)
     krw = fs.get("krw") or {}
     if krw.get("value") is not None and krw.get("pct10y") is not None and krw.get("chg_1y") is not None:
         rows.append({"axis": "원화", "status": f"원/달러 {krw['value']:,.0f}원 · 10년 중 {krw['pct10y']}% · 1년 {krw['chg_1y']:+.1f}%",
                      "tone": 1 if krw["pct10y"] >= 80 else -1 if krw["pct10y"] <= 20 else 0})
+    rows.append(dollar)  # 2열 격자에서 왼쪽 한국(원화)·오른쪽 미국(달러)이 되도록 원화 다음에 둔다
     for k, name in (("kospi", "KOSPI"), ("spx", "S&P500")):
         last = (sreg.get(k) or [None])[-1]
         if last:

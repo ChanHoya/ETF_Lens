@@ -50,6 +50,7 @@ def _stocks():
 def test_diagnosis_headline_and_rows():
     d = build_overview(_fx(), _rates(), _stocks(), TODAY)["diagnosis"]
     assert d["headline"] == "긴축 · 달러 강세 · KOSPI 약세장 · S&P500 강세장"
+    assert [r["axis"] for r in d["rows"]] == ["한국 금리", "미국 금리", "원화", "달러", "KOSPI", "S&P500"]  # 왼쪽 한국·오른쪽 미국
     tones = {r["axis"]: r["tone"] for r in d["rows"]}
     assert tones == {"한국 금리": 1, "미국 금리": 0, "달러": 1, "원화": 1, "KOSPI": -1, "S&P500": 1}
 
