@@ -257,7 +257,13 @@ def allocation(fx, rates, stocks) -> list[dict]:
     return out
 
 
-def scenarios(rates) -> dict:
+# 회의 외 주요 이벤트(현지 날짜) — 지난 일정은 자동으로 빠진다. 연 1회 갱신.
+EVENTS = [
+    ("2026-11-03", "미국 중간선거", "의회 구성에 따라 재정·관세 정책 기대가 바뀌며 달러·미국 금리 변동이 커질 수 있음"),
+]
+
+
+def scenarios(rates, today: date) -> dict:
     rs = (rates or {}).get("snapshot", {})
     kb, up = rs.get("kr_base") or {}, rs.get("us_policy") or {}
     return {
@@ -269,6 +275,8 @@ def scenarios(rates) -> dict:
                  "cases": [
                      {"case": "인상", "krw": "상승(달러 강세)", "kr_bond": "상승 압력", "kospi": "위험자산 부담"},
                      {"case": "동결", "krw": "하락(인상 기대가 클수록)", "kr_bond": "안정", "kospi": "안도"}]},
+        "events": [{"date": d, "d_day": (date.fromisoformat(d) - today).days, "name": n, "note": t}
+                   for d, n, t in EVENTS if date.fromisoformat(d) >= today],
         "note": "일반적인 방향입니다. 실제 반응은 결과가 시장 기대(1년물에 반영된 경로)와 얼마나 다른지가 결정합니다.",
     }
 
@@ -282,7 +290,7 @@ def build_overview(fx: dict | None, rates: dict | None, stocks: dict | None, tod
         "analogs": find_analogs(w, features(w), regs) if not w.empty else None,
         "correlation": correlation_map(w) if not w.empty else None,
         "timeline": timeline(fx, rates, stocks, w),
-        "scenarios": scenarios(rates),
+        "scenarios": scenarios(rates, today),
         "allocation": allocation(fx, rates, stocks),
         "sources": {"fx": (fx or {}).get("updated_at"), "rates": (rates or {}).get("updated_at"),
                     "stocks": (stocks or {}).get("updated_at")},

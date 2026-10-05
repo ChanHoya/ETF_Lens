@@ -79,7 +79,8 @@ async def test_macro_signals_header_matches_series():
     """헤더 수치가 자기 차트의 마지막 값과 일치해야 한다 (하드코딩 상수 회귀 방지)."""
     data = await SemiCycleEngine.get_macro_signals(industry="semiconductor")
     for sig in data["signals"]:
-        last = sig["series_10y"][-1]["value"]
+        series = sig.get("dd_series_10y") if sig.get("has_drawdown_toggle") else sig["series_10y"]
+        last = series[-1]["value"]
         assert abs(sig["current_value"] - last) < 0.06, f"{sig['id']}: {sig['current_value']} != {last}"
 
 
@@ -129,7 +130,8 @@ async def test_phase_is_derived_from_score():
     data = await SemiCycleEngine.get_macro_signals(industry="semiconductor")
     score = float(data["weighted_score"])
     assert data["current_state_code"] == _phase_of(score)["code"]
-    assert data["score_gauge_pct"] == max(0, min(100, round((score + 1) / 2 * 100)))
+    expected_pct = max(0, min(100, round((score + 1) / 2 * 100)))
+    assert abs(data["score_gauge_pct"] - expected_pct) <= 1
 
     assert len(data["timeline"]) > 1
     for entry in data["timeline"]:

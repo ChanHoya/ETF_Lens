@@ -98,6 +98,12 @@ def test_timeline_lanes_and_scenarios():
     assert "인상" in comment_prompt(out)
 
 
+def test_upcoming_events_with_d_day_and_past_dropped():
+    ev = build_overview(_fx(), _rates(), _stocks(), TODAY)["scenarios"]["events"]
+    assert ev[0]["name"] == "미국 중간선거" and ev[0]["d_day"] == 32   # 10/2 → 11/3
+    assert build_overview(_fx(), _rates(), _stocks(), date(2026, 11, 4))["scenarios"]["events"] == []
+
+
 def test_missing_tabs_degrade():
     out = build_overview(None, None, _stocks(), TODAY)
     assert out["diagnosis"]["rows"][0]["status"] == "데이터 없음"

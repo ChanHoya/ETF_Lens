@@ -74,6 +74,8 @@ async def test_scheduler_sector_quant_registered():
 @pytest.mark.asyncio
 async def test_screener_db_fast_retrieval():
     """DB에 사전 계산된 퀀트 결과가 있을 때 0.01초 database_precomputed로 즉시 반환되는지 검증."""
+    from api.next_leader import _LEADER_CACHE
+    _LEADER_CACHE.pop("screener", None)
     mock_request = MagicMock()
     async with AsyncSessionLocal() as db:
         data = await get_next_leader_screener(request=mock_request, db=db)
