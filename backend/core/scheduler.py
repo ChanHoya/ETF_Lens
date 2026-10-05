@@ -592,6 +592,17 @@ async def check_etf_disparity_and_alert() -> None:
     print(f"[DisparityAlert] Sent disparity alert for {len(alert_items)} items: {results}")
 
 
+async def refresh_currency_pair_prices():
+    """환헤지/환노출 페어 ETF 가격만 가볍게 갱신 — 활성 ETF 목록(구성종목·성과 배치)에는 넣지 않아 메모리 부담을 늘리지 않는다."""
+    from core.currency_analyzer import get_currency_hedged_pairs
+    from core.price_freshness import ensure_fresh_prices
+    async with AsyncSessionLocal() as db:
+        pairs = await get_currency_hedged_pairs(db)
+        codes = sorted({p[side]["code"] for p in pairs for side in ("hedged", "unhedged")})
+        done = await ensure_fresh_prices(db, codes, max_age_days=0)
+    print(f"[CurrencyPairPrices] {len(done)}/{len(codes)}개 페어 종목 가격 갱신")
+
+
 def setup_scheduler():
     from scheduler.etf_price_sync import sync_etf_prices_yfinance
     from core.etf_performance import update_all_etf_performance_job
@@ -614,6 +625,10 @@ def setup_scheduler():
 
     async def _job_price():
         await sync_etf_prices_yfinance()
+        try:
+            await refresh_currency_pair_prices()
+        except Exception as e:
+            print(f"[CurrencyPairPrices] 실패: {type(e).__name__}: {e}")
         await update_app_version("[price]")
         trigger_replication_background()
         gc.collect()

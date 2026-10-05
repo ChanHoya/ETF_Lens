@@ -253,47 +253,6 @@ function RangeButtons({ range, setRange }: { range: Range; setRange: (r: Range) 
 
 const axisTick = { fill: '#9ca3af', fontSize: 11 };
 
-function KrwDxyChart({ data, regimes, selected }: { data: (Row & { t: number })[]; regimes: Regime[]; selected: number | null }) {
-    return (
-        <ResponsiveContainer width="100%" height={320}>
-            <ComposedChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                {regimes.map((g, i) => (
-                    <ReferenceArea key={g.start} yAxisId="krw" x1={ts(g.start)} x2={g.end ? ts(g.end) : (data[data.length - 1]?.t ?? ts(g.start))} ifOverflow="hidden"
-                        fill={KIND_STYLE[g.kind].fill} fillOpacity={selected === i ? 0.25 : 0.08} />
-                ))}
-                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(data)} interval={0} tick={axisTick} />
-                <YAxis yAxisId="dxy" tick={axisTick} domain={['auto', 'auto']} width={44} />
-                <YAxis yAxisId="krw" orientation="right" tick={axisTick} domain={['auto', 'auto']} width={48} />
-                <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))}
-                    formatter={(v, name) => [typeof v === 'number' ? v.toLocaleString('ko-KR') : v, name]} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line yAxisId="dxy" dataKey="dxy" name="달러지수 DXY (좌)" stroke="#9ca3af" dot={false} strokeWidth={1.5} connectNulls isAnimationActive={false} />
-                <Line yAxisId="krw" dataKey="krw" name="원/달러 (우)" stroke="#6366f1" dot={false} strokeWidth={2} connectNulls isAnimationActive={false} />
-            </ComposedChart>
-        </ResponsiveContainer>
-    );
-}
-
-function SpreadChart({ data }: { data: (Row & { t: number })[] }) {
-    return (
-        <ResponsiveContainer width="100%" height={320}>
-            <ComposedChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(data)} interval={0} tick={axisTick} />
-                <YAxis yAxisId="sp" tick={axisTick} domain={['auto', 'auto']} width={48} tickFormatter={(v: number) => `${v}%p`} />
-                <YAxis yAxisId="krw" orientation="right" tick={axisTick} domain={['auto', 'auto']} width={48} />
-                <ReferenceLine yAxisId="sp" y={0} stroke="#f59e0b" strokeDasharray="4 4" />
-                <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))}
-                    formatter={(v, name) => [typeof v === 'number' ? v.toLocaleString('ko-KR') : v, name]} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line yAxisId="sp" dataKey="spread10" name="미-한 10년물 금리차 (좌, %p)" stroke="#10b981" dot={false} strokeWidth={2} connectNulls isAnimationActive={false} />
-                <Line yAxisId="krw" dataKey="krw" name="원/달러 (우)" stroke="#9ca3af" dot={false} strokeWidth={1.5} connectNulls isAnimationActive={false} />
-            </ComposedChart>
-        </ResponsiveContainer>
-    );
-}
-
 // 상관계수 해석 — 주간 변화 기준
 const corrLabel = (v: number | null) => v == null ? '-' : v >= 0.6 ? '강한 동조' : v >= 0.3 ? '보통 동조' : v > -0.3 ? '거의 무관' : '반대로 움직임';
 const CORR_SERIES = [
@@ -636,36 +595,17 @@ export default function FxTab() {
             {data && (
                 <>
                     <BalanceSection s={data.snapshot} />
-                    <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                        <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                                <SectionTitle icon={<TrendingUp className="w-5 h-5 text-indigo-400" />} title="원/달러 & 달러지수"
-                                    sub="음영 = 원/달러 국면 (빨강 원화 약세 · 초록 원화 강세) · 아래 타임라인을 누르면 강조" />
-                                <RangeButtons range={range} setRange={setRange} />
-                            </div>
-                            <KrwDxyChart data={rows} regimes={data.regimes} selected={selected} />
-                        </div>
-                        <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                                <SectionTitle icon={<Landmark className="w-5 h-5 text-emerald-400" />} title="미-한 금리차 & 원/달러"
-                                    sub="미국 10년물 − 한국 10년물 · 점선 0 아래 = 한국 금리가 더 높음" />
-                                <RangeButtons range={range} setRange={setRange} />
-                            </div>
-                            <SpreadChart data={rows} />
-                        </div>
-                    </section>
 
+                    {data.analysis && (
+                        <>
+                            <AnalysisSection an={data.analysis} rows={rows} range={range} setRange={setRange} corrRows={corrRows} />
+                            <ValueSection an={data.analysis} rows={rows} range={range} setRange={setRange} />
                     <section className="bg-black/20 rounded-2xl border border-white/5 p-4">
                         <SectionTitle icon={<History className="w-5 h-5 text-amber-400" />} title="원/달러 국면 타임라인"
                             sub="2007년 이후 상승·하락 이정표 — 번호를 누르면 그 시기의 글로벌 경제·사회 동향이 아래에 나옵니다 · 값은 FRED 원/달러(뉴욕 정오)" />
                         <RegimeMilestones rows={fullRows} milestones={milestones} selected={selected} onSelect={setSelected}
                             seriesName="원/달러" seriesColor="#6366f1" yFormat={(v) => v.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} />
                     </section>
-
-                    {data.analysis && (
-                        <>
-                            <AnalysisSection an={data.analysis} rows={rows} range={range} setRange={setRange} corrRows={corrRows} />
-                            <ValueSection an={data.analysis} rows={rows} range={range} setRange={setRange} />
                             <FxFinder />
                         </>
                     )}

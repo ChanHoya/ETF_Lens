@@ -1,8 +1,11 @@
 import asyncio
+import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from db.models import ETFMaster, ETFDailyPrice, MarketMacroLog
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 def clean_etf_name_for_hedging(name: str) -> str:
     """이름에서 (H), (H)(합성), H, H(합성) 등을 제거하여 매칭용 베이스 이름을 얻습니다."""
@@ -79,6 +82,13 @@ async def analyze_fx_impact(db: AsyncSession, h_code: str, u_code: str) -> dict:
     
     if not h_etf or not u_etf:
         return {"error": "환헤지 혹은 환노출 ETF를 찾을 수 없습니다."}
+
+    # 페어 ETF는 야간 가격 배치(활성 ETF만) 대상 밖이라 가격이 오래됐으면 이 두 종목만 즉석 보충
+    try:
+        from core.price_freshness import ensure_fresh_prices
+        await ensure_fresh_prices(db, [h_code, u_code])
+    except Exception as e:
+        logger.warning(f"[currency_analyzer] 가격 보충 실패 {h_code}/{u_code}: {type(e).__name__}: {e}")
         
     # 2. 1년 기간 구하기
     end_date_str = datetime.now().strftime("%Y-%m-%d")
@@ -163,13 +173,15 @@ async def analyze_fx_impact(db: AsyncSession, h_code: str, u_code: str) -> dict:
     # 환노출 성과 = 환헤지 성과 + 환율 변동률 - (대략적인 헤지 수수료 등 연산)
     # 연간 환헤지 프리미엄/비용 추정치 = 한국-미국 금리차 차감 및 거래 비용 (평균 연 1.5% 수준 발생)
     hedge_cost_est = 1.25  # 연 1.25% 비용 발생 가정
-    
+
+    # 미래 시나리오의 출발점은 가장 최근 환율(ETF 가격이 늦게 갱신돼도 1년 전 값으로 떨어지지 않게)
+    fx_now = fx_data[max(fx_data)] if fx_data else chart_data[-1]["fx_rate"]
     scenarios = [
-        {"change": -15, "label": "급격한 원화 강세 (-15%)", "expected_fx": fx_data.get(all_dates[-1], fx_start_val) * 0.85},
-        {"change": -5, "label": "완만한 원화 강세 (-5%)", "expected_fx": fx_data.get(all_dates[-1], fx_start_val) * 0.95},
-        {"change": 0, "label": "환율 보합 (0%)", "expected_fx": fx_data.get(all_dates[-1], fx_start_val) * 1.0},
-        {"change": 5, "label": "완만한 원화 약세 (+5%)", "expected_fx": fx_data.get(all_dates[-1], fx_start_val) * 1.05},
-        {"change": 15, "label": "급격한 원화 약세 (+15%)", "expected_fx": fx_data.get(all_dates[-1], fx_start_val) * 1.15},
+        {"change": -15, "label": "급격한 원화 강세 (-15%)", "expected_fx": fx_now * 0.85},
+        {"change": -5, "label": "완만한 원화 강세 (-5%)", "expected_fx": fx_now * 0.95},
+        {"change": 0, "label": "환율 보합 (0%)", "expected_fx": fx_now * 1.0},
+        {"change": 5, "label": "완만한 원화 약세 (+5%)", "expected_fx": fx_now * 1.05},
+        {"change": 15, "label": "급격한 원화 약세 (+15%)", "expected_fx": fx_now * 1.15},
     ]
     
     simulation_results = []
@@ -208,7 +220,11 @@ async def analyze_fx_impact(db: AsyncSession, h_code: str, u_code: str) -> dict:
             "unhedged_1y_return": final_u_ret,
             "fx_1y_change": final_fx_change,
             "gap_1y": final_gap,
-            "estimated_annual_hedge_cost": hedge_cost_est
+            "estimated_annual_hedge_cost": hedge_cost_est,
+            "fx_now": round(fx_now, 2),
+            "fx_now_date": max(fx_data) if fx_data else all_dates[-1],
+            # 노출 − 헤지 = 환율 변화 + 헤지 비용 → 0이 되는 환율 변화(이보다 원화가 더 강해지면 헤지 유리)
+            "breakeven_fx_change": -hedge_cost_est,
         },
         "chart_data": chart_data,
         "scenarios": simulation_results
