@@ -5,7 +5,7 @@
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 ✅ Current: 대선 D-day 라벨·AI Pulse 프롬프트의 하드코딩된 "D-3" 제거(d8118497) + 저장소 정리 (2026-10-04)
 ➡️ Next: 브라질 대선 1차(현지 10/4 · 결과 반영 10/5 KST)·결선(현지 10/25 · 결과 반영 10/26 KST) 후속 동향 반영
-➡️ 다음 신규 스토리 ID는 **S6-20**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+➡️ 다음 신규 스토리 ID는 **S6-21**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-04, Claude Code):
 > - 🌗 Dark / Light 토글(상단 바, `ThemeToggle`) 추가. Tailwind v4 색 변수를 `html.light`에서 반전하는 방식(`scripts/generate-light-theme.py` → `app/theme-light.css`). 근거 `docs/theme-light-context-notes.md`. 시장동향 '오늘의 시장' 임베드 주소를 bulliza.com으로 교체(finance.richgo.ai 404).
@@ -84,6 +84,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 | S6-17 | 브라질 대선 시나리오 분석 및 조건별 추천 국채 라인업 (헤알화/달러 기반) | ✅ stable | 3대 대선 시나리오 비교(BCB 독립성 하방 방파제), 금리 고점 듀레이션 확대 원칙, 조건별 국채 5종 라인업(적극 고수익 바벨 포함), Tranche 3 체크리스트 및 Gemini Live Pulse 연동 완료 |
 | S6-18 | 브라질 대선 2차 결선투표 추가, 타임라인 1줄 최소화 및 대선 종합 인텔리전스 팝업 | ✅ stable | 결선투표(현지 10/25 · 결과 반영 10/26 KST) 추가, 완료 이벤트 1줄 접기/펼치기 아코디언, 선거 일정/제도 요약표, 룰라 vs 플라비우 판세 및 Quaest·AtlasIntel 여론조사 시각화 바 차트, 국채 투자 액션 가이드 및 출처 팝업 모달 구현 완료 |
 | S6-19 | 브라질 국채 토탈리턴(Total Return) 시뮬레이터 & 대선 1차 투표 결과/이벤트 실시간 업데이트 | ✅ stable | NTN-F/LTN 더티프라이스, 복리 재투자, 만기보유 vs 조기매도 자본차익, 환율 손익분기점, 7x6 시나리오 매트릭스, 대선 1차 투표 결과 시각화(결선 뱃지) 및 Gemini AI 뉴스 동적 갱신/수동 입력 지원 완료 |
+| S6-20 | 범용 시계열 하이브리드 엔진 모듈화 (DB 축적 + Gap-fill + 실시간 병합) | ✅ stable | core/hybrid_series.py 구현 완료. ETFDailyPrice/BenchmarkPrice 대상 초기 1회 시드, 결측 구간(Gap)만 증분 수집, 당일 실시간 시세 병합 및 다중 배치 처리 지원 |
 
 ### 스토리 ID 충돌 대응표
 

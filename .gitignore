@@ -14,3 +14,5 @@ backend/pw-browsers/
 # 일회성 진단 스크립트 (정리 2026-10-04)
 scratch/
 backend/scratch/
+.claude/
+.rtk/
