@@ -2,7 +2,7 @@
 """
 GET /api/v1/fx/overview  (?refresh=true 로 캐시 무시)
 
-- 원천: FRED fredgraph CSV(키 불필요) + Yahoo v8 chart. 수집은 6시간 메모리 캐시, 실패 시 마지막 성공값 유지.
+- 원천: FRED fredgraph CSV(키 불필요) + Yahoo v8 chart. 수집은 30분 메모리 캐시, 실패 시 마지막 성공값 유지.
 - 계산(build_overview·build_analysis)은 네트워크와 분리해 테스트한다. 분석 지표의 정의는 docs/fx-tab-context-notes.md.
 """
 import asyncio
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 YEARS = 20
-CACHE_TTL = 6 * 3600
+CACHE_TTL = 30 * 60  # 프론트는 기준 시각 1시간 경과 시 갱신 → 서버 캐시는 그보다 짧아야 새 값을 받는다
 FRED_IDS = {
     "krw": "DEXKOUS",           # 원/달러 (뉴욕 정오, 일간)
     "us10": "DGS10",            # 미 10년물

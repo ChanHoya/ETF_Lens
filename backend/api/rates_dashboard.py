@@ -48,6 +48,7 @@ ECOS_SERIES = {  # key: (통계표, 주기, 항목)
     "kr10y": ("817Y002", "D", "010210000"),
     "kr20y": ("817Y002", "D", "010220000"),
     "kr30y": ("817Y002", "D", "010230000"),
+    "kr50y": ("817Y002", "D", "010240000"),  # 2016-10~
     "kr_cpi": ("901Y009", "M", "0"),
 }
 
@@ -257,6 +258,77 @@ def _curve(points: list[tuple[str, pd.Series]], when: pd.Timestamp) -> list[dict
     return [{"tenor": t, "value": _r(_at(s, when))} for t, s in points if not s.empty]
 
 
+TERM_BUCKETS = [  # (키, 이름, 한국, 미국) — 단기는 양국 모두 국채 1년물로 같은 상품끼리 비교
+    ("short", "단기 (1년)", "kr1y", "us1y"),
+    ("long", "장기 (10년)", "kr10y", "us10y"),
+    ("ultra", "초장기 (30년)", "kr30y", "us30y"),
+]
+TENOR = {"short": "1년물", "long": "10년물", "ultra": "30년물"}  # 해석 문장용 (모두 받침 있어 조사 '이')
+
+
+def term_compare(g) -> dict | None:
+    """단기·장기·초장기 한·미 비교 + 초장기 프리미엄(30년−10년) + 자동 해석 문장."""
+    rows = []
+    for key, label, k, u in TERM_BUCKETS:
+        ks, us_ = g(k), g(u)
+        if ks.empty or us_.empty:
+            continue
+        kv, uv = float(ks.iloc[-1]), float(us_.iloc[-1])
+        k1, u1 = _at(ks, ks.index[-1] - timedelta(days=365)), _at(us_, us_.index[-1] - timedelta(days=365))
+        rows.append({"key": key, "label": label, "kr": _r(kv), "us": _r(uv), "gap": _r(kv - uv),
+                     "gap_1y": _r(k1 - u1) if k1 is not None and u1 is not None else None,
+                     "kr_chg_1y": _bp_change(ks, 365), "us_chg_1y": _bp_change(us_, 365)})
+    if not rows:
+        return None
+    by = {r["key"]: r for r in rows}
+    premium = {}
+    for c in ("kr", "us"):
+        if "ultra" in by and "long" in by:
+            l, u = g(f"{c}10y"), g(f"{c}30y")
+            now = by["ultra"][c] - by["long"][c]
+            y1l, y1u = _at(l, l.index[-1] - timedelta(days=365)), _at(u, u.index[-1] - timedelta(days=365))
+            premium[c] = {"now": _r(now), "y1": _r(y1u - y1l) if y1l is not None and y1u is not None else None}
+
+    insights = []
+    gaps = [r["gap"] for r in rows]
+    if all(x < 0 for x in gaps):
+        widening = all(b <= a for a, b in zip(gaps, gaps[1:]))
+        insights.append(f"모든 만기에서 미국 금리가 더 높습니다({TENOR[rows[0]['key']]} {gaps[0]:+.2f}%p → {TENOR[rows[-1]['key']]} {gaps[-1]:+.2f}%p)"
+                        + (" — 만기가 길수록 격차가 커져 장기 자금이 미국으로 향하기 쉬운 구조입니다." if widening else "."))
+    elif all(x > 0 for x in gaps):
+        insights.append("모든 만기에서 한국 금리가 더 높습니다 — 원화 자산의 금리 매력이 큰 구간입니다.")
+    else:
+        insights.append("만기에 따라 한·미 금리 우위가 엇갈립니다(" + ", ".join(f"{TENOR[r['key']]} {r['gap']:+.2f}%p" for r in rows) + ").")
+    names = {"kr": "한국", "us": "미국"}
+    for c, pr in premium.items():
+        v = pr["now"]
+        if v >= 0.3:
+            msg = f"{names[c]} 초장기 프리미엄(30년−10년) {v:+.2f}%p — 재정·인플레 우려로 30년물에 더 높은 보상을 요구하고 있습니다."
+        elif v < 0:
+            msg = f"{names[c]} 초장기 역전(30년−10년 {v:+.2f}%p) — 연기금·보험사의 초장기채 수요나 장기 저성장 기대가 초장기 금리를 누르고 있습니다."
+        else:
+            msg = f"{names[c]} 30년−10년 {v:+.2f}%p로 평탄 — 초장기 금리가 장기 금리와 비슷하게 움직입니다."
+        if pr["y1"] is not None and abs(v - pr["y1"]) >= 0.1:
+            msg += f" (1년 전 {pr['y1']:+.2f}%p에서 {'확대' if v > pr['y1'] else '축소'})"
+        insights.append(msg)
+    for c in ("kr", "us"):
+        moves = [(r[f"{c}_chg_1y"], r["key"]) for r in rows if r[f"{c}_chg_1y"] is not None]
+        if not moves:
+            continue
+        up = sum(m for m, _ in moves) > 0
+        lead = max(moves, key=lambda x: x[0] if up else -x[0])
+        why = {"short": "정책금리 기대가 이끈", "long": "성장·물가 기대가 이끈", "ultra": "기간 프리미엄이 이끈"}[lead[1]]
+        insights.append(f"{names[c]} 최근 1년 금리는 {TENOR[lead[1]]}이 가장 크게 {'올라' if up else '내려'}({lead[0]:+.0f}bp) {why} "
+                        f"{'상승' if up else '하락'}입니다.")
+    if "long" in by and by["long"]["gap_1y"] is not None:
+        a, b = by["long"]["gap_1y"], by["long"]["gap"]
+        if abs(b - a) >= 0.15:
+            insights.append(f"한미 10년물 격차가 1년 전 {a:+.2f}%p에서 {b:+.2f}%p로 {'벌어져 원화 약세 압력이 커졌' if abs(b) > abs(a) else '좁혀져 원화 약세 압력이 줄었'}습니다(환율 탭 참고).")
+    kr50 = g("kr50y")
+    return {"rows": rows, "premium": premium, "insights": insights,
+            "kr50y": {"value": _r(kr50.iloc[-1]), "date": kr50.index[-1].strftime("%Y-%m-%d")} if not kr50.empty else None}
+
+
 def _rate_card(s: pd.Series, ten_years_ago: pd.Timestamp) -> dict | None:
     if s.empty:
         return None
@@ -351,7 +423,8 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
     # 주간 차트 데이터
     cols = {"kr_base": g("kr_base"), "us_upper": fed, "ecb": g("ecb"), "kr3y": g("kr3y"), "kr10y": g("kr10y"),
             "us2y": g("us2y"), "us10y": g("us10y"), "kr_10_3": kr_10_3, "us_10_2": g("us_10_2"),
-            "us_10_3m": g("us_10_3m")}
+            "us_10_3m": g("us_10_3m"), "kr1y": g("kr1y"), "us1y": g("us1y"), "kr30y": g("kr30y"),
+            "us30y": g("us30y"), "kr50y": g("kr50y")}
     wk = pd.DataFrame({k: _weekly(v) for k, v in cols.items()})
     wk = wk[wk.index >= start].ffill(limit=4)
     rows = [{"date": i.strftime("%Y-%m-%d"), **{k: _r(r[k], 3) for k in cols}} for i, r in wk.iterrows()]
@@ -377,7 +450,7 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
                         "drivers": r["drivers"], "source": r.get("source"),
                         "from": _r(v0), "to": _r(v1), "bp": _r((v1 - v0) * 100, 0), "changes": n})
 
-    return {"snapshot": snap, "spreads": spreads, "shapes": shapes, "curves": curves,
+    return {"snapshot": snap, "spreads": spreads, "shapes": shapes, "curves": curves, "terms": term_compare(g),
             "recessions": [r for r in recessions if (r["end"] or "9999") >= start.strftime("%Y-%m-%d")],
             "weekly": rows, "regimes": regimes,
             "data_dates": {k: s.index[-1].strftime("%Y-%m-%d") for k, s in S.items() if not s.empty},

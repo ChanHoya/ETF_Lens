@@ -121,3 +121,24 @@ def test_missing_ecos_degrades_to_us_only():
     assert out["snapshot"]["phase"]["kr"] is None and out["regimes"] == []
     assert "us_policy" in out["snapshot"] and out["weekly"]
     assert len(REGIMES) >= 15
+
+
+def test_term_compare_buckets_premium_and_insights():
+    from api.rates_dashboard import term_compare
+    s, e = date(2024, 1, 1), date(2026, 10, 2)
+    year_ago = date(2025, 10, 2)
+    up = lambda now, before: (lambda d: now if d > year_ago else before)  # noqa: E731
+    S = {k: _s(_daily(s, e, f)) for k, f in {
+        "kr1y": up(3.73, 2.31), "kr10y": up(4.37, 2.96), "kr30y": up(4.50, 2.82), "kr50y": up(4.49, 2.80),
+        "us1y": up(4.44, 3.62), "us10y": up(5.24, 4.12), "us30y": up(5.61, 4.72)}.items()}
+    t = term_compare(lambda k: S.get(k, pd.Series(dtype=float, index=pd.DatetimeIndex([]))))
+    by = {r["key"]: r for r in t["rows"]}
+    assert (by["short"]["gap"], by["long"]["gap"], by["ultra"]["gap"]) == (-0.71, -0.87, -1.11)
+    assert by["ultra"]["kr_chg_1y"] == 168.0
+    assert t["premium"]["kr"] == {"now": 0.13, "y1": -0.14} and t["premium"]["us"]["now"] == 0.37
+    assert t["kr50y"]["value"] == 4.49
+    text = " ".join(t["insights"])
+    assert "만기가 길수록 격차가 커져" in text
+    assert "미국 초장기 프리미엄" in text and "한국 30년−10년 +0.13%p로 평탄" in text
+    assert "한국 최근 1년 금리는 30년물이 가장 크게 올라(+168bp) 기간 프리미엄이 이끈 상승" in text
+    assert "좁혀져 원화 약세 압력이 줄었습니다" in text
