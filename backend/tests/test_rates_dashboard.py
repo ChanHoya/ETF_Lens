@@ -3,7 +3,7 @@ from datetime import date, timedelta
 
 import pandas as pd
 
-from api.rates_dashboard import (REGIMES, _implied, _last_change, _yoy, build_overview, curve_shape,
+from api.rates_dashboard import (REGIMES, _changes, _implied, _last_change, _yoy, build_overview, curve_shape,
                                  inversion_episodes, recession_periods)
 
 TODAY = date(2026, 10, 5)
@@ -38,6 +38,8 @@ def _base_rate(d: date) -> float:
 def test_last_change_and_implied_moves():
     s = _s(_daily(date(2026, 1, 1), date(2026, 10, 2), _base_rate))
     assert _last_change(s) == {"date": "2026-08-27", "from": 2.75, "to": 3.0, "bp": 25.0}
+    ch = _changes(s)  # 종합 탭 회의 결과 판정용 — 오래된 순, 마지막은 last_change와 같다
+    assert ch[-1] == _last_change(s) and [c["date"] for c in ch] == sorted(c["date"] for c in ch)
     assert _implied(3.73, 3.0) == {"gap": 0.73, "moves": 2.9, "label": "1년 내 인상 약 2.9회 반영"}
     assert _implied(2.6, 3.0)["label"] == "1년 내 인하 약 1.6회 반영"
     assert _implied(3.05, 3.0)["label"] == "동결 예상"

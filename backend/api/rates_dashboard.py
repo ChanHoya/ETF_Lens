@@ -156,6 +156,16 @@ def _last_change(s: pd.Series) -> dict | None:
     return {"date": d.strftime("%Y-%m-%d"), "from": _r(before), "to": _r(after), "bp": _r((after - before) * 100, 0)}
 
 
+def _changes(s: pd.Series, n: int = 8) -> list[dict]:
+    """계단형 정책금리의 최근 변경 n건(오래된 순) — 종합 탭의 회의 결과 판정용."""
+    if len(s) < 2:
+        return []
+    diff = s.diff()
+    ch = diff[diff.abs() > 1e-9].tail(n)
+    return [{"date": d.strftime("%Y-%m-%d"), "from": _r(float(s.loc[d]) - float(v)), "to": _r(s.loc[d]), "bp": _r(v * 100, 0)}
+            for d, v in ch.items()]
+
+
 def _next_meeting(dates: list[str], today: date) -> dict | None:
     for d in dates:
         dd = date.fromisoformat(d)
@@ -354,12 +364,14 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
     snap: dict = {}
     if not g("kr_base").empty:
         snap["kr_base"] = {"value": _r(g("kr_base").iloc[-1]), "date": g("kr_base").index[-1].strftime("%Y-%m-%d"),
-                           "last_change": _last_change(g("kr_base")), "next_meeting": _next_meeting(BOK_MEETINGS, today)}
+                           "last_change": _last_change(g("kr_base")), "changes": _changes(g("kr_base")),
+                           "next_meeting": _next_meeting(BOK_MEETINGS, today)}
     if not fed.empty:
         snap["us_policy"] = {"upper": _r(fed.iloc[-1]), "lower": _r(fed.iloc[-1] - HIKE_STEP),
                              "effective": _r(g("fed_eff").iloc[-1]) if not g("fed_eff").empty else None,
                              "date": fed.index[-1].strftime("%Y-%m-%d"),
-                             "last_change": _last_change(fed), "next_meeting": _next_meeting(FOMC_MEETINGS, today)}
+                             "last_change": _last_change(fed), "changes": _changes(fed),
+                             "next_meeting": _next_meeting(FOMC_MEETINGS, today)}
     if "kr_base" in snap and "us_policy" in snap:
         snap["policy_gap"] = _r(snap["kr_base"]["value"] - snap["us_policy"]["upper"])
     for key in ("kr3y", "kr10y", "us2y", "us10y"):
