@@ -16,6 +16,7 @@ export type Milestone = {
     color: string;               // 밴드·핀 색
     badge: { label: string; cls: string };
     summary: React.ReactNode;    // 오른쪽 수치 요약
+    auto?: boolean;              // 데이터로 자동 감지된 국면(문구는 AI 또는 기본 문구)
 };
 
 const Y_W = 48;    // 왼쪽 Y축 폭 — 아래 핀 트랙을 플롯 영역과 맞추는 기준
@@ -95,7 +96,7 @@ export default function RegimeMilestones({ rows, milestones, selected, onSelect,
                         <button key={g.start} type="button" onClick={() => onSelect(i)} title={`${period(g)} · ${g.title}`}
                             className="absolute flex flex-col items-center -translate-x-1/2 group cursor-pointer"
                             style={{ left: `${pct}%`, top: lane * LANE_H }}>
-                            <span className={`flex items-center justify-center rounded-full text-[10px] font-extrabold text-white transition-transform ${active ? 'w-6 h-6 ring-2 ring-white/70 scale-110' : 'w-5 h-5 opacity-80 group-hover:opacity-100 group-hover:scale-110'}`}
+                            <span className={`flex items-center justify-center rounded-full text-[10px] font-extrabold text-white transition-transform ${active ? 'w-6 h-6 ring-2 ring-white/70 scale-110' : 'w-5 h-5 opacity-80 group-hover:opacity-100 group-hover:scale-110'} ${g.auto ? 'outline outline-1 outline-dashed outline-offset-2 outline-gray-400' : ''}`}
                                 style={{ backgroundColor: g.color }}>
                                 {i + 1}
                             </span>
@@ -112,6 +113,7 @@ export default function RegimeMilestones({ rows, milestones, selected, onSelect,
                         <span className="text-xs font-mono text-gray-400">{period(m)}</span>
                         <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${m.badge.cls}`}>{m.badge.label}</span>
                         <span className="text-sm font-extrabold text-white">{m.title}</span>
+                        {m.auto && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border border-dashed border-gray-400/60 text-gray-300" title="데이터로 자동 감지한 국면입니다">자동 감지</span>}
                         <span className="text-xs font-bold text-gray-300 ml-auto">{m.summary}</span>
                         <div className="flex gap-1">
                             <button type="button" onClick={() => onSelect(Math.max(0, cur - 1))} disabled={cur === 0} aria-label="이전 국면"
