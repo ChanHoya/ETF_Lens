@@ -21,7 +21,9 @@ type Overview = {
     correlation: { assets: { key: string; label: string }[]; now: (number | null)[][]; long: (number | null)[][]; notable: { text: string; diff: number }[] } | null;
     timeline: { lanes: { key: string; label: string; segments: Seg[] }[]; series: { date: string; kospi: number | null; krw: number | null }[] };
     scenarios: Record<'bok' | 'fomc', { meeting: { date: string; d_day: number } | null; rate: number | null; implied: { label: string } | null;
-        cases: { case: string; krw: string; kr_bond: string; kospi: string }[] }> & { note: string };
+        cases: { case: string; krw: string; kr_bond: string; kospi: string }[] }> & {
+        note: string; events?: { date: string; d_day: number; name: string; note: string }[];
+    };
     comment: { text: string | null; at: string | null };
     updated_at: string;
 };
@@ -260,6 +262,13 @@ function LaneTimeline({ t }: { t: Overview['timeline'] }) {
 function Scenarios({ sc }: { sc: Overview['scenarios'] }) {
     return (
         <div>
+            {sc.events?.map(e => (
+                <div key={e.date} className="flex flex-wrap items-baseline gap-2 mb-3 rounded-xl bg-amber-500/10 border border-amber-400/25 px-3 py-2">
+                    <span className="text-sm font-extrabold text-amber-200">{e.name}</span>
+                    <span className="text-xs font-bold text-gray-300">{e.date} (D-{e.d_day})</span>
+                    <span className="text-xs text-gray-400">{e.note} · 이후 국면 변화를 이 화면에서 점검</span>
+                </div>
+            ))}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                 {(['bok', 'fomc'] as const).map(k => {
                     const x = sc[k];
@@ -286,7 +295,7 @@ function Scenarios({ sc }: { sc: Overview['scenarios'] }) {
 }
 
 export default function MacroTab() {
-    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-macro-v1', `${API_BASE}/api/v1/macro/overview`);
+    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-macro-v2', `${API_BASE}/api/v1/macro/overview`);
     return (
         <div className="w-full max-w-[95vw] xl:max-w-[1400px] mx-auto space-y-4 pb-10">
             <section className="bg-black/20 rounded-2xl border border-white/5 p-4 md:p-5">
@@ -337,7 +346,7 @@ export default function MacroTab() {
                     )}
 
                     <section className="bg-black/20 rounded-2xl border border-white/5 p-4">
-                        <SectionTitle icon={<CalendarClock className="w-5 h-5 text-purple-400" />} title="다가오는 이벤트 시나리오" sub="다음 금통위·FOMC와 결과별로 흔히 나타나는 시장 반응" />
+                        <SectionTitle icon={<CalendarClock className="w-5 h-5 text-purple-400" />} title="다가오는 이벤트 시나리오" sub="다음 금통위·FOMC·주요 이벤트와 결과별로 흔히 나타나는 시장 반응" />
                         <Scenarios sc={data.scenarios} />
                     </section>
 
