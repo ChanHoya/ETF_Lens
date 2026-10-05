@@ -25,12 +25,14 @@ def _s(d: dict) -> pd.Series:
 
 
 def _base_rate(d: date) -> float:
-    """실제와 같은 모양의 계단: 2025-05-29 2.50 → 2026-07-16 2.75 → 2026-08-27 3.00."""
+    """실제와 같은 모양의 계단: 2025-05-29 2.75→2.50 인하, 2026-07-16 2.75 → 2026-08-27 3.00 인상."""
     if d >= date(2026, 8, 27):
         return 3.0
     if d >= date(2026, 7, 16):
         return 2.75
-    return 2.5
+    if d >= date(2025, 5, 29):
+        return 2.5
+    return 2.75
 
 
 def test_last_change_and_implied_moves():
@@ -109,7 +111,7 @@ def test_overview_snapshot_spreads_and_regimes():
     assert out["weekly"][-1]["date"] <= TODAY.isoformat()
     last = out["regimes"][-1]
     assert (last["kind"], last["from"], last["to"], last["changes"]) == ("hike", 2.5, 3.0, 2)
-    hold = next(r for r in out["regimes"] if r["start"] == "2025-05-29")
+    hold = next(r for r in out["regimes"] if r["start"] == "2025-05-29" and r["kind"] == "hold")
     assert (hold["from"], hold["to"], hold["changes"]) == (2.5, 2.5, 0)
 
 

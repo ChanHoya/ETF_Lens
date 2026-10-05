@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from api.exit_signal import _fetch_yahoo_v8
 from core.overview_cache import OverviewCache, fred_csv, timed
+from core.regime_auto import enrich_texts, fx_auto_segments, template_text
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -192,19 +193,31 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
                             "avg20y": _r(avg, 1), "gap_pct": _r((reer.iloc[-1] / avg - 1) * 100, 1)}
     snapshot["verdict"] = _verdict(snapshot.get("krw", {}).get("pct10y"), snapshot.get("reer", {}).get("gap_pct"))
 
+    def _regime(g: dict) -> dict | None:
+        end = g["end"] or krw.index[-1].strftime("%Y-%m-%d")  # end=None은 진행 중 → 마지막 관측일까지
+        a, b = krw[krw.index <= g["start"]], krw[krw.index <= end]
+        seg = krw[(krw.index >= g["start"]) & (krw.index <= end)]
+        if a.empty or b.empty or seg.empty:
+            return None
+        v0, v1 = a.iloc[-1], b.iloc[-1]
+        return {"start": g["start"], "end": g["end"], "kind": g.get("kind") or ("up" if v1 > v0 else "down"),
+                "from": _r(v0, 1), "to": _r(v1, 1), "chg_pct": _r((v1 / v0 - 1) * 100, 1),
+                "low": _r(seg.min(), 1), "high": _r(seg.max(), 1)}
+
     regimes = []
     for g in REGIMES:
-        a, b = krw[krw.index <= g["start"]], krw[krw.index <= g["end"]]
-        seg = krw[(krw.index >= g["start"]) & (krw.index <= g["end"])]
-        if a.empty or b.empty or seg.empty:
-            continue
-        v0, v1 = a.iloc[-1], b.iloc[-1]
-        regimes.append({
-            "start": g["start"], "end": g["end"], "title": g["title"], "drivers": g["drivers"],
-            "source": g.get("source"), "kind": g.get("kind") or ("up" if v1 > v0 else "down"),
-            "from": _r(v0, 1), "to": _r(v1, 1), "chg_pct": _r((v1 / v0 - 1) * 100, 1),
-            "low": _r(seg.min(), 1), "high": _r(seg.max(), 1),
-        })
+        reg = _regime(g)
+        if reg:
+            reg.update(title=g["title"], drivers=g["drivers"], source=g.get("source"), auto=False)
+            regimes.append(reg)
+    # 마지막 큐레이션 국면 이후는 고점·저점 반전으로 자동 감지(문구는 AI 또는 기본 문구)
+    if regimes and regimes[-1]["end"] and not krw.empty:
+        for g in fx_auto_segments(krw, regimes[-1]["end"], regimes[-1]["kind"]):
+            reg = _regime(g)
+            if reg:
+                reg["kind"] = g["kind"]
+                reg.update(template_text("fx", reg), auto=True)
+                regimes.append(reg)
 
     return {"snapshot": snapshot, "weekly": rows, "regimes": regimes,
             "analysis": build_analysis(wk, reer, snapshot, start),
@@ -335,7 +348,15 @@ async def _build() -> dict | None:
     if not raw.get("krw"):
         logger.warning(f"FX overview: 원/달러 수집 실패 {sources}")
         return None
-    data = build_overview(raw, date.today())
+    today = date.today()
+    data = build_overview(raw, today)
+    snap = data["snapshot"]
+    dxy = snap.get("dxy", {}).get("value")
+    spread = snap.get("spread10", {}).get("value")
+    await enrich_texts("fx", data["regimes"], lambda g: (
+        f"원/달러 {g['from']:,.0f}→{g['to']:,.0f}원 ({g['chg_pct']:+.1f}%), 구간 저점 {g['low']:,.0f}·고점 {g['high']:,.0f}원"
+        + (f", 최신 달러지수 {dxy}" if dxy is not None else "") + (f", 한미 10년물 금리차 {spread:+.2f}%p" if spread is not None else "")),
+        "원달러 환율", today)
     data["sources"] = sources
     data["timings"] = {**timings, "total": round(time.perf_counter() - t0, 2)}
     return data if data["weekly"] else None
