@@ -194,19 +194,19 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
     cross_jpy = (fred_krw / jpy * 100).dropna() if not fred_krw.empty and not jpy.empty else pd.Series(dtype=float)
     wk = pd.DataFrame({"krw": _weekly(krw), "dxy": _weekly(dxy), "us10": _weekly(us10), "kr10": _weekly(kr10),
                        "usdjpy": _weekly(jpy), "usdcny": _weekly(cny), "usdtwd": _weekly(twd),
-                       "vix": _weekly(_series(raw.get("vix", {})))})
+                       "vix": _weekly(_series(raw.get("vix", {}))), "kospi": _weekly(_series(raw.get("kospi", {})))})
     wk = wk[wk.index >= start]
     if not krw.empty:  # 진행 중인 주는 다가올 금요일이 아니라 마지막 관측일로 표시
         last = krw.index[-1]
         wk.index = wk.index.where(wk.index <= last, last)
     wk["kr10"] = wk["kr10"].ffill(limit=10)
-    daily_cols = ["krw", "dxy", "us10", "usdjpy", "usdcny", "usdtwd", "vix"]
+    daily_cols = ["krw", "dxy", "us10", "usdjpy", "usdcny", "usdtwd", "vix", "kospi"]
     wk[daily_cols] = wk[daily_cols].ffill(limit=2)
     wk["spread10"] = wk["us10"] - wk["kr10"]
     rows = [
         {"date": idx.strftime("%Y-%m-%d"), "krw": _r(r.krw, 1), "dxy": _r(r.dxy), "us10": _r(r.us10),
          "kr10": _r(r.kr10), "spread10": _r(r.spread10), "usdjpy": _r(r.usdjpy), "usdcny": _r(r.usdcny, 3),
-         "usdtwd": _r(r.usdtwd), "vix": _r(r.vix)}
+         "usdtwd": _r(r.usdtwd), "vix": _r(r.vix), "kospi": _r(r.kospi, 0)}
         for idx, r in wk.iterrows() if not pd.isna(r.krw)
     ]
 
@@ -362,6 +362,7 @@ async def _collect_raw() -> tuple[dict[str, dict[str, float]], dict[str, float]]
     start = (date.today() - timedelta(days=365 * (YEARS + 1))).isoformat()
     jobs = {k: (fred_csv, FRED_IDS[k], start) for k in FRED_IDS}
     jobs["dxy"] = (_yahoo_weekly, "DX-Y.NYB")
+    jobs["kospi"] = (_yahoo_weekly, "^KS11")  # 원데이터 겹쳐 보기용(일요일 날짜 봉 → 주간 리샘플로 같은 주에 맞춤)
     jobs.update({f"bop_{k}": (_fetch_ecos, "301Y013", "M", code, 12) for k, code in BOP_ITEMS.items()})
     names = list(jobs)
     res = await asyncio.gather(*(timed(*jobs[n]) for n in names), _fetch_yahoo_v8("KRW=X", days=60))

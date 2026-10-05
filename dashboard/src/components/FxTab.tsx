@@ -15,7 +15,7 @@ import RegimeMilestones, { type Milestone } from './RegimeMilestones';
 
 type Row = {
     date: string; krw: number | null; dxy: number | null; us10: number | null; kr10: number | null; spread10: number | null;
-    usdjpy: number | null; usdcny: number | null; usdtwd: number | null; vix: number | null;
+    usdjpy: number | null; usdcny: number | null; usdtwd: number | null; vix: number | null; kospi: number | null;
 };
 type Regime = {
     start: string; end: string | null; title: string; drivers: string[]; source: string | null;
@@ -302,6 +302,55 @@ const CORR_SERIES = [
     { key: 'vix', name: 'VIX(공포지수)', color: '#f43f5e' },
 ] as const;
 
+// 원데이터 겹쳐 보기 — 비교 지표는 시기에 따라 사용자가 고른다
+const OVERLAY = [
+    { key: 'dxy', name: '달러지수', color: '#9ca3af', unit: '' },
+    { key: 'spread10', name: '미-한 10년물 금리차', color: '#10b981', unit: '%p' },
+    { key: 'kospi', name: 'KOSPI', color: '#f59e0b', unit: '' },
+    { key: 'vix', name: 'VIX(공포지수)', color: '#f43f5e', unit: '' },
+    { key: 'usdjpy', name: '엔/달러', color: '#eab308', unit: '' },
+    { key: 'usdcny', name: '위안/달러', color: '#fb7185', unit: '' },
+    { key: 'us10', name: '미국 10년물', color: '#a78bfa', unit: '%' },
+] as const;
+type OverlayKey = typeof OVERLAY[number]['key'];
+
+function OverlayChart({ rows }: { rows: (Row & { t: number })[] }) {
+    const [key, setKey] = useState<OverlayKey>('dxy');
+    const [flip, setFlip] = useState(false);
+    const o = OVERLAY.find(x => x.key === key)!;
+    return (
+        <>
+            <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                {OVERLAY.map(x => (
+                    <button key={x.key} onClick={() => { setKey(x.key); setFlip(x.key === 'kospi'); }}
+                        className={`text-[11px] font-bold px-2 py-0.5 rounded-full border transition ${key === x.key
+                            ? 'bg-indigo-500/20 border-indigo-400/50 text-indigo-200' : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200'}`}>
+                        {x.name}
+                    </button>
+                ))}
+                <label className="flex items-center gap-1 text-[11px] text-gray-400 ml-auto cursor-pointer">
+                    <input type="checkbox" checked={flip} onChange={e => setFlip(e.target.checked)} className="accent-indigo-500" />
+                    비교 축 뒤집기
+                </label>
+            </div>
+            <ResponsiveContainer width="100%" height={260}>
+                <ComposedChart data={rows} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                    <YAxis yAxisId="cmp" tick={axisTick} domain={['auto', 'auto']} width={48} reversed={flip}
+                        tickFormatter={(v: number) => `${v.toLocaleString('ko-KR')}${o.unit}`} />
+                    <YAxis yAxisId="krw" orientation="right" tick={axisTick} domain={['auto', 'auto']} width={48} />
+                    <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))}
+                        formatter={(v, name) => [typeof v === 'number' ? v.toLocaleString('ko-KR') : v, name]} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Line yAxisId="cmp" dataKey={key} name={`${o.name} (좌${flip ? ', 뒤집음' : ''})`} stroke={o.color} dot={false} strokeWidth={1.6} connectNulls isAnimationActive={false} />
+                    <Line yAxisId="krw" dataKey="krw" name="원/달러 (우)" stroke="#6366f1" dot={false} strokeWidth={2} connectNulls isAnimationActive={false} />
+                </ComposedChart>
+            </ResponsiveContainer>
+        </>
+    );
+}
+
 function CorrChart({ rows, now }: { rows: (Analysis['corr'][number] & { t: number })[]; now: Analysis['corr_now'] }) {
     return (
         <>
@@ -374,21 +423,33 @@ function DecompBar({ d }: { d: NonNullable<Analysis['decomp_1y']> }) {
     );
 }
 
-function AnalysisSection({ an, range, setRange, corrRows }: { an: Analysis; range: Range; setRange: (r: Range) => void; corrRows: (Analysis['corr'][number] & { t: number })[] }) {
+function AnalysisSection({ an, rows, range, setRange, corrRows }: { an: Analysis; rows: (Row & { t: number })[]; range: Range; setRange: (r: Range) => void; corrRows: (Analysis['corr'][number] & { t: number })[] }) {
     const f = an.fair;
     return (
         <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                     <SectionTitle icon={<Link2 className="w-5 h-5 text-indigo-400" />} title="원/달러는 무엇과 같이 움직이나"
-                        sub="52주 롤링 상관계수 · 주간 변화끼리 계산 · +1에 가까울수록 같은 방향" />
+                        sub="원데이터 겹쳐 보기 · 비교 지표를 골라 시기별로 같이 움직였는지 눈으로 확인" />
                     <RangeButtons range={range} setRange={setRange} />
                 </div>
-                <CorrChart rows={corrRows} now={an.corr_now} />
+                <OverlayChart rows={rows} />
                 <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
-                    달러지수와의 상관이 낮아지면 원화가 글로벌 달러가 아닌 국내 요인(수급·정치·성장)으로 움직인다는 뜻입니다.
-                    VIX와 양(+)의 상관은 위험회피 때 원화가 약해지는 &lsquo;위험자산 통화&rsquo; 성격을 보여 줍니다.
+                    같이 움직이는 지표는 시기마다 바뀝니다. KOSPI는 원/달러와 반대로 움직이는 경우가 많아 기본으로 축을 뒤집어 보여 줍니다.
+                    다만 두 선이 함께 오르기만 해도 비슷해 보이니, 꺾이는 시점이 같은지를 보세요.
                 </p>
+                <details className="mt-3 group">
+                    <summary className="text-xs font-bold text-gray-400 cursor-pointer hover:text-gray-200">
+                        통계로 보기 — 52주 롤링 상관계수 (주간 변화끼리, 1년씩 굴려 다시 잼)
+                    </summary>
+                    <div className="mt-2">
+                        <CorrChart rows={corrRows} now={an.corr_now} />
+                        <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
+                            관계가 영원하지 않기 때문에 고정값이 아니라 최근 1년씩 다시 계산합니다. 달러지수와의 상관이 낮아지면 원화가
+                            국내 요인(수급·정치·성장)으로 움직인다는 뜻이고, VIX와 양(+)의 상관은 위험회피 때 원화가 약해지는 성격을 보여 줍니다.
+                        </p>
+                    </div>
+                </details>
             </div>
             <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
                 <SectionTitle icon={<Gauge className="w-5 h-5 text-rose-400" />} title="원/달러 변화, 달러 탓인가 한국 탓인가"
@@ -499,7 +560,7 @@ function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row 
 
 export default function FxTab() {
     // 재진입 시 캐시를 즉시 그리고, 서버 기준 시각이 1시간 넘었을 때만 백그라운드 갱신
-    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-fx-v5', `${API_BASE}/api/v1/fx/overview`);
+    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-fx-v6', `${API_BASE}/api/v1/fx/overview`);
     const [range, setRange] = useState<Range>('20Y');
     const [selected, setSelected] = useState<number | null>(null);
 
@@ -587,7 +648,7 @@ export default function FxTab() {
 
                     {data.analysis && (
                         <>
-                            <AnalysisSection an={data.analysis} range={range} setRange={setRange} corrRows={corrRows} />
+                            <AnalysisSection an={data.analysis} rows={rows} range={range} setRange={setRange} corrRows={corrRows} />
                             <ValueSection an={data.analysis} rows={rows} range={range} setRange={setRange} />
                             <FxFinder />
                         </>
@@ -595,7 +656,7 @@ export default function FxTab() {
 
                     <p className="flex items-start gap-1.5 text-[11px] text-gray-500 px-1">
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        출처: 한국은행 ECOS(국제수지), FRED(DEXKOUS·DGS10·IRLTLT01KRM156N·RBKRBIS·DEXJPUS·DEXCHUS·DEXTAUS·VIXCLS), Yahoo Finance(DX-Y.NYB·KRW=X).
+                        출처: 한국은행 ECOS(국제수지), FRED(DEXKOUS·DGS10·IRLTLT01KRM156N·RBKRBIS·DEXJPUS·DEXCHUS·DEXTAUS·VIXCLS), Yahoo Finance(DX-Y.NYB·KRW=X·^KS11).
                         한국 금리·실질실효환율은 월간 지표라 최대 2개월 늦습니다. 판정 배지·근거 목록·적정 원/달러는 공개 지표로 만든 참고 정보이며 투자 권유가 아닙니다.
                     </p>
                 </>

@@ -49,6 +49,14 @@ def test_live_quote_extends_fred_tail_only():
     assert 9999.0 not in [r["krw"] for r in out["weekly"]]
 
 
+def test_kospi_weekly_aligns_to_friday_rows():
+    raw = _raw()
+    # Yahoo KOSPI 주간 봉은 일요일 날짜 — 같은 주 금요일 행으로 들어가야 한다
+    raw["kospi"] = {(date(2026, 9, 20) - timedelta(weeks=i)).isoformat(): 3000.0 + i for i in range(10)}
+    rows = {r["date"]: r for r in build_overview(raw, TODAY)["weekly"]}
+    assert rows["2026-09-25"]["kospi"] == 3000 and rows["2026-09-18"]["kospi"] == 3001
+
+
 def test_weekly_rows_span_twenty_years_with_spread():
     rows = build_overview(_raw(), TODAY)["weekly"]
     assert rows[0]["date"] >= "2006-10-05"
