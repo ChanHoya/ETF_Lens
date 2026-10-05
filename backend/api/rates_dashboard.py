@@ -17,6 +17,7 @@ import requests
 from fastapi import APIRouter, HTTPException, Query
 
 from core.overview_cache import OverviewCache, fred_csv, timed
+from core.regime_auto import attach_text, enrich_texts, rate_cycles, template_text
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -56,7 +57,8 @@ ECOS_SERIES = {  # key: (통계표, 주기, 항목)
 BOK_MEETINGS = ["2026-10-22", "2026-11-26"]
 FOMC_MEETINGS = ["2026-10-28", "2026-12-09"]
 
-# 한국 기준금리 국면 — 날짜는 ECOS 실제 변경일, 구간 값은 데이터에서 계산. end=None은 진행 중.
+# 한국 기준금리 국면 문구 — 구간 경계는 rate_cycles가 변경 이력으로 자동 계산하고, 시작일·종류가 같은 구간에 이 제목·배경을 붙인다.
+# 새 사이클은 자동 감지되어 AI 문구(없으면 기본 문구)로 표시된다. end는 참고용(자동 경계가 우선).
 REGIMES = [
     {"start": "2008-10-09", "end": "2009-02-12", "kind": "cut", "title": "글로벌 금융위기 급속 인하",
      "drivers": ["리먼 파산 이후 신용경색", "5개월 새 3.25%p 인하", "한미 통화스와프(2008.10)"]},
@@ -433,7 +435,7 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
     kb = g("kr_base")
     changes = kb.diff()
     changes = changes[changes.abs() > 1e-9]
-    for r in REGIMES:
+    for r in (attach_text(rate_cycles(kb, today), REGIMES) if not kb.empty else []):
         st, en = pd.Timestamp(r["start"]), pd.Timestamp(r["end"] or today.isoformat())
         if r["kind"] == "hold":  # 동결: 시작일 변경은 앞 구간, 종료일 변경은 다음 구간 몫
             v0, v1 = _at(kb, st), _at(kb, en - timedelta(days=1))
@@ -443,9 +445,11 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
             n = int(((changes.index >= st) & (changes.index <= en)).sum())
         if v0 is None or v1 is None:
             continue
-        regimes.append({"start": r["start"], "end": r["end"], "kind": r["kind"], "title": r["title"],
-                        "drivers": r["drivers"], "source": r.get("source"),
-                        "from": _r(v0), "to": _r(v1), "bp": _r((v1 - v0) * 100, 0), "changes": n})
+        reg = {"start": r["start"], "end": r["end"], "kind": r["kind"], "auto": r["auto"],
+               "from": _r(v0), "to": _r(v1), "bp": _r((v1 - v0) * 100, 0), "changes": n}
+        reg.update(template_text("rates", reg) if r["auto"] else
+                   {"title": r["title"], "drivers": r["drivers"], "source": r.get("source")})
+        regimes.append(reg)
 
     return {"snapshot": snap, "spreads": spreads, "shapes": shapes, "curves": curves, "terms": term_compare(g),
             "recessions": [r for r in recessions if (r["end"] or "9999") >= start.strftime("%Y-%m-%d")],
@@ -498,7 +502,15 @@ async def _build() -> dict | None:
     if not raw.get("kr_base") and not raw.get("us10y"):
         logger.warning(f"rates overview: 수집 실패 {sources}")
         return None
-    data = build_overview(raw, datetime.now(_KST).date())
+    today = datetime.now(_KST).date()
+    data = build_overview(raw, today)
+    snap = data["snapshot"]
+    cpi = snap.get("real", {}).get("kr", {}).get("cpi")
+    us = snap.get("us_policy", {}).get("upper")
+    await enrich_texts("rates", data["regimes"], lambda g: (
+        f"기준금리 {g['from']:.2f}→{g['to']:.2f}% ({g['bp']:+.0f}bp, 변경 {g['changes']}회)"
+        + (f", 최신 소비자물가 {cpi}%" if cpi is not None else "") + (f", 미국 정책금리 상단 {us}%" if us is not None else "")),
+        "한국은행 기준금리", today)
     data["sources"] = sources
     data["timings"] = {**timings, "total": round(time.perf_counter() - t0, 2)}
     data["ecos_key"] = bool(os.environ.get("ECOS_API_KEY"))

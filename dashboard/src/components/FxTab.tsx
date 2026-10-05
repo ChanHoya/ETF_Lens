@@ -18,8 +18,8 @@ type Row = {
     jpy100: number | null; cny: number | null; vix: number | null;
 };
 type Regime = {
-    start: string; end: string; title: string; drivers: string[]; source: string | null;
-    kind: 'up' | 'down' | 'range'; from: number; to: number; chg_pct: number; low: number; high: number;
+    start: string; end: string | null; title: string; drivers: string[]; source: string | null;
+    kind: 'up' | 'down' | 'range'; from: number; to: number; chg_pct: number; low: number; high: number; auto?: boolean;
 };
 type Snapshot = {
     krw?: { value: number; date: string; chg_1w: number | null; chg_1m: number | null; chg_1y: number | null; pct10y: number; min10y: number; max10y: number };
@@ -185,7 +185,7 @@ function KrwDxyChart({ data, regimes, selected }: { data: (Row & { t: number })[
             <ComposedChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                 {regimes.map((g, i) => (
-                    <ReferenceArea key={g.start} yAxisId="krw" x1={ts(g.start)} x2={ts(g.end)} ifOverflow="hidden"
+                    <ReferenceArea key={g.start} yAxisId="krw" x1={ts(g.start)} x2={g.end ? ts(g.end) : (data[data.length - 1]?.t ?? ts(g.start))} ifOverflow="hidden"
                         fill={KIND_STYLE[g.kind].fill} fillOpacity={selected === i ? 0.25 : 0.08} />
                 ))}
                 <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
@@ -460,7 +460,7 @@ export default function FxTab() {
     const fullRows = useMemo(() => (data?.weekly ?? []).map(r => ({ t: ts(r.date), v: r.krw })), [data]);
     const milestones = useMemo<Milestone[]>(() => (data?.regimes ?? []).map(g => ({
         start: g.start, end: g.end, title: g.title, drivers: g.drivers, source: g.source,
-        color: KIND_STYLE[g.kind].fill, badge: { label: KIND_STYLE[g.kind].label, cls: KIND_STYLE[g.kind].badge },
+        color: KIND_STYLE[g.kind].fill, badge: { label: KIND_STYLE[g.kind].label, cls: KIND_STYLE[g.kind].badge }, auto: g.auto,
         summary: <>{fmtNum(g.from, 0)} → {fmtNum(g.to, 0)}원 <span className={g.chg_pct > 0 ? 'text-red-400' : 'text-blue-400'}>({g.chg_pct > 0 ? '+' : ''}{g.chg_pct}%)</span></>,
     })), [data]);
 

@@ -41,7 +41,7 @@ type Terms = {
 } | null;
 type Regime = {
     start: string; end: string | null; kind: 'hike' | 'cut' | 'hold'; title: string; drivers: string[]; source: string | null;
-    from: number; to: number; bp: number; changes: number;
+    from: number; to: number; bp: number; changes: number; auto?: boolean;
 };
 type Overview = {
     snapshot: Snapshot; spreads: Record<string, Spread>; shapes: { kr: Shape; us: Shape }; terms?: Terms;
@@ -457,7 +457,7 @@ export default function RatesTab() {
     const baseRows = useMemo(() => (data?.weekly ?? []).map(r => ({ t: ts(r.date), v: r.kr_base })), [data]);
     const milestones = useMemo<Milestone[]>(() => (data?.regimes ?? []).map(g => ({
         start: g.start, end: g.end, title: g.title, drivers: g.drivers, source: g.source,
-        color: KIND[g.kind].fill, badge: { label: KIND[g.kind].label, cls: KIND[g.kind].badge },
+        color: KIND[g.kind].fill, badge: { label: KIND[g.kind].label, cls: KIND[g.kind].badge }, auto: g.auto,
         summary: g.kind === 'hold' ? <>{g.from.toFixed(2)}% 유지</> : <>{g.from.toFixed(2)} → {g.to.toFixed(2)}%{' '}
             <span className={g.bp > 0 ? 'text-red-400' : 'text-blue-400'}>({signed(g.bp, 0, 'bp')} · {g.changes}회)</span></>,
     })), [data]);
