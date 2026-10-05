@@ -31,14 +31,14 @@ FRED_IDS = {
     "fed_upper": "DFEDTARU",   # 연방기금 목표 상단 (2008-12~)
     "fed_target": "DFEDTAR",   # 단일 목표 (~2008-12)
     "fed_eff": "DFF",          # 실효 연방기금금리
-    "us3m": "DGS3MO", "us1y": "DGS1", "us2y": "DGS2", "us5y": "DGS5", "us10y": "DGS10", "us30y": "DGS30",
+    "us3m": "DGS3MO", "us1y": "DGS1", "us2y": "DGS2", "us3y": "DGS3", "us5y": "DGS5", "us10y": "DGS10", "us30y": "DGS30",
     "us_10_2": "T10Y2Y", "us_10_3m": "T10Y3M",
     "usrec": "USREC",          # 미국 경기침체 구간(NBER, 월간 0/1)
     "ecb": "ECBDFR",           # ECB 예금금리
     "us_cpi": "CPIAUCSL",
 }
-# 역전 이력은 1970년대부터 봐야 해서 길게 받는다
-LONG_FRED = {"us_10_3m", "us_10_2", "usrec"}
+# 역전 이력은 1970년대부터 봐야 해서 길게 받는다(미국 10년−3년은 10년·3년물로 계산)
+LONG_FRED = {"us_10_3m", "us_10_2", "usrec", "us10y", "us3y"}
 LONG_YEARS = 50
 
 ECOS_SERIES = {  # key: (통계표, 주기, 항목)
@@ -356,6 +356,7 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
                      else g("fed_target"), g("fed_upper")]).sort_index()
     kr_cpi_yoy, us_cpi_yoy = _yoy(g("kr_cpi")), _yoy(g("us_cpi"))
     kr_10_3 = (g("kr10y") - g("kr3y")).dropna()
+    us_10_3 = (g("us10y") - g("us3y")).dropna()  # 한·미 같은 기준(10년−3년) — docs/spread-basis-context-notes.md
 
     start = pd.Timestamp(today) - pd.DateOffset(years=YEARS)
     ten_years_ago = pd.Timestamp(today) - pd.DateOffset(years=10)
@@ -406,20 +407,20 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
     # 장단기 금리차
     recessions = recession_periods(g("usrec"))
     spreads = {}
-    for key, s, label in (("kr_10_3", kr_10_3, "한국 10년−3년"), ("us_10_2", g("us_10_2"), "미국 10년−2년"),
-                          ("us_10_3m", g("us_10_3m"), "미국 10년−3개월")):
+    for key, s, label, basis in (("kr_10_3", kr_10_3, "한국 10년−3년", "common"), ("us_10_3", us_10_3, "미국 10년−3년", "common"),
+                                 ("us_10_3m", g("us_10_3m"), "미국 10년−3개월 (참고)", "reference")):
         if s.empty:
             continue
         s20 = s[s.index >= start]
-        spreads[key] = {"label": label, "value": _r(s.iloc[-1]), "date": s.index[-1].strftime("%Y-%m-%d"),
+        spreads[key] = {"label": label, "basis": basis, "value": _r(s.iloc[-1]), "date": s.index[-1].strftime("%Y-%m-%d"),
                         "inverted": bool(s.iloc[-1] < 0), "chg_1m": _bp_change(s, 30),
                         "pct20y": _pct_rank(s20, s.iloc[-1]),
                         "inversions": inversion_episodes(s, recessions, today)}
-    shapes = {"kr": curve_shape(g("kr3y"), g("kr10y")), "us": curve_shape(g("us2y"), g("us10y"))}
+    shapes = {"kr": curve_shape(g("kr3y"), g("kr10y")), "us": curve_shape(g("us3y"), g("us10y"))}
     curve_pts = {
         "kr": [("1년", g("kr1y")), ("3년", g("kr3y")), ("5년", g("kr5y")), ("10년", g("kr10y")),
                ("20년", g("kr20y")), ("30년", g("kr30y"))],
-        "us": [("3개월", g("us3m")), ("1년", g("us1y")), ("2년", g("us2y")), ("5년", g("us5y")),
+        "us": [("3개월", g("us3m")), ("1년", g("us1y")), ("2년", g("us2y")), ("3년", g("us3y")), ("5년", g("us5y")),
                ("10년", g("us10y")), ("30년", g("us30y"))],
     }
     curves = {}
@@ -433,7 +434,7 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
 
     # 주간 차트 데이터
     cols = {"kr_base": g("kr_base"), "us_upper": fed, "ecb": g("ecb"), "kr3y": g("kr3y"), "kr10y": g("kr10y"),
-            "us2y": g("us2y"), "us10y": g("us10y"), "kr_10_3": kr_10_3, "us_10_2": g("us_10_2"),
+            "us2y": g("us2y"), "us10y": g("us10y"), "kr_10_3": kr_10_3, "us_10_3": us_10_3, "us_10_2": g("us_10_2"),
             "us_10_3m": g("us_10_3m"), "kr1y": g("kr1y"), "us1y": g("us1y"), "kr30y": g("kr30y"),
             "us30y": g("us30y"), "kr50y": g("kr50y")}
     wk = pd.DataFrame({k: _weekly(v) for k, v in cols.items()})
