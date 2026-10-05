@@ -30,8 +30,9 @@ FRED_IDS = {
     "us10": "DGS10",            # 미 10년물
     "kr10": "IRLTLT01KRM156N",  # 한 10년물 (월간, OECD)
     "reer": "RBKRBIS",          # 원화 실질실효환율 (월간, BIS)
-    "jpy": "DEXJPUS",           # 엔/달러 — 원/엔 교차 계산용
-    "cny": "DEXCHUS",           # 위안/달러 — 원/위안 교차 계산용
+    "jpy": "DEXJPUS",           # 엔/달러
+    "cny": "DEXCHUS",           # 위안/달러
+    "twd": "DEXTAUS",           # 대만달러/달러 — 반도체 수출국끼리 비교
     "dff": "DFF",               # 미 실효연방기금금리
     "kr3m": "IR3TIB01KRM156N",  # 한 3개월 금리 (월간) — 헤지 비용 근사
     "vix": "VIXCLS",            # 미국 변동성지수 — 위험 선호와 원화의 동조 확인용
@@ -182,28 +183,29 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
     dxy = _series(raw.get("dxy", {}))
     us10, kr10 = _series(raw.get("us10", {})), _series(raw.get("kr10", {}))
     reer = _series(raw.get("reer", {}))
-    jpy, cny = _series(raw.get("jpy", {})), _series(raw.get("cny", {}))
+    jpy, cny, twd = _series(raw.get("jpy", {})), _series(raw.get("cny", {})), _series(raw.get("twd", {}))
     dff, kr3m = _series(raw.get("dff", {})), _series(raw.get("kr3m", {}))
 
     start = pd.Timestamp(today) - pd.DateOffset(years=YEARS)
     ten_years_ago = pd.Timestamp(today) - pd.DateOffset(years=10)
 
-    # 주간(금요일) 축 — 월간 지표는 앞채움
+    # 주간(금요일) 축 — 월간 지표는 앞채움. 아시아 통화는 모두 달러 대비(같은 잣대)로 본다.
     cross_jpy = (fred_krw / jpy * 100).dropna() if not fred_krw.empty and not jpy.empty else pd.Series(dtype=float)
-    cross_cny = (fred_krw / cny).dropna() if not fred_krw.empty and not cny.empty else pd.Series(dtype=float)
     wk = pd.DataFrame({"krw": _weekly(krw), "dxy": _weekly(dxy), "us10": _weekly(us10), "kr10": _weekly(kr10),
-                       "jpy100": _weekly(cross_jpy), "cny": _weekly(cross_cny),
+                       "usdjpy": _weekly(jpy), "usdcny": _weekly(cny), "usdtwd": _weekly(twd),
                        "vix": _weekly(_series(raw.get("vix", {})))})
     wk = wk[wk.index >= start]
     if not krw.empty:  # 진행 중인 주는 다가올 금요일이 아니라 마지막 관측일로 표시
         last = krw.index[-1]
         wk.index = wk.index.where(wk.index <= last, last)
     wk["kr10"] = wk["kr10"].ffill(limit=10)
-    wk[["krw", "dxy", "us10", "jpy100", "cny", "vix"]] = wk[["krw", "dxy", "us10", "jpy100", "cny", "vix"]].ffill(limit=2)
+    daily_cols = ["krw", "dxy", "us10", "usdjpy", "usdcny", "usdtwd", "vix"]
+    wk[daily_cols] = wk[daily_cols].ffill(limit=2)
     wk["spread10"] = wk["us10"] - wk["kr10"]
     rows = [
         {"date": idx.strftime("%Y-%m-%d"), "krw": _r(r.krw, 1), "dxy": _r(r.dxy), "us10": _r(r.us10),
-         "kr10": _r(r.kr10), "spread10": _r(r.spread10), "jpy100": _r(r.jpy100), "cny": _r(r.cny), "vix": _r(r.vix)}
+         "kr10": _r(r.kr10), "spread10": _r(r.spread10), "usdjpy": _r(r.usdjpy), "usdcny": _r(r.usdcny, 3),
+         "usdtwd": _r(r.usdtwd), "vix": _r(r.vix)}
         for idx, r in wk.iterrows() if not pd.isna(r.krw)
     ]
 
@@ -225,10 +227,14 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
             "value": _r(dxy.iloc[-1]), "date": dxy.index[-1].strftime("%Y-%m-%d"),
             "chg_1m": _change(dxy, 30), "chg_1y": _change(dxy, 365), "pct10y": _pct_rank(dxy10, dxy.iloc[-1]),
         }
-    for key, cross, label in (("jpy100", cross_jpy, "원/100엔"), ("cny", cross_cny, "원/위안")):
-        if not cross.empty:
-            snapshot[key] = {"label": label, "value": _r(cross.iloc[-1]), "date": cross.index[-1].strftime("%Y-%m-%d"),
-                             "chg_1m": _change(cross, 30), "chg_1y": _change(cross, 365)}
+    asia = [{"key": k, "label": label, "value": _r(ser.iloc[-1], 3 if k == "usdcny" else 2),
+             "date": ser.index[-1].strftime("%Y-%m-%d"), "chg_1y": _change(ser, 365)}
+            for k, ser, label in (("usdkrw", fred_krw, "원/달러"), ("usdjpy", jpy, "엔/달러"),
+                                  ("usdcny", cny, "위안/달러"), ("usdtwd", twd, "대만달러/달러")) if not ser.empty]
+    if asia:  # 원/달러는 FRED 기준(같은 시각·같은 원천으로 비교)
+        snapshot["asia"] = asia
+    if not cross_jpy.empty:  # 엔화 자산·여행용 참고 숫자
+        snapshot["jpy100"] = {"value": _r(cross_jpy.iloc[-1]), "chg_1y": _change(cross_jpy, 365)}
     if not us10.empty and not kr10.empty:
         hist = wk["spread10"].dropna()
         ago = hist[hist.index <= hist.index[-1] - timedelta(days=365)] if not hist.empty else hist

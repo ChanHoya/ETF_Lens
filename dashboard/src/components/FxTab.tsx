@@ -15,7 +15,7 @@ import RegimeMilestones, { type Milestone } from './RegimeMilestones';
 
 type Row = {
     date: string; krw: number | null; dxy: number | null; us10: number | null; kr10: number | null; spread10: number | null;
-    jpy100: number | null; cny: number | null; vix: number | null;
+    usdjpy: number | null; usdcny: number | null; usdtwd: number | null; vix: number | null;
 };
 type Regime = {
     start: string; end: string | null; title: string; drivers: string[]; source: string | null;
@@ -27,8 +27,8 @@ type Snapshot = {
         min10y: number; max10y: number; ma26: number | null; ma26_gap: number | null;
     };
     dxy?: { value: number; date: string; chg_1m: number | null; chg_1y: number | null; pct10y: number };
-    jpy100?: { label: string; value: number; date: string; chg_1m: number | null; chg_1y: number | null };
-    cny?: { label: string; value: number; date: string; chg_1m: number | null; chg_1y: number | null };
+    asia?: { key: 'usdkrw' | 'usdjpy' | 'usdcny' | 'usdtwd'; label: string; value: number; date: string; chg_1y: number | null }[];
+    jpy100?: { value: number; chg_1y: number | null };
     spread10?: { value: number; us10: number; kr10: number; kr10_date: string; year_ago: number | null };
     hedge?: { value: number; us: number; kr: number; kr_date: string };
     reer?: { value: number; date: string; avg20y: number; gap_pct: number };
@@ -131,11 +131,12 @@ function SnapshotGrid({ s, fair }: { s: Snapshot; fair?: Analysis['fair'] }) {
                     <PctBar pct={s.dxy.pct10y} left="약달러" right="강달러" />
                 </> : <p className="text-sm text-gray-500">데이터 없음</p>}
             </Card>
-            <Card icon={<Scale className="w-3.5 h-3.5 text-amber-400" />} title="아시아 통화" foot={s.jpy100 ? `${s.jpy100.date} 기준 · 달러 환율로 교차 계산` : undefined}>
-                {[s.jpy100, s.cny].map(c => c && (
-                    <div key={c.label} className="flex items-baseline justify-between gap-2 py-1 border-b border-white/5 last:border-0">
+            <Card icon={<Scale className="w-3.5 h-3.5 text-amber-400" />} title="아시아 통화 (달러 대비)"
+                foot={s.jpy100 ? `참고: 원/100엔 ${fmtNum(s.jpy100.value, 2)}원 (1년 ${s.jpy100.chg_1y == null ? '-' : sign(s.jpy100.chg_1y)}%)` : undefined}>
+                {(s.asia ?? []).filter(c => c.key !== 'usdkrw').map(c => (
+                    <div key={c.key} className="flex items-baseline justify-between gap-2 py-1 border-b border-white/5 last:border-0">
                         <span className="text-xs text-gray-400">{c.label}</span>
-                        <span className="text-lg font-extrabold text-white">{fmtNum(c.value, 2)}</span>
+                        <span className="text-lg font-extrabold text-white">{fmtNum(c.value, c.key === 'usdcny' ? 3 : 2)}</span>
                         <span className="text-[11px] font-bold"><Chg v={c.chg_1y} label="1년" /></span>
                     </div>
                 ))}
@@ -415,19 +416,31 @@ function AnalysisSection({ an, range, setRange, corrRows }: { an: Analysis; rang
     );
 }
 
+const ASIA = [
+    { key: 'krw', name: '원/달러', color: '#6366f1' },
+    { key: 'usdjpy', name: '엔/달러', color: '#f59e0b' },
+    { key: 'usdcny', name: '위안/달러', color: '#f43f5e' },
+    { key: 'usdtwd', name: '대만달러/달러', color: '#10b981' },
+] as const;
+
 function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row & { t: number })[]; range: Range; setRange: (r: Range) => void }) {
     const reerRows = useMemo(() => (an.reer?.rows ?? []).map(r => ({ ...r, t: ts(`${r.date}-01`) })), [an.reer]);
-    // 아시아 통화: 보이는 구간 첫 값을 100으로 (오를수록 원화 약세)
+    // 아시아 통화: 모두 달러 대비, 보이는 구간 첫 값을 100으로 (오를수록 그 통화 약세)
     const asia = useMemo(() => {
-        const base = (k: 'krw' | 'jpy100' | 'cny') => rows.find(r => r[k] != null)?.[k] ?? null;
-        const b = { krw: base('krw'), jpy100: base('jpy100'), cny: base('cny') };
+        const b = Object.fromEntries(ASIA.map(a => [a.key, rows.find(r => r[a.key] != null)?.[a.key] ?? null]));
         return rows.map(r => ({
             t: r.t,
-            krw: r.krw != null && b.krw ? +(r.krw / b.krw * 100).toFixed(1) : null,
-            jpy100: r.jpy100 != null && b.jpy100 ? +(r.jpy100 / b.jpy100 * 100).toFixed(1) : null,
-            cny: r.cny != null && b.cny ? +(r.cny / b.cny * 100).toFixed(1) : null,
+            ...Object.fromEntries(ASIA.map(a => {
+                const v = r[a.key], base = b[a.key];
+                return [a.key, v != null && base ? +(v / base * 100).toFixed(1) : null];
+            })),
         }));
     }, [rows]);
+    // 구간 변화(마지막 값 − 100) — 원화만 유독 약했는지 한눈에
+    const moves = ASIA.map(a => {
+        const last = [...asia].reverse().find(r => (r as Record<string, number | null>)[a.key] != null) as Record<string, number | null> | undefined;
+        return { ...a, chg: last?.[a.key] != null ? (last[a.key] as number) - 100 : null };
+    });
     const rr = an.reer;
     return (
         <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -451,8 +464,15 @@ function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row 
             <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                     <SectionTitle icon={<Globe2 className="w-5 h-5 text-amber-400" />} title="원화만 약한가, 아시아 전체인가"
-                        sub="원/달러·원/100엔·원/위안을 구간 시작 = 100으로 맞춤 · 위로 갈수록 원화 약세" />
+                        sub="모두 달러 대비 환율 · 구간 시작 = 100 · 위로 갈수록 그 통화 약세(달러 강세)" />
                     <RangeButtons range={range} setRange={setRange} />
+                </div>
+                <div className="flex flex-wrap gap-2 mb-2">
+                    {moves.map(m => (
+                        <span key={m.key} className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-gray-300">
+                            <span style={{ color: m.color }}>●</span> {m.name} {m.chg == null ? '-' : <span className={m.chg > 0 ? 'text-red-400' : 'text-blue-400'}>{sign(m.chg)}%</span>}
+                        </span>
+                    ))}
                 </div>
                 <ResponsiveContainer width="100%" height={260}>
                     <ComposedChart data={asia} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -462,9 +482,9 @@ function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row 
                         <YAxis tick={axisTick} domain={['auto', 'auto']} width={40} />
                         <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
-                        <Line dataKey="krw" name="원/달러" stroke="#6366f1" dot={false} strokeWidth={2} connectNulls isAnimationActive={false} />
-                        <Line dataKey="jpy100" name="원/100엔" stroke="#f59e0b" dot={false} strokeWidth={1.5} connectNulls isAnimationActive={false} />
-                        <Line dataKey="cny" name="원/위안" stroke="#f43f5e" dot={false} strokeWidth={1.5} connectNulls isAnimationActive={false} />
+                        {ASIA.map(a => (
+                            <Line key={a.key} dataKey={a.key} name={a.name} stroke={a.color} dot={false} strokeWidth={a.key === 'krw' ? 2.2 : 1.5} connectNulls isAnimationActive={false} />
+                        ))}
                     </ComposedChart>
                 </ResponsiveContainer>
             </div>
@@ -510,7 +530,7 @@ function HedgeSection({ h, s }: { h: Analysis['hedge']; s: Snapshot }) {
 
 export default function FxTab() {
     // 재진입 시 캐시를 즉시 그리고, 서버 기준 시각이 1시간 넘었을 때만 백그라운드 갱신
-    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-fx-v3', `${API_BASE}/api/v1/fx/overview`);
+    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-fx-v4', `${API_BASE}/api/v1/fx/overview`);
     const [range, setRange] = useState<Range>('20Y');
     const [selected, setSelected] = useState<number | null>(null);
 
@@ -606,7 +626,7 @@ export default function FxTab() {
 
                     <p className="flex items-start gap-1.5 text-[11px] text-gray-500 px-1">
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        출처: 한국은행 ECOS(국제수지), FRED(DEXKOUS·DGS10·IRLTLT01KRM156N·RBKRBIS·DFF·IR3TIB01KRM156N·DEXJPUS·DEXCHUS·VIXCLS), Yahoo Finance(DX-Y.NYB·KRW=X).
+                        출처: 한국은행 ECOS(국제수지), FRED(DEXKOUS·DGS10·IRLTLT01KRM156N·RBKRBIS·DFF·IR3TIB01KRM156N·DEXJPUS·DEXCHUS·DEXTAUS·VIXCLS), Yahoo Finance(DX-Y.NYB·KRW=X).
                         한국 금리·실질실효환율은 월간 지표라 최대 2개월 늦습니다. 판정 배지·근거 목록·환헤지 판단·적정 원/달러는 공개 지표로 만든 참고 정보이며 투자 권유가 아닙니다.
                     </p>
                 </>

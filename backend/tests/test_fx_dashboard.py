@@ -37,6 +37,7 @@ def _raw():
         "reer": _monthly(s, date(2026, 7, 1), lambda d: 85.0 if d >= date(2026, 1, 1) else 100.0),
         "jpy": _daily(s, e, lambda d: 150.0),
         "cny": _daily(s, e, lambda d: 7.0),
+        "twd": _daily(s, e, lambda d: 30.0 if d.year < 2026 else 33.0),
         "dff": _daily(s, e, lambda d: 3.9),
         "kr3m": _monthly(s, e, lambda d: 3.0),
     }
@@ -61,7 +62,10 @@ def test_snapshot_cross_rates_hedge_and_reer():
     snap = build_overview(_raw(), TODAY)["snapshot"]
     fred_last = 1000 + 21 * 18  # 2026년 값 = 1,378
     assert snap["jpy100"]["value"] == round(fred_last / 150 * 100, 2)
-    assert snap["cny"]["value"] == round(fred_last / 7, 2)
+    asia = {a["key"]: a for a in snap["asia"]}
+    assert list(asia) == ["usdkrw", "usdjpy", "usdcny", "usdtwd"]
+    assert asia["usdkrw"]["value"] == fred_last and asia["usdcny"]["value"] == 7.0
+    assert asia["usdtwd"]["chg_1y"] == 10.0 and asia["usdjpy"]["chg_1y"] == 0.0
     assert snap["hedge"]["value"] == 0.9
     assert snap["spread10"]["value"] == 1.0 and snap["spread10"]["year_ago"] == 1.0
     assert snap["reer"]["value"] == 85.0 and snap["reer"]["gap_pct"] < -10
