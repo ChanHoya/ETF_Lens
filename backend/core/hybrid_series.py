@@ -376,3 +376,19 @@ async def get_hybrid_daily_prices_batch(
             logger.error(f"[hybrid_series_batch] Failed for {t}: {e}")
             results[t] = {"ticker": t, "dates": [], "prices": [], "last_price": 0.0, "source": "error"}
     return results
+
+
+async def get_hybrid_series_as_pd_series(
+    ticker: str,
+    db: AsyncSession,
+    days: int = 3650,
+    include_live: bool = True,
+) -> pd.Series:
+    """하이브리드 시계열을 pandas Series(index=DatetimeIndex, values=prices)로 즉시 반환"""
+    data = await get_hybrid_daily_prices(ticker, db, days=days, include_live=include_live)
+    dates = data.get("dates", [])
+    prices = data.get("prices", [])
+    if not dates or not prices:
+        return pd.Series(dtype=float)
+    idx = pd.to_datetime(dates)
+    return pd.Series(prices, index=idx)

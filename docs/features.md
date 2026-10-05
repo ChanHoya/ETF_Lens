@@ -69,6 +69,7 @@
 | S6-19: 브라질 국채 토탈리턴(Total Return) 시뮬레이터 & 대선 1차 투표 결과/이벤트 실시간 업데이트 | ✅ done | backend/core/brazil_total_return.py, backend/api/brazil_total_return.py, backend/api/brazil_election_intel.py, BrazilTotalReturnSimulator.tsx, BrazilBondTab.tsx | NTN-F 10% 반기이표 및 LTN 할인채 더티 프라이스·듀레이션·반기 복리 재투자·만기보유 vs 조기매도 자본차익·손익분기 환율·7x6(금리±300bp × 환율-30%~+20%) 시나리오 매트릭스, 1차 투표 개표 결과(룰라/플라비우/기타 득표율 및 10/25 결선 확정 뱃지) 실시간 시각화, Gemini AI 대선 뉴스 실시간 갱신 및 수동 결과/이벤트 등록 영속화 API 연동 완료 |
 | S6-20: 범용 시계열 하이브리드 엔진 모듈화 | ✅ done | backend/core/hybrid_series.py, backend/tests/test_hybrid_series.py | DB(ETFDailyPrice/BenchmarkPrice) 우선 서빙 + 누락 영업일만 증분 수집(Gap-fill) + 당일 실시간 시세 병합(Live Merge) 공통 엔진 구축 완료 |
 | S6-21: 매크로 출구신호 DB 영속화 & FRED/Yahoo 증분 수집 | ✅ done | backend/api/exit_signal.py, backend/tests/test_exit_signal_macro_db.py, backend/db/models.py | MarketMacroLog 연동으로 달러지수, 환율, 장단기금리차, HY 스프레드 DB 적재 및 결측일만 증분 수집하여 외부 스크래핑 지연 완전 제거 |
+| S6-22: 섹터/테마 차트 5종 DB 하이브리드 엔진 전면 전환 | ✅ done | backend/api/router.py, backend/tests/test_sector_charts_hybrid.py | 반도체, 소부장, 우주항공, 에너지, 바이오 5대 섹터 차트의 10년치 반복 외부 호출을 DB 하이브리드 엔진으로 교체하여 초기 응답 속도 극대화 완료 |
 
 
 
