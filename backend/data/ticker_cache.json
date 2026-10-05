@@ -910,5 +910,173 @@
   "acm research inc-class a": {
     "symbol": null,
     "display_name": "ACM RESEARCH INC-CLASS A"
+  },
+  "한미반도체": {
+    "symbol": null,
+    "display_name": "한미반도체"
+  },
+  "이오테크닉스": {
+    "symbol": null,
+    "display_name": "이오테크닉스"
+  },
+  "테크윙": {
+    "symbol": null,
+    "display_name": "테크윙"
+  },
+  "심텍": {
+    "symbol": null,
+    "display_name": "심텍"
+  },
+  "db하이텍": {
+    "symbol": null,
+    "display_name": "DB하이텍"
+  },
+  "대덕전자": {
+    "symbol": null,
+    "display_name": "대덕전자"
+  },
+  "하나마이크론": {
+    "symbol": null,
+    "display_name": "하나마이크론"
+  },
+  "제주반도체": {
+    "symbol": null,
+    "display_name": "제주반도체"
+  },
+  "리노공업": {
+    "symbol": null,
+    "display_name": "리노공업"
+  },
+  "피에스케이": {
+    "symbol": null,
+    "display_name": "피에스케이"
+  },
+  "삼성전기": {
+    "symbol": null,
+    "display_name": "삼성전기"
+  },
+  "hpsp": {
+    "symbol": null,
+    "display_name": "HPSP"
+  },
+  "원익ips": {
+    "symbol": null,
+    "display_name": "원익IPS"
+  },
+  "테스": {
+    "symbol": null,
+    "display_name": "테스"
+  },
+  "파두": {
+    "symbol": null,
+    "display_name": "파두"
+  },
+  "isc": {
+    "symbol": null,
+    "display_name": "ISC"
+  },
+  "이수페타시스": {
+    "symbol": null,
+    "display_name": "이수페타시스"
+  },
+  "lg이노텍": {
+    "symbol": null,
+    "display_name": "LG이노텍"
+  },
+  "주성엔지니어링": {
+    "symbol": null,
+    "display_name": "주성엔지니어링"
+  },
+  "두산테스나": {
+    "symbol": null,
+    "display_name": "두산테스나"
+  },
+  "티에스이": {
+    "symbol": null,
+    "display_name": "티에스이"
+  },
+  "브이엠": {
+    "symbol": null,
+    "display_name": "브이엠"
+  },
+  "파크시스템스": {
+    "symbol": null,
+    "display_name": "파크시스템스"
+  },
+  "피에스케이홀딩스": {
+    "symbol": null,
+    "display_name": "피에스케이홀딩스"
+  },
+  "sfa반도체": {
+    "symbol": null,
+    "display_name": "SFA반도체"
+  },
+  "티엘비": {
+    "symbol": null,
+    "display_name": "티엘비"
+  },
+  "솔브레인": {
+    "symbol": null,
+    "display_name": "솔브레인"
+  },
+  "코리아써키트": {
+    "symbol": null,
+    "display_name": "코리아써키트"
+  },
+  "한솔케미칼": {
+    "symbol": null,
+    "display_name": "한솔케미칼"
+  },
+  "skc": {
+    "symbol": null,
+    "display_name": "SKC"
+  },
+  "티씨케이": {
+    "symbol": null,
+    "display_name": "티씨케이"
+  },
+  "유진테크": {
+    "symbol": null,
+    "display_name": "유진테크"
+  },
+  "삼성전자선물2611": {
+    "symbol": null,
+    "display_name": "삼성전자선물2611"
+  },
+  "삼성전자선물2610": {
+    "symbol": null,
+    "display_name": "삼성전자선물2610"
+  },
+  "sk하이닉스선물2611": {
+    "symbol": null,
+    "display_name": "SK하이닉스선물2611"
+  },
+  "sk하이닉스선물2610": {
+    "symbol": null,
+    "display_name": "SK하이닉스선물2610"
+  },
+  "2026-10 삼성전자개별선물": {
+    "symbol": null,
+    "display_name": "2026-10 삼성전자개별선물"
+  },
+  "2026-10 sk하이닉스개별선물": {
+    "symbol": null,
+    "display_name": "2026-10 SK하이닉스개별선물"
+  },
+  "2026-11 sk하이닉스개별선물": {
+    "symbol": null,
+    "display_name": "2026-11 SK하이닉스개별선물"
+  },
+  "qnity electronics inc": {
+    "symbol": "Q",
+    "display_name": "Qnity Electronics, Inc."
+  },
+  "sitime corp": {
+    "symbol": "SITM",
+    "display_name": "SiTime Corporation"
+  },
+  "tower semiconductor ltd": {
+    "symbol": "TSEM",
+    "display_name": "Tower Semiconductor Ltd."
   }
 }

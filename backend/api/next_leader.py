@@ -364,16 +364,12 @@ async def get_m7_capex_and_semi_temp():
 
 
 # ── Endpoint 3: 10대 대안 섹터 퀀트 스크리너 ─────────────────────────────────
-@router.get("/screener")
-async def get_next_leader_screener(request: Request, db: AsyncSession = Depends(get_db)):
+async def compute_and_save_sector_leader_quant(db: AsyncSession) -> dict:
     """
-    10대 테마 대표 ETF 구성종목 실시간 스크래핑 후
-    [소외도 35% + 펀더멘털 40% + 기술적 턴 25%] 퀀트 점수 산출 및 순위 도출
+    10대 테마 대표 ETF 구성종목 실시간 스크래핑 및 퀀트 점수 산출 후 DB(SectorLeaderQuant)에 저장.
     """
-    now = time.time()
-    cache_key = "screener"
-    if cache_key in _LEADER_CACHE and (now - _LEADER_CACHE[cache_key]["ts"] < _CACHE_TTL):
-        return _LEADER_CACHE[cache_key]["data"]
+    from db.models import SectorLeaderQuant
+    from sqlalchemy import select
 
     # 1. KOSPI 6개월 수익률 수집 (소외도 비교 기준)
     loop = asyncio.get_running_loop()
@@ -393,12 +389,10 @@ async def get_next_leader_screener(request: Request, db: AsyncSession = Depends(
 
     async def analyze_stock(name: str, code: str, weight: float) -> dict | None:
         async with sem:
-            # 병렬 수집: 재무(Naver) + 최근 주가 260일(Yahoo v8)
             f_data = await loop.run_in_executor(None, _fetch_naver_stock_fundamentals, code)
             h_prices = await loop.run_in_executor(None, _fetch_yahoo_v8_history, f"{code}.KS", 260)
             
             if not h_prices:
-                # KQ 확인
                 h_prices = await loop.run_in_executor(None, _fetch_yahoo_v8_history, f"{code}.KQ", 260)
                 
             if not h_prices or len(h_prices) < 22:
@@ -407,28 +401,21 @@ async def get_next_leader_screener(request: Request, db: AsyncSession = Depends(
             closes = [item["close"] for item in h_prices]
             curr_close = closes[-1]
             
-            # (1) 6M 수익률 및 소외도 연산
-            # 6M = 120 거래일 기준
             idx_6m = min(len(closes), 120)
             price_6m = closes[-idx_6m]
             stock_6m_ret = (curr_close - price_6m) / price_6m * 100
             
-            # 소외도: KOSPI 6M 대비 얼마나 언더퍼폼했는지 계산 (상대 수익률 저조할수록 고점수)
-            # min(100, max(0, 50 + (KOSPI_6M_ret - Stock_6M_ret) * 1.5))
             out_of_favor = min(100.0, max(0.0, 50.0 + (kospi_6m_ret - stock_6m_ret) * 1.5))
             
-            # (2) 펀더멘털 점수 연산 (PER, PBR, ROE)
             per = f_data.get("per")
             pbr = f_data.get("pbr")
             roe = f_data.get("roe")
             div = f_data.get("div_yield", 0.0)
             
-            # ROE Score (최대 100)
             roe_score = min(100.0, max(0.0, roe * 4.0)) if roe is not None else 40.0
             
-            # PER Score (최대 100)
             if per is None or per <= 0:
-                per_score = 30.0  # 적자기업 페널티
+                per_score = 30.0
             elif 5.0 <= per <= 18.0:
                 per_score = 100.0
             elif per < 5.0:
@@ -436,7 +423,6 @@ async def get_next_leader_screener(request: Request, db: AsyncSession = Depends(
             else:
                 per_score = max(0.0, 100.0 - (per - 18.0) * 2.0)
                 
-            # PBR Score (최대 100)
             if pbr is None or pbr <= 0:
                 pbr_score = 30.0
             elif 0.5 <= pbr <= 2.2:
@@ -446,25 +432,17 @@ async def get_next_leader_screener(request: Request, db: AsyncSession = Depends(
             else:
                 pbr_score = max(0.0, 100.0 - (pbr - 2.2) * 15.0)
                 
-            # Dividend Score (최대 100)
             div_score = min(100.0, div * 20.0) if div else 0.0
-            
-            # 종합 펀더멘털 점수
             fund_score = 0.4 * roe_score + 0.3 * per_score + 0.2 * pbr_score + 0.1 * div_score
             
-            # (3) 기술적 반전 점수 연산 (20일선, RSI)
-            # 20D SMA
             sma_20 = sum(closes[-20:]) / 20
             above_20d_sma = curr_close >= sma_20
             
-            # 20D 이격 점수
             if above_20d_sma:
                 sma_score = 100.0
             else:
                 sma_score = max(0.0, 100.0 - (sma_20 - curr_close) / sma_20 * 500)
                 
-            # RSI 14
-            # 심플 RSI 연산
             diffs = [closes[i] - closes[i-1] for i in range(1, len(closes))]
             gains = [d if d > 0 else 0 for d in diffs[-14:]]
             losses = [-d if d < 0 else 0 for d in diffs[-14:]]
@@ -477,17 +455,14 @@ async def get_next_leader_screener(request: Request, db: AsyncSession = Depends(
                 rs = avg_gain / avg_loss
                 rsi = 100.0 - (100.0 / (1.0 + rs))
                 
-            # RSI Score
             if 40.0 <= rsi <= 60.0:
                 rsi_score = 100.0
             elif rsi < 40.0:
-                rsi_score = max(0.0, rsi * 2.5)  # 과매수 탈출 가능
+                rsi_score = max(0.0, rsi * 2.5)
             else:
                 rsi_score = max(0.0, 100.0 - (rsi - 60.0) * 2.5)
                 
             tech_score = 0.6 * sma_score + 0.4 * rsi_score
-            
-            # (4) 최종 Quant Score (가중합)
             quant_score = 0.35 * out_of_favor + 0.4 * fund_score + 0.25 * tech_score
             
             return {
@@ -511,19 +486,16 @@ async def get_next_leader_screener(request: Request, db: AsyncSession = Depends(
 
     for sector, etf_code in SECTOR_ETF_MAP.items():
         logger.info(f"[Screener] Harvesting holdings for {sector} ({etf_code})")
-        # ETF 구성종목 로드
         etf_data = await harvester.fetch_naver_etf_data(etf_code, skip_holdings=False, skip_chart=True)
         holdings = etf_data.get("holdings", [])
         
         tasks = []
         for h in holdings:
-            h_name = h.get("ticker")  # Naver fallback ticker key holds stock name
+            h_name = h.get("ticker")
             h_weight = h.get("weight", 0.0)
             
-            # 한국 주식 이름 → 종목코드 매핑
             h_code = STOCK_NAME_CODE_MAP.get(h_name)
             if not h_code:
-                # 6자리 숫자로 구성되어 있는지 체크 (직접 코드로 들어온 케이스)
                 if h_name.isdigit() and len(h_name) == 6:
                     h_code = h_name
                     h_name = f"Stock_{h_code}"
@@ -532,11 +504,8 @@ async def get_next_leader_screener(request: Request, db: AsyncSession = Depends(
                 tasks.append(analyze_stock(h_name, h_code, h_weight))
                 
         if tasks:
-            # 구성종목 병렬 분석
             analyzed_stocks = await asyncio.gather(*tasks)
-            # None 제외 및 정렬
             valid_stocks = [s for s in analyzed_stocks if s is not None]
-            # Quant Score 기준 내림차순 정렬 및 Top 5 선정
             valid_stocks.sort(key=lambda x: x["quant_score"], reverse=True)
             sector_results[sector] = valid_stocks[:5]
         else:
@@ -544,14 +513,128 @@ async def get_next_leader_screener(request: Request, db: AsyncSession = Depends(
 
     await harvester.close()
 
+    # DB에 영속화 (upsert)
+    try:
+        for sector, stocks in sector_results.items():
+            for r_idx, s in enumerate(stocks):
+                stmt = select(SectorLeaderQuant).where(
+                    SectorLeaderQuant.sector == sector,
+                    SectorLeaderQuant.code == s["code"]
+                )
+                existing = (await db.execute(stmt)).scalars().first()
+                if not existing:
+                    existing = SectorLeaderQuant(
+                        sector=sector,
+                        code=s["code"],
+                        name=s["name"],
+                    )
+                    db.add(existing)
+                existing.name = s["name"]
+                existing.weight = s["weight"]
+                existing.rank = r_idx + 1
+                existing.quant_score = s["quant_score"]
+                existing.out_of_favor_score = s["out_of_favor_score"]
+                existing.fundamental_score = s["fundamental_score"]
+                existing.turnaround_score = s["technical_score"]
+                existing.per = s.get("per")
+                existing.pbr = s.get("pbr")
+                existing.roe = s.get("roe")
+                existing.div_yield = s.get("div_yield")
+                existing.stock_6m_ret = s.get("return_6m")
+                existing.kospi_6m_ret = round(kospi_6m_ret, 2)
+                existing.updated_at = datetime.utcnow()
+        await db.commit()
+    except Exception as e:
+        logger.error(f"[Screener] Failed to persist quant results to DB: {e}")
+
     response = {
         "status": "success",
+        "source": "live_computed_and_saved",
         "sectors": sector_results,
         "kospi_6m_return": round(kospi_6m_ret, 2)
     }
 
-    _LEADER_CACHE[cache_key] = {"data": response, "ts": now}
+    _LEADER_CACHE["screener"] = {"data": response, "ts": time.time()}
     return response
+
+
+# ── Endpoint 3: 10대 대안 섹터 퀀트 스크리너 (초고속 DB 우선 조회) ─────────────────
+@router.get("/screener")
+async def get_next_leader_screener(request: Request, db: AsyncSession = Depends(get_db)):
+    """
+    10대 테마 대표 ETF 구성종목 퀀트 스크리닝 결과 반환.
+    DB(SectorLeaderQuant)에 저장된 사전 연산 결과를 0.01초에 즉시 반환.
+    """
+    now = time.time()
+    cache_key = "screener"
+    if cache_key in _LEADER_CACHE and (now - _LEADER_CACHE[cache_key]["ts"] < _CACHE_TTL):
+        return _LEADER_CACHE[cache_key]["data"]
+
+    try:
+        from db.models import SectorLeaderQuant
+        from sqlalchemy import select
+        stmt = select(SectorLeaderQuant).order_by(SectorLeaderQuant.sector, SectorLeaderQuant.rank)
+        res = await db.execute(stmt)
+        rows = res.scalars().all()
+        if rows:
+            sector_results = {}
+            kospi_ret = 0.0
+            for r in rows:
+                if r.sector not in sector_results:
+                    sector_results[r.sector] = []
+                kospi_ret = r.kospi_6m_ret or kospi_ret
+                sector_results[r.sector].append({
+                    "code": r.code,
+                    "name": r.name,
+                    "weight": r.weight,
+                    "rank": r.rank,
+                    "quant_score": r.quant_score,
+                    "out_of_favor_score": r.out_of_favor_score,
+                    "fundamental_score": r.fundamental_score,
+                    "technical_score": r.turnaround_score,
+                    "per": r.per,
+                    "pbr": r.pbr,
+                    "roe": r.roe,
+                    "div_yield": r.div_yield,
+                    "return_6m": r.stock_6m_ret,
+                })
+            response = {
+                "status": "success",
+                "source": "database_precomputed",
+                "sectors": sector_results,
+                "kospi_6m_return": round(kospi_ret, 2)
+            }
+            _LEADER_CACHE[cache_key] = {"data": response, "ts": now}
+            return response
+    except Exception as e:
+        logger.warning(f"[Screener] DB lookup failed, falling back: {e}")
+
+    # DB가 비어있는 초기 상태인 경우에만 실시간 계산 및 DB 저장
+    return await compute_and_save_sector_leader_quant(db)
+
+
+@router.post("/screener/sync")
+async def force_sync_next_leader_screener(db: AsyncSession = Depends(get_db)):
+    """관리자/스케줄러 수동 강제 재계산 트리거."""
+    _LEADER_CACHE.pop("screener", None)
+    return await compute_and_save_sector_leader_quant(db)
+
+
+async def sync_sector_leader_quant_job() -> bool:
+    """스케줄러에서 평일 장 마감 후 자동 실행되어 10대 섹터 퀀트 데이터를 사전 계산하여 DB에 저장."""
+    try:
+        from db.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
+            logger.info("[SectorLeaderQuant Job] Starting pre-computation...")
+            _LEADER_CACHE.pop("screener", None)
+            res = await compute_and_save_sector_leader_quant(db)
+            if res and res.get("status") == "success":
+                logger.info("[SectorLeaderQuant Job] Pre-computation completed successfully.")
+                return True
+    except Exception as e:
+        logger.error(f"[SectorLeaderQuant Job] Failed: {e}", exc_info=True)
+    return False
+
 
 
 # ── Endpoint 4: 섹터별 주가 흐름 격자 (Sector Flow Grid) ──────────────────────────

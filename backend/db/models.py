@@ -410,3 +410,26 @@ class ETFDividendSummary(Base):
     currency = Column(String, default="KRW")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
+class SectorLeaderQuant(Base):
+    """10대 대안 섹터 대표 종목 퀀트 스크리닝(소외도+펀더멘털+기술적 턴) 결과 캐시"""
+    __tablename__ = "sector_leader_quant"
+
+    sector = Column(String, primary_key=True, index=True)         # 섹터명 (조선, 방산, 원자력 등)
+    code = Column(String, primary_key=True, index=True)           # 종목코드 (e.g. 042660)
+    name = Column(String, nullable=False)                         # 종목명
+    weight = Column(Float, default=0.0)                            # 섹터 ETF 내 비중 (%)
+    rank = Column(Integer, default=1)                              # 섹터 내 퀀트 순위
+    quant_score = Column(Float, default=0.0)                       # 종합 가중 점수 (100점 만점)
+    out_of_favor_score = Column(Float, default=0.0)                # 소외도 점수 (35%)
+    fundamental_score = Column(Float, default=0.0)                 # 펀더멘털 점수 (40%)
+    turnaround_score = Column(Float, default=0.0)                  # 기술적 턴어라운드 점수 (25%)
+    per = Column(Float, nullable=True)
+    pbr = Column(Float, nullable=True)
+    roe = Column(Float, nullable=True)
+    div_yield = Column(Float, nullable=True)
+    stock_6m_ret = Column(Float, nullable=True)
+    kospi_6m_ret = Column(Float, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+

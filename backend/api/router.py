@@ -421,10 +421,39 @@ import time
 
 _bench_cache = {}
 _space_quotes_cache = {}
+_HOLDINGS_QUOTES_CACHE: dict = {}
 _price_cache: dict = {}  # sym -> (price, timestamp) — 섹터 간 가격 공유, 레이트리밋 방지
 CACHE_TTL = 600
 SPACE_QUOTES_TTL = 300
+HOLDINGS_QUOTES_TTL = 300
 PRICE_CACHE_TTL = 3600  # 1 hour
+
+
+async def _get_cached_quotes_for_constituents(tickers_to_fetch: dict) -> dict:
+    """
+    tickers_to_fetch: {constituent_name: symbol}
+    5분 인메모리 캐시를 적용하여 yfinance 중복 조회를 방어하고 초고속으로 현재가/등락률 반환.
+    """
+    global _HOLDINGS_QUOTES_CACHE
+    now = time.time()
+    results = {}
+    missing = {}
+
+    for c, sym in tickers_to_fetch.items():
+        if c in _HOLDINGS_QUOTES_CACHE and (now - _HOLDINGS_QUOTES_CACHE[c]["ts"] < HOLDINGS_QUOTES_TTL):
+            results[c] = _HOLDINGS_QUOTES_CACHE[c]["quote"]
+        else:
+            missing[c] = sym
+
+    if missing:
+        tasks = [_fetch_stock_quote(sym) for sym in missing.values()]
+        quote_results = await asyncio.gather(*tasks)
+        for (c, _), q in zip(missing.items(), quote_results):
+            _HOLDINGS_QUOTES_CACHE[c] = {"quote": q, "ts": now}
+            results[c] = q
+
+    return results
+
 
 # ── 티커 자동 해석 시스템 ──────────────────────────────────────────────────────
 # JSON 캐시 파일 (서버 재시작 후에도 해석 결과 유지)
@@ -2858,9 +2887,12 @@ async def get_semi_holdings(db: AsyncSession = Depends(get_db)):
                 logger.warning(f"[semi_holdings] DB query failed for {code}: {e}")
 
         if code and code[0].isdigit():
-            # 1순위: Naver 라이브 (캐시 1시간, 항상 최신 데이터)
-            live = await _fetch_holdings_with_weight_calc(code)
-            holdings = live if live else (db_holdings if db_holdings else fallbacks.get(etf_name, []))
+            # 1순위: DB 캐시 우선 서빙 (0.01초)
+            if db_holdings:
+                holdings = db_holdings
+            else:
+                live = await _fetch_holdings_with_weight_calc(code)
+                holdings = live if live else fallbacks.get(etf_name, [])
         else:
             # US ETF (SMH, SOXQ 등): 하드코딩 유지
             holdings = fallbacks.get(etf_name, [])
@@ -2965,9 +2997,7 @@ async def get_semi_holdings(db: AsyncSession = Depends(get_db)):
 
     top_20_rows = table_rows[:20]
 
-    # Fetch quotes in parallel
-    import time
-    now = time.time()
+    # Fetch quotes using cache (0.01s hit, 5m TTL)
     tickers_to_fetch = {}
     for r in top_20_rows:
         constituent = r["constituent"]
@@ -2975,13 +3005,7 @@ async def get_semi_holdings(db: AsyncSession = Depends(get_db)):
         if ticker:
             tickers_to_fetch[constituent] = ticker
 
-    constituents = list(tickers_to_fetch.keys())
-    tasks = [_fetch_stock_quote(tickers_to_fetch[c]) for c in constituents]
-    quote_results = await asyncio.gather(*tasks)
-
-    cached_quotes = {}
-    for c, q in zip(constituents, quote_results):
-        cached_quotes[c] = q
+    cached_quotes = await _get_cached_quotes_for_constituents(tickers_to_fetch)
 
     for r in top_20_rows:
         constituent = r["constituent"]
@@ -2989,6 +3013,8 @@ async def get_semi_holdings(db: AsyncSession = Depends(get_db)):
         r["price"] = quote.get("price")
         r["change_pct"] = quote.get("change_pct")
 
+    import time
+    now = time.time()
     from datetime import datetime, timezone, timedelta
     dt_kst = datetime.fromtimestamp(now, tz=timezone(timedelta(hours=9)))
     updated_at_str = dt_kst.strftime("%y.%m.%d %H:%M")
@@ -3350,8 +3376,12 @@ async def get_semiparts_holdings(db: AsyncSession = Depends(get_db)):
                 logger.warning(f"[semiparts_holdings] DB query failed for {code}: {e}")
 
         if code and code[0].isdigit():
-            live = await _fetch_holdings_with_weight_calc(code)
-            holdings = live if live else (db_holdings if db_holdings else fallbacks.get(etf_name, []))
+            # 1순위: DB 캐시 우선 서빙
+            if db_holdings:
+                holdings = db_holdings
+            else:
+                live = await _fetch_holdings_with_weight_calc(code)
+                holdings = live if live else fallbacks.get(etf_name, [])
         else:
             holdings = fallbacks.get(etf_name, [])
 
@@ -3423,15 +3453,14 @@ async def get_semiparts_holdings(db: AsyncSession = Depends(get_db)):
 
     import time
     now = time.time()
+    # Fetch quotes using cache (0.01s hit, 5m TTL)
     tickers_to_fetch = {}
     for r in top_20_rows:
         symbol = SEMIPARTS_CONSTITUENT_TICKER_MAP.get(r["constituent"])
         if symbol:
             tickers_to_fetch[r["constituent"]] = symbol
 
-    constituents = list(tickers_to_fetch.keys())
-    quote_results = await asyncio.gather(*[_fetch_stock_quote(tickers_to_fetch[c]) for c in constituents])
-    cached_quotes = {c: q for c, q in zip(constituents, quote_results)}
+    cached_quotes = await _get_cached_quotes_for_constituents(tickers_to_fetch)
 
     for r in top_20_rows:
         quote = cached_quotes.get(r["constituent"], {"price": None, "change_pct": None})
@@ -4348,9 +4377,12 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
         except Exception as e:
             logger.warning(f"Error querying holdings for {code}: {e}")
 
-        # 1순위: Naver 라이브 (캐시 1시간, SPCX 등 최신 매핑 반영)
-        live = await _fetch_holdings_with_weight_calc(code)
-        holdings = live if live else (db_holdings if db_holdings else fallbacks.get(etf_name, []))
+        # 1순위: DB 캐시 우선 서빙 (0.01초)
+        if db_holdings:
+            holdings = db_holdings
+        else:
+            live = await _fetch_holdings_with_weight_calc(code)
+            holdings = live if live else fallbacks.get(etf_name, [])
 
         for h in holdings:
             # 라이브 데이터: _resolve_ticker가 이미 _display 설정
@@ -4399,34 +4431,15 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
     top_15_rows = public_rows + private_rows  # 전체 반환 (프론트에서 스크롤로 표시)
 
     # ── 주가 조회: _display_to_symbol로 constituent_ticker_map 자동 생성 ──
-    # JSON 캐시에서 display_name → symbol 역방향 맵이 자동 구성됨
-    global _space_quotes_cache
     now = time.time()
-    cached_quotes = None
-    if "quotes" in _space_quotes_cache:
-        val, ts = _space_quotes_cache["quotes"]
-        # 캐시가 최신이고 모든 현재 종목을 포함하는지 확인
-        current_constituents = {r["constituent"] for r in top_15_rows if not r.get("is_private")}
-        if now - ts < SPACE_QUOTES_TTL and current_constituents.issubset(val.keys()):
-            cached_quotes = val
+    tickers_to_fetch = {}
+    for r in top_15_rows:
+        constituent = r["constituent"]
+        sym = _display_to_symbol.get(constituent)
+        if sym:
+            tickers_to_fetch[constituent] = sym
 
-    if cached_quotes is None:
-        tickers_to_fetch = {}
-        for r in top_15_rows:
-            constituent = r["constituent"]
-            sym = _display_to_symbol.get(constituent)
-            if sym:
-                tickers_to_fetch[constituent] = sym
-
-        constituents = list(tickers_to_fetch.keys())
-        tasks = [_fetch_stock_quote(tickers_to_fetch[c]) for c in constituents]
-        quote_results = await asyncio.gather(*tasks)
-
-        cached_quotes = {}
-        for c, q in zip(constituents, quote_results):
-            cached_quotes[c] = q
-
-        _space_quotes_cache["quotes"] = (cached_quotes, now)
+    cached_quotes = await _get_cached_quotes_for_constituents(tickers_to_fetch)
 
     # Inject quotes into top 15 rows
     for r in top_15_rows:
@@ -4437,7 +4450,7 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
 
     # Return top 15 holdings to avoid clutter
     from datetime import datetime, timezone, timedelta
-    cache_ts = _space_quotes_cache["quotes"][1] if "quotes" in _space_quotes_cache else time.time()
+    cache_ts = now
     dt_kst = datetime.fromtimestamp(cache_ts, tz=timezone(timedelta(hours=9)))
     updated_at_str = dt_kst.strftime("%y.%m.%d %H:%M")
 
@@ -4995,9 +5008,12 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
                 logger.warning(f"[semi_holdings] DB query failed for {code}: {e}")
 
         if code and code[0].isdigit():
-            # 1순위: Naver 라이브 (캐시 1시간, 항상 최신 데이터)
-            live = await _fetch_holdings_with_weight_calc(code)
-            holdings = live if live else (db_holdings if db_holdings else fallbacks.get(etf_name, []))
+            # 1순위: DB 캐시 우선 서빙
+            if db_holdings:
+                holdings = db_holdings
+            else:
+                live = await _fetch_holdings_with_weight_calc(code)
+                holdings = live if live else fallbacks.get(etf_name, [])
         else:
             holdings = fallbacks.get(etf_name, [])
 
@@ -5128,9 +5144,7 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
 
     top_15_rows = table_rows  # 전체 반환 (프론트에서 스크롤로 표시)
 
-    # Fetch quotes in parallel
-    import time
-    now = time.time()
+    # Fetch quotes using cache (0.01s hit, 5m TTL)
     tickers_to_fetch = {}
     for r in top_15_rows:
         constituent = r["constituent"]
@@ -5138,13 +5152,7 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
         if ticker:
             tickers_to_fetch[constituent] = ticker
             
-    constituents = list(tickers_to_fetch.keys())
-    tasks = [_fetch_stock_quote(tickers_to_fetch[c]) for c in constituents]
-    quote_results = await asyncio.gather(*tasks)
-    
-    cached_quotes = {}
-    for c, q in zip(constituents, quote_results):
-        cached_quotes[c] = q
+    cached_quotes = await _get_cached_quotes_for_constituents(tickers_to_fetch)
 
     for r in top_15_rows:
         constituent = r["constituent"]
@@ -5546,9 +5554,12 @@ async def get_bio_holdings(db: AsyncSession = Depends(get_db)):
         except Exception as e:
             logger.warning(f"Error querying holdings for {code}: {e}")
 
-        # 1순위: Naver 라이브 (캐시 1시간, table_a 직접 비중)
-        live = await _fetch_holdings_with_weight_calc(code)
-        holdings = live if live else (db_holdings if db_holdings else fallbacks.get(etf_name, []))
+        # 1순위: DB 캐시 우선 서빙 (0.01초)
+        if db_holdings:
+            holdings = db_holdings
+        else:
+            live = await _fetch_holdings_with_weight_calc(code)
+            holdings = live if live else fallbacks.get(etf_name, [])
 
         for h in holdings:
             if h.get("weight") is None:

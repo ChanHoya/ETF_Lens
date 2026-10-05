@@ -685,6 +685,16 @@ def setup_scheduler():
         except Exception as e:
             print(f"[scheduler] _job_dividend_refresh failed: {e}")
 
+    async def _job_sector_quant():
+        """장 마감 후 10대 대안 섹터 퀀트 스크리닝(소외도+펀더멘털+기술적 턴) 사전 계산 및 DB 영속화."""
+        try:
+            from api.next_leader import sync_sector_leader_quant_job
+            await sync_sector_leader_quant_job()
+            trigger_replication_background()
+            gc.collect()
+        except Exception as e:
+            print(f"[scheduler] _job_sector_quant failed: {e}")
+
     async def _job_keep_alive():
         """Render 유휴 스핀다운 방지: 자기 자신의 /health 를 호출해 idle 타이머를 리셋한다.
         RENDER_EXTERNAL_URL(렌더가 자동 주입)이 없으면 로컬/비-Render 환경이므로 no-op."""
@@ -721,6 +731,9 @@ def setup_scheduler():
 
     # 월-금 15:40 - 장 마감 후 일일 자산 총액 및 포트폴리오 스냅샷 자동 기록
     scheduler.add_job(_job_asset_snapshot, "cron", day_of_week="mon-fri", hour=15, minute=40, id="market_close_asset_snapshot")
+
+    # 월-금 16:00 - 장 마감 후 10대 주도주 퀀트 랭킹 사전 계산 DB 적재 (초고속 즉시 서빙)
+    scheduler.add_job(_job_sector_quant, "cron", day_of_week="mon-fri", hour=16, minute=0, id="market_close_sector_quant_sync")
 
     # 매주 일요일 23:30 - 14일 이상 지난 배당 데이터(ETFDividendSummary) 백그라운드 자동 갱신
     scheduler.add_job(_job_dividend_refresh, "cron", day_of_week="sun", hour=23, minute=30, id="weekly_dividend_refresh")

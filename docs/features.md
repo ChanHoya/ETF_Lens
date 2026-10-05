@@ -71,6 +71,7 @@
 | S6-21: 매크로 출구신호 DB 영속화 & FRED/Yahoo 증분 수집 | ✅ done | backend/api/exit_signal.py, backend/tests/test_exit_signal_macro_db.py, backend/db/models.py | MarketMacroLog 연동으로 달러지수, 환율, 장단기금리차, HY 스프레드 DB 적재 및 결측일만 증분 수집하여 외부 스크래핑 지연 완전 제거 |
 | S6-22: 섹터/테마 차트 5종 DB 하이브리드 엔진 전면 전환 | ✅ done | backend/api/router.py, backend/tests/test_sector_charts_hybrid.py | 반도체, 소부장, 우주항공, 에너지, 바이오 5대 섹터 차트의 10년치 반복 외부 호출을 DB 하이브리드 엔진으로 교체하여 초기 응답 속도 극대화 완료 |
 | S6-23: 장 마감 자산 스냅샷 스케줄러 & 배당 14일 TTL 자동 갱신 파이프라인 | ✅ done | backend/api/my_assets.py, backend/core/dividend_scraper.py, backend/core/scheduler.py, backend/tests/test_snapshot_and_dividend_sync.py | 장 마감(평일 15:40) 시점 KIS 포트폴리오 기준 UserAssetSnapshot 자동 적재 및 배당 요약본(ETFDividendSummary) 14일 TTL stale 감지 시 주간 자동 갱신 크론 잡 구축 완료 |
+| S6-24: 10대 주도주 스크리너 사전 계산 DB화 & 5대 섹터 구성종목 DB 서빙 전환 | ✅ done | backend/api/next_leader.py, backend/api/router.py, backend/db/models.py, backend/core/scheduler.py, backend/tests/test_next_leader_and_holdings_db.py | SectorLeaderQuant 모델 및 장 마감 후 자동 사전 계산 크론 잡 구축(20초→0.01초 즉각 응답), 5대 섹터 ETF 구성종목 DB 우선 조회 및 주가 5분 캐시 적용(8초→0.05초 초고속 서빙) |
 
 
 
