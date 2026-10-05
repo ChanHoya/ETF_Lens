@@ -1,8 +1,11 @@
 import asyncio
+import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from db.models import ETFMaster, ETFDailyPrice, MarketMacroLog
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 def clean_etf_name_for_hedging(name: str) -> str:
     """이름에서 (H), (H)(합성), H, H(합성) 등을 제거하여 매칭용 베이스 이름을 얻습니다."""
@@ -79,6 +82,13 @@ async def analyze_fx_impact(db: AsyncSession, h_code: str, u_code: str) -> dict:
     
     if not h_etf or not u_etf:
         return {"error": "환헤지 혹은 환노출 ETF를 찾을 수 없습니다."}
+
+    # 페어 ETF는 야간 가격 배치(활성 ETF만) 대상 밖이라 가격이 오래됐으면 이 두 종목만 즉석 보충
+    try:
+        from core.price_freshness import ensure_fresh_prices
+        await ensure_fresh_prices(db, [h_code, u_code])
+    except Exception as e:
+        logger.warning(f"[currency_analyzer] 가격 보충 실패 {h_code}/{u_code}: {type(e).__name__}: {e}")
         
     # 2. 1년 기간 구하기
     end_date_str = datetime.now().strftime("%Y-%m-%d")
