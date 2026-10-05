@@ -78,11 +78,39 @@ def test_regime_values_come_from_data():
     assert len(regimes) == len(REGIMES)
 
 
-def test_verdict_rules():
-    assert _verdict(85, -15)["level"] == "weak_krw"
-    assert _verdict(85, -5)["level"] == "neutral"
-    assert _verdict(15, 5)["level"] == "strong_krw"
-    assert _verdict(None, None)["level"] == "neutral"
+def test_verdict_weighs_both_sides():
+    # 평균 회귀 근거만 있으면 원화 강세 우세
+    v = _verdict({"krw": {"pct10y": 85, "pct3y": 90}, "reer": {"gap_pct": -15}}, 6)
+    assert v["level"] == "strong_krw" and len(v["strong"]) == 3 and v["weak"] == []
+    # 같은 위치라도 3년 기준 중간·상승 추세·자금 순유출·큰 금리차가 있으면 약세 근거가 이긴다
+    v = _verdict({"krw": {"pct10y": 75, "pct3y": 40, "ma26_gap": 2.0}, "flows": {"net_12m": -120},
+                  "spread10": {"value": 1.2}, "reer": {"gap_pct": -15}}, None)
+    assert v["level"] == "weak_krw" and len(v["weak"]) == 4 and len(v["strong"]) == 1
+    assert any("새 보통" in t for t in v["weak"])
+    assert _verdict({}, None) == {"level": "neutral", "label": "강세·약세 근거 팽팽 — 방향 관망", "strong": [], "weak": []}
+
+
+def _bop(raw):
+    s, e = date(2014, 1, 1), date(2026, 7, 1)
+    raw.update(bop_ca=_monthly(s, e, lambda d: 300.0), bop_di_a=_monthly(s, e, lambda d: 100.0),
+               bop_pi_a=_monthly(s, e, lambda d: 300.0 if d.year == 2026 else 100.0),
+               bop_di_l=_monthly(s, e, lambda d: 20.0), bop_pi_l=_monthly(s, e, lambda d: 30.0))
+    return raw
+
+
+def test_flows_twelve_month_net_in_hundred_million_dollars():
+    f = build_overview(_bop(_raw()), TODAY)["snapshot"]["flows"]
+    # 2025-08~2026-07: 경상 3,600 − (직접 1,200 + 증권 5×100+7×300=2,600) + (240+360) = 400백만 → 4억달러
+    assert f["month"] == "2026-07" and f["ca_12m"] == 36 and f["out_12m"] == 38 and f["in_12m"] == 6 and f["net_12m"] == 4
+    assert f["net_year_ago"] == 18 and f["rows"][-1]["out"] == -38   # 차트는 유출을 음수로
+    assert f["rows"][0]["date"] >= "2016-07"
+
+
+def test_krw_three_year_position_and_trend():
+    k = build_overview(_raw(), TODAY)["snapshot"]["krw"]
+    # 최근 3년 값: 2023년 말 1,324·2024년 1,342(≤1,350) / 2025년 1,360·2026년 1,378(>1,350) → 약 42%
+    assert 40 <= k["pct3y"] <= 44 and k["pct10y"] > k["pct3y"]
+    assert k["ma26"] is not None and k["ma26_gap"] < 0  # 마지막 실시간 1,350 < 26주 평균
 
 
 def test_missing_sources_degrade_gracefully():

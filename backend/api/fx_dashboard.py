@@ -2,7 +2,7 @@
 """
 GET /api/v1/fx/overview  (?refresh=true 로 캐시 무시)
 
-- 원천: FRED fredgraph CSV(키 불필요) + Yahoo v8 chart. 수집은 30분 메모리 캐시, 실패 시 마지막 성공값 유지.
+- 원천: FRED fredgraph CSV(키 불필요) + Yahoo v8 chart + ECOS 국제수지(ECOS_API_KEY). 수집은 30분 메모리 캐시, 실패 시 마지막 성공값 유지.
 - 계산(build_overview·build_analysis)은 네트워크와 분리해 테스트한다. 분석 지표의 정의는 docs/fx-tab-context-notes.md.
 """
 import asyncio
@@ -16,6 +16,7 @@ import requests
 from fastapi import APIRouter, HTTPException, Query
 
 from api.exit_signal import _fetch_yahoo_v8
+from api.rates_dashboard import _fetch_ecos
 from core.overview_cache import OverviewCache, fred_csv, timed
 from core.regime_auto import enrich_texts, fx_auto_segments, template_text
 
@@ -35,6 +36,9 @@ FRED_IDS = {
     "kr3m": "IR3TIB01KRM156N",  # 한 3개월 금리 (월간) — 헤지 비용 근사
     "vix": "VIXCLS",            # 미국 변동성지수 — 위험 선호와 원화의 동조 확인용
 }
+# 국제수지(ECOS 301Y013, 월간, 백만달러) — 자산 + = 내국인 해외투자(유출), 부채 + = 외국인 국내투자(유입)
+BOP_ITEMS = {"ca": "000000", "di_a": "BOPF11000000", "pi_a": "BOPF21000000",
+             "di_l": "BOPF12000000", "pi_l": "BOPF22000000"}
 CORR_WINDOW = 52   # 롤링 상관 창(주)
 FIT_YEARS = 10     # DXY 기반 적정 원/달러 회귀 기간
 BETA_WEEKS = 156   # 민감도(베타) 추정 기간 = 3년
@@ -114,13 +118,57 @@ def _weekly(s: pd.Series) -> pd.Series:
     return s.resample("W-FRI").last() if not s.empty else pd.Series(dtype=float)
 
 
-def _verdict(pct10y: int | None, reer_gap: float | None) -> dict:
-    """참고용 판정 — 규칙은 docs/fx-tab-context-notes.md."""
-    if pct10y is not None and pct10y >= 80 and reer_gap is not None and reer_gap <= -10:
-        return {"level": "weak_krw", "label": "원화 저평가 — 달러 자산 신규 매수 신중"}
-    if pct10y is not None and pct10y <= 20:
-        return {"level": "strong_krw", "label": "원화 강세 — 달러 자산 분할 매수 유리"}
-    return {"level": "neutral", "label": "중립 — 환율 방향성 관망"}
+def _verdict(snap: dict, fair_gap: float | None) -> dict:
+    """원화 강세(원/달러 하락) 근거와 약세(상승) 근거를 같은 무게로 나열 — 규칙은 docs/fx-feedback-context-notes.md."""
+    k, reer = snap.get("krw") or {}, (snap.get("reer") or {}).get("gap_pct")
+    p10, p3, ma = k.get("pct10y"), k.get("pct3y"), k.get("ma26_gap")
+    net = (snap.get("flows") or {}).get("net_12m")
+    sp = (snap.get("spread10") or {}).get("value")
+    strong, weak = [], []
+
+    def add(side, cond, text):  # text는 조건이 참일 때만 만든다(None 값 포맷 방지)
+        if cond:
+            side.append(text())
+    add(strong, p10 is not None and p10 >= 80, lambda: f"원/달러가 10년 중 {p10}% 위치 — 장기 평균보다 높아 되돌림 여지")
+    add(strong, reer is not None and reer <= -10, lambda: f"원화 실질가치가 20년 평균보다 {abs(reer):.0f}% 낮음(수년 단위 지표)")
+    add(strong, fair_gap is not None and fair_gap >= 5, lambda: f"달러지수로 설명되는 수준보다 {fair_gap:.1f}% 높음 — 원화 고유 약세가 쌓임")
+    add(strong, net is not None and net > 0, lambda: f"최근 12개월 달러 순유입 +{net:,.0f}억달러 — 벌어온 달러가 해외투자 유출보다 많음")
+    add(strong, ma is not None and ma <= -1, lambda: f"26주 평균보다 {abs(ma):.1f}% 낮음 — 하락 추세")
+    add(strong, sp is not None and sp <= 0, lambda: f"한국 10년물 금리가 미국보다 {abs(sp):.2f}%p 높음")
+    add(weak, p10 is not None and p10 <= 20, lambda: f"원/달러가 10년 중 {p10}% 위치 — 장기 평균보다 낮음")
+    add(weak, reer is not None and reer >= 5, lambda: f"원화 실질가치가 20년 평균보다 {reer:.0f}% 높음")
+    add(weak, fair_gap is not None and fair_gap <= -5, lambda: f"달러지수로 설명되는 수준보다 {abs(fair_gap):.1f}% 낮음 — 원화가 이미 강함")
+    add(weak, net is not None and net < 0, lambda: f"최근 12개월 달러 순유출 {net:,.0f}억달러 — 해외투자 유출이 벌어온 달러보다 많음")
+    add(weak, ma is not None and ma >= 1, lambda: f"26주 평균보다 {ma:.1f}% 높음 — 상승 추세")
+    add(weak, sp is not None and sp >= 1, lambda: f"미국 10년물 금리가 한국보다 {sp:.2f}%p 높음 — 달러 보유 유인")
+    add(weak, p10 is not None and p3 is not None and p10 >= 70 and p3 <= 50,
+        lambda: f"10년 중 {p10}%지만 최근 3년 중으론 {p3}% — 높은 환율이 새 보통이 됐다면 하락 여지가 작음")
+    diff = len(strong) - len(weak)
+    if diff >= 2:
+        level, label = "strong_krw", "원화 강세 근거 우세"
+    elif diff <= -2:
+        level, label = "weak_krw", "원화 약세 근거 우세"
+    else:
+        level, label = "neutral", "강세·약세 근거 팽팽 — 방향 관망"
+    return {"level": level, "label": label, "strong": strong, "weak": weak}
+
+
+def _flows(raw: dict) -> dict | None:
+    """국제수지 12개월 합(억달러): 경상수지 − 내국인 해외투자 + 외국인 국내투자 = 달러 순유입(기본수지 근사)."""
+    df = pd.DataFrame({k: _series(raw.get(f"bop_{k}", {})) for k in BOP_ITEMS}).dropna()
+    if len(df) < 24:
+        return None
+    m = df.rolling(12).sum().dropna() / 100
+    m["out"], m["inflow"] = m["di_a"] + m["pi_a"], m["di_l"] + m["pi_l"]
+    m["net"] = m["ca"] - m["out"] + m["inflow"]
+    last = m.iloc[-1]
+    ago = m[m.index <= m.index[-1] - pd.DateOffset(months=12)]
+    tail = m[m.index >= m.index[-1] - pd.DateOffset(years=10)]
+    return {"month": m.index[-1].strftime("%Y-%m"), "ca_12m": _r(last.ca, 0), "out_12m": _r(last.out, 0),
+            "in_12m": _r(last.inflow, 0), "net_12m": _r(last.net, 0),
+            "net_year_ago": _r(ago["net"].iloc[-1], 0) if not ago.empty else None,
+            "rows": [{"date": i.strftime("%Y-%m"), "ca": _r(r.ca, 0), "out": _r(-r.out, 0), "inflow": _r(r.inflow, 0),
+                      "net": _r(r.net, 0)} for i, r in tail.iterrows()]}
 
 
 def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
@@ -162,11 +210,14 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
     snapshot: dict = {}
     if not krw.empty:
         krw10 = krw[krw.index >= ten_years_ago]
+        krw3 = krw[krw.index >= pd.Timestamp(today) - pd.DateOffset(years=3)]
+        ma26 = wk["krw"].dropna().tail(26).mean()  # 반년 추세선
         snapshot["krw"] = {
             "value": _r(krw.iloc[-1], 1), "date": krw.index[-1].strftime("%Y-%m-%d"),
             "chg_1w": _change(krw, 7), "chg_1m": _change(krw, 30), "chg_1y": _change(krw, 365),
-            "pct10y": _pct_rank(krw10, krw.iloc[-1]),
+            "pct10y": _pct_rank(krw10, krw.iloc[-1]), "pct3y": _pct_rank(krw3, krw.iloc[-1]),
             "min10y": _r(krw10.min(), 1), "max10y": _r(krw10.max(), 1),
+            "ma26": _r(ma26, 1), "ma26_gap": _r((krw.iloc[-1] / ma26 - 1) * 100, 1) if ma26 else None,
         }
     if not dxy.empty:
         dxy10 = dxy[dxy.index >= ten_years_ago]
@@ -191,7 +242,9 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
         avg = reer[reer.index >= start].mean()
         snapshot["reer"] = {"value": _r(reer.iloc[-1], 1), "date": reer.index[-1].strftime("%Y-%m"),
                             "avg20y": _r(avg, 1), "gap_pct": _r((reer.iloc[-1] / avg - 1) * 100, 1)}
-    snapshot["verdict"] = _verdict(snapshot.get("krw", {}).get("pct10y"), snapshot.get("reer", {}).get("gap_pct"))
+    flows = _flows(raw)
+    if flows:
+        snapshot["flows"] = flows
 
     def _regime(g: dict) -> dict | None:
         end = g["end"] or krw.index[-1].strftime("%Y-%m-%d")  # end=None은 진행 중 → 마지막 관측일까지
@@ -219,8 +272,9 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
                 reg.update(template_text("fx", reg), auto=True)
                 regimes.append(reg)
 
-    return {"snapshot": snapshot, "weekly": rows, "regimes": regimes,
-            "analysis": build_analysis(wk, reer, snapshot, start),
+    analysis = build_analysis(wk, reer, snapshot, start)
+    snapshot["verdict"] = _verdict(snapshot, analysis.get("fair", {}).get("now", {}).get("gap_pct"))
+    return {"snapshot": snapshot, "weekly": rows, "regimes": regimes, "analysis": analysis,
             "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
 
 
@@ -334,6 +388,7 @@ async def _collect_raw() -> tuple[dict[str, dict[str, float]], dict[str, float]]
     start = (date.today() - timedelta(days=365 * (YEARS + 1))).isoformat()
     jobs = {k: (fred_csv, FRED_IDS[k], start) for k in FRED_IDS}
     jobs["dxy"] = (_yahoo_weekly, "DX-Y.NYB")
+    jobs.update({f"bop_{k}": (_fetch_ecos, "301Y013", "M", code, 12) for k, code in BOP_ITEMS.items()})
     names = list(jobs)
     res = await asyncio.gather(*(timed(*jobs[n]) for n in names), _fetch_yahoo_v8("KRW=X", days=60))
     raw = {n: r[0] for n, r in zip(names, res)}

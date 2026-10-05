@@ -16,7 +16,8 @@ def _wave(i, period, amp, base):
 def _fx():
     return {"weekly": [{"date": d.isoformat(), "krw": _wave(i, 260, 150, 1200), "dxy": _wave(i, 260, 8, 95),
                         "vix": 20 + 5 * np.sin(i / 7)} for i, d in enumerate(WEEKS)],
-            "snapshot": {"dxy": {"chg_1y": 4.8}, "krw": {"value": 1345.0, "pct10y": 85, "chg_1y": -4.3},
+            "snapshot": {"dxy": {"chg_1y": 4.8}, "krw": {"value": 1345.0, "pct10y": 85, "pct3y": 60, "chg_1y": -4.3},
+                         "verdict": {"level": "strong_krw", "strong": ["10년 상위", "실질가치 저평가", "순유입"], "weak": []},
                          "reer": {"gap_pct": -14.0}, "spread10": {"value": 0.95, "year_ago": 1.2}},
             "regimes": [{"start": "2025-06-30", "end": None, "kind": "down", "title": "원화 강세", "drivers": [],
                          "from": 1556.0, "to": 1345.0, "chg_pct": -13.6}], "updated_at": "2026-10-05T00:00:00+00:00"}
@@ -52,7 +53,8 @@ def test_diagnosis_headline_and_rows():
     assert d["headline"] == "긴축 · 달러 강세 · KOSPI 약세장 · S&P500 강세장"
     assert [r["axis"] for r in d["rows"]] == ["한국 금리", "미국 금리", "원화", "달러", "KOSPI", "S&P500"]  # 왼쪽 한국·오른쪽 미국
     tones = {r["axis"]: r["tone"] for r in d["rows"]}
-    assert tones == {"한국 금리": 1, "미국 금리": 0, "달러": 1, "원화": 1, "KOSPI": -1, "S&P500": 1}
+    assert tones == {"한국 금리": 1, "미국 금리": 0, "달러": 1, "원화": -1, "KOSPI": -1, "S&P500": 1}
+    assert "3년 중 60%" in next(r["status"] for r in d["rows"] if r["axis"] == "원화")
 
 
 def test_analogs_exclude_recent_and_keep_gap():
@@ -76,6 +78,14 @@ def test_allocation_scores():
     alloc = {a["asset"]: a for a in build_overview(_fx(), _rates(), _stocks(), TODAY)["allocation"]}
     assert alloc["주식"]["score"] == -3 and alloc["주식"]["label"] == "비중 축소 근거 우세"
     assert alloc["채권"]["score"] == 0 and alloc["달러"]["score"] == -3 and alloc["현금·단기"]["score"] == 1
+    assert alloc["달러"]["reasons"][0]["text"] == "[원화 강세] 10년 상위"
+
+
+def test_dollar_allocation_counts_krw_weakness_evidence():
+    fx = _fx()
+    fx["snapshot"]["verdict"] = {"level": "neutral", "strong": ["a"], "weak": ["b", "c"]}
+    alloc = {a["asset"]: a for a in build_overview(fx, _rates(), _stocks(), TODAY)["allocation"]}
+    assert alloc["달러"]["score"] == 1 and [r["sign"] for r in alloc["달러"]["reasons"]] == [-1, 1, 1]
 
 
 def test_timeline_lanes_and_scenarios():

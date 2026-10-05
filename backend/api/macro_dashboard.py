@@ -187,8 +187,10 @@ def diagnosis(fx, rates, stocks) -> dict:
         dollar = {"axis": "달러", "status": f"{word} (달러지수 1년 {dxy:+.1f}%)", "tone": tone}
     krw = fs.get("krw") or {}
     if krw.get("value") is not None and krw.get("pct10y") is not None and krw.get("chg_1y") is not None:
-        rows.append({"axis": "원화", "status": f"원/달러 {krw['value']:,.0f}원 · 10년 중 {krw['pct10y']}% · 1년 {krw['chg_1y']:+.1f}%",
-                     "tone": 1 if krw["pct10y"] >= 80 else -1 if krw["pct10y"] <= 20 else 0})
+        p3 = f" · 3년 중 {krw['pct3y']}%" if krw.get("pct3y") is not None else ""
+        level = (fs.get("verdict") or {}).get("level")  # 환율 탭의 강세·약세 근거 비교 결과
+        rows.append({"axis": "원화", "status": f"원/달러 {krw['value']:,.0f}원 · 10년 중 {krw['pct10y']}%{p3} · 1년 {krw['chg_1y']:+.1f}%",
+                     "tone": 1 if level == "weak_krw" else -1 if level == "strong_krw" else 0})
     rows.append(dollar)  # 2열 격자에서 왼쪽 한국(원화)·오른쪽 미국(달러)이 되도록 원화 다음에 둔다
     for k, name in (("kospi", "KOSPI"), ("spx", "S&P500")):
         last = (sreg.get(k) or [None])[-1]
@@ -242,17 +244,9 @@ def allocation(fx, rates, stocks) -> list[dict]:
         r.append((1, f"미 10년물 {us10.get('value')}%로 10년 중 {us10.get('pct10y')}% — 채권 금리 매력"))
     add("채권", r)
 
-    r = []
-    reer = (fs.get("reer") or {}).get("gap_pct")
-    if reer is not None and reer <= -10:
-        r.append((-1, f"원화 실질가치가 20년 평균 대비 {reer:.0f}% — 원화 강세로 되돌림 여지(달러 자산 환차손 위험)"))
-    kp = (fs.get("krw") or {}).get("pct10y")
-    if kp is not None and kp >= 80:
-        r.append((-1, f"원/달러 10년 중 {kp}% 위치 — 비싼 달러"))
-    sp = fs.get("spread10") or {}
-    if sp.get("value") is not None and sp.get("year_ago") is not None and abs(sp["value"]) < abs(sp["year_ago"]) - 0.15:
-        r.append((-1, f"한미 10년물 금리차 축소({sp['year_ago']:+.2f}→{sp['value']:+.2f}%p) — 원화 지지"))
-    add("달러", r)
+    # 달러 자산: 환율 탭과 같은 근거 — 원화 강세 근거는 환차손 위험(−1), 약세 근거는 환차익 여지(+1)
+    v = fs.get("verdict") or {}
+    add("달러", [(-1, f"[원화 강세] {t}") for t in v.get("strong", [])] + [(1, f"[원화 약세] {t}") for t in v.get("weak", [])])
 
     r = []
     rows = ((rates or {}).get("terms") or {}).get("rows") or []

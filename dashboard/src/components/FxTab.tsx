@@ -4,9 +4,9 @@
 import React, { useMemo, useState } from 'react';
 import {
     ResponsiveContainer, ComposedChart, Line, XAxis, YAxis, CartesianGrid,
-    Tooltip as RechartsTooltip, Legend, ReferenceArea, ReferenceLine, Area,
+    Tooltip as RechartsTooltip, Legend, ReferenceArea, ReferenceLine, Area, Bar,
 } from 'recharts';
-import { DollarSign, Globe2, Landmark, RefreshCw, Scale, Shield, TrendingDown, TrendingUp, History, Info, Link2, Gauge } from 'lucide-react';
+import { DollarSign, Globe2, Landmark, RefreshCw, Scale, Shield, TrendingDown, TrendingUp, History, Info, Link2, Gauge, ArrowDownUp } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
 import { useCachedOverview } from '@/lib/useCachedOverview';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
@@ -22,14 +22,21 @@ type Regime = {
     kind: 'up' | 'down' | 'range'; from: number; to: number; chg_pct: number; low: number; high: number; auto?: boolean;
 };
 type Snapshot = {
-    krw?: { value: number; date: string; chg_1w: number | null; chg_1m: number | null; chg_1y: number | null; pct10y: number; min10y: number; max10y: number };
+    krw?: {
+        value: number; date: string; chg_1w: number | null; chg_1m: number | null; chg_1y: number | null; pct10y: number; pct3y: number | null;
+        min10y: number; max10y: number; ma26: number | null; ma26_gap: number | null;
+    };
     dxy?: { value: number; date: string; chg_1m: number | null; chg_1y: number | null; pct10y: number };
     jpy100?: { label: string; value: number; date: string; chg_1m: number | null; chg_1y: number | null };
     cny?: { label: string; value: number; date: string; chg_1m: number | null; chg_1y: number | null };
     spread10?: { value: number; us10: number; kr10: number; kr10_date: string; year_ago: number | null };
     hedge?: { value: number; us: number; kr: number; kr_date: string };
     reer?: { value: number; date: string; avg20y: number; gap_pct: number };
-    verdict: { level: 'weak_krw' | 'strong_krw' | 'neutral'; label: string };
+    flows?: {
+        month: string; ca_12m: number; out_12m: number; in_12m: number; net_12m: number; net_year_ago: number | null;
+        rows: { date: string; ca: number; out: number; inflow: number; net: number }[];
+    };
+    verdict: { level: 'weak_krw' | 'strong_krw' | 'neutral'; label: string; strong: string[]; weak: string[] };
 };
 type Analysis = {
     corr: { date: string; dxy: number | null; spread: number | null; vix: number | null }[];
@@ -57,6 +64,7 @@ const TOOLTIP_STYLE = { background: '#1a1a23', border: '1px solid #ffffff20', bo
 const ts = (d: string) => Date.parse(d);
 const fmtDate = (t: number) => new Date(t).toISOString().slice(0, 10);
 const fmtNum = (v: number | null | undefined, digits = 1) => (v == null ? '-' : v.toLocaleString('ko-KR', { minimumFractionDigits: digits, maximumFractionDigits: digits }));
+const sign = (v: number, d = 1) => `${v > 0 ? '+' : ''}${v.toFixed(d)}`;
 
 // 국내 관례: 오르면 빨강, 내리면 파랑
 function Chg({ v, label }: { v: number | null | undefined; label: string }) {
@@ -100,7 +108,7 @@ function SectionTitle({ icon, title, sub }: { icon: React.ReactNode; title: stri
     );
 }
 
-function SnapshotGrid({ s }: { s: Snapshot }) {
+function SnapshotGrid({ s, fair }: { s: Snapshot; fair?: Analysis['fair'] }) {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-3">
             <Card icon={<DollarSign className="w-3.5 h-3.5 text-indigo-400" />} title="원/달러" foot={s.krw ? `${s.krw.date} 기준` : undefined}>
@@ -110,6 +118,10 @@ function SnapshotGrid({ s }: { s: Snapshot }) {
                         <Chg v={s.krw.chg_1w} label="1주" /><Chg v={s.krw.chg_1m} label="1개월" /><Chg v={s.krw.chg_1y} label="1년" />
                     </div>
                     <PctBar pct={s.krw.pct10y} left={fmtNum(s.krw.min10y, 0)} right={fmtNum(s.krw.max10y, 0)} />
+                    <p className="text-[11px] text-gray-400 mt-1.5">
+                        {s.krw.pct3y != null && <>최근 3년 중 <b className="text-gray-200">{s.krw.pct3y}%</b></>}
+                        {s.krw.ma26_gap != null && <> · 26주 평균 대비 <b className={s.krw.ma26_gap > 0 ? 'text-red-400' : 'text-blue-400'}>{sign(s.krw.ma26_gap)}%</b></>}
+                    </p>
                 </> : <p className="text-sm text-gray-500">데이터 없음</p>}
             </Card>
             <Card icon={<Globe2 className="w-3.5 h-3.5 text-sky-400" />} title="달러지수 (DXY)" foot="주요 6개 통화 대비 달러 가치">
@@ -136,14 +148,12 @@ function SnapshotGrid({ s }: { s: Snapshot }) {
                     <p className="text-xs text-gray-400 mt-1">{s.spread10.value > 0 ? '미국 금리가 높아 원화에 약세 압력' : '한국 금리가 높아 원화에 강세 압력'}</p>
                 </> : <p className="text-sm text-gray-500">데이터 없음</p>}
             </Card>
-            <Card icon={<Shield className="w-3.5 h-3.5 text-purple-400" />} title="환헤지 비용 (근사)"
-                foot={s.hedge ? `미 정책금리 ${s.hedge.us}% − 한 3개월 금리 ${s.hedge.kr}% (${s.hedge.kr_date})` : undefined}>
-                {s.hedge ? <>
-                    <div className="text-2xl font-extrabold text-white">연 {s.hedge.value.toFixed(2)}<span className="text-sm text-gray-400 ml-1">%p</span></div>
-                    <p className="text-xs text-gray-400 mt-1">
-                        {s.hedge.value > 0
-                            ? '미국 자산을 환헤지(H)하면 이만큼 수익이 깎인다'
-                            : '미국 자산을 환헤지(H)하면 이만큼 수익이 더해진다'}
+            <Card icon={<Gauge className="w-3.5 h-3.5 text-rose-400" />} title="달러지수로 본 적정 원/달러"
+                foot={fair ? `최근 ${fair.years}년 달러지수와의 관계로 계산 · 괴리 = 한국 고유 요인` : undefined}>
+                {fair ? <>
+                    <div className="text-2xl font-extrabold text-white">{fmtNum(fair.now.fitted, 0)}<span className="text-sm text-gray-400 ml-1">원</span></div>
+                    <p className={`text-xs font-bold mt-1 ${fair.now.gap_pct > 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                        실제가 {sign(fair.now.gap_pct)}% {fair.now.gap_pct > 0 ? '높음 (원화 고유 약세)' : '낮음 (원화 고유 강세)'}
                     </p>
                 </> : <p className="text-sm text-gray-500">데이터 없음</p>}
             </Card>
@@ -158,6 +168,64 @@ function SnapshotGrid({ s }: { s: Snapshot }) {
                 </> : <p className="text-sm text-gray-500">데이터 없음</p>}
             </Card>
         </div>
+    );
+}
+
+// 원화 방향 근거 — 강세·약세 양쪽을 같은 형식으로, 아래에 국제수지 자금 흐름
+function BalanceSection({ s }: { s: Snapshot }) {
+    const v = s.verdict;
+    const f = s.flows;
+    const rows = useMemo(() => (f?.rows ?? []).map(r => ({ ...r, t: ts(`${r.date}-01`) })), [f]);
+    const side = (title: string, items: string[], cls: string, Icon: typeof TrendingDown) => (
+        <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3">
+            <p className={`flex items-center gap-1.5 text-xs font-bold mb-2 ${cls}`}><Icon className="w-3.5 h-3.5" />{title} · {items.length}개</p>
+            {items.length ? (
+                <ul className="space-y-1.5">{items.map(t => <li key={t} className="text-sm text-gray-200 leading-snug">· {t}</li>)}</ul>
+            ) : <p className="text-sm text-gray-500">해당 근거 없음</p>}
+        </div>
+    );
+    return (
+        <section className="bg-black/20 rounded-2xl border border-white/5 p-4">
+            <SectionTitle icon={<ArrowDownUp className="w-5 h-5 text-indigo-400" />} title="원화 방향, 양쪽 근거"
+                sub="장기 평균으로 돌아간다는 근거와 높은 환율이 굳어진다는 근거를 같은 무게로 — 2개 이상 차이 날 때만 한쪽 우세로 표시" />
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+                <div className="xl:col-span-2 space-y-3">
+                    {side('원화 강세(원/달러 하락) 쪽', v.strong, 'text-blue-400', TrendingDown)}
+                    {side('원화 약세(원/달러 상승) 쪽', v.weak, 'text-red-400', TrendingUp)}
+                </div>
+                <div className="xl:col-span-3">
+                    {f ? <>
+                        <p className="text-xs font-bold text-gray-300">달러가 실제로 들어오나 나가나 — 국제수지 12개월 합계 ({f.month}까지, 억달러)</p>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs mt-1 mb-2">
+                            <span className="text-gray-400">경상수지 <b className="text-emerald-400">{sign(f.ca_12m, 0)}</b></span>
+                            <span className="text-gray-400">내국인 해외투자 <b className="text-red-400">{sign(-f.out_12m, 0)}</b></span>
+                            <span className="text-gray-400">외국인 국내투자 <b className={f.in_12m >= 0 ? 'text-emerald-400' : 'text-red-400'}>{sign(f.in_12m, 0)}</b></span>
+                            <span className="text-gray-400">= 순유입 <b className={f.net_12m >= 0 ? 'text-blue-400' : 'text-red-400'}>{sign(f.net_12m, 0)}</b>
+                                {f.net_year_ago != null && <span className="text-gray-500"> (1년 전 {sign(f.net_year_ago, 0)})</span>}</span>
+                        </div>
+                        <ResponsiveContainer width="100%" height={220}>
+                            <ComposedChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} stackOffset="sign">
+                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                                <YAxis tick={axisTick} width={48} tickFormatter={(x: number) => x.toLocaleString('ko-KR')} />
+                                <ReferenceLine y={0} stroke="#ffffff40" />
+                                <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t)).slice(0, 7)}
+                                    formatter={(x, name) => [typeof x === 'number' ? `${x.toLocaleString('ko-KR')}억달러` : x, name]} />
+                                <Legend wrapperStyle={{ fontSize: 12 }} />
+                                <Bar dataKey="ca" name="경상수지" stackId="f" fill="#10b981" fillOpacity={0.55} isAnimationActive={false} />
+                                <Bar dataKey="out" name="내국인 해외투자" stackId="f" fill="#f43f5e" fillOpacity={0.55} isAnimationActive={false} />
+                                <Bar dataKey="inflow" name="외국인 국내투자" stackId="f" fill="#38bdf8" fillOpacity={0.55} isAnimationActive={false} />
+                                <Line dataKey="net" name="순유입" stroke="#e5e7eb" dot={false} strokeWidth={2} isAnimationActive={false} />
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                        <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+                            순유입 = 경상수지(무역 등으로 벌어온 달러) − 내국인 해외투자(직접+증권) + 외국인 국내투자(직접+증권). 마이너스가 이어지면
+                            흑자를 내도 원화가 강해지기 어려운 구조적 달러 수요가 있다는 뜻입니다. 출처: 한국은행 국제수지(월간, 약 2개월 지연).
+                        </p>
+                    </> : <p className="text-sm text-gray-500">국제수지 데이터 없음</p>}
+                </div>
+            </div>
+        </section>
     );
 }
 
@@ -222,7 +290,6 @@ function SpreadChart({ data }: { data: (Row & { t: number })[] }) {
 
 // 상관계수 해석 — 주간 변화 기준
 const corrLabel = (v: number | null) => v == null ? '-' : v >= 0.6 ? '강한 동조' : v >= 0.3 ? '보통 동조' : v > -0.3 ? '거의 무관' : '반대로 움직임';
-const sign = (v: number, d = 1) => `${v > 0 ? '+' : ''}${v.toFixed(d)}`;
 const CORR_SERIES = [
     { key: 'dxy', name: '달러지수', color: '#6366f1' },
     { key: 'spread', name: '미-한 금리차', color: '#10b981' },
@@ -443,7 +510,7 @@ function HedgeSection({ h, s }: { h: Analysis['hedge']; s: Snapshot }) {
 
 export default function FxTab() {
     // 재진입 시 캐시를 즉시 그리고, 서버 기준 시각이 1시간 넘었을 때만 백그라운드 갱신
-    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-fx-v2', `${API_BASE}/api/v1/fx/overview`);
+    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-fx-v3', `${API_BASE}/api/v1/fx/overview`);
     const [range, setRange] = useState<Range>('20Y');
     const [selected, setSelected] = useState<number | null>(null);
 
@@ -497,11 +564,12 @@ export default function FxTab() {
                     <p className="text-sm text-red-400">환율 데이터를 불러오지 못했습니다 ({error}). 서버가 깨어나는 중이면 잠시 후 업데이트를 눌러 주세요.</p>
                 )}
                 {!data && !error && <ChartLoadingPlaceholder height={140} message="환율 데이터 수집 중" subMessage="FRED·Yahoo 20년 시계열 — 첫 로드는 수십 초 걸릴 수 있습니다" />}
-                {s && <SnapshotGrid s={s} />}
+                {s && <SnapshotGrid s={s} fair={data?.analysis?.fair} />}
             </section>
 
             {data && (
                 <>
+                    <BalanceSection s={data.snapshot} />
                     <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                         <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
                             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -538,8 +606,8 @@ export default function FxTab() {
 
                     <p className="flex items-start gap-1.5 text-[11px] text-gray-500 px-1">
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        출처: FRED(DEXKOUS·DGS10·IRLTLT01KRM156N·RBKRBIS·DFF·IR3TIB01KRM156N·DEXJPUS·DEXCHUS·VIXCLS), Yahoo Finance(DX-Y.NYB·KRW=X).
-                        한국 금리·실질실효환율은 월간 지표라 최대 2개월 늦습니다. 판정 배지·환헤지 판단·적정 원/달러는 공개 지표로 만든 참고 정보이며 투자 권유가 아닙니다.
+                        출처: 한국은행 ECOS(국제수지), FRED(DEXKOUS·DGS10·IRLTLT01KRM156N·RBKRBIS·DFF·IR3TIB01KRM156N·DEXJPUS·DEXCHUS·VIXCLS), Yahoo Finance(DX-Y.NYB·KRW=X).
+                        한국 금리·실질실효환율은 월간 지표라 최대 2개월 늦습니다. 판정 배지·근거 목록·환헤지 판단·적정 원/달러는 공개 지표로 만든 참고 정보이며 투자 권유가 아닙니다.
                     </p>
                 </>
             )}
