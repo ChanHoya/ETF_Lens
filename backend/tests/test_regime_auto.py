@@ -171,3 +171,12 @@ def test_enrich_rejects_contradicting_ai_text(monkeypatch):
     seg = _auto_seg()  # 인하 국면
     asyncio.run(regime_auto.enrich_texts("rates", [seg], lambda s: "ctx", "q", date(2027, 1, 20)))
     assert seg["title"] == "인하 사이클" and _FakeSession.store == {}
+
+
+def test_zigzag_keeps_qualified_high_when_low_is_broken_before_confirmation():
+    # 나스닥 2006~2009 모양: 저점 2300 → 고점 2810(+22%) → 2290(직전 저점 살짝 이탈, 고점 대비 −18.5%) → 1270
+    from core.regime_auto import zigzag_auto
+    s = _krw([("2006-10-06", 2300), ("2007-11-02", 2810), ("2008-01-18", 2290), ("2009-03-06", 1270), ("2010-01-01", 2300)])
+    pivots, _ = zigzag_auto(s, 0.20)
+    kinds = [(d.strftime("%Y-%m"), k) for d, _, k in pivots]
+    assert kinds[:3] == [("2006-10", "low"), ("2007-11", "high"), ("2009-03", "low")]
