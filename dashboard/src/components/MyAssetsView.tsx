@@ -40,10 +40,40 @@ async function fetchWithWake(
 }
 
 export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenDetail?: (code: string) => void, onAnalyzePeers?: (items: any[]) => void }) {
-    const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isAuthorized, setIsAuthorized] = useState<boolean>(() => {
+        if (typeof window !== "undefined") {
+            try {
+                return sessionStorage.getItem("kis_authorized") === "true";
+            } catch (e) {
+                return false;
+            }
+        }
+        return false;
+    });
+
+    const [kisData, setKisData] = useState<any>(() => {
+        if (typeof window !== "undefined") {
+            try {
+                const saved = sessionStorage.getItem("kis_portfolio_data");
+                if (saved) return JSON.parse(saved);
+            } catch (e) {}
+        }
+        return null;
+    });
+
+    const [isLoading, setIsLoading] = useState<boolean>(() => {
+        if (typeof window !== "undefined") {
+            const isAuth = sessionStorage.getItem("kis_authorized") === "true";
+            const hasKis = !!sessionStorage.getItem("kis_portfolio_data");
+            const hasIntegrated = !!sessionStorage.getItem("integrated_assets_data");
+            // 인증되었고 캐시된 데이터가 존재하면 블로킹 없이 즉시 화면 전시
+            if (isAuth && (hasKis || hasIntegrated)) return false;
+            if (!isAuth) return false; // 미인증 시 바로 PIN 모달 전시
+        }
+        return true;
+    });
+
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [kisData, setKisData] = useState<any>(null);
     const [tradesData, setTradesData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
     const [wakingUp, setWakingUp] = useState(false);
@@ -63,8 +93,12 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
     }, []);
 
     const fetchPortfolioData = useCallback(async (isManualRefresh = false) => {
-        if (isManualRefresh) setIsRefreshing(true);
-        else setIsLoading(true);
+        const hasCached = !!kisData || (typeof window !== "undefined" && !!sessionStorage.getItem("kis_portfolio_data"));
+        if (isManualRefresh || hasCached) {
+            setIsRefreshing(true);
+        } else {
+            setIsLoading(true);
+        }
         setError(null);
         setWakingUp(false);
         try {
@@ -86,7 +120,7 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
             }
 
             const [portfolioRes] = await Promise.all([
-                fetchWithWake(`${API_BASE}/api/v1/my/portfolio`, undefined, () => setWakingUp(true)),
+                fetchWithWake(`${API_BASE}/api/v1/my/portfolio?force_refresh=${isManualRefresh}`, undefined, () => setWakingUp(true)),
                 fetchTrades(),
             ]);
             const data = await portfolioRes.json();
@@ -98,6 +132,11 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
                 );
             }
             setKisData(data);
+            if (typeof window !== "undefined") {
+                try {
+                    sessionStorage.setItem("kis_portfolio_data", JSON.stringify(data));
+                } catch (e) {}
+            }
             setIsAuthorized(true);
             setLastFetchedAt(new Date());
         } catch (err: any) {
@@ -105,13 +144,13 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
                 ? JSON.stringify(err.message)
                 : (err.message || "데이터 로드 실패");
             setError(msg);
-            if (!isManualRefresh) setIsAuthorized(false);
+            if (!isManualRefresh && !hasCached) setIsAuthorized(false);
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
             setWakingUp(false);
         }
-    }, [fetchTrades]);
+    }, [fetchTrades, kisData]);
 
     useEffect(() => {
         // 초기 마운트 시 세션스토리지 확인
@@ -140,12 +179,12 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
         }
     }, [isAuthorized]);
 
-    // 초기 마운트 시 인증되어 있으면 데이터 불러오기
+    // 초기 마운트 시 인증되어 있으면 데이터 불러오기 (백그라운드 갱신)
     useEffect(() => {
-        if (isAuthorized && !kisData) {
-            fetchPortfolioData();
+        if (isAuthorized) {
+            fetchPortfolioData(false);
         }
-    }, [isAuthorized, kisData, fetchPortfolioData]);
+    }, [isAuthorized]);
 
     useEffect(() => {
         const handleRefresh = (e: any) => {
@@ -298,7 +337,7 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
                 </div>
             ) : !isAuthorized ? (
                 <MyAuthModal onSuccess={handleAuthSuccess} initialError={error} />
-            ) : isLoading ? (
+            ) : (isLoading && !kisData && mainTab === "kis") ? (
                 <div className="flex flex-col items-center justify-center p-20 w-full max-w-4xl bg-white/[0.02] border border-white/5 rounded-3xl backdrop-blur-xl mt-8">
                     <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
                     <h2 className="text-xl font-bold mb-2">{wakingUp ? "서버를 깨우는 중" : "My 포트폴리오 분석 중"}</h2>

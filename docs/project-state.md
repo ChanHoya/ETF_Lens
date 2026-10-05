@@ -3,9 +3,9 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S6-25 종합 매트릭스 및 배당 캘린더 DB 일괄 쿼리 & 캐시 가속화 완료
+✅ Current: S6-26 종합 자산(Hoya Board) 초기 로딩 블로킹 제거 & KIS 스마트 캐시 가속화 완료
 ➡️ Next: 전 섹터/대시보드 실서버 운영 모니터링 및 성능 유지보수
-➡️ 다음 신규 스토리 ID는 **S6-26**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+➡️ 다음 신규 스토리 ID는 **S6-27**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-04, Claude Code):
 > - 🌗 Dark / Light 토글(상단 바, `ThemeToggle`) 추가. Tailwind v4 색 변수를 `html.light`에서 반전하는 방식(`scripts/generate-light-theme.py` → `app/theme-light.css`). 근거 `docs/theme-light-context-notes.md`. 시장동향 '오늘의 시장' 임베드 주소를 bulliza.com으로 교체(finance.richgo.ai 404).
@@ -90,6 +90,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 | S6-23 | 장 마감 자산 스냅샷 스케줄러 & 배당 14일 TTL 자동 갱신 파이프라인 | ✅ stable | 평일 15:40 자산 스냅샷(UserAssetSnapshot) 자동 DB 적재 및 배당 요약본 14일 TTL 만료 시 주간 자동 재스크래핑 크론 등록 완료 |
 | S6-24 | 10대 주도주 스크리너 사전 계산 DB화 & 5대 섹터 구성종목 DB 서빙 전환 | ✅ stable | SectorLeaderQuant 모델 및 일일 장 마감 후(16:00) 퀀트 랭킹 사전 계산 크론 잡 구축(20초→0.01초), 5대 섹터 구성종목(Holdings) DB 1순위 조회 및 주가 5분 캐시 적용(8초→0.05초) 완료 |
 | S6-25 | 종합 매트릭스 및 배당 캘린더 DB 일괄 쿼리 & 캐시 가속화 | ✅ stable | CompareTable의 불필요한 wisereport 스크래핑 제거 및 60초 캐싱(3초→0.05초), DividendDashboard 포트폴리오 캐시플로우 DB 일괄 쿼리(0.005초) 및 SWR 캐시 우선 렌더링 적용 완료 |
+| S6-26 | 종합 자산(Hoya Board) 초기 로딩 블로킹 제거 & KIS 스마트 캐시 | ✅ stable | MyAssetsView 마운트 시 Hoya Board 탭을 가로막던 20초 전면 스피너 블로킹 제거, 세션 캐시 기반 0초 즉시 렌더링(SWR) 및 백엔드 포트폴리오 스마트 TTL(장마감 30분/장중 10분) 캐싱 적용 완료 |
 
 ### 스토리 ID 충돌 대응표
 

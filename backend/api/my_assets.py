@@ -27,6 +27,7 @@ router = APIRouter()
 @router.get("/portfolio")
 async def get_my_portfolio(
     request: Request,
+    force_refresh: bool = False,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -42,9 +43,19 @@ async def get_my_portfolio(
     # Use Lock to prevent concurrent threads from initiating KIS API requests at the exact same time
     async with _PORTFOLIO_LOCK:
         now = time.time()
-        # Return cache if valid (within 5 minutes)
-        if _PORTFOLIO_CACHE is not None and (now - _PORTFOLIO_CACHE_TIME) < _PORTFOLIO_CACHE_TTL:
-            return _PORTFOLIO_CACHE
+        # Return cache if valid (unless force_refresh is requested)
+        if not force_refresh and _PORTFOLIO_CACHE is not None:
+            from datetime import datetime, timezone, timedelta
+            kst_now = datetime.now(timezone(timedelta(hours=9)))
+            is_market_closed = (
+                kst_now.weekday() >= 5
+                or (kst_now.hour > 15 or (kst_now.hour == 15 and kst_now.minute >= 35))
+                or kst_now.hour < 9
+            )
+            smart_ttl = 1800 if is_market_closed else 600  # 장 마감/주말 30분, 장중 10분
+            if (now - _PORTFOLIO_CACHE_TIME) < smart_ttl:
+                logger.info(f"[portfolio] Serving cached portfolio ({round(now - _PORTFOLIO_CACHE_TIME, 1)}s old)")
+                return _PORTFOLIO_CACHE
 
         env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
         load_dotenv(dotenv_path=env_path, override=True)

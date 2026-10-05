@@ -73,6 +73,7 @@
 | S6-23: 장 마감 자산 스냅샷 스케줄러 & 배당 14일 TTL 자동 갱신 파이프라인 | ✅ done | backend/api/my_assets.py, backend/core/dividend_scraper.py, backend/core/scheduler.py, backend/tests/test_snapshot_and_dividend_sync.py | 장 마감(평일 15:40) 시점 KIS 포트폴리오 기준 UserAssetSnapshot 자동 적재 및 배당 요약본(ETFDividendSummary) 14일 TTL stale 감지 시 주간 자동 갱신 크론 잡 구축 완료 |
 | S6-24: 10대 주도주 스크리너 사전 계산 DB화 & 5대 섹터 구성종목 DB 서빙 전환 | ✅ done | backend/api/next_leader.py, backend/api/router.py, backend/db/models.py, backend/core/scheduler.py, backend/tests/test_next_leader_and_holdings_db.py | SectorLeaderQuant 모델 및 장 마감 후 자동 사전 계산 크론 잡 구축(20초→0.01초 즉각 응답), 5대 섹터 ETF 구성종목 DB 우선 조회 및 주가 5분 캐시 적용(8초→0.05초 초고속 서빙) |
 | S6-25: 종합 매트릭스 및 배당 캘린더 DB 일괄 쿼리 & 캐시 가속화 | ✅ done | backend/api/router.py, backend/api/dividends.py, dashboard/src/components/DividendDashboard.tsx, backend/tests/test_compare_and_dividend_fast.py | 종합 매트릭스 중복 스크래핑 제거 및 60초 캐싱(0.05초 서빙), 배당 캘린더 포트폴리오 캐시플로우 DB 일괄 쿼리(0.005초) 및 SWR 캐시 우선 렌더링 완료 |
+| S6-26: 종합 자산(Hoya Board) 초기 로딩 블로킹 제거 & KIS 스마트 캐시 | ✅ done | backend/api/my_assets.py, dashboard/src/components/MyAssetsView.tsx, backend/tests/test_my_assets.py | MyAssetsView 마운트 시 Hoya Board 탭을 가로막던 20초 전면 스피너 블로킹 제거, 세션 캐시 기반 0초 즉시 렌더링(SWR) 및 백엔드 포트폴리오 스마트 TTL(장마감 30분/장중 10분) 캐싱 적용 완료 |
 
 
 
