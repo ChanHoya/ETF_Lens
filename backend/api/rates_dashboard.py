@@ -14,9 +14,9 @@ from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
 import requests
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
-from api.exit_signal import _fetch_fred_series
+from core.overview_cache import OverviewCache, fred_csv, timed
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -90,9 +90,6 @@ REGIMES = [
      "drivers": ["물가 3% 안팎, 근원물가 오름세", "중동 리스크 비용 전이", "수도권 주택·가계부채 위험"],
      "source": "한국은행 2026년 9월 통화신용정책보고서(연합뉴스)"},
 ]
-
-_cache: dict = {"data": None, "ts": 0.0}
-
 
 # ── 공통 유틸 ────────────────────────────────────────────────────────────────
 def _empty() -> pd.Series:
@@ -482,28 +479,38 @@ def _fetch_ecos(stat: str, cycle: str, item: str, years: int = YEARS + 2) -> dic
         return {}
 
 
-async def _collect_raw() -> dict[str, dict[str, float]]:
-    fred_keys, ecos_keys = list(FRED_IDS), list(ECOS_SERIES)
-    results = await asyncio.gather(
-        *(_fetch_fred_series(FRED_IDS[k], days=365 * (LONG_YEARS if k in LONG_FRED else YEARS + 2)) for k in fred_keys),
-        *(asyncio.to_thread(_fetch_ecos, *ECOS_SERIES[k]) for k in ecos_keys),
-    )
-    return dict(zip(fred_keys + ecos_keys, results))
+async def _collect_raw() -> tuple[dict[str, dict[str, float]], dict[str, float]]:
+    """FRED·ECOS 전부를 전용 I/O 풀에서 동시에 받는다. 반환: (raw, 시리즈별 걸린 초)."""
+    today = date.today()
+    start = (today - timedelta(days=365 * (YEARS + 2))).isoformat()
+    start_long = (today - timedelta(days=365 * LONG_YEARS)).isoformat()
+    jobs = {k: (fred_csv, FRED_IDS[k], start_long if k in LONG_FRED else start) for k in FRED_IDS}
+    jobs.update({k: (_fetch_ecos, *ECOS_SERIES[k]) for k in ECOS_SERIES})
+    names = list(jobs)
+    res = await asyncio.gather(*(timed(*jobs[n]) for n in names))
+    return {n: r[0] for n, r in zip(names, res)}, {n: r[1] for n, r in zip(names, res)}
+
+
+async def _build() -> dict | None:
+    t0 = time.perf_counter()
+    raw, timings = await _collect_raw()
+    sources = {k: len(v) for k, v in raw.items()}  # 0이면 그 원천이 실패(ECOS 키 누락 포함)
+    if not raw.get("kr_base") and not raw.get("us10y"):
+        logger.warning(f"rates overview: 수집 실패 {sources}")
+        return None
+    data = build_overview(raw, datetime.now(_KST).date())
+    data["sources"] = sources
+    data["timings"] = {**timings, "total": round(time.perf_counter() - t0, 2)}
+    data["ecos_key"] = bool(os.environ.get("ECOS_API_KEY"))
+    return data if data["weekly"] else None
+
+
+overview_cache = OverviewCache("rates", CACHE_TTL, _build)
 
 
 @router.get("/overview")
 async def rates_overview(refresh: bool = Query(False)):
-    now = time.time()
-    if not refresh and _cache["data"] and now - _cache["ts"] < CACHE_TTL:
-        return _cache["data"]
-    raw = await _collect_raw()
-    sources = {k: len(v) for k, v in raw.items()}  # 0이면 그 원천이 실패(ECOS 키 누락 포함)
-    if not raw.get("kr_base") and not raw.get("us10y") and _cache["data"]:
-        logger.warning(f"rates overview: 수집 실패, 마지막 성공값 반환 {sources}")
-        return {**_cache["data"], "stale": True, "sources": sources}
-    data = build_overview(raw, datetime.now(_KST).date())
-    data["sources"] = sources
-    data["ecos_key"] = bool(os.environ.get("ECOS_API_KEY"))
-    if data["weekly"]:
-        _cache.update(data=data, ts=now)
+    data = await overview_cache.get(force=refresh)
+    if data is None:
+        raise HTTPException(status_code=503, detail="금리 원천 데이터 수집 실패 — 잠시 후 다시 시도해 주세요.")
     return data

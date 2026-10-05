@@ -229,6 +229,15 @@ async def lifespan(app: FastAPI):
         except Exception as _e:
             print(f"[Startup] Brazil seeding skipped: {_e}")
 
+        # ── 5.6. 시장동향 환율·금리 탭 서버 캐시 예열 (재시작·배포 직후 첫 방문자가 수집을 기다리지 않게) ──
+        try:
+            from api.fx_dashboard import overview_cache as _fx_cache
+            from api.rates_dashboard import overview_cache as _rates_cache
+            _fx_cache.warm()
+            _rates_cache.warm()
+        except Exception as _e:
+            print(f"[Startup] overview cache warm skipped: {_e}")
+
         setup_scheduler()
 
     # DB 연결 대기로 인한 Render 60초 포트바인딩 타임아웃 방지를 위해 백그라운드로 실행

@@ -13,9 +13,10 @@ from datetime import date, datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 import requests
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
-from api.exit_signal import _fetch_fred_series, _fetch_yahoo_v8
+from api.exit_signal import _fetch_yahoo_v8
+from core.overview_cache import OverviewCache, fred_csv, timed
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -78,9 +79,6 @@ REGIMES = [
                  "미 고용 부진·약달러, 미·일 엔화 공조 매입", "외국인 순매수 전환과 경상수지 흑자"],
      "source": "한국경제 2026-07-31 · 서울신문 2026-08-20"},
 ]
-
-_cache: dict = {"data": None, "ts": 0.0}
-
 
 def _series(d: dict[str, float]) -> pd.Series:
     if not d:
@@ -318,30 +316,37 @@ def _yahoo_weekly(symbol: str, years: int = YEARS) -> dict[str, float]:
         return {}
 
 
-async def _collect_raw() -> dict[str, dict[str, float]]:
-    keys = list(FRED_IDS)
-    results = await asyncio.gather(
-        *(_fetch_fred_series(FRED_IDS[k], days=365 * (YEARS + 1)) for k in keys),
-        asyncio.to_thread(_yahoo_weekly, "DX-Y.NYB"),
-        _fetch_yahoo_v8("KRW=X", days=60),
-    )
-    raw = dict(zip(keys, results[:len(keys)]))
-    raw["dxy"], raw["krw_live"] = results[len(keys)], results[len(keys) + 1]
-    return raw
+async def _collect_raw() -> tuple[dict[str, dict[str, float]], dict[str, float]]:
+    """원천 전부를 전용 I/O 풀에서 동시에 받는다. 반환: (raw, 시리즈별 걸린 초)."""
+    start = (date.today() - timedelta(days=365 * (YEARS + 1))).isoformat()
+    jobs = {k: (fred_csv, FRED_IDS[k], start) for k in FRED_IDS}
+    jobs["dxy"] = (_yahoo_weekly, "DX-Y.NYB")
+    names = list(jobs)
+    res = await asyncio.gather(*(timed(*jobs[n]) for n in names), _fetch_yahoo_v8("KRW=X", days=60))
+    raw = {n: r[0] for n, r in zip(names, res)}
+    raw["krw_live"] = res[-1]
+    return raw, {n: r[1] for n, r in zip(names, res)}
+
+
+async def _build() -> dict | None:
+    t0 = time.perf_counter()
+    raw, timings = await _collect_raw()
+    sources = {k: len(v) for k, v in raw.items()}  # 0이면 그 원천이 실패한 것
+    if not raw.get("krw"):
+        logger.warning(f"FX overview: 원/달러 수집 실패 {sources}")
+        return None
+    data = build_overview(raw, date.today())
+    data["sources"] = sources
+    data["timings"] = {**timings, "total": round(time.perf_counter() - t0, 2)}
+    return data if data["weekly"] else None
+
+
+overview_cache = OverviewCache("fx", CACHE_TTL, _build)
 
 
 @router.get("/overview")
 async def fx_overview(refresh: bool = Query(False)):
-    now = time.time()
-    if not refresh and _cache["data"] and now - _cache["ts"] < CACHE_TTL:
-        return _cache["data"]
-    raw = await _collect_raw()
-    sources = {k: len(v) for k, v in raw.items()}  # 시리즈별 관측 수 — 0이면 그 원천이 실패한 것
-    if not raw.get("krw") and _cache["data"]:
-        logger.warning(f"FX overview: 원/달러 수집 실패, 마지막 성공값 반환 {sources}")
-        return {**_cache["data"], "stale": True, "sources": sources}
-    data = build_overview(raw, date.today())
-    data["sources"] = sources
-    if data["weekly"]:
-        _cache.update(data=data, ts=now)
+    data = await overview_cache.get(force=refresh)
+    if data is None:
+        raise HTTPException(status_code=503, detail="환율 원천 데이터 수집 실패 — 잠시 후 다시 시도해 주세요.")
     return data
