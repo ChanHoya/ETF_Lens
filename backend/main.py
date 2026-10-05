@@ -27,6 +27,7 @@ from api.integrated_assets import router as integrated_assets_router
 from api.dividends import router as dividends_router
 from api.fx_dashboard import router as fx_dashboard_router
 from api.rates_dashboard import router as rates_dashboard_router
+from api.stocks_dashboard import router as stocks_dashboard_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -229,12 +230,14 @@ async def lifespan(app: FastAPI):
         except Exception as _e:
             print(f"[Startup] Brazil seeding skipped: {_e}")
 
-        # ── 5.6. 시장동향 환율·금리 탭 서버 캐시 예열 (재시작·배포 직후 첫 방문자가 수집을 기다리지 않게) ──
+        # ── 5.6. 시장동향 환율·금리·주식 탭 서버 캐시 예열 (재시작·배포 직후 첫 방문자가 수집을 기다리지 않게) ──
         try:
             from api.fx_dashboard import overview_cache as _fx_cache
             from api.rates_dashboard import overview_cache as _rates_cache
+            from api.stocks_dashboard import overview_cache as _stocks_cache
             _fx_cache.warm()
             _rates_cache.warm()
+            _stocks_cache.warm()
         except Exception as _e:
             print(f"[Startup] overview cache warm skipped: {_e}")
 
@@ -301,6 +304,7 @@ app.include_router(integrated_assets_router, prefix="/api/v1/my")
 app.include_router(dividends_router)
 app.include_router(fx_dashboard_router, prefix="/api/v1/fx")
 app.include_router(rates_dashboard_router, prefix="/api/v1/rates")
+app.include_router(stocks_dashboard_router, prefix="/api/v1/stocks")
 
 
 @app.get("/health")

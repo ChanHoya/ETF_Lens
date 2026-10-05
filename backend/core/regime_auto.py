@@ -71,25 +71,45 @@ def zigzag(s: pd.Series, start_type: str, threshold: float = FX_THRESHOLD):
     ext_d, ext_v = s.index[0], float(s.iloc[0])
     for d, v in s.iloc[1:].items():
         v = float(v)
+        # 반전 확정을 먼저 본다 — 한 주에 크게 떨어져 직전 저점까지 깨도 그 앞 고점은 전환점으로 남아야 한다
         if looking == "high":
-            if v < pivots[-1][1]:                      # 저점 갱신 → 저점을 뒤로
+            if v <= ext_v * (1 - threshold) and ext_v >= pivots[-1][1] * (1 + threshold):
+                pivots.append((ext_d, ext_v, "high"))
+                looking, ext_d, ext_v = "low", d, v
+            elif v < pivots[-1][1] and ext_v < pivots[-1][1] * (1 + threshold):
+                # 고점 후보가 아직 threshold만큼 오르지 못했을 때만 저점을 뒤로(이미 오른 고점은 하락 확정을 기다린다)
                 pivots[-1] = (d, v, "low")
                 ext_d, ext_v = d, v
             elif v > ext_v:
                 ext_d, ext_v = d, v
-            elif v <= ext_v * (1 - threshold) and ext_v >= pivots[-1][1] * (1 + threshold):
-                pivots.append((ext_d, ext_v, "high"))
-                looking, ext_d, ext_v = "low", d, v
         else:
-            if v > pivots[-1][1]:                      # 고점 갱신 → 고점을 뒤로
+            if v >= ext_v * (1 + threshold) and ext_v <= pivots[-1][1] * (1 - threshold):
+                pivots.append((ext_d, ext_v, "low"))
+                looking, ext_d, ext_v = "high", d, v
+            elif v > pivots[-1][1] and ext_v > pivots[-1][1] * (1 - threshold):
+                # 저점 후보가 아직 threshold만큼 내리지 못했을 때만 고점을 뒤로
                 pivots[-1] = (d, v, "high")
                 ext_d, ext_v = d, v
             elif v < ext_v:
                 ext_d, ext_v = d, v
-            elif v >= ext_v * (1 + threshold) and ext_v <= pivots[-1][1] * (1 - threshold):
-                pivots.append((ext_d, ext_v, "low"))
-                looking, ext_d, ext_v = "high", d, v
     return pivots, (ext_d, ext_v)
+
+
+def zigzag_auto(s: pd.Series, threshold: float):
+    """첫 전환점을 모를 때: 처음부터 최고·최저를 추적해 먼저 threshold 반전이 나는 쪽을 첫 전환점으로 삼고 zigzag를 이어 간다."""
+    hi_d = lo_d = s.index[0]
+    hi_v = lo_v = float(s.iloc[0])
+    for d, v in s.items():
+        v = float(v)
+        if v > hi_v:
+            hi_d, hi_v = d, v
+        if v < lo_v:
+            lo_d, lo_v = d, v
+        if v <= hi_v * (1 - threshold):   # 고점에서 먼저 무너짐 → 첫 전환점은 고점
+            return zigzag(s[s.index >= hi_d], "high", threshold)
+        if v >= lo_v * (1 + threshold):   # 저점에서 먼저 반등 → 첫 전환점은 저점
+            return zigzag(s[s.index >= lo_d], "low", threshold)
+    return [(s.index[0], float(s.iloc[0]), "low")], (s.index[-1], float(s.iloc[-1]))
 
 
 def fx_auto_segments(krw: pd.Series, after: str, after_kind: str) -> list[dict]:
@@ -126,6 +146,7 @@ def attach_text(segs: list[dict], curated: list[dict]) -> list[dict]:
 
 
 RATE_TITLE = {"hike": "인상 사이클", "cut": "인하 사이클", "hold": "동결 국면"}
+STOCK_TITLE = {"bull": "강세장", "bear": "약세장"}
 FX_TITLE = {"up": "원화 약세 국면", "down": "원화 강세 국면", "range": "박스권"}
 
 
@@ -135,6 +156,11 @@ def template_text(asset: str, seg: dict) -> dict:
         line = (f"기준금리 {seg['from']:.2f}% 유지" if seg["kind"] == "hold"
                 else f"기준금리 {seg['from']:.2f} → {seg['to']:.2f}% ({seg['bp']:+.0f}bp, {seg['changes']}회)")
         return {"title": RATE_TITLE[seg["kind"]], "drivers": [line, "한국은행 기준금리 변경 이력으로 자동 감지"],
+                "source": "데이터 기반 자동 감지"}
+    if _group(asset) == "stock":
+        return {"title": STOCK_TITLE[seg["kind"]],
+                "drivers": [f"{ASSET_NAME[asset]} {seg['from']:,.0f} → {seg['to']:,.0f} ({seg['chg_pct']:+.1f}%)",
+                            "고점·저점 대비 20% 반전 기준으로 자동 감지"],
                 "source": "데이터 기반 자동 감지"}
     return {"title": FX_TITLE[seg["kind"]],
             "drivers": [f"원/달러 {seg['from']:,.0f} → {seg['to']:,.0f}원 ({seg['chg_pct']:+.1f}%)",
@@ -162,13 +188,20 @@ DIRECTION = {
     ("fx", "up"): ("원/달러 상승 = 원화 약세 국면", ("원화 강세", "환율 하락", "환율 급락")),
     ("fx", "down"): ("원/달러 하락 = 원화 강세 국면", ("원화 약세", "환율 상승", "환율 급등")),
     ("fx", "range"): ("박스권", ()),
+    ("stock", "bull"): ("강세장(저점 대비 20% 이상 상승)", ("약세장", "폭락", "하락장")),
+    ("stock", "bear"): ("약세장(고점 대비 20% 이상 하락)", ("강세장", "랠리", "상승장")),
 }
+ASSET_NAME = {"rates": "한국 기준금리", "fx": "원/달러 환율", "kospi": "KOSPI", "spx": "S&P500", "ndx": "Nasdaq"}
+
+
+def _group(asset: str) -> str:
+    return "stock" if asset in ("kospi", "spx", "ndx") else asset
 
 
 def _prompt(asset: str, seg: dict, context: str, headlines: list[str]) -> str:
-    name = "한국 기준금리" if asset == "rates" else "원/달러 환율"
+    name = ASSET_NAME.get(asset, asset)
     period = f"{seg['start']} ~ {seg['end'] or '현재(진행 중)'}"
-    direction = DIRECTION[(asset, seg["kind"])][0]
+    direction = DIRECTION[(_group(asset), seg["kind"])][0]
     news = "\n".join(f"- {h}" for h in headlines) or "- (헤드라인 없음)"
     return f"""너는 한국 금융시장 애널리스트다. 아래 {name} 국면의 이름과 배경을 한국어로 쓴다.
 기간: {period}
@@ -178,7 +211,8 @@ def _prompt(asset: str, seg: dict, context: str, headlines: list[str]) -> str:
 {news}
 
 규칙:
-- 위 데이터와 헤드라인에 근거한 내용만 쓴다. 근거 없는 수치·사건·인물은 쓰지 않는다.
+- 위 데이터와 헤드라인에 근거한 내용만 쓴다. 헤드라인이 없으면 이 기간에 널리 알려진 거시 사건(예: 글로벌 금융위기,
+  코로나19)만 근거로 쓰고, 확실하지 않으면 데이터 설명에 그친다. 근거 없는 수치·인물은 쓰지 않는다.
 - 제목과 요인은 반드시 위 '방향'과 일치해야 한다. 이 방향과 무관하거나 반대인 헤드라인은 무시한다.
 - title: 12자 안팎의 짧은 국면 이름(예: "환전 수급·금리차 축소").
 - drivers: 이 국면을 만든 요인 2~3개, 각 30자 이내.
@@ -194,14 +228,15 @@ def valid_text(t: dict, asset: str | None = None, kind: str | None = None) -> di
         return None
     if asset and kind:
         text = " ".join([title, *drivers])
-        if any(w in text for w in DIRECTION.get((asset, kind), ("", ()))[1]):
+        if any(w in text for w in DIRECTION.get((_group(asset), kind), ("", ()))[1]):
             return None
     return {"title": title.strip(), "drivers": [x.strip()[:60] for x in drivers]}
 
 
-async def enrich_texts(asset: str, segs: list[dict], context_of, news_query: str, today: date) -> None:
-    """auto 국면의 제목·배경을 채운다: DB 캐시 → Gemini(빌드당 최대 2건) → 기본 문구(이미 들어 있음).
-    context_of(seg) -> str: 그 구간의 데이터 요약."""
+async def enrich_texts(asset: str, segs: list[dict], context_of, news_query: str, today: date,
+                       ai: bool = True, budget: int = AI_MAX_PER_BUILD) -> None:
+    """auto 국면의 제목·배경을 채운다: DB 캐시 → Gemini(호출당 최대 budget건) → 기본 문구(이미 들어 있음).
+    context_of(seg) -> str: 그 구간의 데이터 요약. ai=False면 DB 캐시만 적용(빌드를 막지 않을 때)."""
     pending = [s for s in segs if s.get("auto")]
     if not pending:
         return
@@ -215,7 +250,7 @@ async def enrich_texts(asset: str, segs: list[dict], context_of, news_query: str
         logger.warning(f"enrich_texts import failed: {e}")
         return
     api_key = os.environ.get("GEMINI_API_KEY")
-    ai_budget = AI_MAX_PER_BUILD
+    ai_budget = budget if ai else 0
     try:
         async with AsyncSessionLocal() as db:
             for s in pending:
