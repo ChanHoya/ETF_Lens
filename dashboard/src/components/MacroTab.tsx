@@ -1,13 +1,19 @@
 'use client';
 // 시장동향 > 종합분석 하위 탭 — 환율·금리·주식을 묶은 국면 진단, 자산배분 근거, 과거 유사 국면, 자산 연결 지도, 3트랙 통합 타임라인, 이벤트 시나리오
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ResponsiveContainer, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { Compass, RefreshCw, Sparkles, PieChart, History, Network, CalendarClock, Info, Plus, Minus, Circle } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
-import { useCachedOverview } from '@/lib/useCachedOverview';
+import { dataAgeMs, useCachedOverview } from '@/lib/useCachedOverview';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 
+type EventItem = {
+    kind: 'bok' | 'fomc' | 'event'; date: string; d_day: number; title: string; status: 'upcoming' | 'pending' | 'done';
+    rate?: number | null; implied?: string | null; note?: string; cols: string[]; cases: { case: string; cells: string[] }[];
+    result: { case: string; text?: string; summary?: string; points?: string[]; source?: string } | null;
+    reaction: { since: string; krw?: number; kospi?: number; us10y_bp?: number; kr10y_bp?: number } | null;
+};
 type Seg = { start: string; end: string | null; kind: string; title: string; drivers: string[]; source?: string | null; summary: string };
 type Outcome = Partial<Record<'kospi' | 'spx' | 'krw' | 'us10y_bp', number>>;
 type Overview = {
@@ -20,10 +26,7 @@ type Overview = {
     } | null;
     correlation: { assets: { key: string; label: string }[]; now: (number | null)[][]; long: (number | null)[][]; notable: { text: string; diff: number }[] } | null;
     timeline: { lanes: { key: string; label: string; segments: Seg[] }[]; series: { date: string; kospi: number | null; krw: number | null }[] };
-    scenarios: Record<'bok' | 'fomc', { meeting: { date: string; d_day: number } | null; rate: number | null; implied: { label: string } | null;
-        cases: { case: string; krw: string; kr_bond: string; kospi: string }[] }> & {
-        note: string; events?: { date: string; d_day: number; name: string; note: string }[];
-    };
+    scenarios: { items: EventItem[]; missing: string[]; note: string };
     comment: { text: string | null; at: string | null };
     updated_at: string;
 };
@@ -259,43 +262,106 @@ function LaneTimeline({ t }: { t: Overview['timeline'] }) {
     );
 }
 
-function Scenarios({ sc }: { sc: Overview['scenarios'] }) {
+const sgn = (v: number, d = 1, u = '%') => `${v > 0 ? '+' : ''}${v.toFixed(d)}${u}`;
+const STATUS_BADGE: Record<EventItem['status'], { label: (x: EventItem) => string; cls: string }> = {
+    upcoming: { label: x => `D-${x.d_day}`, cls: 'text-gray-300 border-white/15 bg-white/5' },
+    pending: { label: () => '결과 반영 대기', cls: 'text-amber-200 border-amber-400/40 bg-amber-500/10' },
+    done: { label: () => '결과 반영', cls: 'text-emerald-200 border-emerald-400/40 bg-emerald-500/10' },
+};
+
+function EventCard({ x }: { x: EventItem }) {
+    const b = STATUS_BADGE[x.status];
+    const r = x.result, re = x.reaction;
     return (
-        <div>
-            {sc.events?.map(e => (
-                <div key={e.date} className="flex flex-wrap items-baseline gap-2 mb-3 rounded-xl bg-amber-500/10 border border-amber-400/25 px-3 py-2">
-                    <span className="text-sm font-extrabold text-amber-200">{e.name}</span>
-                    <span className="text-xs font-bold text-gray-300">{e.date} (D-{e.d_day})</span>
-                    <span className="text-xs text-gray-400">{e.note} · 이후 국면 변화를 이 화면에서 점검</span>
-                </div>
-            ))}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                {(['bok', 'fomc'] as const).map(k => {
-                    const x = sc[k];
-                    return (
-                        <div key={k} className="rounded-xl bg-white/[0.03] border border-white/5 p-3">
-                            <p className="text-sm font-extrabold text-white">{k === 'bok' ? '한국은행 금통위' : '미국 FOMC'}
-                                <span className="text-xs font-bold text-gray-400 ml-2">{x.meeting ? `${x.meeting.date} (D-${x.meeting.d_day})` : '일정 갱신 필요'} · 현재 {x.rate?.toFixed(2)}%</span></p>
-                            <p className="text-xs text-gray-400 mt-1">시장 반영: {x.implied?.label ?? '-'}</p>
-                            <table className="w-full text-xs mt-2">
-                                <thead><tr className="text-gray-500 border-b border-white/10"><th className="text-left py-1 font-bold">결과</th><th className="text-left font-bold">원/달러</th><th className="text-left font-bold">국내 채권금리</th><th className="text-left font-bold">KOSPI</th></tr></thead>
-                                <tbody>
-                                    {x.cases.map(c => (
-                                        <tr key={c.case} className="border-b border-white/5 text-gray-300"><td className="py-1 font-bold text-gray-100">{c.case}</td><td>{c.krw}</td><td>{c.kr_bond}</td><td>{c.kospi}</td></tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    );
-                })}
+        <div className={`rounded-xl border p-3 ${x.kind === 'event' ? 'xl:col-span-2 bg-amber-500/[0.04] border-amber-400/20' : 'bg-white/[0.03] border-white/5'}`}>
+            <div className="flex flex-wrap items-baseline gap-2">
+                <span className={`text-sm font-extrabold ${x.kind === 'event' ? 'text-amber-200' : 'text-white'}`}>{x.title}</span>
+                <span className="text-xs font-bold text-gray-400">{x.date}</span>
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${b.cls}`}>{b.label(x)}</span>
+                {x.rate != null && <span className="text-xs font-bold text-gray-400">현재 {x.rate.toFixed(2)}%</span>}
             </div>
-            <p className="text-[11px] text-gray-500 mt-2">{sc.note}</p>
+            {x.note && <p className="text-xs text-gray-400 mt-1">{x.note}</p>}
+            {x.status === 'upcoming' && x.implied && <p className="text-xs text-gray-400 mt-1">시장 반영: {x.implied}</p>}
+            {x.status === 'pending' && (
+                <p className="text-xs text-amber-200/80 mt-1.5">
+                    {x.kind === 'event' ? '뉴스로 결과를 확인하는 중입니다' : '결정 후 금리 데이터가 아직 갱신되지 않았습니다'} — 자동으로 다시 확인하며, 위의 &lsquo;결과 업데이트&rsquo;로 바로 확인할 수도 있습니다.
+                </p>
+            )}
+            {x.status === 'done' && r && (
+                <div className="mt-2 rounded-lg bg-emerald-500/[0.07] border border-emerald-400/20 px-2.5 py-2">
+                    <p className="text-sm font-bold text-emerald-100">결과: {r.text ?? r.summary}</p>
+                    {r.points && r.points.length > 0 && (
+                        <ul className="mt-1 space-y-0.5">{r.points.map(t => <li key={t} className="text-xs text-gray-300">· {t}</li>)}</ul>
+                    )}
+                    {re && (
+                        <p className="text-[11px] text-gray-400 mt-1">
+                            직전 주({re.since}) 대비
+                            {re.krw != null && <> · 원/달러 <b className={re.krw > 0 ? 'text-red-400' : 'text-blue-400'}>{sgn(re.krw)}</b></>}
+                            {re.kospi != null && <> · KOSPI <b className={re.kospi > 0 ? 'text-red-400' : 'text-blue-400'}>{sgn(re.kospi)}</b></>}
+                            {re.us10y_bp != null && <> · 미 10년물 {sgn(re.us10y_bp, 0, 'bp')}</>}
+                            {re.kr10y_bp != null && <> · 한 10년물 {sgn(re.kr10y_bp, 0, 'bp')}</>}
+                        </p>
+                    )}
+                    {r.source && <p className="text-[10px] text-gray-500 mt-1">{r.source}</p>}
+                </div>
+            )}
+            <table className="w-full text-xs mt-2">
+                <thead><tr className="text-gray-500 border-b border-white/10">
+                    <th className="text-left py-1 font-bold">결과</th>{x.cols.map(c => <th key={c} className="text-left font-bold">{c}</th>)}
+                </tr></thead>
+                <tbody>
+                    {x.cases.map(c => {
+                        const hit = x.status === 'done' && r?.case === c.case;
+                        return (
+                            <tr key={c.case} className={`border-b border-white/5 ${hit ? 'bg-emerald-500/10 text-gray-100' : x.status === 'done' ? 'text-gray-500' : 'text-gray-300'}`}>
+                                <td className="py-1 font-bold text-gray-100">{c.case}{hit && <span className="ml-1 text-emerald-300">◀ 실제</span>}</td>
+                                {c.cells.map((v, k) => <td key={k}>{v}</td>)}
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
         </div>
     );
 }
 
+function Scenarios({ sc }: { sc: Overview['scenarios'] }) {
+    return (
+        <div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                {sc.items.map(x => <EventCard key={`${x.kind}-${x.date}`} x={x} />)}
+            </div>
+            {sc.missing.length > 0 && <p className="text-[11px] text-amber-300/80 mt-2">다음 일정 갱신 필요: {sc.missing.join(', ')}</p>}
+            <p className="text-[11px] text-gray-500 mt-2">{sc.note} 지난 이벤트는 결과와 함께 30일간 남습니다.</p>
+        </div>
+    );
+}
+
+// 날짜가 지났는데 결과가 아직 없거나, 서버 데이터가 이벤트 날 이전에 만들어졌으면 1시간을 기다리지 않고 다시 받는다
+const todayKst = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+const eventDue = (d: Overview) => dataAgeMs(d) > 10 * 60 * 1000 && (d.scenarios?.items ?? []).some(
+    x => x.status === 'pending' || (x.status === 'upcoming' && x.date <= todayKst()));
+
 export default function MacroTab() {
-    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-macro-v2', `${API_BASE}/api/v1/macro/overview`);
+    const { data, refreshing, error, refresh, replace } = useCachedOverview<Overview>('iprism-macro-v3', `${API_BASE}/api/v1/macro/overview`, { isStale: eventDue });
+    // 수동 '결과 업데이트' — 금리 원천·이벤트 AI 결과를 서버에서 다시 확인한 응답으로 캐시를 바꾼다
+    const [evBusy, setEvBusy] = useState(false);
+    const [evMsg, setEvMsg] = useState<string | null>(null);
+    const updateEvents = useCallback(async () => {
+        setEvBusy(true);
+        setEvMsg(null);
+        try {
+            const r = await fetch(`${API_BASE}/api/v1/macro/events/refresh`, { method: 'POST', cache: 'no-store' });
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            const j = (await r.json()) as Overview & { throttled?: boolean };
+            replace(j);
+            setEvMsg(j.throttled ? '방금 업데이트했습니다 — 1분 뒤 다시 시도할 수 있습니다' : `${new Date().toLocaleTimeString('ko-KR')} 결과 확인 완료`);
+        } catch (e) {
+            setEvMsg(`업데이트 실패 (${e instanceof Error ? e.message : String(e)}) — 잠시 후 다시 시도해 주세요`);
+        } finally {
+            setEvBusy(false);
+        }
+    }, [replace]);
     return (
         <div className="w-full max-w-[95vw] xl:max-w-[1400px] mx-auto space-y-4 pb-10">
             <section className="bg-black/20 rounded-2xl border border-white/5 p-4 md:p-5">
@@ -346,7 +412,17 @@ export default function MacroTab() {
                     )}
 
                     <section className="bg-black/20 rounded-2xl border border-white/5 p-4">
-                        <SectionTitle icon={<CalendarClock className="w-5 h-5 text-purple-400" />} title="다가오는 이벤트 시나리오" sub="다음 금통위·FOMC·주요 이벤트와 결과별로 흔히 나타나는 시장 반응" />
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                            <SectionTitle icon={<CalendarClock className="w-5 h-5 text-purple-400" />} title="이벤트 시나리오 · 결과"
+                                sub="금통위·FOMC·주요 이벤트를 날짜순으로 — 결과가 나오면 실제 시나리오와 시장 반응을 자동 반영" />
+                            <div className="flex items-center gap-2">
+                                {evMsg && <span className="text-[11px] text-gray-400">{evMsg}</span>}
+                                <button onClick={updateEvents} disabled={evBusy}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 disabled:opacity-50">
+                                    <RefreshCw className={`w-3.5 h-3.5 ${evBusy ? 'animate-spin' : ''}`} />{evBusy ? '결과 확인 중…' : '결과 업데이트'}
+                                </button>
+                            </div>
+                        </div>
                         <Scenarios sc={data.scenarios} />
                     </section>
 

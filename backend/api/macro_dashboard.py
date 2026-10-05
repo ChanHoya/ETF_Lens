@@ -1,6 +1,7 @@
 # 시장동향 > 종합분석 탭용 API — 환율·금리·주식 탭 캐시를 결합해 국면 진단, 과거 유사 국면, 자산 연결 지도, 통합 타임라인, 시나리오, 자산배분 시사점
 """
 GET /api/v1/macro/overview  (?refresh=true 로 세 탭 캐시까지 새로)
+POST /api/v1/macro/events/refresh  (수동 '결과 업데이트' — 금리 원천·이벤트 AI 결과를 다시 확인, 1분 간격 제한)
 
 - 새 원천을 모으지 않고 fx·rates·stocks의 OverviewCache를 읽는다(숫자가 세 탭과 같다).
 - 계산(build_overview)은 세 탭 응답 dict를 받는 순수 함수로 두고 테스트한다. 규칙은 docs/macro-tab-context-notes.md.
@@ -10,7 +11,7 @@ import json
 import logging
 import os
 import time
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import numpy as np
 import pandas as pd
@@ -257,31 +258,236 @@ def allocation(fx, rates, stocks) -> list[dict]:
     return out
 
 
-# 회의 외 주요 이벤트(현지 날짜) — 지난 일정은 자동으로 빠진다. 연 1회 갱신.
-EVENTS = [
-    ("2026-11-03", "미국 중간선거", "의회 구성에 따라 재정·관세 정책 기대가 바뀌며 달러·미국 금리 변동이 커질 수 있음"),
-]
+RESULT_DAYS = 30   # 지난 이벤트를 결과와 함께 남겨 두는 기간(일)
+MEETING_COLS = ["원/달러", "국내 채권금리", "KOSPI"]
+MEETING_CASES = {
+    "bok": [("인상", "하락(원화 강세)", "상승(가격 하락)", "부담(금리 민감 업종)"),
+            ("동결", "상승(인상 기대가 클수록)", "하락(기대 되돌림)", "안도"),
+            ("인하", "상승(원화 약세)", "하락(가격 상승)", "유동성 호재")],
+    "fomc": [("인상", "상승(달러 강세)", "상승 압력", "위험자산 부담"),
+             ("동결", "하락(인상 기대가 클수록)", "안정", "안도"),
+             ("인하", "하락(달러 약세)", "하락 압력", "위험자산 호재")],
+}
+# 회의 외 주요 이벤트(현지 날짜) — 결과는 날짜 이후 뉴스 헤드라인 + AI 요약(keywords가 빠진 요약은 버린다). 연 1회 갱신.
+EVENTS = [{
+    "date": "2026-11-03", "title": "미국 중간선거",
+    "note": "의회 구성에 따라 재정·관세 정책 기대가 바뀌며 달러·미국 금리 변동이 커질 수 있음",
+    "cols": ["원/달러", "미국 금리", "KOSPI"],
+    "cases": [("공화당 상·하원 유지", "상승 압력(감세·관세 기조 지속, 달러 강세)", "상승 압력(재정적자 확대 기대)", "관세 불확실성 지속"),
+              ("민주당 하원 이상 탈환(분점)", "하락 여지(정책 교착, 달러 약세)", "안정(추가 재정 확대 제동)", "관세·무역 완화 기대")],
+    "query": "미국 중간선거 결과 하원 상원", "keywords": ("하원", "상원"),
+}]
 
 
-def scenarios(rates, today: date) -> dict:
+def _meeting_result(card: dict, d: str, lag: int, rate_key: str) -> dict | None:
+    """정책금리 카드(date·changes)로 회의일 d의 결정을 판정. 데이터가 d+lag일에 못 미치면 None(결과 대기)."""
+    if not card or not card.get("date"):
+        return None
+    day = date.fromisoformat(d)
+    if date.fromisoformat(card["date"]) < day + timedelta(days=lag):
+        return None
+    ch = card.get("changes") or []
+    hit = next((c for c in ch if day <= date.fromisoformat(c["date"]) <= day + timedelta(days=3)), None)
+    if hit:
+        word = "인상" if hit["bp"] > 0 else "인하"
+        return {"case": word, "text": f"{word} {hit['from']:.2f}→{hit['to']:.2f}% ({hit['bp']:+.0f}bp)"}
+    later = next((c for c in ch if date.fromisoformat(c["date"]) > day + timedelta(days=3)), None)
+    rate = later["from"] if later else card.get(rate_key)
+    return {"case": "동결", "text": f"동결 · {rate:.2f}% 유지" if rate is not None else "동결"}
+
+
+def _reaction(w: pd.DataFrame, d: str) -> dict | None:
+    """이벤트 직전 주 대비 최신 주의 시장 반응(주간 표 기준)."""
+    if w is None or w.empty:
+        return None
+    before = w[w.index < pd.Timestamp(d)]
+    if before.empty or w.index[-1] <= before.index[-1]:
+        return None
+    b, n = before.iloc[-1], w.iloc[-1]
+    out = {"since": before.index[-1].strftime("%Y-%m-%d")}
+    for k in ("krw", "kospi"):
+        if k in w and not pd.isna(b.get(k)) and not pd.isna(n.get(k)) and b[k]:
+            out[k] = _r((n[k] / b[k] - 1) * 100)
+    for k in ("us10y", "kr10y"):
+        if k in w and not pd.isna(b.get(k)) and not pd.isna(n.get(k)):
+            out[f"{k}_bp"] = _r((n[k] - b[k]) * 100, 0)
+    return out if len(out) > 1 else None
+
+
+def _shown(dates: list[str], today: date) -> tuple[list[str], bool]:
+    """보일 날짜: 오늘 포함 최근 RESULT_DAYS일 안의 지난 일정 + 다음 일정 하나. 두 번째 값은 다음 일정 유무."""
+    past = [d for d in dates if 0 <= (today - date.fromisoformat(d)).days <= RESULT_DAYS]
+    nxt = next((d for d in dates if date.fromisoformat(d) > today), None)
+    return past + ([nxt] if nxt else []), nxt is not None
+
+
+def scenarios(rates, w: pd.DataFrame | None, today: date, event_results: dict | None = None) -> dict:
+    """금통위·FOMC·기타 이벤트를 날짜순 한 목록으로. 지난 이벤트는 결과(case·text)와 직전 주 대비 반응을 붙인다."""
+    from api.rates_dashboard import BOK_MEETINGS, FOMC_MEETINGS
     rs = (rates or {}).get("snapshot", {})
-    kb, up = rs.get("kr_base") or {}, rs.get("us_policy") or {}
-    return {
-        "bok": {"meeting": kb.get("next_meeting"), "rate": kb.get("value"), "implied": (rs.get("implied") or {}).get("kr"),
-                "cases": [
-                    {"case": "인상", "krw": "하락(원화 강세)", "kr_bond": "상승(가격 하락)", "kospi": "부담(금리 민감 업종)"},
-                    {"case": "동결", "krw": "상승(인상 기대가 클수록)", "kr_bond": "하락(기대 되돌림)", "kospi": "안도"}]},
-        "fomc": {"meeting": up.get("next_meeting"), "rate": up.get("upper"), "implied": (rs.get("implied") or {}).get("us"),
-                 "cases": [
-                     {"case": "인상", "krw": "상승(달러 강세)", "kr_bond": "상승 압력", "kospi": "위험자산 부담"},
-                     {"case": "동결", "krw": "하락(인상 기대가 클수록)", "kr_bond": "안정", "kospi": "안도"}]},
-        "events": [{"date": d, "d_day": (date.fromisoformat(d) - today).days, "name": n, "note": t}
-                   for d, n, t in EVENTS if date.fromisoformat(d) >= today],
-        "note": "일반적인 방향입니다. 실제 반응은 결과가 시장 기대(1년물에 반영된 경로)와 얼마나 다른지가 결정합니다.",
-    }
+    implied = rs.get("implied") or {}
+    items, missing = [], []
+    meetings = (("bok", "한국은행 금통위", BOK_MEETINGS, rs.get("kr_base") or {}, "value", 0, "kr"),
+                ("fomc", "미국 FOMC", FOMC_MEETINGS, rs.get("us_policy") or {}, "upper", 1, "us"))
+    for kind, title, dates, card, rate_key, lag, ck in meetings:
+        shown, has_next = _shown(dates, today)
+        if not has_next:
+            missing.append(title)
+        for d in shown:
+            # 미국 현지 날짜 이벤트(FOMC)는 결과가 다음 날 나오므로 그날까지는 '예정'으로 둔다
+            upcoming = date.fromisoformat(d) + timedelta(days=lag) > today
+            res = None if upcoming else _meeting_result(card, d, lag, rate_key)
+            items.append({"kind": kind, "date": d, "d_day": (date.fromisoformat(d) - today).days, "title": title,
+                          "status": "upcoming" if upcoming else "done" if res else "pending",
+                          "rate": card.get(rate_key), "implied": (implied.get(ck) or {}).get("label") if upcoming else None,
+                          "cols": MEETING_COLS, "cases": [{"case": c, "cells": list(v)} for c, *v in MEETING_CASES[kind]],
+                          "result": res, "reaction": _reaction(w, d) if res else None})
+    for ev in EVENTS:
+        day = date.fromisoformat(ev["date"])
+        if (today - day).days > RESULT_DAYS:
+            continue
+        upcoming = day + timedelta(days=1) > today   # 결과는 다음 날부터 확인
+        res = None if upcoming else (event_results or {}).get(ev["date"])
+        items.append({"kind": "event", "date": ev["date"], "d_day": (day - today).days, "title": ev["title"],
+                      "status": "upcoming" if upcoming else "done" if res else "pending",
+                      "note": ev["note"], "cols": ev["cols"], "cases": [{"case": c, "cells": list(v)} for c, *v in ev["cases"]],
+                      "result": res, "reaction": _reaction(w, ev["date"]) if res else None})
+    items.sort(key=lambda x: (x["date"], {"bok": 0, "fomc": 1, "event": 2}[x["kind"]]))
+    return {"items": items, "missing": missing,
+            "note": "일반적인 방향입니다. 실제 반응은 결과가 시장 기대(1년물에 반영된 경로)와 얼마나 다른지가 결정합니다."}
 
 
-def build_overview(fx: dict | None, rates: dict | None, stocks: dict | None, today: date) -> dict:
+# ── 이벤트 결과(AI, DB 저장) ──────────────────────────────────────────────────
+EVENT_RETRY_SEC = 6 * 3600
+_event_results: dict[str, dict] = {}     # date → {summary, points, case, at}
+_event_loaded = False
+_event_attempt: dict[str, float] = {}
+
+
+def due_ai_events(today: date) -> list[dict]:
+    """결과를 확인할 때가 된 기타 이벤트(다음 날부터 RESULT_DAYS일까지)."""
+    return [ev for ev in EVENTS if 1 <= (today - date.fromisoformat(ev["date"])).days <= RESULT_DAYS]
+
+
+def event_headlines(query: str, since: date, limit: int = 12) -> list[str]:
+    """Google 뉴스 RSS에서 since 이후 발행 헤드라인만 — 지난 선거 기사로 요약이 오염되지 않게."""
+    from email.utils import parsedate_to_datetime
+    from urllib.parse import quote
+    from xml.etree import ElementTree
+
+    import requests
+    try:
+        url = f"https://news.google.com/rss/search?q={quote(query)}&hl=ko&gl=KR&ceid=KR:ko"
+        root = ElementTree.fromstring(requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"}).content)
+        out = []
+        for it in root.iter("item"):
+            title, pub = it.findtext("title"), it.findtext("pubDate")
+            try:
+                ok = pub and parsedate_to_datetime(pub).date() >= since
+            except Exception:
+                ok = False
+            if title and ok:
+                out.append(title)
+        return out[:limit]
+    except Exception as e:
+        logger.warning(f"event headlines failed: {type(e).__name__}")
+        return []
+
+
+def event_prompt(ev: dict, headlines: list[str]) -> str:
+    cases = "\n".join(f"- {c[0]}" for c in ev["cases"])
+    news = "\n".join(f"- {h}" for h in headlines)
+    return f"""너는 한국 투자자를 돕는 거시 애널리스트다. {ev['date']}에 있었던 '{ev['title']}'의 결과를 아래 헤드라인만 근거로 정리한다.
+헤드라인({ev['date']} 이후 발행):
+{news}
+미리 정한 시나리오:
+{cases}
+규칙:
+- summary: 결과를 한국어 1~2문장(120자 이내). 헤드라인에서 최종 결과가 확인되지 않으면 빈 문자열.
+- points: 시장에 중요한 포인트 2~3개, 각 40자 이내.
+- case: 위 시나리오 이름 중 하나를 그대로, 어느 쪽도 아니면 "기타".
+반드시 JSON만 반환: {{"summary": "...", "points": ["..."], "case": "..."}}"""
+
+
+def valid_event_result(t: dict, ev: dict) -> dict | None:
+    summary, points = t.get("summary"), t.get("points") or []
+    if not isinstance(summary, str) or not 10 <= len(summary.strip()) <= 200:
+        return None
+    if not isinstance(points, list) or not all(isinstance(x, str) for x in points):
+        return None
+    if not any(k in summary + " ".join(points) for k in ev["keywords"]):
+        return None
+    names = [c[0] for c in ev["cases"]]
+    return {"summary": summary.strip(), "points": [x.strip()[:60] for x in points if x.strip()][:3],
+            "case": t.get("case") if t.get("case") in names else "기타"}
+
+
+async def _load_event_results():
+    global _event_loaded
+    if _event_loaded:
+        return
+    try:
+        from sqlalchemy import select
+
+        from db.database import AsyncSessionLocal
+        from db.models import SectorInsight
+        async with AsyncSessionLocal() as db:
+            for ev in EVENTS:
+                row = (await db.execute(select(SectorInsight).where(SectorInsight.sector == f"event_result:{ev['date']}"))).scalar_one_or_none()
+                if row and row.content:
+                    _event_results[ev["date"]] = json.loads(row.content)
+        _event_loaded = True
+    except Exception as e:
+        logger.warning(f"event results load failed: {type(e).__name__}")
+
+
+async def check_events(today: date, force: bool = False) -> bool:
+    """확인할 때가 된 이벤트 결과를 AI로 채운다. force면 저장된 결과도 다시 쓴다(실패하면 기존 결과 유지). 새로 저장하면 True."""
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        return False
+    saved = False
+    for ev in due_ai_events(today):
+        d = ev["date"]
+        if not force and (d in _event_results or time.time() - _event_attempt.get(d, 0) < EVENT_RETRY_SEC):
+            continue
+        _event_attempt[d] = time.time()
+        headlines = await run_io(event_headlines, ev["query"], date.fromisoformat(d))
+        if not headlines:
+            continue
+        try:
+            from api.brazil_bond import _call_gemini_sync, _extract_json
+            res = valid_event_result(_extract_json(await run_io(_call_gemini_sync, key, event_prompt(ev, headlines))), ev)
+        except Exception as e:
+            logger.warning(f"event result AI failed {d}: {type(e).__name__}")
+            res = None
+        if not res:
+            continue
+        res["at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        res["source"] = f"AI 요약 · {d} 이후 뉴스 {len(headlines)}건"
+        _event_results[d] = res
+        saved = True
+        try:
+            from sqlalchemy import select
+
+            from db.database import AsyncSessionLocal
+            from db.models import SectorInsight
+            async with AsyncSessionLocal() as db:
+                sector = f"event_result:{d}"
+                row = (await db.execute(select(SectorInsight).where(SectorInsight.sector == sector))).scalar_one_or_none()
+                payload, at = json.dumps(res, ensure_ascii=False), datetime.now(timezone.utc).replace(tzinfo=None)
+                if row:
+                    row.content, row.generated_at = payload, at
+                else:
+                    db.add(SectorInsight(sector=sector, content=payload, generated_at=at))
+                await db.commit()
+        except Exception as e:
+            logger.warning(f"event result save failed {d}: {type(e).__name__}")
+    return saved
+
+
+def build_overview(fx: dict | None, rates: dict | None, stocks: dict | None, today: date,
+                   event_results: dict | None = None) -> dict:
     w = weekly_frame(fx, rates, stocks)
     regs = {"rates": (rates or {}).get("regimes") or [], "fx": (fx or {}).get("regimes") or [],
             "kospi": ((stocks or {}).get("regimes") or {}).get("kospi") or []}
@@ -290,7 +496,7 @@ def build_overview(fx: dict | None, rates: dict | None, stocks: dict | None, tod
         "analogs": find_analogs(w, features(w), regs) if not w.empty else None,
         "correlation": correlation_map(w) if not w.empty else None,
         "timeline": timeline(fx, rates, stocks, w),
-        "scenarios": scenarios(rates, today),
+        "scenarios": scenarios(rates, w, today, event_results),
         "allocation": allocation(fx, rates, stocks),
         "sources": {"fx": (fx or {}).get("updated_at"), "rates": (rates or {}).get("updated_at"),
                     "stocks": (stocks or {}).get("updated_at")},
@@ -303,7 +509,20 @@ _comment: dict = {"text": None, "at": None}
 _bg: set = set()
 
 
+def events_sig(d: dict) -> str:
+    """결과가 나온 이벤트 서명 — 바뀌면 AI 종합 코멘트를 다시 쓴다."""
+    return "|".join(f"{i['date']}:{i['kind']}:{(i.get('result') or {}).get('case')}"
+                    for i in (d.get("scenarios") or {}).get("items", []) if i["status"] == "done")
+
+
+def _event_line(i: dict) -> str:
+    r = i["result"] or {}
+    return f"- {i['date']} {i['title']}: {r.get('text') or r.get('summary')}"
+
+
 def comment_prompt(d: dict) -> str:
+    done = [i for i in (d.get("scenarios") or {}).get("items", []) if i["status"] == "done"]
+    events = ("최근 이벤트 결과:\n" + "\n".join(_event_line(i) for i in done) + "\n") if done else ""
     alloc = "\n".join(f"- {a['asset']}: {a['label']} ({'; '.join(x['text'] for x in a['reasons'])})" for a in d["allocation"])
     diag = "\n".join(f"- {r['axis']}: {r['status']}" for r in d["diagnosis"]["rows"])
     an = (d.get("analogs") or {}).get("average", {}).get("after_12m", {})
@@ -313,7 +532,7 @@ def comment_prompt(d: dict) -> str:
 자산별 근거:
 {alloc}
 과거 유사 국면 이후 12개월 평균(%, us10y_bp는 bp): {json.dumps(an, ensure_ascii=False)}
-규칙: 수치에 없는 사건·전망을 지어내지 않는다. 매수·매도 권유 문장을 쓰지 않는다. 문장만 반환."""
+{events}규칙: 최근 이벤트 결과가 있으면 그 결과가 지금 국면에 주는 의미를 한 문장 포함한다. 수치에 없는 사건·전망을 지어내지 않는다. 매수·매도 권유 문장을 쓰지 않는다. 문장만 반환."""
 
 
 async def _refresh_comment(d: dict):
@@ -326,7 +545,7 @@ async def _refresh_comment(d: dict):
         if not text:
             return
         at = datetime.now(timezone.utc)
-        _comment.update(text=text, at=at.isoformat(timespec="seconds"))
+        _comment.update(text=text, at=at.isoformat(timespec="seconds"), events_sig=events_sig(d))
         d["comment"] = dict(_comment)
         from sqlalchemy import select
 
@@ -369,15 +588,29 @@ async def _build(force_sources: bool = False) -> dict | None:
     fx, rates, stocks = [None if isinstance(x, BaseException) else x for x in res]
     if not any((fx, rates, stocks)):
         return None
-    data = build_overview(fx, rates, stocks, date.today())
+    today = date.today()
+    await _load_event_results()
+    data = build_overview(fx, rates, stocks, today, _event_results)
     await _load_comment()
     data["comment"] = dict(_comment)
     at = datetime.fromisoformat(_comment["at"]) if _comment.get("at") else None
-    if at is None or (datetime.now(timezone.utc) - at).total_seconds() > AI_TTL:
-        t = asyncio.create_task(_refresh_comment(data))
-        _bg.add(t)
-        t.add_done_callback(_bg.discard)
+    stale = at is None or (datetime.now(timezone.utc) - at).total_seconds() > AI_TTL
+    if stale or _comment.get("events_sig", "") != events_sig(data):  # 새 이벤트 결과가 나오면 바로 다시 쓴다
+        _spawn(_refresh_comment(data))
+    if any(ev["date"] not in _event_results for ev in due_ai_events(today)):
+        _spawn(_bg_check_events(today))
     return data
+
+
+def _spawn(coro):
+    t = asyncio.create_task(coro)
+    _bg.add(t)
+    t.add_done_callback(_bg.discard)
+
+
+async def _bg_check_events(today: date):
+    if await check_events(today):  # 새 결과 → 캐시를 만료시켜 다음 조회 때 다시 계산
+        overview_cache.ts = 0
 
 
 overview_cache = OverviewCache("macro", CACHE_TTL, _build)
@@ -393,4 +626,25 @@ async def macro_overview(refresh: bool = Query(False)):
         data = await overview_cache.get()
     if data is None:
         raise HTTPException(status_code=503, detail="종합분석에 필요한 환율·금리·주식 데이터를 불러오지 못했습니다.")
+    return data
+
+
+_manual = {"at": 0.0}
+MANUAL_MIN_SEC = 60
+
+
+@router.post("/events/refresh")
+async def refresh_events():
+    """수동 '결과 업데이트': 금리 원천을 새로 받고, 이벤트 AI 결과를 다시 확인한 뒤 종합분석을 다시 계산한다."""
+    if time.time() - _manual["at"] < MANUAL_MIN_SEC and overview_cache.data:  # 연타 방지
+        return {**overview_cache.data, "throttled": True}
+    _manual["at"] = time.time()
+    from api.rates_dashboard import overview_cache as rates_c
+    await rates_c.get(force=True)
+    await _load_event_results()
+    await check_events(date.today(), force=True)
+    data = await _build()
+    if data is None:
+        raise HTTPException(status_code=503, detail="종합분석 데이터를 다시 계산하지 못했습니다.")
+    overview_cache.data, overview_cache.ts = data, time.time()
     return data
