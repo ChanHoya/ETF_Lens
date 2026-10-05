@@ -76,24 +76,66 @@ const BIO_INSIGHT_FALLBACK: InsightContent = {
 export default function BioChart({ onOpenDetail }: BioChartProps) {
     const [period, setPeriod] = useState('1Y');
     const [chartData, setChartData] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [keys, setKeys] = useState<string[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const c = sessionStorage.getItem('iprism_bio_chart_keys');
+                if (c) return JSON.parse(c);
+            } catch (e) {}
+        }
+        return [];
+    });
+    const [originalData, setOriginalData] = useState<any[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const c = sessionStorage.getItem('iprism_bio_chart_orig');
+                if (c) return JSON.parse(c);
+            } catch (e) {}
+        }
+        return [];
+    });
+    const [isLoading, setIsLoading] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return !sessionStorage.getItem('iprism_bio_chart_orig');
+        }
+        return true;
+    });
     const [error, setError] = useState<string | null>(null);
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
-    const [keys, setKeys] = useState<string[]>([]);
-    const [originalData, setOriginalData] = useState<any[]>([]);
     const [selectedEtf, setSelectedEtf] = useState<string | null>(null);
     
-    // Holdings comparison state
-    const [holdingsData, setHoldingsData] = useState<any[]>([]);
-    const [holdingsKeys, setHoldingsKeys] = useState<string[]>([]);
-    const [isHoldingsLoading, setIsHoldingsLoading] = useState(true);
+    // Holdings comparison state (SWR Cache First)
+    const [holdingsData, setHoldingsData] = useState<any[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const c = sessionStorage.getItem('iprism_bio_holdings_data');
+                if (c) return JSON.parse(c);
+            } catch (e) {}
+        }
+        return [];
+    });
+    const [holdingsKeys, setHoldingsKeys] = useState<string[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const c = sessionStorage.getItem('iprism_bio_holdings_keys');
+                if (c) return JSON.parse(c);
+            } catch (e) {}
+        }
+        return [];
+    });
+    const [isHoldingsLoading, setIsHoldingsLoading] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return !sessionStorage.getItem('iprism_bio_holdings_data');
+        }
+        return true;
+    });
     const [disparityData, setDisparityData] = useState<{ [key: string]: any }>({});
     const [activeInsightTab, setActiveInsightTab] = useState<'cycle' | 'etfs' | 'strategy'>('cycle');
 
     useEffect(() => {
         const fetchDisparity = async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/v1/analyze/etf/disparity?codes=462900,463050,244580,143860,364970`);
+                const res = await fetch(`${API_BASE}/api/v1/analyze/etf/disparity?codes=462900,463050,244580,143860,364970`, { cache: 'no-store' });
                 if (res.ok) {
                     const data = await res.json();
                     setDisparityData(data);
@@ -109,15 +151,18 @@ export default function BioChart({ onOpenDetail }: BioChartProps) {
 
     useEffect(() => {
         const fetchHoldings = async () => {
-            setIsHoldingsLoading(true);
             try {
-                const res = await fetch(`${API_BASE}/api/v1/analyze/bio-holdings`);
+                const res = await fetch(`${API_BASE}/api/v1/analyze/bio-holdings`, { cache: 'no-store' });
                 if (!res.ok) throw new Error('API fetch error');
                 const data = await res.json();
                 if (data.table_data) {
                     setHoldingsData(data.table_data);
                     if (data.keys) {
                         setHoldingsKeys(data.keys);
+                    }
+                    if (typeof window !== 'undefined') {
+                        sessionStorage.setItem('iprism_bio_holdings_data', JSON.stringify(data.table_data));
+                        if (data.keys) sessionStorage.setItem('iprism_bio_holdings_keys', JSON.stringify(data.keys));
                     }
                 }
             } catch (err) {
@@ -131,18 +176,21 @@ export default function BioChart({ onOpenDetail }: BioChartProps) {
 
     useEffect(() => {
         const fetchData = async () => {
-            setIsLoading(true);
             try {
                 const url = selectedEtf
                     ? `${API_BASE}/api/v1/analyze/bio-chart?etf=${encodeURIComponent(selectedEtf)}`
                     : `${API_BASE}/api/v1/analyze/bio-chart`;
-                const res = await fetch(url);
+                const res = await fetch(url, { cache: 'no-store' });
                 if (!res.ok) throw new Error('API fetch error');
                 const data = await res.json();
                 
                 if (data.line_chart_data && data.line_chart_data.length > 0) {
                     setOriginalData(data.line_chart_data);
                     setKeys(data.keys);
+                    if (typeof window !== 'undefined' && !selectedEtf) {
+                        sessionStorage.setItem('iprism_bio_chart_orig', JSON.stringify(data.line_chart_data));
+                        sessionStorage.setItem('iprism_bio_chart_keys', JSON.stringify(data.keys));
+                    }
                 } else {
                     setError('데이터가 없습니다.');
                 }

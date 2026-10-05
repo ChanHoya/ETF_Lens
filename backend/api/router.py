@@ -2615,7 +2615,7 @@ async def get_semi_chart_data(etf: str = None, db: AsyncSession = Depends(get_db
     _kst_h, _kst_m = _kst_now.hour, _kst_now.minute
     _in_kr_market = (9, 0) <= (_kst_h, _kst_m) <= (15, 30)
     _in_us_market = (23, 30) <= (_kst_h, _kst_m) or (_kst_h, _kst_m) <= (6, 0)
-    _semi_ttl = 60 if (_in_kr_market or _in_us_market) else 600
+    _semi_ttl = 300 if (_in_kr_market or _in_us_market) else 1800
 
     if semi_cache_key in _bench_cache:
         cached_val, cached_ts = _bench_cache[semi_cache_key]
@@ -2696,15 +2696,20 @@ async def get_semi_chart_data(etf: str = None, db: AsyncSession = Depends(get_db
         return series
 
     from core.hybrid_series import get_hybrid_series_as_pd_series
+    from db.database import AsyncSessionLocal
 
-    results: dict[str, pd.Series] = {}
-    for t_name, t_code in tickers.items():
-        try:
-            series = await get_hybrid_series_as_pd_series(t_code, db=db, days=10 * 365, include_live=True)
-            results[t_name] = series
-        except Exception as e:
-            logger.warning(f"semi-chart: hybrid fetch failed for {t_name} ({t_code}): {e}")
-            results[t_name] = pd.Series(dtype=float)
+    async def _fetch_one_parallel(t_name: str, t_code: str) -> tuple[str, pd.Series]:
+        async with AsyncSessionLocal() as local_db:
+            try:
+                s = await get_hybrid_series_as_pd_series(t_code, db=local_db, days=10 * 365, include_live=True)
+                return t_name, s
+            except Exception as e:
+                logger.warning(f"semi-chart: hybrid fetch failed for {t_name} ({t_code}): {e}")
+                return t_name, pd.Series(dtype=float)
+
+    tasks = [_fetch_one_parallel(name, code) for name, code in tickers.items()]
+    fetched_results = await asyncio.gather(*tasks)
+    results: dict[str, pd.Series] = dict(fetched_results)
 
     import random
     base_dates = []
@@ -2904,6 +2909,9 @@ async def get_semi_holdings(db: AsyncSession = Depends(get_db)):
             # 1순위: DB 캐시 우선 서빙 (0.01초)
             if db_holdings:
                 holdings = db_holdings
+            elif fallbacks.get(etf_name):
+                # 2순위: 검증된 fallbacks 즉시 채택 (0초 서빙, 블로킹 방지)
+                holdings = fallbacks.get(etf_name, [])
             else:
                 live = await _fetch_holdings_with_weight_calc(code)
                 holdings = live if live else fallbacks.get(etf_name, [])
@@ -3255,7 +3263,7 @@ async def get_semiparts_chart_data(etf: str = None, db: AsyncSession = Depends(g
     _kst_now = datetime.now(_kst)
     _in_kr_market = (9, 0) <= (_kst_now.hour, _kst_now.minute) <= (15, 30)
     _in_us_market = (23, 30) <= (_kst_now.hour, _kst_now.minute) or (_kst_now.hour, _kst_now.minute) <= (6, 0)
-    _ttl = 60 if (_in_kr_market or _in_us_market) else 600
+    _ttl = 300 if (_in_kr_market or _in_us_market) else 1800
 
     if semi_cache_key in _bench_cache:
         cached_val, cached_ts = _bench_cache[semi_cache_key]
@@ -3312,15 +3320,20 @@ async def get_semiparts_chart_data(etf: str = None, db: AsyncSession = Depends(g
         return series
 
     from core.hybrid_series import get_hybrid_series_as_pd_series
+    from db.database import AsyncSessionLocal
 
-    results: dict[str, pd.Series] = {}
-    for t_name, t_code in tickers.items():
-        try:
-            series = await get_hybrid_series_as_pd_series(t_code, db=db, days=10 * 365, include_live=True)
-            results[t_name] = series
-        except Exception as e:
-            logger.warning(f"semiparts-chart: hybrid fetch failed for {t_name} ({t_code}): {e}")
-            results[t_name] = pd.Series(dtype=float)
+    async def _fetch_one_parallel_semiparts(t_name: str, t_code: str) -> tuple[str, pd.Series]:
+        async with AsyncSessionLocal() as local_db:
+            try:
+                s = await get_hybrid_series_as_pd_series(t_code, db=local_db, days=10 * 365, include_live=True)
+                return t_name, s
+            except Exception as e:
+                logger.warning(f"semiparts-chart: hybrid fetch failed for {t_name} ({t_code}): {e}")
+                return t_name, pd.Series(dtype=float)
+
+    tasks = [_fetch_one_parallel_semiparts(name, code) for name, code in tickers.items()]
+    fetched_results = await asyncio.gather(*tasks)
+    results: dict[str, pd.Series] = dict(fetched_results)
 
     import random
     base_dates = []
@@ -3393,6 +3406,9 @@ async def get_semiparts_holdings(db: AsyncSession = Depends(get_db)):
             # 1순위: DB 캐시 우선 서빙
             if db_holdings:
                 holdings = db_holdings
+            elif fallbacks.get(etf_name):
+                # 2순위: 검증된 fallbacks 즉시 채택 (0초 서빙, 블로킹 방지)
+                holdings = fallbacks.get(etf_name, [])
             else:
                 live = await _fetch_holdings_with_weight_calc(code)
                 holdings = live if live else fallbacks.get(etf_name, [])
@@ -3481,8 +3497,10 @@ async def get_semiparts_holdings(db: AsyncSession = Depends(get_db)):
         r["price"] = quote.get("price")
         r["change_pct"] = quote.get("change_pct")
 
+    import time
+    now_ts = time.time()
     from datetime import datetime, timezone, timedelta
-    dt_kst = datetime.fromtimestamp(now, tz=timezone(timedelta(hours=9)))
+    dt_kst = datetime.fromtimestamp(now_ts, tz=timezone(timedelta(hours=9)))
     updated_at_str = dt_kst.strftime("%y.%m.%d %H:%M")
 
     is_market_open = False
@@ -3849,7 +3867,7 @@ async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_d
     _kst_h, _kst_m = _kst_now.hour, _kst_now.minute
     _in_kr_market = (9, 0) <= (_kst_h, _kst_m) <= (15, 30)
     _in_us_market = (23, 30) <= (_kst_h, _kst_m) or (_kst_h, _kst_m) <= (6, 0)
-    _space_ttl = 60 if (_in_kr_market or _in_us_market) else 600
+    _space_ttl = 300 if (_in_kr_market or _in_us_market) else 1800
     if space_cache_key in _bench_cache:
         cached_val, cached_ts = _bench_cache[space_cache_key]
         if time.time() - cached_ts < _space_ttl:
@@ -3938,15 +3956,20 @@ async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_d
         return series
 
     from core.hybrid_series import get_hybrid_series_as_pd_series
+    from db.database import AsyncSessionLocal
 
-    results: dict[str, pd.Series] = {}
-    for t_name, t_code in tickers.items():
-        try:
-            series = await get_hybrid_series_as_pd_series(t_code, db=db, days=10 * 365, include_live=True)
-            results[t_name] = series
-        except Exception as e:
-            logger.warning(f"space-chart: hybrid fetch failed for {t_name} ({t_code}): {e}")
-            results[t_name] = pd.Series(dtype=float)
+    async def _fetch_one_parallel_space(t_name: str, t_code: str) -> tuple[str, pd.Series]:
+        async with AsyncSessionLocal() as local_db:
+            try:
+                s = await get_hybrid_series_as_pd_series(t_code, db=local_db, days=10 * 365, include_live=True)
+                return t_name, s
+            except Exception as e:
+                logger.warning(f"space-chart: hybrid fetch failed for {t_name} ({t_code}): {e}")
+                return t_name, pd.Series(dtype=float)
+
+    tasks = [_fetch_one_parallel_space(name, code) for name, code in tickers.items()]
+    fetched_results = await asyncio.gather(*tasks)
+    results: dict[str, pd.Series] = dict(fetched_results)
 
     # ── Fail-safe fallback: if any series is empty, generate highly realistic simulated space sector daily paths ──
     import random
@@ -4077,10 +4100,11 @@ async def _fetch_holdings_with_weight_calc(code: str) -> list[dict]:
     req_obj = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     try:
         html = await asyncio.to_thread(
-            lambda: urllib.request.urlopen(req_obj, context=ctx, timeout=10).read()
+            lambda: urllib.request.urlopen(req_obj, context=ctx, timeout=3).read()
         )
     except Exception as e:
         logger.warning(f"[live_holdings] {code} Naver fetch failed: {e}")
+        _bench_cache[cache_key] = ([], time.time())
         return []
 
     soup = BeautifulSoup(html, "html.parser")
@@ -4394,6 +4418,9 @@ async def get_space_holdings(db: AsyncSession = Depends(get_db)):
         # 1순위: DB 캐시 우선 서빙 (0.01초)
         if db_holdings:
             holdings = db_holdings
+        elif fallbacks.get(etf_name):
+            # 2순위: 검증된 fallbacks 즉시 채택 (0초 서빙, 블로킹 방지)
+            holdings = fallbacks.get(etf_name, [])
         else:
             live = await _fetch_holdings_with_weight_calc(code)
             holdings = live if live else fallbacks.get(etf_name, [])
@@ -4714,7 +4741,7 @@ async def get_energy_chart_data(etf: str = None, db: AsyncSession = Depends(get_
     _kst_h, _kst_m = _kst_now.hour, _kst_now.minute
     _in_kr_market = (9, 0) <= (_kst_h, _kst_m) <= (15, 30)
     _in_us_market = (23, 30) <= (_kst_h, _kst_m) or (_kst_h, _kst_m) <= (6, 0)
-    _energy_ttl = 60 if (_in_kr_market or _in_us_market) else 600
+    _energy_ttl = 300 if (_in_kr_market or _in_us_market) else 1800
     if energy_cache_key in _bench_cache:
         cached_val, cached_ts = _bench_cache[energy_cache_key]
         if time.time() - cached_ts < _energy_ttl:
@@ -4796,15 +4823,20 @@ async def get_energy_chart_data(etf: str = None, db: AsyncSession = Depends(get_
         return series
 
     from core.hybrid_series import get_hybrid_series_as_pd_series
+    from db.database import AsyncSessionLocal
 
-    results: dict[str, pd.Series] = {}
-    for t_name, t_code in tickers.items():
-        try:
-            series = await get_hybrid_series_as_pd_series(t_code, db=db, days=10 * 365, include_live=True)
-            results[t_name] = series
-        except Exception as e:
-            logger.warning(f"energy-chart: hybrid fetch failed for {t_name} ({t_code}): {e}")
-            results[t_name] = pd.Series(dtype=float)
+    async def _fetch_one_parallel_energy(t_name: str, t_code: str) -> tuple[str, pd.Series]:
+        async with AsyncSessionLocal() as local_db:
+            try:
+                s = await get_hybrid_series_as_pd_series(t_code, db=local_db, days=10 * 365, include_live=True)
+                return t_name, s
+            except Exception as e:
+                logger.warning(f"energy-chart: hybrid fetch failed for {t_name} ({t_code}): {e}")
+                return t_name, pd.Series(dtype=float)
+
+    tasks = [_fetch_one_parallel_energy(name, code) for name, code in tickers.items()]
+    fetched_results = await asyncio.gather(*tasks)
+    results: dict[str, pd.Series] = dict(fetched_results)
 
     import random
     base_dates = []
@@ -5025,6 +5057,9 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
             # 1순위: DB 캐시 우선 서빙
             if db_holdings:
                 holdings = db_holdings
+            elif fallbacks.get(etf_name):
+                # 2순위: 검증된 fallbacks 즉시 채택 (0초 서빙, 블로킹 방지)
+                holdings = fallbacks.get(etf_name, [])
             else:
                 live = await _fetch_holdings_with_weight_calc(code)
                 holdings = live if live else fallbacks.get(etf_name, [])
@@ -5174,8 +5209,10 @@ async def get_energy_holdings(db: AsyncSession = Depends(get_db)):
         r["price"] = quote.get("price")
         r["change_pct"] = quote.get("change_pct")
 
+    import time
+    now_ts = time.time()
     from datetime import datetime, timezone, timedelta
-    dt_kst = datetime.fromtimestamp(now, tz=timezone(timedelta(hours=9)))
+    dt_kst = datetime.fromtimestamp(now_ts, tz=timezone(timedelta(hours=9)))
     updated_at_str = dt_kst.strftime("%y.%m.%d %H:%M")
 
     is_market_open = False
@@ -5328,7 +5365,7 @@ async def get_bio_chart_data(etf: str = None, db: AsyncSession = Depends(get_db)
     _kst_now = datetime.now(_kst)
     _kst_h, _kst_m = _kst_now.hour, _kst_now.minute
     _in_kr_market = (9, 0) <= (_kst_h, _kst_m) <= (15, 30)
-    _bio_ttl = 60 if _in_kr_market else 600
+    _bio_ttl = 300 if _in_kr_market else 1800
     if bio_cache_key in _bench_cache:
         cached_val, cached_ts = _bench_cache[bio_cache_key]
         if time.time() - cached_ts < _bio_ttl:
@@ -5412,15 +5449,20 @@ async def get_bio_chart_data(etf: str = None, db: AsyncSession = Depends(get_db)
         return series
 
     from core.hybrid_series import get_hybrid_series_as_pd_series
+    from db.database import AsyncSessionLocal
 
-    results: dict[str, pd.Series] = {}
-    for t_name, t_code in tickers.items():
-        try:
-            series = await get_hybrid_series_as_pd_series(t_code, db=db, days=10 * 365, include_live=True)
-            results[t_name] = series
-        except Exception as e:
-            logger.warning(f"bio-chart: hybrid fetch failed for {t_name} ({t_code}): {e}")
-            results[t_name] = pd.Series(dtype=float)
+    async def _fetch_one_parallel_bio(t_name: str, t_code: str) -> tuple[str, pd.Series]:
+        async with AsyncSessionLocal() as local_db:
+            try:
+                s = await get_hybrid_series_as_pd_series(t_code, db=local_db, days=10 * 365, include_live=True)
+                return t_name, s
+            except Exception as e:
+                logger.warning(f"bio-chart: hybrid fetch failed for {t_name} ({t_code}): {e}")
+                return t_name, pd.Series(dtype=float)
+
+    tasks = [_fetch_one_parallel_bio(name, code) for name, code in tickers.items()]
+    fetched_results = await asyncio.gather(*tasks)
+    results: dict[str, pd.Series] = dict(fetched_results)
 
     # Fail-safe fallback simulation
     import random
@@ -5571,6 +5613,9 @@ async def get_bio_holdings(db: AsyncSession = Depends(get_db)):
         # 1순위: DB 캐시 우선 서빙 (0.01초)
         if db_holdings:
             holdings = db_holdings
+        elif fallbacks.get(etf_name):
+            # 2순위: 검증된 fallbacks 즉시 채택 (0초 서빙, 블로킹 방지)
+            holdings = fallbacks.get(etf_name, [])
         else:
             live = await _fetch_holdings_with_weight_calc(code)
             holdings = live if live else fallbacks.get(etf_name, [])

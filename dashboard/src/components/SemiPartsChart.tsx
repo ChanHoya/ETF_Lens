@@ -159,17 +159,60 @@ const SEMIPARTS_INSIGHT_FALLBACK: InsightContent = {
 export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
     const [period, setPeriod] = useState('1Y');
     const [chartData, setChartData] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [keys, setKeys] = useState<string[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const c = sessionStorage.getItem('iprism_semiparts_chart_keys');
+                if (c) return JSON.parse(c);
+            } catch (e) {}
+        }
+        return [];
+    });
+    const [originalData, setOriginalData] = useState<any[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const c = sessionStorage.getItem('iprism_semiparts_chart_orig');
+                if (c) return JSON.parse(c);
+            } catch (e) {}
+        }
+        return [];
+    });
+    const [isLoading, setIsLoading] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return !sessionStorage.getItem('iprism_semiparts_chart_orig');
+        }
+        return true;
+    });
     const [error, setError] = useState<string | null>(null);
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
-    const [keys, setKeys] = useState<string[]>([]);
-    const [originalData, setOriginalData] = useState<any[]>([]);
     const [selectedEtf, setSelectedEtf] = useState<string | null>(null);
     const [marketTab, setMarketTab] = useState<'KR' | 'KR_US' | 'US'>('KR');
 
-    const [holdingsData, setHoldingsData] = useState<any[]>([]);
-    const [holdingsKeys, setHoldingsKeys] = useState<string[]>([]);
-    const [isHoldingsLoading, setIsHoldingsLoading] = useState(true);
+    // Holdings comparison state (SWR Cache First)
+    const [holdingsData, setHoldingsData] = useState<any[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const c = sessionStorage.getItem('iprism_semiparts_holdings_data');
+                if (c) return JSON.parse(c);
+            } catch (e) {}
+        }
+        return [];
+    });
+    const [holdingsKeys, setHoldingsKeys] = useState<string[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const c = sessionStorage.getItem('iprism_semiparts_holdings_keys');
+                if (c) return JSON.parse(c);
+            } catch (e) {}
+        }
+        return [];
+    });
+    const [isHoldingsLoading, setIsHoldingsLoading] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return !sessionStorage.getItem('iprism_semiparts_holdings_data');
+        }
+        return true;
+    });
     const [holdingsUpdatedAt, setHoldingsUpdatedAt] = useState<string>('');
     const [isMarketOpen, setIsMarketOpen] = useState<boolean>(() => checkIsUsMarketOpenClient());
     const [disparityData, setDisparityData] = useState<{ [key: string]: any }>({});
@@ -216,7 +259,6 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
 
     useEffect(() => {
         const fetchHoldings = async () => {
-            setIsHoldingsLoading(true);
             try {
                 const res = await fetch(`${API_BASE}/api/v1/analyze/semiparts-holdings`, { cache: 'no-store' });
                 if (!res.ok) throw new Error('API fetch error');
@@ -226,6 +268,10 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                     if (data.keys) setHoldingsKeys(data.keys);
                     if (data.updated_at) setHoldingsUpdatedAt(data.updated_at);
                     if (data.is_market_open !== undefined) setIsMarketOpen(data.is_market_open);
+                    if (typeof window !== 'undefined') {
+                        sessionStorage.setItem('iprism_semiparts_holdings_data', JSON.stringify(data.table_data));
+                        if (data.keys) sessionStorage.setItem('iprism_semiparts_holdings_keys', JSON.stringify(data.keys));
+                    }
                 }
             } catch (err) {
                 console.error('Error fetching semiparts holdings:', err);
@@ -238,7 +284,6 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
 
     useEffect(() => {
         const fetchData = async () => {
-            setIsLoading(true);
             try {
                 const url = selectedEtf
                     ? `${API_BASE}/api/v1/analyze/semiparts-chart?etf=${encodeURIComponent(selectedEtf)}`
@@ -249,6 +294,10 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                 if (data.line_chart_data && data.line_chart_data.length > 0) {
                     setOriginalData(data.line_chart_data);
                     setKeys(data.keys);
+                    if (typeof window !== 'undefined' && !selectedEtf) {
+                        sessionStorage.setItem('iprism_semiparts_chart_orig', JSON.stringify(data.line_chart_data));
+                        sessionStorage.setItem('iprism_semiparts_chart_keys', JSON.stringify(data.keys));
+                    }
                 } else {
                     setError('데이터가 없습니다.');
                 }

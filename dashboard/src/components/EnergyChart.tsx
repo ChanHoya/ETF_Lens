@@ -171,19 +171,66 @@ const ENERGY_INSIGHT_FALLBACK: InsightContent = {
 export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
     const [period, setPeriod] = useState('1Y');
     const [chartData, setChartData] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [keys, setKeys] = useState<string[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const c = sessionStorage.getItem('iprism_energy_chart_keys');
+                if (c) return JSON.parse(c);
+            } catch (e) {}
+        }
+        return [];
+    });
+    const [originalData, setOriginalData] = useState<any[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const c = sessionStorage.getItem('iprism_energy_chart_orig');
+                if (c) return JSON.parse(c);
+            } catch (e) {}
+        }
+        return [];
+    });
+    const [isLoading, setIsLoading] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return !sessionStorage.getItem('iprism_energy_chart_orig');
+        }
+        return true;
+    });
     const [error, setError] = useState<string | null>(null);
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
-    const [keys, setKeys] = useState<string[]>([]);
-    const [originalData, setOriginalData] = useState<any[]>([]);
     const [selectedEtf, setSelectedEtf] = useState<string | null>(null);
     const [marketTab, setMarketTab] = useState<'KR' | 'KR_US' | 'US'>('KR');
     
-    // Holdings comparison state
-    const [holdingsData, setHoldingsData] = useState<any[]>([]);
-    const [holdingsKeys, setHoldingsKeys] = useState<string[]>([]);
-    const [isHoldingsLoading, setIsHoldingsLoading] = useState(true);
-    const [holdingsUpdatedAt, setHoldingsUpdatedAt] = useState<string>('');
+    // Holdings comparison state (SWR Cache First)
+    const [holdingsData, setHoldingsData] = useState<any[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const c = sessionStorage.getItem('iprism_energy_holdings_data');
+                if (c) return JSON.parse(c);
+            } catch (e) {}
+        }
+        return [];
+    });
+    const [holdingsKeys, setHoldingsKeys] = useState<string[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const c = sessionStorage.getItem('iprism_energy_holdings_keys');
+                if (c) return JSON.parse(c);
+            } catch (e) {}
+        }
+        return [];
+    });
+    const [isHoldingsLoading, setIsHoldingsLoading] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return !sessionStorage.getItem('iprism_energy_holdings_data');
+        }
+        return true;
+    });
+    const [holdingsUpdatedAt, setHoldingsUpdatedAt] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            return sessionStorage.getItem('iprism_energy_holdings_time') || '';
+        }
+        return '';
+    });
     const [isMarketOpen, setIsMarketOpen] = useState<boolean>(() => checkIsUsMarketOpenClient());
     const [disparityData, setDisparityData] = useState<{ [key: string]: any }>({});
     const [activeInsightTab, setActiveInsightTab] = useState<'macro' | 'etfs' | 'strategy'>('macro');
@@ -207,7 +254,6 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
 
     useEffect(() => {
         const fetchHoldings = async () => {
-            setIsHoldingsLoading(true);
             try {
                 const res = await fetch(`${API_BASE}/api/v1/analyze/energy-holdings`);
                 if (!res.ok) throw new Error('API fetch error');
@@ -223,6 +269,11 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                     if (data.is_market_open !== undefined) {
                         setIsMarketOpen(data.is_market_open);
                     }
+                    try {
+                        sessionStorage.setItem('iprism_energy_holdings_data', JSON.stringify(data.table_data));
+                        if (data.keys) sessionStorage.setItem('iprism_energy_holdings_keys', JSON.stringify(data.keys));
+                        if (data.updated_at) sessionStorage.setItem('iprism_energy_holdings_time', data.updated_at);
+                    } catch (e) {}
                 }
             } catch (err) {
                 console.error('Error fetching energy holdings:', err);
@@ -235,7 +286,24 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
 
     useEffect(() => {
         const fetchData = async () => {
-            setIsLoading(true);
+            const cacheOrigKey = selectedEtf ? `iprism_energy_chart_${selectedEtf}_orig` : 'iprism_energy_chart_orig';
+            const cacheKeysKey = selectedEtf ? `iprism_energy_chart_${selectedEtf}_keys` : 'iprism_energy_chart_keys';
+            
+            // 캐시 확인
+            if (typeof window !== 'undefined') {
+                try {
+                    const cachedOrig = sessionStorage.getItem(cacheOrigKey);
+                    const cachedKeys = sessionStorage.getItem(cacheKeysKey);
+                    if (cachedOrig && cachedKeys) {
+                        setOriginalData(JSON.parse(cachedOrig));
+                        setKeys(JSON.parse(cachedKeys));
+                        setIsLoading(false);
+                    } else if (!originalData.length) {
+                        setIsLoading(true);
+                    }
+                } catch (e) {}
+            }
+
             try {
                 const url = selectedEtf
                     ? `${API_BASE}/api/v1/analyze/energy-chart?etf=${encodeURIComponent(selectedEtf)}`
@@ -247,12 +315,18 @@ export default function EnergyChart({ onOpenDetail }: EnergyChartProps) {
                 if (data.line_chart_data && data.line_chart_data.length > 0) {
                     setOriginalData(data.line_chart_data);
                     setKeys(data.keys);
-                } else {
+                    try {
+                        sessionStorage.setItem(cacheOrigKey, JSON.stringify(data.line_chart_data));
+                        sessionStorage.setItem(cacheKeysKey, JSON.stringify(data.keys));
+                    } catch (e) {}
+                } else if (!originalData.length) {
                     setError('데이터가 없습니다.');
                 }
             } catch (err) {
                 console.error(err);
-                setError('서버에서 전력 지수 데이터를 불러오지 못했습니다.');
+                if (!originalData.length) {
+                    setError('서버에서 전력 지수 데이터를 불러오지 못했습니다.');
+                }
             } finally {
                 setIsLoading(false);
             }
