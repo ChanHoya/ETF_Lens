@@ -26,7 +26,7 @@ RAYS = ["#ff5a5f", "#ff9f1c", "#ffd23f", "#22b8a7", "#4d7cfe"]
 INK = "#f2f3f8"      # 독립 SVG·타일에서 i 줄기·프리즘 윤곽 색
 TILE = "#0b0d14"     # 앱 아이콘 타일 배경
 
-# 로고타입 기하(시안 H2): 역삼각형 프리즘 (14,50)-(46,50)-(30,78), i 줄기, PRISM 글자 120px·기준선 120
+# 로고타입 기하(시안 H2): 역삼각형 프리즘 (14,50)-(46,50)-(30,78), i 줄기, Prism 글자 120px·기준선 120
 FONT_SIZE, BASELINE, TEXT_X = 120, 120, 108
 RAY_END_X = TEXT_X - 6
 
@@ -73,7 +73,7 @@ def build_logotype(font):
     gs, cmap, hmtx = font.getGlyphSet(), font.getBestCmap(), font["hmtx"]
     x = TEXT_X
     glyph_paths, centers = [], []
-    for ch in "PRISM":
+    for ch in "Prism":
         name = cmap[ord(ch)]
         pen = SVGPathPen(gs, ntos=lambda v: f"{v:.2f}")
         gs[name].draw(TransformPen(pen, (scale, 0, 0, -scale, x, BASELINE)))
@@ -195,8 +195,10 @@ def render_pngs(tile):
     from PIL import Image
     from playwright.sync_api import sync_playwright
     sizes = {}
+    chrome_path = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    launch_kwargs = {"executable_path": chrome_path} if os.path.exists(chrome_path) else {}
     with sync_playwright() as p:
-        b = p.chromium.launch()
+        b = p.chromium.launch(**launch_kwargs)
         pg = b.new_page()
         for s in (180, 48, 32, 16):
             pg.set_viewport_size({"width": s, "height": s})
