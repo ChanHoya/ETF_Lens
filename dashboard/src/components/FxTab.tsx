@@ -157,13 +157,13 @@ function SnapshotGrid({ s, fair }: { s: Snapshot; fair?: Analysis['fair'] }) {
                 </> : <p className="text-sm text-gray-500">데이터 없음</p>}
             </Card>
             <Card icon={<TrendingDown className="w-3.5 h-3.5 text-rose-400" />} title="원화 실질실효환율"
-                foot={s.reer ? `BIS · ${s.reer.date} · 물가를 반영한 원화의 실제 구매력 (높을수록 원화 강세)` : undefined}>
+                foot={s.reer ? `BIS · ${s.reer.date} · 교역국 60여 개 대비, 물가 차이까지 반영한 원화 구매력 · 수년 단위 지표` : undefined}>
                 {s.reer ? <>
-                    <div className="text-2xl font-extrabold text-white">{fmtNum(s.reer.value)}</div>
-                    <p className="text-xs text-gray-400 mt-1">20년 평균 {fmtNum(s.reer.avg20y)}</p>
-                    <p className={`text-xs font-bold mt-1 ${s.reer.gap_pct < 0 ? 'text-blue-400' : 'text-red-400'}`}>
-                        평균 대비 {s.reer.gap_pct > 0 ? '+' : ''}{s.reer.gap_pct.toFixed(1)}% ({s.reer.gap_pct < 0 ? '원화 저평가' : '원화 고평가'})
-                    </p>
+                    <div className={`text-2xl font-extrabold ${s.reer.gap_pct < 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                        {Math.abs(s.reer.gap_pct).toFixed(0)}% {s.reer.gap_pct < 0 ? '싸다' : '비싸다'}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">원화가 20년 평균보다 {s.reer.gap_pct < 0 ? '저평가' : '고평가'}</p>
+                    <p className="text-[11px] text-gray-500 mt-1">지수 {fmtNum(s.reer.value)} · 20년 평균 {fmtNum(s.reer.avg20y)}</p>
                 </> : <p className="text-sm text-gray-500">데이터 없음</p>}
             </Card>
         </div>
@@ -508,11 +508,19 @@ function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row 
         return { ...a, chg: last?.[a.key] != null ? (last[a.key] as number) - 100 : null };
     });
     const rr = an.reer;
+    const rrLast = rr?.rows[rr.rows.length - 1];
+    const rrGap = rr && rrLast ? (rrLast.reer / rr.avg - 1) * 100 : null;
     return (
         <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
-                <SectionTitle icon={<Scale className="w-5 h-5 text-sky-400" />} title="원화 실질실효환율"
-                    sub={rr ? `BIS 월간 · 회색 띠 = 20년 평균 ${rr.avg} ± 1σ(${rr.std}) · 아래로 벗어날수록 원화 저평가` : '데이터 없음'} />
+                <SectionTitle icon={<Scale className="w-5 h-5 text-sky-400" />} title="원화는 세계 물건값 기준으로 싼가"
+                    sub={rr ? `원화 실질실효환율(BIS 월간) · 회색 띠 = 20년 평균 ${rr.avg} ± 1σ · 아래로 벗어날수록 원화 저평가` : '데이터 없음'} />
+                {rrGap != null && (
+                    <p className="text-sm text-gray-200 mb-2">
+                        지금 원화는 20년 평균보다 <b className={rrGap < 0 ? 'text-blue-400' : 'text-red-400'}>{Math.abs(rrGap).toFixed(0)}% {rrGap < 0 ? '싸게' : '비싸게'}</b> 거래됩니다
+                        <span className="text-gray-500"> ({rrLast!.date} 기준)</span>.
+                    </p>
+                )}
                 {rr && (
                     <ResponsiveContainer width="100%" height={260}>
                         <ComposedChart data={reerRows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -526,6 +534,14 @@ function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row 
                         </ComposedChart>
                     </ResponsiveContainer>
                 )}
+                <details className="mt-2">
+                    <summary className="text-xs font-bold text-gray-400 cursor-pointer hover:text-gray-200">어떻게 계산하나, 어디에 쓰나</summary>
+                    <ul className="text-[11px] text-gray-400 mt-1.5 space-y-1 leading-relaxed list-disc pl-4">
+                        <li>원화 100만 원으로 교역 상대국 60여 개 나라의 물건을 얼마나 살 수 있는지를 지수로 만든 것입니다. 나라별 환율을 무역 비중으로 가중하고 물가 차이까지 반영합니다(국제결제은행 BIS 발표).</li>
+                        <li>원/달러는 미국 하나와만 비교하지만, 이 지수는 원화가 모든 교역국 대비 싼지를 봅니다. 그래서 &lsquo;달러가 센 건지, 원화가 약한 건지&rsquo;를 가려 줍니다.</li>
+                        <li>평균으로 돌아오는 데 보통 수년이 걸리고 발표도 1~2개월 늦습니다. 매매 시점보다는 장기 위치를 확인하는 용도로만 보세요.</li>
+                    </ul>
+                </details>
             </div>
             <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
