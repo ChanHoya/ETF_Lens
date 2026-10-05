@@ -4,6 +4,7 @@ import requests
 import yfinance as yf
 from datetime import datetime, timedelta, timezone as _tz
 from fastapi import APIRouter
+from typing import Dict, List, Optional, Tuple, Any
 import pandas as pd
 from core.quant_sentiment import calculate_realized_volatility, calculate_rsi, calculate_hybrid_fgi
 
@@ -226,13 +227,20 @@ async def _fetch_yahoo_v8(symbol: str, days: int = 400) -> dict[str, float]:
 
 
 async def fetch_yf_data(target_ym: str = None):
-    """달러 인덱스(FRED) + 환율(Yahoo v8)를 월별 집계해 반환."""
+    """달러 인덱스 + 환율을 DB(MarketMacroLog) 우선 로드 후 월별 집계해 반환."""
     try:
-        # FRED DTWEXBGS = Trade Weighted US Dollar Index: Broad
-        dx_dict, krw_dict = await asyncio.gather(
-            _fetch_fred_series("DTWEXBGS", days=3700 if target_ym else 400),
-            _fetch_yahoo_v8("KRW=X", days=3700 if target_ym else 400),
-        )
+        # 1순위: DB(MarketMacroLog)에서 읽기
+        dx_dict, krw_dict, _, _ = await get_cached_market_macro_series(days=3700 if target_ym else 400)
+
+        # 2순위: DB에 없으면 실시간 수집 fallback
+        if not dx_dict or not krw_dict:
+            # FRED DTWEXBGS = Trade Weighted US Dollar Index: Broad
+            fresh_dx, fresh_krw = await asyncio.gather(
+                _fetch_fred_series("DTWEXBGS", days=3700 if target_ym else 400),
+                _fetch_yahoo_v8("KRW=X", days=3700 if target_ym else 400),
+            )
+            dx_dict = dx_dict or fresh_dx
+            krw_dict = krw_dict or fresh_krw
 
         if not dx_dict:
             logger.warning("FRED DTWEXBGS empty, using fallback 100.0")
@@ -524,6 +532,119 @@ async def seed_market_sentiment_db_if_empty():
         logger.error(f"[DB Seeding] Seeding failed: {e}")
 
 
+async def sync_market_macro_indicators_job(force_days: int = None) -> bool:
+    """FRED 및 Yahoo에서 시장 거시경제 지표(달러인덱스, 환율, 장단기금리차, 하이일드 스프레드)를 증분 수집하여 MarketMacroLog에 영구 적재."""
+    try:
+        from db.database import AsyncSessionLocal
+        from db.models import MarketMacroLog
+        from sqlalchemy import select, func
+
+        now_kst = _kst_now()
+        today_date = now_kst.date()
+
+        days_to_fetch = force_days
+        async with AsyncSessionLocal() as db:
+            latest_res = await db.execute(
+                select(MarketMacroLog.date).order_by(MarketMacroLog.date.desc()).limit(1)
+            )
+            latest_date_str = latest_res.scalar()
+
+            if not latest_date_str:
+                days_to_fetch = 3700  # 최초 1회 10년치
+                logger.info("[MarketMacro Sync] MarketMacroLog is empty. Fetching full 10-year history...")
+            elif days_to_fetch is None:
+                try:
+                    latest_date = datetime.strptime(latest_date_str, "%Y-%m-%d").date()
+                    gap_days = (today_date - latest_date).days
+                    if gap_days <= 1 and now_kst.hour < 9:
+                        # 이미 어제까지 수집 완료
+                        return True
+                    days_to_fetch = max(10, gap_days + 3)
+                except Exception:
+                    days_to_fetch = 30
+
+        logger.info(f"[MarketMacro Sync] Fetching macro series (days={days_to_fetch})...")
+        dx_dict, krw_dict, t10y2y_dict, hy_dict = await asyncio.gather(
+            _fetch_fred_series("DTWEXBGS", days=days_to_fetch),
+            _fetch_yahoo_v8("KRW=X", days=days_to_fetch),
+            _fetch_fred_series("T10Y2Y", days=days_to_fetch),
+            _fetch_fred_series("BAMLH0A0HYM2", days=days_to_fetch),
+        )
+
+        all_dates = sorted(list(set(dx_dict.keys()) | set(krw_dict.keys()) | set(t10y2y_dict.keys()) | set(hy_dict.keys())))
+        if not all_dates:
+            logger.warning("[MarketMacro Sync] No data returned from external sources.")
+            return False
+
+        async with AsyncSessionLocal() as db:
+            exist_stmt = select(MarketMacroLog).where(MarketMacroLog.date.in_(all_dates))
+            exist_res = await db.execute(exist_stmt)
+            exist_map = {r.date: r for r in exist_res.scalars().all()}
+
+            new_objs = []
+            for d in all_dates:
+                dx_val = dx_dict.get(d)
+                krw_val = krw_dict.get(d)
+                t_val = t10y2y_dict.get(d)
+                hy_val = hy_dict.get(d)
+
+                if d in exist_map:
+                    rec = exist_map[d]
+                    if dx_val is not None:
+                        rec.dollar_index = dx_val
+                    if krw_val is not None:
+                        rec.krw = krw_val
+                    if t_val is not None:
+                        rec.t10y2y = t_val
+                    if hy_val is not None:
+                        rec.hy_spread = hy_val
+                else:
+                    new_objs.append(
+                        MarketMacroLog(
+                            date=d,
+                            dollar_index=dx_val,
+                            krw=krw_val,
+                            t10y2y=t_val,
+                            hy_spread=hy_val,
+                        )
+                    )
+
+            if new_objs:
+                db.add_all(new_objs)
+            await db.commit()
+            logger.info(f"[MarketMacro Sync] Synced MarketMacroLog: {len(new_objs)} inserted, {len(exist_map)} updated.")
+            return True
+    except Exception as e:
+        logger.error(f"[MarketMacro Sync] Failed: {e}", exc_info=True)
+        return False
+
+
+async def seed_market_macro_db_if_empty():
+    """MarketMacroLog가 비어있거나 최신 데이터가 누락되었을 때 자동 동기화 트리거"""
+    try:
+        from db.database import AsyncSessionLocal
+        from db.models import MarketMacroLog
+        from sqlalchemy import select, func
+
+        async with AsyncSessionLocal() as db:
+            count = (await db.execute(select(func.count(MarketMacroLog.id)))).scalar()
+            if not count or count == 0:
+                logger.info("[DB Seeding] MarketMacroLog is empty. Starting full seeding...")
+                await sync_market_macro_indicators_job(force_days=3700)
+            else:
+                latest_res = await db.execute(
+                    select(MarketMacroLog.date).order_by(MarketMacroLog.date.desc()).limit(1)
+                )
+                latest_date_str = latest_res.scalar()
+                if latest_date_str:
+                    latest_date = datetime.strptime(latest_date_str, "%Y-%m-%d").date()
+                    if (_kst_now().date() - latest_date).days > 1:
+                        # 결측일 증분 동기화
+                        await sync_market_macro_indicators_job()
+    except Exception as e:
+        logger.error(f"[DB Seeding] MarketMacroLog check failed: {e}")
+
+
 async def seed_us_macro_db_if_empty():
     try:
         from db.database import AsyncSessionLocal
@@ -542,14 +663,41 @@ async def seed_us_macro_db_if_empty():
         logger.error(f"[DB Seeding] US Macro seeding check failed: {e}")
 
 
+async def get_cached_market_macro_series(days: int = 3700) -> Tuple[Dict[str, float], Dict[str, float], Dict[str, float], Dict[str, float]]:
+    """DB(MarketMacroLog)에서 과거 매크로 지표 시계열(dx, krw, t10y2y, hy)을 일괄 로드하여 딕셔너리로 반환"""
+    dx_dict, krw_dict, t10y2y_dict, hy_dict = {}, {}, {}, {}
+    try:
+        from db.database import AsyncSessionLocal
+        from db.models import MarketMacroLog
+        from sqlalchemy import select
+
+        cutoff_str = _kst_start_str(days)
+        async with AsyncSessionLocal() as db:
+            stmt = select(MarketMacroLog).where(MarketMacroLog.date >= cutoff_str).order_by(MarketMacroLog.date.asc())
+            rows = (await db.execute(stmt)).scalars().all()
+            for r in rows:
+                if r.dollar_index is not None:
+                    dx_dict[r.date] = r.dollar_index
+                if r.krw is not None:
+                    krw_dict[r.date] = r.krw
+                if r.t10y2y is not None:
+                    t10y2y_dict[r.date] = r.t10y2y
+                if r.hy_spread is not None:
+                    hy_dict[r.date] = r.hy_spread
+    except Exception as e:
+        logger.error(f"[get_cached_market_macro_series] DB read failed: {e}")
+    return dx_dict, krw_dict, t10y2y_dict, hy_dict
+
+
 @router.get("")
 async def get_exit_signal_data(target_ym: str = None):
     global _cache
     now = datetime.now().timestamp()
 
-    # 1회성 DB 자동 시딩 실행
+    # 1회성 DB 자동 시딩 및 증분 갱신 실행
     await seed_market_sentiment_db_if_empty()
     await seed_us_macro_db_if_empty()
+    await seed_market_macro_db_if_empty()
 
     target_key = target_ym if target_ym else "CURRENT"
     import json
@@ -599,10 +747,17 @@ async def get_exit_signal_data(target_ym: str = None):
             mock["current_status"]["fgi"] = current_fgi
 
         # ── 신규 2개 지표 수집 (T10Y2Y, BAMLH0A0HYM2) ──────────────────────────
-        t10y2y_dict = await _fetch_fred_series("T10Y2Y", days=3700 if target_ym else 400)
-        t10y2y_dict = _filter_by_target_ym(t10y2y_dict, target_ym)
-        hy_dict = await _fetch_fred_series("BAMLH0A0HYM2", days=3700 if target_ym else 400)
-        hy_dict = _filter_by_target_ym(hy_dict, target_ym)
+        # 1순위: DB(MarketMacroLog) 캐시 로드
+        _, _, db_t10y, db_hy = await get_cached_market_macro_series(days=3700 if target_ym else 400)
+        
+        # 2순위: DB에 없으면 FRED 원천 호출 fallback
+        if not db_t10y:
+            db_t10y = await _fetch_fred_series("T10Y2Y", days=3700 if target_ym else 400)
+        if not db_hy:
+            db_hy = await _fetch_fred_series("BAMLH0A0HYM2", days=3700 if target_ym else 400)
+
+        t10y2y_dict = _filter_by_target_ym(db_t10y, target_ym)
+        hy_dict = _filter_by_target_ym(db_hy, target_ym)
 
         # 월별 마지막값 집계용 로컬 helper
         def _monthly_last_local(d: dict[str, float]) -> dict[str, float]:
