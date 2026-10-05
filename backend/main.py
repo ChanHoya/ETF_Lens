@@ -28,6 +28,7 @@ from api.dividends import router as dividends_router
 from api.fx_dashboard import router as fx_dashboard_router
 from api.rates_dashboard import router as rates_dashboard_router
 from api.stocks_dashboard import router as stocks_dashboard_router
+from api.macro_dashboard import router as macro_dashboard_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -238,6 +239,8 @@ async def lifespan(app: FastAPI):
             _fx_cache.warm()
             _rates_cache.warm()
             _stocks_cache.warm()
+            from api.macro_dashboard import overview_cache as _macro_cache
+            _macro_cache.warm()  # 세 캐시를 기다렸다 결합(같은 수집 공유)
         except Exception as _e:
             print(f"[Startup] overview cache warm skipped: {_e}")
 
@@ -305,6 +308,7 @@ app.include_router(dividends_router)
 app.include_router(fx_dashboard_router, prefix="/api/v1/fx")
 app.include_router(rates_dashboard_router, prefix="/api/v1/rates")
 app.include_router(stocks_dashboard_router, prefix="/api/v1/stocks")
+app.include_router(macro_dashboard_router, prefix="/api/v1/macro")
 
 
 @app.get("/health")
