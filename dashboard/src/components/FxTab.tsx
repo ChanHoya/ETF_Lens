@@ -1,12 +1,12 @@
 'use client';
-// 시장동향 > 환율 하위 탭 — 스냅샷, 20년 추이 차트, 국면 타임라인, 연계성 분석, 원화 가치·아시아 통화, 환헤지 판단
+// 시장동향 > 환율 하위 탭 — 스냅샷, 원화 방향 근거·자금 흐름, 20년 추이, 국면 타임라인, 연계성 분석, 원화 가치·아시아 통화, H/UH 성과 비교
 
 import React, { useMemo, useState } from 'react';
 import {
     ResponsiveContainer, ComposedChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip as RechartsTooltip, Legend, ReferenceArea, ReferenceLine, Area, Bar,
 } from 'recharts';
-import { DollarSign, Globe2, Landmark, RefreshCw, Scale, Shield, TrendingDown, TrendingUp, History, Info, Link2, Gauge, ArrowDownUp } from 'lucide-react';
+import { DollarSign, Globe2, Landmark, RefreshCw, Scale, TrendingDown, TrendingUp, History, Info, Link2, Gauge, ArrowDownUp } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
 import { useCachedOverview } from '@/lib/useCachedOverview';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
@@ -30,13 +30,12 @@ type Snapshot = {
     asia?: { key: 'usdkrw' | 'usdjpy' | 'usdcny' | 'usdtwd'; label: string; value: number; date: string; chg_1y: number | null }[];
     jpy100?: { value: number; chg_1y: number | null };
     spread10?: { value: number; us10: number; kr10: number; kr10_date: string; year_ago: number | null };
-    hedge?: { value: number; us: number; kr: number; kr_date: string };
     reer?: { value: number; date: string; avg20y: number; gap_pct: number };
     flows?: {
         month: string; ca_12m: number; out_12m: number; in_12m: number; net_12m: number; net_year_ago: number | null;
         rows: { date: string; ca: number; out: number; inflow: number; net: number }[];
     };
-    verdict: { level: 'weak_krw' | 'strong_krw' | 'neutral'; label: string; strong: string[]; weak: string[] };
+    verdict: { level: 'weak_krw' | 'strong_krw' | 'neutral'; label: string; action?: string; strong: string[]; weak: string[] };
 };
 type Analysis = {
     corr: { date: string; dxy: number | null; spread: number | null; vix: number | null }[];
@@ -48,7 +47,6 @@ type Analysis = {
     beta?: { value: number; r2: number; weeks: number };
     decomp_1y?: { krw_chg: number; dxy_chg: number; dollar_part: number; krw_part: number };
     reer?: { rows: { date: string; reer: number }[]; avg: number; std: number };
-    hedge: { pick: 'H' | 'UH' | 'MIX'; label: string; score_h: number; score_uh: number; reasons: { side: 'H' | 'UH' | 'MIX'; text: string }[] };
 };
 type Overview = { snapshot: Snapshot; weekly: Row[]; regimes: Regime[]; analysis?: Analysis; updated_at: string; stale?: boolean };
 
@@ -189,6 +187,13 @@ function BalanceSection({ s }: { s: Snapshot }) {
         <section className="bg-black/20 rounded-2xl border border-white/5 p-4">
             <SectionTitle icon={<ArrowDownUp className="w-5 h-5 text-indigo-400" />} title="원화 방향, 양쪽 근거"
                 sub="장기 평균으로 돌아간다는 근거와 높은 환율이 굳어진다는 근거를 같은 무게로 — 2개 이상 차이 날 때만 한쪽 우세로 표시" />
+            {v.action && (
+                <div className="flex flex-wrap items-center gap-2 mb-3 rounded-xl bg-white/[0.03] border border-white/5 px-3 py-2">
+                    <span className="text-xs font-bold text-gray-400">해외(달러) 자산 매수, 환율 여건</span>
+                    <span className="text-sm font-bold text-gray-100">{v.action}</span>
+                    <span className="text-[11px] text-gray-500">· 환헤지보다 환율이 유리할 때 나눠 사는 쪽을 기본으로 봅니다</span>
+                </div>
+            )}
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
                 <div className="xl:col-span-2 space-y-3">
                     {side('원화 강세(원/달러 하락) 쪽', v.strong, 'text-blue-400', TrendingDown)}
@@ -345,18 +350,18 @@ function FairChart({ fair }: { fair: NonNullable<Analysis['fair']> }) {
     );
 }
 
-// 1년 변화 분해: 실제 = 달러 몫 + 원화 고유 몫
+// 1년 변화 분해: 실제 = 달러 탓(글로벌 달러) + 한국 고유 요인
 function DecompBar({ d }: { d: NonNullable<Analysis['decomp_1y']> }) {
     const parts = [
-        { label: '달러 몫', v: d.dollar_part, color: 'bg-indigo-500' },
-        { label: '원화 고유 몫', v: d.krw_part, color: 'bg-rose-500' },
+        { label: '달러 탓(글로벌)', v: d.dollar_part, color: 'bg-indigo-500' },
+        { label: '한국 고유 요인', v: d.krw_part, color: 'bg-rose-500' },
     ];
     const max = Math.max(...parts.map(p => Math.abs(p.v)), Math.abs(d.krw_chg), 1);
     return (
         <div className="space-y-1.5">
             {[...parts, { label: '실제 변화', v: d.krw_chg, color: 'bg-gray-400' }].map(p => (
                 <div key={p.label} className="flex items-center gap-2 text-xs">
-                    <span className="w-20 shrink-0 text-gray-400">{p.label}</span>
+                    <span className="w-24 shrink-0 text-gray-400">{p.label}</span>
                     <div className="relative flex-1 h-3">
                         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/20" />
                         <div className={`absolute top-0 bottom-0 rounded-sm ${p.color}`}
@@ -386,7 +391,7 @@ function AnalysisSection({ an, range, setRange, corrRows }: { an: Analysis; rang
                 </p>
             </div>
             <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
-                <SectionTitle icon={<Gauge className="w-5 h-5 text-rose-400" />} title="달러 몫 vs 원화 고유 몫"
+                <SectionTitle icon={<Gauge className="w-5 h-5 text-rose-400" />} title="원/달러 변화, 달러 탓인가 한국 탓인가"
                     sub={f ? `최근 ${f.years}년 달러지수로 설명되는 적정 원/달러와 실제의 괴리` : '데이터 부족'} />
                 {f && <FairChart fair={f} />}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
@@ -409,7 +414,7 @@ function AnalysisSection({ an, range, setRange, corrRows }: { an: Analysis; rang
                 <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
                     {f && `적정선은 ln(원/달러)=a+b·ln(달러지수) 회귀(탄력성 ${f.elasticity}, 설명력 R² ${f.r2})로 그린 기술적 기준입니다. `}
                     {an.beta && `민감도: 달러지수가 1% 오르면 원/달러는 평균 ${an.beta.value.toFixed(2)}% 오릅니다(최근 3년, R² ${an.beta.r2}). `}
-                    괴리가 +이면 달러로 설명되지 않는 원화 약세가 쌓여 있다는 뜻입니다.
+                    괴리가 +이면 달러로 설명되지 않는 원화 약세(한국 고유 요인)가 쌓여 있다는 뜻입니다.
                 </p>
             </div>
         </section>
@@ -492,45 +497,9 @@ function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row 
     );
 }
 
-function HedgeSection({ h, s }: { h: Analysis['hedge']; s: Snapshot }) {
-    const pickCls = h.pick === 'H' ? 'bg-purple-500/15 text-purple-300 border-purple-400/30'
-        : h.pick === 'UH' ? 'bg-amber-500/15 text-amber-300 border-amber-400/30' : 'bg-white/5 text-gray-200 border-white/15';
-    const sideCls = { H: 'text-purple-300 border-purple-400/30', UH: 'text-amber-300 border-amber-400/30', MIX: 'text-gray-300 border-white/15' };
-    return (
-        <section className="space-y-4">
-            <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
-                <SectionTitle icon={<Shield className="w-5 h-5 text-purple-400" />} title="해외 ETF 환헤지 판단"
-                    sub="미국 주식·채권 ETF를 환헤지(H)로 살지 환노출(UH)로 살지 — 지금 지표로 본 참고 판단" />
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <div className="rounded-xl bg-white/[0.03] border border-white/5 p-4 flex flex-col items-start gap-2">
-                        <span className={`text-lg font-extrabold px-3 py-1 rounded-full border ${pickCls}`}>{h.label}</span>
-                        <p className="text-xs text-gray-400">근거 점수 — 환헤지(H) {h.score_h} · 환노출(UH) {h.score_uh}</p>
-                        <p className="text-[11px] text-gray-500 leading-relaxed">
-                            2점 이상 차이 나면 한쪽을 권하고, 아니면 H·UH를 나눠 담아 환율 방향 판단을 피합니다.
-                            {s.hedge && ` 지금 헤지 비용은 연 ${s.hedge.value.toFixed(2)}%p입니다.`}
-                        </p>
-                    </div>
-                    <ul className="lg:col-span-2 space-y-2">
-                        {h.reasons.map(r => (
-                            <li key={r.text} className="flex items-start gap-2 text-sm text-gray-200">
-                                <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full border ${sideCls[r.side]}`}>{r.side === 'MIX' ? '중립' : r.side}</span>
-                                {r.text}
-                            </li>
-                        ))}
-                        <li className="text-[11px] text-gray-500 pt-1">
-                            환헤지(H): 환율 변동을 막는 대신 헤지 비용(미-한 단기금리차)을 냅니다. 환노출(UH): 원/달러가 오르면 환차익, 내리면 환차손이 납니다.
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            <FxFinder />
-        </section>
-    );
-}
-
 export default function FxTab() {
     // 재진입 시 캐시를 즉시 그리고, 서버 기준 시각이 1시간 넘었을 때만 백그라운드 갱신
-    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-fx-v4', `${API_BASE}/api/v1/fx/overview`);
+    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-fx-v5', `${API_BASE}/api/v1/fx/overview`);
     const [range, setRange] = useState<Range>('20Y');
     const [selected, setSelected] = useState<number | null>(null);
 
@@ -620,14 +589,14 @@ export default function FxTab() {
                         <>
                             <AnalysisSection an={data.analysis} range={range} setRange={setRange} corrRows={corrRows} />
                             <ValueSection an={data.analysis} rows={rows} range={range} setRange={setRange} />
-                            <HedgeSection h={data.analysis.hedge} s={data.snapshot} />
+                            <FxFinder />
                         </>
                     )}
 
                     <p className="flex items-start gap-1.5 text-[11px] text-gray-500 px-1">
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        출처: 한국은행 ECOS(국제수지), FRED(DEXKOUS·DGS10·IRLTLT01KRM156N·RBKRBIS·DFF·IR3TIB01KRM156N·DEXJPUS·DEXCHUS·DEXTAUS·VIXCLS), Yahoo Finance(DX-Y.NYB·KRW=X).
-                        한국 금리·실질실효환율은 월간 지표라 최대 2개월 늦습니다. 판정 배지·근거 목록·환헤지 판단·적정 원/달러는 공개 지표로 만든 참고 정보이며 투자 권유가 아닙니다.
+                        출처: 한국은행 ECOS(국제수지), FRED(DEXKOUS·DGS10·IRLTLT01KRM156N·RBKRBIS·DEXJPUS·DEXCHUS·DEXTAUS·VIXCLS), Yahoo Finance(DX-Y.NYB·KRW=X).
+                        한국 금리·실질실효환율은 월간 지표라 최대 2개월 늦습니다. 판정 배지·근거 목록·적정 원/달러는 공개 지표로 만든 참고 정보이며 투자 권유가 아닙니다.
                     </p>
                 </>
             )}

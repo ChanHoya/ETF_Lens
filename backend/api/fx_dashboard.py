@@ -33,8 +33,6 @@ FRED_IDS = {
     "jpy": "DEXJPUS",           # 엔/달러
     "cny": "DEXCHUS",           # 위안/달러
     "twd": "DEXTAUS",           # 대만달러/달러 — 반도체 수출국끼리 비교
-    "dff": "DFF",               # 미 실효연방기금금리
-    "kr3m": "IR3TIB01KRM156N",  # 한 3개월 금리 (월간) — 헤지 비용 근사
     "vix": "VIXCLS",            # 미국 변동성지수 — 위험 선호와 원화의 동조 확인용
 }
 # 국제수지(ECOS 301Y013, 월간, 백만달러) — 자산 + = 내국인 해외투자(유출), 부채 + = 외국인 국내투자(유입)
@@ -145,13 +143,17 @@ def _verdict(snap: dict, fair_gap: float | None) -> dict:
     add(weak, p10 is not None and p3 is not None and p10 >= 70 and p3 <= 50,
         lambda: f"10년 중 {p10}%지만 최근 3년 중으론 {p3}% — 높은 환율이 새 보통이 됐다면 하락 여지가 작음")
     diff = len(strong) - len(weak)
+    # 해외(달러) 자산을 지금 사는 데 환율이 돕는가 — 헤지 여부가 아니라 매수 시점 참고
     if diff >= 2:
         level, label = "strong_krw", "원화 강세 근거 우세"
+        action = "환율 여건 불리 — 원화가 더 강해지면 환차손, 달러 자산은 나눠서 매수"
     elif diff <= -2:
         level, label = "weak_krw", "원화 약세 근거 우세"
+        action = "환율 여건 유리 — 원화가 더 약해지면 환차익 여지"
     else:
         level, label = "neutral", "강세·약세 근거 팽팽 — 방향 관망"
-    return {"level": level, "label": label, "strong": strong, "weak": weak}
+        action = "환율 중립 — 환율보다 자산 자체의 매력으로 판단"
+    return {"level": level, "label": label, "action": action, "strong": strong, "weak": weak}
 
 
 def _flows(raw: dict) -> dict | None:
@@ -184,7 +186,6 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
     us10, kr10 = _series(raw.get("us10", {})), _series(raw.get("kr10", {}))
     reer = _series(raw.get("reer", {}))
     jpy, cny, twd = _series(raw.get("jpy", {})), _series(raw.get("cny", {})), _series(raw.get("twd", {}))
-    dff, kr3m = _series(raw.get("dff", {})), _series(raw.get("kr3m", {}))
 
     start = pd.Timestamp(today) - pd.DateOffset(years=YEARS)
     ten_years_ago = pd.Timestamp(today) - pd.DateOffset(years=10)
@@ -241,9 +242,6 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
         snapshot["spread10"] = {"value": _r(us10.iloc[-1] - kr10.iloc[-1]), "us10": _r(us10.iloc[-1]),
                                 "kr10": _r(kr10.iloc[-1]), "kr10_date": kr10.index[-1].strftime("%Y-%m"),
                                 "year_ago": _r(ago.iloc[-1]) if not ago.empty else None}
-    if not dff.empty and not kr3m.empty:
-        snapshot["hedge"] = {"value": _r(dff.iloc[-1] - kr3m.iloc[-1]), "us": _r(dff.iloc[-1]), "kr": _r(kr3m.iloc[-1]),
-                             "kr_date": kr3m.index[-1].strftime("%Y-%m")}
     if not reer.empty:
         avg = reer[reer.index >= start].mean()
         snapshot["reer"] = {"value": _r(reer.iloc[-1], 1), "date": reer.index[-1].strftime("%Y-%m"),
@@ -294,34 +292,8 @@ def _ols(x: np.ndarray, y: np.ndarray) -> tuple[float, float, float] | None:
     return float(a), float(b), float(1 - (resid ** 2).sum() / ss_tot) if ss_tot else 0.0
 
 
-def _hedge_judgment(pct10y, reer_gap, hedge_cost, fair_gap) -> dict:
-    """환노출(UH) vs 환헤지(H) 참고 판단 — 점수 규칙은 docs/fx-tab-context-notes.md."""
-    reasons = []
-    def add(cond, side, text):  # text는 조건이 참일 때만 만든다(None 값 포맷 방지)
-        if cond:
-            reasons.append({"side": side, "text": text()})
-    add(pct10y is not None and pct10y >= 80, "H", lambda: f"원/달러가 10년 중 상위 {pct10y}% — 환율 하락(원화 강세) 시 환차손 위험")
-    add(pct10y is not None and pct10y <= 30, "UH", lambda: f"원/달러가 10년 중 {pct10y}% 수준으로 낮음 — 달러를 싸게 확보")
-    add(reer_gap is not None and reer_gap <= -10, "H", lambda: f"원화 실질가치가 20년 평균보다 {abs(reer_gap):.0f}% 낮음 — 원화 강세로 되돌아갈 여지")
-    add(reer_gap is not None and reer_gap >= 5, "UH", lambda: f"원화 실질가치가 20년 평균보다 {reer_gap:.0f}% 높음 — 원화 약세 여지")
-    add(hedge_cost is not None and hedge_cost >= 1.5, "UH", lambda: f"헤지 비용이 연 {hedge_cost:.2f}%p로 큼")
-    add(hedge_cost is not None and hedge_cost <= 0.5, "H", lambda: f"헤지 비용이 연 {hedge_cost:.2f}%p로 작음")
-    add(fair_gap is not None and fair_gap >= 5, "H", lambda: f"달러지수로 설명되는 수준보다 원/달러가 {fair_gap:.1f}% 높음 — 원화 고유 약세가 풀리면 환차손")
-    h = sum(r["side"] == "H" for r in reasons)
-    u = sum(r["side"] == "UH" for r in reasons)
-    if h - u >= 2:
-        pick, label = "H", "환헤지(H) 우위"
-    elif u - h >= 2:
-        pick, label = "UH", "환노출(UH) 우위"
-    else:
-        pick, label = "MIX", "H·UH 분산"
-    if not reasons:
-        reasons.append({"side": "MIX", "text": "어느 쪽으로도 뚜렷한 근거가 없음"})
-    return {"pick": pick, "label": label, "score_h": h, "score_uh": u, "reasons": reasons}
-
-
 def build_analysis(wk: pd.DataFrame, reer: pd.Series, snapshot: dict, start: pd.Timestamp) -> dict:
-    """연계성 분석 — 롤링 상관, DXY 기반 적정 원/달러, 베타·1년 변화 분해, 실질실효환율 밴드, 환헤지 판단."""
+    """연계성 분석 — 롤링 상관, DXY 기반 적정 원/달러, 베타·1년 변화 분해, 실질실효환율 밴드."""
     out: dict = {}
 
     # 1) 52주 롤링 상관 — 수준이 아니라 주간 변화끼리 (추세만 같아도 높게 나오는 왜곡 방지)
@@ -365,10 +337,6 @@ def build_analysis(wk: pd.DataFrame, reer: pd.Series, snapshot: dict, start: pd.
         out["reer"] = {"rows": [{"date": i.strftime("%Y-%m"), "reer": _r(v, 1)} for i, v in rr.items()],
                        "avg": _r(rr.mean(), 1), "std": _r(rr.std(), 1)}
 
-    # 5) 환헤지 판단
-    out["hedge"] = _hedge_judgment(
-        snapshot.get("krw", {}).get("pct10y"), snapshot.get("reer", {}).get("gap_pct"),
-        snapshot.get("hedge", {}).get("value"), out.get("fair", {}).get("now", {}).get("gap_pct"))
     return out
 
 

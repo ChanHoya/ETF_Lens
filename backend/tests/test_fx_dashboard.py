@@ -2,7 +2,7 @@
 import math
 from datetime import date, timedelta
 
-from api.fx_dashboard import REGIMES, _hedge_judgment, _verdict, build_overview
+from api.fx_dashboard import REGIMES, _verdict, build_overview
 
 TODAY = date(2026, 10, 5)
 
@@ -38,8 +38,6 @@ def _raw():
         "jpy": _daily(s, e, lambda d: 150.0),
         "cny": _daily(s, e, lambda d: 7.0),
         "twd": _daily(s, e, lambda d: 30.0 if d.year < 2026 else 33.0),
-        "dff": _daily(s, e, lambda d: 3.9),
-        "kr3m": _monthly(s, e, lambda d: 3.0),
     }
 
 
@@ -58,7 +56,7 @@ def test_weekly_rows_span_twenty_years_with_spread():
     assert all(r["spread10"] == 1.0 for r in rows if r["spread10"] is not None)  # 4.5 - 3.5 (월간 앞채움)
 
 
-def test_snapshot_cross_rates_hedge_and_reer():
+def test_snapshot_asia_jpy_and_reer():
     snap = build_overview(_raw(), TODAY)["snapshot"]
     fred_last = 1000 + 21 * 18  # 2026년 값 = 1,378
     assert snap["jpy100"]["value"] == round(fred_last / 150 * 100, 2)
@@ -66,7 +64,7 @@ def test_snapshot_cross_rates_hedge_and_reer():
     assert list(asia) == ["usdkrw", "usdjpy", "usdcny", "usdtwd"]
     assert asia["usdkrw"]["value"] == fred_last and asia["usdcny"]["value"] == 7.0
     assert asia["usdtwd"]["chg_1y"] == 10.0 and asia["usdjpy"]["chg_1y"] == 0.0
-    assert snap["hedge"]["value"] == 0.9
+    assert "hedge" not in snap  # 환헤지 비용은 지인 피드백으로 제거
     assert snap["spread10"]["value"] == 1.0 and snap["spread10"]["year_ago"] == 1.0
     assert snap["reer"]["value"] == 85.0 and snap["reer"]["gap_pct"] < -10
 
@@ -91,7 +89,8 @@ def test_verdict_weighs_both_sides():
                   "spread10": {"value": 1.2}, "reer": {"gap_pct": -15}}, None)
     assert v["level"] == "weak_krw" and len(v["weak"]) == 4 and len(v["strong"]) == 1
     assert any("새 보통" in t for t in v["weak"])
-    assert _verdict({}, None) == {"level": "neutral", "label": "강세·약세 근거 팽팽 — 방향 관망", "strong": [], "weak": []}
+    empty = _verdict({}, None)
+    assert empty["level"] == "neutral" and empty["strong"] == [] == empty["weak"] and empty["action"].startswith("환율 중립")
 
 
 def _bop(raw):
@@ -152,18 +151,12 @@ def test_analysis_isolates_krw_specific_shock():
     an = build_overview(_tracking_raw(date(2026, 6, 1), 0.10), TODAY)["analysis"]
     assert an["fair"]["now"]["gap_pct"] > 8          # 달러로 설명되지 않는 원화 고유 약세
     assert an["decomp_1y"]["krw_part"] > 8
-    assert an["hedge"]["pick"] in ("H", "MIX") and any("원화 고유 약세" in r["text"] for r in an["hedge"]["reasons"])
+    assert "hedge" not in an
+    v = build_overview(_tracking_raw(date(2026, 6, 1), 0.10), TODAY)["snapshot"]["verdict"]
+    assert any("원화 고유 약세" in t for t in v["strong"])
 
 
 def test_reer_band_rows_and_stats():
     an = build_overview(_raw(), TODAY)["analysis"]
     assert an["reer"]["rows"][-1] == {"date": "2026-07", "reer": 85.0}
     assert an["reer"]["avg"] > 95 and an["reer"]["std"] > 0
-
-
-def test_hedge_judgment_scoring():
-    assert _hedge_judgment(85, -15, 0.3, 6)["pick"] == "H"
-    assert _hedge_judgment(20, 8, 2.0, None)["pick"] == "UH"
-    mixed = _hedge_judgment(73, -14, 0.91, 1.0)
-    assert mixed["pick"] == "MIX" and mixed["score_h"] == 1
-    assert _hedge_judgment(None, None, None, None)["reasons"][0]["side"] == "MIX"
