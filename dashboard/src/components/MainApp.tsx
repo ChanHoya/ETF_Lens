@@ -36,12 +36,22 @@ const DividendDashboard = dynamic(() => import("@/components/DividendDashboard")
   ),
 });
 
+const PensionWealthHub = dynamic(() => import("@/components/pension/PensionWealthHub"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center p-12 text-emerald-400 gap-2">
+      <Loader2 className="w-6 h-6 animate-spin" />
+      <span>연금·절세 허브 로딩 중...</span>
+    </div>
+  ),
+});
+
 type FavGroup = { id: string; name: string; items: { code: string; name: string }[] };
 
 const BRAND_KEYWORDS = ['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'];
 const THEME_KEYWORDS = ['커버드콜', '배당', '액티브', 'AI', '반도체', '로봇', '원자력', '2차전지', '조선', '방산', '금융', '바이오'];
 
-export default function MainApp({ initialTab = 'select', showMyTab = false, showTffTab = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro', showMyTab?: boolean, showTffTab?: boolean }) {
+export default function MainApp({ initialTab = 'select', showMyTab = false, showTffTab = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension', showMyTab?: boolean, showTffTab?: boolean }) {
   const router = useRouter();
   const [slots, setSlots] = useState<{ search: string, code: string }[]>([
     { search: "", code: "" },
@@ -58,7 +68,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
   const [globalSearch, setGlobalSearch] = useState("");
   const [globalActive, setGlobalActive] = useState(false);
   const [period, setPeriod] = useState<string>('6M');
-  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension'>(initialTab);
 
   const [etfDictionary, setEtfDictionary] = useState<{ code: string, name: string }[]>([]);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState<number | null>(null);
@@ -1211,6 +1221,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
               { id: 'analysis', label: '종목분석' },
               { id: 'sector', label: '섹터분석' },
               { id: 'discover', label: '시장동향' },
+              { id: 'pension', label: '연금·절세' },
               ...(showTffTab ? [{ id: 'tff', label: 'TFF_Fund' }] : []),
               ...(showMyTab ? [{ id: 'my', label: 'My' }] : []),
               { id: 'etftracker', label: 'ETF추적기', isExternal: true },
@@ -1240,6 +1251,13 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                         window.open('https://ystreet.co.kr/etf-tracker/', '_blank', 'noopener,noreferrer');
                         return;
                       }
+                      if (tab.id === 'pension') {
+                        setActiveTab('pension');
+                        setIsEtfCheckModalOpen(false);
+                        setNaverEtfCode(null);
+                        setSelectedDetailEtf(null);
+                        return;
+                      }
                       if (tab.id === 'my') {
                         setActiveTab('my');
                         return;
@@ -1254,7 +1272,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                         setIsEtfCheckModalOpen(false);
                         return;
                       }
-                      setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro');
+                      setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension');
                       setIsEtfCheckModalOpen(false);
                       setNaverEtfCode(null);
                       setSelectedDetailEtf(null);
@@ -1865,6 +1883,10 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
 
         {activeTab === 'macro' && (
           <MacroTab />
+        )}
+
+        {activeTab === 'pension' && (
+          <PensionWealthHub />
         )}
 
 

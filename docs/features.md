@@ -77,6 +77,7 @@
 | S6-27: 5대 섹터 차트·구성종목 119만 건 DB 영구 통합 및 프론트엔드 SWR 초고속 렌더링 | ✅ done | backend/api/router.py, dashboard/src/components/{SemiChart,SpaceChart,EnergyChart,BioChart,SemiPartsChart}.tsx | 과거 수집 119만 건 일별 시세 및 구성종목 DB 누락 복제 해결, 5대 섹터 백엔드 asyncio.gather 병렬화 및 타임아웃 방어, 5대 섹터 프론트엔드 SWR 0초 즉시 렌더링 적용 완료 |
 | S6-28: 실서버(Render/Vercel) 배포 점검 & 프로덕션 동기화 검증 | ✅ done | backend/tests/, origin/main | 전체 141개 유닛 테스트 100% 통과, Render 백엔드 및 Vercel 프론트엔드 실서버 정상 응답(200) 확인 및 origin/main 배포 동기화 완료 |
 | S6-29: 백그라운드 스케줄러 13종 점검 및 정상 기동 검증 | ✅ done | backend/core/scheduler.py | 장 마감 자산 스냅샷(15:40), 퀀트 사전계산(16:00), 배당 14일 갱신(일 23:30), 렌더 킵얼라이브(10분) 등 13개 cron/interval 잡 등록 및 정상 기동 검증 완료 |
+| S6-30: 연금·절세 웰스 허브 탭 신설 및 국민연금 BEP·절세 시뮬레이터 연동 | ✅ done | dashboard/src/lib/pensionRules.ts, dashboard/src/components/pension/PensionWealthHub.tsx, dashboard/src/components/MainApp.tsx, dashboard/src/app/pension/page.tsx | 상단 메뉴바 연금·절세 탭 신설, 국민연금 조기/정상/연기 손익분기점(BEP) 연산, 건보료 피부양자 자격 탈락 위험 자동 판정, 연금 3총사(연금저축/IRP/ISA) 세액공제 및 30년 복리 과세이연 자산 격차 시뮬레이터 연동 완료 |
 
 
 
