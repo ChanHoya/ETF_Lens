@@ -4,10 +4,13 @@
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 ✅ Current: S6-27 5대 섹터 차트·구성종목 119만 건 DB 영구 통합 및 프론트엔드 SWR 초고속 렌더링 완료
-➡️ Next: S6-28 전 섹터/대시보드 실서버 운영 모니터링 및 성능 유지보수
-➡️ 다음 신규 스토리 ID는 **S6-28**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+🔧 Active: S6-28 실서버(Render/Vercel) 배포 점검 & 프로덕션 DB 동기화 상태 검증
+➡️ 다음 신규 스토리 ID는 **S6-29**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
-> 세션 핸드오프 (2026-10-04, Claude Code):
+> 세션 핸드오프 (2026-10-05, Antigravity):
+> - ⚡ 5대 섹터(반도체, 소부장, 우주, 에너지, 바이오) 로딩 지연 원인 해결: 과거 119만 건 일별 시세와 1.6만 건 holdings가 들어있던 `etf_data.db`를 현재 활성 DB(`etf_data_v2.db`)로 영구 복제 통합 완료. 레버리지 4종 holdings fallback 등록 및 백엔드 `asyncio.gather` 병렬화(응답 10~20초대 → 0.3~1.5초대).
+> - 🚀 5대 섹터 프론트엔드 SWR (Stale-While-Revalidate) 0초 즉시 렌더링 적용: `sessionStorage` 기반으로 마운트 시 스피너 차단 없이 이전 차트와 도표를 0ms 즉시 표시 후 백그라운드 갱신.
+> - 🌐 실서버 배포 점검(S6-28) 및 백그라운드 스케줄러 점검(S6-29) 순차 착수.
 > - 🌗 Dark / Light 토글(상단 바, `ThemeToggle`) 추가. Tailwind v4 색 변수를 `html.light`에서 반전하는 방식(`scripts/generate-light-theme.py` → `app/theme-light.css`). 근거 `docs/theme-light-context-notes.md`. 시장동향 '오늘의 시장' 임베드 주소를 bulliza.com으로 교체(finance.richgo.ai 404).
 > - 🔷 서비스명 ETF Lens → **i-Prism**(Investment Prism) 리브랜딩. 로고는 역삼각형 프리즘 i + 부채꼴 스펙트럼 광선 + 그라데이션 Prism(rism 소문자, 시안 H2). 로고·아이콘·파비콘은 `dashboard/scripts/generate-brand.py`로 생성하며 생성물(`components/brand/IPrismLogo.tsx`, `public/brand/*`, `app/icon.svg`, `app/apple-icon.png`, `app/favicon.ico`)은 직접 고치지 않는다. 결정 근거 `docs/iprism-rebrand-context-notes.md`. 도메인(etf-lens.*)과 User-Agent는 유지.
 > - 🐛 대선 D-day 고정값 버그 수정: `ElectionPlaybookSection`의 `D-3 SPECIAL` 라벨과 Tranche 3 카드의 "(D-3 진입 중)"이 JSX에 하드코딩돼 있었고, `_build_election_prompt`도 "D-2~D-3일 앞둔 시점"으로 고정돼 있어 AI 재생성 시에도 같은 D-day가 나왔다. 이제 프론트는 `getElectionDDayLabel()`, 백엔드는 `_election_phase_text()`가 오늘 날짜(KST)와 `CATALYSTS` 대선 일정으로 계산한다. 회귀 테스트는 `test_election_prompt_uses_dynamic_dday`.

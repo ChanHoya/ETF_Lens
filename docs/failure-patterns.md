@@ -25,6 +25,11 @@
 - **원인**: Render 무료 PostgreSQL 90일 만료
 - **해결**: 유료 전환($7/월) 또는 새 DB 생성 후 DATABASE_URL 환경변수 업데이트
 
+### SQLite 다중 DB 분리로 인한 과거 시계열 누락 및 외부 재호출 지연
+- **증상**: 5대 섹터 차트 및 구성종목 조회가 10~20초 이상 걸리거나 스피너가 지속됨
+- **원인**: 과거 119만 건 데이터가 들어있던 `etf_data.db`와 새로 가동된 `etf_data_v2.db`가 분리되어, 백엔드가 로컬 DB에 데이터가 없다고 판단하고 외부 API(네이버/야후)를 전수 크롤링함
+- **해결**: `ATTACH DATABASE`로 기존 시계열(`etf_daily_prices`) 및 `etf_holdings`를 활성 DB로 완전 이관 및 레버리지 종목 fallbacks 등록
+
 ## TFF Dashboard
 
 ### 예수금 0원
