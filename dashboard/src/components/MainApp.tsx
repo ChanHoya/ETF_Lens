@@ -13,6 +13,7 @@ import MarqueeText from "@/components/MarqueeText";
 import Modals from "@/components/Modals";
 import DiscoverTab from "@/components/DiscoverTab";
 import FxTab from "@/components/FxTab";
+import RatesTab from "@/components/RatesTab";
 import TodayMarketButton from "@/components/TodayMarketButton";
 import CoveredCallTab from "@/components/CoveredCallTab";
 import BrazilBondTab from "@/components/BrazilBondTab";
@@ -38,7 +39,7 @@ type FavGroup = { id: string; name: string; items: { code: string; name: string 
 const BRAND_KEYWORDS = ['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'];
 const THEME_KEYWORDS = ['커버드콜', '배당', '액티브', 'AI', '반도체', '로봇', '원자력', '2차전지', '조선', '방산', '금융', '바이오'];
 
-export default function MainApp({ initialTab = 'select', showMyTab = false, showTffTab = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx', showMyTab?: boolean, showTffTab?: boolean }) {
+export default function MainApp({ initialTab = 'select', showMyTab = false, showTffTab = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates', showMyTab?: boolean, showTffTab?: boolean }) {
   const router = useRouter();
   const [slots, setSlots] = useState<{ search: string, code: string }[]>([
     { search: "", code: "" },
@@ -55,7 +56,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
   const [globalSearch, setGlobalSearch] = useState("");
   const [globalActive, setGlobalActive] = useState(false);
   const [period, setPeriod] = useState<string>('6M');
-  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates'>(initialTab);
 
   const [etfDictionary, setEtfDictionary] = useState<{ code: string, name: string }[]>([]);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState<number | null>(null);
@@ -1216,7 +1217,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
               const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call', ...(showMyTab ? ['dividend'] : []), 'brazil'].includes(activeTab);
               const isActive = (tab.id === 'etfcheck' && isEtfCheckModalOpen) ||
                 (tab.id === 'analysis' && isAnalysisActive && !isEtfCheckModalOpen) ||
-                ((activeTab === tab.id || (tab.id === 'discover' && activeTab === 'fx')) && !isEtfCheckModalOpen);
+                ((activeTab === tab.id || (tab.id === 'discover' && (activeTab === 'fx' || activeTab === 'rates'))) && !isEtfCheckModalOpen);
               return (
                 <Fragment key={tab.id}>
                   {tab.id === 'etftracker' && (
@@ -1251,7 +1252,7 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
                         setIsEtfCheckModalOpen(false);
                         return;
                       }
-                      setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx');
+                      setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates');
                       setIsEtfCheckModalOpen(false);
                       setNaverEtfCode(null);
                       setSelectedDetailEtf(null);
@@ -1317,17 +1318,18 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
         </div>
       )}
 
-      {/* 서브탭: 시장동향 탭 선택시 — 시장 개요 | 환율 */}
-      {(activeTab === 'discover' || activeTab === 'fx') && !isEtfCheckModalOpen && (
+      {/* 서브탭: 시장동향 탭 선택시 — 시장 개요 | 환율 | 금리 */}
+      {(activeTab === 'discover' || activeTab === 'fx' || activeTab === 'rates') && !isEtfCheckModalOpen && (
         <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-50">
           <nav className="flex items-center gap-2 md:gap-4 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 shadow-sm backdrop-blur-md overflow-x-auto scrollbar-hide">
             {[
               { id: 'discover', label: '시장 개요' },
               { id: 'fx', label: '💱 환율' },
+              { id: 'rates', label: '📈 금리' },
             ].map(subTab => (
               <button
                 key={subTab.id}
-                onClick={() => setActiveTab(subTab.id as 'discover' | 'fx')}
+                onClick={() => setActiveTab(subTab.id as 'discover' | 'fx' | 'rates')}
                 className={`text-sm md:text-[15px] font-bold transition-all px-3 py-1 rounded-full whitespace-nowrap ${activeTab === subTab.id ? 'bg-white/20 text-white shadow-inner border border-white/20' : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'}`}
               >
                 {subTab.label}
@@ -1847,6 +1849,10 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
 
         {activeTab === 'fx' && (
           <FxTab />
+        )}
+
+        {activeTab === 'rates' && (
+          <RatesTab />
         )}
 
 
