@@ -60,6 +60,22 @@ def test_cards_returns_drawdown_and_cagr():
     assert c["spx"]["w52_pos"] == 100 and c["spx"]["drawdown"] == 0.0
 
 
+def test_us_indices_in_krw_show_fx_effect():
+    u = build_overview(_raw(), TODAY)["cards"]["us_krw"]
+    # S&P는 달러 기준 사상 최고(0%)지만 원/달러가 1,400 → 1,400 유지라 원화 기준도 고점, 2026년 환율 점프(1,000→1,400) 반영
+    assert u["spx"]["dd_usd"] == 0.0 and u["spx"]["dd_krw"] == 0.0 and u["spx"]["fx_effect"] == 0.0
+    assert u["spx"]["chg_1y_krw"] > u["spx"]["chg_1y_usd"] + 30   # 1년 새 원화 약세 40%가 원화 수익에 더해짐
+    assert u["spx"]["ath_krw_date"][:4] == "2026"
+
+
+def test_us_indices_krw_drawdown_when_won_strengthens():
+    raw = _raw()
+    raw["krw"] = _daily(S0, E0, lambda d: 1400.0 if d < date(2026, 7, 1) else 1260.0)  # 마지막 석 달 원화 10% 강세
+    u = build_overview(raw, TODAY)["cards"]["us_krw"]["ndx"]
+    # 원화 10% 강세 − 같은 기간 나스닥 상승(연 15% → 석 달 약 3.5%) ≈ 원화 기준 고점 대비 −6.6%
+    assert u["dd_usd"] == 0.0 and -8 < u["dd_krw"] < -5 and u["fx_effect"] == u["dd_krw"]
+
+
 def test_weekly_rows_align_indices_with_different_bar_dates():
     rows = build_overview(_raw(), TODAY)["weekly"]
     # KOSPI(일요일 봉)와 S&P(월요일 봉)가 같은 주 행에 함께 들어가야 한다

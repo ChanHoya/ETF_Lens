@@ -28,7 +28,10 @@ type Row = {
     dd_kospi?: number | null; dd_spx?: number | null; dd_ndx?: number | null; corr_ks?: number | null;
 };
 type Overview = {
-    cards: Partial<Record<IdxKey, Card>> & { kospi_usd?: { value: number; chg_1y: number | null; ytd: number | null; drawdown: number } };
+    cards: Partial<Record<IdxKey, Card>> & {
+        kospi_usd?: { value: number; chg_1y: number | null; ytd: number | null; drawdown: number };
+        us_krw?: Partial<Record<'spx' | 'ndx', { dd_usd: number; dd_krw: number; fx_effect: number; ath_krw_date: string; chg_1y_usd: number | null; chg_1y_krw: number | null }>>;
+    };
     corr_ks: number | null; weekly: Row[];
     valuation: { pe: Packed; cape: Packed; ey: Packed; erp: Packed; us10: number | null; rows: { date: string; pe: number | null; cape: number | null; erp: number | null }[] } | null;
     regimes: Partial<Record<IdxKey, Regime[]>>; data_dates: Record<string, string>; updated_at: string; stale?: boolean;
@@ -144,6 +147,24 @@ function CardsGrid({ d }: { d: Overview }) {
                         {d.cards.kospi && <span className="text-gray-500"> (원화 기준 {d.cards.kospi.drawdown.toFixed(1)}%)</span>}</p>
                 </> : <p className="text-sm text-gray-500">데이터 없음</p>}
             </Box>
+            <Box icon={<DollarSign className="w-3.5 h-3.5 text-emerald-400" />} title="원화로 본 미국 지수"
+                foot="지수 × 원/달러 · 한국 상장 미국 지수 ETF(환노출)가 체감하는 위치 · 환율 효과 = 원화 기준 − 달러 기준">
+                {d.cards.us_krw ? (['spx', 'ndx'] as const).map(k => {
+                    const u = d.cards.us_krw?.[k];
+                    return u && (
+                        <div key={k} className="py-1 border-b border-white/5 last:border-0">
+                            <div className="flex items-baseline justify-between gap-2">
+                                <span className="text-xs text-gray-400">{NAME[k]} 고점 대비</span>
+                                <span className="text-xs text-gray-400">달러 <b className="text-gray-200">{u.dd_usd.toFixed(1)}%</b> · 원화 <b className="text-white">{u.dd_krw.toFixed(1)}%</b></span>
+                            </div>
+                            <p className="text-[11px] text-gray-500">
+                                환율 효과 <b className={u.fx_effect < 0 ? 'text-blue-400' : u.fx_effect > 0 ? 'text-red-400' : 'text-gray-300'}>{signed(u.fx_effect, 1, '%p')}</b>
+                                {u.chg_1y_usd != null && u.chg_1y_krw != null && <> · 1년 달러 {signed(u.chg_1y_usd, 1)} / 원화 {signed(u.chg_1y_krw, 1)}</>}
+                            </p>
+                        </div>
+                    );
+                }) : <p className="text-sm text-gray-500">데이터 없음</p>}
+            </Box>
             <Box icon={<Scale className="w-3.5 h-3.5 text-amber-400" />} title="S&P500 밸류에이션" foot="multpl.com 월간 · 백분위는 최근 20년 중 위치(높을수록 비쌈)">
                 {v?.pe ? (['pe', 'cape'] as const).map(k => v[k] && (
                     <div key={k} className="flex items-baseline justify-between gap-2 py-0.5">
@@ -241,7 +262,7 @@ function ValuationChart({ v }: { v: NonNullable<Overview['valuation']> }) {
 
 export default function StocksTab() {
     // 재진입 시 캐시를 즉시 그리고, 서버 기준 시각이 1시간 넘었을 때만 백그라운드 갱신
-    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-stocks-v1', `${API_BASE}/api/v1/stocks/overview`);
+    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-stocks-v2', `${API_BASE}/api/v1/stocks/overview`);
     const [range, setRange] = useState<Range>('20Y');
     const [usd, setUsd] = useState<'krw' | 'usd'>('krw');
     const [idx, setIdx] = useState<IdxKey>('kospi');

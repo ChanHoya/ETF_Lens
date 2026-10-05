@@ -157,6 +157,23 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
                               "ytd": _r((float(kospi_usd.iloc[-1]) / prev - 1) * 100) if prev else None,
                               "drawdown": _r((kospi_usd.iloc[-1] / kospi_usd.max() - 1) * 100)}
 
+    # 미국 지수 원화 환산(한국 상장 미국 지수 ETF 투자자 관점): 지수 × 그 시점 원/달러 — 고점 대비를 달러·원화로 비교
+    us_krw = {}
+    for k in ("spx", "ndx"):
+        s_usd = idx.get(k, _empty())
+        if len(s_usd) <= 52 or krw.empty:
+            continue
+        s_krw = (s_usd * krw.reindex(s_usd.index, method="ffill")).dropna()
+        if len(s_krw) <= 52:
+            continue
+        dd_usd = (s_usd.iloc[-1] / s_usd.max() - 1) * 100
+        dd_krw = (s_krw.iloc[-1] / s_krw.max() - 1) * 100
+        us_krw[k] = {"dd_usd": _r(dd_usd, 1), "dd_krw": _r(dd_krw, 1), "fx_effect": _r(dd_krw - dd_usd, 1),
+                     "ath_krw_date": s_krw.idxmax().strftime("%Y-%m-%d"),
+                     "chg_1y_usd": _pct_change(s_usd, 365), "chg_1y_krw": _pct_change(s_krw, 365)}
+    if us_krw:
+        cards["us_krw"] = us_krw
+
     wk = pd.DataFrame(idx)
     if not kospi_usd.empty:
         wk["kospi_usd"] = kospi_usd
