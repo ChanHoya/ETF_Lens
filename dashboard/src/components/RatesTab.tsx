@@ -1,14 +1,16 @@
 'use client';
 // 시장동향 > 금리 하위 탭 — 한·미 기준금리 스냅샷, 기준금리 사이클, 시장금리, 장단기 금리차·역전 이력·수익률곡선, 기준금리 국면 타임라인
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     ResponsiveContainer, ComposedChart, LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip as RechartsTooltip, Legend, ReferenceArea, ReferenceLine,
 } from 'recharts';
-import { Landmark, RefreshCw, TrendingUp, Activity, History, Info, ChevronDown, CalendarClock, Scale, Percent, Waves } from 'lucide-react';
+import { Landmark, RefreshCw, TrendingUp, Activity, History, Info, CalendarClock, Scale, Percent, Waves } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
+import RegimeMilestones, { type Milestone } from './RegimeMilestones';
+import { useCachedOverview } from '@/lib/useCachedOverview';
 
 type Change = { date: string; from: number; to: number; bp: number } | null;
 type Meeting = { date: string; d_day: number } | null;
@@ -30,13 +32,19 @@ type CurvePt = { tenor: string; value: number | null };
 type Row = {
     date: string; kr_base: number | null; us_upper: number | null; ecb: number | null; kr3y: number | null; kr10y: number | null;
     us2y: number | null; us10y: number | null; kr_10_3: number | null; us_10_2: number | null; us_10_3m: number | null;
+    kr1y?: number | null; us1y?: number | null; kr30y?: number | null; us30y?: number | null; kr50y?: number | null;
 };
+type TermRow = { key: 'short' | 'long' | 'ultra'; label: string; kr: number; us: number; gap: number; gap_1y: number | null; kr_chg_1y: number | null; us_chg_1y: number | null };
+type Terms = {
+    rows: TermRow[]; premium: Partial<Record<'kr' | 'us', { now: number; y1: number | null }>>; insights: string[];
+    kr50y: { value: number; date: string } | null;
+} | null;
 type Regime = {
     start: string; end: string | null; kind: 'hike' | 'cut' | 'hold'; title: string; drivers: string[]; source: string | null;
     from: number; to: number; bp: number; changes: number;
 };
 type Overview = {
-    snapshot: Snapshot; spreads: Record<string, Spread>; shapes: { kr: Shape; us: Shape };
+    snapshot: Snapshot; spreads: Record<string, Spread>; shapes: { kr: Shape; us: Shape }; terms?: Terms;
     curves: Record<'kr' | 'us', { date: string; now: CurvePt[]; m1: CurvePt[]; y1: CurvePt[] }>;
     recessions: { start: string; end: string | null }[]; weekly: Row[]; regimes: Regime[];
     data_dates: Record<string, string>; updated_at: string; stale?: boolean; ecos_key?: boolean;
@@ -44,7 +52,6 @@ type Overview = {
 
 const RANGES = ['5Y', '10Y', '20Y'] as const;
 type Range = typeof RANGES[number];
-const REFRESH_MS = 10 * 60 * 1000; // 접속 시점 현행화: 10분 지나면 다시 조회 (서버 캐시도 10분)
 const TOOLTIP_STYLE = { background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 };
 const axisTick = { fill: '#9ca3af', fontSize: 11 };
 const KIND: Record<Regime['kind'], { label: string; fill: string; badge: string }> = {
@@ -345,80 +352,98 @@ function ShapeCard({ title, shape }: { title: string; shape: Shape }) {
     );
 }
 
-function RegimeTimeline({ regimes, selected, onSelect }: { regimes: Regime[]; selected: number | null; onSelect: (i: number | null) => void }) {
-    const [all, setAll] = useState(false);
-    const ordered = regimes.map((g, i) => ({ g, i })).reverse();
-    const shown = all ? ordered : ordered.slice(0, 5);
+const TERM_LINES: Record<TermRow['key'], { kr: keyof Row; us: keyof Row; title: string }> = {
+    short: { kr: 'kr1y', us: 'us1y', title: '단기 · 1년물' },
+    long: { kr: 'kr10y', us: 'us10y', title: '장기 · 10년물' },
+    ultra: { kr: 'kr30y', us: 'us30y', title: '초장기 · 30년물' },
+};
+
+// 단기·장기·초장기 한·미 비교 — 큰 흐름을 3분할 차트, 비교표, 자동 해석으로 보여준다
+function TermSection({ terms, rows, range, setRange }: { terms: NonNullable<Terms>; rows: (Row & { t: number })[]; range: Range; setRange: (r: Range) => void }) {
     return (
-        <div className="space-y-2">
-            {shown.map(({ g, i }) => {
-                const k = KIND[g.kind];
-                const active = selected === i;
-                return (
-                    <button key={g.start} type="button" onClick={() => onSelect(active ? null : i)}
-                        className={`w-full text-left rounded-xl border p-3 transition ${active ? 'border-indigo-400/60 bg-indigo-500/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/5'}`}>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                            <span className="text-xs font-mono text-gray-400 w-[150px] shrink-0">{g.start.slice(0, 7).replace('-', '.')} → {g.end ? g.end.slice(0, 7).replace('-', '.') : '현재'}</span>
-                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${k.badge}`}>{k.label}</span>
-                            <span className="text-sm font-extrabold text-white">{g.title}</span>
-                            <span className="text-xs font-bold text-gray-300 ml-auto">
-                                {g.from.toFixed(2)} → {g.to.toFixed(2)}%
-                                {g.kind !== 'hold' && <span className={g.bp > 0 ? 'text-red-400' : 'text-blue-400'}> ({signed(g.bp, 0, 'bp')} · {g.changes}회)</span>}
-                            </span>
+        <section className="bg-black/20 rounded-2xl border border-white/5 p-4 space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+                <SectionTitle icon={<Activity className="w-5 h-5 text-sky-400" />} title="단기·장기·초장기 금리 — 한·미 비교"
+                    sub="국채 1년·10년·30년물 · 단기는 정책금리 기대, 장기는 성장·물가, 초장기는 재정·기간 프리미엄을 반영" />
+                <Toggle options={RANGE_OPTS} value={range} onChange={setRange} />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                {terms.rows.map(r => {
+                    const L = TERM_LINES[r.key];
+                    return (
+                        <div key={r.key} className="rounded-xl bg-white/[0.03] border border-white/5 p-3">
+                            <div className="flex items-baseline justify-between mb-1">
+                                <p className="text-sm font-bold text-gray-200">{L.title}</p>
+                                <p className="text-xs text-gray-400">한 {r.kr.toFixed(2)}% · 미 {r.us.toFixed(2)}%
+                                    <span className={`font-bold ml-1.5 ${r.gap < 0 ? 'text-blue-400' : 'text-red-400'}`}>{signed(r.gap)}</span></p>
+                            </div>
+                            <ResponsiveContainer width="100%" height={170}>
+                                <LineChart data={rows} margin={{ top: 6, right: 6, bottom: 0, left: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                                    <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} tick={axisTick} minTickGap={30} />
+                                    <YAxis tick={axisTick} width={36} domain={['auto', 'auto']} tickFormatter={(v: number) => `${v}%`} />
+                                    <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
+                                    <Line dataKey={L.kr as string} name="한국" stroke="#6366f1" dot={false} strokeWidth={1.8} connectNulls isAnimationActive={false} />
+                                    <Line dataKey={L.us as string} name="미국" stroke="#f43f5e" dot={false} strokeWidth={1.6} connectNulls isAnimationActive={false} />
+                                    {r.key === 'ultra' && <Line dataKey="kr50y" name="한국 50년" stroke="#f59e0b" strokeDasharray="4 3" dot={false} strokeWidth={1.4} connectNulls isAnimationActive={false} />}
+                                </LineChart>
+                            </ResponsiveContainer>
                         </div>
-                        <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                            {g.drivers.map(d => <li key={d} className="text-[11px] text-gray-300 bg-white/5 border border-white/5 rounded-md px-2 py-0.5">{d}</li>)}
-                        </ul>
-                        {g.source && <p className="text-[10px] text-gray-500 mt-1">출처: {g.source}</p>}
-                    </button>
-                );
-            })}
-            {ordered.length > 5 && (
-                <button type="button" onClick={() => setAll(v => !v)}
-                    className="w-full flex items-center justify-center gap-1 text-xs font-bold text-gray-400 hover:text-gray-200 py-2 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/5">
-                    {all ? '최근 5개만 보기' : `전체 ${ordered.length}개 구간 보기`}
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${all ? 'rotate-180' : ''}`} />
-                </button>
-            )}
-        </div>
+                    );
+                })}
+            </div>
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+                <div className="xl:col-span-3 overflow-x-auto">
+                    <table className="w-full text-xs">
+                        <thead><tr className="text-gray-500 border-b border-white/10">
+                            <th className="text-left py-1.5 font-bold">구간</th><th className="text-right font-bold">한국</th><th className="text-right font-bold">미국</th>
+                            <th className="text-right font-bold">한−미</th><th className="text-right font-bold">1년 전 한−미</th><th className="text-right font-bold">1년 변화 (한 / 미)</th>
+                        </tr></thead>
+                        <tbody>
+                            {terms.rows.map(r => (
+                                <tr key={r.key} className="border-b border-white/5 text-gray-300">
+                                    <td className="py-1.5 font-bold text-gray-200">{r.label}</td>
+                                    <td className="text-right">{r.kr.toFixed(2)}%</td><td className="text-right">{r.us.toFixed(2)}%</td>
+                                    <td className={`text-right font-bold ${r.gap < 0 ? 'text-blue-400' : 'text-red-400'}`}>{signed(r.gap)}</td>
+                                    <td className="text-right">{r.gap_1y != null ? signed(r.gap_1y) : '-'}</td>
+                                    <td className="text-right"><Bp v={r.kr_chg_1y} label="" /> / <Bp v={r.us_chg_1y} label="" /></td>
+                                </tr>
+                            ))}
+                            {terms.kr50y && (
+                                <tr className="text-gray-400"><td className="py-1.5">한국 50년물</td><td className="text-right">{terms.kr50y.value.toFixed(2)}%</td>
+                                    <td colSpan={4} className="text-right text-[11px]">{terms.kr50y.date} 기준</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                        {(['kr', 'us'] as const).map(c => terms.premium[c] && (
+                            <div key={c} className="rounded-lg bg-white/[0.03] border border-white/5 p-2.5">
+                                <p className="text-[11px] text-gray-400 font-bold">{c === 'kr' ? '한국' : '미국'} 초장기 프리미엄 (30년−10년)</p>
+                                <p className="text-lg font-extrabold text-white">{signed(terms.premium[c]!.now)}</p>
+                                {terms.premium[c]!.y1 != null && <p className="text-[11px] text-gray-500">1년 전 {signed(terms.premium[c]!.y1!)}</p>}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <ul className="xl:col-span-2 space-y-2">
+                    {terms.insights.map(t => (
+                        <li key={t} className="flex gap-2 text-[13px] text-gray-200 leading-snug">
+                            <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />{t}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </section>
     );
 }
 
 export default function RatesTab() {
-    const [data, setData] = useState<Overview | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // 재진입 시 캐시를 즉시 그리고, 서버 기준 시각이 1시간 넘었을 때만 백그라운드 갱신
+    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-rates-v2', `${API_BASE}/api/v1/rates/overview`);
     const [range, setRange] = useState<Range>('20Y');
     const [marketCountry, setMarketCountry] = useState<'kr' | 'us'>('kr');
     const [curveCountry, setCurveCountry] = useState<'kr' | 'us'>('kr');
     const [selected, setSelected] = useState<number | null>(null);
-    const lastFetchRef = useRef(0);
-
-    const load = useCallback(async (refresh = false) => {
-        lastFetchRef.current = Date.now();
-        setLoading(true);
-        setError(null);
-        try {
-            const r = await fetch(`${API_BASE}/api/v1/rates/overview${refresh ? '?refresh=true' : ''}`, { cache: 'no-store' });
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            setData(await r.json());
-        } catch (e) {
-            setError(e instanceof Error ? e.message : String(e));
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    // 접속 시점 현행화: 탭 진입 시 조회, 창 복귀·열어 둔 동안 10분이 지났으면 다시 조회
-    useEffect(() => {
-        load();
-        const stale = () => Date.now() - lastFetchRef.current > REFRESH_MS;
-        const onVisible = () => { if (document.visibilityState === 'visible' && stale()) load(); };
-        const id = setInterval(() => { if (document.visibilityState === 'visible' && stale()) load(); }, 60 * 1000);
-        document.addEventListener('visibilitychange', onVisible);
-        return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
-    }, [load]);
-
     const rows = useMemo(() => {
         if (!data) return [];
         const all = data.weekly.map(r => ({ ...r, t: ts(r.date) }));
@@ -427,6 +452,15 @@ export default function RatesTab() {
         cut.setFullYear(cut.getFullYear() - (range === '10Y' ? 10 : 5));
         return all.filter(r => r.t >= cut.getTime());
     }, [data, range]);
+
+    // 국면 타임라인: 기간 버튼과 무관하게 전체 기간
+    const baseRows = useMemo(() => (data?.weekly ?? []).map(r => ({ t: ts(r.date), v: r.kr_base })), [data]);
+    const milestones = useMemo<Milestone[]>(() => (data?.regimes ?? []).map(g => ({
+        start: g.start, end: g.end, title: g.title, drivers: g.drivers, source: g.source,
+        color: KIND[g.kind].fill, badge: { label: KIND[g.kind].label, cls: KIND[g.kind].badge },
+        summary: g.kind === 'hold' ? <>{g.from.toFixed(2)}% 유지</> : <>{g.from.toFixed(2)} → {g.to.toFixed(2)}%{' '}
+            <span className={g.bp > 0 ? 'text-red-400' : 'text-blue-400'}>({signed(g.bp, 0, 'bp')} · {g.changes}회)</span></>,
+    })), [data]);
 
     const s = data?.snapshot;
     const dd = data?.data_dates ?? {};
@@ -437,16 +471,16 @@ export default function RatesTab() {
                     <TrendingUp className="w-6 h-6 text-indigo-400" />
                     <div>
                         <h2 className="text-xl font-extrabold text-white leading-none">금리 대시보드</h2>
-                        <p className="text-xs text-gray-500 mt-1">한·미 기준금리 · 국채금리 · 장단기 금리차 — 접속할 때마다 최신 공표값으로 갱신</p>
+                        <p className="text-xs text-gray-500 mt-1">한·미 기준금리 · 국채금리 · 장단기·초장기 금리 — 기준 시각이 1시간 지나면 자동 갱신</p>
                     </div>
                     {s && (['kr', 'us'] as const).map(c => s.phase[c] && (
                         <span key={c} className="text-xs font-bold px-3 py-1 rounded-full border bg-white/5 text-gray-200 border-white/15">{s.phase[c]}</span>
                     ))}
                     <div className="ml-auto flex items-center gap-2 text-[11px] text-gray-500">
-                        {data && <span>{data.stale ? '⚠ 최신 수집 실패 · 이전 값 · ' : ''}{new Date(data.updated_at).toLocaleString('ko-KR')} 갱신</span>}
-                        <button onClick={() => load(true)} disabled={loading}
+                        {data && <span>{data.stale ? '⚠ 최신 수집 실패 · 이전 값 · ' : ''}{new Date(data.updated_at).toLocaleString('ko-KR')} 기준{refreshing ? ' · 최신 데이터 확인 중…' : ''}</span>}
+                        <button onClick={refresh} disabled={refreshing}
                             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 disabled:opacity-50">
-                            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />업데이트
+                            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />업데이트
                         </button>
                     </div>
                 </div>
@@ -509,10 +543,13 @@ export default function RatesTab() {
                         </div>
                     </section>
 
+                    {data.terms && <TermSection terms={data.terms} rows={rows} range={range} setRange={setRange} />}
+
                     <section className="bg-black/20 rounded-2xl border border-white/5 p-4">
                         <SectionTitle icon={<History className="w-5 h-5 text-amber-400" />} title="한국 기준금리 국면 타임라인"
-                            sub="2008년 이후 인상·인하·동결 구간과 배경 · 구간 값은 한국은행 ECOS 실제 변경 이력으로 계산" />
-                        <RegimeTimeline regimes={data.regimes} selected={selected} onSelect={setSelected} />
+                            sub="2008년 이후 인상·인하·동결 이정표 — 번호를 누르면 배경이 아래에 나옵니다 · 값은 한국은행 ECOS 실제 변경 이력" />
+                        <RegimeMilestones rows={baseRows} milestones={milestones} selected={selected} onSelect={setSelected}
+                            seriesName="한국 기준금리" seriesColor="#6366f1" step yFormat={(v) => `${v.toFixed(2)}%`} />
                     </section>
 
                     <p className="flex items-start gap-1.5 text-[11px] text-gray-500 px-1">

@@ -1,15 +1,17 @@
 'use client';
 // 시장동향 > 환율 하위 탭 — 스냅샷, 20년 추이 차트, 국면 타임라인, 연계성 분석, 원화 가치·아시아 통화, 환헤지 판단
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     ResponsiveContainer, ComposedChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip as RechartsTooltip, Legend, ReferenceArea, ReferenceLine, Area,
 } from 'recharts';
-import { DollarSign, Globe2, Landmark, RefreshCw, Scale, Shield, TrendingDown, TrendingUp, History, Info, Link2, Gauge, ChevronDown } from 'lucide-react';
+import { DollarSign, Globe2, Landmark, RefreshCw, Scale, Shield, TrendingDown, TrendingUp, History, Info, Link2, Gauge } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
+import { useCachedOverview } from '@/lib/useCachedOverview';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import FxFinder from './FxFinder';
+import RegimeMilestones, { type Milestone } from './RegimeMilestones';
 
 type Row = {
     date: string; krw: number | null; dxy: number | null; us10: number | null; kr10: number | null; spread10: number | null;
@@ -215,45 +217,6 @@ function SpreadChart({ data }: { data: (Row & { t: number })[] }) {
                 <Line yAxisId="krw" dataKey="krw" name="원/달러 (우)" stroke="#9ca3af" dot={false} strokeWidth={1.5} connectNulls isAnimationActive={false} />
             </ComposedChart>
         </ResponsiveContainer>
-    );
-}
-
-function RegimeTimeline({ regimes, selected, onSelect }: { regimes: Regime[]; selected: number | null; onSelect: (i: number | null) => void }) {
-    const [all, setAll] = useState(false);
-    const ordered = regimes.map((g, i) => ({ g, i })).reverse();  // 최신 국면부터
-    const order = all ? ordered : ordered.slice(0, 5);
-    return (
-        <div className="space-y-2">
-            {order.map(({ g, i }) => {
-                const k = KIND_STYLE[g.kind];
-                const active = selected === i;
-                return (
-                    <button key={g.start} type="button" onClick={() => onSelect(active ? null : i)}
-                        className={`w-full text-left rounded-xl border p-3 transition ${active ? 'border-indigo-400/60 bg-indigo-500/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/5'}`}>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                            <span className="text-xs font-mono text-gray-400 w-[150px] shrink-0">{g.start.slice(0, 7).replace('-', '.')} → {g.end.slice(0, 7).replace('-', '.')}</span>
-                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${k.badge}`}>{k.label}</span>
-                            <span className="text-sm font-extrabold text-white">{g.title}</span>
-                            <span className="text-xs font-bold text-gray-300 ml-auto">
-                                {fmtNum(g.from, 0)} → {fmtNum(g.to, 0)}원
-                                <span className={g.chg_pct > 0 ? 'text-red-400' : 'text-blue-400'}> ({g.chg_pct > 0 ? '+' : ''}{g.chg_pct}%)</span>
-                            </span>
-                        </div>
-                        <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                            {g.drivers.map(d => <li key={d} className="text-[11px] text-gray-300 bg-white/5 border border-white/5 rounded-md px-2 py-0.5">{d}</li>)}
-                        </ul>
-                        {g.source && <p className="text-[10px] text-gray-500 mt-1">출처: {g.source}</p>}
-                    </button>
-                );
-            })}
-            {ordered.length > 5 && (
-                <button type="button" onClick={() => setAll(v => !v)}
-                    className="w-full flex items-center justify-center gap-1 text-xs font-bold text-gray-400 hover:text-gray-200 py-2 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/5">
-                    {all ? '최근 5개만 보기' : `전체 ${ordered.length}개 구간 보기`}
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${all ? 'rotate-180' : ''}`} />
-                </button>
-            )}
-        </div>
     );
 }
 
@@ -479,27 +442,10 @@ function HedgeSection({ h, s }: { h: Analysis['hedge']; s: Snapshot }) {
 }
 
 export default function FxTab() {
-    const [data, setData] = useState<Overview | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // 재진입 시 캐시를 즉시 그리고, 서버 기준 시각이 1시간 넘었을 때만 백그라운드 갱신
+    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-fx-v2', `${API_BASE}/api/v1/fx/overview`);
     const [range, setRange] = useState<Range>('20Y');
     const [selected, setSelected] = useState<number | null>(null);
-
-    const load = useCallback(async (refresh = false) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const r = await fetch(`${API_BASE}/api/v1/fx/overview${refresh ? '?refresh=true' : ''}`, { cache: 'no-store' });
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            setData(await r.json());
-        } catch (e) {
-            setError(e instanceof Error ? e.message : String(e));
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => { load(); }, [load]);
 
     const rows = useMemo(() => {
         if (!data) return [];
@@ -509,6 +455,14 @@ export default function FxTab() {
         cut.setFullYear(cut.getFullYear() - (range === '10Y' ? 10 : 5));
         return all.filter(r => r.t >= cut.getTime());
     }, [data, range]);
+
+    // 국면 타임라인: 기간 버튼과 무관하게 전체 기간
+    const fullRows = useMemo(() => (data?.weekly ?? []).map(r => ({ t: ts(r.date), v: r.krw })), [data]);
+    const milestones = useMemo<Milestone[]>(() => (data?.regimes ?? []).map(g => ({
+        start: g.start, end: g.end, title: g.title, drivers: g.drivers, source: g.source,
+        color: KIND_STYLE[g.kind].fill, badge: { label: KIND_STYLE[g.kind].label, cls: KIND_STYLE[g.kind].badge },
+        summary: <>{fmtNum(g.from, 0)} → {fmtNum(g.to, 0)}원 <span className={g.chg_pct > 0 ? 'text-red-400' : 'text-blue-400'}>({g.chg_pct > 0 ? '+' : ''}{g.chg_pct}%)</span></>,
+    })), [data]);
 
     const corrRows = useMemo(() => {
         if (!data?.analysis || rows.length === 0) return [];
@@ -532,10 +486,10 @@ export default function FxTab() {
                     </div>
                     {s && <span className={`text-xs font-bold px-3 py-1 rounded-full border ${verdictCls}`}>{s.verdict.label}</span>}
                     <div className="ml-auto flex items-center gap-2 text-[11px] text-gray-500">
-                        {data && <span>{data.stale ? '⚠ 최신 수집 실패 · 이전 값 · ' : ''}{new Date(data.updated_at).toLocaleString('ko-KR')} 갱신</span>}
-                        <button onClick={() => load(true)} disabled={loading}
+                        {data && <span>{data.stale ? '⚠ 최신 수집 실패 · 이전 값 · ' : ''}{new Date(data.updated_at).toLocaleString('ko-KR')} 기준{refreshing ? ' · 최신 데이터 확인 중…' : ''}</span>}
+                        <button onClick={refresh} disabled={refreshing}
                             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 disabled:opacity-50">
-                            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />업데이트
+                            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />업데이트
                         </button>
                     </div>
                 </div>
@@ -569,8 +523,9 @@ export default function FxTab() {
 
                     <section className="bg-black/20 rounded-2xl border border-white/5 p-4">
                         <SectionTitle icon={<History className="w-5 h-5 text-amber-400" />} title="원/달러 국면 타임라인"
-                            sub="2007년 이후 주요 상승·하락 구간과 그 시기의 글로벌 경제·사회 동향 · 구간 값은 FRED 원/달러(뉴욕 정오) 기준" />
-                        <RegimeTimeline regimes={data.regimes} selected={selected} onSelect={setSelected} />
+                            sub="2007년 이후 상승·하락 이정표 — 번호를 누르면 그 시기의 글로벌 경제·사회 동향이 아래에 나옵니다 · 값은 FRED 원/달러(뉴욕 정오)" />
+                        <RegimeMilestones rows={fullRows} milestones={milestones} selected={selected} onSelect={setSelected}
+                            seriesName="원/달러" seriesColor="#6366f1" yFormat={(v) => v.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} />
                     </section>
 
                     {data.analysis && (
