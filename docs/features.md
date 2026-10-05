@@ -75,6 +75,8 @@
 | S6-25: 종합 매트릭스 및 배당 캘린더 DB 일괄 쿼리 & 캐시 가속화 | ✅ done | backend/api/router.py, backend/api/dividends.py, dashboard/src/components/DividendDashboard.tsx, backend/tests/test_compare_and_dividend_fast.py | 종합 매트릭스 중복 스크래핑 제거 및 60초 캐싱(0.05초 서빙), 배당 캘린더 포트폴리오 캐시플로우 DB 일괄 쿼리(0.005초) 및 SWR 캐시 우선 렌더링 완료 |
 | S6-26: 종합 자산(Hoya Board) 초기 로딩 블로킹 제거 & KIS 스마트 캐시 | ✅ done | backend/api/my_assets.py, dashboard/src/components/MyAssetsView.tsx, backend/tests/test_my_assets.py | MyAssetsView 마운트 시 Hoya Board 탭을 가로막던 20초 전면 스피너 블로킹 제거, 세션 캐시 기반 0초 즉시 렌더링(SWR) 및 백엔드 포트폴리오 스마트 TTL(장마감 30분/장중 10분) 캐싱 적용 완료 |
 | S6-27: 5대 섹터 차트·구성종목 119만 건 DB 영구 통합 및 프론트엔드 SWR 초고속 렌더링 | ✅ done | backend/api/router.py, dashboard/src/components/{SemiChart,SpaceChart,EnergyChart,BioChart,SemiPartsChart}.tsx | 과거 수집 119만 건 일별 시세 및 구성종목 DB 누락 복제 해결, 5대 섹터 백엔드 asyncio.gather 병렬화 및 타임아웃 방어, 5대 섹터 프론트엔드 SWR 0초 즉시 렌더링 적용 완료 |
+| S6-28: 실서버(Render/Vercel) 배포 점검 & 프로덕션 동기화 검증 | ✅ done | backend/tests/, origin/main | 전체 141개 유닛 테스트 100% 통과, Render 백엔드 및 Vercel 프론트엔드 실서버 정상 응답(200) 확인 및 origin/main 배포 동기화 완료 |
+| S6-29: 백그라운드 스케줄러 13종 점검 및 정상 기동 검증 | ✅ done | backend/core/scheduler.py | 장 마감 자산 스냅샷(15:40), 퀀트 사전계산(16:00), 배당 14일 갱신(일 23:30), 렌더 킵얼라이브(10분) 등 13개 cron/interval 잡 등록 및 정상 기동 검증 완료 |
 
 
 
