@@ -10,7 +10,7 @@
 - [x] 프론트 `RatesTab.tsx` + MainApp 서브탭 "금리"(환율 오른쪽)
 - [x] 접속 시점 현행화: 탭 진입 시 조회, 창 복귀·열어 둔 동안 10분 지나면 재조회, 서버 캐시 10분
 - [x] pytest, build, tsc, 캡처(다크·라이트)
-- [ ] 커밋·푸시 후 실서버 확인(Render ECOS 키 동작 포함)
+- [x] 커밋·푸시 후 실서버 확인 (Render ecos_key True·22개 시리즈 수집, Vercel success, 실서버 탭에 국면 배지·역전 이력 표시)
 
 검증: pytest tests 88 통과(새 금리 테스트 7건, 기존 실패 test_semi_cycle 2건 무관), build 성공, tsc에서 RatesTab·MainApp 오류 없음.
 실데이터(ECOS 키·FRED) 수집 11.5초, 22개 시리즈 모두 관측치 있음. 로컬 3100에 실데이터 JSON으로 다크·라이트 캡처 확인.
