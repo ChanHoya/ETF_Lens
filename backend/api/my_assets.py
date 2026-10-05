@@ -1907,4 +1907,25 @@ async def get_asset_history(
     }
 
 
+async def record_daily_asset_snapshot_job() -> bool:
+    """스케줄러(장 마감 후 평일 15:40)에서 자동 실행되어 KIS 포트폴리오를 조회하고 UserAssetSnapshot을 DB에 자동 저장."""
+    try:
+        from db.database import AsyncSessionLocal
+        
+        class _MockRequest:
+            headers = {}
+
+        async with AsyncSessionLocal() as db:
+            global _PORTFOLIO_CACHE
+            _PORTFOLIO_CACHE = None  # 캐시 강제 무효화로 당일 마감가 갱신
+            res = await get_my_portfolio(request=_MockRequest(), db=db)
+            if res and "aggregated_summary" in res:
+                tot = res["aggregated_summary"].get("total_asset", 0)
+                logger.info(f"[Asset Snapshot Job] Successfully recorded market close snapshot: total_asset={tot:,.0f}원")
+                return True
+    except Exception as e:
+        logger.error(f"[Asset Snapshot Job] Failed to record snapshot: {e}", exc_info=True)
+    return False
+
+
 

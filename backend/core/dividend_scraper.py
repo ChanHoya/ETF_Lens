@@ -301,8 +301,19 @@ async def get_etf_dividend_detail(
     sum_res = await db.execute(select(ETFDividendSummary).where(ETFDividendSummary.code == clean_code))
     summary_rec = sum_res.scalar_one_or_none()
 
-    # DB에 없거나 캐시가 오래된 경우 즉시 수집
-    if not summary_rec and auto_sync:
+    # DB에 없거나 캐시가 14일 이상 경과한 경우 자동 최신화
+    is_stale = False
+    if summary_rec and summary_rec.updated_at:
+        try:
+            # tz-naive UTC 비교
+            updated_dt = summary_rec.updated_at.replace(tzinfo=None)
+            if (datetime.utcnow() - updated_dt).days >= 14:
+                is_stale = True
+        except Exception:
+            is_stale = False
+
+    if (not summary_rec or is_stale) and auto_sync:
+        logger.info(f"[DividendScraper] {clean_code} 분배금 데이터 stale({is_stale}) 감지 → 최신 스크래핑 갱신")
         return await scrape_and_save_etf_dividend(db, clean_code)
 
     if not summary_rec:
@@ -428,3 +439,32 @@ def compute_portfolio_monthly_cashflow(
         "total_annual_usd": round(total_annual_usd, 2),
         "holdings": holding_details,
     }
+
+
+async def refresh_stale_dividends_job(limit: int = 30) -> int:
+    """스케줄러 또는 주기적 백그라운드 잡으로 호출되어 14일 이상 경과한 배당 요약본을 자동 갱신."""
+    from db.database import AsyncSessionLocal
+    refreshed_count = 0
+    try:
+        async with AsyncSessionLocal() as db:
+            cutoff = datetime.utcnow() - timedelta(days=14)
+            stmt = (
+                select(ETFDividendSummary.code)
+                .where((ETFDividendSummary.updated_at < cutoff) | (ETFDividendSummary.updated_at.is_(None)))
+                .limit(limit)
+            )
+            res = await db.execute(stmt)
+            stale_codes = res.scalars().all()
+
+            for code in stale_codes:
+                try:
+                    await scrape_and_save_etf_dividend(db, code)
+                    refreshed_count += 1
+                    await asyncio.sleep(0.5)  # 과도한 API 요청 방지
+                except Exception as e:
+                    logger.warning(f"[Dividend Refresh] Failed to refresh {code}: {e}")
+
+            logger.info(f"[Dividend Refresh Job] Refreshed {refreshed_count}/{len(stale_codes)} stale dividend summaries.")
+    except Exception as e:
+        logger.error(f"[Dividend Refresh Job] Error: {e}", exc_info=True)
+    return refreshed_count

@@ -665,6 +665,26 @@ def setup_scheduler():
         except Exception as e:
             print(f"[scheduler] _job_brazil_intraday failed: {e}")
 
+    async def _job_asset_snapshot():
+        """장 마감(15:30) 후 KIS 포트폴리오를 조회하여 일일 자산 추이(UserAssetSnapshot)를 DB에 자동 영속화."""
+        try:
+            from api.my_assets import record_daily_asset_snapshot_job
+            await record_daily_asset_snapshot_job()
+            trigger_replication_background()
+            gc.collect()
+        except Exception as e:
+            print(f"[scheduler] _job_asset_snapshot failed: {e}")
+
+    async def _job_dividend_refresh():
+        """14일 이상 경과하여 만료(stale)된 배당 요약본을 주간 단위로 자동 갱신."""
+        try:
+            from core.dividend_scraper import refresh_stale_dividends_job
+            await refresh_stale_dividends_job(limit=50)
+            trigger_replication_background()
+            gc.collect()
+        except Exception as e:
+            print(f"[scheduler] _job_dividend_refresh failed: {e}")
+
     async def _job_keep_alive():
         """Render 유휴 스핀다운 방지: 자기 자신의 /health 를 호출해 idle 타이머를 리셋한다.
         RENDER_EXTERNAL_URL(렌더가 자동 주입)이 없으면 로컬/비-Render 환경이므로 no-op."""
@@ -698,6 +718,12 @@ def setup_scheduler():
     # 월-금 09:10 (Market Open) 및 15:15 (Market Close) 실행
     scheduler.add_job(_job_disparity, "cron", day_of_week="mon-fri", hour=9, minute=10, id="market_open_disparity_check")
     scheduler.add_job(_job_disparity, "cron", day_of_week="mon-fri", hour=15, minute=15, id="market_close_disparity_check")
+
+    # 월-금 15:40 - 장 마감 후 일일 자산 총액 및 포트폴리오 스냅샷 자동 기록
+    scheduler.add_job(_job_asset_snapshot, "cron", day_of_week="mon-fri", hour=15, minute=40, id="market_close_asset_snapshot")
+
+    # 매주 일요일 23:30 - 14일 이상 지난 배당 데이터(ETFDividendSummary) 백그라운드 자동 갱신
+    scheduler.add_job(_job_dividend_refresh, "cron", day_of_week="sun", hour=23, minute=30, id="weekly_dividend_refresh")
 
     # 매일 08:30 (KST) - 브라질 국채 매크로 시계열 동기화 + 신호 전환 알림 + 아침 대시보드 브리핑
     scheduler.add_job(_job_brazil, "cron", hour=8, minute=30, id="daily_brazil_series_sync")

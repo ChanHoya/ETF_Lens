@@ -3,9 +3,9 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 대선 D-day 라벨·AI Pulse 프롬프트의 하드코딩된 "D-3" 제거(d8118497) + 저장소 정리 (2026-10-04)
+✅ Current: S6-23 장 마감(평일 15:40) 자산 스냅샷 스케줄러 및 배당 데이터 14일 TTL 자동 갱신 파이프라인 구축 완료
 ➡️ Next: 브라질 대선 1차(현지 10/4 · 결과 반영 10/5 KST)·결선(현지 10/25 · 결과 반영 10/26 KST) 후속 동향 반영
-➡️ 다음 신규 스토리 ID는 **S6-23**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+➡️ 다음 신규 스토리 ID는 **S6-24**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-04, Claude Code):
 > - 🌗 Dark / Light 토글(상단 바, `ThemeToggle`) 추가. Tailwind v4 색 변수를 `html.light`에서 반전하는 방식(`scripts/generate-light-theme.py` → `app/theme-light.css`). 근거 `docs/theme-light-context-notes.md`. 시장동향 '오늘의 시장' 임베드 주소를 bulliza.com으로 교체(finance.richgo.ai 404).
@@ -87,6 +87,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 | S6-20 | 범용 시계열 하이브리드 엔진 모듈화 (DB 축적 + Gap-fill + 실시간 병합) | ✅ stable | core/hybrid_series.py 구현 완료. ETFDailyPrice/BenchmarkPrice 대상 초기 1회 시드, 결측 구간(Gap)만 증분 수집, 당일 실시간 시세 병합 및 다중 배치 처리 지원 |
 | S6-21 | 매크로 출구신호 DB 영속화 & FRED/Yahoo 증분 수집 파이프라인 | ✅ stable | MarketMacroLog 연동 완료. DTWEXBGS, KRW=X, T10Y2Y, HY Spread 초기 시딩 및 결측일만 타깃 증분 갱신(Gap-fill)으로 외부 API 지연 제거 |
 | S6-22 | 섹터/테마 차트 5종(반도체·소부장·우주·에너지·바이오) DB 하이브리드 엔진 전면 전환 | ✅ stable | router.py 내 5대 섹터 차트의 10년치 yfinance full-fetch 로직을 get_hybrid_series_as_pd_series로 교체하여 DB 기반 0.05초 서빙 및 증분 갱신 완비 |
+| S6-23 | 장 마감 자산 스냅샷 스케줄러 & 배당 14일 TTL 자동 갱신 파이프라인 | ✅ stable | 평일 15:40 자산 스냅샷(UserAssetSnapshot) 자동 DB 적재 및 배당 요약본 14일 TTL 만료 시 주간 자동 재스크래핑 크론 등록 완료 |
 
 ### 스토리 ID 충돌 대응표
 
