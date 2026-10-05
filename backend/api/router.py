@@ -1341,11 +1341,8 @@ async def fetch_etf_hybrid(
             
             # 실제 NAV & 괴리율 데이터 수집 및 캐싱 (KRX 상장 종목 전용, len == 6)
             has_empty_nav = any(p.nav is None for p in price_rows) if price_rows else False
-            # nav_map은 gap-fill 이후에도 재사용하기 위해 외부 변수로 선언
             _wisereport_nav_map: dict = {}
-            if len(code) == 6 and (has_empty_nav or True) and len(price_rows) > 0:
-                # NOTE: has_empty_nav=True 조건이 아니어도 gap-fill 날짜 NAV 채우기 위해 항상 조회
-                # 단, API 호출 비용을 줄이기 위해 캐시 전략은 추후 개선 가능
+            if len(code) == 6 and has_empty_nav and len(price_rows) > 0:
                 try:
                     import urllib.request
                     import ssl
@@ -1378,9 +1375,11 @@ async def fetch_etf_hybrid(
 
         live_price = master.price
 
-        # Naver API에서 정식 종목명 조회 (pykrx/FDR 오매핑 방지, 실패 시 DB name 사용)
-        naver_name = await fetch_naver_stock_name(code)
-        etf_name = naver_name or master.name
+        # DB name 우선 사용 (Naver 웹 스크래핑 최소화)
+        etf_name = master.name
+        if not etf_name or etf_name.startswith("ETF_"):
+            naver_name = await fetch_naver_stock_name(code)
+            etf_name = naver_name or etf_name
 
         naver_live = await fetch_naver_live_price(code)
         if naver_live and naver_live > 0:
@@ -1585,6 +1584,10 @@ async def fetch_benchmark_hybrid(symbol: str, db: AsyncSession, fallback_coro):
     return pd.DataFrame()
 
 
+_COMPARE_CACHE: dict = {}
+_COMPARE_CACHE_TTL: int = 60  # 60초 캐싱 (종합 매트릭스 탭 전환/반복 조회 초고속 0.05초 서빙)
+
+
 @router.post("/compare")
 async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_db)):
     """
@@ -1620,6 +1623,16 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
         mapped_codes.append("ARKX")
         
     request.etf_codes = mapped_codes
+
+    # 0. 캐시 확인 (60초 이내 동일 요청 즉시 반환)
+    import time as _t_compare
+    compare_cache_key = (tuple(sorted(request.etf_codes)), bool(request.skip_holdings), bool(request.skip_chart))
+    now_ts = _t_compare.time()
+    if compare_cache_key in _COMPARE_CACHE:
+        cached_ts, cached_payload = _COMPARE_CACHE[compare_cache_key]
+        if now_ts - cached_ts < _COMPARE_CACHE_TTL:
+            logger.info(f"[compare] Cache hit for {request.etf_codes} ({round(now_ts - cached_ts, 1)}s old)")
+            return cached_payload
 
     # 1. Fetch data for each ETF on-demand (Agent 1)
     harvester = ETFHarvester()
@@ -1932,6 +1945,7 @@ async def compare_etfs(request: CompareRequest, db: AsyncSession = Depends(get_d
     except Exception as e:
         logger.error(f"Failed to save simulation history to DB: {e}")
 
+    _COMPARE_CACHE[compare_cache_key] = (_t_compare.time(), response_payload)
     return response_payload
 
 

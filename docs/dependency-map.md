@@ -35,6 +35,7 @@ A living document of module relationships. Update whenever modules are added or 
 | Brazil Total Return Simulator | Presentation / Core | NTN-F/LTN dirty price, duration, compound reinvestment, early sale capital gain/loss, breakeven FX rate, and 7x6 stress matrix | core/brazil_total_return, api/brazil_total_return | BrazilTotalReturnSimulator, BrazilBondTab | Antigravity |
 | Brazil Election Intelligence | Presentation / Application | Real-time AI presidential election pulse, 1st round vote count persistence, runoff confirmation badge, and manual event dispatch | api/brazil_election_intel, api/brazil_bond | BrazilElectionDetailModal, BrazilBondTab | Antigravity |
 | Hybrid Time-Series Engine | Core / Infrastructure | Universal DB-backed incremental price series fetcher (Gap-fill) & live price merge | db/models, yfinance, FDR, httpx | router, exit_signal | Antigravity |
+| Compare & Cashflow Fast Cache | Application / Presentation | 60s memory caching for ETF comparison & batch DB retrieval for portfolio dividend cashflows | db/models, api/router, api/dividends | CompareTable, DividendDashboard | Antigravity |
 <!-- Add new modules above this line -->
 
 

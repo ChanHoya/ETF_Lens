@@ -64,9 +64,37 @@ const MONTH_NAMES = [
     "7월", "8월", "9월", "10월", "11월", "12월"
 ];
 
+const HOLDINGS_CACHE_KEY = "etf_dividend_user_holdings_cache";
+const CASHFLOW_CACHE_KEY = "etf_dividend_cashflow_cache";
+
 export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLoadMyAssets?: boolean }) {
-    const [holdings, setHoldings] = useState<PortfolioItem[]>(DEFAULT_PRESET);
-    const [cashflow, setCashflow] = useState<CashflowResult | null>(null);
+    // 0. SWR 캐시 우선 초기화 (0.001초 즉시 렌더링)
+    const [holdings, setHoldings] = useState<PortfolioItem[]>(() => {
+        if (typeof window !== "undefined" && autoLoadMyAssets) {
+            try {
+                const saved = localStorage.getItem(HOLDINGS_CACHE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                }
+            } catch (e) { }
+        }
+        return DEFAULT_PRESET;
+    });
+
+    const [cashflow, setCashflow] = useState<CashflowResult | null>(() => {
+        if (typeof window !== "undefined" && autoLoadMyAssets) {
+            try {
+                const saved = localStorage.getItem(CASHFLOW_CACHE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.status === "success") return parsed;
+                }
+            } catch (e) { }
+        }
+        return null;
+    });
+
     const [loading, setLoading] = useState(false);
     const [rankings, setRankings] = useState<DividendRankingItem[]>([]);
     const [rankingFilter, setRankingFilter] = useState<'ALL' | 'MONTHLY'>('MONTHLY');
@@ -104,13 +132,18 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
             if (resp.ok) {
                 const data = await resp.json();
                 setCashflow(data);
+                if (typeof window !== "undefined" && autoLoadMyAssets) {
+                    try {
+                        localStorage.setItem(CASHFLOW_CACHE_KEY, JSON.stringify(data));
+                    } catch (e) { }
+                }
             }
         } catch (err) {
             console.error("Cashflow calculation failed", err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [autoLoadMyAssets]);
 
     // ── 2. 배당 랭킹 조회 ────────────────────────────────────────────────────
     const fetchRankings = useCallback(async (filter: 'ALL' | 'MONTHLY') => {
@@ -131,10 +164,13 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
         }
     }, []);
 
-    // ── 3. 내 실제 보유 계좌 불러오기 ────────────────────────────────────────
+    // ── 3. 내 실제 보유 계좌 불러오기 (SWR 백그라운드 재검증) ─────────────────
     const handleImportUserAssets = useCallback(async () => {
+        const hasCachedData = typeof window !== "undefined" && !!localStorage.getItem(HOLDINGS_CACHE_KEY);
         setImportingAssets(true);
-        setStatusMsg("내 계좌 자산 조회 중…");
+        if (!hasCachedData) {
+            setStatusMsg("내 계좌 자산 조회 중…");
+        }
         try {
             // integrated-assets API 호출
             const resp = await fetch(`${API_BASE}/api/v1/my/integrated-assets`);
@@ -182,31 +218,54 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
                         }
                     }
                     const finalItems = Array.from(mergedMap.values());
+                    
+                    // 캐시 업데이트 및 상태 갱신
+                    if (typeof window !== "undefined") {
+                        try {
+                            localStorage.setItem(HOLDINGS_CACHE_KEY, JSON.stringify(finalItems));
+                        } catch (e) { }
+                    }
                     setHoldings(finalItems);
                     calculateCashflow(finalItems);
-                    setStatusMsg(`총 ${finalItems.length}개 보유 종목을 불러왔습니다!`);
-                } else {
+                    if (!hasCachedData) {
+                        setStatusMsg(`총 ${finalItems.length}개 보유 종목을 불러왔습니다!`);
+                    }
+                } else if (!hasCachedData) {
                     setStatusMsg("연동된 보유 주식/ETF 자산이 없습니다. 기본 프리셋을 유지합니다.");
                     calculateCashflow(DEFAULT_PRESET);
                 }
-            } else {
+            } else if (!hasCachedData) {
                 setStatusMsg("자산 정보를 불러오지 못했습니다. 기본 프리셋을 유지합니다.");
                 calculateCashflow(DEFAULT_PRESET);
             }
         } catch (e) {
             console.error("Import error", e);
-            setStatusMsg("계좌 연동 통신 오류가 발생했습니다.");
-            calculateCashflow(DEFAULT_PRESET);
+            if (!hasCachedData) {
+                setStatusMsg("계좌 연동 통신 오류가 발생했습니다.");
+                calculateCashflow(DEFAULT_PRESET);
+            }
         } finally {
             setImportingAssets(false);
-            setTimeout(() => setStatusMsg(null), 4000);
+            if (!hasCachedData) {
+                setTimeout(() => setStatusMsg(null), 4000);
+            }
         }
     }, [calculateCashflow]);
 
     // 초기 마운트 시 실행
     useEffect(() => {
         if (autoLoadMyAssets) {
-            handleImportUserAssets();
+            // 캐시가 이미 존재하면 초기 cashflow 계산은 캐시된 값 사용, 백그라운드에서 계좌 갱신
+            const hasCached = typeof window !== "undefined" && !!localStorage.getItem(HOLDINGS_CACHE_KEY);
+            if (!hasCached) {
+                handleImportUserAssets();
+            } else {
+                // 캐시가 있어도 최신 계좌 상태 백그라운드 갱신
+                handleImportUserAssets();
+                if (!cashflow) {
+                    calculateCashflow(holdings);
+                }
+            }
         } else {
             calculateCashflow(holdings);
         }

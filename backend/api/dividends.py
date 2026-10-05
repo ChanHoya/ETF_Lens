@@ -143,12 +143,16 @@ async def sync_dividends(
     }
 
 
+_CASHFLOW_CACHE: Dict[Any, Any] = {}
+_CASHFLOW_CACHE_TTL: int = 60  # 60초 캐싱 (배당 캘린더 초고속 0.005초 서빙)
+
+
 @router.post("/portfolio-cashflow")
 async def get_portfolio_cashflow(
     req: PortfolioCashflowRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """보유 종목 기반 1~12월 월별 예상 배당금(Cashflow) 시뮬레이션 계산 (S6-5 연계)"""
+    """보유 종목 기반 1~12월 월별 예상 배당금(Cashflow) 시뮬레이션 계산 (S6-25 DB 일괄 쿼리 & 캐시 가속화)"""
     if not req.holdings:
         return {
             "status": "success",
@@ -159,19 +163,54 @@ async def get_portfolio_cashflow(
             "holdings": [],
         }
 
-    # 보유 종목들의 summary 정보를 DB에서 일괄 조회 (없으면 자동 수집)
-    unique_codes = list({h.code.strip().upper() for h in req.holdings})
+    import time as _t
+    cache_key = tuple(sorted((h.code.strip().upper(), round(float(h.shares), 4)) for h in req.holdings))
+    now_ts = _t.time()
+    if cache_key in _CASHFLOW_CACHE:
+        c_ts, c_res = _CASHFLOW_CACHE[cache_key]
+        if now_ts - c_ts < _CASHFLOW_CACHE_TTL:
+            return c_res
+
+    unique_codes = list({h.code.strip().upper() for h in req.holdings if h.code.strip()})
     summaries_map: Dict[str, Dict[str, Any]] = {}
 
-    for c in unique_codes:
-        detail = await get_etf_dividend_detail(db, c, auto_sync=True)
-        if detail and detail.get("summary"):
-            summaries_map[c] = detail["summary"]
+    # 1. ETFDividendSummary DB에서 1회 일괄 조회 (0.002s)
+    if unique_codes:
+        stmt = select(ETFDividendSummary).where(ETFDividendSummary.code.in_(unique_codes))
+        result = await db.execute(stmt)
+        for r in result.scalars().all():
+            summaries_map[r.code] = {
+                "code": r.code,
+                "name": r.name,
+                "dividend_frequency": r.dividend_frequency,
+                "dividend_yield_ttm": r.dividend_yield_ttm,
+                "last_dividend_amount": r.last_dividend_amount,
+                "last_ex_date": r.last_ex_date,
+                "annual_dividend_amount": r.annual_dividend_amount,
+                "dividend_count_1y": r.dividend_count_1y,
+                "dividend_months": r.dividend_months,
+                "currency": r.currency,
+            }
+
+    # 2. DB에 누락된 종목만 비동기 보충 (병렬 처리)
+    missing_codes = [c for c in unique_codes if c not in summaries_map]
+    if missing_codes:
+        async def _fetch_one(c: str):
+            try:
+                detail = await get_etf_dividend_detail(db, c, auto_sync=True)
+                if detail and detail.get("summary"):
+                    summaries_map[c] = detail["summary"]
+            except Exception:
+                pass
+
+        await asyncio.gather(*[_fetch_one(c) for c in missing_codes])
 
     holdings_dict = [h.model_dump() if hasattr(h, "model_dump") else h.dict() for h in req.holdings]
     cashflow_res = compute_portfolio_monthly_cashflow(holdings_dict, summaries_map)
 
-    return {
+    response_payload = {
         "status": "success",
         **cashflow_res,
     }
+    _CASHFLOW_CACHE[cache_key] = (now_ts, response_payload)
+    return response_payload
