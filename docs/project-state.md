@@ -3,11 +3,26 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S6-32(포트폴리오 목표 비중 드리프트 & 스마트 리밸런싱 주문기) 완료
-➡️ Next: S6-33 (실서버 배포 동기화 및 종합 QA)
-➡️ 다음 신규 스토리 ID는 **S6-33**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+✅ Current: S6-33(매크로 거시경제 4국면 나침반 & 국면별 최적 ETF 레이더) 완료
+➡️ Next: S6-34 (올웨더 & 멀티 자산배분 백테스터 2.0 또는 실서버 배포 동기화)
+➡️ 다음 신규 스토리 ID는 **S6-34**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-06, Antigravity):
+> - 🧭 S6-33 매크로 거시경제 4국면 나침반(Macro Regime Quadrant) & 국면별 최적 ETF 레이더 구축 완료:
+>   - 백엔드 `backend/core/macro_regime.py`:
+>     - 2D 성장-물가 사분면 연산 엔진(성장 지수 +38, 물가 지수 -24 기준 '골디락스' 판정).
+>     - 4대 국면(골디락스, 인플레이션 붐, 스태그플레이션, 디플레이션 수축) 메타데이터 및 국면별 최적 ETF 3선 매핑.
+>     - 최근 5개 분기 역사적 이동 궤적(Historical Trajectory) 산출.
+>     - 사용자 보유 자산 전달 시 현재 국면 적합도 점수(Regime Fit Score, 100점), 시너지/역풍 자산 분해 및 처방전 산출.
+>   - 백엔드 `backend/api/macro_dashboard.py`:
+>     - `GET /api/v1/macro/regime` 및 `POST /api/v1/macro/regime/fit` 엔드포인트 제공.
+>   - 프론트엔드 `dashboard/src/components/MacroRegimeQuadrant.tsx`:
+>     - 4 Bento 카드 (현재 국면 배지, 성장 모멘텀 +38, 인플레이션 압력 -24, 국면 적합도 점수).
+>     - 인터랙티브 2D 사분면 매트릭스 그리드 & 라이브 비콘(Live Beacon 펄스 애니메이션) 좌표 플로팅.
+>     - 국면별 추천 주도 ETF 카드 및 주의사항 배너.
+>     - 최근 5개 분기 이동 궤적 타임라인 및 실계좌 포트폴리오 국면 적합도 진단 위젯 연동.
+>   - `DiscoverTab.tsx` 시장동향 상단 영역에 `MacroCompass`와 나란히 연동 배치 완료.
+>   - 테스트 검증: `backend/tests/test_macro_regime.py` 포함 백엔드 166개 테스트 100% Pass, Next.js 빌드 성공(10/10).
 > - ⚖️ S6-32 포트폴리오 목표 비중 드리프트(Drift) & 스마트 리밸런싱 주문기 구축 완료:
 >   - 백엔드 `backend/core/portfolio_rebalancer.py`:
 >     - 목표 비중(Target Weights) vs 현재 비중(Current Weights) 실시간 괴리율(±%p) 산출 및 정렬 점수(Drift Score, 100점) 연산.
@@ -140,6 +155,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 | S6-30 | 연금·절세 웰스 허브 탭 신설 및 국민연금 BEP·절세 시뮬레이터 연동 | ✅ stable | 상단 메인 메뉴바 연금·절세 탭 신설, 국민연금 조기/정상/연기 손익분기점(BEP) 연산, 건보료 피부양자 탈락 위험 자동 판정, 연금저축/IRP/ISA 세액공제 및 과세이연 30년 복리 시뮬레이터 연동 완료 |
 | S6-31 | 포트폴리오 스트레스 테스터 실계좌 연동 및 7대 위기 시나리오 분석기 | ✅ stable | 7대 위기 시나리오(코로나2020, 블랙먼데이2024, 인플레2022, SVB2023, 러우전쟁2022, 신용강등2011, 리먼2008), KIS 실계좌 자동 연동 및 원화 손실액 환산, 방어지수, 최다타격/효자종목, AI 리스크 헷지 처방전 탑재 완료 |
 | S6-32 | 포트폴리오 목표 비중 드리프트 & 스마트 리밸런싱 주문기 | ✅ stable | 목표 비중 괴리도(Drift) 산출, 3단계 상태(ALIGNED/DRIFT/CRITICAL), 정렬 점수(100점), 올웨더/60:40/테크성장 프리셋, 캐시 인젝션(매도 0주) vs 전체 리밸런싱 모드, Recharts 3중 막대 차트, 실행 주문표 및 CFP 처방전 완비 |
+| S6-33 | 매크로 거시경제 4국면 나침반 & 국면별 최적 ETF 레이더 | ✅ stable | 2D 성장-물가 사분면 매트릭스(골디락스/인플레붐/스태그플레이션/수축), 라이브 비콘(Live Beacon) 좌표 플로팅, 5개 분기 역사적 이동 궤적, 국면별 최적 ETF 3선, 보유 포트폴리오 국면 적합도 진단 완비 |
 
 ### 스토리 ID 충돌 대응표
 

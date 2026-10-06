@@ -16,6 +16,8 @@ from datetime import date, datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
 
 from core.overview_cache import OverviewCache, run_io
 
@@ -648,3 +650,43 @@ async def refresh_events():
         raise HTTPException(status_code=503, detail="종합분석 데이터를 다시 계산하지 못했습니다.")
     overview_cache.data, overview_cache.ts = data, time.time()
     return data
+
+
+class RegimeFitHoldingItem(BaseModel):
+    code: str
+    name: Optional[str] = ""
+    current_price: Optional[float] = 0.0
+    current_qty: Optional[int] = 0
+    current_val: Optional[float] = 0.0
+
+
+class RegimeFitRequest(BaseModel):
+    holdings: List[RegimeFitHoldingItem]
+
+
+@router.get("/regime")
+async def get_macro_regime():
+    """
+    매크로 거시경제 4국면(성장-물가) 사분면 좌표, 판정 결과, 역사적 이동 궤적 및 국면별 추천 ETF를 반환합니다.
+    """
+    try:
+        from core.macro_regime import MacroRegimeEngine
+        return MacroRegimeEngine.get_current_regime()
+    except Exception as e:
+        logger.error(f"Error getting macro regime: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/regime/fit")
+async def evaluate_portfolio_regime_fit(req: RegimeFitRequest):
+    """
+    사용자 포트폴리오의 현재 매크로 국면 적합도 점수(0~100점), 시너지/역풍 종목 분석 및 처방전을 반환합니다.
+    """
+    try:
+        from core.macro_regime import MacroRegimeEngine
+        holdings_dicts = [h.model_dump() if hasattr(h, "model_dump") else h.dict() for h in req.holdings]
+        return MacroRegimeEngine.evaluate_portfolio_fit(holdings_dicts)
+    except Exception as e:
+        logger.error(f"Error evaluating regime fit: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
