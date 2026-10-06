@@ -18,9 +18,10 @@ import {
   statutoryPensionStartAge,
   formatAgeWithMonths
 } from '@/lib/pensionRules';
+import TaxShieldRadar from '@/components/TaxShieldRadar';
 
 export default function PensionWealthHub() {
-  const [activeSubTab, setActiveSubTab] = useState<'tax' | 'nps' | 'withdrawal'>('tax');
+  const [activeSubTab, setActiveSubTab] = useState<'tax' | 'nps' | 'withdrawal' | 'shield'>('tax');
 
   // ── 서브탭 1 상태: 연금 3총사 절세 ─────────────────────────────────────
   const [incomeLevel, setIncomeLevel] = useState<'under55' | 'over55'>('under55');
@@ -174,6 +175,18 @@ export default function PensionWealthHub() {
           >
             <DollarSign className="w-4 h-4" />
             <span>3. 은퇴 인출 & 연금소득세 가이드</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('shield')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
+              activeSubTab === 'shield'
+                ? 'bg-gradient-to-r from-rose-500 to-indigo-600 text-white shadow-lg shadow-rose-500/20'
+                : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+            }`}
+          >
+            <ShieldAlert className="w-4 h-4 text-rose-300" />
+            <span>4. 금융소득 2,000만 & 건보료 방어 (Shield)</span>
           </button>
         </div>
       </div>
@@ -888,6 +901,13 @@ export default function PensionWealthHub() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── [서브탭 4] 금융소득 2,000만원 & 건보료 피부양자 방어 트래커 ─────── */}
+      {activeSubTab === 'shield' && (
+        <div className="flex flex-col gap-5">
+          <TaxShieldRadar />
         </div>
       )}
 

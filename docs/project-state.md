@@ -3,11 +3,27 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S6-34(올웨더 & 자산배분 멀티 ETF 포트폴리오 백테스터 2.0) 완료
-➡️ Next: S6-35 (금융소득 종합과세 2,000만원 & 건보료 피부양자 실시간 방어 트래커)
-➡️ 다음 신규 스토리 ID는 **S6-35**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+✅ Current: S6-35(금융소득 종합과세 2,000만원 & 건보료 피부양자 실시간 방어 트래커) 완료
+➡️ Next: S6-36 (실서버 Render & Vercel 배포 점검 및 라이브 E2E 동기화 검증)
+➡️ 다음 신규 스토리 ID는 **S6-36**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-06, Antigravity):
+> - 🛡️ S6-35 금융소득 종합과세(2,000만원) & 건강보험 피부양자 실시간 방어 트래커(Tax Shield Radar) 구축 완료:
+>   - 백엔드 `backend/core/tax_shield_analyzer.py`:
+>     - 연간 금융소득(일반과세 배당 + 이자소득) 2,000만원 상한선 실시간 추적 및 4단계 위험도(SAFE, CAUTION, WARNING, CRITICAL) 판정.
+>     - 건강보험 피부양자 자격 박탈 위험(연 2,000만원 초과 시 지역건보료 전환 절벽) 및 예상 월/연 부과액 산출.
+>     - 타 종합소득(근로/사업소득) 과표 구간별 누진 한계세율(6.6~49.5%)에 따른 추가 종합소득세액 정밀 연산.
+>     - 1~12월 월별 금융소득 추이 및 2,000만원 한도 돌파 월(Breach Month) 시계열 계산.
+>     - ISA(비과세/분리과세) 및 연금저축/IRP(과세이연/연금소득세) 절세계좌 이전 시뮬레이션을 통한 세금 및 건보료 절감 최적화 처방(CFP 가이드).
+>   - 백엔드 `backend/api/dividends.py`:
+>     - `POST /api/v1/dividends/tax-shield` 엔드포인트 제공.
+>   - 프론트엔드 `dashboard/src/components/TaxShieldRadar.tsx`:
+>     - 4 Bento 카드 (소진율 & 위험 등급 배지, 잔여 방어 한도, 예상 추가 세부담, 건보료 피부양자 자격 판정).
+>     - 3대 대표 시나리오 프리셋 (안전 분산형 60%, 한도 임박형 92.5%, 피부양자 탈락 위기형 120%) 및 인터랙티브 슬라이더 컨트롤러.
+>     - Recharts ComposedChart: 1~12월 월별 금융소득 바 + 연간 누적 선 + 2,000만원 방어선(빨간 점선 ReferenceLine).
+>     - CFP & 세무 전문가 방어 전략 권고안 (Action Plan) 카드 완비.
+>   - `dashboard/src/components/pension/PensionWealthHub.tsx` 연금·절세 허브 내 `[🛡️ 4. 금융소득 2,000만 & 건보료 방어]` 서브탭 연동.
+>   - 테스트 검증: `backend/tests/test_tax_shield_analyzer.py` 5개 테스트 100% Pass, Next.js 프론트엔드 빌드(10/10) 성공.
 > - 🧪 S6-34 올웨더 & 자산배분 멀티 ETF 포트폴리오 백테스터 2.0(Multi-Asset Backtester) 구축 완료:
 >   - 백엔드 `backend/core/multi_backtester.py`:
 >     - 자산배분 3대 클래식 프리셋 완비: 올웨더(All-Weather 30/40/15/7.5/7.5), 60:40(주식 60:채권 40), 바벨(성장주 80:현금성 20).
