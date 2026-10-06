@@ -51,7 +51,7 @@ type FavGroup = { id: string; name: string; items: { code: string; name: string 
 const BRAND_KEYWORDS = ['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'];
 const THEME_KEYWORDS = ['커버드콜', '배당', '액티브', 'AI', '반도체', '로봇', '원자력', '2차전지', '조선', '방산', '금융', '바이오'];
 
-export default function MainApp({ initialTab = 'select', showMyTab = false, showTffTab = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension', showMyTab?: boolean, showTffTab?: boolean }) {
+function MainAppInner({ initialTab = 'select', showMyTab = false, showTffTab = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension', showMyTab?: boolean, showTffTab?: boolean }) {
   const router = useRouter();
   const [slots, setSlots] = useState<{ search: string, code: string }[]>([
     { search: "", code: "" },
@@ -1851,9 +1851,11 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
         }
 
         {/* My Assets Section (유지) */}
-        <div style={{ display: activeTab === 'my' ? 'block' : 'none' }}>
-          <MyAssetsView onOpenDetail={handleOpenDetail} onAnalyzePeers={handleAnalyzePeers} />
-        </div>
+        {showMyTab && (
+          <div style={{ display: activeTab === 'my' ? 'block' : 'none' }}>
+            <MyAssetsView onOpenDetail={handleOpenDetail} onAnalyzePeers={handleAnalyzePeers} />
+          </div>
+        )}
 
         {/* TFF Fund Section */}
         <div style={{ display: activeTab === 'tff' ? 'block' : 'none', width: '100%' }}>
@@ -1960,3 +1962,71 @@ export default function MainApp({ initialTab = 'select', showMyTab = false, show
     </main>
   );
 }
+
+class GlobalAppErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("GlobalAppErrorBoundary Error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#0A0A0F] text-white flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-3xl mb-4">
+            ⚠️
+          </div>
+          <h1 className="text-xl font-bold mb-2">화면 로딩 중 일시적인 오류가 발생했습니다.</h1>
+          <p className="text-xs text-gray-400 font-mono bg-white/5 p-4 rounded-xl max-w-lg mb-6 border border-white/10 break-all">
+            {this.state.error?.message || "알 수 없는 런타임 예외"}
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  sessionStorage.clear();
+                }
+                this.setState({ hasError: false, error: null });
+                window.location.href = "/";
+              }}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-bold transition-all cursor-pointer shadow-lg shadow-indigo-600/30"
+            >
+              캐시 초기화 후 홈으로 이동
+            </button>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.reload();
+              }}
+              className="px-5 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold transition-all cursor-pointer"
+            >
+              새로고침
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function MainApp(props: {
+  initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension';
+  showMyTab?: boolean;
+  showTffTab?: boolean;
+}) {
+  return (
+    <GlobalAppErrorBoundary>
+      <MainAppInner {...props} />
+    </GlobalAppErrorBoundary>
+  );
+}
+
