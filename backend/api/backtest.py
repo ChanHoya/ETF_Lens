@@ -1,14 +1,119 @@
 import logging
+import asyncio
+import hashlib
+import json
+import time
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta, timezone
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.database import get_db, AsyncSessionLocal
+from core.hybrid_series import get_hybrid_daily_prices_batch
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["backtest"])
+
+# ── 인메모리 결과 캐시 (TTL: 1시간) ───────────────────────────────────────────
+_BACKTEST_CACHE: Dict[str, Dict[str, Any]] = {}
+_BACKTEST_CACHE_TTL = 3600  # 1 hour
+
+
+def _make_backtest_cache_key(holdings: List["HoldingItem"]) -> str:
+    # 종목 코드, 정규화된 비중, 그리고 당일 날짜(KST)로 캐시 키 생성
+    kst_today = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
+    canonical_list = sorted(
+        [{"c": h.code.strip(), "a": round(float(h.amount), 2)} for h in holdings if h.amount > 0],
+        key=lambda x: x["c"]
+    )
+    raw = f"{kst_today}:{json.dumps(canonical_list, sort_keys=True)}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+async def load_backtest_close_prices(
+    all_tickers: List[str],
+    db: Optional[AsyncSession] = None,
+    days: int = 3650
+) -> pd.DataFrame:
+    """
+    하이브리드 시계열 엔진(DB 캐시 + 실시간 병합)을 통해 10년치 일봉 종가를 초고속 로드.
+    DB에 없는 결측 종목에 대해서만 선별적으로 yfinance fallback 수집.
+    """
+    t0 = time.time()
+    logger.info(f"[Backtest] Loading cached close prices for {len(all_tickers)} tickers...")
+    
+    close_dict: Dict[str, pd.Series] = {}
+    missing_tickers: List[str] = []
+
+    # 1. DB 하이브리드 시계열 엔진 우선 조회
+    try:
+        if db is not None:
+            batch_data = await get_hybrid_daily_prices_batch(all_tickers, db, days=days, include_live=True)
+        else:
+            async with AsyncSessionLocal() as session:
+                batch_data = await get_hybrid_daily_prices_batch(all_tickers, session, days=days, include_live=True)
+
+        for ticker, item in batch_data.items():
+            dates = item.get("dates", [])
+            prices = item.get("prices", [])
+            if dates and prices and len(dates) == len(prices):
+                idx = pd.to_datetime(dates)
+                s = pd.Series(prices, index=idx, name=ticker, dtype=float)
+                # 유효 데이터가 최소 5일 이상인 경우 유효한 것으로 인정
+                if len(s) >= 5:
+                    close_dict[ticker] = s
+                else:
+                    missing_tickers.append(ticker)
+            else:
+                missing_tickers.append(ticker)
+    except Exception as e:
+        logger.warning(f"[Backtest] Hybrid batch fetch encountered error: {e}. Falling back for missing.")
+        missing_tickers = [t for t in all_tickers if t not in close_dict]
+
+    # 2. 누락된 티커만 yfinance fallback 다운로드 (최초 1회만 발생)
+    if missing_tickers:
+        logger.info(f"[Backtest] Fallback downloading for {len(missing_tickers)} missing tickers: {missing_tickers}")
+        try:
+            raw_df = await asyncio.to_thread(
+                yf.download,
+                missing_tickers,
+                period="10y",
+                interval="1d",
+                group_by="ticker",
+                auto_adjust=True,
+                progress=False
+            )
+            if raw_df is not None and not raw_df.empty:
+                if len(missing_tickers) == 1:
+                    t = missing_tickers[0]
+                    if "Close" in raw_df.columns:
+                        s = raw_df["Close"].dropna()
+                        if not s.empty:
+                            close_dict[t] = s
+                else:
+                    for t in missing_tickers:
+                        if t in raw_df and "Close" in raw_df[t]:
+                            s = raw_df[t]["Close"].dropna()
+                            if not s.empty:
+                                close_dict[t] = s
+        except Exception as yf_err:
+            logger.error(f"[Backtest] Fallback download failed: {yf_err}")
+
+    if not close_dict:
+        return pd.DataFrame()
+
+    # 3. 통합 DataFrame 구축 및 결측치 ffill 처리
+    close_prices = pd.DataFrame(close_dict)
+    close_prices = close_prices.sort_index().ffill().dropna(how="all")
+    
+    elapsed = time.time() - t0
+    logger.info(f"[Backtest] Loaded {len(close_prices.columns)} series ({len(close_prices)} rows) in {elapsed:.3f}s")
+    return close_prices
+
 
 class HoldingItem(BaseModel):
     code: str
@@ -35,13 +140,24 @@ def calculate_mdd(cum_returns: pd.Series) -> float:
     return drawdown.min() * 100  # percentage
 
 @router.post("/run")
-async def run_backtest(req: BacktestRequest):
+async def run_backtest(req: BacktestRequest, db: AsyncSession = Depends(get_db)):
     if not req.holdings:
         raise HTTPException(status_code=400, detail="포트폴리오가 비어있습니다.")
     
     total_amount = sum(h.amount for h in req.holdings if h.amount > 0)
     if total_amount == 0:
          return {"status": "error", "message": "투자 금액이 없습니다."}
+
+    # ── 1. 인메모리 결과 캐시 확인 (0.001초 즉시 반환) ─────────────────────────
+    cache_key = _make_backtest_cache_key(req.holdings)
+    now_ts = time.time()
+    if cache_key in _BACKTEST_CACHE:
+        entry = _BACKTEST_CACHE[cache_key]
+        if now_ts - entry["timestamp"] < _BACKTEST_CACHE_TTL:
+            logger.info(f"[Backtest] Cache HIT! Returning cached result in 0.001s (key={cache_key[:8]})")
+            cached_res = entry["data"].copy()
+            cached_res["cached"] = True
+            return cached_res
 
     weights = {}
     cat_weights = {} # category -> { ticker: amount }
@@ -65,21 +181,11 @@ async def run_backtest(req: BacktestRequest):
     all_tickers = tickers + benchmarks
     
     try:
-        # 최근 10년 데이터 가져오기
-        logger.info(f"Downloading backtest data for: {all_tickers}")
-        df = yf.download(all_tickers, period="10y", interval="1d", group_by="ticker", auto_adjust=True)
+        # 하이브리드 시계열 엔진(DB 캐싱 + 증분)으로 10년치 일봉 종가 로드
+        close_prices = await load_backtest_close_prices(all_tickers, db=db, days=3650)
         
-        # DataFrame 평탄화 (단일 종목일 경우 구조가 다를 수 있음 처리)
-        if len(all_tickers) == 1:
-            close_prices = pd.DataFrame({all_tickers[0]: df['Close']})
-        else:
-            close_prices = pd.DataFrame()
-            for t in all_tickers:
-                if t in df and 'Close' in df[t]:
-                    close_prices[t] = df[t]['Close']
-
-        # 결측치 처리 (전일가로 채움)
-        close_prices = close_prices.ffill().dropna(how='all')
+        if close_prices.empty or len(close_prices) < 2:
+            return {"status": "error", "message": "백테스트를 위한 유효한 가격 시계열 데이터가 부족합니다."}
         
         # 일간 수익률 계산
         daily_returns = close_prices.pct_change().fillna(0)
@@ -177,15 +283,22 @@ async def run_backtest(req: BacktestRequest):
             else:
                 insights.append("시장(S&P500) 대비 상승폭이 다소 밑돌았습니다.")
         
-        return {
+        resp_data = {
             "status": "success",
             "weights": weights,
             "results": results,
             "chart_data": chart_data,
             # AI Insight는 성능 분리를 위해 더 이상 여기서 반환하지 않고
             # 빈 배열만 반환하여 하위호환 유지
-            "insights": [] 
+            "insights": [],
+            "cached": False
         }
+        # 인메모리 캐시에 저장
+        _BACKTEST_CACHE[cache_key] = {
+            "timestamp": time.time(),
+            "data": resp_data
+        }
+        return resp_data
 
     except Exception as e:
         logger.error(f"Backtest failed: {e}", exc_info=True)

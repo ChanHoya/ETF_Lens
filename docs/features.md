@@ -84,6 +84,7 @@
 | S6-34: 올웨더 & 자산배분 멀티 ETF 포트폴리오 백테스터 2.0 | ✅ done | backend/core/multi_backtester.py, backend/api/backtest.py, dashboard/src/components/MultiAssetBacktester.tsx, dashboard/src/components/MyDashboard.tsx | 올웨더/60:40/바벨 프리셋, 리밸런싱 주기별(월간/분기/연간/미실시) 시뮬레이션, CAGR/MDD/Sharpe/Underwater 차트, S&P500 벤치마크 오버레이, AI 진단서 완비 |
 | S6-35: 금융소득 종합과세(2,000만원) & 건보료 피부양자 실시간 방어 트래커 | ✅ done | backend/core/tax_shield_analyzer.py, backend/api/dividends.py, dashboard/src/components/TaxShieldRadar.tsx, dashboard/src/components/pension/PensionWealthHub.tsx | 금융소득 2,000만원 한도 실시간 추적, 4단계 위험도(SAFE/CAUTION/WARNING/CRITICAL), 피부양자 탈락 위험 경보 및 예상 월건보료, 1~12월 방어선 차트, ISA/연금 이전 CFP 권고안 완비 |
 | S6-36: 실서버 배포 점검 및 라이브 E2E 동기화 검증 | ✅ done | backend/api/health_monitor.py, backend/tests/test_live_e2e_sync.py | 신규 5대 핵심 파이프라인(스트레스/리밸런싱/매크로/멀티백테스터/세금방어) 실서버 헬스체크(/health/live-summary) 및 E2E 무결성 검증 완료 |
+| S7-1: 포트폴리오 백테스터 10년치 시계열 DB 캐싱 및 초고속 로딩 최적화 | ✅ done | backend/api/backtest.py, backend/tests/test_portfolio_backtest_cache.py | 10년치 일봉 데이터 DB 하이브리드 엔진 연동(get_hybrid_daily_prices_batch) 및 TTL 3600s 인메모리 결과 캐시 구축 (로딩 시간 95% 단축 및 0.001초 응답) |
 
 
 

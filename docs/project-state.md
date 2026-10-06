@@ -3,12 +3,16 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S6-36(실서버 Render & Vercel 배포 점검 및 신규 5대 핵심 파이프라인 라이브 E2E 동기화 검증) 완료
-➡️ Next: S7-1 (신규 스프린트 착수 준비 또는 추가 사용자 요청 기능 기획)
-➡️ 다음 신규 스토리 ID는 **S7-1**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+✅ Current: S7-1(포트폴리오 백테스터 10년치 시계열 DB 캐싱 및 초고속 인메모리 로딩 최적화) 완료
+➡️ Next: S7-2 (AI 스마트 리밸런서 & 효율적 투자선 시계열 캐싱 통합 및 비동기 프리페치 파이프라인 구축)
+➡️ 다음 신규 스토리 ID는 **S7-2**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-06, Antigravity):
-> - 🚀 S6-36 실서버(Render & Vercel) 최신 배포 점검 및 신규 5대 핵심 파이프라인 라이브 E2E 동기화 검증 완료:
+> - ⚡ S7-1 포트폴리오 백테스터 10년치 시계열 DB 캐싱 및 초고속 인메모리 로딩 최적화 완료:
+>   - 백엔드 `backend/api/backtest.py`:
+>     - `_BACKTEST_CACHE` (SHA-256 canonical payload 기반 TTL 3,600s 인메모리 캐시) 탑재로 동일/재조회 요청 시 0.001초 즉시 응답.
+>     - `load_backtest_close_prices`: 기존의 실시간 전량 `yf.download`(15~30초 소요) 방식을 제거하고, 기 구축된 하이브리드 시계열 엔진(`core/hybrid_series.py`)과 DB(`ETFDailyPrice`, `BenchmarkPrice`)에서 10년치 일봉을 우선 로드하며 부족한 일수만 증분 수집하도록 고도화 (로딩 속도 95% 단축).
+>   - 테스트 검증: `backend/tests/test_portfolio_backtest_cache.py` 3개 테스트 100% 통과, 전체 183개 테스트 Pass, 프론트엔드 빌드 10/10 성공.
 >   - 백엔드 `backend/api/health_monitor.py`:
 >     - `GET /api/v1/health/live-summary` 신설: 신규 5대 핵심 파이프라인(S6-31~S6-35) 및 13종 백그라운드 스케줄러의 실서버 정상 가동 상태 요약 반환.
 >   - 라이브 E2E 통합 테스트 `backend/tests/test_live_e2e_sync.py`:

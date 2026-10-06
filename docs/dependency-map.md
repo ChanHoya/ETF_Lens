@@ -43,6 +43,7 @@ A living document of module relationships. Update whenever modules are added or 
 | Multi-Asset Backtester (S6-34) | Core / Presentation | All-weather/60:40/barbell presets, rebalance frequencies, CAGR/MDD/Sharpe, and underwater charting | core/multi_backtester, api/backtest, MultiAssetBacktester | MyDashboard | Antigravity |
 | Tax Shield Radar (S6-35) | Core / Presentation | 20M KRW financial income limit tracking, health insurance cliff defense, and ISA/pension reallocation | core/tax_shield_analyzer, api/dividends, TaxShieldRadar | PensionWealthHub | Antigravity |
 | Live Deployment Health Monitor (S6-36) | Infrastructure / Presentation | Production multi-pipeline live status endpoint and E2E regression verification suite | api/health_monitor, tests/test_live_e2e_sync | - | Antigravity |
+| Portfolio Backtest Cache Engine (S7-1) | Core / Infrastructure | 10-year DB hybrid series loader & in-memory TTL 3600s backtest response caching | core/hybrid_series, db/models, api/backtest | PortfolioBacktester, MyDashboard | Antigravity |
 <!-- Add new modules above this line -->
 
 
