@@ -4,7 +4,7 @@ import HoldingsSignals from './HoldingsSignals';
 import PortfolioBacktester from './PortfolioBacktester';
 import AIRebalanceSimulator from './AIRebalanceSimulator';
 import RiskAlertBanner from './RiskAlertBanner';
-import { Sparkles, TrendingUp, ShieldAlert, Scale } from 'lucide-react';
+import { Sparkles, TrendingUp, ShieldAlert, Scale, Layers } from 'lucide-react';
 import PortfolioTreemap from './PortfolioTreemap';
 import RebalanceProposal from './RebalanceProposal';
 import DbSyncControl from './DbSyncControl';
@@ -12,6 +12,7 @@ import NotificationSettings from './NotificationSettings';
 import EfficientFrontierPanel from './EfficientFrontierPanel';
 import PortfolioStressTester from './PortfolioStressTester';
 import PortfolioRebalancer from './PortfolioRebalancer';
+import MultiAssetBacktester from './MultiAssetBacktester';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type MyDashboardProps = {
@@ -103,7 +104,7 @@ const getDisparityLevelInfo = (name: string, rate: number): DisparityLevelInfo =
 
 export default function MyDashboard({ data, tradesData, isRefreshing = false, onOpenDetail, onAnalyzePeers }: MyDashboardProps) {
     const [selectedAccount, setSelectedAccount] = useState<any>(null);
-    const [backtestTab, setBacktestTab] = useState<'static' | 'dynamic' | 'efficient' | 'stress' | 'rebalance'>('dynamic');
+    const [backtestTab, setBacktestTab] = useState<'static' | 'dynamic' | 'efficient' | 'stress' | 'rebalance' | 'multi'>('dynamic');
     const [showAllDisparity, setShowAllDisparity] = useState(false);
     const [disparityTab, setDisparityTab] = useState<'warn_risk' | 'risk' | 'warning' | 'normal' | 'all'>('warn_risk');
 
@@ -504,6 +505,16 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                         >
                             <Scale className="w-3.5 h-3.5 text-indigo-300" /> 스마트 리밸런싱
                         </button>
+                        <button
+                            onClick={() => setBacktestTab('multi')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 flex items-center gap-1 ${
+                                backtestTab === 'multi'
+                                ? 'bg-amber-600 text-white shadow-[0_0_10px_rgba(217,119,6,0.35)]'
+                                : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            <Layers className="w-3.5 h-3.5 text-amber-300" /> 멀티 백테스터 2.0
+                        </button>
                     </div>
                 </div>
 
@@ -526,6 +537,14 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                         current_price: Number(h.current_price || h.price || h.prpr || 0),
                         current_qty: Number(h.current_qty || h.qty || h.hld_qty || 0),
                         current_val: Number(h.current_val || h.eval_amount || h.evlu_amt || 0),
+                    }))} />
+                )}
+                {backtestTab === 'multi' && (
+                    <MultiAssetBacktester holdings={(holdings || []).map((h: any) => ({
+                        code: h.code || h.pdno || '',
+                        name: h.name || h.prdt_name || h.code || '',
+                        current_val: Number(h.current_val || h.eval_amount || h.evlu_amt || 0),
+                        weight: Number(h.weight || 0)
                     }))} />
                 )}
             </div>

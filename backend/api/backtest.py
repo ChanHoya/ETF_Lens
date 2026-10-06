@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException
 import yfinance as yf
@@ -543,5 +543,42 @@ async def run_rebalance_backtest(req: RebalanceBacktestRequest):
     except Exception as e:
         logger.error(f"[S4-2 Backtest] Simulation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"시뮬레이터 에러: {str(e)}")
+
+
+class MultiAssetItem(BaseModel):
+    code: str
+    weight: float
+    name: Optional[str] = ""
+
+
+class MultiBacktestRequest(BaseModel):
+    assets: List[MultiAssetItem]
+    initial_capital: Optional[float] = 10000000.0
+    years: Optional[int] = 3
+    rebalance_freq: Optional[str] = "quarterly"
+    benchmark_code: Optional[str] = "379800"
+
+
+@router.post("/multi")
+async def run_multi_asset_backtest_api(req: MultiBacktestRequest):
+    """
+    복수 ETF 자산배분 포트폴리오 백테스트 2.0:
+    리밸런싱 주기(월/분기/연/미실시)에 따른 CAGR, 샤프지수, MDD 및 시계열 차트 데이터를 산출합니다.
+    """
+    try:
+        from core.multi_backtester import MultiAssetBacktester
+        assets_dicts = [a.model_dump() if hasattr(a, "model_dump") else a.dict() for a in req.assets]
+        res = await MultiAssetBacktester.run_backtest(
+            assets=assets_dicts,
+            initial_capital=req.initial_capital or 10000000.0,
+            years=req.years or 3,
+            rebalance_freq=req.rebalance_freq or "quarterly",
+            benchmark_code=req.benchmark_code or "379800"
+        )
+        return res
+    except Exception as e:
+        logger.error(f"Error executing multi-asset backtest: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
