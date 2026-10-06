@@ -79,6 +79,7 @@
 | S6-29: 백그라운드 스케줄러 13종 점검 및 정상 기동 검증 | ✅ done | backend/core/scheduler.py | 장 마감 자산 스냅샷(15:40), 퀀트 사전계산(16:00), 배당 14일 갱신(일 23:30), 렌더 킵얼라이브(10분) 등 13개 cron/interval 잡 등록 및 정상 기동 검증 완료 |
 | S6-30: 연금·절세 웰스 허브 탭 신설 및 국민연금 BEP·절세 시뮬레이터 연동 | ✅ done | dashboard/src/lib/pensionRules.ts, dashboard/src/components/pension/PensionWealthHub.tsx, dashboard/src/components/MainApp.tsx, dashboard/src/app/pension/page.tsx | 상단 메뉴바 연금·절세 탭 신설, 국민연금 조기/정상/연기 손익분기점(BEP) 연산, 건보료 피부양자 자격 탈락 위험 자동 판정, 연금 3총사(연금저축/IRP/ISA) 세액공제 및 30년 복리 과세이연 자산 격차 시뮬레이터 연동 완료 |
 | S6-31: 포트폴리오 스트레스 테스터 실계좌 연동 및 7대 위기 시나리오 분석기 | ✅ done | backend/core/stress_tester.py, backend/api/router.py, dashboard/src/components/PortfolioStressTester.tsx, dashboard/src/components/MyDashboard.tsx | 7대 위기 시나리오(코로나2020, 블랙먼데이2024, 인플레2022, SVB2023, 러우전쟁2022, 신용강등2011, 리먼2008), KIS 실계좌 자동 연동 및 원화 손실액 환산, 방어지수, 최다타격/효자종목, AI 리스크 헷지 처방전 탑재 완료 |
+| S6-32: 포트폴리오 목표 비중 드리프트(Drift) & 스마트 리밸런싱 주문기 | ✅ done | backend/core/portfolio_rebalancer.py, backend/api/router.py, dashboard/src/components/PortfolioRebalancer.tsx, dashboard/src/components/MyDashboard.tsx | 목표 비중 대비 괴리율(Drift) 산출, 정렬 점수(100점), 올웨더/60:40/테크성장 프리셋, 캐시 인젝션(매도 0주) vs 전체 리밸런싱 모드, Recharts 3중 막대 차트, 실행 주문표 및 CFP 처방전 완비 |
 
 
 

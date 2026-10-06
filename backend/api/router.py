@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from agents.harvester.harvester import ETFHarvester
 from agents.quant.quant import ETFQuant
 import logging
@@ -348,6 +348,44 @@ async def portfolio_stress_test(req: StressTestRequest, db: AsyncSession = Depen
     except Exception as e:
         logger.error(f"Error executing stress test: {e}")
         return {"status": "error", "message": str(e)}
+
+
+class RebalanceHoldingItem(BaseModel):
+    code: str
+    name: Optional[str] = ""
+    current_price: Optional[float] = 0.0
+    current_qty: Optional[int] = 0
+    current_val: Optional[float] = 0.0
+
+
+class RebalanceRequest(BaseModel):
+    holdings: List[RebalanceHoldingItem]
+    target_weights: Dict[str, float]
+    cash_injection: Optional[float] = 0.0
+    mode: Optional[str] = "full"
+
+
+@router.post("/portfolio/rebalance", tags=["portfolio"])
+async def portfolio_rebalance(req: RebalanceRequest):
+    """
+    포트폴리오의 목표 비중과 현재 보유 현황을 비교하여 비중 괴리도(Drift)를 분석하고,
+    'full'(매도+매수) 또는 'cash_only'(매도 없는 캐시 인젝션) 모드에 맞춰
+    종목별 스마트 리밸런싱 주문 계획표 및 CFP 처방전을 산출합니다.
+    """
+    try:
+        from core.portfolio_rebalancer import PortfolioRebalancer
+        holdings_dicts = [h.model_dump() if hasattr(h, "model_dump") else h.dict() for h in req.holdings]
+        results = PortfolioRebalancer.analyze_and_rebalance(
+            holdings=holdings_dicts,
+            target_weights=req.target_weights,
+            cash_injection=req.cash_injection or 0.0,
+            mode=req.mode or "full"
+        )
+        return results
+    except Exception as e:
+        logger.error(f"Error executing portfolio rebalance: {e}")
+        return {"status": "error", "message": str(e)}
+
 
 
 @router.get("/etf/currency-pairs", tags=["currency"])
