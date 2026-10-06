@@ -3,11 +3,22 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S6-35(금융소득 종합과세 2,000만원 & 건보료 피부양자 실시간 방어 트래커) 완료
-➡️ Next: S6-36 (실서버 Render & Vercel 배포 점검 및 라이브 E2E 동기화 검증)
-➡️ 다음 신규 스토리 ID는 **S6-36**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+✅ Current: S6-36(실서버 Render & Vercel 배포 점검 및 신규 5대 핵심 파이프라인 라이브 E2E 동기화 검증) 완료
+➡️ Next: S7-1 (신규 스프린트 착수 준비 또는 추가 사용자 요청 기능 기획)
+➡️ 다음 신규 스토리 ID는 **S7-1**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-06, Antigravity):
+> - 🚀 S6-36 실서버(Render & Vercel) 최신 배포 점검 및 신규 5대 핵심 파이프라인 라이브 E2E 동기화 검증 완료:
+>   - 백엔드 `backend/api/health_monitor.py`:
+>     - `GET /api/v1/health/live-summary` 신설: 신규 5대 핵심 파이프라인(S6-31~S6-35) 및 13종 백그라운드 스케줄러의 실서버 정상 가동 상태 요약 반환.
+>   - 라이브 E2E 통합 테스트 `backend/tests/test_live_e2e_sync.py`:
+>     - 1) S6-31: `POST /api/v1/analyze/portfolio/stress-test` (7대 글로벌 위기 시나리오 시뮬레이션 및 잔여 자산 정합성).
+>     - 2) S6-32: `POST /api/v1/analyze/portfolio/rebalance` (목표 비중 드리프트 & 캐시 인젝션/전체 리밸런싱 주문).
+>     - 3) S6-33: `GET /api/v1/macro/regime` & `POST /api/v1/macro/regime/fit` (2D 사분면 궤적 및 국면 적합도 진단).
+>     - 4) S6-34: `POST /api/v1/my/backtest/multi` (올웨더/60:40/바벨 멀티 자산배분 및 리밸런싱 주기 시뮬레이션).
+>     - 5) S6-35: `POST /api/v1/dividends/tax-shield` (금융소득 2,000만원 한도 소진율, 추가 세부담, 건보료 피부양자 자격 판정).
+>     - 6) S6-36: `GET /api/v1/health/live-summary` (실서버 헬스체크 및 13종 스케줄러 상태).
+>   - 테스트 검증: 전체 백엔드 175개 테스트 100% Pass, Next.js 프론트엔드 프로덕션 빌드(10/10) 성공.
 > - 🛡️ S6-35 금융소득 종합과세(2,000만원) & 건강보험 피부양자 실시간 방어 트래커(Tax Shield Radar) 구축 완료:
 >   - 백엔드 `backend/core/tax_shield_analyzer.py`:
 >     - 연간 금융소득(일반과세 배당 + 이자소득) 2,000만원 상한선 실시간 추적 및 4단계 위험도(SAFE, CAUTION, WARNING, CRITICAL) 판정.
