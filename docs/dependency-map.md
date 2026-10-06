@@ -46,6 +46,7 @@ A living document of module relationships. Update whenever modules are added or 
 | Portfolio Backtest Cache Engine (S7-1) | Core / Infrastructure | 10-year DB hybrid series loader & in-memory TTL 3600s backtest response caching | core/hybrid_series, db/models, api/backtest | PortfolioBacktester, MyDashboard | Antigravity |
 | Rebalance & Efficient Frontier Cache (S7-2) | Core / Presentation | Time-series caching and Monte Carlo Efficient Frontier optimization acceleration | core/hybrid_series, api/backtest, api/efficient_frontier | AIRebalanceSimulator, EfficientFrontierPanel | Antigravity |
 | KIS Integrated Asset Sync & Mapping (S7-3) | Application / Presentation | Bi-directional account mapping, default fallback hydration, and modal auto-fetch | api/integrated_assets, KisAccountMappingModal | TotalAssetBoard, MyAssetsView | Antigravity |
+| Sprint 7 Live E2E Integration Suite (S7-4) | Infrastructure / Quality | E2E validation for backtest/rebalance/EF caching and integrated asset KIS resilience | tests/test_sprint7_e2e_integration | - | Antigravity |
 <!-- Add new modules above this line -->
 
 

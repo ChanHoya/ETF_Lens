@@ -87,6 +87,7 @@
 | S7-1: 포트폴리오 백테스터 10년치 시계열 DB 캐싱 및 초고속 로딩 최적화 | ✅ done | backend/api/backtest.py, backend/tests/test_portfolio_backtest_cache.py | 10년치 일봉 데이터 DB 하이브리드 엔진 연동(get_hybrid_daily_prices_batch) 및 TTL 3600s 인메모리 결과 캐시 구축 (로딩 시간 95% 단축 및 0.001초 응답) |
 | S7-2: AI 스마트 리밸런서 & 효율적 투자선 시계열 캐싱 통합 및 비동기 프리페치 | ✅ done | backend/api/backtest.py, backend/api/efficient_frontier.py, backend/tests/test_rebalance_and_efficient_frontier_cache.py | 리밸런스 시뮬레이터 및 몬테카를로 효율적 투자선 시계열 로딩을 DB 하이브리드 엔진으로 통합하고 TTL 3600s 인메모리 캐시 적용 |
 | S7-3: 종합 자산(Hoya Board) ↔ KIS 실시간 포트폴리오 양방향 동기화 및 계좌 자동 매핑 | ✅ done | backend/api/integrated_assets.py, dashboard/src/components/KisAccountMappingModal.tsx, backend/tests/test_integrated_assets_kis_sync.py | KIS 4대 기본 계좌 자동 보충, KIS 매핑 모달 비동기 자동 fetch 및 fallback 바인딩, 일시 오프라인 시 최근 스냅샷 계좌 메타데이터 방어 완비 |
+| S7-4: Sprint 7 라이브 E2E 통합 테스트 및 실서버 배포 무결성 검증 | ✅ done | backend/tests/test_sprint7_e2e_integration.py | 백테스터/리밸런서/효율적투자선 초고속 캐싱 및 종합자산 KIS 양방향 매핑 E2E 무결성 검증 완료 |
 
 
 
