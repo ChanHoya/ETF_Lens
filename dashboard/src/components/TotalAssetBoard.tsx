@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
     Wallet,
     TrendingUp,
@@ -333,7 +333,7 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
             }
 
             const res = await fetchWithWake(
-                `${API_BASE}/api/v1/my/integrated-assets`,
+                `${API_BASE}/api/v1/my/integrated-assets?force_refresh=${refreshPrices}`,
                 undefined,
                 () => setWakingUp(true)
             );
@@ -410,7 +410,32 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
     const summary = data?.summary || {};
     const accountBoards = data?.account_boards || [];
     const groupedHoldings = data?.grouped_holdings || {};
-    const kisAccounts = data?.kis_accounts || [];
+    const kisAccounts = useMemo(() => {
+        if (data?.kis_accounts && data.kis_accounts.length > 0) {
+            return data.kis_accounts;
+        }
+        if (typeof window !== "undefined") {
+            try {
+                const saved = sessionStorage.getItem("kis_portfolio_data");
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    const accs = parsed?.kis_raw?.accounts || [];
+                    if (accs.length > 0) {
+                        return accs.map((a: any) => ({
+                            account_no: a.account_no,
+                            account_name: a.account_name || "연동계좌",
+                            alias: a.account_name || "한투 연동계좌",
+                            category: a.category || "일반주식계좌",
+                            country: "국내",
+                            total_asset: a.total_asset || 0,
+                            cash_balance: a.cash_balance || 0,
+                        }));
+                    }
+                }
+            } catch (e) {}
+        }
+        return [];
+    }, [data?.kis_accounts]);
 
     // Collect all holdings or filter by tab
     let allHoldingsList: any[] = [];

@@ -381,6 +381,7 @@ async def get_stock_price(ticker: str):
 @router.get("/integrated-assets")
 async def get_integrated_assets(
     request: Request,
+    force_refresh: bool = False,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -401,7 +402,7 @@ async def get_integrated_assets(
     kis_raw_summary = {}
 
     try:
-        kis_res = await get_my_portfolio(request, db)
+        kis_res = await get_my_portfolio(request=request, force_refresh=force_refresh, db=db)
         if kis_res and "kis_raw" in kis_res:
             kis_raw = kis_res["kis_raw"]
             kis_holdings = kis_raw.get("holdings", [])
