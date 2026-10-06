@@ -81,6 +81,7 @@
 | S6-31: 포트폴리오 스트레스 테스터 실계좌 연동 및 7대 위기 시나리오 분석기 | ✅ done | backend/core/stress_tester.py, backend/api/router.py, dashboard/src/components/PortfolioStressTester.tsx, dashboard/src/components/MyDashboard.tsx | 7대 위기 시나리오(코로나2020, 블랙먼데이2024, 인플레2022, SVB2023, 러우전쟁2022, 신용강등2011, 리먼2008), KIS 실계좌 자동 연동 및 원화 손실액 환산, 방어지수, 최다타격/효자종목, AI 리스크 헷지 처방전 탑재 완료 |
 | S6-32: 포트폴리오 목표 비중 드리프트(Drift) & 스마트 리밸런싱 주문기 | ✅ done | backend/core/portfolio_rebalancer.py, backend/api/router.py, dashboard/src/components/PortfolioRebalancer.tsx, dashboard/src/components/MyDashboard.tsx | 목표 비중 대비 괴리율(Drift) 산출, 정렬 점수(100점), 올웨더/60:40/테크성장 프리셋, 캐시 인젝션(매도 0주) vs 전체 리밸런싱 모드, Recharts 3중 막대 차트, 실행 주문표 및 CFP 처방전 완비 |
 | S6-33: 매크로 거시경제 4국면 나침반 & 국면별 최적 ETF 레이더 | ✅ done | backend/core/macro_regime.py, backend/api/macro_dashboard.py, dashboard/src/components/MacroRegimeQuadrant.tsx, dashboard/src/components/DiscoverTab.tsx | 2D 성장-물가 사분면 매트릭스(골디락스/인플레붐/스태그플레이션/수축), 라이브 비콘(Live Beacon) 플로팅, 5개 분기 역사적 이동 궤적, 국면별 최적 ETF 3선, 보유 포트폴리오 국면 적합도 진단 완비 |
+| S6-34: 올웨더 & 자산배분 멀티 ETF 포트폴리오 백테스터 2.0 | ✅ done | backend/core/multi_backtester.py, backend/api/backtest.py, dashboard/src/components/MultiAssetBacktester.tsx, dashboard/src/components/MyDashboard.tsx | 올웨더/60:40/바벨 프리셋, 리밸런싱 주기별(월간/분기/연간/미실시) 시뮬레이션, CAGR/MDD/Sharpe/Underwater 차트, S&P500 벤치마크 오버레이, AI 진단서 완비 |
 
 
 

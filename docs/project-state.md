@@ -3,11 +3,28 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S6-33(매크로 거시경제 4국면 나침반 & 국면별 최적 ETF 레이더) 완료
-➡️ Next: S6-34 (올웨더 & 멀티 자산배분 백테스터 2.0 또는 실서버 배포 동기화)
-➡️ 다음 신규 스토리 ID는 **S6-34**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+✅ Current: S6-34(올웨더 & 자산배분 멀티 ETF 포트폴리오 백테스터 2.0) 완료
+➡️ Next: S6-35 (금융소득 종합과세 2,000만원 & 건보료 피부양자 실시간 방어 트래커)
+➡️ 다음 신규 스토리 ID는 **S6-35**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-06, Antigravity):
+> - 🧪 S6-34 올웨더 & 자산배분 멀티 ETF 포트폴리오 백테스터 2.0(Multi-Asset Backtester) 구축 완료:
+>   - 백엔드 `backend/core/multi_backtester.py`:
+>     - 자산배분 3대 클래식 프리셋 완비: 올웨더(All-Weather 30/40/15/7.5/7.5), 60:40(주식 60:채권 40), 바벨(성장주 80:현금성 20).
+>     - 리밸런싱 주기(rebalancing_frequency: monthly, quarterly, yearly, none)별 복리 시뮬레이션 엔진.
+>     - 핵심 성과 지표 산출: 누적 수익률(Cumulative Return), 연평균 복리수익률(CAGR), 최대 낙폭(MDD), 샤프 지수(Sharpe), 연간 변동성(Volatility).
+>     - S&P500 벤치마크 가치 시계열 및 Underwater(낙폭 추이) 시계열 생성.
+>     - CFP & AI 포트폴리오 성과 진단서(위험 대비 보상 평가, 최대 낙폭 방어력 진단, 추천 리밸런싱 주기) 자동 생성.
+>   - 백엔드 `backend/api/backtest.py`:
+>     - `POST /api/v1/my/backtest/multi` 엔드포인트 제공.
+>   - 프론트엔드 `dashboard/src/components/MultiAssetBacktester.tsx`:
+>     - 4 Bento 카드 (최종 평가액/누적 수익률, 연평균 수익률 CAGR, 최대 낙폭 MDD, 위험 대비 보상 Sharpe Ratio).
+>     - 프리셋 원클릭 로더 및 사용자 종목 비중 슬라이더 UI (100% 비중 합계 검증 배지).
+>     - 기간(1년/3년/5년/최대) 및 리밸런싱 주기 스위처.
+>     - Recharts 듀얼 차트: (1) 포트폴리오 vs 벤치마크 자산 가치 추이 라인 차트, (2) Underwater 낙폭 에어리어 차트.
+>     - AI 포트폴리오 성과 진단서 & 액션 가이드 박스.
+>   - `MyDashboard.tsx` Section 5 포트폴리오 시뮬레이션 내 `[🧪 멀티 백테스터 2.0]` 서브탭 연동.
+>   - 테스트 검증: `backend/tests/test_multi_backtester.py` 3개 테스트 100% Pass, Next.js 프론트엔드 빌드(10/10) 성공.
 > - 🧭 S6-33 매크로 거시경제 4국면 나침반(Macro Regime Quadrant) & 국면별 최적 ETF 레이더 구축 완료:
 >   - 백엔드 `backend/core/macro_regime.py`:
 >     - 2D 성장-물가 사분면 연산 엔진(성장 지수 +38, 물가 지수 -24 기준 '골디락스' 판정).
