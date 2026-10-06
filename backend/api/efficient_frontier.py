@@ -1,14 +1,36 @@
 import logging
 import asyncio
+import hashlib
+import json
+import time
 import numpy as np
 import pandas as pd
-from typing import List
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.database import get_db, AsyncSessionLocal
+from core.hybrid_series import get_hybrid_daily_prices_batch
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["efficient-frontier"])
+
+# ── 인메모리 결과 캐시 (TTL: 1시간) ───────────────────────────────────────────
+_EF_CACHE: Dict[str, Dict[str, Any]] = {}
+_EF_CACHE_TTL = 3600
+
+
+def _make_ef_cache_key(req: "EfficientFrontierRequest") -> str:
+    kst_today = datetime.now().strftime("%Y-%m-%d")
+    canonical = sorted(
+        [{"c": h.code.strip(), "a": round(float(h.amount), 2)} for h in req.holdings if h.amount > 0],
+        key=lambda x: x["c"]
+    )
+    raw = f"{kst_today}:{req.lookback_years}:{req.risk_free_rate}:{req.simulations}:{json.dumps(canonical, sort_keys=True)}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
 
 class HoldingItem(BaseModel):
     code: str
@@ -122,9 +144,20 @@ def fetch_ticker_prices(symbol: str, start_str: str, end_str: str) -> pd.Series:
     return closes
 
 @router.post("/efficient-frontier")
-async def calculate_efficient_frontier(req: EfficientFrontierRequest):
+async def calculate_efficient_frontier(req: EfficientFrontierRequest, db: AsyncSession = Depends(get_db)):
     if not req.holdings:
         raise HTTPException(status_code=400, detail="포트폴리오 자산이 비어있습니다.")
+
+    # ── 1. 인메모리 결과 캐시 확인 (0.001초 즉시 반환) ─────────────────────────
+    cache_key = _make_ef_cache_key(req)
+    now_ts = time.time()
+    if cache_key in _EF_CACHE:
+        entry = _EF_CACHE[cache_key]
+        if now_ts - entry["timestamp"] < _EF_CACHE_TTL:
+            logger.info(f"[EF] Cache HIT! Returning cached efficient frontier in 0.001s (key={cache_key[:8]})")
+            cached_res = entry["data"].copy()
+            cached_res["cached"] = True
+            return cached_res
         
     # 1. 현금 및 예수금 등 자산배분 제외 종목 필터링
     risky_holdings = []
@@ -155,19 +188,48 @@ async def calculate_efficient_frontier(req: EfficientFrontierRequest):
     # 2. 날짜 범위 지정 (로컬 시간 기준, 서버 TZ = KST)
     end_date = datetime.now()
     # lookback_years 입력 범위는 Pydantic Field(ge=0.25, le=5.0)로 보장됨
-    start_date = end_date - timedelta(days=int(req.lookback_years * 365))
+    days_cnt = int(req.lookback_years * 365)
+    start_date = end_date - timedelta(days=days_cnt)
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
     
-    # 3. 비동기/병렬 가격 수집 실행
-    logger.info(f"[EF] Start fetching historical prices for {tickers} from {start_str}")
-    tasks = [asyncio.to_thread(fetch_ticker_prices, sym, start_str, end_str) for sym in tickers]
-    fetched_list = await asyncio.gather(*tasks)
-    
+    # 3. DB 하이브리드 엔진 우선 배치 조회 및 결측 종목 fallback 수집
+    logger.info(f"[EF] Fetching historical prices for {len(tickers)} tickers via Hybrid DB...")
     price_dict = {}
-    for sym, closes in zip(tickers, fetched_list):
-        if closes is not None and len(closes) >= 5:
-            price_dict[sym] = closes
+    missing_for_fallback = []
+
+    try:
+        if db is not None:
+            batch_res = await get_hybrid_daily_prices_batch(tickers, db, days=days_cnt + 30, include_live=True)
+        else:
+            async with AsyncSessionLocal() as session:
+                batch_res = await get_hybrid_daily_prices_batch(tickers, session, days=days_cnt + 30, include_live=True)
+
+        for sym, item in batch_res.items():
+            dates = item.get("dates", [])
+            prices = item.get("prices", [])
+            if dates and prices and len(dates) == len(prices):
+                idx = pd.to_datetime(dates).date
+                s = pd.Series(prices, index=idx, dtype=float)
+                s = s[s.index >= start_date.date()]
+                s = s[s > 0]
+                if len(s) >= 5:
+                    price_dict[sym] = s
+                else:
+                    missing_for_fallback.append(sym)
+            else:
+                missing_for_fallback.append(sym)
+    except Exception as e:
+        logger.warning(f"[EF] Hybrid batch fetch failed: {e}. Falling back to fetch_ticker_prices.")
+        missing_for_fallback = tickers
+
+    if missing_for_fallback:
+        logger.info(f"[EF] Fallback scraping for {len(missing_for_fallback)} tickers: {missing_for_fallback}")
+        tasks = [asyncio.to_thread(fetch_ticker_prices, sym, start_str, end_str) for sym in missing_for_fallback]
+        fallback_list = await asyncio.gather(*tasks)
+        for sym, closes in zip(missing_for_fallback, fallback_list):
+            if closes is not None and len(closes) >= 5:
+                price_dict[sym] = closes
             
     if len(price_dict) < 2:
         raise HTTPException(
@@ -277,7 +339,7 @@ async def calculate_efficient_frontier(req: EfficientFrontierRequest):
             "sharpe": float(sim_sharpes[idx])
         })
         
-    return {
+    resp_data = {
         "status": "success",
         "tickers": {
             ticker_to_code[sym]: {
@@ -307,5 +369,11 @@ async def calculate_efficient_frontier(req: EfficientFrontierRequest):
             "weights": {ticker_to_code[aligned_tickers[j]]: float(current_weights[j]) for j in range(M)}
         },
         "frontier": frontier_points,
-        "scatter": scatter_points
+        "scatter": scatter_points,
+        "cached": False
     }
+    _EF_CACHE[cache_key] = {
+        "timestamp": time.time(),
+        "data": resp_data
+    }
+    return resp_data

@@ -20,6 +20,7 @@ router = APIRouter(tags=["backtest"])
 
 # ── 인메모리 결과 캐시 (TTL: 1시간) ───────────────────────────────────────────
 _BACKTEST_CACHE: Dict[str, Dict[str, Any]] = {}
+_REBALANCE_CACHE: Dict[str, Dict[str, Any]] = {}
 _BACKTEST_CACHE_TTL = 3600  # 1 hour
 
 
@@ -31,6 +32,16 @@ def _make_backtest_cache_key(holdings: List["HoldingItem"]) -> str:
         key=lambda x: x["c"]
     )
     raw = f"{kst_today}:{json.dumps(canonical_list, sort_keys=True)}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _make_rebalance_cache_key(req: "RebalanceBacktestRequest") -> str:
+    kst_today = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
+    canonical_list = sorted(
+        [{"c": h.code.strip(), "a": round(float(h.amount), 2)} for h in req.holdings if h.amount > 0],
+        key=lambda x: x["c"]
+    )
+    raw = f"{kst_today}:{req.period}:{req.defense_factor}:{req.safe_asset_code}:{json.dumps(canonical_list, sort_keys=True)}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -375,13 +386,24 @@ class RebalanceBacktestRequest(BaseModel):
 
 
 @router.post("/rebalance")
-async def run_rebalance_backtest(req: RebalanceBacktestRequest):
+async def run_rebalance_backtest(req: RebalanceBacktestRequest, db: AsyncSession = Depends(get_db)):
     if not req.holdings:
         raise HTTPException(status_code=400, detail="포트폴리오가 비어있습니다.")
 
     total_amount = sum(h.amount for h in req.holdings if h.amount > 0)
     if total_amount == 0:
         return {"status": "error", "message": "투자 금액이 없습니다."}
+
+    # ── 1. 인메모리 결과 캐시 확인 (0.001초 즉시 반환) ─────────────────────────
+    cache_key = _make_rebalance_cache_key(req)
+    now_ts = time.time()
+    if cache_key in _REBALANCE_CACHE:
+        entry = _REBALANCE_CACHE[cache_key]
+        if now_ts - entry["timestamp"] < _BACKTEST_CACHE_TTL:
+            logger.info(f"[Rebalance] Cache HIT! Returning cached result in 0.001s (key={cache_key[:8]})")
+            cached_res = entry["data"].copy()
+            cached_res["cached"] = True
+            return cached_res
 
     # 1. 포트폴리오 노멀 자산 비중 계산
     normal_weights = {}
@@ -411,21 +433,14 @@ async def run_rebalance_backtest(req: RebalanceBacktestRequest):
         "3Y": 365 * 3
     }
     days = period_days.get(req.period.upper(), 365)
-    # yfinance 패딩 날짜 추가하여 ffill 및 초기 날짜 맞춤 보장
-    start_date = end_date - timedelta(days=days + 60)
 
     try:
-        logger.info(f"[S4-2 Backtest] Fetching prices for {all_tickers} from {start_date.strftime('%Y-%m-%d')}")
-        df = yf.download(all_tickers, start=start_date.strftime("%Y-%m-%d"), end=(end_date + timedelta(days=2)).strftime("%Y-%m-%d"), interval="1d", group_by="ticker", auto_adjust=True)
+        # 하이브리드 시계열 엔진(DB 캐시 + 실시간 병합)으로 일봉 로드
+        close_prices = await load_backtest_close_prices(all_tickers, db=db, days=days + 60)
         
-        # 데이터프레임 평탄화 및 클로즈 가격 추출
-        close_prices = pd.DataFrame()
-        for t in all_tickers:
-            if t in df and 'Close' in df[t]:
-                close_prices[t] = df[t]['Close']
+        if close_prices.empty:
+            return {"status": "error", "message": "해당 기간에 사용 가능한 충분한 가격 데이터가 없습니다."}
 
-        close_prices = close_prices.ffill().dropna(how='all')
-        
         # 유효 범위 필터링
         analysis_start = end_date - timedelta(days=days)
         close_prices = close_prices[close_prices.index >= pd.Timestamp(analysis_start)]
@@ -627,7 +642,7 @@ async def run_rebalance_backtest(req: RebalanceBacktestRequest):
         if sampled_timeline[-1]["date"] != timeline[-1]["date"]:
             sampled_timeline.append(timeline[-1])
 
-        return {
+        resp_data = {
             "status": "success",
             "metrics": {
                 "buy_and_hold": {
@@ -650,8 +665,14 @@ async def run_rebalance_backtest(req: RebalanceBacktestRequest):
                 }
             },
             "timeline": sampled_timeline,
-            "event_logs": event_logs
+            "event_logs": event_logs,
+            "cached": False
         }
+        _REBALANCE_CACHE[cache_key] = {
+            "timestamp": time.time(),
+            "data": resp_data
+        }
+        return resp_data
 
     except Exception as e:
         logger.error(f"[S4-2 Backtest] Simulation failed: {e}", exc_info=True)

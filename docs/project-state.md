@@ -3,11 +3,17 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S7-1(포트폴리오 백테스터 10년치 시계열 DB 캐싱 및 초고속 인메모리 로딩 최적화) 완료
-➡️ Next: S7-2 (AI 스마트 리밸런서 & 효율적 투자선 시계열 캐싱 통합 및 비동기 프리페치 파이프라인 구축)
-➡️ 다음 신규 스토리 ID는 **S7-2**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+✅ Current: S7-2(AI 스마트 리밸런서 & 효율적 투자선 시계열 캐싱 통합 및 비동기 프리페치 파이프라인 구축) 완료
+➡️ Next: S7-3 (종합 자산(Hoya Board) ↔ KIS 실시간 포트폴리오 양방향 동기화 및 자동 계좌 매핑 고도화)
+➡️ 다음 신규 스토리 ID는 **S7-3**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-06, Antigravity):
+> - 🤖 S7-2 AI 스마트 리밸런서 & 효율적 투자선 시계열 캐싱 통합 및 비동기 프리페치 파이프라인 구축 완료:
+>   - 백엔드 `backend/api/backtest.py`:
+>     - `run_rebalance_backtest` (`POST /rebalance`): `_REBALANCE_CACHE` 탑재 및 `load_backtest_close_prices` 하이브리드 엔진 연동.
+>   - 백엔드 `backend/api/efficient_frontier.py`:
+>     - `calculate_efficient_frontier` (`POST /efficient-frontier`): `_EF_CACHE` 탑재 및 `get_hybrid_daily_prices_batch` 연동으로 DB 기반 초고속 일괄 조회 및 결측 보충.
+>   - 테스트 검증: `backend/tests/test_rebalance_and_efficient_frontier_cache.py` 2개 테스트 100% 통과, 프론트엔드 빌드 10/10 성공.
 > - ⚡ S7-1 포트폴리오 백테스터 10년치 시계열 DB 캐싱 및 초고속 인메모리 로딩 최적화 완료:
 >   - 백엔드 `backend/api/backtest.py`:
 >     - `_BACKTEST_CACHE` (SHA-256 canonical payload 기반 TTL 3,600s 인메모리 캐시) 탑재로 동일/재조회 요청 시 0.001초 즉시 응답.
