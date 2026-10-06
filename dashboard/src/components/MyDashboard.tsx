@@ -4,12 +4,13 @@ import HoldingsSignals from './HoldingsSignals';
 import PortfolioBacktester from './PortfolioBacktester';
 import AIRebalanceSimulator from './AIRebalanceSimulator';
 import RiskAlertBanner from './RiskAlertBanner';
-import { Sparkles, TrendingUp } from 'lucide-react';
+import { Sparkles, TrendingUp, ShieldAlert } from 'lucide-react';
 import PortfolioTreemap from './PortfolioTreemap';
 import RebalanceProposal from './RebalanceProposal';
 import DbSyncControl from './DbSyncControl';
 import NotificationSettings from './NotificationSettings';
 import EfficientFrontierPanel from './EfficientFrontierPanel';
+import PortfolioStressTester from './PortfolioStressTester';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type MyDashboardProps = {
@@ -101,7 +102,7 @@ const getDisparityLevelInfo = (name: string, rate: number): DisparityLevelInfo =
 
 export default function MyDashboard({ data, tradesData, isRefreshing = false, onOpenDetail, onAnalyzePeers }: MyDashboardProps) {
     const [selectedAccount, setSelectedAccount] = useState<any>(null);
-    const [backtestTab, setBacktestTab] = useState<'static' | 'dynamic' | 'efficient'>('dynamic');
+    const [backtestTab, setBacktestTab] = useState<'static' | 'dynamic' | 'efficient' | 'stress'>('dynamic');
     const [showAllDisparity, setShowAllDisparity] = useState(false);
     const [disparityTab, setDisparityTab] = useState<'warn_risk' | 'risk' | 'warning' | 'normal' | 'all'>('warn_risk');
 
@@ -482,6 +483,16 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                         >
                             <TrendingUp className="w-3.5 h-3.5" /> 포트폴리오 최적화
                         </button>
+                        <button
+                            onClick={() => setBacktestTab('stress')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 flex items-center gap-1 ${
+                                backtestTab === 'stress'
+                                ? 'bg-rose-600 text-white shadow-[0_0_10px_rgba(225,29,72,0.35)]'
+                                : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            <ShieldAlert className="w-3.5 h-3.5 text-rose-300" /> 스트레스 테스터
+                        </button>
                     </div>
                 </div>
 
@@ -493,6 +504,9 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                 )}
                 {backtestTab === 'efficient' && (
                     <EfficientFrontierPanel holdings={holdings} />
+                )}
+                {backtestTab === 'stress' && (
+                    <PortfolioStressTester holdings={holdings} />
                 )}
             </div>
 

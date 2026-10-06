@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from agents.harvester.harvester import ETFHarvester
 from agents.quant.quant import ETFQuant
 import logging
@@ -332,17 +332,18 @@ class StressTestItem(BaseModel):
 
 class StressTestRequest(BaseModel):
     portfolio: List[StressTestItem]
+    total_eval_amount: Optional[float] = 0.0
 
 
 @router.post("/portfolio/stress-test", tags=["portfolio"])
 async def portfolio_stress_test(req: StressTestRequest, db: AsyncSession = Depends(get_db)):
     """
-    포트폴리오의 비중 정보를 전달받아 역사적 위기 시나리오별 예상 수익률, MDD, VaR을 퀀트 분석하여 반환합니다.
+    포트폴리오의 비중 정보를 전달받아 역사적 위기 시나리오별 예상 수익률, MDD, VaR, 원화 손실액을 퀀트 분석하여 반환합니다.
     """
     try:
         from core.stress_tester import run_stress_test
         items = [{"code": item.code, "weight": item.weight} for item in req.portfolio]
-        results = await run_stress_test(db, items)
+        results = await run_stress_test(db, items, total_eval_amount=req.total_eval_amount or 0.0)
         return results
     except Exception as e:
         logger.error(f"Error executing stress test: {e}")

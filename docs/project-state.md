@@ -3,11 +3,23 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S6-30(연금·절세 웰스 허브 탭 신설 및 국민연금 BEP·절세 시뮬레이터 연동) 완료
-➡️ Next: S6-31 포트폴리오 스트레스 테스터 실계좌 연동 고도화 or 추가 기획
-➡️ 다음 신규 스토리 ID는 **S6-31**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+✅ Current: S6-31(포트폴리오 스트레스 테스터 실계좌 연동 및 7대 위기 시나리오 분석기) 완료
+➡️ Next: S6-32 (실서버 배포 동기화 및 종합 QA)
+➡️ 다음 신규 스토리 ID는 **S6-32**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-06, Antigravity):
+> - 🚨 S6-31 포트폴리오 스트레스 테스터(Stress Tester) 실계좌 연동 및 7대 위기 시나리오 분석기 구축 완료:
+>   - 백엔드 `backend/core/stress_tester.py`:
+>     - 7대 글로벌 역사적 금융 위기 시나리오 지원: 코로나(2020), 엔캐리 블랙먼데이(2024.08), 고물가·긴축(2022), SVB 파산(2023), 러-우 개전(2022), 미국 신용강등(2011), 리먼 금융위기(2008).
+>     - 자산군(미국주식, 국내주식, 채권, 현금/파킹, 원자재) 및 레버리지/인버스2X 정밀 분류.
+>     - `total_eval_amount` 기반 원화(KRW) 손실액 및 위기 후 잔여 자산 연산.
+>     - 포트폴리오 방어 지수(Defense Score, 100점 만점), 4단계 위험도 등급(SAFE, CAUTION, WARNING, CRITICAL).
+>     - 시나리오 내 최다 타격 취약 종목(Worst Impact) TOP 3 & 방어 효자 종목(Best Shield) TOP 3 도출.
+>     - CFP & AI 리스크 헷지 처방전(진단, 액션 플랜, 추천 헷지 ETF, 15% 채권 편입 시 MDD 완화 시뮬레이션) 생성.
+>   - 프론트엔드 `dashboard/src/components/PortfolioStressTester.tsx`:
+>     - 4 Bento 카드, 7대 시나리오 스위처, Recharts 바 차트 비교, 2열 취약/효자 종목 카드, 전체 종목 상세 분해 테이블, AI 헷지 처방전 완비.
+>     - `MyDashboard.tsx` Section 5 포트폴리오 시뮬레이션에 `스트레스 테스터` 서브탭 연동 (실보유 계좌 종목 및 평가액 원클릭 주입 + 계좌별 필터).
+>   - 테스트 검증: `backend/tests/test_stress_tester.py` 포함 백엔드 156개 테스트 100% Pass, Next.js 빌드 성공(10/10).
 > - 🏛️ S6-30 연금·절세 웰스 허브(Pension Wealth Hub) 신설 완료:
 >   - 상단 메인 메뉴바에 `종목분석`(`analysis`) / `섹터분석`(`sector`) / `시장동향`(`discover`) 오른쪽에 신규 **`연금·절세`**(`pension`) 탭 신설 및 `/pension` 직행 라우트 연동.
 >   - `dashboard/src/lib/pensionRules.ts`:
@@ -109,6 +121,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 | S6-28 | 실서버(Render/Vercel) 배포 점검 & 프로덕션 동기화 검증 | ✅ stable | 전체 141개 유닛 테스트 100% 통과, Render 백엔드 및 Vercel 프론트엔드 정상 동작(HTTP 200) 확인 및 origin/main 배포 동기화 완료 |
 | S6-29 | 백그라운드 스케줄러 13종 점검 및 정상 기동 검증 | ✅ stable | 장 마감 자산 스냅샷, 퀀트 사전계산, 배당 14일 갱신, 렌더 킵얼라이브 등 13개 cron/interval 잡 등록 및 정상 기동 검증 완료 |
 | S6-30 | 연금·절세 웰스 허브 탭 신설 및 국민연금 BEP·절세 시뮬레이터 연동 | ✅ stable | 상단 메인 메뉴바 연금·절세 탭 신설, 국민연금 조기/정상/연기 손익분기점(BEP) 연산, 건보료 피부양자 탈락 위험 자동 판정, 연금저축/IRP/ISA 세액공제 및 과세이연 30년 복리 시뮬레이터 연동 완료 |
+| S6-31 | 포트폴리오 스트레스 테스터 실계좌 연동 및 7대 위기 시나리오 분석기 | ✅ stable | 7대 위기 시나리오(코로나2020, 블랙먼데이2024, 인플레2022, SVB2023, 러우전쟁2022, 신용강등2011, 리먼2008), KIS 실계좌 자동 연동 및 원화 손실액 환산, 방어지수, 최다타격/효자종목, AI 리스크 헷지 처방전 탑재 완료 |
 
 ### 스토리 ID 충돌 대응표
 
