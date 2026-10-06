@@ -28,6 +28,7 @@ import {
     ReferenceLine,
     Cell
 } from 'recharts';
+import { API_BASE } from '@/lib/apiConfig';
 
 interface TaxShieldRadarProps {
     initialTaxableDiv?: number;
@@ -76,10 +77,87 @@ export default function TaxShieldRadar({
     const [loading, setLoading] = useState(false);
     const [analysisData, setAnalysisData] = useState<any>(null);
 
+    const calculateClientFallback = () => {
+        const totalFin = taxableDiv + interestIncome;
+        const limit = 20_000_000;
+        const remaining = Math.max(0, limit - totalFin);
+        const excess = Math.max(0, totalFin - limit);
+        const utilRate = Math.min(200, Math.round((totalFin / limit) * 1000) / 10);
+        const riskLevel = excess > 0 ? 'CRITICAL' : utilRate >= 90 ? 'WARNING' : utilRate >= 75 ? 'CAUTION' : 'SAFE';
+        const riskBadge = excess > 0 ? '🚨 초과 (위험)' : utilRate >= 90 ? '⚠️ 경고 (90%+)' : utilRate >= 75 ? '⚡ 주의 (75%+)' : '✅ 안전 (정상)';
+        
+        // 월별 추이 fallback
+        const monthly = Array.from({ length: 12 }, (_, i) => {
+            const m = i + 1;
+            const mTaxable = Math.round(taxableDiv / 12 * (m === 4 || m === 12 ? 2.5 : 0.8));
+            const mShielded = Math.round(shieldedDiv / 12 * (m === 4 || m === 12 ? 2.2 : 0.85));
+            return {
+                month: `${m}월`,
+                taxable_dividends: mTaxable,
+                shielded_dividends: mShielded,
+                cumulative_taxable: 0,
+                monthly_total: mTaxable + mShielded
+            };
+        });
+        let cum = 0;
+        monthly.forEach(item => {
+            cum += item.taxable_dividends;
+            item.cumulative_taxable = cum;
+        });
+
+        const estHealthFee = excess > 0 && isDependent ? Math.round(totalFin * 0.0709 / 12) : 0;
+        const estAnnualTax = excess > 0 ? Math.round(excess * 0.154) : 0;
+
+        return {
+            summary: {
+                total_financial_income_krw: totalFin,
+                taxable_dividends_krw: taxableDiv,
+                interest_income_krw: interestIncome,
+                shielded_dividends_krw: shieldedDiv,
+                comprehensive_threshold_krw: limit,
+                remaining_limit_krw: remaining,
+                excess_income_krw: excess,
+                utilization_rate: utilRate,
+                risk_level: riskLevel,
+                risk_badge: riskBadge,
+                status_msg: excess > 0 ? '종합과세 기준 2,000만원 초과! 절세 계좌 활용 필수' : '2,000만원 한도 내에서 안전하게 운용 중'
+            },
+            tax_impact: {
+                is_comprehensive_taxation: excess > 0,
+                taxable_base_krw: excess,
+                estimated_comprehensive_tax_krw: estAnnualTax,
+                withholding_tax_krw: Math.round(totalFin * 0.154),
+                marginal_tax_rate_pct: excess > 0 ? 26.4 : 15.4
+            },
+            health_insurance_impact: {
+                is_dependent_lost: excess > 0 && isDependent,
+                estimated_monthly_health_fee_krw: estHealthFee,
+                estimated_annual_health_fee_krw: estHealthFee * 12,
+                status_description: excess > 0 && isDependent ? '피부양자 자격 박탈 예상! 지역가입자 전환' : '피부양자 자격 안전 유지'
+            },
+            monthly_trend: monthly,
+            recommendations: [
+                {
+                    priority: 'HIGH',
+                    action_title: 'ISA 계좌 비과세·분리과세 적극 활용',
+                    description: '연 2,000만원 납입 한도로 일반 배당을 ISA로 이전하여 금융소득종합과세 대상에서 원천 제외하세요.',
+                    expected_savings_krw: Math.round(taxableDiv * 0.099)
+                },
+                {
+                    priority: 'MEDIUM',
+                    action_title: '연금저축/IRP 과세이연 배당 ETF 편입',
+                    description: '고배당 ETF를 연금계좌로 이전 시 배당소득세(15.4%)가 즉시 과세되지 않고 55세 이후 저율 연금소득세(3.3~5.5%)가 적용됩니다.',
+                    expected_savings_krw: Math.round(shieldedDiv * 0.1)
+                }
+            ]
+        };
+    };
+
     const fetchAnalysis = async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/v1/dividends/tax-shield', {
+            const endpoint = `${API_BASE}/api/v1/dividends/tax-shield`;
+            const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -93,9 +171,12 @@ export default function TaxShieldRadar({
             if (res.ok) {
                 const data = await res.json();
                 setAnalysisData(data);
+            } else {
+                setAnalysisData(calculateClientFallback());
             }
         } catch (e) {
-            console.error('Failed to fetch tax shield analysis:', e);
+            console.warn('Backend unavailable, using client fallback calculation:', e);
+            setAnalysisData(calculateClientFallback());
         } finally {
             setLoading(false);
         }

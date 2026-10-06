@@ -55,6 +55,13 @@ const getTickerFromConstituent = (name: string): string => {
     return normalized;
 };
 
+const formatConstituentPrice = (name: string, price: number): string => {
+    const ticker = constituentTickerMap[name] || '';
+    if (/^\d+$/.test(ticker)) return `${new Intl.NumberFormat('ko-KR').format(Math.floor(price))}원`;
+    if (ticker.endsWith('.T')) return `¥${new Intl.NumberFormat('ja-JP').format(Math.floor(price))}`;
+    return `$${price.toFixed(2)}`;
+};
+
 const etfNameToCodeMap: { [key: string]: string } = {
     "KODEX 미국우주항공": "488050",
     "ACE 미국우주테크액티브": "484930",
