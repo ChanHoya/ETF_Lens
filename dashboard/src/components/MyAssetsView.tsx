@@ -39,7 +39,7 @@ async function fetchWithWake(
     }
 }
 
-export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenDetail?: (code: string) => void, onAnalyzePeers?: (items: any[]) => void }) {
+function MyAssetsViewInner({ onOpenDetail, onAnalyzePeers }: { onOpenDetail?: (code: string) => void, onAnalyzePeers?: (items: any[]) => void }) {
     const [isAuthorized, setIsAuthorized] = useState<boolean>(() => {
         if (typeof window !== "undefined") {
             try {
@@ -411,5 +411,58 @@ export default function MyAssetsView({ onOpenDetail, onAnalyzePeers }: { onOpenD
                 </div>
             )}
         </div>
+    );
+}
+
+class MyAssetsErrorBoundary extends React.Component<
+    { children: React.ReactNode },
+    { hasError: boolean; error: Error | null }
+> {
+    constructor(props: { children: React.ReactNode }) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+    static getDerivedStateFromError(error: Error) {
+        return { hasError: true, error };
+    }
+    componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+        console.error("MyAssetsView Error:", error, errorInfo);
+    }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="w-full max-w-2xl mx-auto p-8 rounded-2xl bg-rose-950/30 border border-rose-500/30 text-white text-center space-y-4 my-12">
+                    <div className="w-12 h-12 text-rose-400 mx-auto text-3xl">⚠️</div>
+                    <h3 className="text-lg font-bold">내 자산(My) 화면 로딩 중 일시적인 오류가 발생했습니다.</h3>
+                    <p className="text-xs text-gray-400 font-mono bg-black/40 p-3 rounded-xl break-all">
+                        {this.state.error?.message || "알 수 없는 클라이언트 예외"}
+                    </p>
+                    <div className="flex justify-center gap-3">
+                        <button
+                            onClick={() => {
+                                if (typeof window !== "undefined") {
+                                    sessionStorage.removeItem("integrated_assets_data");
+                                    sessionStorage.removeItem("kis_portfolio_data");
+                                }
+                                this.setState({ hasError: false, error: null });
+                                window.location.reload();
+                            }}
+                            className="px-4 py-2 bg-rose-600 hover:bg-rose-500 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                        >
+                            캐시 초기화 후 새로고침
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
+
+export default function MyAssetsView(props: { onOpenDetail?: (code: string) => void, onAnalyzePeers?: (items: any[]) => void }) {
+    return (
+        <MyAssetsErrorBoundary>
+            <MyAssetsViewInner {...props} />
+        </MyAssetsErrorBoundary>
     );
 }
