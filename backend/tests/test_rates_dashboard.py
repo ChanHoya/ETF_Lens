@@ -99,8 +99,8 @@ def test_overview_snapshot_spreads_and_regimes():
         "fed_upper": _daily(date(2008, 12, 16), e, lambda d: 4.0 if d >= date(2026, 9, 17) else 3.75),
         "fed_target": _daily(s, date(2008, 12, 15), lambda d: 1.0),
         "fed_eff": _daily(s, e, lambda d: 3.88), "us1y": _daily(s, e, lambda d: 4.44),
-        "us2y": _daily(s, e, lambda d: 4.78), "us10y": _daily(s, e, lambda d: 5.24),
-        "us_10_2": _daily(s, e, lambda d: 0.45),
+        "us2y": _daily(s, e, lambda d: 4.78), "us3y": _daily(s, e, lambda d: 4.91), "us10y": _daily(s, e, lambda d: 5.24),
+        "us_10_2": _daily(s, e, lambda d: 0.45), "us_10_3m": _daily(s, e, lambda d: 1.07),
     }
     out = build_overview(raw, TODAY)
     snap = out["snapshot"]
@@ -110,6 +110,11 @@ def test_overview_snapshot_spreads_and_regimes():
     assert snap["implied"]["kr"]["moves"] == 2.9 and snap["implied"]["us"]["moves"] == 2.2
     assert snap["phase"]["kr"].startswith("한국 인상 국면")
     assert out["spreads"]["kr_10_3"]["value"] == 0.43 and not out["spreads"]["kr_10_3"]["inverted"]
+    # 한·미 같은 기준(10년−3년) + 미국 10년−3개월은 참고, 10년−2년은 화면 비교에서 제외
+    sp = out["spreads"]
+    assert list(sp) == ["kr_10_3", "us_10_3", "us_10_3m"] and sp["us_10_3"]["value"] == 0.33
+    assert sp["us_10_3"]["basis"] == "common" and sp["us_10_3m"]["basis"] == "reference"
+    assert out["weekly"][-1]["us_10_3"] == 0.33 and "3년" in [p["tenor"] for p in out["curves"]["us"]["now"]]
     assert out["weekly"][-1]["date"] <= TODAY.isoformat()
     last = out["regimes"][-1]
     assert (last["kind"], last["from"], last["to"], last["changes"]) == ("hike", 2.5, 3.0, 2)

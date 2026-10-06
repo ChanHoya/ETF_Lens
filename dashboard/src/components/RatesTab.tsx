@@ -10,6 +10,7 @@ import { Landmark, RefreshCw, TrendingUp, Activity, History, Info, CalendarClock
 import { API_BASE } from '@/lib/apiConfig';
 import { yearTick, yearTicks } from '@/lib/chartTicks';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
+import SpreadBasisInfo from './SpreadBasisInfo';
 import RegimeMilestones, { type Milestone } from './RegimeMilestones';
 import { useCachedOverview } from '@/lib/useCachedOverview';
 
@@ -27,12 +28,12 @@ type Snapshot = {
     phase: { kr: string | null; us: string | null };
 };
 type Inversion = { start: string; end: string; min: number; recession: string | null; lead_months: number | null; status: 'recession' | 'no_recession' | 'watching' };
-type Spread = { label: string; value: number; date: string; inverted: boolean; chg_1m: number | null; pct20y: number | null; inversions: Inversion[] };
+type Spread = { label: string; basis?: 'common' | 'reference'; value: number; date: string; inverted: boolean; chg_1m: number | null; pct20y: number | null; inversions: Inversion[] };
 type Shape = { name: string; meaning: string; short_bp: number; long_bp: number; slope_bp: number; days: number } | null;
 type CurvePt = { tenor: string; value: number | null };
 type Row = {
     date: string; kr_base: number | null; us_upper: number | null; ecb: number | null; kr3y: number | null; kr10y: number | null;
-    us2y: number | null; us10y: number | null; kr_10_3: number | null; us_10_2: number | null; us_10_3m: number | null;
+    us2y: number | null; us10y: number | null; kr_10_3: number | null; us_10_3?: number | null; us_10_2: number | null; us_10_3m: number | null;
     kr1y?: number | null; us1y?: number | null; kr30y?: number | null; us30y?: number | null; kr50y?: number | null;
 };
 type TermRow = { key: 'short' | 'long' | 'ultra'; label: string; kr: number; us: number; gap: number; gap_1y: number | null; kr_chg_1y: number | null; us_chg_1y: number | null };
@@ -180,10 +181,10 @@ function SnapshotGrid({ d }: { d: Overview }) {
             <Card icon={<Percent className="w-3.5 h-3.5 text-rose-400" />} title="미국 국채" foot={s.us10y ? `${s.us10y.date} 기준 · 10년물은 10년 중 ${s.us10y.pct10y}% 위치` : undefined}>
                 <TwoRates a={s.us2y} b={s.us10y} la="2년" lb="10년" />
             </Card>
-            <Card icon={<Waves className="w-3.5 h-3.5 text-emerald-400" />} title="장단기 금리차" foot="마이너스(역전)는 경기 둔화 신호로 읽힙니다">
-                {(['kr_10_3', 'us_10_2', 'us_10_3m'] as const).map(k => sp[k] && (
-                    <div key={k} className="flex items-baseline justify-between gap-2 py-0.5">
-                        <span className="text-xs text-gray-400">{sp[k].label}</span>
+            <Card icon={<Waves className="w-3.5 h-3.5 text-emerald-400" />} title="장단기 금리차 (한·미 10년−3년)" foot="마이너스(역전)는 경기 둔화 신호로 읽힙니다 · 10년−3개월은 침체 예측 참고">
+                {(['kr_10_3', 'us_10_3', 'us_10_3m'] as const).map(k => sp[k] && (
+                    <div key={k} className={`flex items-baseline justify-between gap-2 py-0.5 ${sp[k].basis === 'reference' ? 'border-t border-white/5 mt-0.5 pt-1' : ''}`}>
+                        <span className={`text-xs ${sp[k].basis === 'reference' ? 'text-gray-500' : 'text-gray-400'}`}>{sp[k].label}</span>
                         <span className={`text-sm font-extrabold ${sp[k].inverted ? 'text-red-400' : 'text-white'}`}>
                             {signed(sp[k].value)}{sp[k].inverted && ' 역전'}
                         </span>
@@ -268,9 +269,9 @@ function SpreadChart({ rows, recessions }: { rows: (Row & { t: number })[]; rece
                 <YAxis tick={axisTick} width={44} tickFormatter={(v: number) => `${v}%p`} />
                 <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line dataKey="us_10_3m" name="미국 10년−3개월" stroke="#f43f5e" dot={false} strokeWidth={1.6} connectNulls isAnimationActive={false} />
-                <Line dataKey="us_10_2" name="미국 10년−2년" stroke="#f59e0b" dot={false} strokeWidth={1.6} connectNulls isAnimationActive={false} />
                 <Line dataKey="kr_10_3" name="한국 10년−3년" stroke="#6366f1" dot={false} strokeWidth={2} connectNulls isAnimationActive={false} />
+                <Line dataKey="us_10_3" name="미국 10년−3년" stroke="#f43f5e" dot={false} strokeWidth={2} connectNulls isAnimationActive={false} />
+                <Line dataKey="us_10_3m" name="미국 10년−3개월 (참고)" stroke="#9ca3af" strokeDasharray="4 3" dot={false} strokeWidth={1.2} connectNulls isAnimationActive={false} />
             </LineChart>
         </ResponsiveContainer>
     );
@@ -294,10 +295,10 @@ function CurveChart({ curve }: { curve: Overview['curves']['kr'] }) {
     );
 }
 
-type SpreadKey = 'us_10_3m' | 'us_10_2' | 'kr_10_3';
+type SpreadKey = 'kr_10_3' | 'us_10_3' | 'us_10_3m';
 function InversionTable({ spreads }: { spreads: Overview['spreads'] }) {
-    const keys = (['us_10_3m', 'us_10_2', 'kr_10_3'] as SpreadKey[]).filter(k => spreads[k]);
-    const [key, setKey] = useState<SpreadKey>(keys[0] ?? 'us_10_3m');
+    const keys = (['kr_10_3', 'us_10_3', 'us_10_3m'] as SpreadKey[]).filter(k => spreads[k]);
+    const [key, setKey] = useState<SpreadKey>(keys.includes('us_10_3') ? 'us_10_3' : keys[0] ?? 'kr_10_3');
     const sp = spreads[key];
     if (!sp) return null;
     const hits = sp.inversions.filter(e => e.status === 'recession');
@@ -439,7 +440,7 @@ function TermSection({ terms, rows, range, setRange }: { terms: NonNullable<Term
 
 export default function RatesTab() {
     // 재진입 시 캐시를 즉시 그리고, 서버 기준 시각이 1시간 넘었을 때만 백그라운드 갱신
-    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-rates-v2', `${API_BASE}/api/v1/rates/overview`);
+    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-rates-v3', `${API_BASE}/api/v1/rates/overview`);
     const [range, setRange] = useState<Range>('20Y');
     const [marketCountry, setMarketCountry] = useState<'kr' | 'us'>('kr');
     const [curveCountry, setCurveCountry] = useState<'kr' | 'us'>('kr');
@@ -519,15 +520,18 @@ export default function RatesTab() {
                     <section className="bg-black/20 rounded-2xl border border-white/5 p-4 space-y-4">
                         <div className="flex flex-wrap items-start justify-between gap-2">
                             <SectionTitle icon={<Waves className="w-5 h-5 text-emerald-400" />} title="장단기 금리차"
-                                sub="장기 − 단기 국채금리 · 0 아래(역전)는 경기 둔화 신호 · 회색 = 미국 경기침체" />
-                            <Toggle options={RANGE_OPTS} value={range} onChange={setRange} />
+                                sub="한·미 같은 기준 10년−3년 국채금리 · 0 아래(역전)는 경기 둔화 신호 · 점선 = 미국 10년−3개월(참고) · 회색 = 미국 경기침체" />
+                            <div className="flex items-center gap-2">
+                                <SpreadBasisInfo />
+                                <Toggle options={RANGE_OPTS} value={range} onChange={setRange} />
+                            </div>
                         </div>
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                             <div>
                                 <SpreadChart rows={rows} recessions={data.recessions} />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                                     <ShapeCard title="한국 곡선 (3년·10년)" shape={data.shapes.kr} />
-                                    <ShapeCard title="미국 곡선 (2년·10년)" shape={data.shapes.us} />
+                                    <ShapeCard title="미국 곡선 (3년·10년)" shape={data.shapes.us} />
                                 </div>
                             </div>
                             <div className="space-y-4">
