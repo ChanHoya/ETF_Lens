@@ -340,6 +340,16 @@ async def get_hybrid_daily_prices(
                 idx = dates.index(today_str)
                 prices[idx] = live_price
 
+    # 5. 일자별 유일성(deduplication) 및 날짜순 정렬 엄격 보장 (cannot reindex duplicate labels 원천 방지)
+    if dates and prices and len(dates) == len(prices):
+        date_map: Dict[str, float] = {}
+        for d, p in zip(dates, prices):
+            if d and p is not None:
+                date_map[str(d).strip()] = float(p)
+        sorted_dates = sorted(date_map.keys())
+        dates = sorted_dates
+        prices = [date_map[d] for d in sorted_dates]
+
     last_val = prices[-1] if prices else 0.0
 
     return {

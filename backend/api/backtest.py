@@ -72,8 +72,13 @@ async def load_backtest_close_prices(
             dates = item.get("dates", [])
             prices = item.get("prices", [])
             if dates and prices and len(dates) == len(prices):
-                idx = pd.to_datetime(dates)
+                idx = pd.to_datetime(dates).normalize()
                 s = pd.Series(prices, index=idx, name=ticker, dtype=float)
+                # tz 통일 (tz-naive)
+                if hasattr(s.index, "tz") and s.index.tz is not None:
+                    s.index = s.index.tz_localize(None)
+                # 인덱스 중복 제거 및 정렬 (duplicate labels 원천 차단)
+                s = s[~s.index.duplicated(keep="last")].sort_index()
                 # 유효 데이터가 최소 5일 이상인 경우 유효한 것으로 인정
                 if len(s) >= 5:
                     close_dict[ticker] = s
@@ -103,13 +108,25 @@ async def load_backtest_close_prices(
                     t = missing_tickers[0]
                     if "Close" in raw_df.columns:
                         s = raw_df["Close"].dropna()
+                        if isinstance(s, pd.DataFrame):
+                            s = s.iloc[:, 0]
                         if not s.empty:
+                            s.index = pd.to_datetime(s.index).normalize()
+                            if hasattr(s.index, "tz") and s.index.tz is not None:
+                                s.index = s.index.tz_localize(None)
+                            s = s[~s.index.duplicated(keep="last")].sort_index()
                             close_dict[t] = s
                 else:
                     for t in missing_tickers:
                         if t in raw_df and "Close" in raw_df[t]:
                             s = raw_df[t]["Close"].dropna()
+                            if isinstance(s, pd.DataFrame):
+                                s = s.iloc[:, 0]
                             if not s.empty:
+                                s.index = pd.to_datetime(s.index).normalize()
+                                if hasattr(s.index, "tz") and s.index.tz is not None:
+                                    s.index = s.index.tz_localize(None)
+                                s = s[~s.index.duplicated(keep="last")].sort_index()
                                 close_dict[t] = s
         except Exception as yf_err:
             logger.error(f"[Backtest] Fallback download failed: {yf_err}")
@@ -117,9 +134,10 @@ async def load_backtest_close_prices(
     if not close_dict:
         return pd.DataFrame()
 
-    # 3. 통합 DataFrame 구축 및 결측치 ffill 처리
+    # 3. 통합 DataFrame 구축 및 결측치 ffill 처리 (인덱스 유일성 및 정렬 보장)
     close_prices = pd.DataFrame(close_dict)
-    close_prices = close_prices.sort_index().ffill().dropna(how="all")
+    close_prices = close_prices.loc[~close_prices.index.duplicated(keep="last")].sort_index()
+    close_prices = close_prices.ffill().dropna(how="all")
     
     elapsed = time.time() - t0
     logger.info(f"[Backtest] Loaded {len(close_prices.columns)} series ({len(close_prices)} rows) in {elapsed:.3f}s")
@@ -198,8 +216,10 @@ async def run_backtest(req: BacktestRequest, db: AsyncSession = Depends(get_db))
         if close_prices.empty or len(close_prices) < 2:
             return {"status": "error", "message": "백테스트를 위한 유효한 가격 시계열 데이터가 부족합니다."}
         
-        # 일간 수익률 계산
+        # 일간 수익률 계산 (중복 인덱스 원천 방지)
+        close_prices = close_prices.loc[~close_prices.index.duplicated(keep="last")].sort_index()
         daily_returns = close_prices.pct_change().fillna(0)
+        daily_returns = daily_returns.loc[~daily_returns.index.duplicated(keep="last")].sort_index()
         
         # 포트폴리오 일간 수익률 (단순 가중 평균)
         pf_returns = pd.Series(0.0, index=daily_returns.index)
@@ -441,9 +461,11 @@ async def run_rebalance_backtest(req: RebalanceBacktestRequest, db: AsyncSession
         if close_prices.empty:
             return {"status": "error", "message": "해당 기간에 사용 가능한 충분한 가격 데이터가 없습니다."}
 
-        # 유효 범위 필터링
+        # 유효 범위 필터링 (인덱스 유일성 보장)
         analysis_start = end_date - timedelta(days=days)
+        close_prices = close_prices.loc[~close_prices.index.duplicated(keep="last")].sort_index()
         close_prices = close_prices[close_prices.index >= pd.Timestamp(analysis_start)]
+        close_prices = close_prices.loc[~close_prices.index.duplicated(keep="last")].sort_index()
         
         if len(close_prices) < 2:
             return {"status": "error", "message": "해당 기간에 사용 가능한 충분한 가격 데이터가 없습니다."}
@@ -514,8 +536,10 @@ async def run_rebalance_backtest(req: RebalanceBacktestRequest, db: AsyncSession
         last_score = 0
         consecutive_safe_days = 0
 
-        # 초기 자산 가격 매핑
+        # 초기 자산 가격 매핑 (단일 행 Series 보장)
         p_prev = close_prices.loc[dates[0]]
+        if isinstance(p_prev, pd.DataFrame):
+            p_prev = p_prev.iloc[-1]
 
         # 첫 번째 날짜 기록
         timeline.append({
@@ -530,6 +554,8 @@ async def run_rebalance_backtest(req: RebalanceBacktestRequest, db: AsyncSession
             curr_date = dates[t_idx]
             curr_date_str = curr_date.strftime("%Y-%m-%d")
             p_curr = close_prices.loc[curr_date]
+            if isinstance(p_curr, pd.DataFrame):
+                p_curr = p_curr.iloc[-1]
 
             # 자산 일간 수익률 계산
             bh_return = 0.0

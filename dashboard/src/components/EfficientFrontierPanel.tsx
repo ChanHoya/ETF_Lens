@@ -198,7 +198,10 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
             }
             setResult(data as EFResult);
         } catch (e: any) {
-            setError(e.message || '알 수 없는 오류가 발생했습니다.');
+            const msg = e?.message === 'Failed to fetch'
+                ? '백엔드 서버에 연결할 수 없거나 응답이 지연되었습니다. 잠시 후 다시 시도해 주세요.'
+                : (e?.message || '알 수 없는 오류가 발생했습니다.');
+            setError(msg);
         } finally {
             setIsLoading(false);
         }

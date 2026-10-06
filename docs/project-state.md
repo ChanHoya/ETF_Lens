@@ -3,12 +3,20 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S7-4(Sprint 7 라이브 E2E 통합 테스트 및 실서버 배포 무결성 검증) 완료 — Sprint 7 전체 완수
+✅ Current: 백테스터·리밸런서 중복 인덱스(cannot reindex duplicate labels) 오류 완치 및 포트폴리오 최적화 CORS·시계열 안정화 완료
 ➡️ Next: S8-1 (신규 스프린트 8 착수 준비 또는 추가 기능 기획)
 ➡️ 다음 신규 스토리 ID는 **S8-1**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
-> 세션 핸드오프 (2026-10-06, Antigravity):
-> - 🎯 S7-4 Sprint 7 라이브 E2E 통합 테스트 및 실서버 배포 무결성 검증 완료:
+> 세션 핸드오프 (2026-10-07, Antigravity):
+> - 🛠️ 백테스터 & AI 리밸런서 & 포트폴리오 최적화 버그 완치 및 시계열/CORS 안정화:
+>   - 1) `cannot reindex on an axis with duplicate labels` 오류 원천 차단:
+>     - `core/hybrid_series.py`: `get_hybrid_daily_prices` 반환 전 일자별 deduplication(마지막 값 보존) 및 정렬 보장.
+>     - `api/backtest.py`: `load_backtest_close_prices`에서 `batch_data` 및 yf fallback의 tz-naive 통일, `~s.index.duplicated(keep="last")`, 결합 DataFrame 인덱스 유일성 보장. `run_backtest`와 `run_rebalance_backtest`의 3Y/10Y 슬라이싱 및 loc 접근 단일 행 Series 보장.
+>     - `api/efficient_frontier.py`: DB 시계열 및 fallback 시계열의 인덱스 중복 제거, 결측 보정 및 수익률 연산 안정화.
+>   - 2) 포트폴리오 최적화 `Failed to fetch` 해결:
+>     - `main.py`: `CORSMiddleware`에 `allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$"` 및 로컬 다중 포트(3004, 3005, 3006, 5173 등) 전면 허용.
+>     - `dashboard/src/components/EfficientFrontierPanel.tsx`: 네트워크 오류 시 친절한 안내 메시지 추가.
+>   - 테스트 검증: `backend/tests/test_duplicate_labels_and_cors.py` 포함 백엔드 테스트 14개 전체 Pass, 프론트엔드 프로덕션 빌드 성공.
 >   - 테스트 스위트 `backend/tests/test_sprint7_e2e_integration.py`:
 >     - 1) S7-1: 백테스터 10년치 시계열 캐싱(1차 계산 0.3s, 2차 인메모리 0.001s 캐시 히트 정합성).
 >     - 2) S7-2: AI 스마트 리밸런서 시나리오 백테스터 캐싱 및 10년치 일봉 하이브리드 로드.

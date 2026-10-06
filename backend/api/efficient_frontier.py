@@ -209,9 +209,12 @@ async def calculate_efficient_frontier(req: EfficientFrontierRequest, db: AsyncS
             dates = item.get("dates", [])
             prices = item.get("prices", [])
             if dates and prices and len(dates) == len(prices):
-                idx = pd.to_datetime(dates).date
+                idx = pd.to_datetime(dates).normalize()
                 s = pd.Series(prices, index=idx, dtype=float)
-                s = s[s.index >= start_date.date()]
+                if hasattr(s.index, "tz") and s.index.tz is not None:
+                    s.index = s.index.tz_localize(None)
+                s = s[~s.index.duplicated(keep="last")].sort_index()
+                s = s[s.index >= pd.Timestamp(start_date.date())]
                 s = s[s > 0]
                 if len(s) >= 5:
                     price_dict[sym] = s
@@ -229,7 +232,14 @@ async def calculate_efficient_frontier(req: EfficientFrontierRequest, db: AsyncS
         fallback_list = await asyncio.gather(*tasks)
         for sym, closes in zip(missing_for_fallback, fallback_list):
             if closes is not None and len(closes) >= 5:
-                price_dict[sym] = closes
+                closes.index = pd.to_datetime(closes.index).normalize()
+                if hasattr(closes.index, "tz") and closes.index.tz is not None:
+                    closes.index = closes.index.tz_localize(None)
+                closes = closes[~closes.index.duplicated(keep="last")].sort_index()
+                closes = closes[closes.index >= pd.Timestamp(start_date.date())]
+                closes = closes[closes > 0]
+                if len(closes) >= 5:
+                    price_dict[sym] = closes
             
     if len(price_dict) < 2:
         raise HTTPException(
@@ -237,10 +247,12 @@ async def calculate_efficient_frontier(req: EfficientFrontierRequest, db: AsyncS
             detail="최적화 분석을 위한 충분한 가격 데이터(최소 2개 자산)가 확보되지 않았습니다."
         )
         
-    # 4. 판다스 데이터프레임 정렬 및 결측치 보정
+    # 4. 판다스 데이터프레임 정렬 및 결측치 보정 (중복 인덱스 원천 차단)
     df_prices = pd.DataFrame(price_dict)
+    df_prices = df_prices.loc[~df_prices.index.duplicated(keep="last")].sort_index()
     df_prices = df_prices.ffill().dropna(how='all')
     df_prices = df_prices.dropna()  # 공통 영업일 기준 필터
+    df_prices = df_prices.loc[~df_prices.index.duplicated(keep="last")].sort_index()
     
     if len(df_prices) < 10:
         raise HTTPException(
@@ -250,6 +262,7 @@ async def calculate_efficient_frontier(req: EfficientFrontierRequest, db: AsyncS
         
     # 5. 수익률 및 공분산 연산
     df_returns = df_prices.pct_change().dropna()
+    df_returns = df_returns.loc[~df_returns.index.duplicated(keep="last")].sort_index()
     if df_returns.empty:
         raise HTTPException(status_code=400, detail="수익률 시계열 연산에 실패했습니다.")
         
