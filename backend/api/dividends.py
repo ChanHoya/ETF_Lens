@@ -19,6 +19,7 @@ from core.dividend_scraper import (
     scrape_and_save_etf_dividend,
     compute_portfolio_monthly_cashflow,
 )
+from core.tax_shield_analyzer import analyze_tax_shield
 
 router = APIRouter(prefix="/api/v1/dividends", tags=["ETF Dividends"])
 
@@ -37,6 +38,16 @@ class PortfolioHoldingItem(BaseModel):
 
 class PortfolioCashflowRequest(BaseModel):
     holdings: List[PortfolioHoldingItem] = Field(..., description="보유 종목 리스트")
+
+
+class TaxShieldRequest(BaseModel):
+    taxable_dividends_krw: float = Field(0.0, description="일반 과세 계좌 연간 예상 배당금 (원)")
+    tax_shielded_dividends_krw: float = Field(0.0, description="절세 계좌(ISA, 연금) 연간 예상 배당금 (원)")
+    interest_income_krw: float = Field(0.0, description="이자 소득 (원)")
+    other_annual_income_krw: float = Field(50_000_000.0, description="근로/사업 등 타 종합소득 (원)")
+    is_health_insurance_dependent: bool = Field(True, description="건강보험 피부양자 여부")
+    monthly_distribution: Optional[List[float]] = Field(None, description="1~12월 월별 배당금 (12개)")
+    holdings: Optional[List[Dict[str, Any]]] = Field(None, description="보유 종목 리스트")
 
 
 # ── 엔드포인트 구현 ────────────────────────────────────────────────────────────
@@ -214,3 +225,21 @@ async def get_portfolio_cashflow(
     }
     _CASHFLOW_CACHE[cache_key] = (now_ts, response_payload)
     return response_payload
+
+
+@router.post("/tax-shield")
+async def get_tax_shield_analysis(
+    req: TaxShieldRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """금융소득 종합과세(2,000만원) & 건강보험 피부양자 실시간 방어 트래커 진단 (S6-35)"""
+    result = analyze_tax_shield(
+        taxable_dividends_krw=req.taxable_dividends_krw,
+        tax_shielded_dividends_krw=req.tax_shielded_dividends_krw,
+        interest_income_krw=req.interest_income_krw,
+        other_annual_income_krw=req.other_annual_income_krw,
+        is_health_insurance_dependent=req.is_health_insurance_dependent,
+        monthly_distribution=req.monthly_distribution,
+        holdings=req.holdings,
+    )
+    return result
