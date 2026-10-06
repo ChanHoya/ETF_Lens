@@ -411,6 +411,32 @@ async def get_integrated_assets(
     except Exception as e:
         logger.warning(f"KIS Portfolio integration fetch error: {e}")
 
+    # KIS API 일시 장애 또는 오프라인 시 fallback 계좌 목록 생성
+    if not kis_accounts:
+        try:
+            from db.models import UserAssetSnapshot
+            stmt_snaps = (
+                select(UserAssetSnapshot)
+                .where(UserAssetSnapshot.account_no != "ALL")
+                .order_by(UserAssetSnapshot.date.desc())
+            )
+            recent_snaps = (await db.execute(stmt_snaps)).scalars().all()
+            snap_acc_map = {}
+            for s in recent_snaps:
+                if s.account_no not in snap_acc_map:
+                    snap_acc_map[s.account_no] = s
+
+            for acc_no, def_info in DEFAULT_KIS_ACCOUNT_MAPPING.items():
+                s = snap_acc_map.get(acc_no)
+                kis_accounts.append({
+                    "account_no": acc_no,
+                    "account_name": def_info.get("alias", "한투 연동계좌"),
+                    "total_asset": float(s.total_asset) if s else 0.0,
+                    "cash_balance": float(s.cash_balance) if s else 0.0,
+                })
+        except Exception as fb_err:
+            logger.debug(f"KIS account fallback error: {fb_err}")
+
     # 3. KIS 계좌별 매핑 정보 로드
     stmt_map = select(KisAccountMapping)
     res_map = await db.execute(stmt_map)
@@ -943,7 +969,32 @@ async def delete_manual_cash(
 async def get_kis_mappings(db: AsyncSession = Depends(get_db)):
     stmt = select(KisAccountMapping).order_by(KisAccountMapping.id.asc())
     res = await db.execute(stmt)
-    return res.scalars().all()
+    db_mappings = res.scalars().all()
+    mapped_acc_nos = {m.account_no for m in db_mappings}
+
+    result = [
+        {
+            "id": m.id,
+            "account_no": m.account_no,
+            "alias": m.alias or DEFAULT_KIS_ACCOUNT_MAPPING.get(m.account_no, {}).get("alias", "한투 연동계좌"),
+            "category": m.category or DEFAULT_KIS_ACCOUNT_MAPPING.get(m.account_no, {}).get("category", "일반주식계좌"),
+            "country": m.country or DEFAULT_KIS_ACCOUNT_MAPPING.get(m.account_no, {}).get("country", "국내"),
+        }
+        for m in db_mappings
+    ]
+
+    # DEFAULT_KIS_ACCOUNT_MAPPING 중 아직 DB에 없는 계좌 자동 보충
+    for acc_no, def_item in DEFAULT_KIS_ACCOUNT_MAPPING.items():
+        if acc_no not in mapped_acc_nos:
+            result.append({
+                "id": None,
+                "account_no": acc_no,
+                "alias": def_item.get("alias", "한투 연동계좌"),
+                "category": def_item.get("category", "일반주식계좌"),
+                "country": def_item.get("country", "국내"),
+            })
+
+    return result
 
 
 @router.post("/kis-mappings")

@@ -43,7 +43,12 @@ export default function KisAccountMappingModal({
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (isOpen) {
+        if (!isOpen) return;
+
+        setError(null);
+
+        // 1. 전달받은 kisAccounts가 있는 경우 이를 우선 가공
+        if (kisAccounts && kisAccounts.length > 0) {
             setMappings(
                 kisAccounts.map((acc) => {
                     const def = DEFAULT_MAPPINGS[acc.account_no] || {};
@@ -63,8 +68,47 @@ export default function KisAccountMappingModal({
                     };
                 })
             );
-            setError(null);
+            return;
         }
+
+        // 2. kisAccounts가 비어있는 경우 백엔드 /api/v1/my/kis-mappings 비동기 조회
+        setIsLoading(true);
+        fetch(`${API_BASE}/api/v1/my/kis-mappings`)
+            .then((res) => res.json())
+            .then((serverMaps) => {
+                if (Array.isArray(serverMaps) && serverMaps.length > 0) {
+                    setMappings(
+                        serverMaps.map((m: any) => ({
+                            account_no: m.account_no,
+                            alias: m.alias || DEFAULT_MAPPINGS[m.account_no]?.alias || "한투 연동계좌",
+                            category: m.category || DEFAULT_MAPPINGS[m.account_no]?.category || "일반주식계좌",
+                            country: m.country || DEFAULT_MAPPINGS[m.account_no]?.country || "국내",
+                        }))
+                    );
+                } else {
+                    setMappings(
+                        Object.entries(DEFAULT_MAPPINGS).map(([accNo, def]) => ({
+                            account_no: accNo,
+                            alias: def.alias,
+                            category: def.category,
+                            country: def.country,
+                        }))
+                    );
+                }
+            })
+            .catch(() => {
+                setMappings(
+                    Object.entries(DEFAULT_MAPPINGS).map(([accNo, def]) => ({
+                        account_no: accNo,
+                        alias: def.alias,
+                        category: def.category,
+                        country: def.country,
+                    }))
+                );
+            })
+            .finally(() => {
+                setIsLoading(false);
+            });
     }, [isOpen, kisAccounts]);
 
     if (!isOpen) return null;

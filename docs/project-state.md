@@ -3,11 +3,18 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S7-2(AI 스마트 리밸런서 & 효율적 투자선 시계열 캐싱 통합 및 비동기 프리페치 파이프라인 구축) 완료
-➡️ Next: S7-3 (종합 자산(Hoya Board) ↔ KIS 실시간 포트폴리오 양방향 동기화 및 자동 계좌 매핑 고도화)
-➡️ 다음 신규 스토리 ID는 **S7-3**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+✅ Current: S7-3(종합 자산(Hoya Board) ↔ KIS 실시간 포트폴리오 양방향 동기화 및 자동 계좌 매핑 고도화) 완료
+➡️ Next: S7-4 (Sprint 7 라이브 E2E 통합 테스트 및 실서버 배포 무결성 검증)
+➡️ 다음 신규 스토리 ID는 **S7-4**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-06, Antigravity):
+> - 🔄 S7-3 종합 자산(Hoya Board) ↔ KIS 실시간 포트폴리오 양방향 동기화 및 자동 계좌 매핑 고도화 완료:
+>   - 백엔드 `backend/api/integrated_assets.py`:
+>     - `get_kis_mappings` (`GET /api/v1/my/kis-mappings`): DB 미등록 시에도 `DEFAULT_KIS_ACCOUNT_MAPPING`의 4대 기본 계좌(ISA, IRP, 기타투자, 일반주식)를 자동 보충 반환.
+>     - `get_integrated_assets`: KIS API 일시 지연 또는 잔고 호출 실패 시에도 최근 스냅샷 및 기본 계좌 메타데이터로 fallback 계좌를 생성하여 종합자산 화면에서 KIS 연동 계좌가 누락되지 않도록 방어.
+>   - 프론트엔드 `dashboard/src/components/KisAccountMappingModal.tsx`:
+>     - 모달 오픈 시 props `kisAccounts`가 비어있을 경우 `/api/v1/my/kis-mappings` 및 `DEFAULT_MAPPINGS`를 자동 fetch/fallback 바인딩하여 "계좌정보 없음" 에러 원천 차단.
+>   - 테스트 검증: `backend/tests/test_integrated_assets_kis_sync.py` 3개 테스트 100% 통과, 프론트엔드 빌드 10/10 성공.
 > - 🤖 S7-2 AI 스마트 리밸런서 & 효율적 투자선 시계열 캐싱 통합 및 비동기 프리페치 파이프라인 구축 완료:
 >   - 백엔드 `backend/api/backtest.py`:
 >     - `run_rebalance_backtest` (`POST /rebalance`): `_REBALANCE_CACHE` 탑재 및 `load_backtest_close_prices` 하이브리드 엔진 연동.

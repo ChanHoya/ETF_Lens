@@ -45,6 +45,7 @@ A living document of module relationships. Update whenever modules are added or 
 | Live Deployment Health Monitor (S6-36) | Infrastructure / Presentation | Production multi-pipeline live status endpoint and E2E regression verification suite | api/health_monitor, tests/test_live_e2e_sync | - | Antigravity |
 | Portfolio Backtest Cache Engine (S7-1) | Core / Infrastructure | 10-year DB hybrid series loader & in-memory TTL 3600s backtest response caching | core/hybrid_series, db/models, api/backtest | PortfolioBacktester, MyDashboard | Antigravity |
 | Rebalance & Efficient Frontier Cache (S7-2) | Core / Presentation | Time-series caching and Monte Carlo Efficient Frontier optimization acceleration | core/hybrid_series, api/backtest, api/efficient_frontier | AIRebalanceSimulator, EfficientFrontierPanel | Antigravity |
+| KIS Integrated Asset Sync & Mapping (S7-3) | Application / Presentation | Bi-directional account mapping, default fallback hydration, and modal auto-fetch | api/integrated_assets, KisAccountMappingModal | TotalAssetBoard, MyAssetsView | Antigravity |
 <!-- Add new modules above this line -->
 
 
