@@ -5,6 +5,7 @@ import { Activity, Calendar, TrendingUp, TrendingDown, RefreshCw, Info, Sparkles
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import KospiExitAnalyzer from '@/components/KospiExitAnalyzer';
 import MacroCompass from '@/components/MacroCompass';
+import MacroRegimeQuadrant from '@/components/MacroRegimeQuadrant';
 import AIInsight from '@/components/AIInsight';
 import { API_BASE } from '@/lib/apiConfig';
 
@@ -517,6 +518,9 @@ export default function DiscoverTab() {
 
                 {/* AI 매크로 로테이션 나침반 (미국/한국 분석) */}
                 <MacroCompass />
+
+                {/* 2D 거시경제 4국면 나침반 & 국면별 최적 ETF 레이더 (S6-33) */}
+                <MacroRegimeQuadrant />
 
                 {/* AI Insight - 전문가 시장 분석 */}
                 <AIInsight />
