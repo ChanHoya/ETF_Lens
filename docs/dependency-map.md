@@ -36,6 +36,13 @@ A living document of module relationships. Update whenever modules are added or 
 | Brazil Election Intelligence | Presentation / Application | Real-time AI presidential election pulse, 1st round vote count persistence, runoff confirmation badge, and manual event dispatch | api/brazil_election_intel, api/brazil_bond | BrazilElectionDetailModal, BrazilBondTab | Antigravity |
 | Hybrid Time-Series Engine | Core / Infrastructure | Universal DB-backed incremental price series fetcher (Gap-fill) & live price merge | db/models, yfinance, FDR, httpx | router, exit_signal | Antigravity |
 | Compare & Cashflow Fast Cache | Application / Presentation | 60s memory caching for ETF comparison & batch DB retrieval for portfolio dividend cashflows | db/models, api/router, api/dividends | CompareTable, DividendDashboard | Antigravity |
+| Pension Wealth Hub (S6-30) | Presentation / Core | Pension 3-pillar tax credit, NPS early/defer BEP crossover, and 30-year compound tax deferral simulation | lib/pensionRules, PensionWealthHub | MainApp | Antigravity |
+| Portfolio Stress Tester (S6-31) | Core / Presentation | 7 major historical crises simulation, defense scoring, and KRW loss estimation | core/stress_tester, api/router, PortfolioStressTester | MyDashboard | Antigravity |
+| Portfolio Rebalancer (S6-32) | Core / Presentation | Target weight drift calculation, cash-only vs full rebalancing orders, and CFP prescriptions | core/portfolio_rebalancer, api/router, PortfolioRebalancer | MyDashboard | Antigravity |
+| Macro Regime Quadrant (S6-33) | Core / Presentation | 2D Growth-Inflation quadrant matrix, historical trajectory, and portfolio regime fit score | core/macro_regime, api/macro_dashboard, MacroRegimeQuadrant | DiscoverTab | Antigravity |
+| Multi-Asset Backtester (S6-34) | Core / Presentation | All-weather/60:40/barbell presets, rebalance frequencies, CAGR/MDD/Sharpe, and underwater charting | core/multi_backtester, api/backtest, MultiAssetBacktester | MyDashboard | Antigravity |
+| Tax Shield Radar (S6-35) | Core / Presentation | 20M KRW financial income limit tracking, health insurance cliff defense, and ISA/pension reallocation | core/tax_shield_analyzer, api/dividends, TaxShieldRadar | PensionWealthHub | Antigravity |
+| Live Deployment Health Monitor (S6-36) | Infrastructure / Presentation | Production multi-pipeline live status endpoint and E2E regression verification suite | api/health_monitor, tests/test_live_e2e_sync | - | Antigravity |
 <!-- Add new modules above this line -->
 
 
