@@ -7,7 +7,8 @@ import { Moon, Sun } from 'lucide-react';
 const STORAGE_KEY = 'iprism-theme';
 
 export default function ThemeToggle() {
-    const [light, setLight] = useState(false);
+    // 기본 테마가 라이트 모드이므로 초기 상태를 true로 설정
+    const [light, setLight] = useState(true);
 
     // 첫 화면 테마는 layout <head> 스크립트가 이미 적용했으므로 그 상태를 읽어 맞춘다
     useEffect(() => {

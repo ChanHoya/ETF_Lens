@@ -23,12 +23,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className="overflow-y-scroll" suppressHydrationWarning>
+    <html lang="ko" className="overflow-y-scroll light" suppressHydrationWarning>
       <head>
-        {/* 저장된 화면 모드를 첫 화면 그리기 전에 적용해 다크→라이트 깜빡임을 막는다 (ThemeToggle과 같은 키) */}
+        {/* 기본 테마는 라이트 모드 (명시적으로 'dark'로 설정된 경우에만 light 클래스 제거) */}
         <script
           dangerouslySetInnerHTML={{
-            __html: "try{if(localStorage.getItem('iprism-theme')==='light')document.documentElement.classList.add('light')}catch(e){}",
+            __html: "try{var t=localStorage.getItem('iprism-theme');if(t==='dark'){document.documentElement.classList.remove('light');}else{document.documentElement.classList.add('light');}}catch(e){}",
           }}
         />
       </head>

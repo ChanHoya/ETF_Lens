@@ -1,12 +1,17 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { IPrismLogo } from './brand/IPrismLogo';
 
 const CORRECT_PASSWORD = '00700';
 const SESSION_KEY = 'etf_lens_auth';
 
+// 비밀번호 인증이 필요한 보안 서비스 경로 (/my, /tff 및 하위 경로)
+const PROTECTED_PREFIXES = ['/my', '/tff'];
+
 export default function PasswordGate({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
     const [authenticated, setAuthenticated] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [input, setInput] = useState('');
@@ -14,19 +19,24 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
     const [shaking, setShaking] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    // 현재 경로가 /my 또는 /tff로 시작하는 보안 서비스인지 판별
+    const isProtected = pathname ? PROTECTED_PREFIXES.some(prefix => 
+        pathname === prefix || pathname.startsWith(prefix + '/')
+    ) : false;
+
     useEffect(() => {
         setMounted(true);
         try {
             if (sessionStorage.getItem(SESSION_KEY) === 'true') {
                 setAuthenticated(true);
-            } else {
+            } else if (isProtected) {
                 setTimeout(() => inputRef.current?.focus(), 100);
             }
         } catch {
             // 시크릿 모드 등 sessionStorage 접근 불가 시 미인증 상태 유지
             setAuthenticated(false);
         }
-    }, []);
+    }, [isProtected]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -45,9 +55,15 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
         }
     };
 
-    // SSR 중에는 아무것도 렌더링 안 함 (hydration 불일치 방지)
+    // 1. 보호 대상이 아닌 공개 서비스('/', '/discover', '/pension' 등)는 비밀번호 없이 즉시 렌더링
+    if (!isProtected) {
+        return <>{children}</>;
+    }
+
+    // 2. 보호 서비스(/my, /tff): SSR 중에는 아무것도 렌더링 안 함 (hydration 불일치 방지)
     if (!mounted) return null;
 
+    // 3. 이미 인증된 경우 자식 컴포넌트 렌더링
     if (authenticated) return <>{children}</>;
 
     return (
@@ -66,7 +82,7 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
                             <span className="sr-only">i-Prism</span>
                             <IPrismLogo className="h-12 w-auto" />
                         </h1>
-                        <p className="text-sm text-gray-500 mt-1">데이터 기반 ETF 분석 서비스</p>
+                        <p className="text-sm text-gray-500 mt-1">보안 서비스 (MY / TFF) 접근 인증</p>
                     </div>
                 </div>
 
