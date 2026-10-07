@@ -3,17 +3,19 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 기본 테마 라이트 모드 전환 및 메인/공개 서비스 비밀번호 해제 (MY·TFF만 비밀번호 보호 적용) 완료
+✅ Current: 서버 사이드 비밀번호 검증(/api/auth/verify) 구축 및 소스코드 내 하드코딩 비밀번호 제거 (GitHub 노출 완전 차단) 완료
 ➡️ Next: S8-1 (신규 스프린트 8 착수 준비 또는 추가 기능 기획)
 ➡️ 다음 신규 스토리 ID는 **S8-1**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-07, Antigravity):
+> - 🔒 서버 사이드 비밀번호 검증 체계 구축 및 비밀번호 GitHub 노출 원천 차단:
+>   - `POST /api/auth/verify` 신규 API Route: Vercel 환경변수(`MY_PASSWORD`, `TFF_PASSWORD`)를 서버 사이드에서만 안전하게 읽어 검증하도록 분리.
+>   - 클라이언트 컴포넌트(`PasswordGate.tsx`, `TffGateWrapper.tsx`) 내 평문 하드코딩 비밀번호(`00700`, `86878889`) 완전 삭제.
+>   - 루트(`/`), `/discover`, `/pension` 등은 비밀번호 없이 누구나 접속 가능한 완전 공개 서비스로 전환.
+>   - 오직 `/my` (개인 종합자산) 및 `/tff` 서비스에만 각 서비스별 비밀번호 입력창 표시 및 비동기 서버 인증 적용.
 > - ☀️ 기본 테마 라이트 모드 기본값 적용:
 >   - `layout.tsx`: `html.light` 기본 클래스 탑재 및 인라인 테마 스크립트에서 사용자가 명시적으로 'dark'로 설정한 경우에만 제거하도록 변경.
 >   - `ThemeToggle.tsx`: 초기 렌더링 상태를 라이트 모드로 기본 일치화.
-> - 🔓 메인 서비스 공개 전환 & 선택적 비밀번호 게이트 (`PasswordGate.tsx`):
->   - 루트(`/`), `/discover`, `/pension` 등 대다수 서비스는 비밀번호 입력 없이 누구나 접근 가능한 공개 서비스로 전환.
->   - 오직 `/my` (개인 종합자산) 및 `/tff` 서비스 접근 시에만 기존 비밀번호 인증(00700)을 요구하도록 라우트별 선택적 보호 체계 구축.
 > - 🛠️ 백테스터 & AI 리밸런서 & 포트폴리오 최적화 버그 완치 및 시계열/CORS 안정화:
 >   - 1) `cannot reindex on an axis with duplicate labels` 오류 원천 차단:
 >     - `core/hybrid_series.py`: `get_hybrid_daily_prices` 반환 전 일자별 deduplication(마지막 값 보존) 및 정렬 보장.

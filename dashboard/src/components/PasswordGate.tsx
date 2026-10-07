@@ -4,9 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { IPrismLogo } from './brand/IPrismLogo';
 
-const CORRECT_PASSWORD = '00700';
-const SESSION_KEY = 'etf_lens_auth';
-
 // 비밀번호 인증이 필요한 보안 서비스 경로 (/my, /tff 및 하위 경로)
 const PROTECTED_PREFIXES = ['/my', '/tff'];
 
@@ -14,44 +11,76 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
     const pathname = usePathname();
     const [authenticated, setAuthenticated] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [input, setInput] = useState('');
     const [error, setError] = useState(false);
     const [shaking, setShaking] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // 현재 경로가 /my 또는 /tff로 시작하는 보안 서비스인지 판별
-    const isProtected = pathname ? PROTECTED_PREFIXES.some(prefix => 
-        pathname === prefix || pathname.startsWith(prefix + '/')
-    ) : false;
+    const targetService = pathname?.startsWith('/tff') ? 'tff' : (pathname?.startsWith('/my') ? 'my' : null);
+    const isProtected = targetService !== null;
+    const sessionKey = targetService ? `${targetService}_auth_verified` : 'public_auth';
 
     useEffect(() => {
         setMounted(true);
+        if (!isProtected) return;
+
         try {
-            if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+            if (sessionStorage.getItem(sessionKey) === 'true') {
                 setAuthenticated(true);
-            } else if (isProtected) {
+            } else {
+                setAuthenticated(false);
                 setTimeout(() => inputRef.current?.focus(), 100);
             }
         } catch {
-            // 시크릿 모드 등 sessionStorage 접근 불가 시 미인증 상태 유지
             setAuthenticated(false);
         }
-    }, [isProtected]);
+    }, [pathname, isProtected, sessionKey]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (input === CORRECT_PASSWORD) {
-            try { sessionStorage.setItem(SESSION_KEY, 'true'); } catch { /* 시크릿 모드 무시 */ }
-            setAuthenticated(true);
-        } else {
+        if (!targetService || loading) return;
+
+        setLoading(true);
+        setError(false);
+
+        try {
+            // Next.js 서버 API Route로 안전하게 검증 (비밀번호는 Vercel 환경변수에서 관리)
+            const res = await fetch('/api/auth/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    service: targetService,
+                    password: input
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                try {
+                    sessionStorage.setItem(sessionKey, 'true');
+                    // TFF인 경우 TFF 대시보드 내부 세션 키도 함께 동기화
+                    if (targetService === 'tff') {
+                        sessionStorage.setItem('tff_fund_auth', 'true');
+                    }
+                } catch { /* 시크릿 모드 무시 */ }
+                setAuthenticated(true);
+            } else {
+                setError(true);
+                setShaking(true);
+                setInput('');
+                setTimeout(() => {
+                    setShaking(false);
+                    setError(false);
+                    inputRef.current?.focus();
+                }, 600);
+            }
+        } catch (err) {
             setError(true);
-            setShaking(true);
-            setInput('');
-            setTimeout(() => {
-                setShaking(false);
-                setError(false);
-                inputRef.current?.focus();
-            }, 600);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -82,7 +111,9 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
                             <span className="sr-only">i-Prism</span>
                             <IPrismLogo className="h-12 w-auto" />
                         </h1>
-                        <p className="text-sm text-gray-500 mt-1">보안 서비스 (MY / TFF) 접근 인증</p>
+                        <p className="text-sm text-gray-400 mt-1 font-medium">
+                            {targetService === 'tff' ? 'TFF 펀드 대시보드 접근 인증' : 'MY 종합자산 포트폴리오 접근 인증'}
+                        </p>
                     </div>
                 </div>
 
@@ -112,9 +143,10 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
 
                     <button
                         type="submit"
-                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-base hover:from-indigo-500 hover:to-purple-500 active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(99,102,241,0.35)]"
+                        disabled={loading}
+                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-base hover:from-indigo-500 hover:to-purple-500 active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(99,102,241,0.35)] disabled:opacity-50"
                     >
-                        입장
+                        {loading ? '인증 확인 중...' : '입장'}
                     </button>
                 </form>
 

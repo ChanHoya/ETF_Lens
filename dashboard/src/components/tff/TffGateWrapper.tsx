@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import TffDashboard from './TffDashboard';
 
-const CORRECT_PASSWORD = '86878889';
 const SESSION_KEY = 'tff_fund_auth';
 
 interface Props {
@@ -13,6 +12,7 @@ interface Props {
 export default function TffGateWrapper({ onOpenDetail }: Props) {
     const [authenticated, setAuthenticated] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [input, setInput] = useState('');
     const [error, setError] = useState(false);
     const [shaking, setShaking] = useState(false);
@@ -21,7 +21,7 @@ export default function TffGateWrapper({ onOpenDetail }: Props) {
     useEffect(() => {
         setMounted(true);
         try {
-            if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+            if (sessionStorage.getItem(SESSION_KEY) === 'true' || sessionStorage.getItem('tff_auth_verified') === 'true') {
                 setAuthenticated(true);
             }
         } catch {
@@ -37,20 +37,46 @@ export default function TffGateWrapper({ onOpenDetail }: Props) {
         }
     }, [mounted, authenticated]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (input === CORRECT_PASSWORD) {
-            try { sessionStorage.setItem(SESSION_KEY, 'true'); } catch { /* 시크릿 모드 무시 */ }
-            setAuthenticated(true);
-        } else {
+        if (loading) return;
+
+        setLoading(true);
+        setError(false);
+
+        try {
+            // Next.js 서버 API Route로 안전하게 검증 (비밀번호는 Vercel 환경변수에서 관리)
+            const res = await fetch('/api/auth/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    service: 'tff',
+                    password: input
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                try {
+                    sessionStorage.setItem(SESSION_KEY, 'true');
+                    sessionStorage.setItem('tff_auth_verified', 'true');
+                } catch { /* 시크릿 모드 무시 */ }
+                setAuthenticated(true);
+            } else {
+                setError(true);
+                setShaking(true);
+                setInput('');
+                setTimeout(() => {
+                    setShaking(false);
+                    setError(false);
+                    inputRef.current?.focus();
+                }, 600);
+            }
+        } catch (err) {
             setError(true);
-            setShaking(true);
-            setInput('');
-            setTimeout(() => {
-                setShaking(false);
-                setError(false);
-                inputRef.current?.focus();
-            }, 600);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -104,9 +130,10 @@ export default function TffGateWrapper({ onOpenDetail }: Props) {
 
                     <button
                         type="submit"
-                        className="w-full py-3 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 text-white font-bold text-sm hover:from-sky-500 hover:to-indigo-500 active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(14,165,233,0.3)]"
+                        disabled={loading}
+                        className="w-full py-3 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 text-white font-bold text-sm hover:from-sky-500 hover:to-indigo-500 active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(14,165,233,0.3)] disabled:opacity-50"
                     >
-                        잠금 해제
+                        {loading ? '인증 확인 중...' : '잠금 해제'}
                     </button>
                 </form>
             </div>
