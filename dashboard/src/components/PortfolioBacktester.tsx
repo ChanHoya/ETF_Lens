@@ -40,6 +40,34 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
         return 'KOSPI';
     };
 
+    const METRIC_COLUMNS = [
+        {
+            id: "all",
+            upper: { key: "Portfolio", name: "내 포트폴리오 (전체)", color: "#a855f7", isMain: true },
+            lower: null,
+        },
+        {
+            id: "kospi",
+            upper: { key: "Portfolio_KOSPI", name: "내 포트폴리오 (KOSPI)", color: "#3b82f6", isMain: false },
+            lower: { key: "^KS11", name: "KOSPI 지수", color: "#3b82f6", isMain: false },
+        },
+        {
+            id: "kosdaq",
+            upper: { key: "Portfolio_KOSDAQ", name: "내 포트폴리오 (KOSDAQ)", color: "#eab308", isMain: false },
+            lower: { key: "^KQ11", name: "KOSDAQ 지수", color: "#eab308", isMain: false },
+        },
+        {
+            id: "sp500",
+            upper: { key: "Portfolio_S&P 500", name: "내 포트폴리오 (S&P 500)", color: "#f43f5e", isMain: false },
+            lower: { key: "^GSPC", name: "S&P 500 지수", color: "#f43f5e", isMain: false },
+        },
+        {
+            id: "nasdaq",
+            upper: { key: "Portfolio_NASDAQ", name: "내 포트폴리오 (NASDAQ)", color: "#10b981", isMain: false },
+            lower: { key: "^IXIC", name: "NASDAQ 지수", color: "#10b981", isMain: false },
+        },
+    ];
+
     const LINE_CONFIG = [
         { key: "Portfolio", name: "내 포트폴리오 (전체)", color: "#a855f7", isBench: false, width: 3, pair: null },
         { key: "Portfolio_KOSPI", name: "내 포트폴리오 (KOSPI)", color: "#3b82f6", isBench: false, width: 2, pair: "^KS11" },
@@ -136,6 +164,28 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
         );
     };
 
+    const renderCard = (cfg: { key: string; name: string; isMain?: boolean }) => {
+        const resData = data?.results?.[period]?.[cfg.key];
+        if (!resData) return null;
+
+        const isMain = cfg.isMain ?? (cfg.key === "Portfolio");
+        const borderClass = isMain ? "border-purple-500/40 shadow-sm shadow-purple-500/10" : "border-white/10";
+        const bgClass = isMain ? "bg-purple-500/10" : "bg-white/[0.02]";
+        const textClass = isMain ? "text-purple-300 font-extrabold" : "text-gray-300 font-semibold";
+
+        return (
+            <div className={`border ${borderClass} rounded-xl p-2 ${bgClass} transition-all hover:border-white/20 flex flex-col justify-between`}>
+                <div className={`text-center py-1 text-xs sm:text-sm border-b ${isMain ? "border-purple-500/20" : "border-white/5"} mb-2 ${textClass}`}>
+                    {cfg.name}
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 items-center">
+                    {renderMetric("수익률", resData.return)}
+                    {renderMetric("MDD", resData.mdd)}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <section className="flex flex-col gap-4 mt-6">
             <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -200,27 +250,26 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
                             ))}
                         </div>
 
-                        {/* Metrics Grid */}
+                        {/* Metrics Grid (위아래 동일군 1:1 비교 배치) */}
                         {data.results && data.results[period] && (
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-4">
-                                {LINE_CONFIG.map(cfg => {
-                                    const resData = data.results[period][cfg.key];
-                                    if (!resData) return null;
-                                    
-                                    const isMain = cfg.key === "Portfolio";
-                                    const borderClass = isMain ? "border-purple-500/30" : "border-white/5";
-                                    const bgClass = isMain ? "bg-purple-500/5" : "bg-white/[0.02]";
-                                    const textClass = isMain ? "text-purple-300" : "text-gray-300";
-
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 mb-4">
+                                {METRIC_COLUMNS.map((col) => {
                                     return (
-                                        <div key={cfg.key} className={`col-span-2 md:col-span-1 border ${borderClass} rounded-xl p-1.5 ${bgClass}`}>
-                                            <div className={`text-center font-bold py-1 text-xs sm:text-sm border-b ${isMain ? "border-purple-500/20" : "border-white/5"} mb-2 ${textClass}`}>
-                                                {cfg.name}
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-1 items-center">
-                                                {renderMetric("수익률", resData.return)}
-                                                {renderMetric("MDD", resData.mdd)}
-                                            </div>
+                                        <div key={col.id} className="flex flex-col gap-2.5">
+                                            {/* 상단: 내 포트폴리오 */}
+                                            {renderCard(col.upper)}
+
+                                            {/* 하단: 동일군 벤치마크 지수 (전체 아래는 비움) */}
+                                            {col.lower ? (
+                                                renderCard(col.lower)
+                                            ) : (
+                                                <div 
+                                                    className="hidden lg:flex flex-1 rounded-xl p-2 border border-dashed border-white/5 bg-transparent items-center justify-center text-xs text-gray-600 min-h-[96px]"
+                                                    aria-hidden="true"
+                                                >
+                                                    <span className="text-[11px] text-gray-500/40">—</span>
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}
