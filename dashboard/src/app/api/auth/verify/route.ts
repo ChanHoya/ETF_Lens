@@ -20,15 +20,24 @@ export async function POST(req: NextRequest) {
         let expectedPassword = '';
 
         if (service === 'my') {
-            // MY 서비스 비밀번호: Vercel 환경변수 MY_PASSWORD 우선 참조
-            expectedPassword = process.env.MY_PASSWORD || '00700';
+            // MY 서비스 비밀번호: 오직 환경변수 MY_PASSWORD에서만 참조 (소스코드에 기본값 노출 금지)
+            expectedPassword = process.env.MY_PASSWORD || '';
         } else if (service === 'tff') {
-            // TFF 서비스 비밀번호: Vercel 환경변수 TFF_PASSWORD 우선 참조 (기본 86878889)
-            expectedPassword = process.env.TFF_PASSWORD || '86878889';
+            // TFF 서비스 비밀번호: 오직 환경변수 TFF_PASSWORD에서만 참조 (소스코드에 기본값 노출 금지)
+            expectedPassword = process.env.TFF_PASSWORD || '';
         } else {
             return NextResponse.json(
                 { success: false, message: '유효하지 않은 서비스입니다.' },
                 { status: 400 }
+            );
+        }
+
+        // 서버 환경변수가 설정되지 않은 경우 보안상 접속 차단
+        if (!expectedPassword) {
+            console.error(`[Auth] ${service} 비밀번호 환경변수가 서버에 설정되지 않았습니다.`);
+            return NextResponse.json(
+                { success: false, message: '서버 인증 환경변수가 설정되지 않았습니다. 관리자에게 문의하세요.' },
+                { status: 500 }
             );
         }
 

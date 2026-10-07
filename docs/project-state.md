@@ -10,7 +10,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 > 세션 핸드오프 (2026-10-07, Antigravity):
 > - 🔒 서버 사이드 비밀번호 검증 체계 구축 및 비밀번호 GitHub 노출 원천 차단:
 >   - `POST /api/auth/verify` 신규 API Route: Vercel 환경변수(`MY_PASSWORD`, `TFF_PASSWORD`)를 서버 사이드에서만 안전하게 읽어 검증하도록 분리.
->   - 클라이언트 컴포넌트(`PasswordGate.tsx`, `TffGateWrapper.tsx`) 내 평문 하드코딩 비밀번호(`00700`, `86878889`) 완전 삭제.
+>   - 클라이언트 컴포넌트(`PasswordGate.tsx`, `TffGateWrapper.tsx`) 내 평문 하드코딩 비밀번호 완전 삭제.
 >   - 루트(`/`), `/discover`, `/pension` 등은 비밀번호 없이 누구나 접속 가능한 완전 공개 서비스로 전환.
 >   - 오직 `/my` (개인 종합자산) 및 `/tff` 서비스에만 각 서비스별 비밀번호 입력창 표시 및 비동기 서버 인증 적용.
 > - ☀️ 기본 테마 라이트 모드 기본값 적용:
