@@ -27,6 +27,10 @@ import {
     Info,
     ChevronRight,
     ChevronLeft,
+    GripHorizontal,
+    Move,
+    ArrowDownToLine,
+    ArrowUpFromLine,
 } from "lucide-react";
 import {
     ResponsiveContainer,
@@ -220,6 +224,71 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
     const [selectedPoint, setSelectedPoint] = useState<any | null>(null);
     const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
     const [isLooping, setIsLooping] = useState<boolean>(true);
+
+    // 정보 팝업 모드 및 드래그 위치 제어 ("floating": 차트 내 드래그 플로팅, "docked": 궤적 밖 하단 고정)
+    const [popupDisplayMode, setPopupDisplayMode] = useState<"floating" | "docked">("floating");
+    const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
+    const [isDragging, setIsDragging] = useState<boolean>(false);
+    const dragStartRef = useRef<{ startX: number; startY: number; initX: number; initY: number } | null>(null);
+    const popupRef = useRef<HTMLDivElement>(null);
+    const chartContainerRef = useRef<HTMLDivElement>(null);
+
+    const handlePointerDown = (e: React.PointerEvent) => {
+        if ((e.target as HTMLElement).closest("button")) return;
+        if (popupRef.current && chartContainerRef.current) {
+            const popupRect = popupRef.current.getBoundingClientRect();
+            const containerRect = chartContainerRef.current.getBoundingClientRect();
+
+            const currentX = popupPos ? popupPos.x : (popupRect.left - containerRect.left);
+            const currentY = popupPos ? popupPos.y : (popupRect.top - containerRect.top);
+
+            dragStartRef.current = {
+                startX: e.clientX,
+                startY: e.clientY,
+                initX: currentX,
+                initY: currentY,
+            };
+            setIsDragging(true);
+            try {
+                (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+            } catch {}
+        }
+    };
+
+    const handlePointerMove = (e: React.PointerEvent) => {
+        if (!isDragging || !dragStartRef.current || !chartContainerRef.current || !popupRef.current) return;
+
+        const deltaX = e.clientX - dragStartRef.current.startX;
+        const deltaY = e.clientY - dragStartRef.current.startY;
+
+        const containerWidth = chartContainerRef.current.clientWidth;
+        const containerHeight = chartContainerRef.current.clientHeight;
+        const popupWidth = popupRef.current.clientWidth;
+        const popupHeight = popupRef.current.clientHeight;
+
+        let newX = dragStartRef.current.initX + deltaX;
+        let newY = dragStartRef.current.initY + deltaY;
+
+        // 컨테이너 경계 제한 (4px 마진)
+        newX = Math.max(4, Math.min(newX, containerWidth - popupWidth - 4));
+        newY = Math.max(4, Math.min(newY, containerHeight - popupHeight - 4));
+
+        setPopupPos({ x: newX, y: newY });
+    };
+
+    const handlePointerUp = (e: React.PointerEvent) => {
+        if (isDragging) {
+            setIsDragging(false);
+            try {
+                (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+            } catch {}
+        }
+    };
+
+    const handleResetPopupPos = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setPopupPos(null);
+    };
 
     const fetchAllData = async () => {
         try {
@@ -492,6 +561,29 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                     </button>
                                 </div>
 
+                                {/* 궤적 밖으로 / 차트 내부 도킹 토글 */}
+                                <button
+                                    onClick={() => setPopupDisplayMode((prev) => (prev === "floating" ? "docked" : "floating"))}
+                                    className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-xl border transition-all ${
+                                        popupDisplayMode === "docked"
+                                            ? "bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-600/30"
+                                            : "text-gray-300 hover:text-white border-white/15 bg-black/50 hover:bg-white/10"
+                                    }`}
+                                    title={popupDisplayMode === "docked" ? "정보창을 차트 내부 플로팅으로 전환" : "궤적 경로를 가리지 않도록 정보창을 차트 밖으로 이동"}
+                                >
+                                    {popupDisplayMode === "docked" ? (
+                                        <>
+                                            <ArrowUpFromLine className="w-3 h-3 text-indigo-200" />
+                                            <span>차트내부 플로팅</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ArrowDownToLine className="w-3 h-3 text-indigo-400" />
+                                            <span>궤적 밖으로</span>
+                                        </>
+                                    )}
+                                </button>
+
                                 {/* 기간 선택 토글 */}
                                 <div className="flex items-center bg-black/40 border border-white/10 rounded-lg p-0.5 gap-1">
                                     {(["5Y", "3Y", "1Y"] as const).map((p) => (
@@ -512,7 +604,10 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                         </div>
 
                         {/* 4 Quadrants Diagram via ScatterChart */}
-                        <div className="relative w-full h-[380px] my-2 bg-black/40 rounded-xl border border-white/5 overflow-hidden">
+                        <div
+                            ref={chartContainerRef}
+                            className="relative w-full h-[380px] my-2 bg-black/40 rounded-xl border border-white/5 overflow-hidden"
+                        >
                             {/* 사분면 배경 레이블 */}
                             <div className="absolute top-3 right-4 text-right pointer-events-none z-0">
                                 <span className="text-xs font-bold text-emerald-400/80">Phase 3: 적극적 재고 축적</span>
@@ -531,34 +626,76 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                 <p className="text-[9px] text-gray-500">고점경보 · 마진피크 분할차익실현 (2021H2)</p>
                             </div>
 
-                            {/* 활성 지점 플로팅 팝업 정보창 (2021.01~2023.08: 좌측 상단 분면 / 2023.10~현재: 우측 하단 분면) */}
-                            {isPopupOpen && selectedPoint && (
+                            {/* 활성 지점 플로팅 팝업 정보창 (마우스로 자유롭게 이동 가능 + 궤적 외곽 기본 배치) */}
+                            {popupDisplayMode === "floating" && isPopupOpen && selectedPoint && (
                                 <div
-                                    className={`absolute z-20 transition-all duration-700 ease-in-out pointer-events-auto ${
-                                        // 2021년 1월 ~ 2023년 8월: 좌측 상단 분면 (우측 아래 궤적을 피하면서 더 오른쪽으로 이동)
-                                        // 2023년 10월 ~ 현재: 우측 하단 분면 (좌측 위 궤적을 피하면서 더 위로 끌어올림)
-                                        (selectedPoint.date <= "2023-08")
-                                            ? "top-12 left-[20%] sm:left-[25%] md:left-[28%] animate-in slide-in-from-top-3 fade-in"
-                                            : "bottom-[20%] sm:bottom-[24%] md:bottom-[26%] right-[16%] sm:right-[20%] md:right-[24%] animate-in slide-in-from-bottom-3 fade-in"
+                                    ref={popupRef}
+                                    onPointerDown={handlePointerDown}
+                                    onPointerMove={handlePointerMove}
+                                    onPointerUp={handlePointerUp}
+                                    style={
+                                        popupPos
+                                            ? {
+                                                  left: `${popupPos.x}px`,
+                                                  top: `${popupPos.y}px`,
+                                              }
+                                            : undefined
+                                    }
+                                    className={`absolute z-30 pointer-events-auto select-none transition-shadow ${
+                                        isDragging
+                                            ? "cursor-grabbing opacity-90 scale-[1.02] shadow-[0_12px_40px_rgba(0,0,0,0.8)]"
+                                            : "cursor-grab"
+                                    } ${
+                                        !popupPos
+                                            ? "top-3 right-3 sm:right-5 animate-in fade-in duration-200"
+                                            : ""
                                     }`}
                                 >
-                                    <div className="bg-[#12141c]/95 border border-white/20 rounded-2xl p-3.5 shadow-2xl backdrop-blur-2xl text-xs w-[240px] sm:w-[260px]">
+                                    <div className="bg-[#12141c]/95 border border-white/20 hover:border-indigo-500/50 rounded-2xl p-3 shadow-2xl backdrop-blur-2xl text-xs w-[245px] sm:w-[265px] transition-all">
+                                        {/* 드래그 가능 헤더 */}
                                         <div className="flex justify-between items-center pb-1.5 border-b border-white/10">
                                             <div className="flex items-center gap-1.5 font-black text-white">
+                                                <GripHorizontal className="w-3.5 h-3.5 text-gray-400 hover:text-indigo-400" />
                                                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                                                 <span className="text-xs text-indigo-300 font-extrabold font-mono">
                                                     {selectedPoint.date}
                                                 </span>
                                                 <span className="text-[10px] text-gray-400 font-normal">({selectedPoint.label})</span>
                                             </div>
-                                            <button
-                                                onClick={() => setIsPopupOpen(false)}
-                                                className="p-1 rounded-md text-gray-400 hover:text-white hover:bg-white/10"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </button>
+                                            <div className="flex items-center gap-1">
+                                                {popupPos && (
+                                                    <button
+                                                        onClick={handleResetPopupPos}
+                                                        className="p-1 rounded-md text-gray-400 hover:text-indigo-300 hover:bg-white/10"
+                                                        title="위치 기본값으로 리셋"
+                                                    >
+                                                        <RotateCcw className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setPopupDisplayMode("docked");
+                                                    }}
+                                                    className="p-1 rounded-md text-gray-400 hover:text-indigo-300 hover:bg-white/10"
+                                                    title="궤적 밖으로 이동 (차트 하단 고정)"
+                                                >
+                                                    <ArrowDownToLine className="w-3 h-3" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setIsPopupOpen(false);
+                                                    }}
+                                                    className="p-1 rounded-md text-gray-400 hover:text-white hover:bg-white/10"
+                                                    title="닫기"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </div>
                                         </div>
 
+                                        {/* 지표 내용 */}
                                         <div className="mt-2 space-y-1 text-[11px]">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-gray-400 text-[10px]">사이클 국면</span>
@@ -578,6 +715,23 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                                 <span className="text-gray-400">수요 / 수출 모멘텀</span>
                                                 <span className="font-mono text-gray-200">{selectedPoint.y}σ</span>
                                             </div>
+                                        </div>
+
+                                        {/* 마우스 드래그 가이드 */}
+                                        <div className="mt-2 pt-1 border-t border-white/5 flex items-center justify-between text-[9px] text-gray-400">
+                                            <span className="flex items-center gap-1 text-gray-400">
+                                                <Move className="w-2.5 h-2.5 text-indigo-400" />
+                                                마우스로 드래그하여 이동
+                                            </span>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setPopupDisplayMode("docked");
+                                                }}
+                                                className="text-indigo-400 hover:text-indigo-300 font-medium hover:underline"
+                                            >
+                                                궤적 밖으로
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -711,6 +865,53 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                                 </ScatterChart>
                             </ResponsiveContainer>
                         </div>
+
+                        {/* 도킹 모드: 궤적 밖(차트 바로 아래) 고정 바 */}
+                        {popupDisplayMode === "docked" && isPopupOpen && selectedPoint && (
+                            <div className="my-2 p-3 rounded-xl bg-gradient-to-r from-indigo-950/70 via-[#161922] to-slate-900/70 border border-indigo-500/40 flex flex-wrap items-center justify-between gap-3 shadow-xl animate-in fade-in duration-300">
+                                <div className="flex items-center gap-2.5">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                                    <div className="flex items-baseline gap-1.5 font-mono">
+                                        <span className="text-sm font-black text-indigo-300">{selectedPoint.date}</span>
+                                        <span className="text-xs text-gray-400 font-sans">({selectedPoint.label})</span>
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${activePointStyle.badge}`}>
+                                        Phase {selectedPoint.phase} : {activePointPhaseInfo ? (activePointPhaseInfo as any).name : `Phase ${selectedPoint.phase}`}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs font-mono">
+                                    <div>
+                                        <span className="text-gray-400 text-[10px] mr-1.5 font-sans">CSCI 종합</span>
+                                        <span className="font-bold text-white">{selectedPoint.csci}σ</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-400 text-[10px] mr-1.5 font-sans">재고 건전성 (X)</span>
+                                        <span className="text-gray-200">{selectedPoint.x}σ</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-400 text-[10px] mr-1.5 font-sans">수출 모멘텀 (Y)</span>
+                                        <span className="text-gray-200">{selectedPoint.y}σ</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        onClick={() => setPopupDisplayMode("floating")}
+                                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-200 text-[11px] transition-colors"
+                                        title="차트 내부 플로팅 카드로 이동"
+                                    >
+                                        <ArrowUpFromLine className="w-3 h-3" />
+                                        <span>플로팅 전환</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setIsPopupOpen(false)}
+                                        className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10"
+                                        title="닫기"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {/* 4국면 설명 요약 가이드 */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] mt-2 pt-3 border-t border-white/5">

@@ -3,11 +3,15 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 서버 사이드 비밀번호 검증(/api/auth/verify) 구축 및 소스코드 내 하드코딩 비밀번호 제거 (GitHub 노출 완전 차단) 완료
+✅ Current: 반도체 4국면 사이클 시계 궤적 경로 범례/정보 박스 마우스 드래그 이동 및 궤적 밖 도킹 기능 추가 완료
 ➡️ Next: S8-1 (신규 스프린트 8 착수 준비 또는 추가 기능 기획)
 ➡️ 다음 신규 스토리 ID는 **S8-1**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-07, Antigravity):
+> - 🧭 반도체 4국면 사이클 시계(`SemiCycleDashboard.tsx`) 범례 박스 가림 현상 완치:
+>   - 1) 자유로운 마우스 드래그 앤 드롭 이동: 사용자가 마우스로 원하는 위치 어디로든 정보 박스를 끌어서 배치 가능 (포인터 캡처 및 화면 경계 유지, 위치 리셋 기능 탑재).
+>   - 2) 궤적 밖 도킹 모드 전환: 상단 컨트롤 바 및 정보창 헤더에 [궤적 밖으로 / 플로팅 전환] 원클릭 토글 버튼 제공. 도킹 시 차트 아래 가로형 바로 깔끔하게 빠져 궤적 경로 100% 가시성 확보.
+>   - 3) 플로팅 모드 기본 위치를 궤적의 이동 경로 밖(상단 우측 여백)으로 재배치하여 재생 시작 시 궤적 시작점을 가리지 않도록 방어.
 > - 🔒 서버 사이드 비밀번호 검증 체계 구축 및 비밀번호 GitHub 노출 원천 차단:
 >   - `POST /api/auth/verify` 신규 API Route: Vercel 환경변수(`MY_PASSWORD`, `TFF_PASSWORD`)를 서버 사이드에서만 안전하게 읽어 검증하도록 분리.
 >   - 클라이언트 컴포넌트(`PasswordGate.tsx`, `TffGateWrapper.tsx`) 내 평문 하드코딩 비밀번호 완전 삭제.
