@@ -224,34 +224,59 @@ async def lifespan(app: FastAPI):
         except Exception as _e:
             print(f"[Startup] Seeding skipped: {_e}")
 
-        # ── 5.5. 브라질 국채 매크로 시계열 시딩 (신규 배포 시 빈 테이블 즉시 채움) ──
-        try:
-            from core.brazil_fetcher import seed_brazil_series_if_empty
-            asyncio.create_task(seed_brazil_series_if_empty())
-        except Exception as _e:
-            print(f"[Startup] Brazil seeding skipped: {_e}")
+        # ── 5.5. 브라질 시딩, 대시보드 캐시 예열, ETF 마스터 동기화 순차 지연 실행 (Render 512MB OOM 방지) ──
+        async def background_staggered_startup():
+            import gc
+            # 포트 바인딩 및 Render 헬스체크 완료 후 15초 대기
+            await asyncio.sleep(15)
 
-        # ── 5.6. 시장동향 환율·금리·주식 탭 서버 캐시 예열 (재시작·배포 직후 첫 방문자가 수집을 기다리지 않게) ──
-        try:
-            from api.fx_dashboard import overview_cache as _fx_cache
-            from api.rates_dashboard import overview_cache as _rates_cache
-            from api.stocks_dashboard import overview_cache as _stocks_cache
-            _fx_cache.warm()
-            _rates_cache.warm()
-            _stocks_cache.warm()
-            from api.macro_dashboard import overview_cache as _macro_cache
-            _macro_cache.warm()  # 세 캐시를 기다렸다 결합(같은 수집 공유)
-        except Exception as _e:
-            print(f"[Startup] overview cache warm skipped: {_e}")
+            # 1. 브라질 국채 매크로 시계열 시딩
+            try:
+                from core.brazil_fetcher import seed_brazil_series_if_empty
+                await seed_brazil_series_if_empty()
+                gc.collect()
+            except Exception as _e:
+                print(f"[Startup] Brazil seeding skipped: {_e}")
 
+            # 2. 시장동향 환율·금리·주식·매크로 탭 서버 캐시 순차 예열 (10초 간격 분산)
+            try:
+                from api.fx_dashboard import overview_cache as _fx_cache
+                _fx_cache.warm()
+                await asyncio.sleep(10)
+                gc.collect()
+
+                from api.rates_dashboard import overview_cache as _rates_cache
+                _rates_cache.warm()
+                await asyncio.sleep(10)
+                gc.collect()
+
+                from api.stocks_dashboard import overview_cache as _stocks_cache
+                _stocks_cache.warm()
+                await asyncio.sleep(10)
+                gc.collect()
+
+                from api.macro_dashboard import overview_cache as _macro_cache
+                _macro_cache.warm()
+                await asyncio.sleep(10)
+                gc.collect()
+                print("[Startup] All overview caches warmed successfully with staggered delays.")
+            except Exception as _e:
+                print(f"[Startup] overview cache warm skipped: {_e}")
+
+            # 3. ETF 마스터 목록 동기화 (캐시 예열 완료 후 최종 실행)
+            try:
+                from core.scheduler import sync_etf_master_list
+                await sync_etf_master_list()
+                gc.collect()
+                print("[Startup] ETF master list synced successfully.")
+            except Exception as _e:
+                print(f"[Startup] ETF master list sync skipped: {_e}")
+
+        asyncio.create_task(background_staggered_startup())
         setup_scheduler()
 
     # DB 연결 대기로 인한 Render 60초 포트바인딩 타임아웃 방지를 위해 백그라운드로 실행
     asyncio.create_task(init_db_and_startup())
-
-    # 앱 시작 시 ETF 마스터 목록 즉시 백그라운드 동기화
-    from core.scheduler import sync_etf_master_list
-    asyncio.create_task(sync_etf_master_list())
 
     yield
     # Shutdown
