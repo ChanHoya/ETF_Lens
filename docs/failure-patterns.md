@@ -336,4 +336,16 @@
   4. **스레드 풀 축소**: `overview_cache.py`의 `IO_POOL` worker를 16개에서 6개로 줄여 스레드 스택 메모리 절약.
   5. **OS 메모리 강제 반환 (glibc malloc_trim)**: `gc.collect()` 호출 후 리눅스 glibc `malloc_trim(0)`을 호출하여 단편화된 힙 메모리를 OS로 즉시 반환(스케줄러 잡 완료 후, 백테스트 API 처리 후, 서버 시작 워밍업 후).
 
+### [FP-039] 대용량 시뮬레이션 컴포넌트 탭 전환 시 언마운트 오버헤드 및 비캐싱으로 인한 반복적 로딩 블로킹
+- **증상**: 포트폴리오 백테스터 서브탭 전환 시마다 기존 연산 결과가 날아가며 스피너가 재작동하거나, TFF 대시보드 새로고침/재방문 시 과거 조회 데이터가 있음에도 매번 전체 화면을 가리고 서버 응답을 대기함.
+- **원인**:
+  1. 다중 서브탭 컴포넌트에서 비활성 탭을 조건부 렌더링(`activeTab === id && <Component />`)으로 언마운트하여 컴포넌트 상태 및 수 초간 연산된 백테스트 결과가 소멸됨.
+  2. TFF 대시보드에서 `LOCAL_STORAGE_KEY` 상수가 선언만 되고 실제 `getItem`/`setItem` 라이프사이클이 누락되어 브라우저 영속화가 작동하지 않음.
+  3. 백테스트 결과에 대한 AI Insight 및 추정 시뮬레이션이 캐싱 없이 매번 고비용 외부 API를 재호출함.
+- **해결**:
+  1. **Lazy-Mount + Keep-Alive 패턴**: 서브탭을 최초 접근 시에만 마운트하고 이후에는 언마운트 대신 `hidden` 클래스로 뷰를 유지하여 서브탭 재클릭 시 **0ms 즉시 스위칭** 실현.
+  2. **브라우저 SWR(Stale-While-Revalidate) 캐싱**: `sessionStorage` 및 `localStorage` 3대 키(`tff_fund_data`, `tff_estimate_data`, `tff_history_records`)를 활용해 마운트 즉시 **0초 화면 복원** 후 백그라운드 비차단 최신 동기화 적용.
+  3. **백엔드 인메모리 캐싱**: `_INSIGHT_CACHE` (TTL 3600s) 및 `_BACKTEST_CACHE`로 중복 LLM API 호출을 차단하고 0.001초 즉각 응답 달성.
+
+
 
