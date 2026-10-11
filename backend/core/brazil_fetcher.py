@@ -613,21 +613,21 @@ async def sync_brazil_series(days: int = 365 * 9) -> dict:
                     key=lambda r: r.date,
                 )
                 if len(y5_rows) >= 2:
-                # 최신 점에서 뒤로 걸으며 연속 블록의 시작 인덱스를 찾는다(gap>30일이면 경계).
-                block_start = 0
-                for i in range(len(y5_rows) - 1, 0, -1):
-                    gap = (date.fromisoformat(y5_rows[i].date) - date.fromisoformat(y5_rows[i - 1].date)).days
-                    if gap > 30:
-                        block_start = i
-                        break
-                orphans = y5_rows[:block_start]
-                for r in orphans:
-                    await db.delete(r)
-                if orphans:
-                    await db.commit()
-                result["y5_orphans_removed"] = len(orphans)
-                print(f"[brazil_fetcher] y5 orphan cleanup: removed {len(orphans)} isolated old points "
-                      f"(연속 블록 시작 {y5_rows[block_start].date})")
+                    # 최신 점에서 뒤로 걸으며 연속 블록의 시작 인덱스를 찾는다(gap>30일이면 경계).
+                    block_start = 0
+                    for i in range(len(y5_rows) - 1, 0, -1):
+                        gap = (date.fromisoformat(y5_rows[i].date) - date.fromisoformat(y5_rows[i - 1].date)).days
+                        if gap > 30:
+                            block_start = i
+                            break
+                    orphans = y5_rows[:block_start]
+                    for r in orphans:
+                        await db.delete(r)
+                    if orphans:
+                        await db.commit()
+                    result["y5_orphans_removed"] = len(orphans)
+                    print(f"[brazil_fetcher] y5 orphan cleanup: removed {len(orphans)} isolated old points "
+                          f"(연속 블록 시작 {y5_rows[block_start].date})")
     except Exception as e:
         print(f"[brazil_fetcher] y5 orphan cleanup failed: {e}")
 

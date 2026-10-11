@@ -22,6 +22,11 @@ async def test_rebalance_backtest_caching_lifecycle():
     """리밸런스 백테스트 캐시 1회차 연산 및 2회차 즉시 반환 라이프사이클 검증"""
     _REBALANCE_CACHE.clear()
 
+    # DB 테이블 무결성 보장
+    from db.database import engine, Base
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     # 1년치 일봉 데이터 모의 생성
     now_ts = pd.Timestamp.now()
     dates = pd.date_range(end=now_ts, periods=300, freq="B")
