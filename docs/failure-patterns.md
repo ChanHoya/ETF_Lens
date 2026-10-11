@@ -314,3 +314,14 @@
   1. `received = [t for t in coupon_times(T) if t <= H + 1e-9] if c > 0 else []`와 같이 표면이율 `c > 0`인 경우에만 이표 수령 목록을 생성하도록 엄격한 가드 적용.
   2. 세금/비과세 유지 비율(`tax_keep`) 등 공통 수치 변수는 최상위 연산 스코프에서 기본값(`1.0`)으로 명시적 초기화하여 분기별 누락 방어.
 
+### [FP-037] 공통 UI 컴포넌트 신규 도입 시 props 인터페이스 불일치로 인한 Cannot read properties of undefined (reading 'map') 런타임 크래시
+- **증상**: 대시보드 특정 메뉴(예: TFF 대시보드) 진입 시 `GlobalAppErrorBoundary`가 트리거되며 "화면 로딩 중 일시적인 오류가 발생했습니다. Cannot read properties of undefined (reading 'map')" 화면 표출.
+- **원인**:
+  1. 신규 구축된 공통 컴포넌트(`SlidingTabs.tsx`)의 props 시그니처(`items: TabItem[]`, `activeId: string`)와 호출 컴포넌트(`TffDashboard.tsx`, `MonthlyView.tsx`)에서 전달한 프로퍼티 명(`tabs`, `activeTab`)이 불일치함.
+  2. 컴포넌트 내부에서 `items.map(...)`을 호출할 때 `items`가 `undefined`로 평가되어 런타임 TypeError 발생.
+- **해결**:
+  1. **컴포넌트 방어적 설계 및 다중 별칭 지원**: `SlidingTabs.tsx` 내에서 `const tabList = items || tabs || [];`, `const currentActiveId = activeId || activeTab || "";` 형태로 유연하게 수용하고 빈 배열 Fallback 보장.
+  2. **호출부 명칭 표준화**: 개별 뷰 컴포넌트의 프로퍼티 명을 표준 규격인 `items`, `activeId`, `pillClassName`으로 동기화.
+  3. 모든 배열 순회 JSX 렌더링 전 `(arr || []).map(...)` 패턴을 엄격히 적용하여 `undefined.map` 크래시 원천 차단.
+
+

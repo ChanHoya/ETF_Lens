@@ -3,9 +3,21 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: Sprint 8 (S8-1~S8-4) transitions.dev 전역 모션 토큰 및 직관적 인터랙션 UI 고도화 완료 (PR #23 main 머지 완료)
-➡️ Next: 다음 스프린트 기능 기획 또는 세션 마무리 (learn)
+✅ Current: Sprint 8 (S8-1~S8-4) transitions.dev 전역 모션 토큰 및 직관적 인터랙션 UI 고도화 완료 + TFF 런타임 오류 핫픽스 (FP-037) 완료 (PR #23 머지 및 배포 안정화)
+➡️ Next: 다음 스프린트 기능 기획 또는 신규 개발 시작 (S9-1)
 ➡️ 다음 신규 스토리 ID는 **S9-1**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+
+> 세션 핸드오프 (2026-10-11, Antigravity):
+> - 🎨 Sprint 8 (S8-1 ~ S8-4) transitions.dev 기반 전역 모션 디자인 시스템 및 마이크로 인터랙션 구축 완료:
+>   - S8-1: `transitions.css` 전역 모션 토큰 체계(`--t-spring-smooth`, `--t-fade-enter`, `--t-blur-panel`) 구축 및 상단 메인 내비게이션 `SlidingTabs.tsx` 슬라이딩 인디케이터 적용.
+>   - S8-2: `/my` 개인종합자산 서브탭 슬라이딩, PIN 인증 모달 햅틱 셰이크/스무스 체크 모션, 자산 잔고 카운터 애니메이션(`NumberPopIn.tsx`) 탑재.
+>   - S8-3: `/tff` 서브탭 슬라이딩, 추정 배당 시뮬레이션 스무스 토글 스위치, 월별 비교 카드 텍스트 스왑(`t-text-swap`) 적용.
+>   - S8-4: AI Assistant/Insight 씽킹 카드(`t-shimmer-text`) 및 전체 모달 `t-modal-backdrop` & `t-modal-panel` 스케일/블러 진입 고도화.
+>   - PR #23 검토 및 `main` 브랜치 머지 완료.
+> - 🛠️ TFF 대시보드 런타임 오류 핫픽스 (FP-037):
+>   - `SlidingTabs.tsx`: props 별칭(`items`/`tabs`, `activeId`/`activeTab`, `pillClassName`/`activePillClassName`) 다중 지원 및 빈 배열 fallback(`(tabList || []).map(...)`) 방어 적용.
+>   - `TffDashboard.tsx`, `MonthlyView.tsx`: 표준 프로퍼티 명칭 동기화.
+>   - Next.js 11개 전 정적 페이지 정상 빌드 및 배포 무결성 검증 완료.
 
 > 세션 핸드오프 (2026-10-07, Antigravity):
 > - 🧭 반도체 4국면 사이클 시계(`SemiCycleDashboard.tsx`) 범례 박스 가림 현상 완치:
