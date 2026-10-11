@@ -15,6 +15,8 @@ import MonthlyView from './views/MonthlyView';
 import SlidingTabs from '../common/SlidingTabs';
 
 const LOCAL_STORAGE_KEY = 'tff_fund_data';
+const ESTIMATE_STORAGE_KEY = 'tff_estimate_data';
+const HISTORY_STORAGE_KEY = 'tff_history_records';
 
 interface Props {
     onOpenDetail?: (code: string) => void;
@@ -76,11 +78,12 @@ export default function TffDashboard({ onOpenDetail }: Props) {
         }
     }, [showPasscodeModal]);
 
-    // 중앙 서버 히스토리 관련 상태
+    // 중앙 서버 히스토리 관련 상태 및 백그라운드 동기화 상태
     const [historyRecords, setHistoryRecords] = useState<TffHistoryRecord[]>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [selectedCompareRecord, setSelectedCompareRecord] = useState<any | null>(null);
     const [isLatestLoading, setIsLatestLoading] = useState(false);
+    const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
 
     const formatMoney = (val: number) => new Intl.NumberFormat('ko-KR').format(Math.round(val));
 
@@ -133,30 +136,54 @@ export default function TffDashboard({ onOpenDetail }: Props) {
         sessionStorage.removeItem('tff_admin_key');
     };
 
-    // 최신 공유 데이터 로드
-    const fetchLatestData = async () => {
-        setIsLatestLoading(true);
+    // 최신 공유 데이터 로드 (SWR 방식: 기존 캐시가 있으면 백그라운드 동기화, 없으면 블로킹 로딩)
+    const fetchLatestData = async (isBackground = false) => {
+        if (!isBackground) {
+            setIsLatestLoading(true);
+        } else {
+            setIsBackgroundSyncing(true);
+        }
         try {
             const res = await fetch(`${API_BASE}/api/v1/analyze/tff/latest`);
             const result = await res.json();
             if (result.status === 'ok') {
-                setFundData({ ...result.fund_data, id: result.id });
+                const newFundData = { ...result.fund_data, id: result.id };
+                setFundData(newFundData);
                 setRawLog(result.raw_sheets);
                 if (result.fund_data && result.fund_data.latestMonth) {
                     setSelectedMonth(result.fund_data.latestMonth);
                 }
+                // 브라우저 로컬 캐시 즉시 저장
+                try {
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+                        id: result.id,
+                        fund_data: result.fund_data,
+                        raw_sheets: result.raw_sheets,
+                        cachedAt: new Date().toISOString()
+                    }));
+                } catch (e) {
+                    console.warn('[TFF] 로컬 캐시 저장 오류', e);
+                }
             } else {
-                setFundData(null);
-                setRawLog(null);
+                // 서버에 데이터가 아예 없는 경우에만 캐시 비움
+                if (result.message?.includes('데이터가 없습니다') || result.status === 'empty') {
+                    setFundData(null);
+                    setRawLog(null);
+                    try {
+                        localStorage.removeItem(LOCAL_STORAGE_KEY);
+                        localStorage.removeItem(ESTIMATE_STORAGE_KEY);
+                    } catch (_) {}
+                }
             }
         } catch (err) {
             console.error("최신 TFF 데이터 로드 오류", err);
         } finally {
             setIsLatestLoading(false);
+            setIsBackgroundSyncing(false);
         }
     };
 
-    // 히스토리 목록 불러오기 (서버)
+    // 히스토리 목록 불러오기 (서버 + 로컬 캐시)
     const loadHistory = async () => {
         try {
             const res = await fetch(`${API_BASE}/api/v1/analyze/tff/records`);
@@ -168,6 +195,9 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                     parsedAt: r.uploaded_at ? r.uploaded_at.replace('T', ' ').substring(0, 16) : 'N/A'
                 }));
                 setHistoryRecords(mapped);
+                try {
+                    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(mapped));
+                } catch (_) {}
                 return mapped;
             }
             return [];
@@ -193,17 +223,53 @@ export default function TffDashboard({ onOpenDetail }: Props) {
         }
     };
 
-    // 최초 로딩 시 인증 복원 및 최신 데이터 패치
+    // 최초 로딩 시: 1) 로컬 캐시 즉시 복원(0초 로딩) -> 2) 인증 복원 -> 3) 백그라운드 최신 동기화
     useEffect(() => {
+        let hasCachedData = false;
+        try {
+            const cachedFund = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (cachedFund) {
+                const parsed = JSON.parse(cachedFund);
+                if (parsed && parsed.fund_data) {
+                    setFundData({ ...parsed.fund_data, id: parsed.id });
+                    if (parsed.raw_sheets) setRawLog(parsed.raw_sheets);
+                    if (parsed.fund_data.latestMonth) {
+                        setSelectedMonth(parsed.fund_data.latestMonth);
+                    }
+                    hasCachedData = true;
+                }
+            }
+
+            const cachedEst = localStorage.getItem(ESTIMATE_STORAGE_KEY);
+            if (cachedEst) {
+                const parsedEst = JSON.parse(cachedEst);
+                if (parsedEst && parsedEst.estimateRaw) {
+                    setEstimateRaw(parsedEst.estimateRaw);
+                }
+            }
+
+            const cachedHist = localStorage.getItem(HISTORY_STORAGE_KEY);
+            if (cachedHist) {
+                const parsedHist = JSON.parse(cachedHist);
+                if (Array.isArray(parsedHist) && parsedHist.length > 0) {
+                    setHistoryRecords(parsedHist);
+                }
+            }
+        } catch (e) {
+            console.warn('[TFF] 로컬 캐시 복원 오류:', e);
+        }
+
         const savedKey = sessionStorage.getItem('tff_admin_key');
         if (savedKey) {
             handleVerifyPasscode(savedKey);
         }
-        fetchLatestData();
+
+        // 캐시 데이터가 있으면 백그라운드 동기화(isBackground=true), 없으면 스켈레톤 로딩(isBackground=false)
+        fetchLatestData(hasCachedData);
         loadHistory();
     }, []);
 
-    // fundData 로드 후 백그라운드에서 현 시점 추정 데이터 패치
+    // fundData 로드 후 백그라운드에서 현 시점 추정 데이터 패치 (캐시 보존)
     useEffect(() => {
         if (!fundData) {
             setEstimateRaw(null);
@@ -211,12 +277,27 @@ export default function TffDashboard({ onOpenDetail }: Props) {
             return;
         }
         let cancelled = false;
-        setEstimateRaw(null);
-        setUseEstimate(false);
         setEstimateLoading(true);
         fetchTffEstimate(fundData)
-            .then(res => { if (!cancelled) setEstimateRaw(res); })
-            .finally(() => { if (!cancelled) setEstimateLoading(false); });
+            .then(res => {
+                if (!cancelled && res) {
+                    setEstimateRaw(res);
+                    try {
+                        localStorage.setItem(ESTIMATE_STORAGE_KEY, JSON.stringify({
+                            fundId: (fundData as any)?.id,
+                            latestMonth: fundData.latestMonth,
+                            estimateRaw: res,
+                            cachedAt: new Date().toISOString()
+                        }));
+                    } catch (_) {}
+                }
+            })
+            .catch(err => {
+                console.error('[tff estimate] 추정치 패치 오류', err);
+            })
+            .finally(() => {
+                if (!cancelled) setEstimateLoading(false);
+            });
         return () => { cancelled = true; };
     }, [(fundData as any)?.id, fundData?.latestMonth]);
 
@@ -303,10 +384,16 @@ export default function TffDashboard({ onOpenDetail }: Props) {
     };
 
     const handleClearData = () => {
-        if (confirm('대시보드 화면을 초기화하시겠습니까?\n(화면만 초기화되며 서버의 공유 데이터는 삭제되지 않습니다. 새로고침 시 다시 최신본을 로드합니다.)')) {
+        if (confirm('대시보드 화면을 초기화하시겠습니까?\n(화면 및 브라우저 캐시가 비워지며, 서버의 공유 데이터는 삭제되지 않습니다. 새로고침 시 다시 서버 최신본을 로드합니다.)')) {
             setFundData(null);
             setRawLog(null);
             setSelectedCompareRecord(null);
+            setEstimateRaw(null);
+            setUseEstimate(false);
+            try {
+                localStorage.removeItem(LOCAL_STORAGE_KEY);
+                localStorage.removeItem(ESTIMATE_STORAGE_KEY);
+            } catch (_) {}
         }
     };
 
@@ -340,18 +427,27 @@ export default function TffDashboard({ onOpenDetail }: Props) {
         }
     };
 
-    // 공유 히스토리에서 데이터 불러오기 (임시 뷰어 로드)
+    // 공유 히스토리에서 데이터 불러오기 (임시 뷰어 로드 및 로컬 캐시 갱신)
     const handleLoadHistoryItem = async (record: TffHistoryRecord) => {
         if (confirm(`'${record.fileName}' 버전을 화면에 불러오시겠습니까?`)) {
             const details = await getRecordDetails(record.id);
             if (details) {
-                setFundData({ ...details.fund_data, id: details.id });
+                const newFundData = { ...details.fund_data, id: details.id };
+                setFundData(newFundData);
                 setRawLog(details.raw_sheets);
                 if (details.fund_data && details.fund_data.latestMonth) {
                     setSelectedMonth(details.fund_data.latestMonth);
                 }
                 setSelectedCompareRecord(null);
                 setShowHistory(false);
+                try {
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+                        id: details.id,
+                        fund_data: details.fund_data,
+                        raw_sheets: details.raw_sheets,
+                        cachedAt: new Date().toISOString()
+                    }));
+                } catch (_) {}
             }
         }
     };
@@ -467,12 +563,17 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                 '26년 {fundData.latestMonth || "N/A"} 데이터 연동
                             </span>
                         )}
+                        {isBackgroundSyncing && (
+                            <span className="px-1.5 py-0.5 bg-sky-500/10 text-sky-400 rounded text-[10px] md:text-xs font-bold border border-sky-500/20 flex items-center gap-1 animate-pulse">
+                                <Loader2 className="w-3 h-3 animate-spin" /> 동기화 중...
+                            </span>
+                        )}
                         {!fundData && !isLatestLoading && (
                             <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[10px] md:text-xs font-bold border border-amber-500/20">
                                 공유 데이터 없음
                             </span>
                         )}
-                        {isLatestLoading && (
+                        {!fundData && isLatestLoading && (
                             <span className="px-1.5 py-0.5 bg-sky-500/10 text-sky-400 rounded text-[10px] md:text-xs font-bold border border-sky-500/20 flex items-center gap-1">
                                 <Loader2 className="w-3 h-3 animate-spin" /> 로딩 중...
                             </span>
@@ -616,8 +717,20 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                 {/* 1. 데이터가 없을 때 */}
                 {!fundData && (
                     <div className="flex-1 flex flex-col items-center justify-center py-10">
-                        {/* 1-1. 마스터 권한인 경우: 파일 업로드 드롭존 표시 */}
-                        {isAdmin ? (
+                        {isLatestLoading ? (
+                            /* 1-0. 초기 캐시 없을 때 서버 조회 중 스켈레톤/로딩 */
+                            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center max-w-md mx-auto animate-in fade-in duration-300">
+                                <div className="w-16 h-16 rounded-full bg-sky-950/40 border border-sky-500/30 flex items-center justify-center mb-6 shadow-xl relative">
+                                    <div className="absolute inset-0 rounded-full bg-sky-400/20 animate-ping" />
+                                    <Loader2 className="w-8 h-8 text-sky-400 animate-spin" />
+                                </div>
+                                <h3 className="text-xl font-bold text-white mb-2">공유 데이터 확인 중...</h3>
+                                <p className="text-gray-400 text-sm leading-relaxed">
+                                    중앙 서버에서 최신 TFF 펀드 현황 데이터를 불러오고 있습니다.
+                                </p>
+                            </div>
+                        ) : isAdmin ? (
+                            /* 1-1. 마스터 권한인 경우: 파일 업로드 드롭존 표시 */
                             <div 
                                 className={`w-full max-w-lg p-10 mt-4 mb-4 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all cursor-pointer bg-white/5 backdrop-blur-sm
                                 ${isDragging ? 'border-sky-400 bg-sky-900/20 scale-102 shadow-[0_0_40px_rgba(56,189,248,0.2)]' : 'border-gray-600 hover:border-gray-500 hover:bg-white/10'}
