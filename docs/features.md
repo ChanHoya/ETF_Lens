@@ -90,6 +90,7 @@
 | S7-4: Sprint 7 라이브 E2E 통합 테스트 및 실서버 배포 무결성 검증 | ✅ done | backend/tests/test_sprint7_e2e_integration.py | 백테스터/리밸런서/효율적투자선 초고속 캐싱 및 종합자산 KIS 양방향 매핑 E2E 무결성 검증 완료 |
 | S8-1: transitions.css 전역 모션 토큰 체계 구축 + 상단 메인 내비게이션 탭 슬라이딩 | ✅ done | dashboard/src/app/transitions.css, dashboard/src/components/common/SlidingTabs.tsx, dashboard/src/components/MainApp.tsx | transitions.dev 기반 GPU 가속 모션 토큰, 스프링 이징 곡선, SlidingTabs 글라이딩 인디케이터 및 메인/서브 내비게이션 탭 슬라이더 탑재 완료 |
 | S8-2: /my 종합자산(Hoya Board & KIS) 탭 슬라이딩, PIN 모달 셰이크/체크, 자산 숫자 팝인 카운터 적용 | ✅ done | dashboard/src/components/MyAssetsView.tsx, MyDashboard.tsx, MyAuthModal.tsx, TotalAssetBoard.tsx, InvestmentReturnCard.tsx, common/NumberPopIn.tsx | My 서브탭 및 섹션5 시뮬레이션 탭 SlidingTabs 연동, PIN 불일치 햅틱 셰이크 및 성공 팝인 모션, 자산/수익률 변동 시 NumberPopIn 마이크로 인터랙션 적용 완료 |
+| S8-3: /tff 펀드 대시보드 서브탭 슬라이딩, 추정 시뮬레이션 스무스 토글 스위치, 월별 비교 카드 텍스트 스왑 적용 | ✅ done | dashboard/src/components/tff/TffDashboard.tsx, dashboard/src/components/tff/views/MonthlyView.tsx | TFF 5대 서브탭 및 월별 분류 탭 SlidingTabs 글라이딩 적용, 추정 시뮬레이션 스프링 토글 스위치 비주얼, 버전 비교 메트릭 텍스트 스왑(t-text-swap) 및 월별 성과 NumberPopIn 적용 완료 |
 
 
 

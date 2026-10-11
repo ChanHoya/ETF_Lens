@@ -3,9 +3,9 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S8-2 (/my 종합자산 Hoya Board & KIS 탭 슬라이딩, PIN 모달 셰이크/체크, 자산 숫자 팝인 카운터 적용) 완료
-➡️ Next: S8-3 (/tff 펀드 대시보드 서브탭 슬라이딩, 추정 시뮬레이션 스무스 토글 스위치, 월별 비교 카드 텍스트 스왑 적용)
-➡️ 다음 신규 스토리 ID는 **S8-3**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+✅ Current: S8-3 (/tff 펀드 대시보드 서브탭 슬라이딩, 추정 시뮬레이션 스무스 토글 스위치, 월별 비교 카드 텍스트 스왑 적용) 완료
+➡️ Next: S8-4 (AI 어드바이저 씽킹 스테이트 및 전체 모달 스케일/블러 진입 고도화 + 통합 PR & push)
+➡️ 다음 신규 스토리 ID는 **S8-4**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-07, Antigravity):
 > - 🧭 반도체 4국면 사이클 시계(`SemiCycleDashboard.tsx`) 범례 박스 가림 현상 완치:

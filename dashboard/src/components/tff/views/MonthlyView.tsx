@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { TffMonthInfo } from '../../../lib/tff/types';
 import { Wallet, PieChart, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, DollarSign, Calendar, Compass, Layers, Percent, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import krTickers from '../../../lib/tff/kr-tickers.json';
+import SlidingTabs from '../../common/SlidingTabs';
+import { NumberPopIn } from '../../common/NumberPopIn';
 
 function findTickerCode(name: string): string | undefined {
     if (!name) return undefined;
@@ -372,15 +374,20 @@ export default function MonthlyView({ data, onOpenDetail, titleRightElement }: P
         <div className="bg-[#1a1a23]/40 p-4 rounded-2xl border border-white/5 relative overflow-hidden backdrop-blur-sm">
           <div className="absolute top-3 right-3 text-gray-600 opacity-20"><Layers className="w-8 h-8" /></div>
           <p className="text-xs text-gray-400 mb-1 font-bold">기초 평가금액</p>
-          <h4 className="text-xl font-black text-white">{formatMoney(totalBegin)} 원</h4>
+          <h4 className="text-xl font-black text-white flex items-baseline">
+            <NumberPopIn value={formatMoney(totalBegin)} />
+            <span className="text-xs font-normal text-gray-400 ml-1">원</span>
+          </h4>
           <p className="text-[10px] text-gray-500 mt-1">월초 자산 총량</p>
         </div>
 
         <div className="bg-[#1a1a23]/40 p-4 rounded-2xl border border-white/5 relative overflow-hidden backdrop-blur-sm">
           <div className="absolute top-3 right-3 text-sky-500 opacity-10"><DollarSign className="w-8 h-8" /></div>
           <p className="text-xs text-gray-400 mb-1 font-bold">당월 순매수 규모</p>
-          <h4 className="text-xl font-black text-sky-400">
-            {totalBuy - totalSell >= 0 ? '+' : ''}{formatMoney(totalBuy - totalSell)} 원
+          <h4 className="text-xl font-black text-sky-400 flex items-baseline">
+            <span>{totalBuy - totalSell >= 0 ? '+' : ''}</span>
+            <NumberPopIn value={formatMoney(totalBuy - totalSell)} />
+            <span className="text-xs font-normal text-gray-400 ml-1">원</span>
           </h4>
           <p className="text-[10px] text-gray-500 mt-1">매수 {formatMoney(totalBuy)} | 매도 {formatMoney(totalSell)}</p>
         </div>
@@ -388,7 +395,10 @@ export default function MonthlyView({ data, onOpenDetail, titleRightElement }: P
         <div className="bg-[#1a1a23]/40 p-4 rounded-2xl border border-white/5 relative overflow-hidden backdrop-blur-sm">
           <div className="absolute top-3 right-3 text-indigo-500 opacity-10"><Wallet className="w-8 h-8" /></div>
           <p className="text-xs text-gray-400 mb-1 font-bold">기말 평가금액</p>
-          <h4 className="text-xl font-black text-indigo-300">{formatMoney(totalEnd)} 원</h4>
+          <h4 className="text-xl font-black text-indigo-300 flex items-baseline">
+            <NumberPopIn value={formatMoney(totalEnd)} />
+            <span className="text-xs font-normal text-gray-400 ml-1">원</span>
+          </h4>
           <p className="text-[10px] text-gray-500 mt-1">월말 자산 총량</p>
         </div>
 
@@ -400,13 +410,16 @@ export default function MonthlyView({ data, onOpenDetail, titleRightElement }: P
           <div className="absolute top-3 right-3 text-emerald-500 opacity-10"><Percent className="w-8 h-8" /></div>
           <p className="text-xs text-gray-400 mb-1 font-bold">당월 투자 성과</p>
           <div className="flex items-baseline gap-2">
-            <h4 className={`text-2xl font-black ${totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {totalPnl >= 0 ? '+' : ''}{formatMoney(totalPnl)} 원
+            <h4 className={`text-2xl font-black flex items-baseline ${totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              <span>{totalPnl >= 0 ? '+' : ''}</span>
+              <NumberPopIn value={formatMoney(totalPnl)} />
+              <span className="text-xs font-normal text-gray-400 ml-1">원</span>
             </h4>
-            <span className={`text-xs font-black px-1.5 py-0.5 rounded ${
+            <span className={`text-xs font-black px-1.5 py-0.5 rounded flex items-center ${
               totalPnl >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
             }`}>
-              {totalPnl >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
+              <span>{totalPnl >= 0 ? '+' : ''}</span>
+              <NumberPopIn value={`${returnPct.toFixed(2)}%`} />
             </span>
           </div>
           <p className="text-[10px] text-gray-500 mt-1">당월 자산 투입 대비 손익</p>
@@ -414,22 +427,16 @@ export default function MonthlyView({ data, onOpenDetail, titleRightElement }: P
       </div>
 
       {/* Class Filters */}
-      <div className="flex items-center justify-between flex-wrap gap-3 bg-[#1a1a23]/30 p-3 rounded-2xl border border-white/5 backdrop-blur-sm">
-        <span className="text-xs font-bold text-gray-400 pl-1">보유 자산 분류</span>
-        <div className="flex items-center flex-wrap gap-1.5">
-          {FILTER_TYPES.map(filter => (
-            <button
-              key={filter.value}
-              onClick={() => setSelectedType(filter.value)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                selectedType === filter.value 
-                  ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md shadow-indigo-500/10' 
-                  : 'bg-[#1a1a23]/60 text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-white/5'
-              }`}
-            >
-              {filter.label}
-            </button>
-          ))}
+      <div className="flex items-center justify-between flex-wrap gap-3 bg-[#1a1a23]/30 p-2.5 rounded-2xl border border-white/5 backdrop-blur-sm">
+        <span className="text-xs font-bold text-gray-400 pl-1 shrink-0">보유 자산 분류</span>
+        <div className="overflow-x-auto custom-scrollbar">
+          <SlidingTabs
+            tabs={FILTER_TYPES.map(filter => ({ id: filter.value, label: filter.label }))}
+            activeTab={selectedType}
+            onChange={(val) => setSelectedType(val)}
+            activePillClassName="bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md shadow-indigo-500/20"
+            inactiveTabClassName="text-gray-400 hover:text-gray-200"
+          />
         </div>
       </div>
 
