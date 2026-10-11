@@ -3,9 +3,9 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 반도체 4국면 사이클 시계 궤적 경로 범례/정보 박스 마우스 드래그 이동 및 궤적 밖 도킹 기능 추가 완료
-➡️ Next: S8-1 (신규 스프린트 8 착수 준비 또는 추가 기능 기획)
-➡️ 다음 신규 스토리 ID는 **S8-1**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+✅ Current: S8-1 transitions.css 전역 모션 토큰 체계 구축 + 상단 메인 내비게이션 탭 슬라이딩 완료
+➡️ Next: S8-2 (/my 종합자산 Hoya Board & KIS 탭 슬라이딩, PIN 모달 셰이크/체크, 자산 숫자 팝인 카운터 적용)
+➡️ 다음 신규 스토리 ID는 **S8-2**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-07, Antigravity):
 > - 🧭 반도체 4국면 사이클 시계(`SemiCycleDashboard.tsx`) 범례 박스 가림 현상 완치:

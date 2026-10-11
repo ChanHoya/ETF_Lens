@@ -1,0 +1,258 @@
+/* ==========================================================================
+   transitions.dev inspired Design Motion System for i-Prism
+   Tokens, Springs, Transforms & Accessible Micro-interactions
+   ========================================================================== */
+
+:root {
+  /* Motion Tokens — Springs & Cubic Beziers */
+  --t-ease-spring: cubic-bezier(0.22, 1, 0.36, 1);       /* P2, P3, P4, P7, P8 main spring */
+  --t-ease-bounce: cubic-bezier(0.34, 1.45, 0.64, 1);   /* P1, P9, P10 bouncy pop */
+  --t-ease-snappy: cubic-bezier(0.16, 1, 0.3, 1);       /* Quick response */
+  --t-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);        /* Standard deceleration */
+
+  /* Durations */
+  --t-dur-fast: 150ms;
+  --t-dur-normal: 250ms;
+  --t-dur-medium: 350ms;
+  --t-dur-slow: 500ms;
+
+  /* Material Depth & Shadows */
+  --t-glass-border: rgba(255, 255, 255, 0.08);
+  --t-glass-bg: rgba(255, 255, 255, 0.04);
+  --t-card-glow: 0 4px 24px -1px rgba(99, 102, 241, 0.12);
+}
+
+/* Touch manipulation: iOS / Mobile double-tap zoom suppression */
+button,
+a,
+label,
+summary,
+input,
+select,
+[role="button"],
+[role="tab"] {
+  touch-action: manipulation;
+}
+
+/* ==========================================================================
+   1. Sliding Tabs (Pill Indicator)
+   ========================================================================== */
+.t-tabs-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  user-select: none;
+}
+
+.t-tabs-pill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  transition: transform var(--t-dur-normal) var(--t-ease-spring),
+              width var(--t-dur-normal) var(--t-ease-spring),
+              opacity var(--t-dur-fast) ease-out;
+  will-change: transform, width;
+}
+
+/* ==========================================================================
+   2. Number Pop-in / Spinning Counter Transition
+   ========================================================================== */
+@keyframes t-number-pop-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.95);
+    filter: blur(2px);
+  }
+  60% {
+    opacity: 0.8;
+    transform: translateY(-1px) scale(1.02);
+    filter: blur(0.5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.t-number-pop {
+  display: inline-block;
+  animation: t-number-pop-in var(--t-dur-medium) var(--t-ease-bounce) forwards;
+  will-change: transform, opacity, filter;
+}
+
+/* ==========================================================================
+   3. Modal & Panel Transitions (Origin-aware Scale & Backdrop Blur)
+   ========================================================================== */
+@keyframes t-modal-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes t-backdrop-enter {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+}
+
+.t-modal-backdrop {
+  animation: t-backdrop-enter var(--t-dur-normal) var(--t-ease-spring) forwards;
+}
+
+.t-modal-panel {
+  animation: t-modal-enter var(--t-dur-normal) var(--t-ease-spring) forwards;
+  will-change: transform, opacity, filter;
+}
+
+/* ==========================================================================
+   4. Error State Shake & Success Check Morph
+   ========================================================================== */
+@keyframes t-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+}
+
+.t-shake {
+  animation: t-shake 320ms var(--t-ease-spring) forwards;
+}
+
+@keyframes t-check-pop {
+  0% {
+    transform: scale(0.5) rotate(-15deg);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.15) rotate(2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+.t-check-pop {
+  animation: t-check-pop var(--t-dur-medium) var(--t-ease-bounce) forwards;
+}
+
+/* ==========================================================================
+   5. Shimmer & Thinking States (AI Advisor & Live Status)
+   ========================================================================== */
+@keyframes t-shimmer-flow {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.t-shimmer-text {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(255, 255, 255, 0.4) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: t-shimmer-flow 2.4s infinite linear;
+}
+
+html.light .t-shimmer-text {
+  background: linear-gradient(
+    90deg,
+    rgba(79, 70, 229, 0.4) 0%,
+    rgba(79, 70, 229, 1) 50%,
+    rgba(79, 70, 229, 0.4) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: t-shimmer-flow 2.4s infinite linear;
+}
+
+/* Pulse Beacon */
+@keyframes t-pulse-beacon {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.35;
+  }
+}
+
+.t-pulse-beacon {
+  animation: t-pulse-beacon 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ==========================================================================
+   6. 3D Tilt Card (Micro-interaction on Hover)
+   ========================================================================== */
+.t-card-tilt {
+  transition: transform var(--t-dur-normal) var(--t-ease-spring),
+              box-shadow var(--t-dur-normal) var(--t-ease-spring),
+              border-color var(--t-dur-fast) ease;
+  will-change: transform, box-shadow;
+}
+
+.t-card-tilt:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+}
+
+/* ==========================================================================
+   7. Page & View Transitions (Side-by-side Crossfade)
+   ========================================================================== */
+@keyframes t-fade-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.t-fade-slide-in {
+  animation: t-fade-slide-in var(--t-dur-normal) var(--t-ease-spring) forwards;
+}
+
+/* ==========================================================================
+   8. Reduced Motion Accessibility Guard (WCAG 2.2)
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .t-tabs-pill {
+    transition: none !important;
+  }
+}

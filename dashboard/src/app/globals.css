@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./theme-light.css"; /* 라이트 모드 팔레트(html.light) */
+@import "./transitions.css"; /* transitions.dev 모션 토큰 및 마이크로 인터랙션 */
 
 html {
   font-size: 17.5px; /* 기본 16px(12pt) 대비 +1.5px(+1.1pt) 전체 스케일업 (가독성 향상) */
