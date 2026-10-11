@@ -3,8 +3,8 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: S8-4 (AI 어드바이저 씽킹 스테이트 및 전체 모달 스케일/블러 진입 고도화) 완료 [Sprint 8 전 단계 S8-1~S8-4 완수]
-➡️ Next: feature/sprint-8-transitions-ui 원격 푸시 및 통합 PR 완료
+✅ Current: Sprint 8 (S8-1~S8-4) transitions.dev 전역 모션 토큰 및 직관적 인터랙션 UI 고도화 완료 (PR #23 main 머지 완료)
+➡️ Next: 다음 스프린트 기능 기획 또는 세션 마무리 (learn)
 ➡️ 다음 신규 스토리 ID는 **S9-1**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
 
 > 세션 핸드오프 (2026-10-07, Antigravity):
