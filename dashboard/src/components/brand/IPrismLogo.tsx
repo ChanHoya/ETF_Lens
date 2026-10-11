@@ -113,17 +113,17 @@ const PRISM_STOPS: [number, string][] = [[0.1128, '#ff5a5f'], [0.3027, '#ff9f1c'
 
 const safeId = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, '');
 
-/** 역삼각형 프리즘 i + 부채꼴 스펙트럼 + 그라데이션 PRISM. i 줄기·프리즘 윤곽은 currentColor를 따른다. */
+/** 역삼각형 프리즘 i + 부채꼴 스펙트럼 + 모던 테크 산세리프 PRISM. i 줄기·프리즘 윤곽은 currentColor를 따른다. */
 export function IPrismLogo({ className, title = 'i-Prism' }: { className?: string; title?: string }) {
     const id = safeId(useId());
     return (
-        <svg viewBox="0 37.8 423.64 86.2" className={className} role="img" aria-label={title}>
+        <svg viewBox="0 37.8 355 86.2" className={className} role="img" aria-label={title}>
             <defs>
                 <linearGradient id={`${id}-beam`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="20.4" y2="0">
                     <stop offset="0" stopColor="currentColor" stopOpacity="0" />
                     <stop offset="1" stopColor="currentColor" />
                 </linearGradient>
-                <linearGradient id={`${id}-text`} gradientUnits="userSpaceOnUse" x1="108" y1="0" x2="419.64" y2="0">
+                <linearGradient id={`${id}-text`} gradientUnits="userSpaceOnUse" x1="110" y1="0" x2="345" y2="0">
                     {PRISM_STOPS.map(([o, c]) => <stop key={o} offset={o} stopColor={c} />)}
                 </linearGradient>
             </defs>
@@ -131,7 +131,21 @@ export function IPrismLogo({ className, title = 'i-Prism' }: { className?: strin
             <g>{LOGO_FAN.map(([d, c], i) => <path key={i} d={d} fill={c} />)}</g>
             <path d="M14 50 L46 50 L30 78 Z" fill="currentColor" fillOpacity={0.12} stroke="currentColor" strokeWidth={3.2} strokeLinejoin="round" />
             <rect x="24" y="86" width="12" height="34" rx="4" fill="currentColor" />
-            <g fill={`url(#${id}-text)`}>{PRISM_GLYPHS.map((d, i) => <path key={i} d={d} />)}</g>
+            <text
+                x="110"
+                y="119"
+                fontFamily="'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                fontSize="84"
+                fontWeight="800"
+                letterSpacing="-0.035em"
+                fill={`url(#${id}-text)`}
+                style={{
+                    fontFeatureSettings: '"cv02", "cv03", "cv04", "cv11"',
+                    userSelect: 'none'
+                }}
+            >
+                Prism
+            </text>
         </svg>
     );
 }

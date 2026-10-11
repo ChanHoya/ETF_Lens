@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Inter:wght@700;800&display=swap');
 @import "tailwindcss";
 @import "./theme-light.css"; /* 라이트 모드 팔레트(html.light) */
 @import "./transitions.css"; /* transitions.dev 모션 토큰 및 마이크로 인터랙션 */
