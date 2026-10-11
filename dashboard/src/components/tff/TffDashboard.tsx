@@ -47,7 +47,27 @@ export default function TffDashboard({ onOpenDetail }: Props) {
     const [showPasscodeModal, setShowPasscodeModal] = useState(false);
     const [passcodeInput, setPasscodeInput] = useState('');
     const [passcodeError, setPasscodeError] = useState('');
+    const [isVerifying, setIsVerifying] = useState(false);
     const passcodeInputRef = useRef<HTMLInputElement>(null);
+
+    // Render 무료 티어 절전 모드 해제를 위한 사전 백엔드 웜업 핑
+    const triggerBackendWarmup = () => {
+        try {
+            fetch(`${API_BASE}/health`, { method: 'HEAD', mode: 'no-cors' }).catch(() => {});
+        } catch (_) {}
+    };
+
+    const openPasscodeModal = () => {
+        setPasscodeInput('');
+        setPasscodeError('');
+        setIsVerifying(false);
+        setShowPasscodeModal(true);
+        triggerBackendWarmup();
+    };
+
+    useEffect(() => {
+        triggerBackendWarmup();
+    }, []);
 
     useEffect(() => {
         if (showPasscodeModal) {
@@ -70,25 +90,39 @@ export default function TffDashboard({ onOpenDetail }: Props) {
             setPasscodeError('비밀번호를 입력하세요.');
             return;
         }
+        if (isVerifying) return;
+        setIsVerifying(true);
+        setPasscodeError('');
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 45000); // 45초 타임아웃
             const res = await fetch(`${API_BASE}/api/v1/analyze/tff/verify-token`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ admin_key: passcode })
+                body: JSON.stringify({ admin_key: passcode.trim() }),
+                signal: controller.signal,
             });
+            clearTimeout(timeoutId);
             const result = await res.json();
             if (result.status === 'ok') {
-                setAdminKey(passcode);
+                setAdminKey(passcode.trim());
                 setIsAdmin(true);
                 setShowPasscodeModal(false);
-                sessionStorage.setItem('tff_admin_key', passcode);
+                sessionStorage.setItem('tff_admin_key', passcode.trim());
                 setPasscodeError('');
+                setPasscodeInput('');
             } else {
                 setPasscodeError(result.message || '비밀번호가 일치하지 않습니다.');
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            setPasscodeError('인증 요청 중 오류가 발생했습니다.');
+            if (err?.name === 'AbortError') {
+                setPasscodeError('서버 응답 대기 시간이 초과되었습니다. 다시 시도해주세요.');
+            } else {
+                setPasscodeError('서버 연결 중 오류가 발생했습니다. (잠시 후 다시 시도해주세요)');
+            }
+        } finally {
+            setIsVerifying(false);
         }
     };
 
@@ -464,11 +498,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                         </div>
                     ) : (
                         <button
-                            onClick={() => {
-                                setPasscodeInput('');
-                                setPasscodeError('');
-                                setShowPasscodeModal(true);
-                            }}
+                            onClick={openPasscodeModal}
                             className="flex flex-row items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors border border-white/5 backdrop-blur-md shadow-sm"
                             title="마스터 패스코드 인증"
                         >
@@ -629,11 +659,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                     마스터 관리자가 첫 번째 엑셀 파일을 업로드하면 이곳에서 전체 투자참여자가 실시간으로 조회가 가능합니다.
                                 </p>
                                 <button
-                                    onClick={() => {
-                                        setPasscodeInput('');
-                                        setPasscodeError('');
-                                        setShowPasscodeModal(true);
-                                    }}
+                                    onClick={openPasscodeModal}
                                     className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-sm rounded-xl transition-all shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center gap-2"
                                 >
                                     <Key className="w-4 h-4 text-amber-400" /> 마스터 권한으로 로그인
@@ -940,15 +966,16 @@ export default function TffDashboard({ onOpenDetail }: Props) {
 
             {/* 마스터 비밀번호 입력 모달 */}
             {showPasscodeModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="w-full max-w-sm bg-slate-950 border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative p-6 space-y-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm t-modal-backdrop">
+                    <div className="w-full max-w-sm bg-slate-950 border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative p-6 space-y-4 t-modal-panel">
                         <div className="flex items-center justify-between">
                             <h3 className="text-lg font-bold text-white flex items-center gap-2">
                                 <Key className="w-4 h-4 text-amber-400" /> 마스터 로그인
                             </h3>
                             <button
-                                onClick={() => setShowPasscodeModal(false)}
-                                className="p-1 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                                onClick={() => !isVerifying && setShowPasscodeModal(false)}
+                                disabled={isVerifying}
+                                className="p-1 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors disabled:opacity-40"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -964,30 +991,50 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                 type="password"
                                 placeholder="마스터 패스코드 입력"
                                 value={passcodeInput}
+                                disabled={isVerifying}
                                 onChange={(e) => setPasscodeInput(e.target.value)}
                                 onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleVerifyPasscode(passcodeInput);
+                                    if (e.key === 'Enter' && !isVerifying) handleVerifyPasscode(passcodeInput);
                                 }}
-                                className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500 transition-colors"
+                                className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500 transition-colors disabled:opacity-60"
                                 autoFocus
                             />
                             {passcodeError && (
                                 <p className="text-xs font-semibold text-red-400 px-1">{passcodeError}</p>
+                            )}
+                            {isVerifying && (
+                                <div className="flex items-center gap-2 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-xs animate-pulse">
+                                    <Loader2 className="w-4 h-4 animate-spin shrink-0 text-amber-400" />
+                                    <span>마스터 권한 확인 및 서버 연결 중... (절전 모드 해제 시 최대 20~30초 소요될 수 있습니다)</span>
+                                </div>
                             )}
                         </div>
 
                         <div className="flex gap-2 pt-2">
                             <button
                                 onClick={() => setShowPasscodeModal(false)}
-                                className="flex-1 py-2.5 border border-white/10 text-gray-400 hover:text-white rounded-xl text-xs font-bold transition-all hover:bg-white/5"
+                                disabled={isVerifying}
+                                className="flex-1 py-2.5 border border-white/10 text-gray-400 hover:text-white rounded-xl text-xs font-bold transition-all hover:bg-white/5 disabled:opacity-40"
                             >
                                 취소
                             </button>
                             <button
                                 onClick={() => handleVerifyPasscode(passcodeInput)}
-                                className="flex-1 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                                disabled={isVerifying}
+                                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                                    isVerifying
+                                        ? "bg-amber-600/40 text-amber-200/60 cursor-not-allowed border border-amber-500/20"
+                                        : "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                                }`}
                             >
-                                확인
+                                {isVerifying ? (
+                                    <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        <span>인증 확인 중...</span>
+                                    </>
+                                ) : (
+                                    "확인"
+                                )}
                             </button>
                         </div>
                     </div>
