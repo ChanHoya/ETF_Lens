@@ -93,6 +93,7 @@
 | S8-3: /tff 펀드 대시보드 서브탭 슬라이딩, 추정 시뮬레이션 스무스 토글 스위치, 월별 비교 카드 텍스트 스왑 적용 | ✅ done | dashboard/src/components/tff/TffDashboard.tsx, dashboard/src/components/tff/views/MonthlyView.tsx | TFF 5대 서브탭 및 월별 분류 탭 SlidingTabs 글라이딩 적용, 추정 시뮬레이션 스프링 토글 스위치 비주얼, 버전 비교 메트릭 텍스트 스왑(t-text-swap) 및 월별 성과 NumberPopIn 적용 완료 |
 | S8-4: AI 어드바이저 씽킹 스테이트 및 전체 모달 스케일/블러 진입 고도화 | ✅ done | dashboard/src/components/ChatBot.tsx, AIInsight.tsx, Modals.tsx, AccountDetailModal.tsx, KisAccountMappingModal.tsx, ManualAssetModal.tsx, ManualCashModal.tsx | AI Assistant/Insight 씽킹 카드(t-shimmer-text, 펄싱 아바타) 적용 및 전체 팝업/모달(관심종목, 상세, 계좌매핑, 수동자산, 마켓) 스프링 스케일(t-modal-panel) & 블러 백드롭(t-modal-backdrop) 전역 적용 완료 |
 | S9-1: 포트폴리오 백테스터 탭 캐싱 및 로딩 속도 최적화 | ✅ done | backend/api/backtest.py, MyDashboard.tsx, PortfolioBacktester.tsx, AIRebalanceSimulator.tsx, MultiAssetBacktester.tsx, EfficientFrontierPanel.tsx | 프론트엔드 SWR/sessionStorage 캐싱, 섹션5 시뮬레이션 6대 서브탭 Keep-Alive 언마운트 방지, 백엔드 AI Insight 인메모리 캐싱(TTL 3600s) 및 수동 새로고침 버튼 탑재 완료 |
+| S9-2: TFF 펀드 대시보드 브라우저 SWR 캐싱 & 0초 로딩 | ✅ done | dashboard/src/components/tff/TffDashboard.tsx | localStorage 3대 키 기반 마운트 즉시 0ms 복원, SWR 백그라운드 최신본 동기화, 초기 스켈레톤 로딩 UX 및 추정 시뮬레이션 캐시 보존 완료 |
 
 
 
