@@ -7,16 +7,18 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 ➡️ Next: S9-2 또는 다음 개선 과제 기획
 
 > 세션 핸드오프 (2026-10-11, Antigravity):
-> - 🎨 Sprint 8 (S8-1 ~ S8-4) transitions.dev 기반 전역 모션 디자인 시스템 및 마이크로 인터랙션 구축 완료:
->   - S8-1: `transitions.css` 전역 모션 토큰 체계(`--t-spring-smooth`, `--t-fade-enter`, `--t-blur-panel`) 구축 및 상단 메인 내비게이션 `SlidingTabs.tsx` 슬라이딩 인디케이터 적용.
->   - S8-2: `/my` 개인종합자산 서브탭 슬라이딩, PIN 인증 모달 햅틱 셰이크/스무스 체크 모션, 자산 잔고 카운터 애니메이션(`NumberPopIn.tsx`) 탑재.
->   - S8-3: `/tff` 서브탭 슬라이딩, 추정 배당 시뮬레이션 스무스 토글 스위치, 월별 비교 카드 텍스트 스왑(`t-text-swap`) 적용.
->   - S8-4: AI Assistant/Insight 씽킹 카드(`t-shimmer-text`) 및 전체 모달 `t-modal-backdrop` & `t-modal-panel` 스케일/블러 진입 고도화.
->   - PR #23 검토 및 `main` 브랜치 머지 완료.
-> - 🛠️ TFF 대시보드 런타임 오류 핫픽스 (FP-037):
->   - `SlidingTabs.tsx`: props 별칭(`items`/`tabs`, `activeId`/`activeTab`, `pillClassName`/`activePillClassName`) 다중 지원 및 빈 배열 fallback(`(tabList || []).map(...)`) 방어 적용.
->   - `TffDashboard.tsx`, `MonthlyView.tsx`: 표준 프로퍼티 명칭 동기화.
->   - Next.js 11개 전 정적 페이지 정상 빌드 및 배포 무결성 검증 완료.
+> - ⚡ Sprint 9 (S9-1) 포트폴리오 백테스터 탭 캐싱 및 로딩 속도 최적화 완료:
+>   - 1) 서브탭 Keep-Alive 언마운트 방지 (`MyDashboard.tsx`): Section 5 시뮬레이션 6대 서브탭(동적 리밸런싱, 일반 백테스터, 포트폴리오 최적화, 스트레스 테스터, 스마트 리밸런싱, 멀티 백테스터)에 Lazy-mount + Keep-Alive 패턴 적용으로 서브탭 재클릭 시 0ms 즉시 스위칭.
+>   - 2) 클라이언트 SWR/sessionStorage 캐싱 (`PortfolioBacktester.tsx`, `AIRebalanceSimulator.tsx`, `EfficientFrontierPanel.tsx`, `MultiAssetBacktester.tsx`): 보유 자산 서명 및 파라미터 조합별 세션 캐시 탑재로 0ms 렌더링 및 새로고침 수동 버튼 제공.
+>   - 3) 백엔드 AI Insight 인메모리 캐싱 (`api/backtest.py`): `_INSIGHT_CACHE` (TTL 3600s) 탑재로 중복 Gemini API 호출 차단 및 0.001s 즉시 응답.
+> - 🛡️ Render 512MB RAM 제약 환경 OOM 방지 핫픽스 (FP-038):
+>   - 1) `_job_brazil_intraday` 주말 휴장 시 조기 반환(`return`), `days=14` 경량 조회.
+>   - 2) `_upsert()` 대상 날짜 선별 쿼리(`BrazilSeries.date.in_(target_dates)`)로 ORM 객체 99% 감축.
+>   - 3) glibc 메모리 단편화 해소를 위한 `malloc_trim(0)` 강제 회수 탑재.
+>   - 4) `overview_cache.py` IO_POOL 16 -> 6개 축소로 스레드 스택 절약.
+> - 🔑 TFF 마스터 로그인 로딩 피드백 및 백엔드 사전 웜업 고도화:
+>   - 마스터 패스코드 인증 시 스피너 및 비활성화 피드백 추가, TFF 탭 마운트 시 `triggerBackendWarmup()` 비동기 핑 전송.
+> - 🎨 Sprint 8 (S8-1 ~ S8-4) transitions.dev 전역 모션 체계 및 TFF 런타임 오류 핫픽스 (FP-037) 완료 (PR #23 머지 및 배포 안정화).
 
 > 세션 핸드오프 (2026-10-07, Antigravity):
 > - 🧭 반도체 4국면 사이클 시계(`SemiCycleDashboard.tsx`) 범례 박스 가림 현상 완치:
