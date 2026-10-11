@@ -667,18 +667,30 @@ def setup_scheduler():
         gc.collect()
 
     async def _job_brazil_intraday():
-        """실시간 수집 및 COPOM Selic 변경·신호 전환·초록불 감지 주기 모니터링 (15분 간격)."""
+        """실시간 수집 및 COPOM Selic 변경·신호 전환·초록불 감지 주기 모니터링 (15분 간격). 주말 휴장 시 스킵 및 경량화(days=14)."""
+        from datetime import datetime, timezone, timedelta
+        kst_now = datetime.now(timezone(timedelta(hours=9)))
+        if kst_now.weekday() >= 5:  # 주말(토/일)은 금융 시장 휴장이므로 불필요한 OOM 방지 위해 스킵
+            return
+
         from core.brazil_fetcher import sync_brazil_series
         from api.brazil_bond import (
             check_brazil_signal_and_alert,
             check_brazil_all_green_and_alert,
         )
         try:
-            await sync_brazil_series()
+            await sync_brazil_series(days=14)
             await check_brazil_signal_and_alert()
             await check_brazil_all_green_and_alert()
         except Exception as e:
             print(f"[scheduler] _job_brazil_intraday failed: {e}")
+        finally:
+            gc.collect()
+            try:
+                import ctypes
+                ctypes.CDLL("libc.so.6").malloc_trim(0)
+            except Exception:
+                pass
 
     async def _job_asset_snapshot():
         """장 마감(15:30) 후 KIS 포트폴리오를 조회하여 일일 자산 추이(UserAssetSnapshot)를 DB에 자동 영속화."""

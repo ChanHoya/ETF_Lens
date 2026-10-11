@@ -322,6 +322,18 @@
 - **해결**:
   1. **컴포넌트 방어적 설계 및 다중 별칭 지원**: `SlidingTabs.tsx` 내에서 `const tabList = items || tabs || [];`, `const currentActiveId = activeId || activeTab || "";` 형태로 유연하게 수용하고 빈 배열 Fallback 보장.
   2. **호출부 명칭 표준화**: 개별 뷰 컴포넌트의 프로퍼티 명을 표준 규격인 `items`, `activeId`, `pillClassName`으로 동기화.
-  3. 모든 배열 순회 JSX 렌더링 전 `(arr || []).map(...)` 패턴을 엄격히 적용하여 `undefined.map` 크래시 원천 차단.
+### [FP-038] Render 512MB RAM 제약 환경에서의 Intraday 과다 쿼리 및 glibc 메모리 단편화로 인한 OOM 인스턴스 자동 재시작
+- **증상**: 웹 서비스 ETF_Lens가 메모리 제한(512MB)을 초과하여 Render 인스턴스가 자동으로 SIGKILL 재시작됨.
+- **원인**:
+  1. 15분마다 동작하는 `_job_brazil_intraday`가 금융시장 휴장일인 주말(토/일)에도 계속 실행되며, 브라질 중앙은행(BCB SGS) API 7개 시리즈에 대해 매번 9년치(3,285일) 데이터를 요청함.
+  2. `_upsert()`에서 `select(BrazilSeries)` 전체 수천 건을 ORM 객체로 메모리에 로드하여 총 2만 개 이상의 ORM 객체가 주기적으로 생성됨.
+  3. Python 표준 메모리 할당자(pymalloc) 및 Linux glibc의 특성상 대량 객체 해제 후에도 OS로 실제 페이지가 즉시 반환되지 않는 메모리 단편화(fragmentation) 발생.
+  4. 기본 RSS가 약 267MB인 상태에서 백테스터/리밸런싱 등의 연산이나 `google-genai` 라이브러리가 로드되는 순간 512MB 임계치를 돌파하여 OOM 재시작 유발.
+- **해결**:
+  1. **주말 조기 반환**: `_job_brazil_intraday` 실행 시 주말(토/일)은 즉시 스킵(`return`).
+  2. **조회 윈도우 축소**: 인트라데이 작업은 `days=14` 파라미터로 최근 2주치 데이터만 타겟팅하고, FRED 월간 지표 및 y5 proxy 정리는 장기 동기화(`days >= 365`) 시에만 실행.
+  3. **DB 쿼리 필터링**: `_upsert()` 시 `BrazilSeries.date.in_(target_dates)`로 대상 날짜만 선별 조회하여 ORM 객체 99% 감축.
+  4. **스레드 풀 축소**: `overview_cache.py`의 `IO_POOL` worker를 16개에서 6개로 줄여 스레드 스택 메모리 절약.
+  5. **OS 메모리 강제 반환 (glibc malloc_trim)**: `gc.collect()` 호출 후 리눅스 glibc `malloc_trim(0)`을 호출하여 단편화된 힙 메모리를 OS로 즉시 반환(스케줄러 잡 완료 후, 백테스트 API 처리 후, 서버 시작 워밍업 후).
 
 

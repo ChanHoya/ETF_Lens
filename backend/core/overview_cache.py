@@ -14,7 +14,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-IO_POOL = ThreadPoolExecutor(max_workers=16, thread_name_prefix="overview-io")
+IO_POOL = ThreadPoolExecutor(max_workers=6, thread_name_prefix="overview-io")
 
 
 async def run_io(fn, *args):

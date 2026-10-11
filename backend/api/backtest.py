@@ -35,6 +35,16 @@ def _make_backtest_cache_key(holdings: List["HoldingItem"]) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def _cleanup_memory():
+    import gc
+    gc.collect()
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:
+        pass
+
+
 def _make_rebalance_cache_key(req: "RebalanceBacktestRequest") -> str:
     kst_today = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
     canonical_list = sorted(
@@ -329,6 +339,7 @@ async def run_backtest(req: BacktestRequest, db: AsyncSession = Depends(get_db))
             "timestamp": time.time(),
             "data": resp_data
         }
+        _cleanup_memory()
         return resp_data
 
     except Exception as e:
@@ -387,12 +398,14 @@ async def generate_backtest_insight(req: BacktestResultData):
             contents=prompt,
         )
         
+        _cleanup_memory()
         return {
             "status": "success",
             "insight_md": response.text.strip()
         }
     except Exception as e:
         logger.error(f"Insight generation failed: {e}")
+        _cleanup_memory()
         return {"status": "error", "insight_md": "AI 분석 중 오류가 발생했습니다."}
 
 
@@ -698,10 +711,12 @@ async def run_rebalance_backtest(req: RebalanceBacktestRequest, db: AsyncSession
             "timestamp": time.time(),
             "data": resp_data
         }
+        _cleanup_memory()
         return resp_data
 
     except Exception as e:
         logger.error(f"[S4-2 Backtest] Simulation failed: {e}", exc_info=True)
+        _cleanup_memory()
         raise HTTPException(status_code=500, detail=f"시뮬레이터 에러: {str(e)}")
 
 
@@ -735,9 +750,11 @@ async def run_multi_asset_backtest_api(req: MultiBacktestRequest):
             rebalance_freq=req.rebalance_freq or "quarterly",
             benchmark_code=req.benchmark_code or "379800"
         )
+        _cleanup_memory()
         return res
     except Exception as e:
         logger.error(f"Error executing multi-asset backtest: {e}")
+        _cleanup_memory()
         raise HTTPException(status_code=500, detail=str(e))
 
 

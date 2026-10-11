@@ -50,17 +50,17 @@ def _norm_sgs_date(dmy: str) -> str:
         return dmy
 
 
-async def _fetch_sgs(client: httpx.AsyncClient, code: int) -> list[dict]:
+async def _fetch_sgs(client: httpx.AsyncClient, code: int, days: int = 365 * 9) -> list[dict]:
     """SGS 시리즈. [{'date':'YYYY-MM-DD','value':float}, ...] (날짜 오름차순).
     일별 시리즈(Selic·PTAX)는 dataInicial+dataFinal 범위 조회만 안정적이다
     (ultimos/N 은 Selic 목표의 미래날짜 선반영 때문에 N이 조금만 커도 400).
-    일시 네트워크 실패에 대비해 9년 윈도우로 3회 재시도 후, 마지막엔 4년 윈도우로 폴백한다."""
+    일시 네트워크 실패에 대비해 지정된 윈도우로 3회 재시도 후, 마지막엔 4년 윈도우로 폴백한다."""
     url = _SGS_BASE.format(code=code)
     now = datetime.now(_KST)
     end = now.strftime("%d/%m/%Y")
 
-    async def _range(days: int):
-        start = (now - timedelta(days=days)).strftime("%d/%m/%Y")
+    async def _range(d_count: int):
+        start = (now - timedelta(days=d_count)).strftime("%d/%m/%Y")
         r = await client.get(
             url, params={"formato": "json", "dataInicial": start, "dataFinal": end}, timeout=30
         )
@@ -70,12 +70,12 @@ async def _fetch_sgs(client: httpx.AsyncClient, code: int) -> list[dict]:
     rows = None
     for attempt in range(3):
         try:
-            rows = await _range(365 * 9)
+            rows = await _range(days)
             break
         except Exception:
             await asyncio.sleep(1.5)
     if rows is None:
-        rows = await _range(365 * 4)  # 짧은 윈도우 폴백 (윈도우/부하 이슈 회피)
+        rows = await _range(min(days, 365 * 4))  # 짧은 윈도우 폴백 (윈도우/부하 이슈 회피)
     out = []
     today = datetime.now(_KST).date()
     for row in rows:
@@ -466,13 +466,19 @@ def _fetch_usd_krw_series_sync(days: int = 400) -> dict[str, float]:
 
 
 async def _upsert(db, series_key: str, rows: list[dict]) -> int:
-    """(series_key, date) 유니크 upsert. 저장/갱신 건수 반환."""
+    """(series_key, date) 유니크 upsert. 저장/갱신 건수 반환. 전체 DB를 로드하지 않고 업서트 대상 일자만 선별 조회하여 OOM 방지."""
     if not rows:
         return 0
+    target_dates = [r["date"] for r in rows if "date" in r]
     existing = {
         r.date: r
         for r in (
-            await db.execute(select(BrazilSeries).where(BrazilSeries.series_key == series_key))
+            await db.execute(
+                select(BrazilSeries).where(
+                    BrazilSeries.series_key == series_key,
+                    BrazilSeries.date.in_(target_dates)
+                )
+            )
         ).scalars()
     }
     n = 0
@@ -491,16 +497,19 @@ async def _upsert(db, series_key: str, rows: list[dict]) -> int:
     return n
 
 
-async def sync_brazil_series() -> dict:
-    """모든 브라질 시계열을 수집해 BrazilSeries 에 upsert. 스케줄러/수동 실행 진입점."""
+async def sync_brazil_series(days: int = 365 * 9) -> dict:
+    """모든 브라질 시계열을 수집해 BrazilSeries 에 upsert. 스케줄러/수동 실행 진입점.
+    - 08:30 일일 전체 동기화: days = 365 * 9 (9년치 풀 동기화 및 오염 데이터 정리)
+    - 15분 주기 인트라데이 모니터링: days = 14 (최근 2주치만 가볍게 수집하여 Render 512MB OOM 원천 차단)
+    """
     result: dict[str, int] = {}
     today_iso = datetime.now(_KST).strftime("%Y-%m-%d")
 
     async with httpx.AsyncClient(follow_redirects=True) as client:
-        # 1) SGS 시리즈
+        # 1) SGS 시리즈 (지정된 days 윈도우만 수집)
         for key, code in _SGS_SERIES.items():
             try:
-                rows = await _fetch_sgs(client, code)
+                rows = await _fetch_sgs(client, code, days=days)
                 async with AsyncSessionLocal() as db:
                     result[key] = await _upsert(db, key, rows)
                     await db.commit()
@@ -520,7 +529,7 @@ async def sync_brazil_series() -> dict:
                 result[key] = -1
 
         # 3) 5년물 국채금리 — 1순위 ANBIMA ETTJ(공식, 최근 10일 백필), 2순위 investing.com(403 봇차단 잦음)
-        y5_rows = await _fetch_5y_anbima_recent(client, days=10)
+        y5_rows = await _fetch_5y_anbima_recent(client, days=min(days, 10))
         if not y5_rows:
             y5_rows = await _fetch_5y_yield_history(client)
         if not y5_rows:
@@ -536,25 +545,32 @@ async def sync_brazil_series() -> dict:
         else:
             result["y5"] = -1
 
-        # 3.5) FRED 브라질 국채금리 대리 지표 (INTGSTBRM193N)
-        try:
-            fred_rows = await _fetch_fred_series("INTGSTBRM193N")
-            if fred_rows:
-                async with AsyncSessionLocal() as db:
-                    result["y5_fred"] = await _upsert(db, "y5_fred", fred_rows)
-                    await db.commit()
-            else:
+        # 3.5) FRED 브라질 국채금리 대리 지표 (INTGSTBRM193N) — 월간 지표이므로 전체 동기화 시에만 수집
+        if days >= 365:
+            try:
+                fred_rows = await _fetch_fred_series("INTGSTBRM193N")
+                if fred_rows:
+                    async with AsyncSessionLocal() as db:
+                        result["y5_fred"] = await _upsert(db, "y5_fred", fred_rows)
+                        await db.commit()
+                else:
+                    result["y5_fred"] = -1
+            except Exception as e:
+                print(f"[brazil_fetcher] FRED y5_fred sync failed: {e}")
                 result["y5_fred"] = -1
-        except Exception as e:
-            print(f"[brazil_fetcher] FRED y5_fred sync failed: {e}")
-            result["y5_fred"] = -1
 
     # 4) BRL/KRW 크로스 = USD/KRW ÷ USD/BRL (일별 교집합)
     try:
-        usd_krw = await asyncio.to_thread(_fetch_usd_krw_series_sync)
+        usd_krw = await asyncio.to_thread(_fetch_usd_krw_series_sync, days=min(days, 400))
         async with AsyncSessionLocal() as db:
+            # 대상 기간에 해당하는 날짜들만 조회
             usd_brl_rows = (
-                await db.execute(select(BrazilSeries).where(BrazilSeries.series_key == "usd_brl"))
+                await db.execute(
+                    select(BrazilSeries).where(
+                        BrazilSeries.series_key == "usd_brl",
+                        BrazilSeries.date.in_(list(usd_krw.keys()))
+                    )
+                )
             ).scalars().all()
             usd_brl = {r.date: r.value for r in usd_brl_rows}
             cross = []
@@ -568,39 +584,35 @@ async def sync_brazil_series() -> dict:
         print(f"[brazil_fetcher] brl_krw cross failed: {e}")
         result["brl_krw"] = -1
 
-    # y5 프록시 오염 정리: 과거 y5가 selic 복사본으로 백필된 행 제거.
-    # (실제 5년물 시장금리는 기준금리와 소수점까지 정확히 같을 수 없음 → 정확 일치 = 백필 오염)
-    # 정리 후 FRED 역사적 곡선(y5_fred)이 과거 구간을, 실제 최근 y5가 최근 구간을 담당하게 된다.
-    try:
-        async with AsyncSessionLocal() as db:
-            selic_map = {
-                r.date: r.value for r in
-                (await db.execute(select(BrazilSeries).where(BrazilSeries.series_key == "selic_target"))).scalars()
-            }
-            y5_all = (await db.execute(select(BrazilSeries).where(BrazilSeries.series_key == "y5"))).scalars().all()
-            removed = 0
-            for r in y5_all:
-                s = selic_map.get(r.date)
-                if s is not None and abs(r.value - s) < 1e-6:
-                    await db.delete(r)
-                    removed += 1
-            if removed:
-                await db.commit()
-            result["y5_proxy_removed"] = removed
-            print(f"[brazil_fetcher] y5 proxy cleanup: removed {removed} selic-copy rows")
-    except Exception as e:
-        print(f"[brazil_fetcher] y5 proxy cleanup failed: {e}")
+    # y5 프록시 오염 정리 및 고아 점 정리: 1일 1회 전체 동기화(days >= 365) 시에만 수행 (15분 주기 스케줄러에서는 스킵)
+    if days >= 365:
+        try:
+            async with AsyncSessionLocal() as db:
+                selic_map = {
+                    r.date: r.value for r in
+                    (await db.execute(select(BrazilSeries).where(BrazilSeries.series_key == "selic_target"))).scalars()
+                }
+                y5_all = (await db.execute(select(BrazilSeries).where(BrazilSeries.series_key == "y5"))).scalars().all()
+                removed = 0
+                for r in y5_all:
+                    s = selic_map.get(r.date)
+                    if s is not None and abs(r.value - s) < 1e-6:
+                        await db.delete(r)
+                        removed += 1
+                if removed:
+                    await db.commit()
+                result["y5_proxy_removed"] = removed
+                print(f"[brazil_fetcher] y5 proxy cleanup: removed {removed} selic-copy rows")
+        except Exception as e:
+            print(f"[brazil_fetcher] y5 proxy cleanup failed: {e}")
 
-    # y5 고아 점 정리: 최근 연속 일별 블록만 남긴다.
-    # ANBIMA 다운로드가 최근 ~5개월만 제공하므로 그보다 오래된 고립 점(옛 스크레이핑 잔재)은
-    # 큰 gap(30일 초과)으로 떨어져 있어 차트에서 직선 보간·FRED 은폐 왜곡을 유발한다 → 제거.
-    try:
-        async with AsyncSessionLocal() as db:
-            y5_rows = sorted(
-                (await db.execute(select(BrazilSeries).where(BrazilSeries.series_key == "y5"))).scalars().all(),
-                key=lambda r: r.date,
-            )
-            if len(y5_rows) >= 2:
+        try:
+            async with AsyncSessionLocal() as db:
+                y5_rows = sorted(
+                    (await db.execute(select(BrazilSeries).where(BrazilSeries.series_key == "y5"))).scalars().all(),
+                    key=lambda r: r.date,
+                )
+                if len(y5_rows) >= 2:
                 # 최신 점에서 뒤로 걸으며 연속 블록의 시작 인덱스를 찾는다(gap>30일이면 경계).
                 block_start = 0
                 for i in range(len(y5_rows) - 1, 0, -1):

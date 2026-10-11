@@ -268,6 +268,11 @@ async def lifespan(app: FastAPI):
                 from core.scheduler import sync_etf_master_list
                 await sync_etf_master_list()
                 gc.collect()
+                try:
+                    import ctypes
+                    ctypes.CDLL("libc.so.6").malloc_trim(0)
+                except Exception:
+                    pass
                 print("[Startup] ETF master list synced successfully.")
             except Exception as _e:
                 print(f"[Startup] ETF master list sync skipped: {_e}")
