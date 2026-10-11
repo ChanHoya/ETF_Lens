@@ -21,6 +21,7 @@ router = APIRouter(tags=["backtest"])
 # ── 인메모리 결과 캐시 (TTL: 1시간) ───────────────────────────────────────────
 _BACKTEST_CACHE: Dict[str, Dict[str, Any]] = {}
 _REBALANCE_CACHE: Dict[str, Dict[str, Any]] = {}
+_INSIGHT_CACHE: Dict[str, Dict[str, Any]] = {}
 _BACKTEST_CACHE_TTL = 3600  # 1 hour
 
 
@@ -52,6 +53,14 @@ def _make_rebalance_cache_key(req: "RebalanceBacktestRequest") -> str:
         key=lambda x: x["c"]
     )
     raw = f"{kst_today}:{req.period}:{req.defense_factor}:{req.safe_asset_code}:{json.dumps(canonical_list, sort_keys=True)}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _make_insight_cache_key(results: Dict[str, Any], weights: Dict[str, Any]) -> str:
+    kst_today = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
+    r1 = results.get("1Y", {})
+    r3 = results.get("3Y", {})
+    raw = f"{kst_today}:{json.dumps(r1, sort_keys=True)}:{json.dumps(r3, sort_keys=True)}:{json.dumps(weights, sort_keys=True)}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -364,6 +373,13 @@ async def generate_backtest_insight(req: BacktestResultData):
     
     if not results or "1Y" not in results:
         return {"status": "error", "insight_md": "데이터가 부족하여 AI 분석을 수행할 수 없습니다."}
+
+    # 1. 인메모리 결과 캐시 확인 (0.001초 즉시 반환)
+    cache_key = _make_insight_cache_key(results, weights)
+    cached = _INSIGHT_CACHE.get(cache_key)
+    if cached and (time.time() - cached["cached_at"]) < _BACKTEST_CACHE_TTL:
+        logger.info(f"[BacktestInsight] Cache hit (0.001s): key={cache_key[:8]}")
+        return cached["data"]
         
     try:
         from google import genai
@@ -398,11 +414,13 @@ async def generate_backtest_insight(req: BacktestResultData):
             contents=prompt,
         )
         
-        _cleanup_memory()
-        return {
+        out = {
             "status": "success",
             "insight_md": response.text.strip()
         }
+        _INSIGHT_CACHE[cache_key] = {"data": out, "cached_at": time.time()}
+        _cleanup_memory()
+        return out
     except Exception as e:
         logger.error(f"Insight generation failed: {e}")
         _cleanup_memory()

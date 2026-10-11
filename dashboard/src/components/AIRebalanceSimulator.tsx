@@ -29,8 +29,32 @@ export default function AIRebalanceSimulator({ holdings }: AIRebalanceSimulatorP
         { code: "273130", name: "KODEX 종합채권(AA-이상)액티브" }
     ];
 
-    const fetchBacktest = async () => {
+    const getHoldingsSignature = () => {
+        if (!holdings) return "";
+        return holdings
+            .filter(h => h.eval_amount > 0)
+            .map(h => `${h.code}:${h.eval_amount}`)
+            .sort()
+            .join("|");
+    };
+
+    const fetchBacktest = async (force: boolean = false) => {
         if (!holdings || holdings.length === 0) return;
+        const sig = getHoldingsSignature();
+        const cacheKey = `iprism_airebal_${sig}_${period}_${defenseFactor}_${safeAsset}`;
+
+        // 1. sessionStorage 캐시 확인 (새로고침이 아닌 경우 0ms 즉시 표시)
+        if (!force && typeof window !== "undefined" && sig) {
+            try {
+                const cached = sessionStorage.getItem(cacheKey);
+                if (cached) {
+                    setData(JSON.parse(cached));
+                    setLoading(false);
+                    return;
+                }
+            } catch (_) {}
+        }
+
         setLoading(true);
         setError(null);
         try {
@@ -58,6 +82,11 @@ export default function AIRebalanceSimulator({ holdings }: AIRebalanceSimulatorP
             if (result.status === "error") throw new Error(result.message);
 
             setData(result);
+            if (typeof window !== "undefined" && sig) {
+                try {
+                    sessionStorage.setItem(cacheKey, JSON.stringify(result));
+                } catch (_) {}
+            }
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -127,11 +156,22 @@ export default function AIRebalanceSimulator({ holdings }: AIRebalanceSimulatorP
             <div className="flex justify-between items-center flex-wrap gap-2">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
                     <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
-                    AI 리밸런싱 백테스트 시뮬레이터 (S4-2)
+                    AI 동적 리밸런싱 시뮬레이터 (S4-2)
                 </h2>
-                <div className="flex items-center gap-1.5 bg-emerald-950/20 border border-emerald-500/20 px-3 py-1 rounded-full text-xs text-emerald-400 font-medium">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Exit-Signal 기반 동적 자산배분</span>
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 bg-emerald-950/20 border border-emerald-500/20 px-3 py-1 rounded-full text-xs text-emerald-400 font-medium">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Exit-Signal 기반 동적 자산배분</span>
+                    </div>
+                    <button
+                        onClick={() => fetchBacktest(true)}
+                        disabled={loading}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition-all disabled:opacity-50"
+                        title="캐시를 비우고 최신 데이터로 다시 계산"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                        <span>새로고침</span>
+                    </button>
                 </div>
             </div>
 

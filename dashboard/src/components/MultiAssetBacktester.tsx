@@ -118,9 +118,28 @@ export default function MultiAssetBacktester({ holdings = [] }: Props) {
     setAssets(myAssets);
   };
 
+  const getAssetsSignature = () => {
+    return assets.map(a => `${a.code}:${a.weight}`).sort().join('|');
+  };
+
   // 백테스트 API 호출
-  const runBacktest = async () => {
+  const runBacktest = async (force: boolean = false) => {
     if (assets.length === 0) return;
+    const sig = getAssetsSignature();
+    const cacheKey = `iprism_multi_bt_${sig}_${years}_${rebalanceFreq}_${initialCapital}`;
+
+    // 1. sessionStorage 캐시 확인 (새로고침이 아닌 경우 0ms 즉시 표시)
+    if (!force && typeof window !== "undefined" && sig) {
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          setResult(JSON.parse(cached));
+          setLoading(false);
+          return;
+        }
+      } catch (_) {}
+    }
+
     setLoading(true);
     try {
       const payload = {
@@ -140,6 +159,11 @@ export default function MultiAssetBacktester({ holdings = [] }: Props) {
       if (res.ok) {
         const json: BacktestResponse = await res.json();
         setResult(json);
+        if (typeof window !== "undefined" && sig) {
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify(json));
+          } catch (_) {}
+        }
       }
     } catch (err) {
       console.error('Error running multi-asset backtest:', err);
@@ -201,7 +225,7 @@ export default function MultiAssetBacktester({ holdings = [] }: Props) {
               </button>
             )}
             <button
-              onClick={runBacktest}
+              onClick={() => runBacktest(true)}
               disabled={loading}
               className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-md transition flex items-center gap-1.5"
             >

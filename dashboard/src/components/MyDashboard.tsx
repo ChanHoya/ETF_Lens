@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AccountDetailModal from './AccountDetailModal';
 import HoldingsSignals from './HoldingsSignals';
 import PortfolioBacktester from './PortfolioBacktester';
@@ -106,6 +106,12 @@ const getDisparityLevelInfo = (name: string, rate: number): DisparityLevelInfo =
 export default function MyDashboard({ data, tradesData, isRefreshing = false, onOpenDetail, onAnalyzePeers }: MyDashboardProps) {
     const [selectedAccount, setSelectedAccount] = useState<any>(null);
     const [backtestTab, setBacktestTab] = useState<'static' | 'dynamic' | 'efficient' | 'stress' | 'rebalance' | 'multi'>('dynamic');
+    const [visitedTabs, setVisitedTabs] = useState<Record<string, boolean>>({ dynamic: true });
+
+    useEffect(() => {
+        setVisitedTabs(prev => prev[backtestTab] ? prev : { ...prev, [backtestTab]: true });
+    }, [backtestTab]);
+
     const [showAllDisparity, setShowAllDisparity] = useState(false);
     const [disparityTab, setDisparityTab] = useState<'warn_risk' | 'risk' | 'warning' | 'normal' | 'all'>('warn_risk');
 
@@ -475,34 +481,46 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                     </div>
                 </div>
 
-                {backtestTab === 'dynamic' && (
-                    <AIRebalanceSimulator holdings={holdings} />
+                {visitedTabs['dynamic'] && (
+                    <div className={backtestTab === 'dynamic' ? 'block' : 'hidden'}>
+                        <AIRebalanceSimulator holdings={holdings} />
+                    </div>
                 )}
-                {backtestTab === 'static' && (
-                    <PortfolioBacktester holdings={holdings} />
+                {visitedTabs['static'] && (
+                    <div className={backtestTab === 'static' ? 'block' : 'hidden'}>
+                        <PortfolioBacktester holdings={holdings} />
+                    </div>
                 )}
-                {backtestTab === 'efficient' && (
-                    <EfficientFrontierPanel holdings={holdings} />
+                {visitedTabs['efficient'] && (
+                    <div className={backtestTab === 'efficient' ? 'block' : 'hidden'}>
+                        <EfficientFrontierPanel holdings={holdings} />
+                    </div>
                 )}
-                {backtestTab === 'stress' && (
-                    <PortfolioStressTester holdings={holdings} />
+                {visitedTabs['stress'] && (
+                    <div className={backtestTab === 'stress' ? 'block' : 'hidden'}>
+                        <PortfolioStressTester holdings={holdings} />
+                    </div>
                 )}
-                {backtestTab === 'rebalance' && (
-                    <PortfolioRebalancer initialHoldings={(holdings || []).map((h: any) => ({
-                        code: h.code || h.pdno || '',
-                        name: h.name || h.prdt_name || h.code || '',
-                        current_price: Number(h.current_price || h.price || h.prpr || 0),
-                        current_qty: Number(h.current_qty || h.qty || h.hld_qty || 0),
-                        current_val: Number(h.current_val || h.eval_amount || h.evlu_amt || 0),
-                    }))} />
+                {visitedTabs['rebalance'] && (
+                    <div className={backtestTab === 'rebalance' ? 'block' : 'hidden'}>
+                        <PortfolioRebalancer initialHoldings={(holdings || []).map((h: any) => ({
+                            code: h.code || h.pdno || '',
+                            name: h.name || h.prdt_name || h.code || '',
+                            current_price: Number(h.current_price || h.price || h.prpr || 0),
+                            current_qty: Number(h.current_qty || h.qty || h.hld_qty || 0),
+                            current_val: Number(h.current_val || h.eval_amount || h.evlu_amt || 0),
+                        }))} />
+                    </div>
                 )}
-                {backtestTab === 'multi' && (
-                    <MultiAssetBacktester holdings={(holdings || []).map((h: any) => ({
-                        code: h.code || h.pdno || '',
-                        name: h.name || h.prdt_name || h.code || '',
-                        current_val: Number(h.current_val || h.eval_amount || h.evlu_amt || 0),
-                        weight: Number(h.weight || 0)
-                    }))} />
+                {visitedTabs['multi'] && (
+                    <div className={backtestTab === 'multi' ? 'block' : 'hidden'}>
+                        <MultiAssetBacktester holdings={(holdings || []).map((h: any) => ({
+                            code: h.code || h.pdno || '',
+                            name: h.name || h.prdt_name || h.code || '',
+                            current_val: Number(h.current_val || h.eval_amount || h.evlu_amt || 0),
+                            weight: Number(h.weight || 0)
+                        }))} />
+                    </div>
                 )}
             </div>
 

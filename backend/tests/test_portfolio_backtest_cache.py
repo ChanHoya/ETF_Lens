@@ -113,3 +113,36 @@ async def test_run_backtest_caching_lifecycle():
         assert mock_load.call_count == 1, "캐시 히트 시 데이터베이스나 시계열 로더를 호출하지 않아야 함"
         assert t_second < t_first + 0.05, "캐시 히트 응답은 초고속(0.01s 미만)이어야 함"
         assert res1["results"] == res2["results"]
+
+
+@pytest.mark.asyncio
+async def test_generate_backtest_insight_caching_lifecycle():
+    """AI 백테스트 인사이트 1회차 호출 및 2회차 인메모리 캐시 히트 검증"""
+    from api.backtest import generate_backtest_insight, BacktestResultData, _INSIGHT_CACHE
+    _INSIGHT_CACHE.clear()
+
+    req = BacktestResultData(
+        results={
+            "1Y": {"Portfolio": {"return": 15.2, "mdd": -8.4}, "^KS11": {"return": 5.0, "mdd": -12.0}},
+            "3Y": {"Portfolio": {"return": 35.0, "mdd": -15.0}}
+        },
+        weights={"069500": 100.0}
+    )
+
+    with patch("os.environ.get", return_value="dummy_key"):
+        with patch("google.genai.Client") as mock_client_cls:
+            mock_client = mock_client_cls.return_value
+            mock_response = mock_client.models.generate_content.return_value
+            mock_response.text = "인사이트 분석 내용입니다."
+
+            # 1회차 실행: AI 호출
+            res1 = await generate_backtest_insight(req)
+            assert res1["status"] == "success"
+            assert res1["insight_md"] == "인사이트 분석 내용입니다."
+            assert mock_client.models.generate_content.call_count == 1
+
+            # 2회차 실행: 캐시 히트 (AI 호출 없이 즉시 반환)
+            res2 = await generate_backtest_insight(req)
+            assert res2["status"] == "success"
+            assert res2["insight_md"] == "인사이트 분석 내용입니다."
+            assert mock_client.models.generate_content.call_count == 1, "캐시 히트 시 Gemini generate_content를 재호출하지 않아야 함"

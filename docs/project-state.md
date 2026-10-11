@@ -3,9 +3,8 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: Sprint 8 (S8-1~S8-4) transitions.dev 전역 모션 토큰 및 직관적 인터랙션 UI 고도화 완료 + TFF 런타임 오류 핫픽스 (FP-037) 완료 (PR #23 머지 및 배포 안정화)
-➡️ Next: 다음 스프린트 기능 기획 또는 신규 개발 시작 (S9-1)
-➡️ 다음 신규 스토리 ID는 **S9-1**. 아래 "스토리 ID 충돌 대응표"에 있는 번호는 재사용하지 않는다.
+✅ Current: Sprint 9 (S9-1) 포트폴리오 백테스터 탭 캐싱 및 로딩 속도 최적화 완료
+➡️ Next: S9-2 또는 다음 개선 과제 기획
 
 > 세션 핸드오프 (2026-10-11, Antigravity):
 > - 🎨 Sprint 8 (S8-1 ~ S8-4) transitions.dev 기반 전역 모션 디자인 시스템 및 마이크로 인터랙션 구축 완료:
@@ -216,14 +215,15 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 
 ## Current Sprint
 
-- Sprint: 6 — Centralized TFF Dashboard, Efficient Frontier, Dividend Calendar, & Custom Disparity Alerts
-- Started: 2026-05-31
+- Sprint: 9 — Portfolio Backtester Caching & Instant Tab Switching (S9-1)
+- Started: 2026-10-11
 - Branch: main
 
 ## Story Status
 
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
+| S9-1 | 포트폴리오 백테스터 탭 캐싱 및 로딩 속도 최적화 | ✅ stable | 프론트엔드 SWR/sessionStorage 캐싱, 백테스터 6개 서브탭 Keep-Alive 언마운트 방지 및 백엔드 AI Insight 인메모리 캐싱(TTL 3600s) 완료 |
 | S6-1 | TFF 엑셀 업로드 데이터 PostgreSQL 저장 및 중앙 공유형 대시보드 | ✅ stable | 파일 데이터 PostgreSQL 저장, 마스터 인증 패스코드 및 뷰어/마스터 권한 격리 구현 완료 |
 | S6-2 | 포트폴리오 Efficient Frontier 최적화 백엔드 API | ✅ stable | yfinance/pykrx 연동 기대수익률, 공분산 및 몬테카를로 포트폴리오 변동성 최적화 연산 모듈 및 유닛 테스트 구현 완료 |
 | S6-3 | Efficient Frontier 시각화 및 최적 비중 연동 | ✅ stable | Recharts ComposedChart 산점도/효율전선 커브, Max Sharpe/MinVar/현재 Bento 카드, 최적 비중 BarChart 및 인사이트 요약 구현 완료 |

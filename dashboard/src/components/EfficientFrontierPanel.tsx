@@ -1,6 +1,4 @@
-'use client';
-
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { API_BASE } from '@/lib/apiConfig';
 import {
     ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -167,7 +165,31 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
     const [result, setResult] = useState<EFResult | null>(null);
     const [showInfoModal, setShowInfoModal] = useState<boolean>(false);
 
-    const handleRun = useCallback(async () => {
+    const getHoldingsSignature = useCallback(() => {
+        if (!holdings) return "";
+        return holdings
+            .filter((h: any) => h.eval_amount > 0)
+            .map((h: any) => `${h.code}:${h.eval_amount}`)
+            .sort()
+            .join("|");
+    }, [holdings]);
+
+    const handleRun = useCallback(async (force: boolean = false) => {
+        const sig = getHoldingsSignature();
+        const cacheKey = `iprism_ef_${sig}_${lookbackYears}_${riskFreeRate}`;
+
+        // 1. sessionStorage 캐시 확인 (새로고침이 아닌 경우 0ms 즉시 표시)
+        if (!force && typeof window !== "undefined" && sig) {
+            try {
+                const cached = sessionStorage.getItem(cacheKey);
+                if (cached) {
+                    setResult(JSON.parse(cached));
+                    setIsLoading(false);
+                    return;
+                }
+            } catch (_) {}
+        }
+
         setIsLoading(true);
         setError(null);
         try {
@@ -197,6 +219,11 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
                 throw new Error(data.detail || '분석 중 오류가 발생했습니다.');
             }
             setResult(data as EFResult);
+            if (typeof window !== "undefined" && sig) {
+                try {
+                    sessionStorage.setItem(cacheKey, JSON.stringify(data));
+                } catch (_) {}
+            }
         } catch (e: any) {
             const msg = e?.message === 'Failed to fetch'
                 ? '백엔드 서버에 연결할 수 없거나 응답이 지연되었습니다. 잠시 후 다시 시도해 주세요.'
@@ -205,7 +232,20 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
         } finally {
             setIsLoading(false);
         }
-    }, [holdings, lookbackYears, riskFreeRate]);
+    }, [holdings, lookbackYears, riskFreeRate, getHoldingsSignature]);
+
+    useEffect(() => {
+        const sig = getHoldingsSignature();
+        if (typeof window !== "undefined" && sig && !result) {
+            const cacheKey = `iprism_ef_${sig}_${lookbackYears}_${riskFreeRate}`;
+            try {
+                const cached = sessionStorage.getItem(cacheKey);
+                if (cached) {
+                    setResult(JSON.parse(cached));
+                }
+            } catch (_) {}
+        }
+    }, [getHoldingsSignature, lookbackYears, riskFreeRate, result]);
 
     /* ─── Derived chart data ─── */
     const scatterData = result?.scatter ?? [];
@@ -288,7 +328,7 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
 
                 {/* 실행 버튼 */}
                 <button
-                    onClick={handleRun}
+                    onClick={() => handleRun(true)}
                     disabled={isLoading}
                     className="flex items-center gap-2 px-5 py-2.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-lg shadow-sky-500/20 transition-all duration-300 hover:scale-105 disabled:hover:scale-100 shrink-0"
                 >
@@ -324,7 +364,7 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
                     <AlertTriangle className="w-8 h-8 text-rose-400" />
                     <p className="text-rose-300 text-sm">{error}</p>
                     <button
-                        onClick={handleRun}
+                        onClick={() => handleRun(true)}
                         className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 rounded-lg text-xs font-bold transition-colors"
                     >
                         다시 시도

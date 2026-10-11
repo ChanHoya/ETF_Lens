@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { API_BASE } from "@/lib/apiConfig";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, RefreshCw } from "lucide-react";
 
 type HoldingProps = {
     code: string;
@@ -86,7 +86,40 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
         return 0.1;
     };
 
-    const fetchBacktest = async () => {
+    const getHoldingsSignature = () => {
+        if (!holdings) return "";
+        return holdings
+            .filter(h => h.eval_amount > 0)
+            .map(h => `${h.code}:${h.eval_amount}`)
+            .sort()
+            .join("|");
+    };
+
+    const fetchBacktest = async (force: boolean = false) => {
+        const sig = getHoldingsSignature();
+        const cacheKey = `iprism_backtest_${sig}`;
+        const insightCacheKey = `iprism_backtest_insight_${sig}`;
+
+        // 1. sessionStorage 캐시 확인 (새로고침이 아닌 경우 0ms 즉시 표시)
+        if (!force && typeof window !== "undefined" && sig) {
+            try {
+                const cachedData = sessionStorage.getItem(cacheKey);
+                if (cachedData) {
+                    const parsed = JSON.parse(cachedData);
+                    setData(parsed);
+                    setLoading(false);
+                    const cachedInsight = sessionStorage.getItem(insightCacheKey);
+                    if (cachedInsight) {
+                        setInsightText(cachedInsight);
+                        setInsightLoading(false);
+                    } else {
+                        fetchInsight(parsed.results, parsed.weights, sig);
+                    }
+                    return;
+                }
+            } catch (_) {}
+        }
+
         setLoading(true);
         setError(null);
         try {
@@ -110,9 +143,14 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
             if (result.status === "error") throw new Error(result.message);
             
             setData(result);
+            if (typeof window !== "undefined" && sig) {
+                try {
+                    sessionStorage.setItem(cacheKey, JSON.stringify(result));
+                } catch (_) {}
+            }
 
             // Fetch AI Insight asynchronously
-            fetchInsight(result.results, result.weights);
+            fetchInsight(result.results, result.weights, sig);
 
         } catch (err: any) {
             setError(err.message);
@@ -121,7 +159,17 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
         }
     };
 
-    const fetchInsight = async (resultsData: any, weightsData: any) => {
+    const fetchInsight = async (resultsData: any, weightsData: any, sig?: string) => {
+        const insightCacheKey = sig ? `iprism_backtest_insight_${sig}` : "";
+        if (insightCacheKey && typeof window !== "undefined") {
+            const cachedInsight = sessionStorage.getItem(insightCacheKey);
+            if (cachedInsight) {
+                setInsightText(cachedInsight);
+                setInsightLoading(false);
+                return;
+            }
+        }
+
         setInsightLoading(true);
         setInsightText(null);
         try {
@@ -133,6 +181,11 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
             const result = await res.json();
             if (result.status === "success") {
                 setInsightText(result.insight_md);
+                if (insightCacheKey && typeof window !== "undefined") {
+                    try {
+                        sessionStorage.setItem(insightCacheKey, result.insight_md);
+                    } catch (_) {}
+                }
             } else {
                 setInsightText(result.insight_md || "단기 데이터 부족 혹은 분석 장애가 발생했습니다.");
             }
@@ -188,10 +241,21 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
 
     return (
         <section className="flex flex-col gap-4 mt-6">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-                <span className="w-1.5 h-6 bg-purple-500 rounded-full"></span>
-                포트폴리오 백테스터 & 성과 분석
-            </h2>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <span className="w-1.5 h-6 bg-purple-500 rounded-full"></span>
+                    포트폴리오 백테스터 & 성과 분석
+                </h2>
+                <button
+                    onClick={() => fetchBacktest(true)}
+                    disabled={loading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition-all disabled:opacity-50"
+                    title="캐시를 비우고 최신 데이터로 다시 계산"
+                >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                    <span>새로고침</span>
+                </button>
+            </div>
             <div className="bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-md overflow-hidden p-6">
                 
                 {loading ? (
