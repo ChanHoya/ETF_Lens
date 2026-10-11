@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { API_BASE } from "@/lib/apiConfig";
-import { Loader2, Sparkles, RefreshCw } from "lucide-react";
+import { Loader2, Sparkles, RefreshCw, Shield } from "lucide-react";
 
 type HoldingProps = {
     code: string;
@@ -15,6 +15,7 @@ type BacktesterProps = {
 
 export default function PortfolioBacktester({ holdings }: BacktesterProps) {
     const [period, setPeriod] = useState<"3M" | "6M" | "1Y" | "3Y" | "10Y">("1Y");
+    const [metricMode, setMetricMode] = useState<'all' | 'basic' | 'risk'>('all');
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
@@ -217,6 +218,22 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
         );
     };
 
+    const renderRiskMetric = (label: string, val: number | undefined, tooltip: string, unit: string = "") => {
+        if (val === undefined || val === null) return null;
+        const colorClass = val > 1.0 ? "text-emerald-400" : val > 0 ? "text-sky-300" : val < 0 ? "text-amber-400" : "text-gray-400";
+        return (
+            <div className="flex flex-col items-center p-2 bg-white/[0.02] rounded-xl border border-white/5 group relative cursor-help">
+                <span className="text-[10px] text-gray-500 mb-0.5">{label}</span>
+                <span className={`text-xs font-bold ${colorClass}`}>
+                    {val.toFixed(2)}{unit}
+                </span>
+                <div className="absolute bottom-full mb-1.5 hidden group-hover:block z-30 w-44 p-2 bg-slate-900/95 border border-white/10 rounded-lg text-[10px] text-gray-200 text-center shadow-xl backdrop-blur-md pointer-events-none leading-relaxed">
+                    {tooltip}
+                </div>
+            </div>
+        );
+    };
+
     const renderCard = (cfg: { key: string; name: string; isMain?: boolean }) => {
         const resData = data?.results?.[period]?.[cfg.key];
         if (!resData) return null;
@@ -225,16 +242,31 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
         const borderClass = isMain ? "border-purple-500/40 shadow-sm shadow-purple-500/10" : "border-white/10";
         const bgClass = isMain ? "bg-purple-500/10" : "bg-white/[0.02]";
         const textClass = isMain ? "text-purple-300 font-extrabold" : "text-gray-300 font-semibold";
+        const hasRisk = resData.volatility !== undefined;
 
         return (
-            <div className={`border ${borderClass} rounded-xl p-2 ${bgClass} transition-all hover:border-white/20 flex flex-col justify-between`}>
-                <div className={`text-center py-1 text-xs sm:text-sm border-b ${isMain ? "border-purple-500/20" : "border-white/5"} mb-2 ${textClass}`}>
+            <div className={`border ${borderClass} rounded-xl p-2.5 ${bgClass} transition-all hover:border-white/20 flex flex-col justify-between gap-2`}>
+                <div className={`text-center py-1 text-xs sm:text-sm border-b ${isMain ? "border-purple-500/20" : "border-white/5"} ${textClass}`}>
                     {cfg.name}
                 </div>
-                <div className="grid grid-cols-2 gap-1.5 items-center">
-                    {renderMetric("수익률", resData.return)}
-                    {renderMetric("MDD", resData.mdd)}
-                </div>
+
+                {/* 기본 지표 (수익률 / MDD) */}
+                {(metricMode === 'all' || metricMode === 'basic') && (
+                    <div className="grid grid-cols-2 gap-1.5 items-center">
+                        {renderMetric("수익률", resData.return)}
+                        {renderMetric("MDD", resData.mdd)}
+                    </div>
+                )}
+
+                {/* 4대 심층 리스크 지표 (Vol, Sharpe, Sortino, Calmar) */}
+                {hasRisk && (metricMode === 'all' || metricMode === 'risk') && (
+                    <div className={`grid grid-cols-2 gap-1.5 ${metricMode === 'all' ? 'pt-1.5 border-t border-white/5' : ''}`}>
+                        {renderRiskMetric("연변동성", resData.volatility, "연간화 주가 표준편차 (낮을수록 변동 리스크 안정)", "%")}
+                        {renderRiskMetric("Sharpe", resData.sharpe, "위험 단위당 초과수익률 (1.0 이상 우수, 0.5 미만 주의)")}
+                        {renderRiskMetric("Sortino", resData.sortino, "하방 손실 위험 대비 초과수익률 (하락장 방어 지표)")}
+                        {renderRiskMetric("Calmar", resData.calmar, "최대 낙폭(MDD) 대비 연수익률 (낙폭 회복 탄력성)")}
+                    </div>
+                )}
             </div>
         );
     };
@@ -297,21 +329,59 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
                             </div>
                         )}
 
-                        {/* Controls */}
-                        <div className="flex gap-2 mb-2 justify-center lg:justify-end">
-                            {["3M", "6M", "1Y", "3Y"].map((p) => (
+                        {/* Controls: 리스크 뷰 모드 토글 + 기간 선택기 */}
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-2">
+                            {/* 지표 보기 필터 */}
+                            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 text-xs">
                                 <button
-                                    key={p}
-                                    onClick={() => setPeriod(p as any)}
-                                    className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                                        period === p 
-                                        ? "bg-purple-500 text-white" 
-                                        : "bg-white/5 text-gray-400 hover:bg-white/10"
+                                    onClick={() => setMetricMode('all')}
+                                    className={`px-3 py-1 rounded-lg font-medium transition-colors ${
+                                        metricMode === 'all'
+                                            ? "bg-purple-500 text-white shadow-sm"
+                                            : "text-gray-400 hover:text-white"
                                     }`}
                                 >
-                                    {p}
+                                    종합 지표
                                 </button>
-                            ))}
+                                <button
+                                    onClick={() => setMetricMode('basic')}
+                                    className={`px-3 py-1 rounded-lg font-medium transition-colors ${
+                                        metricMode === 'basic'
+                                            ? "bg-purple-500 text-white shadow-sm"
+                                            : "text-gray-400 hover:text-white"
+                                    }`}
+                                >
+                                    수익률·MDD
+                                </button>
+                                <button
+                                    onClick={() => setMetricMode('risk')}
+                                    className={`px-3 py-1 rounded-lg font-medium transition-colors flex items-center gap-1 ${
+                                        metricMode === 'risk'
+                                            ? "bg-purple-500 text-white shadow-sm"
+                                            : "text-gray-400 hover:text-white"
+                                    }`}
+                                >
+                                    <Shield className="w-3 h-3 text-purple-300" />
+                                    <span>4대 리스크</span>
+                                </button>
+                            </div>
+
+                            {/* 기간 선택 버튼 */}
+                            <div className="flex gap-1.5 justify-center">
+                                {["3M", "6M", "1Y", "3Y"].map((p) => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setPeriod(p as any)}
+                                        className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                                            period === p 
+                                            ? "bg-purple-500 text-white shadow-sm" 
+                                            : "bg-white/5 text-gray-400 hover:bg-white/10"
+                                        }`}
+                                    >
+                                        {p}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {/* Metrics Grid (위아래 동일군 1:1 비교 배치) */}

@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Depends
 import yfinance as yf
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -185,7 +186,77 @@ def format_ticker(code: str) -> str:
 def calculate_mdd(cum_returns: pd.Series) -> float:
     roll_max = cum_returns.cummax()
     drawdown = cum_returns / roll_max - 1.0
-    return drawdown.min() * 100  # percentage
+    return float(drawdown.min() * 100)  # percentage
+
+
+def calculate_risk_metrics(
+    period_rets: pd.Series,
+    cum_ret: pd.Series,
+    rf_annual: float = 3.0
+) -> Dict[str, float]:
+    """
+    4대 심층 리스크 메트릭 (연간화 변동성, 샤프 지수, 소르티노 지수, 칼마 지수) 계산
+    """
+    if period_rets.empty or cum_ret.empty:
+        return {
+            "return": 0.0,
+            "mdd": 0.0,
+            "volatility": 0.0,
+            "sharpe": 0.0,
+            "sortino": 0.0,
+            "calmar": 0.0,
+            "annualized_return": 0.0
+        }
+        
+    final_ret = float((cum_ret.iloc[-1] - 1.0) * 100.0)
+    mdd = float(calculate_mdd(cum_ret))
+    
+    # 영업일 수 기반 연간화 기간 산출
+    n_days = max(1, len(period_rets))
+    years = max(n_days / 252.0, 0.08)  # 최소 약 1개월
+    
+    # 연간화 수익률 (CAGR)
+    if (1.0 + final_ret / 100.0) > 0:
+        ann_return = float(((1.0 + final_ret / 100.0) ** (1.0 / years) - 1.0) * 100.0)
+    else:
+        ann_return = float(final_ret / years)
+        
+    # 1. 연간화 변동성 (Annualized Volatility)
+    clean_rets = period_rets.dropna()
+    daily_std = float(clean_rets.std()) if len(clean_rets) > 1 else 0.0
+    ann_vol = float(daily_std * np.sqrt(252.0) * 100.0)
+    
+    # 2. 샤프 지수 (Sharpe Ratio, 무위험 수익률 3.0% 차감)
+    excess_ret = ann_return - rf_annual
+    if ann_vol > 0.001:
+        sharpe = float(excess_ret / ann_vol)
+    else:
+        sharpe = 0.0
+        
+    # 3. 소르티노 지수 (Sortino Ratio, 하방 변동성 적용)
+    downside_rets = clean_rets[clean_rets < 0]
+    if len(downside_rets) > 1 and downside_rets.std() > 0:
+        downside_vol = float(downside_rets.std() * np.sqrt(252.0) * 100.0)
+        sortino = float(excess_ret / downside_vol) if downside_vol > 0.001 else 0.0
+    else:
+        sortino = float(sharpe * 1.5) if sharpe > 0 else 0.0
+        
+    # 4. 칼마 지수 (Calmar Ratio, 연수익률 / |MDD|)
+    abs_mdd = abs(mdd)
+    if abs_mdd > 0.001:
+        calmar = float(ann_return / abs_mdd)
+    else:
+        calmar = 0.0
+        
+    return {
+        "return": round(final_ret, 2),
+        "mdd": round(mdd, 2),
+        "volatility": round(ann_vol, 2),
+        "sharpe": round(sharpe, 2),
+        "sortino": round(sortino, 2),
+        "calmar": round(calmar, 2),
+        "annualized_return": round(ann_return, 2)
+    }
 
 @router.post("/run")
 async def run_backtest(req: BacktestRequest, db: AsyncSession = Depends(get_db)):
@@ -289,13 +360,8 @@ async def run_backtest(req: BacktestRequest, db: AsyncSession = Depends(get_db))
             # Portfolio, Sub-portfolios & Benchmarks
             targets = ["Portfolio"] + [f"Portfolio_{cat}" for cat in cat_weights.keys()] + benchmarks
             for t in targets:
-                if t in cum_returns.columns:
-                    final_ret = (cum_returns[t].iloc[-1] - 1) * 100 if not cum_returns[t].empty else 0
-                    mdd = calculate_mdd(cum_returns[t]) if not cum_returns[t].empty else 0
-                    period_summary[t] = {
-                        "return": final_ret,
-                        "mdd": mdd
-                    }
+                if t in cum_returns.columns and t in period_returns.columns:
+                    period_summary[t] = calculate_risk_metrics(period_returns[t], cum_returns[t])
                     
             results[p_name] = period_summary
             

@@ -146,3 +146,62 @@ async def test_generate_backtest_insight_caching_lifecycle():
             assert res2["status"] == "success"
             assert res2["insight_md"] == "인사이트 분석 내용입니다."
             assert mock_client.models.generate_content.call_count == 1, "캐시 히트 시 Gemini generate_content를 재호출하지 않아야 함"
+
+
+@pytest.mark.asyncio
+async def test_calculate_risk_metrics_and_deep_metrics_output():
+    """4대 심층 리스크 메트릭 (변동성, 샤프, 소르티노, 칼마) 계산 및 run_backtest 응답 포함 검증"""
+    from api.backtest import calculate_risk_metrics
+    _BACKTEST_CACHE.clear()
+
+    # 모의 일간 수익률 및 누적 수익률 생성 (100일)
+    dates = pd.date_range("2023-01-01", periods=100, freq="B")
+    mock_rets = pd.Series([0.001 * (1 if i % 2 == 0 else -0.5) for i in range(100)], index=dates)
+    mock_cum = (1 + mock_rets).cumprod()
+
+    metrics = calculate_risk_metrics(mock_rets, mock_cum, rf_annual=3.0)
+
+    assert "return" in metrics
+    assert "mdd" in metrics
+    assert "volatility" in metrics
+    assert "sharpe" in metrics
+    assert "sortino" in metrics
+    assert "calmar" in metrics
+    assert "annualized_return" in metrics
+
+    assert isinstance(metrics["volatility"], float)
+    assert isinstance(metrics["sharpe"], float)
+    assert isinstance(metrics["sortino"], float)
+    assert isinstance(metrics["calmar"], float)
+    assert metrics["volatility"] > 0
+
+    # run_backtest 응답에도 해당 지표가 모두 포함되는지 검증
+    now_ts = pd.Timestamp.now()
+    dates_full = pd.date_range(end=now_ts, periods=300, freq="B")
+    mock_prices = pd.DataFrame(
+        {
+            "069500.KS": [30000.0 * (1 + 0.0005 * i) for i in range(300)],
+            "^KS11": [2500.0 * (1 + 0.0002 * i) for i in range(300)],
+            "^KQ11": [800.0 * (1 + 0.0002 * i) for i in range(300)],
+            "^GSPC": [4000.0 * (1 + 0.0003 * i) for i in range(300)],
+            "^IXIC": [12000.0 * (1 + 0.0004 * i) for i in range(300)],
+        },
+        index=dates_full
+    )
+
+    req = BacktestRequest(
+        holdings=[HoldingItem(code="069500", amount=10000000, name="KODEX 200")]
+    )
+
+    with patch("api.backtest.load_backtest_close_prices", new_callable=AsyncMock) as mock_load:
+        mock_load.return_value = mock_prices
+        res = await run_backtest(req, db=None)
+        assert res["status"] == "success"
+        pf_1y = res["results"]["1Y"]["Portfolio"]
+        assert "volatility" in pf_1y
+        assert "sharpe" in pf_1y
+        assert "sortino" in pf_1y
+        assert "calmar" in pf_1y
+        assert "annualized_return" in pf_1y
+        assert pf_1y["volatility"] >= 0
+        assert pf_1y["mdd"] <= 0
