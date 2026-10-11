@@ -9,6 +9,7 @@ import RiskBanner from "@/components/RiskBanner";
 import AssetHistoryChart from "@/components/AssetHistoryChart";
 import TotalAssetBoard from "@/components/TotalAssetBoard";
 import DividendDashboard from "@/components/DividendDashboard";
+import SlidingTabs from "./common/SlidingTabs";
 
 // Render 콜드 스타트 대응: 첫 요청 시 백엔드가 잠들어 있으면 "Failed to fetch"(네트워크 실패)나
 // 502/503(기동 중)이 나므로, 서버가 깨어날 때까지 점진적 backoff로 재시도한다.
@@ -248,52 +249,22 @@ function MyAssetsViewInner({ onOpenDetail, onAnalyzePeers }: { onOpenDetail?: (c
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
-                        {/* Sub-tab Switcher */}
-                        <div className="flex bg-black/40 p-1 rounded-xl border border-white/10">
-                            <button
-                                onClick={() => setMainTab("total")}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                    mainTab === "total"
-                                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                                        : "text-gray-400 hover:text-white"
-                                }`}
-                            >
-                                <Wallet className="w-3.5 h-3.5" />
-                                <span>종합 자산 (Hoya Board)</span>
-                            </button>
-                            <button
-                                onClick={() => setMainTab("kis")}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                    mainTab === "kis"
-                                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                                        : "text-gray-400 hover:text-white"
-                                }`}
-                            >
-                                <LayoutDashboard className="w-3.5 h-3.5" />
-                                <span>KIS 실시간</span>
-                            </button>
-                            <button
-                                onClick={() => setMainTab("history")}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                    mainTab === "history"
-                                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                                        : "text-gray-400 hover:text-white"
-                                }`}
-                            >
-                                <TrendingUp className="w-3.5 h-3.5" />
-                                <span>자산 추이</span>
-                            </button>
-                            <button
-                                onClick={() => setMainTab("dividend")}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                    mainTab === "dividend"
-                                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                                        : "text-gray-400 hover:text-white"
-                                }`}
-                            >
-                                <Coins className="w-3.5 h-3.5 text-amber-400" />
-                                <span>💰 배당 캘린더</span>
-                            </button>
+                        {/* transitions.dev: Sub-tab Switcher with SlidingTabs */}
+                        <div className="bg-black/40 p-1 rounded-xl border border-white/10">
+                            <SlidingTabs
+                                items={[
+                                    { id: "total", label: "종합 자산 (Hoya Board)", icon: <Wallet className="w-3.5 h-3.5" /> },
+                                    { id: "kis", label: "KIS 실시간", icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
+                                    { id: "history", label: "자산 추이", icon: <TrendingUp className="w-3.5 h-3.5" /> },
+                                    { id: "dividend", label: "💰 배당 캘린더", icon: <Coins className="w-3.5 h-3.5 text-amber-400" /> },
+                                ]}
+                                activeId={mainTab}
+                                onChange={(id) => setMainTab(id as "total" | "kis" | "history" | "dividend")}
+                                pillClassName="bg-indigo-600 shadow-md shadow-indigo-600/30"
+                                tabClassName="px-3 py-1.5 rounded-lg text-xs font-bold"
+                                activeTabClassName="text-white"
+                                inactiveTabClassName="text-gray-400 hover:text-white"
+                            />
                         </div>
 
                         {hasSimulated && mainTab === "kis" && (

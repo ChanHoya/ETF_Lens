@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, Info, Hash } from 'lucide-react';
+import { Lock, Info, Hash, CheckCircle2 } from 'lucide-react';
 
 export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: () => void, initialError: string | null }) {
     const [pin, setPin] = useState('');
     const [hasExistingPin, setHasExistingPin] = useState(false); // SSR-safe: useEffect에서 초기화
     const [setupPin, setSetupPin] = useState('');
     const [error, setError] = useState(initialError || '');
+    const [isShaking, setIsShaking] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
     const pinInputRef = useRef<HTMLInputElement>(null);
 
     // localStorage는 클라이언트 전용 — useEffect에서 안전하게 접근
@@ -22,9 +24,14 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: ()
         e.preventDefault();
         const storedPin = localStorage.getItem("etf_lens_pin");
         if (pin === storedPin || storedPin === null) {
-            onSuccess();
+            setIsSuccess(true);
+            setTimeout(() => {
+                onSuccess();
+            }, 400);
         } else {
             setError("PIN 번호가 일치하지 않습니다.");
+            setIsShaking(true);
+            setTimeout(() => setIsShaking(false), 500);
         }
     };
 
@@ -32,11 +39,16 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: ()
         e.preventDefault();
         if (setupPin.length < 4) {
             setError("PIN 번호는 4자리 이상이어야 합니다.");
+            setIsShaking(true);
+            setTimeout(() => setIsShaking(false), 500);
             return;
         }
 
         localStorage.setItem("etf_lens_pin", setupPin);
-        onSuccess();
+        setIsSuccess(true);
+        setTimeout(() => {
+            onSuccess();
+        }, 400);
     };
 
     const handleReset = () => {
@@ -48,10 +60,14 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: ()
     };
 
     return (
-        <div className="w-full max-w-md mx-auto bg-white/[0.03] p-6 lg:p-8 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+        <div className={`w-full max-w-md mx-auto bg-white/[0.03] p-6 lg:p-8 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] ${isShaking ? 't-shake' : ''}`}>
             <div className="mb-8 text-center">
-                <div className="mx-auto w-16 h-16 bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 rounded-2xl border border-indigo-500/30 flex items-center justify-center mb-4">
-                    <Lock className="w-8 h-8 text-indigo-400" />
+                <div className={`mx-auto w-16 h-16 rounded-2xl border flex items-center justify-center mb-4 transition-all duration-300 ${isSuccess ? 'bg-emerald-500/20 border-emerald-500/40' : 'bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 border-indigo-500/30'}`}>
+                    {isSuccess ? (
+                        <CheckCircle2 className="w-8 h-8 text-emerald-400 t-check-pop" />
+                    ) : (
+                        <Lock className="w-8 h-8 text-indigo-400" />
+                    )}
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">
                     {hasExistingPin ? '포트폴리오 잠금 해제' : 'PIN 앱 잠금 설정'}

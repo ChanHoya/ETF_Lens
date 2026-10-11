@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { TrendingUp, TrendingDown, Check, Trash2, Info, PlusCircle } from "lucide-react";
 import { API_BASE } from "@/lib/apiConfig";
+import NumberPopIn from "./common/NumberPopIn";
 
 interface PrincipalEntry {
     account_no: string;
@@ -140,7 +141,11 @@ export default function InvestmentReturnCard({ totalEvalAmount, cashBalance }: P
                 <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left border-b md:border-b-0 md:border-r border-white/10 pb-2 md:pb-0 md:pr-8 w-full md:w-auto">
                     <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">누적 투자금액</p>
                     <div className="flex items-baseline gap-1">
-                        <p className="text-2xl md:text-4xl font-extrabold tracking-tight text-white">{fmtKRW(totalPrincipal)}</p>
+                        <NumberPopIn
+                            value={totalPrincipal}
+                            isCurrency
+                            className="text-2xl md:text-4xl font-extrabold tracking-tight text-white"
+                        />
                         <span className="text-xs md:text-sm text-gray-500">원</span>
                     </div>
                 </div>
@@ -149,9 +154,11 @@ export default function InvestmentReturnCard({ totalEvalAmount, cashBalance }: P
                 <div className="flex-2 flex flex-col items-center text-center px-4 md:px-12 w-full md:w-auto">
                     <p className="text-xs md:text-sm text-gray-400 mb-1 font-bold">현재 자산 총액</p>
                     <div className="flex items-baseline gap-1">
-                        <p className="text-3xl md:text-5xl font-black tracking-tighter text-white bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400">
-                            {fmtKRW(currentTotalAsset)}
-                        </p>
+                        <NumberPopIn
+                            value={currentTotalAsset}
+                            isCurrency
+                            className="text-3xl md:text-5xl font-black tracking-tighter text-white bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400"
+                        />
                         <span className="text-sm md:text-base text-gray-400">원</span>
                     </div>
                 </div>
@@ -161,7 +168,16 @@ export default function InvestmentReturnCard({ totalEvalAmount, cashBalance }: P
                     <p className="text-xs md:text-sm text-gray-500 mb-1 font-bold">누적 총 수익</p>
                     <div className={`flex flex-col items-center md:items-end ${returnRate === null ? "text-gray-400" : isPos ? "text-rose-400" : "text-blue-400"}`}>
                         <div className="text-2xl md:text-4xl font-extrabold tracking-tight flex items-center gap-1">
-                            {returnRate !== null ? `${isPos ? "+" : ""}${returnRate.toFixed(2)}%` : "-- %"}
+                            {returnRate !== null ? (
+                                <NumberPopIn
+                                    value={returnRate}
+                                    decimals={2}
+                                    prefix={isPos ? "+" : ""}
+                                    suffix="%"
+                                />
+                            ) : (
+                                "-- %"
+                            )}
                         </div>
                         {profit !== null && (
                             <p className="text-sm md:text-base font-bold opacity-80 mt-1">
