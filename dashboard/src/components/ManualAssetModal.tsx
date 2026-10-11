@@ -371,10 +371,10 @@ export default function ManualAssetModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 t-modal-backdrop">
             <div className={`bg-[#12141a] border border-white/10 rounded-2xl w-full ${
                 isEdit ? "max-w-xl" : "max-w-6xl"
-            } overflow-hidden shadow-2xl flex flex-col max-h-[92vh]`}>
+            } overflow-hidden shadow-2xl flex flex-col max-h-[92vh] t-modal-panel`}>
                 {/* Header */}
                 <div className="px-5 py-3.5 border-b border-white/10 flex justify-between items-center bg-white/[0.02]">
                     <div className="flex items-center gap-2.5">

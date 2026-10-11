@@ -106,8 +106,8 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
     const getCustomColor = (name: string) => customColors[name] || '#71717a';
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-[#121217] border border-white/10 rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 t-modal-backdrop">
+            <div className="bg-[#121217] border border-white/10 rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col relative t-modal-panel">
 
                 {/* Header */}
                 <div className="sticky top-0 z-10 bg-[#121217] p-6 border-b border-white/10 flex justify-between items-center backdrop-blur-md">

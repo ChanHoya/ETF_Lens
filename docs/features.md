@@ -91,6 +91,7 @@
 | S8-1: transitions.css 전역 모션 토큰 체계 구축 + 상단 메인 내비게이션 탭 슬라이딩 | ✅ done | dashboard/src/app/transitions.css, dashboard/src/components/common/SlidingTabs.tsx, dashboard/src/components/MainApp.tsx | transitions.dev 기반 GPU 가속 모션 토큰, 스프링 이징 곡선, SlidingTabs 글라이딩 인디케이터 및 메인/서브 내비게이션 탭 슬라이더 탑재 완료 |
 | S8-2: /my 종합자산(Hoya Board & KIS) 탭 슬라이딩, PIN 모달 셰이크/체크, 자산 숫자 팝인 카운터 적용 | ✅ done | dashboard/src/components/MyAssetsView.tsx, MyDashboard.tsx, MyAuthModal.tsx, TotalAssetBoard.tsx, InvestmentReturnCard.tsx, common/NumberPopIn.tsx | My 서브탭 및 섹션5 시뮬레이션 탭 SlidingTabs 연동, PIN 불일치 햅틱 셰이크 및 성공 팝인 모션, 자산/수익률 변동 시 NumberPopIn 마이크로 인터랙션 적용 완료 |
 | S8-3: /tff 펀드 대시보드 서브탭 슬라이딩, 추정 시뮬레이션 스무스 토글 스위치, 월별 비교 카드 텍스트 스왑 적용 | ✅ done | dashboard/src/components/tff/TffDashboard.tsx, dashboard/src/components/tff/views/MonthlyView.tsx | TFF 5대 서브탭 및 월별 분류 탭 SlidingTabs 글라이딩 적용, 추정 시뮬레이션 스프링 토글 스위치 비주얼, 버전 비교 메트릭 텍스트 스왑(t-text-swap) 및 월별 성과 NumberPopIn 적용 완료 |
+| S8-4: AI 어드바이저 씽킹 스테이트 및 전체 모달 스케일/블러 진입 고도화 | ✅ done | dashboard/src/components/ChatBot.tsx, AIInsight.tsx, Modals.tsx, AccountDetailModal.tsx, KisAccountMappingModal.tsx, ManualAssetModal.tsx, ManualCashModal.tsx | AI Assistant/Insight 씽킹 카드(t-shimmer-text, 펄싱 아바타) 적용 및 전체 팝업/모달(관심종목, 상세, 계좌매핑, 수동자산, 마켓) 스프링 스케일(t-modal-panel) & 블러 백드롭(t-modal-backdrop) 전역 적용 완료 |
 
 
 
