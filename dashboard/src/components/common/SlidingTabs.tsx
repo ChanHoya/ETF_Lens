@@ -10,11 +10,14 @@ export interface TabItem {
 }
 
 export interface SlidingTabsProps {
-  items: TabItem[];
-  activeId: string;
+  items?: TabItem[];
+  tabs?: TabItem[];
+  activeId?: string;
+  activeTab?: string;
   onChange: (id: string) => void;
   containerClassName?: string;
   pillClassName?: string;
+  activePillClassName?: string;
   tabClassName?: string;
   activeTabClassName?: string;
   inactiveTabClassName?: string;
@@ -22,14 +25,21 @@ export interface SlidingTabsProps {
 
 export default function SlidingTabs({
   items,
+  tabs,
   activeId,
+  activeTab,
   onChange,
   containerClassName = "",
-  pillClassName = "bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_15px_rgba(99,102,241,0.4)]",
+  pillClassName,
+  activePillClassName,
   tabClassName = "px-3 py-1 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap",
   activeTabClassName = "text-white",
   inactiveTabClassName = "text-gray-400 hover:text-white hover:bg-white/5",
 }: SlidingTabsProps) {
+  const tabList = items || tabs || [];
+  const currentActiveId = activeId || activeTab || "";
+  const currentPillClass = pillClassName || activePillClassName || "bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_15px_rgba(99,102,241,0.4)]";
+
   const containerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [pillStyle, setPillStyle] = useState<{ left: number; width: number; height: number; top: number; visible: boolean }>({
@@ -41,7 +51,7 @@ export default function SlidingTabs({
   });
 
   const updatePill = useCallback(() => {
-    const activeEl = tabRefs.current.get(activeId);
+    const activeEl = tabRefs.current.get(currentActiveId);
     const containerEl = containerRef.current;
     if (activeEl && containerEl) {
       const containerRect = containerEl.getBoundingClientRect();
@@ -57,7 +67,7 @@ export default function SlidingTabs({
     } else {
       setPillStyle((prev) => ({ ...prev, visible: false }));
     }
-  }, [activeId]);
+  }, [currentActiveId]);
 
   useEffect(() => {
     updatePill();
@@ -78,7 +88,7 @@ export default function SlidingTabs({
     >
       {/* 부드럽게 슬라이딩되는 액티브 인디케이터 필(Pill) */}
       <div
-        className={`t-tabs-pill rounded-full ${pillClassName}`}
+        className={`t-tabs-pill rounded-full ${currentPillClass}`}
         style={{
           transform: `translateX(${pillStyle.left}px)`,
           width: `${pillStyle.width}px`,
@@ -90,8 +100,8 @@ export default function SlidingTabs({
       />
 
       {/* 탭 버튼 목록 */}
-      {items.map((tab) => {
-        const isActive = tab.id === activeId;
+      {tabList.map((tab) => {
+        const isActive = tab.id === currentActiveId;
         return (
           <button
             key={tab.id}

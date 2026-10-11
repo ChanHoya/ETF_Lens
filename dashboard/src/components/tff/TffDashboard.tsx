@@ -516,16 +516,16 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                 <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 relative z-20 px-0 flex flex-col lg:flex-row lg:items-center gap-2">
                     <div className="flex-1 overflow-x-auto custom-scrollbar">
                         <SlidingTabs
-                            tabs={[
+                            items={[
                                 { id: 'overview', label: '포트폴리오 현황' },
                                 { id: 'cumulative', label: '총누적손익' },
                                 { id: 'assets', label: '종목별 수익율' },
                                 { id: 'ytm', label: 'YTM 현황' },
                                 { id: 'monthly', label: '월별 분석' },
                             ]}
-                            activeTab={activeSubTab}
+                            activeId={activeSubTab}
                             onChange={(id) => setActiveSubTab(id as any)}
-                            activePillClassName="bg-sky-500/20 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.2)] border border-sky-500/40"
+                            pillClassName="bg-sky-500/20 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.2)] border border-sky-500/40"
                             inactiveTabClassName="text-gray-400 hover:text-gray-200"
                         />
                     </div>

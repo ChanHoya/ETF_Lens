@@ -431,10 +431,10 @@ export default function MonthlyView({ data, onOpenDetail, titleRightElement }: P
         <span className="text-xs font-bold text-gray-400 pl-1 shrink-0">보유 자산 분류</span>
         <div className="overflow-x-auto custom-scrollbar">
           <SlidingTabs
-            tabs={FILTER_TYPES.map(filter => ({ id: filter.value, label: filter.label }))}
-            activeTab={selectedType}
+            items={FILTER_TYPES.map(filter => ({ id: filter.value, label: filter.label }))}
+            activeId={selectedType}
             onChange={(val) => setSelectedType(val)}
-            activePillClassName="bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md shadow-indigo-500/20"
+            pillClassName="bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md shadow-indigo-500/20"
             inactiveTabClassName="text-gray-400 hover:text-gray-200"
           />
         </div>
