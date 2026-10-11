@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, Fragment } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback, Fragment } from "react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, BarChart, Bar, Cell, PieChart, Pie, ComposedChart, ReferenceLine, ReferenceArea } from "recharts";
 import { Search, Loader2, Plus, X, ChevronDown, ChevronLeft, ChevronRight, Star, Trash2, Edit2, Check, Share2, RefreshCw, BarChart2, Minus, Zap, Crown, Target, Layers, BookOpen, AlertCircle, ArrowUpRight, ArrowDownRight, Clock, ShieldAlert, Cpu, Maximize2, Minimize2, Building2, Flame } from "lucide-react";
 import { API_BASE } from '@/lib/apiConfig';
@@ -25,6 +25,7 @@ import { useRouter } from "next/navigation";
 import MyAssetsView from "./MyAssetsView";
 import SectorAnalysisTab from "./SectorAnalysisTab";
 import TffGateWrapper from "./tff/TffGateWrapper";
+import SlidingTabs from "./common/SlidingTabs";
 
 const DividendDashboard = dynamic(() => import("@/components/DividendDashboard"), {
   ssr: false,
@@ -226,7 +227,52 @@ function MainAppInner({ initialTab = 'select', showMyTab = false, showTffTab = f
     mainNavRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
   };
 
+  // transitions.dev: 메인 내비게이션 탭 슬라이딩 필(Pill Indicator)
+  const [navPillStyle, setNavPillStyle] = useState<{ left: number; width: number; height: number; visible: boolean }>({
+    left: 0,
+    width: 0,
+    height: 0,
+    visible: false,
+  });
+  const navTabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
+  const currentMainTabId = useMemo(() => {
+    if (isEtfCheckModalOpen) return 'etfcheck';
+    if (['select', 'info', 'chart', 'holdings', 'covered_call', ...(showMyTab ? ['dividend'] : []), 'brazil'].includes(activeTab)) {
+      return 'analysis';
+    }
+    if (['discover', 'fx', 'rates', 'stocks', 'macro'].includes(activeTab)) {
+      return 'discover';
+    }
+    return activeTab;
+  }, [activeTab, isEtfCheckModalOpen, showMyTab]);
+
+  const updateNavPill = useCallback(() => {
+    const activeEl = navTabRefs.current.get(currentMainTabId);
+    const navEl = mainNavRef.current;
+    if (activeEl && navEl) {
+      const navRect = navEl.getBoundingClientRect();
+      const tabRect = activeEl.getBoundingClientRect();
+      setNavPillStyle({
+        left: tabRect.left - navRect.left + navEl.scrollLeft,
+        width: tabRect.width,
+        height: tabRect.height,
+        visible: true,
+      });
+    } else {
+      setNavPillStyle(prev => ({ ...prev, visible: false }));
+    }
+  }, [currentMainTabId]);
+
+  useEffect(() => {
+    updateNavPill();
+    window.addEventListener('resize', updateNavPill);
+    const timer = setTimeout(updateNavPill, 60);
+    return () => {
+      window.removeEventListener('resize', updateNavPill);
+      clearTimeout(timer);
+    };
+  }, [updateNavPill]);
 
   const handleReset = () => {
     setSlots([
@@ -1213,10 +1259,24 @@ function MainAppInner({ initialTab = 'select', showMyTab = false, showTffTab = f
             onMouseUp={handleNavMouseUp}
             onMouseMove={handleNavMouseMove}
             onWheel={handleNavWheel}
-            className={`flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 py-1 sm:py-1.5 overflow-x-auto scrollbar-hide whitespace-nowrap touch-pan-x min-w-0 max-w-full select-none ${
+            className={`t-tabs-container relative flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 py-1 sm:py-1.5 overflow-x-auto scrollbar-hide whitespace-nowrap touch-pan-x min-w-0 max-w-full select-none ${
               isNavMouseDown ? 'cursor-grabbing' : 'cursor-grab'
             }`}
           >
+            {/* transitions.dev: 스무스 하드웨어 가속 슬라이딩 필(Pill) 인디케이터 */}
+            <div
+              className="t-tabs-pill rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+              style={{
+                transform: `translateX(${navPillStyle.left}px)`,
+                width: `${navPillStyle.width}px`,
+                height: navPillStyle.height ? `${navPillStyle.height}px` : 'auto',
+                top: '50%',
+                marginTop: navPillStyle.height ? `-${navPillStyle.height / 2}px` : 0,
+                opacity: navPillStyle.visible ? 1 : 0,
+              }}
+              aria-hidden="true"
+            />
+
             {[
               { id: 'analysis', label: '종목분석' },
               { id: 'sector', label: '섹터분석' },
@@ -1234,9 +1294,13 @@ function MainAppInner({ initialTab = 'select', showMyTab = false, showTffTab = f
               return (
                 <Fragment key={tab.id}>
                   {tab.id === 'etftracker' && (
-                    <div className="h-3.5 w-[1px] bg-white/20 mx-0.5 shrink-0 self-center" />
+                    <div className="h-3.5 w-[1px] bg-white/20 mx-0.5 shrink-0 self-center relative z-10" />
                   )}
                   <button
+                    ref={(el) => {
+                      if (el) navTabRefs.current.set(tab.id, el);
+                      else navTabRefs.current.delete(tab.id);
+                    }}
                     onClick={(e) => {
                       if (hasNavDragged) {
                         e.preventDefault();
@@ -1277,9 +1341,9 @@ function MainAppInner({ initialTab = 'select', showMyTab = false, showTffTab = f
                       setNaverEtfCode(null);
                       setSelectedDetailEtf(null);
                     }}
-                    className={`text-xs sm:text-sm md:text-[14px] lg:text-[15px] tracking-wide font-bold transition-all px-2.5 sm:px-3 md:px-3.5 py-1 sm:py-1 rounded-full whitespace-nowrap shrink-0 cursor-pointer ${
+                    className={`relative z-10 text-xs sm:text-sm md:text-[14px] lg:text-[15px] tracking-wide font-bold transition-colors px-2.5 sm:px-3 md:px-3.5 py-1 sm:py-1 rounded-full whitespace-nowrap shrink-0 cursor-pointer ${
                       isActive
-                        ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]'
+                        ? 'text-white'
                         : tab.isExternal
                         ? 'text-gray-400/70 hover:text-gray-200 hover:bg-white/5 border border-white/5'
                         : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'
@@ -1306,60 +1370,58 @@ function MainAppInner({ initialTab = 'select', showMyTab = false, showTffTab = f
       {/* 서브탭: 종목분석 탭 선택시만 헤더 아래에 표시 */}
       {['select', 'info', 'chart', 'holdings', 'covered_call', ...(showMyTab ? ['dividend'] : []), 'brazil'].includes(activeTab) && !isEtfCheckModalOpen && (
         <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-50">
-          {/* 모바일: 수평 스크롤 가능한 서브탭 */}
-          <nav className="flex items-center gap-2 md:gap-4 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 shadow-sm backdrop-blur-md overflow-x-auto scrollbar-hide">
-            {[
-              { id: 'select', label: '종목선택' },
-              { id: 'info', label: '기본정보' },
-              { id: 'chart', label: '차트' },
-              { id: 'holdings', label: '구성종목' },
-              { id: 'covered_call', label: '커버드콜' },
-              ...(showMyTab ? [{ id: 'dividend', label: '💰 배당 캘린더' }] : []),
-              { id: 'brazil', label: '🇧🇷 브라질채권' },
-            ].map(subTab => (
-              <button
-                key={subTab.id}
-                onClick={() => {
-                  // 브라질채권과 배당 캘린더는 종목 선택 없이 독립 진입 가능 (시뮬레이터 / 매크로 뷰)
-                  if (subTab.id !== 'select' && subTab.id !== 'brazil' && subTab.id !== 'dividend' && !data) {
-                    alert('먼저 종목을 선택하고 비교를 실행해주세요.');
-                    return;
-                  }
-                  setActiveTab(subTab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'brazil');
-                  setNaverEtfCode(null);
-                  setSelectedDetailEtf(null);
-                }}
-                className={`text-sm md:text-[15px] font-bold transition-all px-3 py-1 rounded-full whitespace-nowrap ${activeTab === subTab.id ? 'bg-white/20 text-white shadow-inner border border-white/20' : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'}`}
-              >
-                {subTab.label}
-              </button>
-            ))}
-          </nav>
+          <div className="bg-black/40 px-3 py-1 rounded-full border border-white/10 shadow-sm backdrop-blur-md overflow-x-auto scrollbar-hide">
+            <SlidingTabs
+              items={[
+                { id: 'select', label: '종목선택' },
+                { id: 'info', label: '기본정보' },
+                { id: 'chart', label: '차트' },
+                { id: 'holdings', label: '구성종목' },
+                { id: 'covered_call', label: '커버드콜' },
+                ...(showMyTab ? [{ id: 'dividend', label: '💰 배당 캘린더' }] : []),
+                { id: 'brazil', label: '🇧🇷 브라질채권' },
+              ]}
+              activeId={activeTab}
+              onChange={(newId) => {
+                if (newId !== 'select' && newId !== 'brazil' && newId !== 'dividend' && !data) {
+                  alert('먼저 종목을 선택하고 비교를 실행해주세요.');
+                  return;
+                }
+                setActiveTab(newId as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'brazil');
+                setNaverEtfCode(null);
+                setSelectedDetailEtf(null);
+              }}
+              pillClassName="bg-white/20 shadow-inner border border-white/20"
+              tabClassName="text-sm md:text-[15px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
+              activeTabClassName="text-white"
+              inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
+            />
+          </div>
         </div>
       )}
 
       {/* 서브탭: 시장동향 탭 선택시 — 시장 개요 | 환율 | 금리 | 주식 | 종합 */}
       {(activeTab === 'discover' || activeTab === 'fx' || activeTab === 'rates' || activeTab === 'stocks' || activeTab === 'macro') && !isEtfCheckModalOpen && (
         <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-50">
-          <nav className="flex items-center gap-2 md:gap-4 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 shadow-sm backdrop-blur-md overflow-x-auto scrollbar-hide">
-            {[
-              { id: 'discover', label: '시장 개요' },
-              { id: 'fx', label: '💱 환율' },
-              { id: 'rates', label: '📈 금리' },
-              { id: 'stocks', label: '📊 주식' },
-              { id: 'macro', label: '🧭 종합' },
-            ].map(subTab => (
-              <button
-                key={subTab.id}
-                onClick={() => setActiveTab(subTab.id as 'discover' | 'fx' | 'rates' | 'stocks' | 'macro')}
-                className={`text-sm md:text-[15px] font-bold transition-all px-3 py-1 rounded-full whitespace-nowrap ${activeTab === subTab.id ? 'bg-white/20 text-white shadow-inner border border-white/20' : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'}`}
-              >
-                {subTab.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-2 md:gap-4 bg-black/40 px-3 py-1 rounded-full border border-white/10 shadow-sm backdrop-blur-md overflow-x-auto scrollbar-hide">
+            <SlidingTabs
+              items={[
+                { id: 'discover', label: '시장 개요' },
+                { id: 'fx', label: '💱 환율' },
+                { id: 'rates', label: '📈 금리' },
+                { id: 'stocks', label: '📊 주식' },
+                { id: 'macro', label: '🧭 종합' },
+              ]}
+              activeId={activeTab}
+              onChange={(newId) => setActiveTab(newId as 'discover' | 'fx' | 'rates' | 'stocks' | 'macro')}
+              pillClassName="bg-white/20 shadow-inner border border-white/20"
+              tabClassName="text-sm md:text-[15px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
+              activeTabClassName="text-white"
+              inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
+            />
             <div className="h-4 w-[1px] bg-white/20 shrink-0" />
             <TodayMarketButton />
-          </nav>
+          </div>
         </div>
       )}
 

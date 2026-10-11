@@ -136,13 +136,13 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
             <>
                 {/* 반투명 배경 — 클릭 시 닫기 */}
                 <div
-                    className="fixed inset-0 z-[199] bg-black/50 backdrop-blur-[2px]"
+                    className="fixed inset-0 z-[199] bg-black/60 t-modal-backdrop"
                     onClick={() => setIsOpen(false)}
                 />
                 {/* 채팅 패널 — 뷰포트 상단 70px 기준으로 고정 */}
                 <div className="fixed top-[70px] inset-x-0 z-[200] flex justify-center px-4 md:px-8 pointer-events-none">
                     <div
-                        className="w-full max-w-[960px] min-h-[300px] max-h-[80vh] bg-[#12121A] border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto"
+                        className="w-full max-w-[960px] min-h-[300px] max-h-[80vh] bg-[#12121A] border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col t-modal-panel pointer-events-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
@@ -177,14 +177,17 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
                             ))}
 
                             {isLoading && (
-                                <div className="flex gap-3 justify-start">
-                                    <div className="w-8 h-8 rounded-full bg-indigo-500/20 shrink-0 flex items-center justify-center mt-1">
+                                <div className="flex gap-3 justify-start items-start animate-in fade-in duration-300">
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/30 to-purple-500/30 shrink-0 flex items-center justify-center mt-1 border border-indigo-400/30 animate-pulse">
                                         <Bot className="w-4 h-4 text-indigo-400" />
                                     </div>
-                                    <div className="bg-[#1C1C24] border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                                    <div className="bg-[#1C1C24] border border-indigo-500/20 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-3 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                                        </div>
+                                        <span className="text-xs font-semibold t-shimmer-text">AI 분석 및 포트폴리오 데이터를 추론 중입니다...</span>
                                     </div>
                                 </div>
                             )}
@@ -221,7 +224,7 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
     return (
         <>
             {isOpen && (
-                <div className="absolute top-14 left-0 w-full min-h-[300px] max-h-[80vh] bg-[#12121A] border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col z-[100] animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="absolute top-14 left-0 w-full min-h-[300px] max-h-[80vh] bg-[#12121A] border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col z-[100] t-modal-panel">
                     <div className="px-4 py-3 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-b border-white/10 flex justify-between items-center shrink-0">
                         <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
@@ -236,11 +239,6 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
                     <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar bg-black/40">
                         {messages.map(msg => (
                             <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                {msg.role === 'assistant' && (
-                                    <div className="w-8 h-8 rounded-full bg-indigo-500/20 shrink-0 flex items-center justify-center mt-1">
-                                        <Bot className="w-4 h-4 text-indigo-400" />
-                                    </div>
-                                )}
                                 <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${msg.role === 'user'
                                     ? 'bg-indigo-500 text-white rounded-tr-sm'
                                     : 'bg-[#1C1C24] text-gray-200 border border-white/5 rounded-tl-sm whitespace-pre-wrap leading-relaxed'
@@ -250,14 +248,17 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
                             </div>
                         ))}
                         {isLoading && (
-                            <div className="flex gap-3 justify-start">
-                                <div className="w-8 h-8 rounded-full bg-indigo-500/20 shrink-0 flex items-center justify-center mt-1">
+                            <div className="flex gap-3 justify-start items-start animate-in fade-in duration-300">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/30 to-purple-500/30 shrink-0 flex items-center justify-center mt-1 border border-indigo-400/30 animate-pulse">
                                     <Bot className="w-4 h-4 text-indigo-400" />
                                 </div>
-                                <div className="bg-[#1C1C24] border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                                <div className="bg-[#1C1C24] border border-indigo-500/20 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-3 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                                    </div>
+                                    <span className="text-xs font-semibold t-shimmer-text">AI 분석 및 포트폴리오 데이터를 추론 중입니다...</span>
                                 </div>
                             </div>
                         )}

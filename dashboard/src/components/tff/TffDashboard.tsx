@@ -12,6 +12,7 @@ import PortfolioDetailView from './views/PortfolioDetailView';
 import OverviewView from './views/OverviewView';
 import YtmView from './views/YtmView';
 import MonthlyView from './views/MonthlyView';
+import SlidingTabs from '../common/SlidingTabs';
 
 const LOCAL_STORAGE_KEY = 'tff_fund_data';
 
@@ -386,13 +387,13 @@ export default function TffDashboard({ onOpenDetail }: Props) {
         const isPositive = diff >= 0;
 
         return (
-            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 space-y-1">
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 space-y-1 transition-all hover:bg-white/[0.04]">
                 <span className="text-xs text-gray-400 font-medium">{label}</span>
                 <div className="flex items-baseline justify-between gap-1">
                     {/* Base Value */}
                     <div className="text-left">
                         <span className="block text-[9px] text-gray-500 font-bold uppercase">기준</span>
-                        <div className="text-xs text-gray-300">
+                        <div className="text-xs text-gray-300 t-text-swap" key={`base-${baseVal}`}>
                             {isPercent ? `${baseVal.toFixed(1)}%` : `${formatMoney(baseVal)}원`}
                         </div>
                     </div>
@@ -403,10 +404,10 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                     {/* Current Value & Diff */}
                     <div className="text-right">
                         <span className="block text-[9px] text-gray-500 font-bold uppercase">현재</span>
-                        <div className="text-sm font-bold text-white">
+                        <div className="text-sm font-bold text-white t-text-swap" key={`curr-${currentVal}`}>
                             {isPercent ? `${currentVal.toFixed(1)}%` : `${formatMoney(currentVal)}원`}
                         </div>
-                        <div className={`text-[10px] font-bold ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <div className={`text-[10px] font-bold t-text-swap ${isPositive ? 'text-emerald-400' : 'text-red-400'}`} key={`diff-${diff}`}>
                             {isPositive ? '+' : ''}
                             {isPercent ? `${diff.toFixed(1)}%` : `${formatMoney(diff)}원`}
                         </div>
@@ -513,54 +514,55 @@ export default function TffDashboard({ onOpenDetail }: Props) {
             {/* 헤더 2행: 탭 내비게이션 (데이터 있을 때만) */}
             {fundData && (
                 <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 relative z-20 px-0 flex flex-col lg:flex-row lg:items-center gap-2">
-                    <div className="flex flex-row items-center bg-black/40 p-1.5 rounded-xl border border-white/5 overflow-x-auto custom-scrollbar whitespace-nowrap flex-1">
-                        {[
-                            { id: 'overview', label: '포트폴리오 현황' },
-                            { id: 'cumulative', label: '총누적손익' },
-                            { id: 'assets', label: '종목별 수익율' },
-                            { id: 'ytm', label: 'YTM 현황' },
-                            { id: 'monthly', label: '월별 분석' },
-                        ].map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveSubTab(tab.id as any)}
-                                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex-shrink-0 ${activeSubTab === tab.id ? 'bg-sky-500/20 text-sky-300 shadow-[0_0_10px_rgba(56,189,248,0.1)] border border-sky-500/30' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5 border border-transparent'}`}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
+                    <div className="flex-1 overflow-x-auto custom-scrollbar">
+                        <SlidingTabs
+                            tabs={[
+                                { id: 'overview', label: '포트폴리오 현황' },
+                                { id: 'cumulative', label: '총누적손익' },
+                                { id: 'assets', label: '종목별 수익율' },
+                                { id: 'ytm', label: 'YTM 현황' },
+                                { id: 'monthly', label: '월별 분석' },
+                            ]}
+                            activeTab={activeSubTab}
+                            onChange={(id) => setActiveSubTab(id as any)}
+                            activePillClassName="bg-sky-500/20 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.2)] border border-sky-500/40"
+                            inactiveTabClassName="text-gray-400 hover:text-gray-200"
+                        />
                     </div>
 
-                    {/* 현 시점 추정 시뮬레이션 토글 */}
+                    {/* 현 시점 추정 시뮬레이션 스무스 토글 스위치 */}
                     <div className="relative group flex-shrink-0">
                         <button
                             onClick={() => estimateBuilt && setUseEstimate(v => !v)}
                             disabled={!estimateBuilt}
-                            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border whitespace-nowrap ${
+                            className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border whitespace-nowrap select-none ${
                                 !estimateBuilt
                                     ? 'bg-white/5 text-gray-500 border-white/5 cursor-wait'
                                     : useEstimate
-                                        ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-amber-400/50 shadow-[0_0_14px_rgba(245,158,11,0.3)]'
-                                        : 'bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20'
+                                        ? 'bg-gradient-to-r from-amber-500/20 to-orange-600/20 text-amber-200 border-amber-400/50 shadow-[0_0_14px_rgba(245,158,11,0.2)]'
+                                        : 'bg-white/[0.03] text-gray-400 border-white/10 hover:bg-white/[0.06] hover:text-gray-200'
                             }`}
                         >
                             {!estimateBuilt ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-500" />
                             ) : (
-                                <Sparkles className="w-3.5 h-3.5" />
+                                <Sparkles className={`w-3.5 h-3.5 transition-colors ${useEstimate ? 'text-amber-400 animate-pulse' : 'text-gray-400'}`} />
                             )}
                             <span>
                                 {estimateBuilt
                                     ? (() => {
                                         const parts = (estimateBuilt.asOf || '').split('-');
                                         const label = parts.length === 3 ? `${parseInt(parts[1],10)}월 ${parseInt(parts[2],10)}일` : '현재';
-                                        return `현시점(${label}) 기준 추정 시뮬레이션`;
+                                        return `현시점(${label}) 추정 시뮬레이션`;
                                     })()
                                     : '추정 시뮬레이션 준비중 (최대 수분 소요) ...'}
                             </span>
                             {estimateBuilt && (
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black ${useEstimate ? 'bg-white/25' : 'bg-amber-500/20'}`}>
-                                    {useEstimate ? 'ON' : 'OFF'}
+                                <span className={`w-9 h-5 rounded-full p-0.5 transition-colors flex items-center ${useEstimate ? 'bg-amber-500' : 'bg-gray-700/80'}`}>
+                                    <span
+                                        className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${useEstimate ? 'translate-x-4' : 'translate-x-0'}`}
+                                        style={{ transitionTimingFunction: 'var(--t-ease-spring)' }}
+                                    />
                                 </span>
                             )}
                         </button>

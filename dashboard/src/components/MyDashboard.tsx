@@ -13,6 +13,7 @@ import EfficientFrontierPanel from './EfficientFrontierPanel';
 import PortfolioStressTester from './PortfolioStressTester';
 import PortfolioRebalancer from './PortfolioRebalancer';
 import MultiAssetBacktester from './MultiAssetBacktester';
+import SlidingTabs from './common/SlidingTabs';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type MyDashboardProps = {
@@ -454,67 +455,23 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                         <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
                         포트폴리오 시뮬레이션
                     </h2>
-                    <div className="flex gap-1 bg-black/40 p-1 rounded-xl border border-white/5 flex-wrap">
-                        <button
-                            onClick={() => setBacktestTab('dynamic')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 flex items-center gap-1 ${
-                                backtestTab === 'dynamic'
-                                ? 'bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.3)]'
-                                : 'text-gray-400 hover:text-white'
-                            }`}
-                        >
-                            <Sparkles className="w-3.5 h-3.5" /> AI 동적 리밸런싱
-                        </button>
-                        <button
-                            onClick={() => setBacktestTab('static')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${
-                                backtestTab === 'static'
-                                ? 'bg-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.3)]'
-                                : 'text-gray-400 hover:text-white'
-                            }`}
-                        >
-                            일반 백테스터
-                        </button>
-                        <button
-                            onClick={() => setBacktestTab('efficient')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 flex items-center gap-1 ${
-                                backtestTab === 'efficient'
-                                ? 'bg-sky-600 text-white shadow-[0_0_10px_rgba(14,165,233,0.35)]'
-                                : 'text-gray-400 hover:text-white'
-                            }`}
-                        >
-                            <TrendingUp className="w-3.5 h-3.5" /> 포트폴리오 최적화
-                        </button>
-                        <button
-                            onClick={() => setBacktestTab('stress')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 flex items-center gap-1 ${
-                                backtestTab === 'stress'
-                                ? 'bg-rose-600 text-white shadow-[0_0_10px_rgba(225,29,72,0.35)]'
-                                : 'text-gray-400 hover:text-white'
-                            }`}
-                        >
-                            <ShieldAlert className="w-3.5 h-3.5 text-rose-300" /> 스트레스 테스터
-                        </button>
-                        <button
-                            onClick={() => setBacktestTab('rebalance')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 flex items-center gap-1 ${
-                                backtestTab === 'rebalance'
-                                ? 'bg-indigo-600 text-white shadow-[0_0_10px_rgba(99,102,241,0.35)]'
-                                : 'text-gray-400 hover:text-white'
-                            }`}
-                        >
-                            <Scale className="w-3.5 h-3.5 text-indigo-300" /> 스마트 리밸런싱
-                        </button>
-                        <button
-                            onClick={() => setBacktestTab('multi')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 flex items-center gap-1 ${
-                                backtestTab === 'multi'
-                                ? 'bg-amber-600 text-white shadow-[0_0_10px_rgba(217,119,6,0.35)]'
-                                : 'text-gray-400 hover:text-white'
-                            }`}
-                        >
-                            <Layers className="w-3.5 h-3.5 text-amber-300" /> 멀티 백테스터 2.0
-                        </button>
+                    <div className="bg-black/40 p-1 rounded-xl border border-white/5 flex-wrap">
+                        <SlidingTabs
+                            items={[
+                                { id: 'dynamic', label: 'AI 동적 리밸런싱', icon: <Sparkles className="w-3.5 h-3.5" /> },
+                                { id: 'static', label: '일반 백테스터' },
+                                { id: 'efficient', label: '포트폴리오 최적화', icon: <TrendingUp className="w-3.5 h-3.5" /> },
+                                { id: 'stress', label: '스트레스 테스터', icon: <ShieldAlert className="w-3.5 h-3.5 text-rose-300" /> },
+                                { id: 'rebalance', label: '스마트 리밸런싱', icon: <Scale className="w-3.5 h-3.5 text-indigo-300" /> },
+                                { id: 'multi', label: '멀티 백테스터 2.0', icon: <Layers className="w-3.5 h-3.5 text-amber-300" /> },
+                            ]}
+                            activeId={backtestTab}
+                            onChange={(id) => setBacktestTab(id as 'dynamic' | 'static' | 'efficient' | 'stress' | 'rebalance' | 'multi')}
+                            pillClassName="bg-gradient-to-r from-emerald-600 to-indigo-600 shadow-md shadow-emerald-500/20"
+                            tabClassName="px-3 py-1.5 rounded-lg text-xs font-bold"
+                            activeTabClassName="text-white font-bold"
+                            inactiveTabClassName="text-gray-400 hover:text-white"
+                        />
                     </div>
                 </div>
 

@@ -420,7 +420,7 @@ export default function AIInsight() {
                 <div className="h-3 w-4/5 bg-white/5 rounded" />
               </div>
             ))}
-            <p className="text-[13px] text-gray-500 text-center mt-2">AI가 시장 데이터를 분석 중입니다...</p>
+            <p className="text-[13px] font-medium text-center mt-2 t-shimmer-text">AI가 시장 데이터를 분석 중입니다...</p>
           </div>
         ) : error ? (
           <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 text-[14px] text-rose-300">

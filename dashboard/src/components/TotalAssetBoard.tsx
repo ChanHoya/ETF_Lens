@@ -30,6 +30,7 @@ import AccountSummaryDashboard from "./AccountSummaryDashboard";
 import HoldingsDetailDashboard from "./HoldingsDetailDashboard";
 import { SECTOR_OPTIONS, CLASSIFICATION_OPTIONS, UNSET_LABEL } from "@/lib/sectorOptions";
 import { filterHoldingsBySource } from "@/lib/holdingFilters";
+import { NumberPopIn } from "./common/NumberPopIn";
 
 /** 보유 종목 표의 출처(KIS/수동) 필터 토글. 꺼지면 회색이 되고 해당 종목이 목록에서 빠진다. */
 function SourceFilterToggle({
@@ -547,8 +548,8 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                         <span className="text-lg">💎</span>
                     </div>
                     <div className="mt-2">
-                        <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                            {fmtKRW(summary.total_net_worth || 0)}
+                        <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-baseline">
+                            <NumberPopIn value={fmtKRW(summary.total_net_worth || 0)} />
                             <span className="text-xs font-normal text-gray-400 ml-1">원</span>
                         </h3>
                         <p className="text-[11px] text-indigo-300/80 font-semibold mt-0.5">
@@ -579,12 +580,14 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                     </div>
                     <div className="mt-2">
                         <div className="flex items-baseline gap-2">
-                            <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${isProfit ? "text-rose-400" : "text-blue-400"}`}>
-                                {isProfit ? "+" : ""}{fmtKRW(summary.total_profit_loss || 0)}
+                            <h3 className={`text-xl sm:text-2xl font-black tracking-tight flex items-baseline ${isProfit ? "text-rose-400" : "text-blue-400"}`}>
+                                <span>{isProfit ? "+" : ""}</span>
+                                <NumberPopIn value={fmtKRW(summary.total_profit_loss || 0)} />
                                 <span className="text-xs font-normal text-gray-400 ml-1">원</span>
                             </h3>
-                            <span className={`text-xs sm:text-sm font-bold px-2 py-0.5 rounded-lg ${isProfit ? "bg-rose-500/15 text-rose-400" : "bg-blue-500/15 text-blue-400"}`}>
-                                {isProfit ? "+" : ""}{(summary.total_return_rate || 0).toFixed(2)}%
+                            <span className={`text-xs sm:text-sm font-bold px-2 py-0.5 rounded-lg flex items-center ${isProfit ? "bg-rose-500/15 text-rose-400" : "bg-blue-500/15 text-blue-400"}`}>
+                                <span>{isProfit ? "+" : ""}</span>
+                                <NumberPopIn value={`${(summary.total_return_rate || 0).toFixed(2)}%`} />
                             </span>
                         </div>
                         <p className="text-[11px] text-gray-400 mt-0.5">
@@ -610,8 +613,8 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                         <span className="text-lg">💵</span>
                     </div>
                     <div className="mt-2">
-                        <h3 className="text-xl sm:text-2xl font-black tracking-tight text-emerald-400">
-                            {fmtKRW(summary.total_cash_converted || 0)}
+                        <h3 className="text-xl sm:text-2xl font-black tracking-tight text-emerald-400 flex items-baseline">
+                            <NumberPopIn value={fmtKRW(summary.total_cash_converted || 0)} />
                             <span className="text-xs font-normal text-gray-400 ml-1">원</span>
                         </h3>
                         <div className="text-[11px] text-gray-400 mt-0.5 flex gap-2">
@@ -642,8 +645,8 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                     <div className="mt-2">
                         <div className="flex items-baseline gap-1.5">
                             <span className="text-xs text-gray-400 font-semibold">USD/KRW</span>
-                            <h3 className="text-xl sm:text-2xl font-black tracking-tight text-sky-400">
-                                {summary.usd_krw_rate ? fmtKRW(summary.usd_krw_rate) : "1,385"}
+                            <h3 className="text-xl sm:text-2xl font-black tracking-tight text-sky-400 flex items-baseline">
+                                <NumberPopIn value={summary.usd_krw_rate ? fmtKRW(summary.usd_krw_rate) : "1,385"} />
                                 <span className="text-xs font-normal text-gray-400 ml-1">원</span>
                             </h3>
                         </div>

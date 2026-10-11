@@ -88,6 +88,10 @@
 | S7-2: AI 스마트 리밸런서 & 효율적 투자선 시계열 캐싱 통합 및 비동기 프리페치 | ✅ done | backend/api/backtest.py, backend/api/efficient_frontier.py, backend/tests/test_rebalance_and_efficient_frontier_cache.py | 리밸런스 시뮬레이터 및 몬테카를로 효율적 투자선 시계열 로딩을 DB 하이브리드 엔진으로 통합하고 TTL 3600s 인메모리 캐시 적용 |
 | S7-3: 종합 자산(Hoya Board) ↔ KIS 실시간 포트폴리오 양방향 동기화 및 계좌 자동 매핑 | ✅ done | backend/api/integrated_assets.py, dashboard/src/components/KisAccountMappingModal.tsx, backend/tests/test_integrated_assets_kis_sync.py | KIS 4대 기본 계좌 자동 보충, KIS 매핑 모달 비동기 자동 fetch 및 fallback 바인딩, 일시 오프라인 시 최근 스냅샷 계좌 메타데이터 방어 완비 |
 | S7-4: Sprint 7 라이브 E2E 통합 테스트 및 실서버 배포 무결성 검증 | ✅ done | backend/tests/test_sprint7_e2e_integration.py | 백테스터/리밸런서/효율적투자선 초고속 캐싱 및 종합자산 KIS 양방향 매핑 E2E 무결성 검증 완료 |
+| S8-1: transitions.css 전역 모션 토큰 체계 구축 + 상단 메인 내비게이션 탭 슬라이딩 | ✅ done | dashboard/src/app/transitions.css, dashboard/src/components/common/SlidingTabs.tsx, dashboard/src/components/MainApp.tsx | transitions.dev 기반 GPU 가속 모션 토큰, 스프링 이징 곡선, SlidingTabs 글라이딩 인디케이터 및 메인/서브 내비게이션 탭 슬라이더 탑재 완료 |
+| S8-2: /my 종합자산(Hoya Board & KIS) 탭 슬라이딩, PIN 모달 셰이크/체크, 자산 숫자 팝인 카운터 적용 | ✅ done | dashboard/src/components/MyAssetsView.tsx, MyDashboard.tsx, MyAuthModal.tsx, TotalAssetBoard.tsx, InvestmentReturnCard.tsx, common/NumberPopIn.tsx | My 서브탭 및 섹션5 시뮬레이션 탭 SlidingTabs 연동, PIN 불일치 햅틱 셰이크 및 성공 팝인 모션, 자산/수익률 변동 시 NumberPopIn 마이크로 인터랙션 적용 완료 |
+| S8-3: /tff 펀드 대시보드 서브탭 슬라이딩, 추정 시뮬레이션 스무스 토글 스위치, 월별 비교 카드 텍스트 스왑 적용 | ✅ done | dashboard/src/components/tff/TffDashboard.tsx, dashboard/src/components/tff/views/MonthlyView.tsx | TFF 5대 서브탭 및 월별 분류 탭 SlidingTabs 글라이딩 적용, 추정 시뮬레이션 스프링 토글 스위치 비주얼, 버전 비교 메트릭 텍스트 스왑(t-text-swap) 및 월별 성과 NumberPopIn 적용 완료 |
+| S8-4: AI 어드바이저 씽킹 스테이트 및 전체 모달 스케일/블러 진입 고도화 | ✅ done | dashboard/src/components/ChatBot.tsx, AIInsight.tsx, Modals.tsx, AccountDetailModal.tsx, KisAccountMappingModal.tsx, ManualAssetModal.tsx, ManualCashModal.tsx | AI Assistant/Insight 씽킹 카드(t-shimmer-text, 펄싱 아바타) 적용 및 전체 팝업/모달(관심종목, 상세, 계좌매핑, 수동자산, 마켓) 스프링 스케일(t-modal-panel) & 블러 백드롭(t-modal-backdrop) 전역 적용 완료 |
 
 
 

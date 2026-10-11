@@ -371,8 +371,8 @@ export default function Modals({
         <>
             {/* ===== 1. 나의 관심종목 즐겨찾기 Modal ===== */}
             {isFavModalOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-transparent animate-in fade-in duration-200 p-2 md:p-6">
-                    <div className="bg-[#0f111a] border border-white/10 rounded-2xl w-full max-w-[1400px] h-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 t-modal-backdrop p-2 md:p-6">
+                    <div className="bg-[#0f111a] border border-white/10 rounded-2xl w-full max-w-[1400px] h-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl t-modal-panel">
 
                         {/* 헤더 */}
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border-b border-white/10 relative gap-3 bg-black/20">
@@ -744,8 +744,8 @@ export default function Modals({
 
             {/* ===== 2. ETF 상세 정보 Modal ===== */}
             {selectedDetailEtf && (
-                <div className="fixed top-0 inset-x-0 bottom-2 md:bottom-4 lg:bottom-4 z-[300] flex animate-in fade-in duration-200">
-                    <div className="bg-[#0B0F19] border border-white/10 rounded-b-2xl md:rounded-2xl w-full h-full overflow-hidden flex flex-col shadow-2xl shadow-indigo-500/10">
+                <div className="fixed top-0 inset-x-0 bottom-2 md:bottom-4 lg:bottom-4 z-[300] flex t-modal-backdrop">
+                    <div className="bg-[#0B0F19] border border-white/10 rounded-b-2xl md:rounded-2xl w-full h-full overflow-hidden flex flex-col shadow-2xl shadow-indigo-500/10 t-modal-panel">
 
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 lg:px-8 border-b border-white/10 relative gap-3 bg-gradient-to-r from-blue-900/20 to-transparent">
                             <div>
@@ -1181,8 +1181,8 @@ export default function Modals({
             )}
             {/* ===== 포트폴리오 마켓 팝업 ===== */}
             {isMarketOpen && (
-                <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200 p-2 md:p-6">
-                    <div className="bg-[#0f111a] border border-purple-500/20 rounded-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col shadow-2xl shadow-purple-900/30">
+                <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/70 t-modal-backdrop p-2 md:p-6">
+                    <div className="bg-[#0f111a] border border-purple-500/20 rounded-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col shadow-2xl shadow-purple-900/30 t-modal-panel">
                         {/* 헤더 */}
                         <div className="flex justify-between items-center px-5 py-4 border-b border-white/10 bg-purple-500/5 flex-shrink-0">
                             <div>
