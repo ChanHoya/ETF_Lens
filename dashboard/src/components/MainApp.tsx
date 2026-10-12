@@ -52,7 +52,7 @@ type FavGroup = { id: string; name: string; items: { code: string; name: string 
 const BRAND_KEYWORDS = ['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'];
 const THEME_KEYWORDS = ['커버드콜', '배당', '액티브', 'AI', '반도체', '로봇', '원자력', '2차전지', '조선', '방산', '금융', '바이오'];
 
-function MainAppInner({ initialTab = 'select', showMyTab = false, showTffTab = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension', showMyTab?: boolean, showTffTab?: boolean }) {
+function MainAppInner({ initialTab = 'discover', showMyTab = false, showTffTab = false, initialOpenTodayMarket = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension', showMyTab?: boolean, showTffTab?: boolean, initialOpenTodayMarket?: boolean }) {
   const router = useRouter();
   const [slots, setSlots] = useState<{ search: string, code: string }[]>([
     { search: "", code: "" },
@@ -70,6 +70,7 @@ function MainAppInner({ initialTab = 'select', showMyTab = false, showTffTab = f
   const [globalActive, setGlobalActive] = useState(false);
   const [period, setPeriod] = useState<string>('6M');
   const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension'>(initialTab);
+  const [isTodayMarketOpen, setIsTodayMarketOpen] = useState(initialOpenTodayMarket);
 
   const [etfDictionary, setEtfDictionary] = useState<{ code: string, name: string }[]>([]);
   const [activeDropdownIndex, setActiveDropdownIndex] = useState<number | null>(null);
@@ -1420,7 +1421,7 @@ function MainAppInner({ initialTab = 'select', showMyTab = false, showTffTab = f
               inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
             />
             <div className="h-4 w-[1px] bg-white/20 shrink-0" />
-            <TodayMarketButton />
+            <TodayMarketButton isOpen={isTodayMarketOpen} onOpenChange={setIsTodayMarketOpen} />
           </div>
         </div>
       )}
@@ -2084,6 +2085,7 @@ export default function MainApp(props: {
   initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension';
   showMyTab?: boolean;
   showTffTab?: boolean;
+  initialOpenTodayMarket?: boolean;
 }) {
   return (
     <GlobalAppErrorBoundary>
