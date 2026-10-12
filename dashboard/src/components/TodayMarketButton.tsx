@@ -81,46 +81,41 @@ export default function TodayMarketButton({
             {open && mounted && typeof document !== 'undefined' && createPortal(
                 <div
                     style={{ top: `${topOffset}px` }}
-                    className="fixed left-0 right-0 bottom-0 z-[150] flex items-start justify-center bg-black/40 backdrop-blur-[2px] p-2 md:p-3 animate-in fade-in duration-200"
+                    className="fixed left-0 right-0 bottom-0 z-[150] flex flex-col items-center bg-black/50 backdrop-blur-[2px] px-2 md:px-6 pb-2 md:pb-3 animate-in fade-in duration-200"
                     onClick={() => handleSetOpen(false)}
                 >
                     <div
-                        style={{ height: `calc(100vh - ${topOffset + 14}px)` }}
-                        className="relative w-full max-w-6xl bg-[#0d0d12] border border-white/15 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                        className="relative w-full max-w-[95vw] xl:max-w-[1400px] h-full bg-white dark:bg-[#0d0d12] border border-white/10 dark:border-white/15 rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden flex flex-col"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* 헤더 */}
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#121217] shrink-0">
-                            <div className="flex items-center gap-2 text-white font-bold">
-                                <Activity className="w-4 h-4 text-emerald-400" />
-                                오늘의 시장
-                                <span className="text-[11px] font-medium text-gray-500 ml-1">bulliza.com</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <a
-                                    href={TODAY_MARKET_URL}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1 text-xs font-bold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg transition-colors"
-                                >
-                                    새 창에서 열기 <ChevronRight className="w-3.5 h-3.5" />
-                                </a>
-                                <button
-                                    onClick={() => handleSetOpen(false)}
-                                    className="p-1.5 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
-                                    aria-label="닫기"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
+                        {/* 창 우측 상단 플로팅 닫기 & 새창 버튼 (헤더 바 제거로 세로 공간 100% 극대화) */}
+                        <div className="absolute top-2.5 right-2.5 md:top-3 md:right-3.5 z-30 flex items-center gap-1.5 bg-black/65 hover:bg-black/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20 shadow-lg transition-all group">
+                            <a
+                                href={TODAY_MARKET_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-[11px] font-bold text-gray-200 hover:text-white transition-colors"
+                                title="새 창에서 열기"
+                            >
+                                새 창 <ChevronRight className="w-3 h-3 text-gray-400 group-hover:text-white" />
+                            </a>
+                            <div className="h-3 w-[1px] bg-white/20" />
+                            <button
+                                onClick={() => handleSetOpen(false)}
+                                className="p-0.5 text-gray-300 hover:text-white rounded-full transition-colors cursor-pointer"
+                                aria-label="닫기"
+                                title="닫기"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
                         </div>
 
-                        {/* 본문 iframe */}
-                        <div className="flex-1 relative bg-white">
+                        {/* 본문 iframe: 왼쪽 메뉴바(w-[220px])를 오프셋 클리핑하여 오른쪽 시장동향 본문(첨부3)만 꽉 차게 노출 */}
+                        <div className="flex-1 relative w-full h-full overflow-hidden bg-white">
                             <iframe
                                 src={TODAY_MARKET_URL}
                                 title="오늘의 시장"
-                                className="absolute inset-0 w-full h-full border-0"
+                                className="absolute inset-0 h-full border-0 w-full md:w-[calc(100%+220px)] md:-ml-[220px]"
                                 allowFullScreen
                                 onError={() => setBlocked(true)}
                             />
