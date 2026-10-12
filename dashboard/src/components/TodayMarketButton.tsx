@@ -67,14 +67,20 @@ export default function TodayMarketButton({
     return (
         <>
             <button
-                onClick={() => { setBlocked(false); handleSetOpen(true); }}
-                className="relative flex items-center gap-1.5 px-3 py-1 rounded-full text-sm md:text-[15px] font-bold whitespace-nowrap transition-all text-emerald-200 border animate-market-highlight hover:text-white"
+                onClick={() => { setBlocked(false); handleSetOpen(!open); }}
+                className={`relative flex items-center gap-1.5 px-3 py-1 rounded-full text-sm md:text-[15px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    open
+                        ? 'text-emerald-200 border border-emerald-400/40 animate-market-highlight hover:text-white'
+                        : 'text-gray-300 hover:text-white hover:bg-white/10 border border-white/15'
+                }`}
             >
-                <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-                </span>
-                <Activity className="w-4 h-4 text-emerald-300" />
+                {open && (
+                    <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                    </span>
+                )}
+                <Activity className={`w-4 h-4 ${open ? 'text-emerald-300' : 'text-gray-400'}`} />
                 오늘의 시장
             </button>
 
