@@ -22,12 +22,40 @@ export default function TodayMarketButton({
     const [blocked, setBlocked] = useState(false);
     const [mounted, setMounted] = useState(false);
 
+    const [topOffset, setTopOffset] = useState(115);
+
     useEffect(() => {
         setMounted(true);
     }, []);
 
     const isControlled = controlledOpen !== undefined;
     const open = isControlled ? controlledOpen : internalOpen;
+
+    useEffect(() => {
+        if (!open) return;
+        const updateOffset = () => {
+            const headlineEl = document.getElementById('iprism-headline');
+            if (headlineEl) {
+                const rect = headlineEl.getBoundingClientRect();
+                setTopOffset(Math.max(Math.round(rect.bottom) + 6, 90));
+            } else {
+                setTopOffset(typeof window !== 'undefined' && window.innerWidth < 768 ? 155 : 115);
+            }
+        };
+
+        updateOffset();
+        window.addEventListener('resize', updateOffset);
+        window.addEventListener('scroll', updateOffset, { passive: true });
+        const timer1 = setTimeout(updateOffset, 60);
+        const timer2 = setTimeout(updateOffset, 250);
+
+        return () => {
+            window.removeEventListener('resize', updateOffset);
+            window.removeEventListener('scroll', updateOffset);
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+        };
+    }, [open, mounted]);
 
     const handleSetOpen = (nextOpen: boolean) => {
         if (!isControlled) {
@@ -52,11 +80,13 @@ export default function TodayMarketButton({
 
             {open && mounted && typeof document !== 'undefined' && createPortal(
                 <div
-                    className="fixed inset-0 z-[150] flex items-start justify-center bg-black/60 p-2 md:p-3 pt-[135px] md:pt-[115px] animate-in fade-in duration-200"
+                    style={{ top: `${topOffset}px` }}
+                    className="fixed left-0 right-0 bottom-0 z-[150] flex items-start justify-center bg-black/40 backdrop-blur-[2px] p-2 md:p-3 animate-in fade-in duration-200"
                     onClick={() => handleSetOpen(false)}
                 >
                     <div
-                        className="relative w-full max-w-6xl h-[calc(100vh-150px)] md:h-[calc(100vh-130px)] bg-[#0d0d12] border border-white/15 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                        style={{ height: `calc(100vh - ${topOffset + 14}px)` }}
+                        className="relative w-full max-w-6xl bg-[#0d0d12] border border-white/15 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* 헤더 */}

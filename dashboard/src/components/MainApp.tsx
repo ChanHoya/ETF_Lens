@@ -1211,230 +1211,233 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
         <div className="absolute bottom-[-10%] left-[10%] w-[60vw] h-[60vw] rounded-full bg-pink-600/10 blur-[150px] mix-blend-screen transition-all duration-1000"></div>
       </div>
 
-      <header className="w-full max-w-[95vw] xl:max-w-[1400px] mb-2 md:mb-4 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-2.5 md:gap-3 relative z-[180]">
-        {/* 상단 행: 로고 (좌측) & 버전/상태/툴버튼 (우측) */}
-        <div className="flex items-center justify-between gap-2 shrink-0">
-          {/* 좌측 로고 */}
-          <div className="flex flex-col items-start cursor-pointer group shrink-0" onClick={handleReset}>
-            <h1 className="text-white group-hover:opacity-80 transition-opacity">
-              <span className="sr-only">i-Prism</span>
-              <IPrismLogo className="h-7 sm:h-8 md:h-11 w-auto" />
-            </h1>
+      {/* 상단 통합 헤드라인 영역: 로고, 툴버튼, 메인 메뉴바, 서브탭 바 */}
+      <div id="iprism-headline" className="w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col items-center shrink-0 relative z-[180]">
+        <header className="w-full mb-2 md:mb-4 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-2.5 md:gap-3 relative z-[180]">
+          {/* 상단 행: 로고 (좌측) & 버전/상태/툴버튼 (우측) */}
+          <div className="flex items-center justify-between gap-2 shrink-0">
+            {/* 좌측 로고 */}
+            <div className="flex flex-col items-start cursor-pointer group shrink-0" onClick={handleReset}>
+              <h1 className="text-white group-hover:opacity-80 transition-opacity">
+                <span className="sr-only">i-Prism</span>
+                <IPrismLogo className="h-7 sm:h-8 md:h-11 w-auto" />
+              </h1>
+            </div>
+
+            {/* 우측 툴버튼 + 버전/연동 상태 정보 */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              {/* Dark / Light 화면 모드 토글 */}
+              <ThemeToggle />
+
+              {/* 전체화면 확대 버튼 */}
+              <button
+                onClick={toggleFullscreen}
+                title={isFullscreen ? "화면 복원" : "전체 화면 확대"}
+                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 hover:text-indigo-100 text-xs sm:text-sm font-bold transition-all shadow-sm shrink-0 backdrop-blur-md active:scale-95 cursor-pointer"
+              >
+                {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" /> : <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />}
+                <span>{isFullscreen ? "복원" : "전체화면"}</span>
+              </button>
+
+              {/* AI Assistant 버튼 */}
+              <ChatBot renderTrigger isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
+            </div>
           </div>
 
-          {/* 우측 툴버튼 + 버전/연동 상태 정보 */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Dark / Light 화면 모드 토글 */}
-            <ThemeToggle />
-
-            {/* 전체화면 확대 버튼 */}
+          {/* 가로 스크롤 & PC 마우스 드래그/화살표 스크롤 메인 메뉴바 */}
+          <div className="relative flex items-center w-full md:w-auto overflow-hidden rounded-full bg-transparent border border-white/20 shadow-sm group">
+            {/* 좌측 스크롤 화살표 버튼 */}
             <button
-              onClick={toggleFullscreen}
-              title={isFullscreen ? "화면 복원" : "전체 화면 확대"}
-              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 hover:text-indigo-100 text-xs sm:text-sm font-bold transition-all shadow-sm shrink-0 backdrop-blur-md active:scale-95 cursor-pointer"
+              onClick={() => scrollNav('left')}
+              className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-black/60 hover:bg-indigo-600 text-gray-300 hover:text-white transition-all shrink-0 ml-1 shadow-md border border-white/10 active:scale-95 cursor-pointer z-10"
+              title="왼쪽 스크롤"
             >
-              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" /> : <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />}
-              <span>{isFullscreen ? "복원" : "전체화면"}</span>
+              <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
 
-            {/* AI Assistant 버튼 */}
-            <ChatBot renderTrigger isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
-          </div>
-        </div>
+            <nav
+              ref={mainNavRef}
+              onMouseDown={handleNavMouseDown}
+              onMouseLeave={handleNavMouseLeave}
+              onMouseUp={handleNavMouseUp}
+              onMouseMove={handleNavMouseMove}
+              onWheel={handleNavWheel}
+              className={`t-tabs-container relative flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 py-1 sm:py-1.5 overflow-x-auto scrollbar-hide whitespace-nowrap touch-pan-x min-w-0 max-w-full select-none ${
+                isNavMouseDown ? 'cursor-grabbing' : 'cursor-grab'
+              }`}
+            >
+              {/* transitions.dev: 스무스 하드웨어 가속 슬라이딩 필(Pill) 인디케이터 */}
+              <div
+                className="t-tabs-pill rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+                style={{
+                  transform: `translateX(${navPillStyle.left}px)`,
+                  width: `${navPillStyle.width}px`,
+                  height: navPillStyle.height ? `${navPillStyle.height}px` : 'auto',
+                  top: '50%',
+                  marginTop: navPillStyle.height ? `-${navPillStyle.height / 2}px` : 0,
+                  opacity: navPillStyle.visible ? 1 : 0,
+                }}
+                aria-hidden="true"
+              />
 
-        {/* 가로 스크롤 & PC 마우스 드래그/화살표 스크롤 메인 메뉴바 */}
-        <div className="relative flex items-center w-full md:w-auto overflow-hidden rounded-full bg-transparent border border-white/20 shadow-sm group">
-          {/* 좌측 스크롤 화살표 버튼 */}
-          <button
-            onClick={() => scrollNav('left')}
-            className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-black/60 hover:bg-indigo-600 text-gray-300 hover:text-white transition-all shrink-0 ml-1 shadow-md border border-white/10 active:scale-95 cursor-pointer z-10"
-            title="왼쪽 스크롤"
-          >
-            <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          </button>
-
-          <nav
-            ref={mainNavRef}
-            onMouseDown={handleNavMouseDown}
-            onMouseLeave={handleNavMouseLeave}
-            onMouseUp={handleNavMouseUp}
-            onMouseMove={handleNavMouseMove}
-            onWheel={handleNavWheel}
-            className={`t-tabs-container relative flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 py-1 sm:py-1.5 overflow-x-auto scrollbar-hide whitespace-nowrap touch-pan-x min-w-0 max-w-full select-none ${
-              isNavMouseDown ? 'cursor-grabbing' : 'cursor-grab'
-            }`}
-          >
-            {/* transitions.dev: 스무스 하드웨어 가속 슬라이딩 필(Pill) 인디케이터 */}
-            <div
-              className="t-tabs-pill rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_15px_rgba(99,102,241,0.5)]"
-              style={{
-                transform: `translateX(${navPillStyle.left}px)`,
-                width: `${navPillStyle.width}px`,
-                height: navPillStyle.height ? `${navPillStyle.height}px` : 'auto',
-                top: '50%',
-                marginTop: navPillStyle.height ? `-${navPillStyle.height / 2}px` : 0,
-                opacity: navPillStyle.visible ? 1 : 0,
-              }}
-              aria-hidden="true"
-            />
-
-            {[
-              { id: 'analysis', label: '종목분석' },
-              { id: 'sector', label: '섹터분석' },
-              { id: 'discover', label: '시장동향' },
-              { id: 'pension', label: '연금·절세' },
-              ...(showTffTab ? [{ id: 'tff', label: 'TFF_Fund' }] : []),
-              ...(showMyTab ? [{ id: 'my', label: 'My' }] : []),
-              { id: 'etftracker', label: 'ETF추적기', isExternal: true },
-              { id: 'etfcheck', label: 'ETF Check', isExternal: true },
-            ].map(tab => {
-              const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call', ...(showMyTab ? ['dividend'] : []), 'brazil'].includes(activeTab);
-              const isActive = (tab.id === 'etfcheck' && isEtfCheckModalOpen) ||
-                (tab.id === 'analysis' && isAnalysisActive && !isEtfCheckModalOpen) ||
-                ((activeTab === tab.id || (tab.id === 'discover' && (activeTab === 'fx' || activeTab === 'rates' || activeTab === 'stocks' || activeTab === 'macro'))) && !isEtfCheckModalOpen);
-              return (
-                <Fragment key={tab.id}>
-                  {tab.id === 'etftracker' && (
-                    <div className="h-3.5 w-[1px] bg-white/20 mx-0.5 shrink-0 self-center relative z-10" />
-                  )}
-                  <button
-                    ref={(el) => {
-                      if (el) navTabRefs.current.set(tab.id, el);
-                      else navTabRefs.current.delete(tab.id);
-                    }}
-                    onClick={(e) => {
-                      if (hasNavDragged) {
-                        e.preventDefault();
-                        return;
-                      }
-                      if (tab.id === 'etfcheck') {
-                        setIsEtfCheckModalOpen(true);
-                        setHasOpenedEtfCheck(true);
-                        return;
-                      }
-                      if (tab.id === 'etftracker') {
-                        window.open('https://ystreet.co.kr/etf-tracker/', '_blank', 'noopener,noreferrer');
-                        return;
-                      }
-                      if (tab.id === 'pension') {
-                        setActiveTab('pension');
-                        setIsEtfCheckModalOpen(false);
-                        setNaverEtfCode(null);
-                        setSelectedDetailEtf(null);
-                        return;
-                      }
-                      if (tab.id === 'my') {
-                        setActiveTab('my');
-                        return;
-                      }
-                      if (tab.id === 'tff') {
-                        setActiveTab('tff');
-                        return;
-                      }
-
-                      if (tab.id === 'analysis') {
-                        clearAllSlots();
-                        setIsEtfCheckModalOpen(false);
-                        return;
-                      }
-                      if (tab.id === 'discover') {
-                        const isAlreadyInMarket = ['macro', 'fx', 'rates', 'stocks', 'discover'].includes(activeTab);
-                        if (!isAlreadyInMarket) {
-                          setActiveTab('macro');
+              {[
+                { id: 'analysis', label: '종목분석' },
+                { id: 'sector', label: '섹터분석' },
+                { id: 'discover', label: '시장동향' },
+                { id: 'pension', label: '연금·절세' },
+                ...(showTffTab ? [{ id: 'tff', label: 'TFF_Fund' }] : []),
+                ...(showMyTab ? [{ id: 'my', label: 'My' }] : []),
+                { id: 'etftracker', label: 'ETF추적기', isExternal: true },
+                { id: 'etfcheck', label: 'ETF Check', isExternal: true },
+              ].map(tab => {
+                const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call', ...(showMyTab ? ['dividend'] : []), 'brazil'].includes(activeTab);
+                const isActive = (tab.id === 'etfcheck' && isEtfCheckModalOpen) ||
+                  (tab.id === 'analysis' && isAnalysisActive && !isEtfCheckModalOpen) ||
+                  ((activeTab === tab.id || (tab.id === 'discover' && (activeTab === 'fx' || activeTab === 'rates' || activeTab === 'stocks' || activeTab === 'macro'))) && !isEtfCheckModalOpen);
+                return (
+                  <Fragment key={tab.id}>
+                    {tab.id === 'etftracker' && (
+                      <div className="h-3.5 w-[1px] bg-white/20 mx-0.5 shrink-0 self-center relative z-10" />
+                    )}
+                    <button
+                      ref={(el) => {
+                        if (el) navTabRefs.current.set(tab.id, el);
+                        else navTabRefs.current.delete(tab.id);
+                      }}
+                      onClick={(e) => {
+                        if (hasNavDragged) {
+                          e.preventDefault();
+                          return;
                         }
+                        if (tab.id === 'etfcheck') {
+                          setIsEtfCheckModalOpen(true);
+                          setHasOpenedEtfCheck(true);
+                          return;
+                        }
+                        if (tab.id === 'etftracker') {
+                          window.open('https://ystreet.co.kr/etf-tracker/', '_blank', 'noopener,noreferrer');
+                          return;
+                        }
+                        if (tab.id === 'pension') {
+                          setActiveTab('pension');
+                          setIsEtfCheckModalOpen(false);
+                          setNaverEtfCode(null);
+                          setSelectedDetailEtf(null);
+                          return;
+                        }
+                        if (tab.id === 'my') {
+                          setActiveTab('my');
+                          return;
+                        }
+                        if (tab.id === 'tff') {
+                          setActiveTab('tff');
+                          return;
+                        }
+
+                        if (tab.id === 'analysis') {
+                          clearAllSlots();
+                          setIsEtfCheckModalOpen(false);
+                          return;
+                        }
+                        if (tab.id === 'discover') {
+                          const isAlreadyInMarket = ['macro', 'fx', 'rates', 'stocks', 'discover'].includes(activeTab);
+                          if (!isAlreadyInMarket) {
+                            setActiveTab('macro');
+                          }
+                          setIsEtfCheckModalOpen(false);
+                          setNaverEtfCode(null);
+                          setSelectedDetailEtf(null);
+                          return;
+                        }
+                        setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension');
                         setIsEtfCheckModalOpen(false);
                         setNaverEtfCode(null);
                         setSelectedDetailEtf(null);
-                        return;
-                      }
-                      setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension');
-                      setIsEtfCheckModalOpen(false);
-                      setNaverEtfCode(null);
-                      setSelectedDetailEtf(null);
-                    }}
-                    className={`relative z-10 text-xs sm:text-sm md:text-[14px] lg:text-[15px] tracking-wide font-bold transition-colors px-2.5 sm:px-3 md:px-3.5 py-1 sm:py-1 rounded-full whitespace-nowrap shrink-0 cursor-pointer ${
-                      isActive
-                        ? 'text-white'
-                        : tab.isExternal
-                        ? 'text-gray-400/70 hover:text-gray-200 hover:bg-white/5 border border-white/5'
-                        : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                </Fragment>
-              )
-            })}
-          </nav>
+                      }}
+                      className={`relative z-10 text-xs sm:text-sm md:text-[14px] lg:text-[15px] tracking-wide font-bold transition-colors px-2.5 sm:px-3 md:px-3.5 py-1 sm:py-1 rounded-full whitespace-nowrap shrink-0 cursor-pointer ${
+                        isActive
+                          ? 'text-white'
+                          : tab.isExternal
+                          ? 'text-gray-400/70 hover:text-gray-200 hover:bg-white/5 border border-white/5'
+                          : 'text-gray-400/80 hover:text-gray-100 hover:bg-white/5'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  </Fragment>
+                )
+              })}
+            </nav>
 
-          {/* 우측 스크롤 화살표 버튼 */}
-          <button
-            onClick={() => scrollNav('right')}
-            className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-black/60 hover:bg-indigo-600 text-gray-300 hover:text-white transition-all shrink-0 mr-1 shadow-md border border-white/10 active:scale-95 cursor-pointer z-10"
-            title="오른쪽 스크롤"
-          >
-            <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          </button>
-        </div>
-      </header>
-
-      {/* 서브탭: 종목분석 탭 선택시만 헤더 아래에 표시 */}
-      {['select', 'info', 'chart', 'holdings', 'covered_call', ...(showMyTab ? ['dividend'] : []), 'brazil'].includes(activeTab) && !isEtfCheckModalOpen && (
-        <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-[180]">
-          <div className="bg-transparent px-3 py-1 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
-            <SlidingTabs
-              items={[
-                { id: 'select', label: '종목선택' },
-                { id: 'info', label: '기본정보' },
-                { id: 'chart', label: '차트' },
-                { id: 'holdings', label: '구성종목' },
-                { id: 'covered_call', label: '커버드콜' },
-                ...(showMyTab ? [{ id: 'dividend', label: '💰 배당 캘린더' }] : []),
-                { id: 'brazil', label: '🇧🇷 브라질채권' },
-              ]}
-              activeId={activeTab}
-              onChange={(newId) => {
-                if (newId !== 'select' && newId !== 'brazil' && newId !== 'dividend' && !data) {
-                  alert('먼저 종목을 선택하고 비교를 실행해주세요.');
-                  return;
-                }
-                setActiveTab(newId as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'brazil');
-                setNaverEtfCode(null);
-                setSelectedDetailEtf(null);
-              }}
-              pillClassName="bg-white/20 shadow-inner border border-white/20"
-              tabClassName="text-sm md:text-[15px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
-              activeTabClassName="text-white"
-              inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
-            />
+            {/* 우측 스크롤 화살표 버튼 */}
+            <button
+              onClick={() => scrollNav('right')}
+              className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-black/60 hover:bg-indigo-600 text-gray-300 hover:text-white transition-all shrink-0 mr-1 shadow-md border border-white/10 active:scale-95 cursor-pointer z-10"
+              title="오른쪽 스크롤"
+            >
+              <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
           </div>
-        </div>
-      )}
+        </header>
 
-      {/* 서브탭: 시장동향 탭 선택시 — 오늘의 시장 | 종합(환율/금리/주식) | 환율 | 금리 | 주식 | 시장지표 */}
-      {(activeTab === 'discover' || activeTab === 'fx' || activeTab === 'rates' || activeTab === 'stocks' || activeTab === 'macro') && !isEtfCheckModalOpen && (
-        <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-[180]">
-          <div className="flex items-center gap-2 md:gap-3 bg-transparent px-3 py-1 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
-            <TodayMarketButton isOpen={isTodayMarketOpen} onOpenChange={setIsTodayMarketOpen} />
-            <div className="h-4 w-[1px] bg-white/20 shrink-0" />
-            <SlidingTabs
-              items={[
-                { id: 'macro', label: '종합(환율/금리/주식)' },
-                { id: 'fx', label: '환율' },
-                { id: 'rates', label: '금리' },
-                { id: 'stocks', label: '주식' },
-                { id: 'discover', label: '시장지표' },
-              ]}
-              activeId={activeTab}
-              onChange={(newId) => setActiveTab(newId as 'macro' | 'fx' | 'rates' | 'stocks' | 'discover')}
-              pillClassName="bg-white/20 shadow-inner border border-white/20"
-              tabClassName="text-sm md:text-[15px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
-              activeTabClassName="text-white"
-              inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
-            />
+        {/* 서브탭: 종목분석 탭 선택시만 헤더 아래에 표시 */}
+        {['select', 'info', 'chart', 'holdings', 'covered_call', ...(showMyTab ? ['dividend'] : []), 'brazil'].includes(activeTab) && !isEtfCheckModalOpen && (
+          <div className="w-full flex justify-center mb-2 relative z-[180]">
+            <div className="bg-transparent px-3 py-1 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
+              <SlidingTabs
+                items={[
+                  { id: 'select', label: '종목선택' },
+                  { id: 'info', label: '기본정보' },
+                  { id: 'chart', label: '차트' },
+                  { id: 'holdings', label: '구성종목' },
+                  { id: 'covered_call', label: '커버드콜' },
+                  ...(showMyTab ? [{ id: 'dividend', label: '💰 배당 캘린더' }] : []),
+                  { id: 'brazil', label: '🇧🇷 브라질채권' },
+                ]}
+                activeId={activeTab}
+                onChange={(newId) => {
+                  if (newId !== 'select' && newId !== 'brazil' && newId !== 'dividend' && !data) {
+                    alert('먼저 종목을 선택하고 비교를 실행해주세요.');
+                    return;
+                  }
+                  setActiveTab(newId as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'brazil');
+                  setNaverEtfCode(null);
+                  setSelectedDetailEtf(null);
+                }}
+                pillClassName="bg-white/20 shadow-inner border border-white/20"
+                tabClassName="text-sm md:text-[15px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
+                activeTabClassName="text-white"
+                inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* 서브탭: 시장동향 탭 선택시 — 오늘의 시장 | 종합(환율/금리/주식) | 환율 | 금리 | 주식 | 시장지표 */}
+        {(activeTab === 'discover' || activeTab === 'fx' || activeTab === 'rates' || activeTab === 'stocks' || activeTab === 'macro') && !isEtfCheckModalOpen && (
+          <div className="w-full flex justify-center mb-2 relative z-[180]">
+            <div className="flex items-center gap-2 md:gap-3 bg-transparent px-3 py-1 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
+              <TodayMarketButton isOpen={isTodayMarketOpen} onOpenChange={setIsTodayMarketOpen} />
+              <div className="h-4 w-[1px] bg-white/20 shrink-0" />
+              <SlidingTabs
+                items={[
+                  { id: 'macro', label: '종합(환율/금리/주식)' },
+                  { id: 'fx', label: '환율' },
+                  { id: 'rates', label: '금리' },
+                  { id: 'stocks', label: '주식' },
+                  { id: 'discover', label: '시장지표' },
+                ]}
+                activeId={activeTab}
+                onChange={(newId) => setActiveTab(newId as 'macro' | 'fx' | 'rates' | 'stocks' | 'discover')}
+                pillClassName="bg-white/20 shadow-inner border border-white/20"
+                tabClassName="text-sm md:text-[15px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
+                activeTabClassName="text-white"
+                inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ChatBot 채팅창 — fixed overlay (스크롤 없이 현재 뷰 위에 표시) */}
       <ChatBot renderChat isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
