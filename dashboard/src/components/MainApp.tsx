@@ -52,7 +52,7 @@ type FavGroup = { id: string; name: string; items: { code: string; name: string 
 const BRAND_KEYWORDS = ['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'];
 const THEME_KEYWORDS = ['커버드콜', '배당', '액티브', 'AI', '반도체', '로봇', '원자력', '2차전지', '조선', '방산', '금융', '바이오'];
 
-function MainAppInner({ initialTab = 'discover', showMyTab = false, showTffTab = false, initialOpenTodayMarket = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension', showMyTab?: boolean, showTffTab?: boolean, initialOpenTodayMarket?: boolean }) {
+function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = false, initialOpenTodayMarket = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension', showMyTab?: boolean, showTffTab?: boolean, initialOpenTodayMarket?: boolean }) {
   const router = useRouter();
   const [slots, setSlots] = useState<{ search: string, code: string }[]>([
     { search: "", code: "" },
@@ -1337,6 +1337,16 @@ function MainAppInner({ initialTab = 'discover', showMyTab = false, showTffTab =
                         setIsEtfCheckModalOpen(false);
                         return;
                       }
+                      if (tab.id === 'discover') {
+                        const isAlreadyInMarket = ['macro', 'fx', 'rates', 'stocks', 'discover'].includes(activeTab);
+                        if (!isAlreadyInMarket) {
+                          setActiveTab('macro');
+                        }
+                        setIsEtfCheckModalOpen(false);
+                        setNaverEtfCode(null);
+                        setSelectedDetailEtf(null);
+                        return;
+                      }
                       setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension');
                       setIsEtfCheckModalOpen(false);
                       setNaverEtfCode(null);
@@ -1401,27 +1411,27 @@ function MainAppInner({ initialTab = 'discover', showMyTab = false, showTffTab =
         </div>
       )}
 
-      {/* 서브탭: 시장동향 탭 선택시 — 시장 개요 | 환율 | 금리 | 주식 | 종합 */}
+      {/* 서브탭: 시장동향 탭 선택시 — 오늘의 시장 | 종합(환율/금리/주식) | 환율 | 금리 | 주식 | 시장지표 */}
       {(activeTab === 'discover' || activeTab === 'fx' || activeTab === 'rates' || activeTab === 'stocks' || activeTab === 'macro') && !isEtfCheckModalOpen && (
         <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-50">
-          <div className="flex items-center gap-2 md:gap-4 bg-black/40 px-3 py-1 rounded-full border border-white/10 shadow-sm backdrop-blur-md overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-2 md:gap-3 bg-black/40 px-3 py-1 rounded-full border border-white/10 shadow-sm backdrop-blur-md overflow-x-auto scrollbar-hide">
+            <TodayMarketButton isOpen={isTodayMarketOpen} onOpenChange={setIsTodayMarketOpen} />
+            <div className="h-4 w-[1px] bg-white/20 shrink-0" />
             <SlidingTabs
               items={[
-                { id: 'discover', label: '시장 개요' },
-                { id: 'fx', label: '💱 환율' },
-                { id: 'rates', label: '📈 금리' },
-                { id: 'stocks', label: '📊 주식' },
-                { id: 'macro', label: '🧭 종합' },
+                { id: 'macro', label: '종합(환율/금리/주식)' },
+                { id: 'fx', label: '환율' },
+                { id: 'rates', label: '금리' },
+                { id: 'stocks', label: '주식' },
+                { id: 'discover', label: '시장지표' },
               ]}
               activeId={activeTab}
-              onChange={(newId) => setActiveTab(newId as 'discover' | 'fx' | 'rates' | 'stocks' | 'macro')}
+              onChange={(newId) => setActiveTab(newId as 'macro' | 'fx' | 'rates' | 'stocks' | 'discover')}
               pillClassName="bg-white/20 shadow-inner border border-white/20"
               tabClassName="text-sm md:text-[15px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
               activeTabClassName="text-white"
               inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
             />
-            <div className="h-4 w-[1px] bg-white/20 shrink-0" />
-            <TodayMarketButton isOpen={isTodayMarketOpen} onOpenChange={setIsTodayMarketOpen} />
           </div>
         </div>
       )}
