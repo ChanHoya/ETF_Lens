@@ -1211,7 +1211,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
         <div className="absolute bottom-[-10%] left-[10%] w-[60vw] h-[60vw] rounded-full bg-pink-600/10 blur-[150px] mix-blend-screen transition-all duration-1000"></div>
       </div>
 
-      <header className="w-full max-w-[95vw] xl:max-w-[1400px] mb-2 md:mb-4 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-2.5 md:gap-3 relative z-50">
+      <header className="w-full max-w-[95vw] xl:max-w-[1400px] mb-2 md:mb-4 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-2.5 md:gap-3 relative z-[180]">
         {/* 상단 행: 로고 (좌측) & 버전/상태/툴버튼 (우측) */}
         <div className="flex items-center justify-between gap-2 shrink-0">
           {/* 좌측 로고 */}
@@ -1243,7 +1243,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
         </div>
 
         {/* 가로 스크롤 & PC 마우스 드래그/화살표 스크롤 메인 메뉴바 */}
-        <div className="relative flex items-center w-full md:w-auto overflow-hidden rounded-full bg-white/[0.03] border border-white/10 backdrop-blur-md shadow-sm group">
+        <div className="relative flex items-center w-full md:w-auto overflow-hidden rounded-full bg-transparent border border-white/20 shadow-sm group">
           {/* 좌측 스크롤 화살표 버튼 */}
           <button
             onClick={() => scrollNav('left')}
@@ -1380,8 +1380,8 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
 
       {/* 서브탭: 종목분석 탭 선택시만 헤더 아래에 표시 */}
       {['select', 'info', 'chart', 'holdings', 'covered_call', ...(showMyTab ? ['dividend'] : []), 'brazil'].includes(activeTab) && !isEtfCheckModalOpen && (
-        <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-50">
-          <div className="bg-black/40 px-3 py-1 rounded-full border border-white/10 shadow-sm backdrop-blur-md overflow-x-auto scrollbar-hide">
+        <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-[180]">
+          <div className="bg-transparent px-3 py-1 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
             <SlidingTabs
               items={[
                 { id: 'select', label: '종목선택' },
@@ -1413,8 +1413,8 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
 
       {/* 서브탭: 시장동향 탭 선택시 — 오늘의 시장 | 종합(환율/금리/주식) | 환율 | 금리 | 주식 | 시장지표 */}
       {(activeTab === 'discover' || activeTab === 'fx' || activeTab === 'rates' || activeTab === 'stocks' || activeTab === 'macro') && !isEtfCheckModalOpen && (
-        <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-50">
-          <div className="flex items-center gap-2 md:gap-3 bg-black/40 px-3 py-1 rounded-full border border-white/10 shadow-sm backdrop-blur-md overflow-x-auto scrollbar-hide">
+        <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-2 relative z-[180]">
+          <div className="flex items-center gap-2 md:gap-3 bg-transparent px-3 py-1 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
             <TodayMarketButton isOpen={isTodayMarketOpen} onOpenChange={setIsTodayMarketOpen} />
             <div className="h-4 w-[1px] bg-white/20 shrink-0" />
             <SlidingTabs

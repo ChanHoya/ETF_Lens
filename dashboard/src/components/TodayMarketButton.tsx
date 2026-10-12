@@ -40,19 +40,23 @@ export default function TodayMarketButton({
         <>
             <button
                 onClick={() => { setBlocked(false); handleSetOpen(true); }}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm md:text-[15px] font-bold whitespace-nowrap transition-all bg-gradient-to-r from-emerald-500/20 to-sky-500/20 text-emerald-200 border border-emerald-400/30 hover:from-emerald-500/30 hover:to-sky-500/30 hover:text-white"
+                className="relative flex items-center gap-1.5 px-3 py-1 rounded-full text-sm md:text-[15px] font-bold whitespace-nowrap transition-all text-emerald-200 border animate-market-highlight hover:text-white"
             >
-                <Activity className="w-4 h-4" />
+                <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                </span>
+                <Activity className="w-4 h-4 text-emerald-300" />
                 오늘의 시장
             </button>
 
             {open && mounted && typeof document !== 'undefined' && createPortal(
                 <div
-                    className="fixed inset-0 z-[200] flex items-start justify-center bg-black/70 backdrop-blur-sm p-2 md:p-3 animate-in fade-in duration-200"
+                    className="fixed inset-0 z-[150] flex items-start justify-center bg-black/60 p-2 md:p-3 pt-[135px] md:pt-[115px] animate-in fade-in duration-200"
                     onClick={() => handleSetOpen(false)}
                 >
                     <div
-                        className="relative w-full max-w-6xl h-[96vh] bg-[#0d0d12] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                        className="relative w-full max-w-6xl h-[calc(100vh-150px)] md:h-[calc(100vh-130px)] bg-[#0d0d12] border border-white/15 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* 헤더 */}
