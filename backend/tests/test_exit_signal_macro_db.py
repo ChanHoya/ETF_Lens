@@ -41,20 +41,24 @@ async def async_db(test_engine):
 @pytest.mark.asyncio
 async def test_get_cached_market_macro_series(async_db):
     """DB에 저장된 MarketMacroLog 시계열이 딕셔너리로 정상 로드되는지 검증"""
+    from datetime import datetime, timedelta
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    yesterday_str = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+
     async_db.add_all([
-        MarketMacroLog(date="2026-10-01", dollar_index=102.5, krw=1330.0, t10y2y=0.15, hy_spread=3.2),
-        MarketMacroLog(date="2026-10-02", dollar_index=103.0, krw=1335.0, t10y2y=0.18, hy_spread=3.1),
+        MarketMacroLog(date=yesterday_str, dollar_index=102.5, krw=1330.0, t10y2y=0.15, hy_spread=3.2),
+        MarketMacroLog(date=today_str, dollar_index=103.0, krw=1335.0, t10y2y=0.18, hy_spread=3.1),
     ])
     await async_db.commit()
 
     with patch("db.database.AsyncSessionLocal", return_value=async_db):
         dx, krw, t10y, hy = await get_cached_market_macro_series(days=10)
 
-        assert "2026-10-01" in dx
-        assert dx["2026-10-01"] == 102.5
-        assert krw["2026-10-02"] == 1335.0
-        assert t10y["2026-10-02"] == 0.18
-        assert hy["2026-10-01"] == 3.2
+        assert yesterday_str in dx
+        assert dx[yesterday_str] == 102.5
+        assert krw[today_str] == 1335.0
+        assert t10y[today_str] == 0.18
+        assert hy[yesterday_str] == 3.2
 
 
 @pytest.mark.asyncio
