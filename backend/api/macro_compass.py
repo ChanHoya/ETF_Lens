@@ -564,12 +564,40 @@ ETF_RECO = {
 }
 
 # ---------------------------------------------------------------------------
-# Gemini explanation
+# Gemini explanation with Fallback Model Chain
 # ---------------------------------------------------------------------------
+
+FALLBACK_GEMINI_MODELS = [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash",
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+]
+
+
+async def _call_gemini_with_fallback(client, prompt: str) -> str:
+    """gemini-3.8-flash 1순위 시도 후 실패 시 차상위 모델들로 순차 Fallback."""
+    last_err = None
+    for model_name in FALLBACK_GEMINI_MODELS:
+        try:
+            logger.info(f"Attempting Gemini generation with model: {model_name}")
+            response = await asyncio.to_thread(
+                client.models.generate_content,
+                model=model_name,
+                contents=prompt,
+            )
+            if response and response.text:
+                logger.info(f"Gemini generation succeeded with model: {model_name}")
+                return response.text.strip()
+        except Exception as e:
+            logger.warning(f"Gemini model '{model_name}' failed: {e}. Falling back to next candidate...")
+            last_err = e
+    raise RuntimeError(f"All Gemini candidate models failed: {last_err}")
+
 
 async def _get_gemini_explanation(phase_en: str, indicators: dict,
                                    market: str, confidence: int) -> str:
-    """Generate a concise Korean explanation of the current macro phase."""
+    """Generate a multi-dimensional deep macro analysis in Korean using gemini-3.8-flash (with fallback)."""
     api_key = os.environ.get("GEMINI_API_KEY", "")
     if not api_key:
         return f"현재 {PHASE_NAMES[phase_en]} 단계로 판단됩니다. (Gemini API 키 미설정)"
@@ -588,27 +616,31 @@ async def _get_gemini_explanation(phase_en: str, indicators: dict,
         if val is not None:
             ind_lines.append(f"  - {k}: {val:.2f} (최신: {upd})")
 
-    prompt = f"""당신은 거시경제 투자 전문가입니다.
-현재 {market_name} 경기 사이클 분석 결과:
-- 단계: {phase_ko} (확신도: {confidence}%)
-- 주요 지표:
+    prompt = f"""당신은 글로벌 헤지펀드의 수석 거시경제 전략가(Chief Investment Strategist)입니다.
+현재 {market_name} 시장의 경기 사이클과 주요 거시경제 지표 데이터는 다음과 같습니다:
+
+[분석 대상 시장]: {market_name}
+[경기 사이클 단계]: {phase_ko} (판정 신뢰도: {confidence}%)
+[주요 실시간 거시 지표]:
 {chr(10).join(ind_lines)}
 
-위 내용을 바탕으로 투자자를 위한 3문장 이내의 간결하고 명확한 한국어 설명을 작성하세요.
-현재 단계의 특징, 주요 근거 지표 1-2개, 투자 시사점을 포함하세요.
-전문 용어를 사용하되 이해하기 쉽게 작성하세요."""
+위 지표들을 단순 나열하거나 단편적으로 요약하지 마십시오.
+지표 간의 '복합 상관관계와 거시경제적 인과관계'를 입체적으로 분석하여, 다음 4가지 핵심 축이 유기적으로 연결된 완성도 높은 전문가 종합 진단(3~4문장)을 작성하세요:
+1. [국면 진단 및 성장-물가 역학]: 성장 모멘텀(ISM/모멘텀)과 물가 부담 간의 괴리 또는 스태그플레이션/침체 압력 요인
+2. [통화정책 및 실질 유동성 경로]: 기준금리 및 채권 금리가 기업 투자 및 밸류에이션에 미치는 실질적인 금융 여건
+3. [글로벌 전이 및 환율·수급]: 미국 통화정책과 달러화 강세가 한국/신흥국 환율 변동성, 수출 사이클, 외국인 수급에 미치는 파급 효과
+4. [포트폴리오 자산배분 시사점]: 현금 비중, 방어적/공격적 섹터 로테이션, 듀레이션 리스크 관리 전략
+
+형식 가이드라인:
+- 단편적인 '지표 A가 하락했으니 B를 사라' 식의 피상적 템플릿 문장을 엄격히 배제하세요.
+- 지표의 원인과 결과를 엮어내는 전문적이고 깊이 있는 투자 리포트 어조를 유지하세요."""
 
     try:
-        response = await asyncio.to_thread(
-            client.models.generate_content,
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
-        return response.text.strip()
+        return await _call_gemini_with_fallback(client, prompt)
     except Exception as e:
-        logger.warning(f"Gemini explanation failed: {e}")
+        logger.warning(f"All Gemini explanation fallbacks failed: {e}")
         phase_ko = PHASE_NAMES[phase_en]
-        return f"현재 {market_name} 경제는 {phase_ko} 단계로 판단됩니다."
+        return f"현재 {market_name} 경제는 {phase_ko} 단계로 분석되며, 변동성 확대를 감안한 보수적인 리스크 관리가 권고됩니다."
 
 
 # ---------------------------------------------------------------------------
@@ -1011,14 +1043,9 @@ async def get_ai_insight(
     try:
         from google import genai  # type: ignore
         client = genai.Client(api_key=api_key)
-        response = await asyncio.to_thread(
-            client.models.generate_content,
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
-        insight_text = response.text.strip()
+        insight_text = await _call_gemini_with_fallback(client, prompt)
     except Exception as e:
-        logger.warning(f"Gemini insight failed: {e}")
+        logger.warning(f"Gemini insight fallback failed: {e}")
         insight_text = f"현재 글로벌 경기는 미국 {us.get('phase','N/A')}, 한국 {kr.get('phase','N/A')} 국면입니다. AI 분석 생성 중 오류가 발생했습니다."
 
     result = {

@@ -51,28 +51,42 @@ def calculate_rsi(prices: pd.Series, window: int = 14) -> pd.Series:
         logger.error(f"Error calculating RSI: {e}")
         return pd.Series(index=prices.index, dtype=float).fillna(50.0)
 
-def calculate_hybrid_fgi(vix: float, kospi_rv: float, sp500_rsi: float) -> float:
+def calculate_hybrid_fgi(
+    vix: float,
+    kospi_rv: float,
+    sp500_rsi: float = 50.0,
+    kospi_rsi: float | None = None
+) -> float:
     """다차원 하이브리드 Fear & Greed Index (FGI) 산출:
-    1) VIX 기반 공포 점수 (40%): VIX가 낮을수록 탐욕, 높을수록 공포
-       - VIX 12이하: 100, VIX 35이상: 0 으로 선형 맵핑
-    2) KOSPI 실현 변동성 점수 (30%): 국내 변동성 기반
-       - KOSPI RV 10이하: 100, KOSPI RV 35이상: 0 으로 선형 맵핑
-    3) S&P 500 RSI 점수 (30%): 모멘텀 기반
-       - RSI 그대로 사용 (RSI 70이상은 Greed, 30이하는 Fear 상황을 완벽 대변)
-       
-    각 점수(0~100)를 가중합산하여 최종 하이브리드 FGI를 산출합니다.
+    1) KOSPI RSI가 주어질 경우:
+       - 국내 시장 직접 반영: KOSPI RSI (40%) + KOSPI 실현 변동성 (35%) = 총 75%
+       - 글로벌 지표 보조: VIX (15%) + S&P 500 RSI (10%) = 총 25%
+       - 코스피 급락 시 FGI가 60점대(탐욕)로 역주행하는 미국 편향 왜곡 원천 차단
+    2) KOSPI RSI 미제공 시(하위 호환):
+       - VIX (40%) + KOSPI RV (30%) + S&P 500 RSI (30%)
     """
-    # 1. VIX Score (12 ~ 35 범위)
+    # 1. VIX Score (12 ~ 35 범위: 낮을수록 탐욕, 높을수록 공포)
     vix = max(12.0, min(35.0, vix))
     vix_score = 100.0 - ((vix - 12.0) / (35.0 - 12.0)) * 100.0
-    
-    # 2. KOSPI Realized Volatility Score (10 ~ 35 범위)
+
+    # 2. KOSPI Realized Volatility Score (10 ~ 35 범위: 낮을수록 탐욕, 높을수록 공포)
     kospi_rv = max(10.0, min(35.0, kospi_rv))
     kospi_rv_score = 100.0 - ((kospi_rv - 10.0) / (35.0 - 10.0)) * 100.0
-    
-    # 3. S&P 500 RSI Score (RSI는 이미 0~100 범위)
-    rsi_score = max(0.0, min(100.0, sp500_rsi))
-    
-    # 가중 합산 (4:3:3)
-    final_fgi = (vix_score * 0.40) + (kospi_rv_score * 0.30) + (rsi_score * 0.30)
+
+    # 3. S&P 500 RSI Score (0 ~ 100)
+    sp_rsi_score = max(0.0, min(100.0, sp500_rsi))
+
+    if kospi_rsi is not None:
+        # 4. KOSPI RSI Score (0 ~ 100: 낮을수록 극단적 공포/과매도)
+        kr_rsi_score = max(0.0, min(100.0, kospi_rsi))
+        final_fgi = (
+            (kr_rsi_score * 0.40) +
+            (kospi_rv_score * 0.35) +
+            (vix_score * 0.15) +
+            (sp_rsi_score * 0.10)
+        )
+    else:
+        # 기존 가중합산 (4:3:3)
+        final_fgi = (vix_score * 0.40) + (kospi_rv_score * 0.30) + (sp_rsi_score * 0.30)
+
     return round(float(final_fgi), 1)

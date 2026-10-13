@@ -426,13 +426,42 @@ export default function KospiExitAnalyzer() {
     const hyStatus = getHySpreadStatus();
 
     const exitOverall = () => {
-        if (exitScore >= 15) return { label: `위험 (매도 준비 | ${exitScore}/21점)`, color: 'text-rose-400', border: 'border-rose-500/40', bg: 'bg-rose-500/20' };
-        if (exitScore >= 9) return { label: `경계 (비중 조절 | ${exitScore}/21점)`, color: 'text-amber-400', border: 'border-amber-500/40', bg: 'bg-amber-500/20' };
-        if (exitScore >= 5) return { label: `주의 (예의 주시 | ${exitScore}/21점)`, color: 'text-orange-400', border: 'border-orange-500/40', bg: 'bg-orange-500/20' };
-        return { label: `안정 (비중 확대 | ${exitScore}/21점)`, color: 'text-emerald-400', border: 'border-emerald-500/40', bg: 'bg-emerald-500/20' };
+        if (riskData?.level === 'danger' || exitScore >= 15) {
+            return {
+                label: `${riskData?.label || '위험'} (비중 축소 | ${exitScore}/21점)`,
+                color: 'text-rose-400',
+                border: 'border-rose-500/40',
+                bg: 'bg-rose-500/20'
+            };
+        }
+        if (riskData?.level === 'warning' || exitScore >= 9) {
+            return {
+                label: `${riskData?.label || '경계'} (비중 조절 | ${exitScore}/21점)`,
+                color: 'text-amber-400',
+                border: 'border-amber-500/40',
+                bg: 'bg-amber-500/20'
+            };
+        }
+        if (riskData?.level === 'caution' || exitScore >= 5) {
+            return {
+                label: `${riskData?.label || '주의'} (예의 주시 | ${exitScore}/21점)`,
+                color: 'text-orange-400',
+                border: 'border-orange-500/40',
+                bg: 'bg-orange-500/20'
+            };
+        }
+        return {
+            label: `${riskData?.label || '안정'} (비중 확대 | ${exitScore}/21점)`,
+            color: 'text-emerald-400',
+            border: 'border-emerald-500/40',
+            bg: 'bg-emerald-500/20'
+        };
     };
 
     const getExitAnalysisText = () => {
+        if (riskData?.diagnosis) {
+            return `${riskData.diagnosis} ${riskData.action ? `[대응 지침: ${riskData.action}]` : ''}`;
+        }
         if (exitScore >= 15) return `종합 위험도가 ${exitScore}점으로 위험 수준입니다. 거시 지표 및 국내 변동성이 극대화되었으므로 주식 비중을 최소화하고 리스크 관리에 집중하세요.`;
         if (exitScore >= 9) return `종합 위험도가 ${exitScore}점입니다. 주요 거시 지표에서 불안 신호가 감지되고 있으므로 포트폴리오 비중을 선제적으로 조절하시기 바랍니다.`;
         if (exitScore >= 5) return `종합 위험도가 ${exitScore}점입니다. 일부 변동성 지표와 밸류에이션에서 미세한 주의 신호가 확인됩니다. 시장 추이를 예의주시하세요.`;

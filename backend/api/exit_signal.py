@@ -329,19 +329,22 @@ async def fetch_market_sentiment(target_ym: str = None):
         k_s.name = "kospi"
         g_s.name = "sp500"
 
-        # 퀀트 계산: KOSPI 20일 실현 변동성 및 S&P 500 14일 RSI 산출
+        # 퀀트 계산: KOSPI 20일 실현 변동성, KOSPI 14일 RSI 및 S&P 500 14일 RSI 산출
         kospi_rv_s = calculate_realized_volatility(k_s, window=20)
         kospi_rv_s.name = "vkospi_proxy"
+        kospi_rsi_s = calculate_rsi(k_s, window=14)
+        kospi_rsi_s.name = "kospi_rsi"
         sp500_rsi_s = calculate_rsi(g_s, window=14)
         sp500_rsi_s.name = "sp500_rsi"
 
         # VIX 기준으로 인덱스 설정 (미국 영업일 기준)
         # KOSPI 및 변동성 지수들은 미국 장에 없는 날(한국 공휴일 등)은 전일 값으로 채움
-        aligned = pd.concat([v_s, k_s, g_s, kospi_rv_s, sp500_rsi_s], axis=1)
+        aligned = pd.concat([v_s, k_s, g_s, kospi_rv_s, kospi_rsi_s, sp500_rsi_s], axis=1)
         aligned["vix"] = aligned["vix"].ffill()
         aligned["sp500"] = aligned["sp500"].ffill()
         aligned["kospi"] = aligned["kospi"].ffill()
         aligned["vkospi_proxy"] = aligned["vkospi_proxy"].ffill().fillna(15.0)
+        aligned["kospi_rsi"] = aligned["kospi_rsi"].ffill().fillna(50.0)
         aligned["sp500_rsi"] = aligned["sp500_rsi"].ffill().fillna(50.0)
 
         # VIX가 있는 날(미국 영업일)만 유지
@@ -361,16 +364,20 @@ async def fetch_market_sentiment(target_ym: str = None):
             kospi_val = float(row["kospi"]) if pd.notna(row.get("kospi")) else 0.0
             sp500_val = float(row["sp500"]) if pd.notna(row.get("sp500")) else 0.0
             kospi_rv_val = float(row["vkospi_proxy"])
+            kospi_rsi_val = float(row["kospi_rsi"])
             sp500_rsi_val = float(row["sp500_rsi"])
 
-            # 하이브리드 다차원 FGI 산출식 적용
-            fgi_val = calculate_hybrid_fgi(vix_val, kospi_rv_val, sp500_rsi_val)
+            # 하이브리드 다차원 FGI 산출식 적용 (KOSPI RSI 40% 직접 반영)
+            fgi_val = calculate_hybrid_fgi(
+                vix_val, kospi_rv_val, sp500_rsi_val, kospi_rsi=kospi_rsi_val
+            )
 
             sentiment_data.append(
                 {
                     "date": dt.strftime("%Y-%m-%d"),
                     "vix": round(vix_val, 2),
                     "vkospi_proxy": round(kospi_rv_val, 2),
+                    "kospi_rsi": round(kospi_rsi_val, 1),
                     "fgi": round(fgi_val, 1),
                     "kospi": round(kospi_val, 2),
                     "sp500": round(sp500_val, 2),
@@ -837,7 +844,7 @@ async def get_exit_signal_data(target_ym: str = None):
     except Exception as e:
         logger.error(f"Error compiling exit signal data: {e}")
 
-    # ── 종합 위험도 산출 ──────────────────────────────────────────────────────
+    # ── 종합 위험도 산출 (폭락 감지 엔진 업그레이드) ──────────────────────────
     cs = mock.get("current_status", {})
     vix = cs.get("vix") or 0
     vkospi = cs.get("vkospi_proxy") or 15.0
@@ -847,6 +854,23 @@ async def get_exit_signal_data(target_ym: str = None):
     t10y2y = cs.get("t10y2y") or 1.0
     hy_spread = cs.get("hy_spread") or 3.0
 
+    # 코스피 단기 모멘텀(20D, 5D 낙폭) 계산
+    kospi_prices = []
+    if "sentiment_data" in locals() and sentiment_data:
+        kospi_prices = [float(row["kospi"]) for row in sentiment_data if row.get("kospi") and row["kospi"] > 0]
+
+    kospi_mom_20d = 0.0
+    kospi_mom_5d = 0.0
+    if len(kospi_prices) >= 20:
+        kospi_mom_20d = ((kospi_prices[-1] - kospi_prices[-20]) / kospi_prices[-20]) * 100.0
+    elif len(kospi_prices) >= 2:
+        kospi_mom_20d = ((kospi_prices[-1] - kospi_prices[0]) / kospi_prices[0]) * 100.0
+
+    if len(kospi_prices) >= 5:
+        kospi_mom_5d = ((kospi_prices[-1] - kospi_prices[-5]) / kospi_prices[-5]) * 100.0
+    elif len(kospi_prices) >= 2:
+        kospi_mom_5d = ((kospi_prices[-1] - kospi_prices[0]) / kospi_prices[0]) * 100.0
+
     def _vix_score(v):
         if v < 20: return 0
         if v < 25: return 1
@@ -854,14 +878,14 @@ async def get_exit_signal_data(target_ym: str = None):
         return 3
 
     def _vkospi_score(vk):
-        if vk < 15: return 0
+        if vk < 16: return 0
         if vk < 20: return 1
-        if vk < 25: return 2
+        if vk < 24: return 2
         return 3
 
     def _fgi_score(f):
         if f >= 50: return 0
-        if f >= 30: return 1
+        if f >= 35: return 1
         if f >= 25: return 2
         return 3
 
@@ -871,7 +895,12 @@ async def get_exit_signal_data(target_ym: str = None):
         if c >= 99.5: return 2
         return 3
 
-    def _per_score(p):
+    def _per_score(p, mom_20, mom_5):
+        # 폭락 장세 밸류에이션 트랩(주가 급락 시 PER이 낮아져 안전 판정되는 역설) 보정
+        if mom_20 <= -7.0 or mom_5 <= -4.0:
+            return 2  # 주가 급락에 따른 실적 추정치 하향 전 밸류 트랩 위험
+        if mom_20 <= -4.0:
+            return max(1, 0 if p < 11 else (1 if p < 13 else (2 if p < 15 else 3)))
         if p < 11: return 0
         if p < 13: return 1
         if p < 15: return 2
@@ -906,14 +935,14 @@ async def get_exit_signal_data(target_ym: str = None):
     score_vkospi = _vkospi_score(vkospi)
     score_fgi = _fgi_score(fgi)
     score_cli = _cli_score(cli)
-    score_per = _per_score(per)
+    score_per = _per_score(per, kospi_mom_20d, kospi_mom_5d)
     score_t10y2y = _t10y2y_score(t10y2y, t10y2y_was_inverted)
     score_hy = _hy_score(hy_spread)
 
     # 7대 지표 총합 최대 21점
     total_score = score_vix + score_vkospi + score_fgi + score_cli + score_per + score_t10y2y + score_hy
     
-    # 0~4: 안전, 5~8: 주의, 9~14: 경계, 15~21: 위험
+    # 기본 등급 체계: 0~4: 안전, 5~8: 주의, 9~14: 경계, 15~21: 위험
     if total_score <= 4:
         risk_level = "safe"
         risk_label = "안전"
@@ -931,12 +960,76 @@ async def get_exit_signal_data(target_ym: str = None):
         risk_label = "위험"
         risk_color = "red"
 
+    # ── 폭락 감지 엔진 가드레일 (Circuit Breaker) ─────────────────────────
+    # 미국 시장 안정(저VIX, 저HY)으로 인해 국내 증시 패닉이 가려지는 시스템적 맹점 차단
+    is_crash_warning = False
+    is_crash_danger = False
+    crash_reasons = []
+
+    if vkospi >= 28.0:
+        is_crash_danger = True
+        crash_reasons.append(f"VKOSPI 변동성 폭등 ({round(vkospi, 1)}% ≥ 28%)")
+    elif vkospi >= 24.0:
+        is_crash_warning = True
+        crash_reasons.append(f"VKOSPI 위험 수위 도달 ({round(vkospi, 1)}% ≥ 24%)")
+
+    if kospi_mom_20d <= -8.0 or kospi_mom_5d <= -5.0:
+        is_crash_danger = True
+        crash_reasons.append(f"코스피 단기 폭락 (20D {kospi_mom_20d:+.1f}%, 5D {kospi_mom_5d:+.1f}%)")
+    elif kospi_mom_20d <= -5.0 or kospi_mom_5d <= -3.0:
+        is_crash_warning = True
+        crash_reasons.append(f"코스피 단기 급락세 지속 (20D {kospi_mom_20d:+.1f}%)")
+
+    # 가드레일 적용: 점수와 관계없이 최저 위험 등급 강제 상향
+    if is_crash_danger:
+        if risk_level != "danger":
+            risk_level = "danger"
+            risk_label = "위험 (폭락 경보)"
+            risk_color = "red"
+            if total_score < 15:
+                total_score = max(total_score + 6, 15)
+    elif is_crash_warning:
+        if risk_level in ["safe", "caution"]:
+            risk_level = "warning"
+            risk_label = "경계 (급락 주의)"
+            risk_color = "orange"
+            if total_score < 9:
+                total_score = max(total_score + 4, 9)
+
+    if risk_level == "danger":
+        diagnosis = (
+            f"코스피 단기 급락 및 극심한 공포 장세입니다. "
+            + (f"[{', '.join(crash_reasons)}] " if crash_reasons else "")
+            + "해외 지표와 무관하게 국내 시장의 투매 압력이 극에 달해 있어 추가 변동성에 대한 철저한 방어가 필요합니다."
+        )
+        recommended_action = "레버리지 포지션 전량 청산, 고베타 주식 및 ETF 비중 축소, 안전자산(현금/달러) 확보 권고."
+    elif risk_level == "warning":
+        diagnosis = (
+            f"코스피 시장에 유의미한 변동성 경보가 발동되었습니다. "
+            + (f"[{', '.join(crash_reasons)}] " if crash_reasons else "")
+            + "단기 낙폭 및 공포 지표가 급등하여 밸류에이션 트랩(저PER 착시) 위험이 상존합니다."
+        )
+        recommended_action = "신규 분할 매수 보류, 포트폴리오 리스크 완충을 위한 보수적 분할 매도 및 현금 비중 확대."
+    elif risk_level == "caution":
+        diagnosis = "일부 거시 지표 및 변동성에서 국지적 주의 신호가 감지됩니다."
+        recommended_action = "시장 추세를 예의주시하며 무리한 추격 매수 자제."
+    else:
+        diagnosis = "거시 지표 및 국내외 밸류에이션 전반이 안정적인 국면입니다."
+        recommended_action = "우량 자산 중심의 안정적 투자 전략 유지."
+
     mock["risk"] = {
         "level": risk_level,
         "label": risk_label,
         "color": risk_color,
         "score": total_score,
         "max_score": 21,
+        "diagnosis": diagnosis,
+        "action": recommended_action,
+        "crash_reasons": crash_reasons,
+        "kospi_momentum": {
+            "mom_20d": round(kospi_mom_20d, 2),
+            "mom_5d": round(kospi_mom_5d, 2)
+        },
         "breakdown": {
             "vix": {"value": round(vix, 1), "score": score_vix, "label": "VIX 공포지수"},
             "vkospi_proxy": {"value": round(vkospi, 1), "score": score_vkospi, "label": "VKOSPI 변동성"},
