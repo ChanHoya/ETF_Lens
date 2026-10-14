@@ -575,8 +575,10 @@ FALLBACK_GEMINI_MODELS = [
 ]
 
 
-async def _call_gemini_with_fallback(client, prompt: str) -> str:
-    """gemini-3.8-flash 1순위 시도 후 실패 시 차상위 모델들로 순차 Fallback."""
+async def _call_gemini_with_fallback(client, prompt: str) -> tuple[str, str]:
+    """gemini-3.8-flash 1순위 시도 후 실패 시 차상위 모델들로 순차 Fallback.
+    Returns (generated_text, successful_model_name).
+    """
     last_err = None
     for model_name in FALLBACK_GEMINI_MODELS:
         try:
@@ -588,7 +590,7 @@ async def _call_gemini_with_fallback(client, prompt: str) -> str:
             )
             if response and response.text:
                 logger.info(f"Gemini generation succeeded with model: {model_name}")
-                return response.text.strip()
+                return response.text.strip(), model_name
         except Exception as e:
             logger.warning(f"Gemini model '{model_name}' failed: {e}. Falling back to next candidate...")
             last_err = e
@@ -596,11 +598,13 @@ async def _call_gemini_with_fallback(client, prompt: str) -> str:
 
 
 async def _get_gemini_explanation(phase_en: str, indicators: dict,
-                                   market: str, confidence: int) -> str:
-    """Generate a multi-dimensional deep macro analysis in Korean using gemini-3.8-flash (with fallback)."""
+                                   market: str, confidence: int) -> tuple[str, str]:
+    """Generate a multi-dimensional deep macro analysis in Korean using gemini-3.8-flash (with fallback).
+    Returns (explanation_text, used_model).
+    """
     api_key = os.environ.get("GEMINI_API_KEY", "")
     if not api_key:
-        return f"현재 {PHASE_NAMES[phase_en]} 단계로 판단됩니다. (Gemini API 키 미설정)"
+        return f"현재 {PHASE_NAMES[phase_en]} 단계로 판단됩니다. (Gemini API 키 미설정)", "none"
 
     from google import genai  # type: ignore
     client = genai.Client(api_key=api_key)
@@ -640,7 +644,7 @@ async def _get_gemini_explanation(phase_en: str, indicators: dict,
     except Exception as e:
         logger.warning(f"All Gemini explanation fallbacks failed: {e}")
         phase_ko = PHASE_NAMES[phase_en]
-        return f"현재 {market_name} 경제는 {phase_ko} 단계로 분석되며, 변동성 확대를 감안한 보수적인 리스크 관리가 권고됩니다."
+        return f"현재 {market_name} 경제는 {phase_ko} 단계로 분석되며, 변동성 확대를 감안한 보수적인 리스크 관리가 권고됩니다.", "fallback"
 
 
 # ---------------------------------------------------------------------------
@@ -651,13 +655,13 @@ async def _get_gemini_explanation(phase_en: str, indicators: dict,
 async def get_macro_compass():
     """
     Returns US and Korea economic cycle phase with:
-    - phase name, confidence, AI explanation
+    - phase name, confidence, AI explanation, AI model used
     - sector heatmap (weight guidance)
     - ETF recommendations (5 each)
     - per-indicator values and their last update dates
     24h cached.
     """
-    cache_key = "macro_compass_v3"
+    cache_key = "macro_compass_v4"
     import time as _time
     now_ts = _time.time()
     if cache_key in _compass_cache:
@@ -675,7 +679,7 @@ async def get_macro_compass():
     kr_phase_en, kr_conf = _score_kr_phase(kr_ind)
 
     # Generate Gemini explanations concurrently
-    us_explanation, kr_explanation = await asyncio.gather(
+    (us_explanation, us_model), (kr_explanation, kr_model) = await asyncio.gather(
         _get_gemini_explanation(us_phase_en, us_ind, "us", us_conf),
         _get_gemini_explanation(kr_phase_en, kr_ind, "kr", kr_conf),
     )
@@ -688,6 +692,7 @@ async def get_macro_compass():
             "phase_en":        us_phase_en,
             "confidence":      us_conf,
             "explanation":     us_explanation,
+            "ai_model":        us_model,
             "sector_weights":  SECTOR_HEAT["us"][us_phase_en],
             "etf_recommendations": ETF_RECO["us"][us_phase_en],
             "indicators":      us_ind,
@@ -698,6 +703,7 @@ async def get_macro_compass():
             "phase_en":        kr_phase_en,
             "confidence":      kr_conf,
             "explanation":     kr_explanation,
+            "ai_model":        kr_model,
             "sector_weights":  SECTOR_HEAT["kr"][kr_phase_en],
             "etf_recommendations": ETF_RECO["kr"][kr_phase_en],
             "indicators":      kr_ind,
@@ -826,7 +832,7 @@ async def get_ai_insight(
     시장 인사이트를 생성합니다. 4시간 캐시.
     """
     import time
-    cache_key = "ai_insight_v6"
+    cache_key = "ai_insight_v7"
     now_ts = time.time()
     if cache_key in _insight_cache:
         cached, ts = _insight_cache[cache_key]
@@ -834,7 +840,7 @@ async def get_ai_insight(
             return cached
 
     # 1. 나침반 데이터 수집 (캐시 활용)
-    compass_key = "macro_compass_v3"
+    compass_key = "macro_compass_v4"
     compass_data = None
     if compass_key in _compass_cache:
         compass_data, _ = _compass_cache[compass_key]
@@ -1040,10 +1046,11 @@ async def get_ai_insight(
 중요: ETF 추천은 반드시 위에 제공된 실제 상장 ETF 목록에서만 선택하고, 목록에 없는 ETF는 절대 추천하지 마세요.
 제공된 성과 데이터의 수치를 그대로 인용하고, 데이터에 없는 수치는 절대 생성하지 마세요."""
 
+    used_model = "gemini-3.8-flash"
     try:
         from google import genai  # type: ignore
         client = genai.Client(api_key=api_key)
-        insight_text = await _call_gemini_with_fallback(client, prompt)
+        insight_text, used_model = await _call_gemini_with_fallback(client, prompt)
     except Exception as e:
         logger.warning(f"Gemini insight fallback failed: {e}")
         insight_text = f"현재 글로벌 경기는 미국 {us.get('phase','N/A')}, 한국 {kr.get('phase','N/A')} 국면입니다. AI 분석 생성 중 오류가 발생했습니다."
@@ -1053,6 +1060,7 @@ async def get_ai_insight(
         "us_phase": us.get("phase"),
         "kr_phase": kr.get("phase"),
         "has_real_perf": has_real_perf,
+        "ai_model": used_model,
         "analyzed_at": analyzed_at,
     }
     _cache_set(_insight_cache, cache_key, (result, now_ts))

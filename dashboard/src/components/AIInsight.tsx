@@ -10,6 +10,7 @@ interface InsightData {
   kr_phase?: string
   has_real_perf?: boolean
   analyzed_at: string
+  ai_model?: string
 }
 
 const getApiUrl = () => {
@@ -247,12 +248,13 @@ function StrategyContent({ content, onSaveToFavorites, toastMsg }: {
   )
 }
 
-function InsightSection({ icon, title, content, isStrategy, hasRealPerf, onSaveToFavorites, toastMsg }: {
+function InsightSection({ icon, title, content, isStrategy, hasRealPerf, aiModel, onSaveToFavorites, toastMsg }: {
   icon: React.ReactNode
   title: string
   content: string
   isStrategy?: boolean
   hasRealPerf?: boolean
+  aiModel?: string
   onSaveToFavorites?: (items: { code: string; name: string }[]) => void
   toastMsg?: string | null
 }) {
@@ -262,15 +264,22 @@ function InsightSection({ icon, title, content, isStrategy, hasRealPerf, onSaveT
         {icon}
         <span className="text-[16px] font-bold text-white/90">{title}</span>
         {isStrategy && (
-          hasRealPerf ? (
-            <span className="ml-auto flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0">
-              ✨ 실제 성과 지표 반영됨
-            </span>
-          ) : (
-            <span className="ml-auto flex items-center gap-1 text-[11px] font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-full shrink-0">
-              ⚠ 수익률 수치는 데모 데이터
-            </span>
-          )
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            {aiModel && (
+              <span className="flex items-center gap-1 text-[11px] font-mono text-purple-300 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">
+                🤖 {aiModel}
+              </span>
+            )}
+            {hasRealPerf ? (
+              <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                ✨ 실제 성과 지표 반영됨
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[11px] font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-full">
+                ⚠ 수익률 수치는 데모 데이터
+              </span>
+            )}
+          </div>
         )}
       </div>
       {isStrategy
@@ -382,9 +391,16 @@ export default function AIInsight() {
             </h2>
             <Sparkles className="w-4 h-4 text-purple-400" />
           </div>
-          <p style={{ margin: 0, fontSize: 14, color: '#64748b', marginTop: 2 }}>
-            {data?.analyzed_at ? `분석 시각: ${data.analyzed_at}` : '매크로 지표 기반 전문가 AI 인사이트'}
-          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
+              {data?.analyzed_at ? `분석 시각: ${data.analyzed_at}` : '매크로 지표 기반 전문가 AI 인사이트'}
+            </p>
+            {data?.ai_model && (
+              <span className="text-[11px] font-mono font-medium text-purple-300 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">
+                🤖 {data.ai_model}
+              </span>
+            )}
+          </div>
         </div>
         {/* 위상 뱃지 + 새로고침 */}
         <div className="ml-auto flex items-center gap-2">
@@ -437,6 +453,7 @@ export default function AIInsight() {
                 content={s.content}
                 isStrategy={s.isStrategy}
                 hasRealPerf={data?.has_real_perf}
+                aiModel={data?.ai_model}
                 onSaveToFavorites={s.isStrategy ? handleSaveToFavorites : undefined}
                 toastMsg={s.isStrategy ? toast : undefined}
               />
@@ -451,8 +468,8 @@ export default function AIInsight() {
         {/* Footer */}
         <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-1.5">
           <Sparkles className="w-3 h-3 text-purple-400" />
-          <p className="text-[12px] text-gray-600">
-            Gemini 2.5 Flash · 매크로 지표 기반 분석 · 투자 조언 아님
+          <p className="text-[12px] text-gray-500">
+            {data?.ai_model || 'gemini-3.8-flash'} · 매크로 지표 기반 분석 · 투자 조언 아님
           </p>
         </div>
       </div>

@@ -48,7 +48,7 @@ def test_portfolio_fit_evaluation():
         {"code": "381180", "name": "TIGER 미국필라델피아반도체나스닥", "current_price": 20000, "current_qty": 100, "current_val": 2000000},
     ]
 
-    fit = MacroRegimeEngine.evaluate_portfolio_fit(holdings)
+    fit = MacroRegimeEngine.evaluate_portfolio_fit(holdings, current_regime="GOLDILOCKS")
     assert fit["fit_score"] >= 80
     assert fit["fit_grade"] == "OPTIMAL"
     assert len(fit["synergy_items"]) >= 2
@@ -56,13 +56,13 @@ def test_portfolio_fit_evaluation():
 
 
 def test_portfolio_fit_headwind():
-    # 스태그플레이션/수축 대비 자산(단기채, CD금리, 곱버스) 위주 포트폴리오
+    # 골디락스 국면에서 방어 자산(단기채, CD금리, 곱버스) 위주 포트폴리오는 역풍
     holdings = [
         {"code": "449170", "name": "KODEX CD금리액티브", "current_price": 100000, "current_qty": 50, "current_val": 5000000},
         {"code": "252670", "name": "KODEX 200선물인버스2X", "current_price": 2000, "current_qty": 1000, "current_val": 2000000},
     ]
 
-    fit = MacroRegimeEngine.evaluate_portfolio_fit(holdings)
+    fit = MacroRegimeEngine.evaluate_portfolio_fit(holdings, current_regime="GOLDILOCKS")
     assert fit["headwind_weight"] >= 80.0
     assert fit["fit_score"] < 60
     assert fit["fit_grade"] == "MISALIGNED"

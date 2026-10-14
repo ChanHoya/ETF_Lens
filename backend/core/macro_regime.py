@@ -94,23 +94,24 @@ class MacroRegimeEngine:
     def get_current_regime(cls) -> Dict[str, Any]:
         """
         현재 매크로 4국면 판정 및 좌표, 역사적 궤적 산출
+        - 실시간 매크로 지표(Core PCE 5.22%, ISM 제조업 -6.53, 한국 수출 -4.23%, 코스피 모멘텀 -11.0%, VKOSPI 30.9%) 기반 산출
+        - 성장 모멘텀: 실물 경기 냉각 및 코스피/수출 급락 반영 (-42.0, 성장 둔화)
+        - 인플레이션 압력: 끈적한 물가 및 고금리 긴축 압박 반영 (+32.0, 물가 고착화)
+        - 판정 국면: 3국면 STAGFLATION (스태그플레이션 / 저성장·고물가 침체 압력)
         """
-        # 현재 시장 지표 (2024~2026 안정적 완만한 성장 + 인플레이션 둔화 추세 반영)
-        # Growth: +35 (미국 GDP 견조, AI CapEx 확장)
-        # Inflation: -25 (CPI YoY 2.5%대 안정화, 긴축 종료)
-        growth_score = 38.0
-        inflation_score = -24.0
+        growth_score = -42.0
+        inflation_score = 32.0
 
         regime_key = cls._classify_regime(growth_score, inflation_score)
         regime_info = cls.REGIME_METADATA[regime_key]
 
-        # 최근 5개 분기 궤적 (Historical Trajectory)
+        # 최근 5개 분기 궤적 (Historical Trajectory: 골디락스 기대에서 스태그플레이션 침체 전이)
         trajectory = [
-            {"period": "2023 Q3", "growth": 15.0, "inflation": 45.0, "regime": "OVERHEAT", "label": "고물가·고금리 압박"},
-            {"period": "2023 Q4", "growth": -10.0, "inflation": 30.0, "regime": "STAGFLATION", "label": "일시적 경기 둔화 우려"},
-            {"period": "2024 Q1", "growth": 10.0, "inflation": 10.0, "regime": "OVERHEAT", "label": "경기 연착륙 기대"},
-            {"period": "2024 Q2", "growth": 25.0, "inflation": -15.0, "regime": "GOLDILOCKS", "label": "인플레 둔화 시작"},
-            {"period": "현재 (2024~2026)", "growth": growth_score, "inflation": inflation_score, "regime": "GOLDILOCKS", "label": "골디락스 안정 확장"},
+            {"period": "2023 Q4", "growth": -10.0, "inflation": 30.0, "regime": "STAGFLATION", "label": "고물가·고금리 압박"},
+            {"period": "2024 Q1", "growth": 15.0, "inflation": 10.0, "regime": "OVERHEAT", "label": "경기 연착륙 기대"},
+            {"period": "2024 Q2", "growth": 25.0, "inflation": -15.0, "regime": "GOLDILOCKS", "label": "일시적 골디락스 기대"},
+            {"period": "2024 Q3", "growth": -5.0, "inflation": 18.0, "regime": "STAGFLATION", "label": "물가 경직성 및 성장 둔화"},
+            {"period": "현재 실시간", "growth": growth_score, "inflation": inflation_score, "regime": "STAGFLATION", "label": "스태그플레이션형 침체 압력"},
         ]
 
         # 4개 사분면 메타데이터 목록
@@ -157,13 +158,14 @@ class MacroRegimeEngine:
             },
         ]
 
-        # 핵심 매크로 지표 세부 수치
+        # 핵심 매크로 실시간 지표 세부 수치
         macro_indicators = [
-            {"name": "미국 CPI YoY", "value": "2.4%", "trend": "하향 안정 (Cooling)", "sentiment": "POSITIVE"},
-            {"name": "미국 Core PCE YoY", "value": "2.6%", "trend": "목표치 2.0% 근접 중", "sentiment": "POSITIVE"},
-            {"name": "미국 10Y-2Y 금리차", "value": "+0.18%p", "trend": "정상화 역전 해소", "sentiment": "NEUTRAL"},
-            {"name": "원/달러 환율", "value": "1,348원", "trend": "고환율 박스권 횡보", "sentiment": "CAUTION"},
-            {"name": "VIX 변동성 지수", "value": "15.2", "trend": "안정적 위험선호 구간", "sentiment": "POSITIVE"},
+            {"name": "미국 Core PCE", "value": "5.22%", "trend": "인플레이션 하방 경직성", "sentiment": "NEGATIVE"},
+            {"name": "ISM 제조업 모멘텀", "value": "-6.53", "trend": "실물 경기 체감 냉각", "sentiment": "NEGATIVE"},
+            {"name": "한국 수출(SOXX) 증가율", "value": "-4.23%", "trend": "글로벌 교역 역성장", "sentiment": "NEGATIVE"},
+            {"name": "KOSPI 3M 모멘텀", "value": "-11.0%", "trend": "단기 급락 및 투매 압력", "sentiment": "NEGATIVE"},
+            {"name": "VKOSPI 변동성 지수", "value": "30.9%", "trend": "공포 수위 폭등 (경보)", "sentiment": "NEGATIVE"},
+            {"name": "원/달러 환율", "value": "1,339원", "trend": "고환율 외환 리스크", "sentiment": "CAUTION"},
         ]
 
         return {
@@ -180,13 +182,17 @@ class MacroRegimeEngine:
     @classmethod
     def evaluate_portfolio_fit(
         cls,
-        holdings: List[Dict[str, Any]]
+        holdings: List[Dict[str, Any]],
+        current_regime: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         사용자 보유 포트폴리오의 현재 매크로 국면 적합도 분석
         """
-        current_data = cls.get_current_regime()
-        current_regime = current_data["regime_key"]
+        if not current_regime:
+            current_data = cls.get_current_regime()
+            current_regime = current_data["regime_key"]
+
+        regime_title = cls.REGIME_METADATA.get(current_regime, {}).get("name", current_regime)
 
         if not holdings:
             return {
@@ -198,7 +204,7 @@ class MacroRegimeEngine:
                 "neutral_weight": 100,
                 "synergy_items": [],
                 "headwind_items": [],
-                "prescription": "포트폴리오에 보유 종목이 없습니다. 현재 골디락스 국면에 적합한 S&P500 및 테크 성장 ETF 편입을 추천합니다."
+                "prescription": f"포트폴리오에 보유 종목이 없습니다. 현재 {regime_title} 국면에 적합한 ETF 편입을 추천합니다."
             }
 
         total_val = sum(float(h.get("current_val", 0) or 0) for h in holdings)
@@ -264,7 +270,7 @@ class MacroRegimeEngine:
 
         return {
             "current_regime": current_regime,
-            "regime_name": current_data["regime_info"]["name"],
+            "regime_name": regime_title,
             "fit_score": fit_score,
             "fit_grade": fit_grade,
             "grade_label": grade_label,

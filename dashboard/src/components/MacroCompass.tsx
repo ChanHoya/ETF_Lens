@@ -13,6 +13,7 @@ interface MarketCompass {
   phase_en: 'recovery' | 'expansion' | 'slowdown' | 'recession'
   confidence: number
   explanation: string
+  ai_model?: string
   sector_weights: SectorWeight[]
   etf_recommendations: EtfReco[]
   indicators: Record<string, Indicator>
@@ -174,53 +175,53 @@ function CompassDial({ phase_en, confidence, phase }: {
   )
 }
 
-// ─── Indicator Card ──────────────────────────────────────────────────────────
+// ─── Indicator Card (2열 콤팩트 그리드로 세로 높이 최적화) ─────────────────────
 function IndicatorCard({ indicators }: { indicators: Record<string, Indicator> }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
       {Object.entries(indicators).map(([key, ind]) => (
         <div
           key={key}
-          className="flex justify-between items-center px-3 py-2 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/5 dark:border-white/5 hover:bg-black/[0.06] dark:hover:bg-white/[0.07] transition-colors"
+          className="flex justify-between items-center px-2.5 py-1.5 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/5 dark:border-white/5 hover:bg-black/[0.06] dark:hover:bg-white/[0.07] transition-colors"
         >
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {(ind as Indicator).label ?? INDICATOR_LABELS[key] ?? key}
-          </span>
-          <div className="flex flex-col items-end gap-0.5">
-            <span className="text-base font-semibold text-gray-900 dark:text-white">
-              {ind.value != null
-                ? `${key === 'usd_krw' ? ind.value.toLocaleString() : ind.value.toFixed(key.includes('momentum') || key === 'pce' || key === 'fed_rate' || key === 'bok_rate' || key === 'export_growth' || key === 'unemployment' ? 1 : 1)}${INDICATOR_UNITS[key] ?? ''}`
-                : 'N/A'}
+          <div className="flex flex-col min-w-0 pr-1">
+            <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300 truncate">
+              {(ind as Indicator).label ?? INDICATOR_LABELS[key] ?? key}
             </span>
             {ind.updated_at && (
-              <span className="text-[11px] text-gray-500 dark:text-gray-400">
+              <span className="text-[9.5px] text-gray-400 dark:text-gray-500">
                 최신: {ind.updated_at}
               </span>
             )}
           </div>
+          <span className="text-[12px] font-bold text-gray-900 dark:text-white shrink-0 font-mono">
+            {ind.value != null
+              ? `${key === 'usd_krw' ? Math.round(ind.value).toLocaleString() : ind.value.toFixed(1)}${INDICATOR_UNITS[key] ?? ''}`
+              : 'N/A'}
+          </span>
         </div>
       ))}
     </div>
   )
 }
 
-// ─── Sector Heat Map ─────────────────────────────────────────────────────────
+// ─── Sector Heat Map (2열 콤팩트 그리드) ─────────────────────────────────────
 function SectorHeatmap({ sectors }: { sectors: SectorWeight[] }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
       {sectors.map((s) => (
         <div
           key={s.sector}
-          className="flex justify-between items-center px-3 py-2 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/5 dark:border-white/5 hover:bg-black/[0.06] dark:hover:bg-white/[0.07] transition-colors"
+          className="flex justify-between items-center px-2.5 py-1.5 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/5 dark:border-white/5 hover:bg-black/[0.06] dark:hover:bg-white/[0.07] transition-colors"
         >
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{s.sector}</span>
+          <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300 truncate">{s.sector}</span>
           <span
             style={{
-              background: WEIGHT_COLOR[s.weight] + '25',
+              background: WEIGHT_COLOR[s.weight] + '20',
               color: WEIGHT_COLOR[s.weight],
-              border: `1px solid ${WEIGHT_COLOR[s.weight]}55`,
+              border: `1px solid ${WEIGHT_COLOR[s.weight]}44`,
             }}
-            className="text-xs font-bold px-2.5 py-1 rounded-full"
+            className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
           >
             {s.weight}
           </span>
@@ -230,39 +231,39 @@ function SectorHeatmap({ sectors }: { sectors: SectorWeight[] }) {
   )
 }
 
-// ─── ETF Recommendation ──────────────────────────────────────────────────────
+// ─── ETF Recommendation (슬림 콤팩트 리스트) ────────────────────────────────
 function EtfList({ etfs, phase_en }: { etfs: EtfReco[]; phase_en: string }) {
   const color = PHASE_CONFIG[phase_en as keyof typeof PHASE_CONFIG]?.color ?? '#38bdf8'
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       {etfs.map((e, i) => (
         <div
           key={e.ticker}
-          className="flex gap-3 items-start px-3 py-2.5 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/5 dark:border-white/5 hover:bg-black/[0.06] dark:hover:bg-white/[0.07] transition-colors"
+          className="flex gap-2.5 items-start px-2.5 py-1.5 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/5 dark:border-white/5 hover:bg-black/[0.06] dark:hover:bg-white/[0.07] transition-colors"
         >
           <span
             style={{ color }}
-            className="text-sm font-bold min-w-[20px] pt-0.5"
+            className="text-[11px] font-bold min-w-[16px] pt-0.5 text-center"
           >
             {i + 1}
           </span>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div 
               onClick={() => {
                 const event = new CustomEvent('open_etf_detail', { detail: { code: e.ticker } });
                 window.dispatchEvent(event);
               }}
-              className="flex gap-2 items-baseline flex-wrap cursor-pointer group/etf-title hover:opacity-80"
+              className="flex gap-1.5 items-baseline flex-wrap cursor-pointer group/etf-title hover:opacity-80"
               title="클릭하여 상세 정보 보기"
             >
-              <span className="text-sm font-bold text-gray-900 dark:text-white group-hover/etf-title:text-indigo-600 dark:group-hover/etf-title:text-indigo-400 transition-colors">
+              <span className="text-[12px] font-bold text-gray-900 dark:text-white group-hover/etf-title:text-indigo-400 transition-colors">
                 {e.ticker}
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 group-hover/etf-title:text-indigo-500 dark:group-hover/etf-title:text-indigo-300 transition-colors">
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 group-hover/etf-title:text-indigo-300 transition-colors truncate">
                 {e.name}
               </span>
             </div>
-            <span className="text-xs text-gray-600 dark:text-gray-400 mt-1 block leading-relaxed">
+            <span className="text-[10.5px] text-gray-600 dark:text-gray-400 mt-0.5 block leading-normal">
               {e.reason}
             </span>
           </div>
@@ -290,8 +291,8 @@ function MarketPanel({ data, flag, market }: {
       }}
     >
       {/* Header */}
-      <div className="px-5 py-4 border-b border-black/5 dark:border-white/10 flex items-center justify-between">
-        <span className="text-lg font-bold text-gray-900 dark:text-white">
+      <div className="px-5 py-3.5 border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+        <span className="text-base font-bold text-gray-900 dark:text-white">
           {flag} {market}
         </span>
         <span
@@ -300,14 +301,14 @@ function MarketPanel({ data, flag, market }: {
             color: cfg.color,
             border: `1px solid ${cfg.color}55`,
           }}
-          className="text-xs font-semibold px-3 py-1 rounded-full"
+          className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
         >
           {data.phase} · {data.confidence}%
         </span>
       </div>
 
       {/* Compass + explanation */}
-      <div className="flex flex-col-reverse md:flex-row gap-4 p-5 items-start">
+      <div className="flex flex-col-reverse md:flex-row gap-4 p-4 items-start">
         {/* 설명글 - 모바일에서 먼저 표시(col-reverse), PC에서 다이얼 우측 */}
         <div
           className="flex-1 text-xs md:text-[13px] leading-relaxed text-gray-600 dark:text-gray-300 order-1 md:order-2 pl-3 pt-1 border-l-2 whitespace-pre-line"
@@ -316,8 +317,11 @@ function MarketPanel({ data, flag, market }: {
           <div className="font-normal tracking-tight space-y-1.5">
             {data.explanation}
           </div>
-          <div className="mt-2.5 text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
+          <div className="mt-2.5 text-[11px] text-gray-400 dark:text-gray-500 flex flex-wrap items-center gap-2">
             <span>🕒 분석 시각: {data.analyzed_at}</span>
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+              🤖 {data.ai_model || 'gemini-3.8-flash'}
+            </span>
           </div>
         </div>
         {/* 다이얼 - 모바일에서 아래(col-reverse에서 나중에), PC에서 좌측 */}
@@ -326,8 +330,8 @@ function MarketPanel({ data, flag, market }: {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mx-5 bg-black/[0.04] dark:bg-black/30 p-1 rounded-xl border border-black/5 dark:border-white/5">
+      {/* Tabs - 슬릭 세그먼트 컨트롤 */}
+      <div className="flex gap-1.5 mx-4 bg-black/[0.05] dark:bg-black/40 p-1 rounded-xl border border-black/5 dark:border-white/10">
         {(['indicators', 'sectors', 'etfs'] as const).map((t) => {
           const labels = { indicators: '📊 참고지표', sectors: '🗺 섹터 비중', etfs: '💡 ETF 추천' }
           const isActive = tab === t
@@ -336,22 +340,24 @@ function MarketPanel({ data, flag, market }: {
               key={t}
               onClick={() => setTab(t)}
               style={{
-                background: isActive ? cfg.color + '25' : 'transparent',
+                background: isActive ? `${cfg.color}22` : 'transparent',
                 color: isActive ? cfg.color : undefined,
-                borderColor: isActive ? cfg.color + '55' : 'transparent',
+                borderColor: isActive ? `${cfg.color}66` : 'transparent',
               }}
-              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all border ${
-                isActive ? 'shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white border-transparent'
+              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all duration-200 border flex items-center justify-center gap-1 ${
+                isActive
+                  ? 'shadow-sm shadow-black/20 ring-1 ring-white/10'
+                  : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white border-transparent hover:bg-white/[0.04]'
               }`}
             >
-              {labels[t]}
+              <span>{labels[t]}</span>
             </button>
           )
         })}
       </div>
 
-      {/* Tab content */}
-      <div className="p-5">
+      {/* Tab content (슬림 패딩 적용) */}
+      <div className="px-4 py-3">
         {tab === 'indicators' && <IndicatorCard indicators={data.indicators} />}
         {tab === 'sectors' && <SectorHeatmap sectors={data.sector_weights} />}
         {tab === 'etfs' && <EtfList etfs={data.etf_recommendations} phase_en={data.phase_en} />}

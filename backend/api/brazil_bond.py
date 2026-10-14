@@ -849,7 +849,12 @@ async def get_history(series: str, years: int = 10, db: AsyncSession = Depends(g
 # ══════════════════════════════════════════════════════════════════════════
 # AI 전략 리포트 (Gemini) — sector_insight 패턴 복제, 브라질 전용 스키마
 # ══════════════════════════════════════════════════════════════════════════
-_GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+_GEMINI_MODELS = [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash",
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+]
 
 _BR_SCHEMA_HINT = """반드시 아래 JSON 스키마만 출력하라(코드펜스/설명 금지):
 {

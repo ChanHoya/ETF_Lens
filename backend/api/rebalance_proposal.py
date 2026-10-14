@@ -26,10 +26,10 @@ _PROPOSAL_CACHE: dict[str, dict] = {}
 _PROPOSAL_CACHE_TTL = 3600 * 2  # 2 hours
 
 _GEMINI_MODELS = [
-    "gemini-2.5-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-3.5-flash",
+    "gemini-2.5-pro",
     "gemini-2.5-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-2.0-flash",
 ]
 
 # JSON schema definition for Gemini's structured output response

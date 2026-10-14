@@ -33,10 +33,10 @@ router = APIRouter()
 _KST = timezone(timedelta(hours=9))
 
 _GEMINI_MODELS = [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash",
+    "gemini-2.5-pro",
     "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
 ]
 
 # ── 섹터 설정: 그라운딩용 대표 티커 + 리포트 메타 ──────────────────────────────

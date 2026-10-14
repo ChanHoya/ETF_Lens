@@ -94,7 +94,7 @@ interface Props {
 export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
   const [data, setData] = useState<RegimeResponse | null>(null);
   const [fitData, setFitData] = useState<PortfolioFitResponse | null>(null);
-  const [selectedRegime, setSelectedRegime] = useState<string>('GOLDILOCKS');
+  const [selectedRegime, setSelectedRegime] = useState<string>('STAGFLATION');
   const [loading, setLoading] = useState<boolean>(true);
 
   // 1. 매크로 4국면 기본 데이터 조회

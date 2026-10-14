@@ -628,8 +628,8 @@ async def sync_brazil_series(days: int = 365 * 9) -> dict:
                     result["y5_orphans_removed"] = len(orphans)
                     print(f"[brazil_fetcher] y5 orphan cleanup: removed {len(orphans)} isolated old points "
                           f"(연속 블록 시작 {y5_rows[block_start].date})")
-    except Exception as e:
-        print(f"[brazil_fetcher] y5 orphan cleanup failed: {e}")
+        except Exception as e:
+            print(f"[brazil_fetcher] y5 orphan cleanup failed: {e}")
 
     print(f"[brazil_fetcher] sync done: {result}")
     return result
