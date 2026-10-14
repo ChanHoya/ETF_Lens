@@ -1344,12 +1344,14 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                           if (!isAlreadyInMarket) {
                             setActiveTab('macro');
                           }
+                          setIsTodayMarketOpen(false);
                           setIsEtfCheckModalOpen(false);
                           setNaverEtfCode(null);
                           setSelectedDetailEtf(null);
                           return;
                         }
                         setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension');
+                        setIsTodayMarketOpen(false);
                         setIsEtfCheckModalOpen(false);
                         setNaverEtfCode(null);
                         setSelectedDetailEtf(null);
@@ -1428,7 +1430,10 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                   { id: 'discover', label: '시장지표' },
                 ]}
                 activeId={activeTab}
-                onChange={(newId) => setActiveTab(newId as 'macro' | 'fx' | 'rates' | 'stocks' | 'discover')}
+                onChange={(newId) => {
+                  setActiveTab(newId as 'macro' | 'fx' | 'rates' | 'stocks' | 'discover');
+                  setIsTodayMarketOpen(false);
+                }}
                 pillClassName="bg-white/20 shadow-inner border border-white/20"
                 tabClassName="text-sm md:text-[15px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
                 activeTabClassName="text-white"

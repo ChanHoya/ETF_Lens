@@ -294,8 +294,6 @@ function InsightSection({ icon, title, content, isStrategy, hasRealPerf, aiModel
 function parseInsight(text: string) {
   const sections: { key: string; icon: React.ReactNode; title: string; content: string; isStrategy?: boolean }[] = []
   const patterns = [
-    { key: 'diagnosis', icon: <TrendingUp className="w-4 h-4 text-indigo-400" />, header: '📊 현재 시장 상황 진단', displayTitle: '현재 시장 상황 진단' },
-    { key: 'risk', icon: <AlertTriangle className="w-4 h-4 text-amber-400" />, header: '⚠️ 주요 리스크 요인', displayTitle: '주요 리스크 요인' },
     { key: 'strategy', icon: <Lightbulb className="w-4 h-4 text-emerald-400" />, header: '💡 투자 전략 제언', displayTitle: '투자전략 및 국내 ETF 추천', isStrategy: true },
     { key: 'monitor', icon: <Search className="w-4 h-4 text-cyan-400" />, header: '🔍 핵심 모니터링 포인트', displayTitle: '핵심 모니터링 포인트' },
   ]

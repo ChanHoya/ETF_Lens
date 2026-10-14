@@ -832,7 +832,7 @@ async def get_ai_insight(
     시장 인사이트를 생성합니다. 4시간 캐시.
     """
     import time
-    cache_key = "ai_insight_v7"
+    cache_key = "ai_insight_v8"
     now_ts = time.time()
     if cache_key in _insight_cache:
         cached, ts = _insight_cache[cache_key]
@@ -1013,12 +1013,6 @@ async def get_ai_insight(
 {etf_list_block}
 
 위 데이터를 바탕으로 다음 형식으로 정확히 작성하세요. 각 섹션 헤더를 반드시 그대로 사용하세요:
-
-**📊 현재 시장 상황 진단**
-(미국/한국 경기 현황, 핵심 지표 해석 2-3문장)
-
-**⚠️ 주요 리스크 요인**
-(현재 가장 주목해야 할 위험 요소 2가지, 번호 매김)
 
 **💡 투자 전략 제언**
 현재 경기 사이클에 맞는 추천 포트폴리오:
