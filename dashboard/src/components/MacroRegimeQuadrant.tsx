@@ -88,6 +88,12 @@ interface PortfolioFitResponse {
   prescription: string;
 }
 
+// 2D 사분면 좌표 변환 헬퍼 (퍼센트 단위 10%~90% 클램핑)
+const getCoords = (g: number, inf: number) => ({
+  x: Math.max(10, Math.min(90, 50 + (g / 200) * 100)),
+  y: Math.max(10, Math.min(90, 50 - (inf / 200) * 100)),
+});
+
 interface Props {
   holdings?: HoldingItem[];
 }
@@ -218,6 +224,16 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
     evaluateFit();
   }, [holdings]);
 
+  // 3. 궤적 좌표 변환 (모든 렌더링에서 동일 순서로 실행되도록 조기 리턴 전에 배치)
+  const trajPoints = useMemo(() => {
+    if (!data?.trajectory) return [];
+    return data.trajectory.map((t) => ({
+      ...t,
+      ...getCoords(t.growth, t.inflation),
+    }));
+  }, [data?.trajectory]);
+
+  // 조기 리턴 (모든 Hook 호출 이후)
   if (loading || !data) {
     return (
       <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center min-h-[300px] animate-pulse">
@@ -228,19 +244,6 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
   }
 
   const { regime_info, growth_score, inflation_score, quadrants, trajectory, macro_indicators } = data;
-
-  const getCoords = (g: number, inf: number) => ({
-    x: Math.max(10, Math.min(90, 50 + (g / 200) * 100)),
-    y: Math.max(10, Math.min(90, 50 - (inf / 200) * 100)),
-  });
-
-  const trajPoints = useMemo(() => {
-    if (!trajectory) return [];
-    return trajectory.map((t) => ({
-      ...t,
-      ...getCoords(t.growth, t.inflation),
-    }));
-  }, [trajectory]);
 
   const activeStep = trajPoints && trajPoints[currentStepIndex] ? trajPoints[currentStepIndex] : {
     period: '현재 실시간',
