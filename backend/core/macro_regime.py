@@ -105,12 +105,23 @@ class MacroRegimeEngine:
         regime_key = cls._classify_regime(growth_score, inflation_score)
         regime_info = cls.REGIME_METADATA[regime_key]
 
-        # 최근 5개 분기 궤적 (Historical Trajectory: 골디락스 기대에서 스태그플레이션 침체 전이)
+        # 2023 Q1부터 2026 Q3 및 현재 실시간까지의 16개 분기 역사적 거시 궤적
         trajectory = [
-            {"period": "2023 Q4", "growth": -10.0, "inflation": 30.0, "regime": "STAGFLATION", "label": "고물가·고금리 압박"},
+            {"period": "2023 Q1", "growth": -18.0, "inflation": 42.0, "regime": "STAGFLATION", "label": "SVB 사태 및 고긴축 충격"},
+            {"period": "2023 Q2", "growth": 8.0, "inflation": 22.0, "regime": "OVERHEAT", "label": "생성형 AI 촉발 성장 랠리"},
+            {"period": "2023 Q3", "growth": -6.0, "inflation": 34.0, "regime": "STAGFLATION", "label": "미 장기금리 5% 돌파 충격"},
+            {"period": "2023 Q4", "growth": -10.0, "inflation": 30.0, "regime": "STAGFLATION", "label": "고물가·고금리 긴축 압박"},
             {"period": "2024 Q1", "growth": 15.0, "inflation": 10.0, "regime": "OVERHEAT", "label": "경기 연착륙 기대"},
             {"period": "2024 Q2", "growth": 25.0, "inflation": -15.0, "regime": "GOLDILOCKS", "label": "일시적 골디락스 기대"},
-            {"period": "2024 Q3", "growth": -5.0, "inflation": 18.0, "regime": "STAGFLATION", "label": "물가 경직성 및 성장 둔화"},
+            {"period": "2024 Q3", "growth": -5.0, "inflation": 18.0, "regime": "STAGFLATION", "label": "엔캐리 청산 충격 및 물가 경직"},
+            {"period": "2024 Q4", "growth": 12.0, "inflation": -5.0, "regime": "GOLDILOCKS", "label": "연준 빅컷(50bp) 및 피벗"},
+            {"period": "2025 Q1", "growth": -12.0, "inflation": 25.0, "regime": "STAGFLATION", "label": "관세 부과 및 공급망 물가 압박"},
+            {"period": "2025 Q2", "growth": 5.0, "inflation": 12.0, "regime": "OVERHEAT", "label": "AI 인프라 투자 속 K자 양극화"},
+            {"period": "2025 Q3", "growth": -22.0, "inflation": 18.0, "regime": "STAGFLATION", "label": "무역 갈등 및 교역 둔화"},
+            {"period": "2025 Q4", "growth": -28.0, "inflation": 22.0, "regime": "STAGFLATION", "label": "제조업 위축 및 경기 둔화 가속"},
+            {"period": "2026 Q1", "growth": -32.0, "inflation": 34.0, "regime": "STAGFLATION", "label": "원자재 반등 및 비용 압박"},
+            {"period": "2026 Q2", "growth": -36.0, "inflation": 35.0, "regime": "STAGFLATION", "label": "신용 경색 및 자산 변동성 확대"},
+            {"period": "2026 Q3", "growth": -39.0, "inflation": 33.0, "regime": "STAGFLATION", "label": "실적 하향 및 경기 침체 경보"},
             {"period": "현재 실시간", "growth": growth_score, "inflation": inflation_score, "regime": "STAGFLATION", "label": "스태그플레이션형 침체 압력"},
         ]
 

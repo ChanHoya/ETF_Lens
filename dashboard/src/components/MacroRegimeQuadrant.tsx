@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Compass, TrendingUp, TrendingDown, Activity, Sparkles,
-  AlertTriangle, ShieldCheck, CheckCircle2, ChevronRight,
+  AlertTriangle, ShieldCheck, CheckCircle2, ChevronRight, ChevronLeft,
   ArrowUpRight, ArrowDownRight, Layers, HelpCircle, Info,
   Play, Pause, RotateCcw
 } from 'lucide-react';
@@ -100,8 +100,9 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
 
   // 궤적 시뮬레이션 재생 상태
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [currentStepIndex, setCurrentStepIndex] = useState<number>(4);
+  const [currentStepIndex, setCurrentStepIndex] = useState<number>(15);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timelineScrollRef = useRef<HTMLDivElement>(null);
 
   // 1. 매크로 4국면 기본 데이터 조회
   useEffect(() => {
@@ -125,19 +126,19 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
     fetchRegime();
   }, []);
 
-  // 궤적 시뮬레이션 타이머
+  // 궤적 시뮬레이션 타이머 (전체 16단계 순차 재생, 스텝당 900ms)
   useEffect(() => {
     if (isPlaying) {
       timerRef.current = setInterval(() => {
         setCurrentStepIndex((prev) => {
-          const maxIdx = (data?.trajectory?.length ?? 5) - 1;
+          const maxIdx = (data?.trajectory?.length ?? 16) - 1;
           if (prev >= maxIdx) {
             setIsPlaying(false);
             return maxIdx;
           }
           return prev + 1;
         });
-      }, 1300);
+      }, 900);
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
     }
@@ -146,11 +147,29 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
     };
   }, [isPlaying, data?.trajectory]);
 
+  // 활성 스텝 변경 시 하단 타임라인 카드 자동 스크롤
+  useEffect(() => {
+    if (timelineScrollRef.current && timelineScrollRef.current.children) {
+      const activeEl = timelineScrollRef.current.children[currentStepIndex] as HTMLElement;
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [currentStepIndex]);
+
+  const scrollTimeline = (direction: 'left' | 'right') => {
+    if (timelineScrollRef.current) {
+      const offset = direction === 'left' ? -320 : 320;
+      timelineScrollRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+  };
+
   const handlePlayToggle = () => {
     if (isPlaying) {
       setIsPlaying(false);
     } else {
-      const maxIdx = (data?.trajectory?.length ?? 5) - 1;
+      const maxIdx = (data?.trajectory?.length ?? 16) - 1;
+      // 끝까지 도달했으면 처음(0번)부터 재생
       if (currentStepIndex >= maxIdx) {
         setCurrentStepIndex(0);
       }
@@ -363,42 +382,47 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
                     : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30'
                 }`}
-                title={isPlaying ? '일시 정지' : '5단계 궤적 순차 재생'}
+                title={isPlaying ? '일시 정지' : `${trajectory.length}단계 전체 궤적 순차 시뮬레이션`}
               >
                 {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                <span>{isPlaying ? '일시정지' : '궤적 시뮬레이션'}</span>
+                <span>{isPlaying ? '일시정지' : '처음부터 시뮬레이션 재생'}</span>
               </button>
               <button
                 type="button"
                 onClick={handleReset}
                 className="p-1 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition cursor-pointer"
-                title="처음(1단계)으로 리셋"
+                title="처음(1단계: 2023 Q1)으로 리셋"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
-          {/* 5단계 스텝 인디케이터 바 */}
-          <div className="flex items-center justify-between gap-1 mt-2.5 mb-1 px-0.5">
-            {trajectory.map((step, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleJumpToStep(idx)}
-                className={`flex-1 py-1 px-1 rounded-lg border text-center transition-all cursor-pointer ${
-                  idx === currentStepIndex
-                    ? 'bg-indigo-600/30 border-indigo-400 text-indigo-200 font-bold shadow-md shadow-indigo-950'
-                    : idx < currentStepIndex
-                    ? 'bg-slate-900/90 border-slate-700/60 text-slate-300 hover:bg-slate-800'
-                    : 'bg-slate-950/40 border-slate-800 text-slate-500 hover:text-slate-400'
-                }`}
-              >
-                <div className="text-[10px] font-mono leading-none">
-                  {idx === trajectory.length - 1 ? '5. 실시간' : `${idx + 1}. ${step.period.replace('20', "'")}`}
-                </div>
-              </button>
-            ))}
+          {/* 16개 분기 스텝 인디케이터 바 (가로 스크롤 지원) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-1 px-0.5 max-w-full scrollbar-thin">
+            {trajectory.map((step, idx) => {
+              const isCurrent = idx === currentStepIndex;
+              const isPassed = idx < currentStepIndex;
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleJumpToStep(idx)}
+                  className={`flex-shrink-0 py-1 px-2 rounded-lg border text-center transition-all cursor-pointer ${
+                    isCurrent
+                      ? 'bg-indigo-600/40 border-indigo-400 text-indigo-100 font-bold shadow-md shadow-indigo-950 ring-1 ring-indigo-400'
+                      : isPassed
+                      ? 'bg-slate-900/90 border-slate-700/60 text-slate-300 hover:bg-slate-800'
+                      : 'bg-slate-950/40 border-slate-800 text-slate-500 hover:text-slate-400'
+                  }`}
+                  title={`${step.period}: ${step.label}`}
+                >
+                  <div className="text-[10px] font-mono whitespace-nowrap">
+                    {idx === trajectory.length - 1 ? '● 실시간' : `${idx + 1}. ${step.period.replace('20', "'")}`}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* 2D 인터랙티브 사분면 그리드 */}
@@ -537,16 +561,16 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
                 <div
                   key={`waypoint-${idx}`}
                   onClick={(e) => { e.stopPropagation(); handleJumpToStep(idx); }}
-                  className="absolute z-15 -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-500 hover:scale-125"
+                  className="absolute z-15 -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 hover:scale-125 group"
                   style={{ left: `${pt.x}%`, top: `${pt.y}%` }}
                   title={`${pt.period}: ${pt.label}`}
                 >
                   <div className="relative flex items-center justify-center">
-                    <span className="w-5 h-5 rounded-full bg-slate-900 border border-indigo-400 text-[10px] font-black text-indigo-300 flex items-center justify-center shadow-md">
+                    <span className="w-4 h-4 rounded-full bg-slate-900/90 border border-indigo-400/80 text-[8px] font-black text-indigo-300 flex items-center justify-center shadow-md group-hover:bg-indigo-600 group-hover:text-white transition">
                       {idx + 1}
                     </span>
-                    <span className="absolute -bottom-4 bg-slate-950/90 text-[9px] font-semibold text-slate-400 px-1 rounded whitespace-nowrap border border-slate-800">
-                      {pt.period.replace('20', "'")}
+                    <span className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -bottom-4.5 bg-slate-950/95 text-[9px] font-semibold text-slate-200 px-1.5 py-0.5 rounded whitespace-nowrap border border-slate-700 shadow-xl transition z-30">
+                      {pt.period}
                     </span>
                   </div>
                 </div>
@@ -650,48 +674,89 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
         </div>
       </div>
 
-      {/* ── 3. 최근 5개 분기 국면 이동 궤적 타임라인 ──────────────────── */}
+      {/* ── 3. 최근 국면 이동 궤적 타임라인 (좌우 수평 스크롤 컨테이너) ────── */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <span>📈</span> 최근 국면 이동 궤적 (Macro Cycle Trajectory)
-          </h3>
-          <span className="text-[11px] text-slate-400">
-            카드 클릭 시 2D 도표 상 해당 분기 위치로 즉시 이동
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800 mb-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+              <span>📈</span> 최근 국면 이동 궤적 (Macro Cycle Trajectory — {trajectory.length}개 분기 전체 시계열)
+            </h3>
+            <span className="text-[11px] text-slate-400 hidden md:inline">
+              좌우 스크롤로 2023 Q1부터 실시간까지의 거시경제 국면 전이를 확인할 수 있습니다
+            </span>
+          </div>
+
+          {/* 좌우 스크롤 버튼 및 단계 카운터 */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono text-indigo-300 bg-indigo-950/70 border border-indigo-800/60 px-2.5 py-0.5 rounded-full font-bold">
+              {currentStepIndex + 1} / {trajectory.length} 단계
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => scrollTimeline('left')}
+                className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                title="왼쪽으로 스크롤"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollTimeline('right')}
+                className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                title="오른쪽으로 스크롤"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+
+        {/* 좌우 스크롤 카드 리스트 */}
+        <div
+          ref={timelineScrollRef}
+          className="flex items-stretch gap-3 overflow-x-auto pb-3 pt-1 scrollbar-thin scroll-smooth"
+        >
           {trajectory.map((t, idx) => {
             const isActive = idx === currentStepIndex;
             return (
               <div
                 key={idx}
                 onClick={() => handleJumpToStep(idx)}
-                className={`p-3 rounded-xl border text-xs transition cursor-pointer ${
+                className={`min-w-[210px] max-w-[240px] flex-shrink-0 p-3.5 rounded-xl border text-xs transition cursor-pointer flex flex-col justify-between ${
                   isActive
-                    ? 'bg-indigo-950/60 border-indigo-400 ring-2 ring-indigo-500 shadow-lg shadow-indigo-950/70 scale-[1.02]'
+                    ? 'bg-indigo-950/70 border-indigo-400 ring-2 ring-indigo-500 shadow-xl shadow-indigo-950/80 scale-[1.02]'
                     : idx === trajectory.length - 1
                     ? 'bg-emerald-950/30 border-emerald-500/40 hover:border-emerald-500/80'
-                    : 'bg-slate-950/50 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/40'
+                    : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/60'
                 }`}
               >
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span className={`font-semibold ${isActive ? 'text-indigo-300 font-bold' : 'text-slate-300'}`}>
-                    {t.period}
-                  </span>
-                  {idx === trajectory.length - 1 ? (
-                    <span className="px-1.5 py-0.2 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded">
-                      NOW
+                <div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-400">
+                    <span className={`font-semibold ${isActive ? 'text-indigo-300 font-bold' : 'text-slate-300'}`}>
+                      {t.period}
                     </span>
-                  ) : (
-                    <span className="text-[10px] text-slate-500 font-mono">
-                      Step {idx + 1}
-                    </span>
-                  )}
+                    {idx === trajectory.length - 1 ? (
+                      <span className="px-1.5 py-0.2 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded">
+                        NOW
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        Step {idx + 1}
+                      </span>
+                    )}
+                  </div>
+                  <div className="font-bold text-white mt-2 text-xs leading-snug line-clamp-2">
+                    {t.label}
+                  </div>
                 </div>
-                <div className="font-bold text-white mt-1.5">{t.label}</div>
-                <div className="text-[11px] text-slate-400 mt-1">
-                  성장 {t.growth > 0 ? `+${t.growth}` : t.growth} / 물가 {t.inflation > 0 ? `+${t.inflation}` : t.inflation}
+                <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">
+                    성장 <span className={t.growth >= 0 ? 'text-emerald-400 font-mono font-semibold' : 'text-rose-400 font-mono font-semibold'}>{t.growth > 0 ? `+${t.growth}` : t.growth}</span>
+                  </span>
+                  <span className="text-slate-400">
+                    물가 <span className={t.inflation > 0 ? 'text-amber-400 font-mono font-semibold' : 'text-sky-400 font-mono font-semibold'}>{t.inflation > 0 ? `+${t.inflation}` : t.inflation}</span>
+                  </span>
                 </div>
               </div>
             );
