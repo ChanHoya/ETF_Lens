@@ -3,8 +3,8 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: Sprint 9 완료 (S9-1 백테스터 탭 캐싱, S9-2 TFF 0초 SWR 로딩, S9-3 4대 심층 리스크 지표 연산 및 UI 확장 전 항목 완료 및 main 배포 완료)
-➡️ Next: 다음 스프린트 기획 시 sprint-manager 호출
+🔄 Current: Sprint 10 진행 중 (S10-1 UnifiedQuantEngine 코어 및 공통 리스크 지표 연산 모듈화)
+➡️ Next: S10-1 구현 및 유닛 테스트 완료 후 S10-2 진행
 
 > 세션 핸드오프 (2026-10-11, Antigravity):
 > - ⚡ Sprint 9 (S9-3) 포트폴리오 백테스터 4대 심층 리스크 메트릭 보강 완료:

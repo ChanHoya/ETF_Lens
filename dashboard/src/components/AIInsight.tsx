@@ -377,7 +377,7 @@ export default function AIInsight() {
 
   return (
     <div className="w-full">
-      {/* ── 섹션 타이틀 (카드 바깥, MacroCompass 제목과 동일 레벨) ── */}
+      {/* ── 섹션 타이틀 (AI 투자전략 및 추천 ETF) ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
           <Brain className="w-5 h-5 text-white" />
@@ -385,13 +385,13 @@ export default function AIInsight() {
         <div>
           <div className="flex items-center gap-2">
             <h2 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.3px' }}>
-              AI Insight
+              AI 투자전략 & ETF 추천
             </h2>
             <Sparkles className="w-4 h-4 text-purple-400" />
           </div>
           <div className="flex items-center gap-2 mt-0.5">
             <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
-              {data?.analyzed_at ? `분석 시각: ${data.analyzed_at}` : '매크로 지표 기반 전문가 AI 인사이트'}
+              {data?.analyzed_at ? `분석 시각: ${data.analyzed_at}` : '거시경제 국면 대응 포트폴리오 전략 및 추천 ETF'}
             </p>
             {data?.ai_model && (
               <span className="text-[11px] font-mono font-medium text-purple-300 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">
@@ -400,23 +400,13 @@ export default function AIInsight() {
             )}
           </div>
         </div>
-        {/* 위상 뱃지 + 새로고침 */}
+        {/* 새로고침 버튼 (우측 침체기 라벨은 상단 나침반과 중복되어 제거) */}
         <div className="ml-auto flex items-center gap-2">
-          {data?.us_phase && (
-            <span className={`text-[13px] px-2 py-0.5 rounded-full border font-semibold ${PHASE_COLOR[data.us_phase] ?? 'text-gray-400 bg-gray-500/10 border-gray-500/20'}`}>
-              🇺🇸 {data.us_phase}
-            </span>
-          )}
-          {data?.kr_phase && (
-            <span className={`text-[13px] px-2 py-0.5 rounded-full border font-semibold ${PHASE_COLOR[data.kr_phase] ?? 'text-gray-400 bg-gray-500/10 border-gray-500/20'}`}>
-              🇰🇷 {data.kr_phase}
-            </span>
-          )}
           <button
             onClick={() => load(true)}
             disabled={refreshing || loading}
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all disabled:opacity-50"
-            title="새로고침"
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all disabled:opacity-50 cursor-pointer"
+            title="AI 투자전략 새로고침"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>

@@ -95,6 +95,8 @@
 | S9-1: 포트폴리오 백테스터 탭 캐싱 및 로딩 속도 최적화 | ✅ done | backend/api/backtest.py, MyDashboard.tsx, PortfolioBacktester.tsx, AIRebalanceSimulator.tsx, MultiAssetBacktester.tsx, EfficientFrontierPanel.tsx | 프론트엔드 SWR/sessionStorage 캐싱, 섹션5 시뮬레이션 6대 서브탭 Keep-Alive 언마운트 방지, 백엔드 AI Insight 인메모리 캐싱(TTL 3600s) 및 수동 새로고침 버튼 탑재 완료 |
 | S9-2: TFF 펀드 대시보드 브라우저 SWR 캐싱 & 0초 로딩 | ✅ done | dashboard/src/components/tff/TffDashboard.tsx | localStorage 3대 키 기반 마운트 즉시 0ms 복원, SWR 백그라운드 최신본 동기화, 초기 스켈레톤 로딩 UX 및 추정 시뮬레이션 캐시 보존 완료 |
 | S9-3: 포트폴리오 백테스터 4대 심층 리스크 메트릭 보강 | ✅ done | backend/api/backtest.py, dashboard/src/components/PortfolioBacktester.tsx, backend/tests/test_portfolio_backtest_cache.py | 연간화 변동성, 샤프 지수, 소르티노 지수, 칼마 지수 백엔드 퀀트 계산 및 [종합 지표/수익률·MDD/4대 리스크] 3대 뷰 모드 UI 확장 완료 |
+| S10-1: 통합 퀀트 데이터 엔진 & 공통 리스크 지표 연산 모듈화 | ✅ done | backend/core/unified_quant_engine.py, backend/tests/test_unified_quant_engine.py | DatetimeIndex 정규화(tz-naive/중복제거/ffill), 4대 리스크 메트릭(Vol/Sharpe/Sortino/Calmar) 및 VaR(95/99), 상관계수 행렬 및 포트폴리오 가중 수익률 연산 일원화 (테스트 7/7 100% Pass) |
+
 
 
 

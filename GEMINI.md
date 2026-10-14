@@ -48,6 +48,7 @@ When the user provides a feature request or development goal in their prompt:
 1. Read `docs/project-state.md` to determine current project state
 2. Route to the appropriate pipeline:
    - State files empty → Start 🟢 Pipeline from Step 1 (`bootstrap`)
+   - Large-scale development (전체 코드 분석 전면 개발, 대규모 리팩토링, 전수 조사 기반 개편) → Activate `gemini-context-caching` skill + `planner` (32K+ 컨텍스트 및 도구 스키마 캐시 선적재로 80~95% 비용 절감)
    - State files exist + new feature request → Start 🟢 or 🔵 Pipeline from `planner`
    - Bug report or error → Start 🔴 Pipeline from `investigate`
    - Structural/design change → Run `architect` first, then `planner`
@@ -112,3 +113,4 @@ These laws are enforced across all skills and agents. Violations should be flagg
 7. **Feature Registry**: When adding a feature, register it in features.md in the same commit.
 8. **Session Handoff**: At session end, update project-state.md Quick Summary so the next session has context.
 9. **Common First**: All features must work at Common level (🟢🔵🔴) without crew dependency. Crew-specific logic must be inside crew marker blocks only. Never add crew-only code to Common paths.
+10. **Context Caching on Large-Scale Tasks**: When executing full codebase analysis, massive refactoring, or long agent trajectories, freeze static context & tool schemas with `gemini-context-caching` to cut token costs by 80~95% and enforce `AgentGuardrail` loop protection.

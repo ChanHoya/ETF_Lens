@@ -88,11 +88,18 @@ interface PortfolioFitResponse {
   prescription: string;
 }
 
-// 2D 사분면 좌표 변환 헬퍼 (퍼센트 단위 10%~90% 클램핑)
-const getCoords = (g: number, inf: number) => ({
-  x: Math.max(10, Math.min(90, 50 + (g / 200) * 100)),
-  y: Math.max(10, Math.min(90, 50 - (inf / 200) * 100)),
-});
+// 2D 사분면 좌표 변환 헬퍼 (레인지 기반 동적 스케일링, 12%~88% 안전 가시영역 매핑)
+const getCoords = (g: number, inf: number, range: number = 50) => {
+  const span = 38; // 중심(50%)에서 최대 ±38% 변위 (12% ~ 88% 영역 활용)
+  const clampedX = Math.max(-range, Math.min(range, g));
+  const clampedY = Math.max(-range, Math.min(range, inf));
+  const x = 50 + (clampedX / range) * span;
+  const y = 50 - (clampedY / range) * span;
+  return {
+    x: Math.round(x * 10) / 10,
+    y: Math.round(y * 10) / 10,
+  };
+};
 
 interface Props {
   holdings?: HoldingItem[];
@@ -103,6 +110,7 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
   const [fitData, setFitData] = useState<PortfolioFitResponse | null>(null);
   const [selectedRegime, setSelectedRegime] = useState<string>('STAGFLATION');
   const [loading, setLoading] = useState<boolean>(true);
+  const [axisRange, setAxisRange] = useState<number>(50); // ±50 (동적 확대, 기본값) 또는 ±100 (표준)
 
   // 궤적 시뮬레이션 재생 상태
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -224,14 +232,14 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
     evaluateFit();
   }, [holdings]);
 
-  // 3. 궤적 좌표 변환 (모든 렌더링에서 동일 순서로 실행되도록 조기 리턴 전에 배치)
+  // 3. 궤적 좌표 변환 (레인지 상태 변경 시 즉시 재계산, 모든 렌더링에서 동일 순서로 실행되도록 조기 리턴 전에 배치)
   const trajPoints = useMemo(() => {
     if (!data?.trajectory) return [];
     return data.trajectory.map((t) => ({
       ...t,
-      ...getCoords(t.growth, t.inflation),
+      ...getCoords(t.growth, t.inflation, axisRange),
     }));
-  }, [data?.trajectory]);
+  }, [data?.trajectory, axisRange]);
 
   // 조기 리턴 (모든 Hook 호출 이후)
   if (loading || !data) {
@@ -251,8 +259,8 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
     inflation: inflation_score,
     regime: data.regime_key,
     label: regime_info.name,
-    x: getCoords(growth_score, inflation_score).x,
-    y: getCoords(growth_score, inflation_score).y,
+    x: getCoords(growth_score, inflation_score, axisRange).x,
+    y: getCoords(growth_score, inflation_score, axisRange).y,
   };
 
   return (
@@ -371,33 +379,63 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
                 <span>🗺️</span> 2D 거시경제 4국면 매트릭스 & 실시간 위치
               </h3>
               <span className="text-[11px] text-slate-400">
-                X축: 성장(-)←→(+) | Y축: 물가(-)←→(+)
+                X: 성장(-)←→(+) · Y: 물가(-)←→(+) (범위: ±{axisRange})
               </span>
             </div>
 
-            {/* 시뮬레이션 플레이 컨트롤 바 */}
-            <div className="flex items-center gap-2 bg-slate-950/90 border border-slate-800 rounded-full px-2.5 py-1 shadow-inner">
-              <button
-                type="button"
-                onClick={handlePlayToggle}
-                className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full transition-all cursor-pointer ${
-                  isPlaying
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
-                    : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30'
-                }`}
-                title={isPlaying ? '일시 정지' : `${trajectory.length}단계 전체 궤적 순차 시뮬레이션`}
-              >
-                {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                <span>{isPlaying ? '일시정지' : '처음부터 시뮬레이션 재생'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleReset}
-                className="p-1 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition cursor-pointer"
-                title="처음(1단계: 2023 Q1)으로 리셋"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
+            <div className="flex items-center gap-2">
+              {/* 레인지 스케일 토글러 */}
+              <div className="flex items-center bg-slate-950/90 border border-slate-800 rounded-full p-0.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setAxisRange(50)}
+                  className={`px-2.5 py-0.5 rounded-full font-bold transition cursor-pointer ${
+                    axisRange === 50
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="±50 레인지: 궤적의 분기별 변화를 역동적으로 확대하여 표시"
+                >
+                  ±50 (확대)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAxisRange(100)}
+                  className={`px-2.5 py-0.5 rounded-full font-bold transition cursor-pointer ${
+                    axisRange === 100
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="±100 레인지: 표준 100점 전체 영역 표시"
+                >
+                  ±100 (표준)
+                </button>
+              </div>
+
+              {/* 시뮬레이션 플레이 컨트롤 바 */}
+              <div className="flex items-center gap-2 bg-slate-950/90 border border-slate-800 rounded-full px-2.5 py-1 shadow-inner">
+                <button
+                  type="button"
+                  onClick={handlePlayToggle}
+                  className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full transition-all cursor-pointer ${
+                    isPlaying
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30'
+                  }`}
+                  title={isPlaying ? '일시 정지' : `${trajectory.length}단계 전체 궤적 순차 시뮬레이션`}
+                >
+                  {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                  <span>{isPlaying ? '일시정지' : '처음부터 시뮬레이션 재생'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="p-1 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition cursor-pointer"
+                  title="처음(1단계: 2023 Q1)으로 리셋"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -499,9 +537,28 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
               </div>
             </div>
 
-            {/* 십자 중앙 분할선 */}
+            {/* 십자 중앙 분할선 & X/Y축 레인지 눈금 라벨 */}
             <div className="absolute inset-x-0 top-1/2 h-[1px] bg-slate-700/60 pointer-events-none" />
             <div className="absolute inset-y-0 left-1/2 w-[1px] bg-slate-700/60 pointer-events-none" />
+
+            {/* X축 레인지 라벨 (-range, 0, +range) */}
+            <div className="absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-mono text-slate-400 bg-slate-950/90 px-1 py-0.5 rounded border border-slate-800 pointer-events-none z-15 shadow-sm">
+              -{axisRange}
+            </div>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-mono text-slate-400 bg-slate-950/90 px-1 py-0.5 rounded border border-slate-800 pointer-events-none z-15 shadow-sm">
+              +{axisRange}
+            </div>
+
+            {/* Y축 레인지 라벨 (+range, 0, -range) */}
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[9px] font-mono text-slate-400 bg-slate-950/90 px-1 py-0.5 rounded border border-slate-800 pointer-events-none z-15 shadow-sm">
+              +{axisRange}
+            </div>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] font-mono text-slate-400 bg-slate-950/90 px-1 py-0.5 rounded border border-slate-800 pointer-events-none z-15 shadow-sm">
+              -{axisRange}
+            </div>
+            <div className="absolute top-1/2 left-1/2 translate-x-1 translate-y-1 text-[9px] font-mono text-slate-500 pointer-events-none z-15">
+              0
+            </div>
 
             {/* ── SVG 궤적 선 및 화살표 오버레이 ───────────────────── */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" viewBox="0 0 100 100">
@@ -512,18 +569,20 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
                   <stop offset="100%" stopColor="#10b981" />
                 </linearGradient>
                 <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="0.8" result="blur" />
+                  <feGaussianBlur stdDeviation="0.6" result="blur" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
-                <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#818cf8" />
+                <marker id="arrow" viewBox="0 0 6 6" refX="4" refY="3" markerWidth="2.5" markerHeight="2.5" orient="auto-start-reverse">
+                  <path d="M 0 1 L 5 3 L 0 5 z" fill="#a5b4fc" />
                 </marker>
               </defs>
 
-              {/* 1단계부터 currentStepIndex까지 연결하는 궤적 선 */}
+              {/* 1단계부터 currentStepIndex까지 연결하는 궤적 선 (슬림 1.3px & 간격 화살표) */}
               {trajPoints.slice(0, currentStepIndex).map((pt, i) => {
                 const nextPt = trajPoints[i + 1];
                 if (!nextPt) return null;
+                const isLastSegment = i === currentStepIndex - 1;
+                const showArrow = isLastSegment || i % 2 === 0;
                 return (
                   <g key={`line-${i}`}>
                     {/* 발광 효과 백그라운드 라인 */}
@@ -532,23 +591,23 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
                       y1={pt.y}
                       x2={nextPt.x}
                       y2={nextPt.y}
-                      stroke="#6366f1"
-                      strokeWidth="3.2"
-                      strokeOpacity="0.45"
+                      stroke="#818cf8"
+                      strokeWidth="1.8"
+                      strokeOpacity="0.25"
                       filter="url(#glow)"
                       className="transition-all duration-700"
                     />
-                    {/* 메인 궤적 점선 */}
+                    {/* 메인 궤적 선 */}
                     <line
                       x1={pt.x}
                       y1={pt.y}
                       x2={nextPt.x}
                       y2={nextPt.y}
                       stroke="url(#trajGrad)"
-                      strokeWidth="2"
-                      strokeDasharray="3 1.5"
+                      strokeWidth="1.3"
+                      strokeDasharray="2.5 1.5"
                       strokeLinecap="round"
-                      markerEnd="url(#arrow)"
+                      markerEnd={showArrow ? "url(#arrow)" : undefined}
                       className="transition-all duration-700"
                     />
                   </g>
@@ -569,11 +628,11 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
                   title={`${pt.period}: ${pt.label}`}
                 >
                   <div className="relative flex items-center justify-center">
-                    <span className="w-4 h-4 rounded-full bg-slate-900/90 border border-indigo-400/80 text-[8px] font-black text-indigo-300 flex items-center justify-center shadow-md group-hover:bg-indigo-600 group-hover:text-white transition">
+                    <span className="w-3.5 h-3.5 rounded-full bg-slate-900/90 border border-indigo-400/80 text-[7.5px] font-black text-indigo-300 flex items-center justify-center shadow-md group-hover:bg-indigo-600 group-hover:text-white transition">
                       {idx + 1}
                     </span>
-                    <span className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -bottom-4.5 bg-slate-950/95 text-[9px] font-semibold text-slate-200 px-1.5 py-0.5 rounded whitespace-nowrap border border-slate-700 shadow-xl transition z-30">
-                      {pt.period}
+                    <span className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -bottom-5 bg-slate-950/95 text-[9px] font-semibold text-slate-200 px-1.5 py-0.5 rounded whitespace-nowrap border border-slate-700 shadow-xl transition z-30">
+                      {pt.period} ({pt.growth > 0 ? `+${pt.growth}` : pt.growth}, {pt.inflation > 0 ? `+${pt.inflation}` : pt.inflation})
                     </span>
                   </div>
                 </div>
@@ -589,14 +648,14 @@ export default function MacroRegimeQuadrant({ holdings = [] }: Props) {
               }}
             >
               <div className="relative flex items-center justify-center">
-                <span className="absolute w-9 h-9 rounded-full bg-emerald-400/30 animate-ping" />
-                <span className="absolute w-6 h-6 rounded-full bg-emerald-500/50" />
+                <span className="absolute w-8 h-8 rounded-full bg-emerald-400/30 animate-ping" />
+                <span className="absolute w-5 h-5 rounded-full bg-emerald-500/50" />
                 <span className="relative w-4 h-4 rounded-full bg-white border-2 border-emerald-500 shadow-xl shadow-emerald-500/80 flex items-center justify-center text-[9px] font-black text-slate-900">
                   {currentStepIndex + 1}
                 </span>
 
-                {/* 플로팅 라벨 카드 */}
-                <div className={`absolute ${activeStep.x > 60 ? 'right-6' : 'left-6'} bg-slate-950/95 border border-emerald-500/60 shadow-2xl rounded-lg px-2.5 py-1 text-left whitespace-nowrap min-w-[130px]`}>
+                {/* 플로팅 라벨 카드 (영역 이탈 방지 동적 오프셋) */}
+                <div className={`absolute ${activeStep.x > 50 ? 'right-5' : 'left-5'} ${activeStep.y < 30 ? 'top-2' : '-top-4'} bg-slate-950/95 border border-emerald-500/70 shadow-2xl rounded-lg px-2.5 py-1 text-left whitespace-nowrap min-w-[130px] z-30`}>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] font-black text-emerald-400">
                       {currentStepIndex === trajectory.length - 1 ? '● NOW' : `STEP ${currentStepIndex + 1}`}

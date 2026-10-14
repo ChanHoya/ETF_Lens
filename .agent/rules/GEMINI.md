@@ -52,6 +52,7 @@ Hệ thống sẽ tự động kích hoạt các luật chuyên sâu dựa trên
 - **Giao diện**: `rules/frontend.md` (Khi làm việc với `.tsx`, `.css`).
 - **Logic**: `rules/backend.md` (Khi làm việc với `.py`, `.js`, `.go`).
 - **Gỡ lỗi**: `rules/debug.md` (Khi sếp yêu cầu sửa bug).
+- **Đại Quy Mô (Large-Scale Dev)**: `rules/large-scale-dev.md` (Khi yêu cầu phân tích toàn bộ code, refactor lớn, 전면 개발 - kích hoạt `gemini-context-caching`).
 
 ---
 
