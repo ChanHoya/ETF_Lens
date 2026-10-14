@@ -1,9 +1,8 @@
 """통합 퀀트 데이터 엔진 (Unified Quant Engine)
 
-Sprint 10: S10-1
-- 파편화된 시계열 로딩 및 정규화(tz-naive, 중복 제거, 결측치 전방 보정) 단일화
-- 공통 통계 및 4대 심층 리스크 메트릭 (연간화 변동성, 샤프, 소르티노, 칼마) 및 VaR(95%, 99%) 산출 일원화
-- 포트폴리오 수익률 및 피어슨 상관계수 행렬 계산
+Sprint 10:
+- S10-1: 시계열 정규화, 4대 심층 리스크(Vol/Sharpe/Sortino/Calmar) 및 VaR(95%, 99%) 연산 일원화
+- S10-2: Non-blocking 비동기 HTTP 커넥션 풀(httpx) 및 동시성 제어 세마포어(asyncio.Semaphore) 탑재
 """
 
 import asyncio
@@ -13,9 +12,10 @@ from datetime import datetime, timedelta, timezone as _tz
 from typing import Dict, List, Optional, Any, Tuple, Union
 import numpy as np
 import pandas as pd
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.hybrid_series import get_hybrid_daily_prices_batch
+from core.hybrid_series import get_hybrid_daily_prices_batch, _clean_ticker, _is_korean_asset, _normalize_korean_code
 from db.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
@@ -31,14 +31,35 @@ def calculate_mdd(cum_returns: pd.Series) -> float:
 
 
 class UnifiedQuantEngine:
-    """통합 퀀트 데이터 및 통계 연산 싱글톤 엔진"""
+    """통합 퀀트 데이터 및 통계 연산 싱글톤 엔진 (비동기 HTTP 풀 및 세마포어 탑재)"""
 
     _instance = None
+    _http_client: Optional[httpx.AsyncClient] = None
+    _semaphore: Optional[asyncio.Semaphore] = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(UnifiedQuantEngine, cls).__new__(cls)
+            cls._instance._semaphore = asyncio.Semaphore(8)
         return cls._instance
+
+    async def get_http_client(self) -> httpx.AsyncClient:
+        """재사용 가능한 글로벌 비동기 HTTP 클라이언트 커넥션 풀 반환"""
+        if self._http_client is None or self._http_client.is_closed:
+            limits = httpx.Limits(max_keepalive_connections=20, max_connections=40, keepalive_expiry=30.0)
+            timeout = httpx.Timeout(connect=3.0, read=5.0, write=5.0, pool=5.0)
+            self._http_client = httpx.AsyncClient(
+                limits=limits,
+                timeout=timeout,
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
+            )
+        return self._http_client
+
+    async def close(self):
+        """HTTP 클라이언트 세션 안전 종료"""
+        if self._http_client and not self._http_client.is_closed:
+            await self._http_client.aclose()
+            self._http_client = None
 
     @staticmethod
     def normalize_series_index(series: pd.Series) -> pd.Series:
@@ -60,6 +81,54 @@ class UnifiedQuantEngine:
         # 인덱스 중복 제거 (마지막 값 유지) 및 오름차순 정렬
         s = s[~s.index.duplicated(keep="last")].sort_index()
         return s
+
+    async def fetch_live_price(self, ticker: str) -> Optional[float]:
+        """세마포어와 재사용 HTTP 커넥션 풀을 통한 단일 종목 실시간 현재가 비동기 조회"""
+        clean = _clean_ticker(ticker)
+        sem = self._semaphore or asyncio.Semaphore(8)
+
+        async with sem:
+            if _is_korean_asset(clean):
+                code = _normalize_korean_code(clean)
+                try:
+                    client = await self.get_http_client()
+                    url = f"https://m.stock.naver.com/api/stock/{code}/basic"
+                    res = await client.get(url)
+                    if res.status_code == 200:
+                        data = res.json()
+                        now_price_str = data.get("nowPrice") or data.get("closePrice")
+                        if now_price_str:
+                            return float(str(now_price_str).replace(",", ""))
+                except Exception as e:
+                    logger.debug(f"[UnifiedQuantEngine] Naver live price error for {code}: {e}")
+
+            # 미국/글로벌 자산 (Yahoo Finance fast_info)
+            try:
+                import yfinance as yf
+                ticker_obj = yf.Ticker(clean)
+                fast_info = getattr(ticker_obj, "fast_info", None)
+                if fast_info:
+                    price = getattr(fast_info, "last_price", None)
+                    if price and float(price) > 0:
+                        return float(price)
+
+                # fallback: 1일 히스토리
+                hist = await asyncio.to_thread(lambda: ticker_obj.history(period="1d"))
+                if not hist.empty and "Close" in hist.columns:
+                    return float(hist["Close"].iloc[-1])
+            except Exception as e:
+                logger.debug(f"[UnifiedQuantEngine] Yahoo live price error for {clean}: {e}")
+
+        return None
+
+    async def fetch_live_prices_batch(self, tickers: List[str]) -> Dict[str, Optional[float]]:
+        """복수 종목 실시간 시세를 세마포어 제어 하에 병렬 비동기 조회"""
+        tasks = [self.fetch_live_price(t) for t in tickers]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        out = {}
+        for t, r in zip(tickers, results):
+            out[t] = r if isinstance(r, (int, float)) else None
+        return out
 
     async def get_normalized_close_matrix(
         self,

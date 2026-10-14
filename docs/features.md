@@ -96,6 +96,8 @@
 | S9-2: TFF 펀드 대시보드 브라우저 SWR 캐싱 & 0초 로딩 | ✅ done | dashboard/src/components/tff/TffDashboard.tsx | localStorage 3대 키 기반 마운트 즉시 0ms 복원, SWR 백그라운드 최신본 동기화, 초기 스켈레톤 로딩 UX 및 추정 시뮬레이션 캐시 보존 완료 |
 | S9-3: 포트폴리오 백테스터 4대 심층 리스크 메트릭 보강 | ✅ done | backend/api/backtest.py, dashboard/src/components/PortfolioBacktester.tsx, backend/tests/test_portfolio_backtest_cache.py | 연간화 변동성, 샤프 지수, 소르티노 지수, 칼마 지수 백엔드 퀀트 계산 및 [종합 지표/수익률·MDD/4대 리스크] 3대 뷰 모드 UI 확장 완료 |
 | S10-1: 통합 퀀트 데이터 엔진 & 공통 리스크 지표 연산 모듈화 | ✅ done | backend/core/unified_quant_engine.py, backend/tests/test_unified_quant_engine.py | DatetimeIndex 정규화(tz-naive/중복제거/ffill), 4대 리스크 메트릭(Vol/Sharpe/Sortino/Calmar) 및 VaR(95/99), 상관계수 행렬 및 포트폴리오 가중 수익률 연산 일원화 (테스트 7/7 100% Pass) |
+| S10-2: Non-blocking 비동기 HTTP 커넥션 풀 및 세마포어 제어 | ✅ done | backend/core/unified_quant_engine.py, backend/tests/test_async_quant_pipeline.py | 글로벌 httpx.AsyncClient 풀 재사용(Keep-Alive/Limits), asyncio.Semaphore(8) 동시성 제어 기반 네이버/야후 병렬 시세 수집 및 OOM 방어 완비 (테스트 3/3 100% Pass) |
+
 
 
 
