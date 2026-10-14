@@ -82,10 +82,18 @@ def _check_gemini():
     if not api_key:
         raise ValueError("GEMINI_API_KEY not set")
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    resp = model.generate_content("ping", generation_config={"max_output_tokens": 1})
-    if not resp.text:
-        raise ValueError("Empty Gemini response")
+    # 3.8-flash 우선 체크 후 2.5-flash fallback
+    last_err = None
+    for m_name in ["gemini-3.8-flash", "gemini-2.5-flash"]:
+        try:
+            model = genai.GenerativeModel(m_name)
+            resp = model.generate_content("ping", generation_config={"max_output_tokens": 1})
+            if resp.text:
+                return
+        except Exception as e:
+            last_err = e
+    if last_err:
+        raise last_err
 
 
 def _check_naver_finance():

@@ -310,12 +310,14 @@ function MarketPanel({ data, flag, market }: {
       <div className="flex flex-col-reverse md:flex-row gap-4 p-5 items-start">
         {/* 설명글 - 모바일에서 먼저 표시(col-reverse), PC에서 다이얼 우측 */}
         <div
-          className="flex-1 text-sm md:text-base leading-relaxed text-gray-700 dark:text-gray-300 order-1 md:order-2 pl-3 pt-1 border-l-2"
+          className="flex-1 text-xs md:text-[13px] leading-relaxed text-gray-600 dark:text-gray-300 order-1 md:order-2 pl-3 pt-1 border-l-2 whitespace-pre-line"
           style={{ borderColor: `${cfg.color}55` }}
         >
-          {data.explanation}
-          <div className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-            분석 시각: {data.analyzed_at}
+          <div className="font-normal tracking-tight space-y-1.5">
+            {data.explanation}
+          </div>
+          <div className="mt-2.5 text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
+            <span>🕒 분석 시각: {data.analyzed_at}</span>
           </div>
         </div>
         {/* 다이얼 - 모바일에서 아래(col-reverse에서 나중에), PC에서 좌측 */}
