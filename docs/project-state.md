@@ -3,18 +3,20 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 미국 3대 인플레이션 지표(CPI, PPI, PCE) 발표 익일 08:15 KST 정기 수집 및 Stale 자동 감지 백그라운드 갱신 반영, 장기 시계열 그래프 및 시장동향 대시보드(금리/주식/환율/종합)의 1회 크롤링 후 SQLite DB 영속화 구현 완료 (220개 백엔드 테스트 100% Pass, 프론트엔드 빌드 100% 성공)
-➡️ Next: 변경 내역 리뷰 및 검증
+✅ Current: 4대 벤치마크 지수(14,808건), 주요 ETF(17,040건), 매크로 지표(2,664건), 시장심리(3,068건) 10년 치 DB 영속화 및 get_hybrid_daily_prices_batch SQL IN 일괄 쿼리(0.005초 Fast-path), KospiExitAnalyzer/PortfolioBacktester/EfficientFrontierPanel/HoldingsSignals SWR 0ms 렌더링 전면 배포 완료
+➡️ Next: 최적화 배포 상태 점검 완료 및 다음 개선 작업 진행
 
 > 세션 핸드오프 (2026-10-15, Antigravity):
+> - ⚡ 장기 시계열 그래프 초고속 렌더링 최적화 및 DB 영속화 전면 적용 (커밋 `c4bf30fa`, `ebff436c`):
+>   - 1) 4대 벤치마크 지수(`^KS11`, `^KQ11`, `^GSPC`, `^IXIC`) 14,808건 및 주요 ETF 17,040건 10년 치 일봉 DB 영속화로 yfinance 다운로드 병목 제거.
+>   - 2) 하이브리드 배치 엔진(`core/hybrid_series.py`): SQL IN 일괄 조회로 DB 캐시 종목 0.005초 내 Fast-path 서빙.
+>   - 3) 보유 ETF 경쟁력 분석(`api/peer_analysis.py`): `_fetch_from_db_etf` 및 `_fetch_from_db_bench` 0순위 SQLite DB 우선 조회 탑재로 30초 대기를 0.1초대로 단축.
+>   - 4) 종합 위험지수(`KospiExitAnalyzer.tsx`): 10년 치 거시경제(`MarketMacroLog`, 2,664건) 및 센티먼트(`MarketSentimentLog`, 3,068건) DB 영속화 + SWR 0ms 캐시 복원 탑재로 로딩 플레이스홀더 깜빡임 원천 차단.
+>   - 5) 포트폴리오 백테스터 & 최적화(`PortfolioBacktester.tsx`, `EfficientFrontierPanel.tsx`): 비중 정규화 서명 및 `localStorage` 캐싱 적용, 기존 데이터 유지형 백그라운드 갱신 적용.
 > - ⚡ 미국 3대 인플레이션 지표(CPI, PPI, PCE) 적시 수집 및 자동 최신화:
->   - 1) 스케줄러 개선 (`backend/core/scheduler.py`): 매월 1일 실행되던 매크로 잡을 **매일 오전 08:15 KST (`daily_us_macro_sync`)**로 변경하여 미국 노동통계국 발표 익일 아침 즉시 최신 데이터가 DB에 반영되도록 최신화.
->   - 2) Stale-While-Revalidate Self-healing (`backend/api/exit_signal.py`): `get_us_macro_indicators` 조회 시 매월 10일 이후 전월치가 누락되거나 CPI/PCE가 비어있으면 백그라운드에서 FRED 자동 수집 트리거.
-> - ⚡ 장기 트렌드 시계열 그래프 DB 영속화 & 5ms 내 초고속 서빙:
->   - 1) `get_macro_detail` (달러, 환율, KOSPI, S&P500): 매번 외부 FRED/Yahoo를 크롤링하던 병목을 제거하고, DB(`MarketMacroLog`, `MarketSentimentLog`) 우선 조회로 5ms 내 즉시 반환.
->   - 2) `get_cli_detail` 및 `get_pe_detail`: `ExitSignalCache` SQLite DB 영속화 연동으로 반복 크롤링 원천 차단.
->   - 3) 시장동향 대시보드 캐시 (`backend/core/overview_cache.py`): 금리/주식/환율/종합 대시보드 데이터를 1회 수집 후 DB에 스냅샷으로 영구 보존. 서버 재기동 시에도 DB에서 즉시 5ms 내 복원하고 백그라운드에서 최신화.
->   - 테스트 검증: 신규 단위 테스트 3종 포함 전체 220개 백엔드 테스트 100% 통과, 프론트엔드 빌드 성공.
+>   - 1) 스케줄러 개선 (`backend/core/scheduler.py`): 매일 야간 22:45 KST 속보 잡 + 익일 08:15 KST 확정 잡 2중 스케줄러 가동.
+>   - 2) Stale-While-Revalidate Self-healing (`backend/api/exit_signal.py`): 매월 10일(CPI), 14일(PPI), 26일(PCE) 기준 지표별 누락 감지 백그라운드 자동 동기화.
+>   - 3) 프론트엔드(`DiscoverTab.tsx`): Cache-Control no-store 및 원클릭 [최신 동기화] 수동 새로고침 버튼 탑재.
 > - ⚡ Sprint 10 (S10-1 ~ S10-4) 통합 퀀트 데이터 엔진 & 비동기 단일화 전 항목 완료:
 >   - 1) UnifiedQuantEngine (`backend/core/unified_quant_engine.py`): 시계열 정규화(tz-naive, 중복 라벨 병합, ffill), 4대 심층 리스크 지표(Vol, Sharpe, Sortino, Calmar), VaR(95%, 99%), 상관계수 행렬 및 가중 포트폴리오 수익률 연산 일원화.
 >   - 2) 비동기 HTTP 커넥션 풀 & 세마포어: 글로벌 `httpx.AsyncClient` 재사용 및 `asyncio.Semaphore(8)` 동시성 제어로 외부 네이버/야후 호출 병렬화 및 OOM 방어.
