@@ -3,11 +3,23 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 1) 야간 보유종목 및 4대 벤치마크 지수 백그라운드 자동 시딩 스케줄러(23:15 KST, sync_user_holdings_prices_job) 등록 완료, 2) 포트폴리오 시뮬레이션(PortfolioBacktester, EfficientFrontierPanel, KospiExitAnalyzer) 차트 렌더링 최적화(LTTB/다운샘플링, isAnimationActive=false)로 모바일/데스크톱 60fps 즉시 렌더링 보장 완료
+✅ Current: 1) 섹션 5 시뮬레이터(스트레스 테스터, 멀티 백테스터) QuantCacheRegistry 백엔드 0ms 캐싱 & 프론트엔드 SWR/localStorage 복원 일원화 완료, 2) 포트폴리오 백테스터 모바일 뷰포트 확장(Maximize/Minimize) 및 터치 커서 인터랙션 개선 완료, 3) 23:15 KST 야간 시계열 시딩 완료 즉시 탈출 신호(Exit Signal) 기반 종합 리스크 텔레그램 일일 브리핑 자동 발송 연동 완료
 ➡️ Next: 실서비스 성능 모니터링 및 사용자 추가 요청 대응
 
 > 세션 핸드오프 (2026-10-15, Antigravity):
-> - ⚡ [추천 1번] KIS 연동 전 계좌 보유 종목 및 4대 벤치마크 지수 백그라운드 자동 시딩 스케줄러 구축 완료:
+> - ⚡ [추천 1번] 섹션 5 시뮬레이터(스트레스 테스터 & 멀티 백테스터) 전수 캐싱 및 0ms 서빙 일원화:
+>   - 1) `backend/api/router.py`: `portfolio_stress_test` 엔드포인트에 `quant_cache.get/set("stress_test", ...)` 백엔드 캐시 적용 (0.0001초 응답).
+>   - 2) `backend/api/backtest.py`: `run_multi_asset_backtest_api`에 `quant_cache.get/set("multi_backtest", ...)` 백엔드 캐시 적용.
+>   - 3) `PortfolioStressTester.tsx`: 자산 가중치 시그니처 기반 `localStorage` 캐싱 탑재 및 Bar 컴포넌트 `isAnimationActive={false}` 적용.
+>   - 4) `MultiAssetBacktester.tsx`: 파라미터 조합별 `localStorage` 캐싱, 150개 초과 시점 균등 다운샘플링 useMemo 탑재 및 차트 라인/영역 애니메이션 비활성화.
+> - ⚡ [추천 2번] 포트폴리오 백테스터 모바일 터치 사용성 및 와이드 뷰포트 확대 인터랙션:
+>   - 1) `PortfolioBacktester.tsx`: 모바일 전용 [차트 확대/축소] 토글 버튼(`Maximize2`/`Minimize2`) 신설, 350px ↔ 480px 동적 높이 전환.
+>   - 2) 터치 제스처 시 스크롤 간섭 방지를 위한 `touch-pan-x` 스타일 적용 및 Recharts 툴팁 터치 커서 보강.
+> - ⚡ [추천 3번] 야간 시계열 시딩 완료 알림 및 일일 포트폴리오 리스크 텔레그램 브리핑 구축:
+>   - 1) `backend/core/risk_digest.py`: 탈출 신호 종합 점수, VKOSPI, 미국 VIX, CNN FGI, 원/달러 환율, 달러인덱스(DXY), 10Y-2Y 금리차 취합 및 포맷팅 엔진 신설.
+>   - 2) `backend/core/scheduler.py`: 23:15 KST `_job_holdings_price_sync` 완료 직후 `send_nightly_risk_digest()` 자동 호출 연동.
+>   - 3) `backend/tests/test_nightly_risk_digest.py`: 리스크 다이제스트 발송 단위 테스트 100% 통과 검증.
+> - ⚡ [기존] KIS 연동 전 계좌 보유 종목 및 4대 벤치마크 지수 백그라운드 자동 시딩 스케줄러 구축 완료:
 >   - 1) `backend/scheduler/etf_price_sync.py`: `sync_user_holdings_prices_job()` 신설. 4대 벤치마크 지수(`^KS11`, `^KQ11`, `^GSPC`, `^IXIC`) 및 수동 자산/AUM 상위 ETF 일봉을 최근 30일치 증분 upsert (`ON CONFLICT` 및 `uq_benchmark_symbol_date` UNIQUE 인덱스 보장).
 >   - 2) `backend/core/scheduler.py`: 매일 야간 23:15 KST 정기 실행 잡(`nightly_holdings_price_sync`) 등록. 신규 매수/계좌 추가 시에도 익일 0ms DB Hit 보장.
 >   - 3) 유닛 테스트: `backend/tests/test_holdings_price_sync_job.py` 작성 및 100% 통과.

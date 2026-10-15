@@ -59,9 +59,34 @@ export default function PortfolioStressTester({ holdings }: PortfolioStressTeste
     ? customTotalEval
     : (calculatedTotalEval > 0 ? calculatedTotalEval : 100_000_000);
 
-  // 스트레스 테스트 API 호출
-  const fetchStressTest = useCallback(async () => {
+  // 스트레스 테스트 캐시 키 생성 서명
+  const getSignature = useCallback(() => {
+    if (!filteredHoldings || filteredHoldings.length === 0) return '';
+    const norm = filteredHoldings
+      .map(h => `${h.code}:${Math.round((h.weight || 0) * 1000)}`)
+      .sort()
+      .join('|');
+    return `stress_${selectedAccount}_${effectiveTotalEval}_${norm}`;
+  }, [filteredHoldings, selectedAccount, effectiveTotalEval]);
+
+  // 스트레스 테스트 API 호출 (SWR 0ms 복원 패턴)
+  const fetchStressTest = useCallback(async (force: boolean = false) => {
     if (!filteredHoldings || filteredHoldings.length === 0) return;
+
+    const sig = getSignature();
+    const cacheKey = `iprism_stress_${sig}`;
+
+    // 1. 캐시가 있으면 0ms 즉시 표시
+    if (!force && typeof window !== 'undefined' && sig) {
+      try {
+        const cached = localStorage.getItem(cacheKey) || sessionStorage.getItem(cacheKey);
+        if (cached) {
+          setStressData(JSON.parse(cached));
+          setLoading(false);
+          return;
+        }
+      } catch (_) {}
+    }
 
     setLoading(true);
     setError(null);
@@ -99,13 +124,19 @@ export default function PortfolioStressTester({ holdings }: PortfolioStressTeste
       }
 
       setStressData(json);
+      if (typeof window !== 'undefined' && sig) {
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(json));
+          sessionStorage.setItem(cacheKey, JSON.stringify(json));
+        } catch (_) {}
+      }
     } catch (err: unknown) {
       console.error(err);
       setError(err instanceof Error ? err.message : '스트레스 테스트를 실행하지 못했습니다.');
     } finally {
       setLoading(false);
     }
-  }, [filteredHoldings, effectiveTotalEval]);
+  }, [filteredHoldings, effectiveTotalEval, getSignature]);
 
   useEffect(() => {
     fetchStressTest();
@@ -433,7 +464,7 @@ export default function PortfolioStressTester({ holdings }: PortfolioStressTeste
                     formatter={(val: any) => [`${val}%`, '예상 수익률']}
                   />
                   <ReferenceLine y={0} stroke="#ffffff40" />
-                  <Bar dataKey="returnRate" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="returnRate" radius={[4, 4, 0, 0]} isAnimationActive={false}>
                     {comparisonChartData.map((entry) => (
                       <Cell
                         key={entry.key}

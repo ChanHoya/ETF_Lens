@@ -128,10 +128,10 @@ export default function MultiAssetBacktester({ holdings = [] }: Props) {
     const sig = getAssetsSignature();
     const cacheKey = `iprism_multi_bt_${sig}_${years}_${rebalanceFreq}_${initialCapital}`;
 
-    // 1. sessionStorage 캐시 확인 (새로고침이 아닌 경우 0ms 즉시 표시)
+    // 1. localStorage 및 sessionStorage 캐시 확인 (새로고침이 아닌 경우 0ms 즉시 표시)
     if (!force && typeof window !== "undefined" && sig) {
       try {
-        const cached = sessionStorage.getItem(cacheKey);
+        const cached = localStorage.getItem(cacheKey) || sessionStorage.getItem(cacheKey);
         if (cached) {
           setResult(JSON.parse(cached));
           setLoading(false);
@@ -161,6 +161,7 @@ export default function MultiAssetBacktester({ holdings = [] }: Props) {
         setResult(json);
         if (typeof window !== "undefined" && sig) {
           try {
+            localStorage.setItem(cacheKey, JSON.stringify(json));
             sessionStorage.setItem(cacheKey, JSON.stringify(json));
           } catch (_) {}
         }
@@ -171,6 +172,18 @@ export default function MultiAssetBacktester({ holdings = [] }: Props) {
       setLoading(false);
     }
   };
+
+  // 150개 초과 시 균등 샘플링하여 60fps 보장
+  const sampledTimeSeries = useMemo(() => {
+    const raw = result?.time_series;
+    if (!raw || raw.length <= 150) return raw || [];
+    const step = Math.ceil(raw.length / 150);
+    const sampled = raw.filter((_, idx) => idx % step === 0);
+    if (sampled[sampled.length - 1] !== raw[raw.length - 1]) {
+      sampled.push(raw[raw.length - 1]);
+    }
+    return sampled;
+  }, [result]);
 
   useEffect(() => {
     runBacktest();
@@ -378,7 +391,7 @@ export default function MultiAssetBacktester({ holdings = [] }: Props) {
 
             <div className="h-64 mt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={result.time_series}>
+                <LineChart data={sampledTimeSeries}>
                   <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="date" stroke="#64748b" fontSize={10} tickLine={false} />
                   <YAxis stroke="#64748b" fontSize={10} unit="원" tickFormatter={v => `${(v / 10000).toFixed(0)}만`} />
@@ -401,8 +414,8 @@ export default function MultiAssetBacktester({ holdings = [] }: Props) {
                       return null;
                     }}
                   />
-                  <Line type="monotone" dataKey="portfolio_val" stroke="#10b981" strokeWidth={2.5} dot={false} />
-                  <Line type="monotone" dataKey="benchmark_val" stroke="#6366f1" strokeWidth={1.5} dot={false} strokeDasharray="4 4" />
+                  <Line type="monotone" dataKey="portfolio_val" stroke="#10b981" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+                  <Line type="monotone" dataKey="benchmark_val" stroke="#6366f1" strokeWidth={1.5} dot={false} strokeDasharray="4 4" isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -419,7 +432,7 @@ export default function MultiAssetBacktester({ holdings = [] }: Props) {
 
             <div className="h-64 mt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={result.time_series}>
+                <AreaChart data={sampledTimeSeries}>
                   <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="date" stroke="#64748b" fontSize={10} tickLine={false} />
                   <YAxis stroke="#64748b" fontSize={10} unit="%" />
@@ -438,7 +451,7 @@ export default function MultiAssetBacktester({ holdings = [] }: Props) {
                     }}
                   />
                   <ReferenceLine y={0} stroke="#475569" />
-                  <Area type="monotone" dataKey="drawdown" stroke="#f43f5e" fill="#881337" fillOpacity={0.4} />
+                  <Area type="monotone" dataKey="drawdown" stroke="#f43f5e" fill="#881337" fillOpacity={0.4} isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

@@ -63,6 +63,11 @@ class QuantCacheRegistry:
                 raw_str = f"{namespace}:{today_prefix}{str(payload)}"
         return hashlib.sha256(raw_str.encode("utf-8")).hexdigest()
 
+    @classmethod
+    def generate_key(cls, payload: Any, namespace: str = "default", include_today: bool = True) -> str:
+        """make_key의 클래스/인스턴스 호출 alias"""
+        return cls.make_key(namespace, payload, include_today=include_today)
+
     def _get_store(self, namespace: str) -> OrderedDict:
         if namespace not in self._stores:
             self._stores[namespace] = OrderedDict()

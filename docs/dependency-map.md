@@ -49,7 +49,8 @@ A living document of module relationships. Update whenever modules are added or 
 | Sprint 7 Live E2E Integration Suite (S7-4) | Infrastructure / Quality | E2E validation for backtest/rebalance/EF caching and integrated asset KIS resilience | tests/test_sprint7_e2e_integration | - | Antigravity |
 | Unified Quant Engine (S10-1) | Core / Application | Centralized time-series normalization, common 4 risk metrics (Sharpe/Sortino/Calmar/Vol), VaR, and correlation matrix | core/hybrid_series, db/models | api/backtest, api/efficient_frontier | Antigravity |
 | Quant Cache Registry (S10-3) | Core / Infrastructure | Centralized namespace-isolated in-memory cache registry with LRU eviction, TTL, and libc malloc_trim memory reclamation | core/quant_cache_registry | api/backtest, api/efficient_frontier, core/stress_tester | Antigravity |
-| Nightly Holdings & Benchmark Seeder | Core / Infrastructure | Nightly incremental DB seeder for 4 benchmarks (^KS11, ^KQ11, ^GSPC, ^IXIC) and user holdings | scheduler/etf_price_sync, core/scheduler, db/models | api/backtest, api/efficient_frontier, KospiExitAnalyzer | Antigravity |
+| Nightly Holdings & Benchmark Seeder | Core / Infrastructure | Nightly incremental DB seeder for 4 benchmarks (^KS11, ^KQ11, ^GSPC, ^IXIC) and user holdings | scheduler/etf_price_sync, core/scheduler, db/models | api/backtest, api/efficient_frontier, KospiExitAnalyzer, core/risk_digest | Antigravity |
+| Nightly Risk Digest & Seeder Notifier | Core / Application | Comprehensive daily risk score and briefing dispatch via Telegram after nightly price seeder | core/risk_digest, core/scheduler, core/notifier | scheduler | Antigravity |
 <!-- Add new modules above this line -->
 
 

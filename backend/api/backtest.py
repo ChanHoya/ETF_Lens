@@ -679,8 +679,21 @@ async def run_multi_asset_backtest_api(req: MultiBacktestRequest):
     리밸런싱 주기(월/분기/연/미실시)에 따른 CAGR, 샤프지수, MDD 및 시계열 차트 데이터를 산출합니다.
     """
     try:
+        from core.quant_cache_registry import quant_cache
         from core.multi_backtester import MultiAssetBacktester
         assets_dicts = [a.model_dump() if hasattr(a, "model_dump") else a.dict() for a in req.assets]
+
+        cache_key = quant_cache.generate_key({
+            "assets": sorted(assets_dicts, key=lambda x: str(x.get("code", ""))),
+            "initial_capital": req.initial_capital or 10000000.0,
+            "years": req.years or 3,
+            "rebalance_freq": req.rebalance_freq or "quarterly",
+            "benchmark_code": req.benchmark_code or "379800"
+        })
+        cached = quant_cache.get("multi_backtest", cache_key)
+        if cached is not None:
+            return cached
+
         res = await MultiAssetBacktester.run_backtest(
             assets=assets_dicts,
             initial_capital=req.initial_capital or 10000000.0,
@@ -688,6 +701,9 @@ async def run_multi_asset_backtest_api(req: MultiBacktestRequest):
             rebalance_freq=req.rebalance_freq or "quarterly",
             benchmark_code=req.benchmark_code or "379800"
         )
+        if res and res.get("status") == "success":
+            quant_cache.set("multi_backtest", cache_key, res, ttl=3600)
+
         _cleanup_memory()
         return res
     except Exception as e:

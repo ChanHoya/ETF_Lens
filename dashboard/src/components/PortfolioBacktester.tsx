@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { API_BASE } from "@/lib/apiConfig";
-import { Loader2, Sparkles, RefreshCw, Shield } from "lucide-react";
+import { Loader2, Sparkles, RefreshCw, Shield, Maximize2, Minimize2 } from "lucide-react";
 
 type HoldingProps = {
     code: string;
@@ -16,6 +16,7 @@ type BacktesterProps = {
 export default function PortfolioBacktester({ holdings }: BacktesterProps) {
     const [period, setPeriod] = useState<"3M" | "6M" | "1Y" | "3Y" | "10Y">("1Y");
     const [metricMode, setMetricMode] = useState<'all' | 'basic' | 'risk'>('all');
+    const [isExpanded, setIsExpanded] = useState<boolean>(false);
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
@@ -383,13 +384,13 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
                                 </button>
                             </div>
 
-                            {/* 기간 선택 버튼 */}
-                            <div className="flex gap-1.5 justify-center">
+                            {/* 기간 선택 및 차트 뷰포트 확대 버튼 */}
+                            <div className="flex items-center gap-1.5 justify-center">
                                 {["3M", "6M", "1Y", "3Y"].map((p) => (
                                     <button
                                         key={p}
                                         onClick={() => setPeriod(p as any)}
-                                        className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                                        className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
                                             period === p 
                                             ? "bg-purple-500 text-white shadow-sm" 
                                             : "bg-white/5 text-gray-400 hover:bg-white/10"
@@ -398,6 +399,17 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
                                         {p}
                                     </button>
                                 ))}
+                                <button
+                                    onClick={() => setIsExpanded(!isExpanded)}
+                                    className={`p-1.5 rounded-xl text-xs font-medium transition-colors border ${
+                                        isExpanded
+                                            ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                                            : "bg-white/5 text-gray-400 hover:text-white border-white/5"
+                                    }`}
+                                    title={isExpanded ? "기본 뷰로 축소" : "차트 높이 및 와이드 확대"}
+                                >
+                                    {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                                </button>
                             </div>
                         </div>
 
@@ -429,16 +441,17 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
 
                         {/* Chart */}
                         {sampledChartData && sampledChartData.length > 0 ? (
-                            <div className="w-full h-[350px]">
+                            <div className={`w-full transition-all duration-300 ${isExpanded ? "h-[480px]" : "h-[350px]"} touch-pan-x`}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={sampledChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                        <XAxis dataKey="date" stroke="none" tick={{ fill: '#71717a', fontSize: 12 }} minTickGap={30} />
+                                        <XAxis dataKey="date" stroke="none" tick={{ fill: '#71717a', fontSize: 12 }} minTickGap={isExpanded ? 20 : 30} />
                                         <YAxis stroke="none" tick={{ fill: '#71717a', fontSize: 12 }} domain={['auto', 'auto']} tickFormatter={(val) => `${val.toFixed(0)}%`} />
                                         <RechartsTooltip 
                                             contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
                                             formatter={(val: number) => [`${val.toFixed(2)}%`]}
                                             labelStyle={{ color: '#a1a1aa', marginBottom: '8px' }}
+                                            cursor={{ stroke: 'rgba(168, 85, 247, 0.4)', strokeWidth: 1.5, strokeDasharray: '4 4' }}
                                         />
                                         <Legend 
                                             onMouseEnter={(e: any) => setActiveHighlight(e.dataKey)}

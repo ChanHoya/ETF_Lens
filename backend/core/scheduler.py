@@ -703,11 +703,13 @@ def setup_scheduler():
             print(f"[scheduler] _job_asset_snapshot failed: {e}")
 
     async def _job_holdings_price_sync():
-        """매일 야간 보유 전 종목 및 4대 벤치마크 지수의 일봉 종가를 DB에 증분 수집 및 영속화."""
+        """매일 야간 보유 전 종목 및 4대 벤치마크 지수의 일봉 종가를 DB에 증분 수집 및 영속화, 텔레그램 일일 리스크 브리핑 발송."""
         try:
             from scheduler.etf_price_sync import sync_user_holdings_prices_job
-            await sync_user_holdings_prices_job()
+            from core.risk_digest import send_nightly_risk_digest
+            stats = await sync_user_holdings_prices_job()
             trigger_replication_background()
+            await send_nightly_risk_digest(stats)
             gc.collect()
         except Exception as e:
             print(f"[scheduler] _job_holdings_price_sync failed: {e}")
