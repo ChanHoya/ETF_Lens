@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { API_BASE } from "@/lib/apiConfig";
 import { Loader2, Sparkles, RefreshCw, Shield } from "lucide-react";
@@ -277,6 +277,17 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
         );
     };
 
+    const sampledChartData = useMemo(() => {
+        const raw = data?.chart_data?.[period];
+        if (!raw || raw.length <= 150) return raw || [];
+        const step = Math.ceil(raw.length / 150);
+        const sampled = raw.filter((_: any, idx: number) => idx % step === 0);
+        if (sampled[sampled.length - 1] !== raw[raw.length - 1]) {
+            sampled.push(raw[raw.length - 1]);
+        }
+        return sampled;
+    }, [data, period]);
+
     return (
         <section className="flex flex-col gap-4 mt-6">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -417,10 +428,10 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
                         )}
 
                         {/* Chart */}
-                        {data.chart_data && data.chart_data[period] && data.chart_data[period].length > 0 ? (
+                        {sampledChartData && sampledChartData.length > 0 ? (
                             <div className="w-full h-[350px]">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={data.chart_data[period]} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <LineChart data={sampledChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                                         <XAxis dataKey="date" stroke="none" tick={{ fill: '#71717a', fontSize: 12 }} minTickGap={30} />
                                         <YAxis stroke="none" tick={{ fill: '#71717a', fontSize: 12 }} domain={['auto', 'auto']} tickFormatter={(val) => `${val.toFixed(0)}%`} />
@@ -434,7 +445,7 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
                                             onMouseLeave={() => setActiveHighlight(null)}
                                         />
                                         {LINE_CONFIG.map(cfg => {
-                                            if (data.chart_data[period].length > 0 && !(cfg.key in data.chart_data[period][0])) return null;
+                                            if (sampledChartData.length > 0 && !(cfg.key in sampledChartData[0])) return null;
                                             return (
                                                 <Line 
                                                     key={cfg.key}
@@ -446,6 +457,7 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
                                                     strokeDasharray={cfg.isBench ? "5 5" : undefined}
                                                     strokeOpacity={getOpacity(cfg.key, cfg.isBench, cfg.pair)}
                                                     dot={false}
+                                                    isAnimationActive={false}
                                                     activeDot={{ r: 4, strokeOpacity: getOpacity(cfg.key, cfg.isBench, cfg.pair) }}
                                                 />
                                             );

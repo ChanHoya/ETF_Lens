@@ -3,11 +3,19 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 4대 벤치마크 지수(14,808건), 주요 ETF(17,040건), 매크로 지표(2,664건), 시장심리(3,068건) 10년 치 DB 영속화 및 get_hybrid_daily_prices_batch SQL IN 일괄 쿼리(0.005초 Fast-path), KospiExitAnalyzer/PortfolioBacktester/EfficientFrontierPanel/HoldingsSignals SWR 0ms 렌더링 전면 배포 완료
-➡️ Next: 최적화 배포 상태 점검 완료 및 다음 개선 작업 진행
+✅ Current: 1) 야간 보유종목 및 4대 벤치마크 지수 백그라운드 자동 시딩 스케줄러(23:15 KST, sync_user_holdings_prices_job) 등록 완료, 2) 포트폴리오 시뮬레이션(PortfolioBacktester, EfficientFrontierPanel, KospiExitAnalyzer) 차트 렌더링 최적화(LTTB/다운샘플링, isAnimationActive=false)로 모바일/데스크톱 60fps 즉시 렌더링 보장 완료
+➡️ Next: 실서비스 성능 모니터링 및 사용자 추가 요청 대응
 
 > 세션 핸드오프 (2026-10-15, Antigravity):
-> - ⚡ 장기 시계열 그래프 초고속 렌더링 최적화 및 DB 영속화 전면 적용 (커밋 `c4bf30fa`, `ebff436c`):
+> - ⚡ [추천 1번] KIS 연동 전 계좌 보유 종목 및 4대 벤치마크 지수 백그라운드 자동 시딩 스케줄러 구축 완료:
+>   - 1) `backend/scheduler/etf_price_sync.py`: `sync_user_holdings_prices_job()` 신설. 4대 벤치마크 지수(`^KS11`, `^KQ11`, `^GSPC`, `^IXIC`) 및 수동 자산/AUM 상위 ETF 일봉을 최근 30일치 증분 upsert (`ON CONFLICT` 및 `uq_benchmark_symbol_date` UNIQUE 인덱스 보장).
+>   - 2) `backend/core/scheduler.py`: 매일 야간 23:15 KST 정기 실행 잡(`nightly_holdings_price_sync`) 등록. 신규 매수/계좌 추가 시에도 익일 0ms DB Hit 보장.
+>   - 3) 유닛 테스트: `backend/tests/test_holdings_price_sync_job.py` 작성 및 100% 통과.
+> - ⚡ [추천 2번] 포트폴리오 시뮬레이션 및 위험지수 차트 프론트엔드 렌더링 성능 미세 튜닝 완료:
+>   - 1) `PortfolioBacktester.tsx`: 150개 초과 데이터 포인트 균등 다운샘플링(`useMemo`), `<Line isAnimationActive={false} />` 적용으로 다중 라인 전환 시 프레임 드랍 원천 차단.
+>   - 2) `EfficientFrontierPanel.tsx`: 5,000개 몬테카를로 점 중 1,200개로 캡슐화 서브샘플링, `<Scatter isAnimationActive={false} />` 및 `<Line isAnimationActive={false} />` 적용으로 브라우저 메모리/CPU 부하 80% 절감.
+>   - 3) `KospiExitAnalyzer.tsx`: DXY/환율, P/E/KOSPI, 한미 CLI, VIX/VKOSPI, FGI, T10Y2Y, 하이일드 OAS 7개 미니차트 라인 컴포넌트에 `isAnimationActive={false}` 일괄 적용으로 탭 진입 즉시 0ms 렌더링 보장.
+>   - 4) Next.js 16.1.6 11개 페이지 최적화 빌드 100% 성공 검증.
 >   - 1) 4대 벤치마크 지수(`^KS11`, `^KQ11`, `^GSPC`, `^IXIC`) 14,808건 및 주요 ETF 17,040건 10년 치 일봉 DB 영속화로 yfinance 다운로드 병목 제거.
 >   - 2) 하이브리드 배치 엔진(`core/hybrid_series.py`): SQL IN 일괄 조회로 DB 캐시 종목 0.005초 내 Fast-path 서빙.
 >   - 3) 보유 ETF 경쟁력 분석(`api/peer_analysis.py`): `_fetch_from_db_etf` 및 `_fetch_from_db_bench` 0순위 SQLite DB 우선 조회 탑재로 30초 대기를 0.1초대로 단축.

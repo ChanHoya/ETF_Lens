@@ -253,14 +253,21 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
     }, [getHoldingsSignature, lookbackYears, riskFreeRate, result]);
 
     /* ─── Derived chart data ─── */
-    const scatterData = result?.scatter ?? [];
+    const rawScatter = result?.scatter ?? [];
     const frontierData = result?.frontier ?? [];
-    // reduce 방식: spread operator는 배열이 커질 때 콜 스택 오버플로우 위험이 있음
-    const minSharpe = scatterData.length > 0
-        ? scatterData.reduce((min, p) => p.sharpe < min ? p.sharpe : min, scatterData[0].sharpe)
+    
+    // 5,000개 몬테카를로 점의 DOM 과부하 방지: 1,200개로 부드럽게 샘플링하여 60fps 보장
+    const optimizedScatterData = useMemo(() => {
+        if (rawScatter.length <= 1200) return rawScatter;
+        const step = Math.ceil(rawScatter.length / 1200);
+        return rawScatter.filter((_, idx) => idx % step === 0);
+    }, [rawScatter]);
+
+    const minSharpe = rawScatter.length > 0
+        ? rawScatter.reduce((min, p) => p.sharpe < min ? p.sharpe : min, rawScatter[0].sharpe)
         : 0;
-    const maxSharpe = scatterData.length > 0
-        ? scatterData.reduce((max, p) => p.sharpe > max ? p.sharpe : max, scatterData[0].sharpe)
+    const maxSharpe = rawScatter.length > 0
+        ? rawScatter.reduce((max, p) => p.sharpe > max ? p.sharpe : max, rawScatter[0].sharpe)
         : 1;
 
     // 비중 비교 바 차트 데이터 — useMemo로 result 변경 시에만 재계산
@@ -447,7 +454,8 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
                                 {/* MC 시뮬레이션 산점도 */}
                                 <Scatter
                                     name="시뮬레이션 포트폴리오"
-                                    data={scatterData}
+                                    data={optimizedScatterData}
+                                    isAnimationActive={false}
                                     shape={(props: any) => (
                                         <CustomScatterDot {...props} minSharpe={minSharpe} maxSharpe={maxSharpe} />
                                     )}
@@ -461,6 +469,7 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
                                     stroke="#0ea5e9"
                                     strokeWidth={2.5}
                                     dot={false}
+                                    isAnimationActive={false}
                                     name="효율적 전선"
                                 />
 

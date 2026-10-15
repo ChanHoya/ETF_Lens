@@ -702,6 +702,16 @@ def setup_scheduler():
         except Exception as e:
             print(f"[scheduler] _job_asset_snapshot failed: {e}")
 
+    async def _job_holdings_price_sync():
+        """매일 야간 보유 전 종목 및 4대 벤치마크 지수의 일봉 종가를 DB에 증분 수집 및 영속화."""
+        try:
+            from scheduler.etf_price_sync import sync_user_holdings_prices_job
+            await sync_user_holdings_prices_job()
+            trigger_replication_background()
+            gc.collect()
+        except Exception as e:
+            print(f"[scheduler] _job_holdings_price_sync failed: {e}")
+
     async def _job_dividend_refresh():
         """14일 이상 경과하여 만료(stale)된 배당 요약본을 주간 단위로 자동 갱신."""
         try:
@@ -752,6 +762,9 @@ def setup_scheduler():
     # 미국 매크로 지표(CPI, PPI, PCE 등) 발표 직후 야간 속보(22:45 KST) 및 익일 아침(08:15 KST) 2중 적시 동기화
     scheduler.add_job(_job_macro, "cron", hour=22, minute=45, id="nightly_us_macro_sync")
     scheduler.add_job(_job_macro, "cron", hour=8, minute=15, id="daily_us_macro_sync")
+
+    # 매일 23:15 (KST) - 전 계좌 보유 종목, 수동 자산, 주요 ETF 및 4대 벤치마크 지수 시세 증분 영속화
+    scheduler.add_job(_job_holdings_price_sync, "cron", hour=23, minute=15, id="nightly_holdings_price_sync")
 
     # 월-금 09:10 (Market Open) 및 15:15 (Market Close) 실행
     scheduler.add_job(_job_disparity, "cron", day_of_week="mon-fri", hour=9, minute=10, id="market_open_disparity_check")

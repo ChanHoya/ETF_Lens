@@ -575,8 +575,8 @@ export default function KospiExitAnalyzer() {
                                     wrapperStyle={{ fontSize: '9px', marginTop: '-5px', marginBottom: '5px' }} 
                                     formatter={(value) => <span className="text-[10px] text-gray-400 font-semibold">{value === 'DXY' ? '달러인덱스 (DXY)' : '원/달러 환율 (KRW)'}</span>}
                                 />
-                                <Line name="DXY" yAxisId="left" type="monotone" dataKey="dollar" stroke={dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#10b981')} strokeWidth={2} dot={false} />
-                                <Line name="krw" yAxisId="right" type="monotone" dataKey="krw" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+                                <Line name="DXY" yAxisId="left" type="monotone" dataKey="dollar" stroke={dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#10b981')} strokeWidth={2} dot={false} isAnimationActive={false} />
+                                <Line name="krw" yAxisId="right" type="monotone" dataKey="krw" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" dot={false} isAnimationActive={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}
@@ -639,8 +639,8 @@ export default function KospiExitAnalyzer() {
                                         return null;
                                     }}
                                 />
-                                <Line name="P/E" yAxisId="left" type="monotone" dataKey="val" stroke={forwardPer >= 12.5 ? '#f43f5e' : '#10b981'} strokeWidth={2} dot={false} />
-                                <Line name="KOSPI" yAxisId="right" type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+                                <Line name="P/E" yAxisId="left" type="monotone" dataKey="val" stroke={forwardPer >= 12.5 ? '#f43f5e' : '#10b981'} strokeWidth={2} dot={false} isAnimationActive={false} />
+                                <Line name="KOSPI" yAxisId="right" type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" dot={false} isAnimationActive={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}
@@ -709,8 +709,8 @@ export default function KospiExitAnalyzer() {
                                         return null;
                                     }}
                                 />
-                                <Line name="kor_cli" type="monotone" dataKey="kor_cli" stroke={cStatus.level === 'danger' ? '#f43f5e' : (cStatus.level === 'warning' ? '#f59e0b' : '#10b981')} strokeWidth={2} dot={false} />
-                                <Line name="usa_cli" type="monotone" dataKey="usa_cli" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+                                <Line name="kor_cli" type="monotone" dataKey="kor_cli" stroke={cStatus.level === 'danger' ? '#f43f5e' : (cStatus.level === 'warning' ? '#f59e0b' : '#10b981')} strokeWidth={2} dot={false} isAnimationActive={false} />
+                                <Line name="usa_cli" type="monotone" dataKey="usa_cli" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" dot={false} isAnimationActive={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}
@@ -784,8 +784,8 @@ export default function KospiExitAnalyzer() {
                                         return null;
                                     }}
                                 />
-                                <Line name="vix" yAxisId="left" type="monotone" dataKey="vix" stroke={vStatus.level === 'danger' ? '#f43f5e' : '#10b981'} strokeWidth={1.5} dot={false} />
-                                <Line name="vkospi_proxy" yAxisId="left" type="monotone" dataKey="vkospi_proxy" stroke={vkStatus.level === 'danger' ? '#ef4444' : '#f97316'} strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
+                                <Line name="vix" yAxisId="left" type="monotone" dataKey="vix" stroke={vStatus.level === 'danger' ? '#f43f5e' : '#10b981'} strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                                <Line name="vkospi_proxy" yAxisId="left" type="monotone" dataKey="vkospi_proxy" stroke={vkStatus.level === 'danger' ? '#ef4444' : '#f97316'} strokeWidth={1.5} strokeDasharray="3 3" dot={false} isAnimationActive={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}
@@ -847,7 +847,7 @@ export default function KospiExitAnalyzer() {
                                         return null;
                                     }}
                                 />
-                                <Line name="fgi" type="monotone" dataKey="fgi" stroke={fgiValue < 30 ? '#10b981' : (fgiValue >= 70 ? '#f43f5e' : '#f59e0b')} strokeWidth={2} dot={false} />
+                                <Line name="fgi" type="monotone" dataKey="fgi" stroke={fgiValue < 30 ? '#10b981' : (fgiValue >= 70 ? '#f43f5e' : '#f59e0b')} strokeWidth={2} dot={false} isAnimationActive={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}
@@ -914,7 +914,7 @@ export default function KospiExitAnalyzer() {
                                         return null;
                                     }}
                                 />
-                                <Line name="t10y2y" type="monotone" dataKey="val" stroke={t10y2yValue < -0.4 ? '#f97316' : t10y2yValue < 0 ? '#eab308' : '#10b981'} strokeWidth={2} dot={false} />
+                                <Line name="t10y2y" type="monotone" dataKey="val" stroke={t10y2yValue < -0.4 ? '#f97316' : t10y2yValue < 0 ? '#eab308' : '#10b981'} strokeWidth={2} dot={false} isAnimationActive={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}
@@ -988,7 +988,7 @@ export default function KospiExitAnalyzer() {
                                         return null;
                                     }}
                                 />
-                                <Line name="hy_spread" type="monotone" dataKey="val" stroke={hySpreadValue >= 6.5 ? '#ef4444' : hySpreadValue >= 5.0 ? '#f97316' : hySpreadValue >= 3.5 ? '#eab308' : '#10b981'} strokeWidth={2} dot={false} />
+                                <Line name="hy_spread" type="monotone" dataKey="val" stroke={hySpreadValue >= 6.5 ? '#ef4444' : hySpreadValue >= 5.0 ? '#f97316' : hySpreadValue >= 3.5 ? '#eab308' : '#10b981'} strokeWidth={2} dot={false} isAnimationActive={false} />
                             </LineChart>
                         </ResponsiveContainer>
                         )}

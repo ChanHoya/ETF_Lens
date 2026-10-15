@@ -192,3 +192,121 @@ async def sync_etf_prices_yfinance() -> int:
     logger.info(f"[ETF Price Sync] 완료: {saved_codes}개 종목 저장")
     return saved_codes
 
+
+async def sync_user_holdings_prices_job() -> dict:
+    """
+    매일 야간(23:15 KST 등) 사용자 보유 종목, 수동 등록 자산, AUM 상위 주요 ETF 및 4대 벤치마크 지수의 
+    최근 일봉 종가를 DB에 증분 수집 및 영속화하여, 포트폴리오 백테스트 및 최적화 조회 시 0ms 응답을 보장.
+    """
+    from db.database import AsyncSessionLocal
+    from db.models import ETFMaster, ManualAsset
+    from core.hybrid_series import get_hybrid_daily_prices
+    from sqlalchemy import select, text
+    import yfinance as yf
+    import pandas as pd
+
+    logger.info("[Holdings Price Sync] 야간 보유 종목 및 벤치마크 지수 증분 동기화 시작...")
+    stats = {"benchmarks": 0, "holdings": 0, "errors": 0}
+
+    # 1. 4대 벤치마크 지수 동기화 (^KS11, ^KQ11, ^GSPC, ^IXIC)
+    benchmarks = {
+        "^KS11": ["KS11", "^KS11"],
+        "^KQ11": ["KQ11", "^KQ11"],
+        "^GSPC": ["^GSPC"],
+        "^IXIC": ["^IXIC"],
+    }
+    
+    start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+    end_date = datetime.now().strftime("%Y-%m-%d")
+
+    async with AsyncSessionLocal() as db:
+        # UNIQUE 인덱스 생성 보장 (없을 경우 ON CONFLICT 오류 방지)
+        try:
+            await db.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_benchmark_symbol_date ON benchmark_prices (symbol, date)"))
+            await db.commit()
+        except Exception:
+            pass
+
+        for yf_sym, db_syms in benchmarks.items():
+            try:
+                df = await asyncio.to_thread(
+                    yf.download,
+                    yf_sym,
+                    start=start_date,
+                    end=end_date,
+                    progress=False,
+                    auto_adjust=True,
+                )
+                if df is not None and not df.empty:
+                    close_col = None
+                    if isinstance(df.columns, pd.MultiIndex):
+                        if "Close" in df.columns.get_level_values(0):
+                            close_col = df["Close"].iloc[:, 0].dropna()
+                    elif "Close" in df.columns:
+                        close_col = df["Close"].dropna()
+                    elif "Adj Close" in df.columns:
+                        close_col = df["Adj Close"].dropna()
+
+                    if close_col is not None and not close_col.empty:
+                        for dt, price in close_col.items():
+                            d_str = dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt)[:10]
+                            p_float = float(price)
+                            for sym in db_syms:
+                                await db.execute(
+                                    text(
+                                        "INSERT INTO benchmark_prices (symbol, date, close) "
+                                        "VALUES (:symbol, :date, :close) "
+                                        "ON CONFLICT(symbol, date) DO UPDATE SET close=excluded.close"
+                                    ),
+                                    {"symbol": sym, "date": d_str, "close": p_float}
+                                )
+                        stats["benchmarks"] += 1
+                        await db.commit()
+            except Exception as e:
+                logger.warning(f"[Holdings Price Sync] 벤치마크 {yf_sym} 동기화 실패: {e}")
+                stats["errors"] += 1
+
+    # 2. 사용자 보유 종목 및 수동 자산 티커 수집
+    target_tickers = set()
+    async with AsyncSessionLocal() as db:
+        try:
+            res_manual = await db.execute(select(ManualAsset.ticker).where(ManualAsset.ticker.isnot(None)))
+            for row in res_manual.fetchall():
+                t = str(row[0]).strip()
+                if t:
+                    target_tickers.add(t)
+        except Exception as e:
+            logger.warning(f"[Holdings Price Sync] ManualAsset 조회 에러: {e}")
+
+        try:
+            res_master = await db.execute(
+                select(ETFMaster.code)
+                .where(ETFMaster.aum.isnot(None))
+                .order_by(ETFMaster.aum.desc())
+                .limit(30)
+            )
+            for row in res_master.fetchall():
+                c = str(row[0]).strip()
+                if c:
+                    target_tickers.add(c)
+        except Exception as e:
+            logger.warning(f"[Holdings Price Sync] ETFMaster 조회 에러: {e}")
+
+    default_majors = ["069500", "360750", "133690", "379800", "379810", "488770", "396500", "102110", "459580", "448290"]
+    for m in default_majors:
+        target_tickers.add(m)
+
+    # 3. get_hybrid_daily_prices 를 통해 최근 데이터 gap-fill 및 캐싱
+    for ticker in list(target_tickers):
+        try:
+            async with AsyncSessionLocal() as db:
+                await get_hybrid_daily_prices(ticker, db, days=365, include_live=False)
+                stats["holdings"] += 1
+        except Exception as e:
+            logger.warning(f"[Holdings Price Sync] 티커 {ticker} 증분 동기화 실패: {e}")
+            stats["errors"] += 1
+
+    logger.info(f"[Holdings Price Sync] 완료: 벤치마크 {stats['benchmarks']}개, 종목 {stats['holdings']}개")
+    return stats
+
+
