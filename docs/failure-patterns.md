@@ -347,5 +347,18 @@
   2. **브라우저 SWR(Stale-While-Revalidate) 캐싱**: `sessionStorage` 및 `localStorage` 3대 키(`tff_fund_data`, `tff_estimate_data`, `tff_history_records`)를 활용해 마운트 즉시 **0초 화면 복원** 후 백그라운드 비차단 최신 동기화 적용.
   3. **백엔드 인메모리 캐싱**: `_INSIGHT_CACHE` (TTL 3600s) 및 `_BACKTEST_CACHE`로 중복 LLM API 호출을 차단하고 0.001초 즉각 응답 달성.
 
+### [FP-040] Google GenAI SDK Context Caching 시 Tool 선언 Pydantic ValidationError 및 추론 시 Tools 중복 전달 오류
+- **증상**: `client.caches.create()` 호출 시 `pydantic_core._pydantic_core.ValidationError: Input should be a valid dictionary or object to extract fields from [type=model_attributes_type, input_type=function]` 발생하거나, `generate_content` 호출 시 `cached_content`와 `tools`를 동시 전달하여 캐시 미매칭/에러 발생.
+- **원인**:
+  1. `google-genai` SDK의 `types.CreateCachedContentConfig`는 파이썬 일반 함수 객체(`function`)를 직접 받지 못하고 `types.Tool(function_declarations=[...])` 객체를 요구함.
+  2. 캐시 생성 시 이미 동결(Freeze)된 도구 스키마를 런타임 추론(`client.models.generate_content`) 시 `GenerateContentConfig(tools=...)`로 재전송하면 스키마 불일치 또는 캐시 무효화가 발생함.
+- **해결**:
+  1. `ContextCacheSession` 초기화 시 전달된 파이썬 callable을 `types.FunctionDeclaration.from_callable(client=self.client._api_client, callable=fn)`를 거쳐 `types.Tool`로 자동 변환하여 캐시에 주입.
+  2. 에이전트 자율 루프(`run_autonomous_cached_loop`)에서는 `GenerateContentConfig`에 오직 `cached_content=cache_name`만 전달하고 `tools` 선언을 명시적으로 배제.
 
-
+### [FP-041] 공통 퀀트 엔진 위임 리팩토링 시 상위 모듈 Mock Patch 단절 및 픽스처 누락
+- **증상**: 기존 라우터 함수(`load_backtest_close_prices`)를 신규 공통 엔진(`UnifiedQuantEngine`)으로 위임 리팩토링한 후, 기존 단위 테스트 실행 시 `with patch("api.backtest.get_hybrid_daily_prices_batch")` 모의 데이터(20행)가 무시되고 실제 DB 시계열(245행)이 반환되어 `AssertionError: assert 245 == 20` 발생.
+- **원인**: 신규 공통 엔진 클래스가 `core.hybrid_series`의 원본 함수를 직접 참조하므로, 테스트 코드에서 상위 모듈(`api.backtest`) 네임스페이스에 건 `unittest.mock.patch`가 엔진 내부 호출로 전파되지 않음.
+- **해결**:
+  1. `UnifiedQuantEngine.get_normalized_close_matrix`에 `batch_fetcher: Optional[Any] = None` 의존성 주입(DI) 파라미터를 신설하여 `fetcher = batch_fetcher or get_hybrid_daily_prices_batch` 패턴 적용.
+  2. 상위 라우터(`api/backtest.py`)에서 `batch_fetcher=get_hybrid_daily_prices_batch`를 전달함으로써 상위 네임스페이스의 mock patch가 공통 엔진 내부로 완벽히 전파되도록 보장.
