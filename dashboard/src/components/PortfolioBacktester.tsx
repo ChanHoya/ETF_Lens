@@ -88,12 +88,17 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
     };
 
     const getHoldingsSignature = () => {
-        if (!holdings) return "";
-        return holdings
-            .filter(h => h.eval_amount > 0)
-            .map(h => `${h.code}:${h.eval_amount}`)
+        if (!holdings || holdings.length === 0) return "";
+        const today = new Date().toISOString().slice(0, 10);
+        const valid = holdings.filter(h => h.eval_amount > 0);
+        const total = valid.reduce((sum, h) => sum + h.eval_amount, 0);
+        if (total === 0) return "";
+        // 비중 기준 0.1% 단위 정규화 + 당일 날짜 결합으로 불필요한 재연산 방지
+        const normHoldings = valid
+            .map(h => `${h.code}:${Math.round((h.eval_amount / total) * 1000)}`)
             .sort()
             .join("|");
+        return `${normHoldings}_${today}`;
     };
 
     const fetchBacktest = async (force: boolean = false) => {
@@ -101,15 +106,15 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
         const cacheKey = `iprism_backtest_${sig}`;
         const insightCacheKey = `iprism_backtest_insight_${sig}`;
 
-        // 1. sessionStorage 캐시 확인 (새로고침이 아닌 경우 0ms 즉시 표시)
+        // 1. localStorage 및 sessionStorage 캐시 확인 (새로고침이 아닌 경우 0ms 즉시 표시)
         if (!force && typeof window !== "undefined" && sig) {
             try {
-                const cachedData = sessionStorage.getItem(cacheKey);
-                if (cachedData) {
-                    const parsed = JSON.parse(cachedData);
+                const cachedStr = localStorage.getItem(cacheKey) || sessionStorage.getItem(cacheKey);
+                if (cachedStr) {
+                    const parsed = JSON.parse(cachedStr);
                     setData(parsed);
                     setLoading(false);
-                    const cachedInsight = sessionStorage.getItem(insightCacheKey);
+                    const cachedInsight = localStorage.getItem(insightCacheKey) || sessionStorage.getItem(insightCacheKey);
                     if (cachedInsight) {
                         setInsightText(cachedInsight);
                         setInsightLoading(false);
@@ -146,6 +151,7 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
             setData(result);
             if (typeof window !== "undefined" && sig) {
                 try {
+                    localStorage.setItem(cacheKey, JSON.stringify(result));
                     sessionStorage.setItem(cacheKey, JSON.stringify(result));
                 } catch (_) {}
             }
@@ -290,7 +296,7 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
             </div>
             <div className="bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-md overflow-hidden p-6">
                 
-                {loading ? (
+                {loading && !data ? (
                     <div className="flex flex-col items-center justify-center p-10 h-[300px]">
                         <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
                         <p className="text-gray-400">최대 10년 치 주가 데이터를 수집 및 연산 중입니다...</p>

@@ -355,6 +355,17 @@ export default function HoldingsSignals({ isAuthorized, onOpenDetail, onAnalyzeP
     const [error, setError] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState<"eval" | "rank1m" | "rank3m" | "alpha1m">("eval");
 
+    // 1. Initial Load from localStorage cache (0ms instant render)
+    useEffect(() => {
+        if (!isAuthorized) return;
+        try {
+            const cached = localStorage.getItem('holdings_peer_analysis_cache');
+            if (cached) {
+                setData(JSON.parse(cached));
+            }
+        } catch (_) {}
+    }, [isAuthorized]);
+
     const fetchData = useCallback(async () => {
         if (!isAuthorized) return;
         setLoading(true);
@@ -362,7 +373,11 @@ export default function HoldingsSignals({ isAuthorized, onOpenDetail, onAnalyzeP
         try {
             const res = await fetch(`${API_BASE}/api/v1/my/peer-analysis`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            setData(await res.json());
+            const result = await res.json();
+            setData(result);
+            try {
+                localStorage.setItem('holdings_peer_analysis_cache', JSON.stringify(result));
+            } catch (_) {}
         } catch (e: any) {
             setError(e.message || "조회 실패");
         } finally {

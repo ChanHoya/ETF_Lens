@@ -509,12 +509,12 @@ async def seed_market_sentiment_db_if_empty():
         from sqlalchemy import select, func
         
         async with AsyncSessionLocal() as db:
-            count_res = await db.execute(select(func.count(MarketSentimentLog.id)))
+            count_res = await db.execute(select(func.count(MarketSentimentLog.id)).where(MarketSentimentLog.vix.isnot(None)))
             count = count_res.scalar()
-            if count and count > 0:
+            if count and count >= 100:
                 return
                 
-            logger.info("[DB Seeding] MarketSentimentLog is empty. Starting 3-year history seeding...")
+            logger.info("[DB Seeding] MarketSentimentLog is empty or insufficient. Starting 3-year history seeding...")
             sentiment_data, _, _, _ = await fetch_market_sentiment()
             if not sentiment_data:
                 logger.warning("[DB Seeding] No sentiment data retrieved from Yahoo, skipping seed.")
@@ -634,9 +634,9 @@ async def seed_market_macro_db_if_empty():
         from sqlalchemy import select, func
 
         async with AsyncSessionLocal() as db:
-            count = (await db.execute(select(func.count(MarketMacroLog.id)))).scalar()
-            if not count or count == 0:
-                logger.info("[DB Seeding] MarketMacroLog is empty. Starting full seeding...")
+            count = (await db.execute(select(func.count(MarketMacroLog.id)).where(MarketMacroLog.dollar_index.isnot(None)))).scalar()
+            if not count or count < 100:
+                logger.info("[DB Seeding] MarketMacroLog has insufficient records. Starting full seeding...")
                 await sync_market_macro_indicators_job(force_days=3700)
             else:
                 latest_res = await db.execute(

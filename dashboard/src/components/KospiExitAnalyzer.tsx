@@ -183,7 +183,7 @@ export default function KospiExitAnalyzer() {
 
     // Fetch Real Data on Mount with LocalStorage Caching (0ms load + background update)
     useEffect(() => {
-        // 1. Try to load cached data from localStorage for instant 0ms render
+        let hasCache = false;
         try {
             const cachedMain = localStorage.getItem('kospi_exit_main_data');
             const cachedCli = localStorage.getItem('kospi_exit_cli_data');
@@ -219,7 +219,8 @@ export default function KospiExitAnalyzer() {
                     if (data.current_status.hy_spread !== undefined) setHySpreadValue(data.current_status.hy_spread);
                 }
                 setApiLoaded(true);
-                setLoading(false); // Disable loading overlay immediately!
+                setLoading(false); // 0ms 즉시 표시
+                hasCache = true;
             }
 
             if (cachedCli) {
@@ -238,10 +239,10 @@ export default function KospiExitAnalyzer() {
             console.warn("Failed to load exit-signal cache:", cacheErr);
         }
 
-        // 2. Fetch fresh data from API in background to update the cache
+        // 2. Fetch fresh data from API in background (SWR pattern)
         const fetchData = async () => {
-            // 전체 로딩 상태는 초기 진입(전체 조회) 시에만 적용
-            if (!selectedDate) {
+            // 캐시가 없을 때만 전체 로딩 상태 적용 (캐시가 있으면 0ms 즉시 렌더 후 백그라운드 갱신)
+            if (!selectedDate && !hasCache) {
                 setLoading(true);
             }
             try {

@@ -166,22 +166,26 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
     const [showInfoModal, setShowInfoModal] = useState<boolean>(false);
 
     const getHoldingsSignature = useCallback(() => {
-        if (!holdings) return "";
-        return holdings
-            .filter((h: any) => h.eval_amount > 0)
-            .map((h: any) => `${h.code}:${h.eval_amount}`)
+        if (!holdings || holdings.length === 0) return "";
+        const today = new Date().toISOString().slice(0, 10);
+        const valid = holdings.filter((h: any) => h.eval_amount > 0);
+        const total = valid.reduce((sum: number, h: any) => sum + Number(h.eval_amount), 0);
+        if (total === 0) return "";
+        const norm = valid
+            .map((h: any) => `${h.code}:${Math.round((Number(h.eval_amount) / total) * 1000)}`)
             .sort()
             .join("|");
+        return `${norm}_${today}`;
     }, [holdings]);
 
     const handleRun = useCallback(async (force: boolean = false) => {
         const sig = getHoldingsSignature();
         const cacheKey = `iprism_ef_${sig}_${lookbackYears}_${riskFreeRate}`;
 
-        // 1. sessionStorage 캐시 확인 (새로고침이 아닌 경우 0ms 즉시 표시)
+        // 1. localStorage 및 sessionStorage 캐시 확인 (새로고침이 아닌 경우 0ms 즉시 표시)
         if (!force && typeof window !== "undefined" && sig) {
             try {
-                const cached = sessionStorage.getItem(cacheKey);
+                const cached = localStorage.getItem(cacheKey) || sessionStorage.getItem(cacheKey);
                 if (cached) {
                     setResult(JSON.parse(cached));
                     setIsLoading(false);
@@ -221,6 +225,7 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
             setResult(data as EFResult);
             if (typeof window !== "undefined" && sig) {
                 try {
+                    localStorage.setItem(cacheKey, JSON.stringify(data));
                     sessionStorage.setItem(cacheKey, JSON.stringify(data));
                 } catch (_) {}
             }
@@ -239,7 +244,7 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
         if (typeof window !== "undefined" && sig && !result) {
             const cacheKey = `iprism_ef_${sig}_${lookbackYears}_${riskFreeRate}`;
             try {
-                const cached = sessionStorage.getItem(cacheKey);
+                const cached = localStorage.getItem(cacheKey) || sessionStorage.getItem(cacheKey);
                 if (cached) {
                     setResult(JSON.parse(cached));
                 }
@@ -343,7 +348,7 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
             </div>
 
             {/* ─── 로딩 상태 ─── */}
-            {isLoading && (
+            {isLoading && !result && (
                 <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-16 flex flex-col items-center justify-center gap-5 min-h-[300px]">
                     <div className="relative">
                         <div className="absolute inset-0 bg-sky-500/20 blur-2xl rounded-full" />

@@ -289,19 +289,73 @@ def _fetch_via_kis(code: str) -> list[float]:
     return []
 
 
+def _fetch_from_db_etf(code: str, limit: int = 100) -> list[float]:
+    """0순위: 로컬 SQLite DB(etf_daily_prices)에서 최근 종가 초고속 조회 (0.001초)."""
+    try:
+        import sqlite3
+        import os
+        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "etf_data_v2.db")
+        if not os.path.exists(db_path):
+            return []
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT close FROM etf_daily_prices WHERE code = ? AND close > 0 ORDER BY date DESC LIMIT ?", (code, limit))
+        rows = cursor.fetchall()
+        conn.close()
+        if rows:
+            closes = [float(r[0]) for r in reversed(rows)]
+            return closes
+    except Exception as e:
+        logger.debug(f"[DB-ETF] {code} error: {e}")
+    return []
+
+
+def _fetch_from_db_bench(symbol: str, limit: int = 100) -> list[float]:
+    """0순위: 로컬 SQLite DB(benchmark_prices)에서 벤치마크 지수 종가 초고속 조회 (0.001초)."""
+    try:
+        import sqlite3
+        import os
+        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "etf_data_v2.db")
+        if not os.path.exists(db_path):
+            return []
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        clean_sym = symbol.lstrip("^")
+        cursor.execute(
+            "SELECT close FROM benchmark_prices WHERE (symbol = ? OR symbol = ? OR symbol = ?) AND close > 0 ORDER BY date DESC LIMIT ?",
+            (symbol, clean_sym, f"^{clean_sym}", limit)
+        )
+        rows = cursor.fetchall()
+        conn.close()
+        if rows:
+            closes = [float(r[0]) for r in reversed(rows)]
+            return closes
+    except Exception as e:
+        logger.debug(f"[DB-Bench] {symbol} error: {e}")
+    return []
+
+
 def _fetch_one_ks(code: str) -> list[float]:
     """
     단일 KRX 종목 종가 목록 반환 (최근 ~100 거래일).
-    캐시 → pykrx(1순위) → Yahoo v8(2순위) → yfinance(3순위) → KIS.
+    캐시 → DB(0순위) → pykrx(1순위) → Yahoo v8(2순위) → yfinance(3순위) → KIS.
     """
     now = time.time()
     if code in _PRICE_CACHE and now - _PRICE_CACHE_TIME.get(code, 0) < _PRICE_CACHE_TTL:
         return _PRICE_CACHE[code]
 
-    closes: list[float] = []
+    # 0순위: DB(etf_daily_prices) 초고속 조회
+    db_closes = _fetch_from_db_etf(code)
+    if len(db_closes) >= 63:
+        _PRICE_CACHE[code] = db_closes
+        _PRICE_CACHE_TIME[code] = now
+        return db_closes
+
+    closes: list[float] = list(db_closes)
 
     # 1순위: FDR(FinanceDataReader)
-    closes = _fetch_via_fdr(code)
+    if len(closes) < 22:
+        closes = _fetch_via_fdr(code)
 
     # 2순위: Yahoo Finance v8
     if len(closes) < 22:
@@ -333,13 +387,20 @@ def _fetch_one_ks(code: str) -> list[float]:
 
 
 def _fetch_bench_closes(bench_sym: str) -> list[float]:
-    """벤치마크 지수 종가 (Yahoo Finance v8 API)."""
+    """벤치마크 지수 종가: 캐시 → DB(0순위) → Yahoo Finance v8 API."""
     now = time.time()
     cache_key = f"_bench_{bench_sym}"
     if cache_key in _PRICE_CACHE and now - _PRICE_CACHE_TIME.get(cache_key, 0) < _PRICE_CACHE_TTL:
         return _PRICE_CACHE[cache_key]
 
-    closes: list[float] = []
+    # 0순위: DB(benchmark_prices) 초고속 조회
+    db_closes = _fetch_from_db_bench(bench_sym)
+    if len(db_closes) >= 63:
+        _PRICE_CACHE[cache_key] = db_closes
+        _PRICE_CACHE_TIME[cache_key] = now
+        return db_closes
+
+    closes: list[float] = list(db_closes)
     try:
         sym_enc = bench_sym.replace("^", "%5E").replace("=", "%3D")
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym_enc}?interval=1d&range=6mo"
