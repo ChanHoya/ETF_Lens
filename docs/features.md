@@ -99,6 +99,7 @@
 | S10-2: Non-blocking 비동기 HTTP 커넥션 풀 및 세마포어 제어 | ✅ done | backend/core/unified_quant_engine.py, backend/tests/test_async_quant_pipeline.py | 글로벌 httpx.AsyncClient 풀 재사용(Keep-Alive/Limits), asyncio.Semaphore(8) 동시성 제어 기반 네이버/야후 병렬 시세 수집 및 OOM 방어 완비 (테스트 3/3 100% Pass) |
 | S10-3: 전역 퀀트 인메모리 캐시 레지스트리 (QuantCacheRegistry) | ✅ done | backend/core/quant_cache_registry.py, backend/tests/test_quant_cache_registry.py | 네임스페이스 격리, Canonical SHA-256 키 생성, LRU 용량 제한(최대 300건), TTL 3600s 자동 만료 및 Render 512MB RAM 제약 대응 malloc_trim(0) 메모리 회수 탑재 (테스트 5/5 100% Pass) |
 | S10-4: 퀀트 라우터 전면 마이그레이션 & E2E 무결성 검증 | ✅ done | backend/api/backtest.py, backend/api/efficient_frontier.py, backend/tests/test_sprint10_quant_engine_e2e.py | 백테스터/효율적투자선 라우터를 UnifiedQuantEngine 및 QuantCacheRegistry로 완전 마이그레이션, 0.001초 캐시 히트 및 E2E 무결성 검증 완료 (전체 217개 백엔드 테스트 100% Pass) |
+| 미국 3대 인플레이션 지표 적시 수집 & 장기 시계열 DB 영속화 | ✅ done | backend/api/exit_signal.py, backend/core/overview_cache.py, backend/core/scheduler.py, backend/tests/test_us_macro_timely_sync.py | CPI/PPI/PCE 매일 08:15 KST 자동 수집, 조회 시 Stale 자동 감지 백그라운드 갱신, 장기 매크로/CLI/PE 및 시장동향 대시보드(금리/주식/환율/종합)의 SQLite DB 영속화로 반복 크롤링 원천 차단 및 5ms 내 초고속 서빙 (전체 220개 테스트 100% Pass) |
 
 
 

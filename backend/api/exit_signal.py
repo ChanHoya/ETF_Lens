@@ -652,20 +652,60 @@ async def seed_market_macro_db_if_empty():
         logger.error(f"[DB Seeding] MarketMacroLog check failed: {e}")
 
 
-async def seed_us_macro_db_if_empty():
+_last_us_macro_check_ts = 0.0
+
+async def seed_us_macro_db_if_empty(force: bool = False):
+    """
+    USMacroIndicatorLog가 비어있거나, 최신 발표 주기(전월치 기준 매월 10일 이후 CPI, 25일 이후 PCE 등)에
+    맞추어 데이터가 stale한 경우 FRED에서 자동 동기화합니다.
+    """
+    global _last_us_macro_check_ts
+    import time
+    now_ts = time.time()
+    if not force and (now_ts - _last_us_macro_check_ts < 3600):  # 최소 1시간 쿨다운
+        return
+
     try:
         from db.database import AsyncSessionLocal
         from db.models import USMacroIndicatorLog
         from sqlalchemy import select, func
         
+        _last_us_macro_check_ts = now_ts
+        now_dt = _kst_now()
+        cur_year, cur_month = now_dt.year, now_dt.month
+        prev_ym = f"{cur_year - 1}-12" if cur_month == 1 else f"{cur_year}-{cur_month - 1:02d}"
+
         async with AsyncSessionLocal() as db:
             count_res = await db.execute(select(func.count(USMacroIndicatorLog.id)))
             count = count_res.scalar()
-            if count and count > 0:
+            if not count or count == 0:
+                logger.info("[DB Seeding] USMacroIndicatorLog is empty. Starting FRED US macro seeding...")
+                await sync_us_macro_indicators_job()
                 return
-                
-            logger.info("[DB Seeding] USMacroIndicatorLog is empty. Starting FRED US macro seeding...")
-            await sync_us_macro_indicators_job()
+
+            latest_res = await db.execute(
+                select(USMacroIndicatorLog).order_by(USMacroIndicatorLog.date.desc()).limit(1)
+            )
+            latest_rec = latest_res.scalar()
+            if not latest_rec:
+                await sync_us_macro_indicators_job()
+                return
+
+            should_sync = False
+            # 매월 10일 이후이고 최신 레코드 date가 prev_ym보다 이전이거나, cpi_yoy가 비어있다면 업데이트 필요
+            if now_dt.day >= 10:
+                if latest_rec.date < prev_ym:
+                    should_sync = True
+                elif latest_rec.date == prev_ym and latest_rec.cpi_yoy is None:
+                    should_sync = True
+
+            # 매월 25일 이후이고 pce_yoy가 비어있다면 업데이트 필요
+            if now_dt.day >= 25 and latest_rec.date == prev_ym and latest_rec.pce_yoy is None:
+                should_sync = True
+
+            if should_sync:
+                logger.info(f"[US Macro Sync] Stale detected (latest={latest_rec.date}, expected={prev_ym}). Triggering FRED sync...")
+                await sync_us_macro_indicators_job()
     except Exception as e:
         logger.error(f"[DB Seeding] US Macro seeding check failed: {e}")
 
@@ -1086,8 +1126,12 @@ async def debug_dx():
 
 
 @router.get("/macro")
-
 async def get_macro_detail(period: str = "1Y"):
+    """
+    KOSPI Exit Analyzer 하단 달러/환율/코스피/S&P500 장기 시계열 반환.
+    DB(MarketMacroLog, MarketSentimentLog) 우선 조회로 5ms 내 초고속 서빙하며,
+    과거 데이터는 1회 크롤링 후 영구 저장되어 반복 크롤링을 방지합니다.
+    """
     global _macro_cache
 
     cache_key = f"daily_{period}"
@@ -1098,25 +1142,127 @@ async def get_macro_detail(period: str = "1Y"):
         return _macro_cache[cache_key]["data"]
 
     try:
-        # Map period to days lookback
+        from db.database import AsyncSessionLocal
+        from db.models import MarketMacroLog, MarketSentimentLog
+        from sqlalchemy import select
+
+        # 기간별 일수 계산
         period_days = {"6m": 185, "1y": 370, "3y": 1100, "10y": 3700}
         days = period_days.get(period.lower(), 370)
+        cutoff_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
 
-        # FRED(달러인덱스) + Yahoo v8(KRW, KOSPI, S&P500) 병렬 수집
+        # 1. DB 우선 조회
+        async with AsyncSessionLocal() as db:
+            macro_stmt = select(MarketMacroLog).where(MarketMacroLog.date >= cutoff_date).order_by(MarketMacroLog.date.asc())
+            macro_rows = (await db.execute(macro_stmt)).scalars().all()
+
+            sent_stmt = select(MarketSentimentLog).where(MarketSentimentLog.date >= cutoff_date).order_by(MarketSentimentLog.date.asc())
+            sent_rows = (await db.execute(sent_stmt)).scalars().all()
+
+        # DB에 데이터가 충분히 존재할 경우 DB 기반 초고속 반환 (영업일 기준 20% 이상)
+        expected_min_rows = max(5, int(days * 0.2))
+        if len(macro_rows) >= expected_min_rows or len(sent_rows) >= expected_min_rows:
+            dx_dict = {r.date: r.dollar_index for r in macro_rows if r.dollar_index is not None}
+            krw_dict = {r.date: r.krw for r in macro_rows if r.krw is not None}
+            k_dict = {r.date: r.kospi for r in sent_rows if r.kospi is not None}
+            g_dict = {r.date: r.sp500 for r in sent_rows if r.sp500 is not None}
+
+            all_dates = sorted(set(dx_dict) | set(krw_dict) | set(k_dict) | set(g_dict))
+            if all_dates:
+                # 최신 날짜가 2영업일 이상 지났으면 백그라운드로 최신화 트리거
+                latest_d_str = all_dates[-1]
+                try:
+                    latest_d = datetime.strptime(latest_d_str, "%Y-%m-%d").date()
+                    if (_kst_now().date() - latest_d).days >= 2:
+                        asyncio.create_task(sync_market_macro_indicators_job())
+                except Exception:
+                    pass
+
+                def _ffill_dict(d: dict, dates: list[str]) -> dict[str, float]:
+                    last = None
+                    res = {}
+                    for dt in dates:
+                        if dt in d:
+                            last = d[dt]
+                        if last is not None:
+                            res[dt] = last
+                    return res
+
+                dx_ff = _ffill_dict(dx_dict, all_dates)
+                krw_ff = _ffill_dict(krw_dict, all_dates)
+                k_ff = _ffill_dict(k_dict, all_dates)
+                g_ff = _ffill_dict(g_dict, all_dates)
+
+                results = []
+                for d_str in all_dates:
+                    results.append({
+                        "date": d_str,
+                        "dollar": round(dx_ff[d_str], 2) if d_str in dx_ff else None,
+                        "krw": round(krw_ff[d_str], 0) if d_str in krw_ff else None,
+                        "kospi": round(k_ff[d_str], 0) if d_str in k_ff else None,
+                        "sp500": round(g_ff[d_str], 0) if d_str in g_ff else None,
+                    })
+
+                _macro_cache[cache_key] = {"data": results, "timestamp": now}
+                logger.info(f"[DB Fast-Path] macro_detail from DB OK: {len(results)} rows (period={period})")
+                return results
+
+        # 2. DB에 데이터가 부족한 경우 외부에서 일괄 수집 후 DB에 영구 적재
+        logger.info(f"[macro_detail] DB lacks data (macro={len(macro_rows)}, sent={len(sent_rows)}). Fetching external...")
         dx_dict, krw_dict, k_dict, g_dict = await asyncio.gather(
             _fetch_fred_series("DTWEXBGS", days=days),
             _fetch_yahoo_v8("KRW=X", days=days),
-            _fetch_yahoo_v8("%5EKS11", days=days),   # ^KS11 URL 인코딩
-            _fetch_yahoo_v8("%5EGSPC", days=days),   # ^GSPC URL 인코딩
+            _fetch_yahoo_v8("%5EKS11", days=days),
+            _fetch_yahoo_v8("%5EGSPC", days=days),
         )
 
-        # 모든 날짜 합집합
         all_dates = sorted(set(dx_dict) | set(krw_dict) | set(k_dict) | set(g_dict))
         if not all_dates:
             logger.warning("macro_detail: no data from any source")
             return []
 
-        # ffill 구현 (이전 유효값 유지)
+        # DB에 영구 저장 (백그라운드로 upsert)
+        async def _save_macro_to_db():
+            try:
+                from db.database import AsyncSessionLocal
+                from db.models import MarketMacroLog, MarketSentimentLog
+                async with AsyncSessionLocal() as db:
+                    exist_macro_stmt = select(MarketMacroLog).where(MarketMacroLog.date.in_(all_dates))
+                    exist_macros = {r.date: r for r in (await db.execute(exist_macro_stmt)).scalars().all()}
+                    new_macros = []
+                    for d in all_dates:
+                        dx_val = dx_dict.get(d)
+                        krw_val = krw_dict.get(d)
+                        if d in exist_macros:
+                            rec = exist_macros[d]
+                            if dx_val is not None: rec.dollar_index = dx_val
+                            if krw_val is not None: rec.krw = krw_val
+                        elif dx_val is not None or krw_val is not None:
+                            new_macros.append(MarketMacroLog(date=d, dollar_index=dx_val, krw=krw_val))
+                    if new_macros:
+                        db.add_all(new_macros)
+
+                    exist_sent_stmt = select(MarketSentimentLog).where(MarketSentimentLog.date.in_(all_dates))
+                    exist_sents = {r.date: r for r in (await db.execute(exist_sent_stmt)).scalars().all()}
+                    new_sents = []
+                    for d in all_dates:
+                        k_val = k_dict.get(d)
+                        g_val = g_dict.get(d)
+                        if d in exist_sents:
+                            rec = exist_sents[d]
+                            if k_val is not None: rec.kospi = k_val
+                            if g_val is not None: rec.sp500 = g_val
+                        elif k_val is not None or g_val is not None:
+                            new_sents.append(MarketSentimentLog(date=d, kospi=k_val, sp500=g_val))
+                    if new_sents:
+                        db.add_all(new_sents)
+
+                    await db.commit()
+            except Exception as save_err:
+                logger.error(f"Failed to persist crawled macro series: {save_err}")
+
+        asyncio.create_task(_save_macro_to_db())
+
         def _ffill_dict(d: dict, dates: list[str]) -> dict[str, float]:
             last = None
             result: dict[str, float] = {}
@@ -1142,11 +1288,12 @@ async def get_macro_detail(period: str = "1Y"):
                 "sp500":  round(g_ff[date_str],   0) if date_str in g_ff   else None,
             })
 
-        # dollar 있는 항목만 카운트 (로그)
-        n_dollar = sum(1 for r in results if r["dollar"] is not None)
-        logger.info(f"macro_detail OK: {len(results)} rows, dollar={n_dollar}, period={period}")
         _macro_cache[cache_key] = {"data": results, "timestamp": now}
+        logger.info(f"macro_detail OK: {len(results)} rows, period={period}")
         return results
+    except Exception as e:
+        logger.error(f"Error fetching macro detail: {e}", exc_info=True)
+        return []
     except Exception as e:
         logger.error(f"Error fetching macro detail: {e}", exc_info=True)
         return []
@@ -1182,6 +1329,25 @@ async def get_cli_detail():
     now = datetime.now().timestamp()
     if "data" in _cli_cache and (now - _cli_cache.get("timestamp", 0) < _get_cache_ttl()):
         return _cli_cache["data"]
+
+    # 1. DB ExitSignalCache 확인 (초고속 DB 서빙)
+    try:
+        from db.database import AsyncSessionLocal
+        from db.models import ExitSignalCache
+        from sqlalchemy import select
+        import json
+        async with AsyncSessionLocal() as db:
+            cache_stmt = select(ExitSignalCache).where(ExitSignalCache.target_ym == "CLI_DETAIL")
+            cache_row = (await db.execute(cache_stmt)).scalar()
+            if cache_row:
+                age = (datetime.utcnow() - cache_row.updated_at).total_seconds()
+                if age < 86400:  # 1일간 DB 캐시 즉시 유효
+                    cached_data = json.loads(cache_row.data_json)
+                    _cli_cache = {"data": cached_data, "timestamp": now}
+                    logger.info(f"[DB Fast-Path] CLI detail from ExitSignalCache OK: {len(cached_data)} months")
+                    return cached_data
+    except Exception as db_cache_err:
+        logger.warning(f"Failed to read CLI from ExitSignalCache: {db_cache_err}")
 
     try:
         end_date = datetime.now()
@@ -1294,6 +1460,26 @@ async def get_cli_detail():
 
         _cli_cache = {"data": filled_results, "timestamp": now}
         logger.info(f"CLI detail OK: {len(filled_results)} months")
+
+        # DB ExitSignalCache에 영구 저장
+        async def _save_cli_cache():
+            try:
+                from db.database import AsyncSessionLocal
+                from db.models import ExitSignalCache
+                from sqlalchemy import select
+                import json
+                async with AsyncSessionLocal() as db:
+                    cache_stmt = select(ExitSignalCache).where(ExitSignalCache.target_ym == "CLI_DETAIL")
+                    cache_row = (await db.execute(cache_stmt)).scalar()
+                    if cache_row:
+                        cache_row.data_json = json.dumps(filled_results)
+                    else:
+                        db.add(ExitSignalCache(target_ym="CLI_DETAIL", data_json=json.dumps(filled_results)))
+                    await db.commit()
+            except Exception as e:
+                logger.warning(f"Failed to save CLI to ExitSignalCache: {e}")
+        asyncio.create_task(_save_cli_cache())
+
         return filled_results
 
     except Exception as e:
@@ -1311,6 +1497,25 @@ async def get_pe_detail(symbol: str = "005930", target_ym: str = None):
     3. Naver Finance 크롤링
     4. 종목별 합리적 기본값 (하드코딩 12.2 개선)
     """
+    cache_db_key = f"PE_DETAIL_{symbol}_{target_ym or 'CURRENT'}"
+    # 1. DB ExitSignalCache 확인
+    try:
+        from db.database import AsyncSessionLocal
+        from db.models import ExitSignalCache
+        from sqlalchemy import select
+        import json
+        async with AsyncSessionLocal() as db:
+            cache_stmt = select(ExitSignalCache).where(ExitSignalCache.target_ym == cache_db_key)
+            cache_row = (await db.execute(cache_stmt)).scalar()
+            if cache_row:
+                age = (datetime.utcnow() - cache_row.updated_at).total_seconds()
+                if age < 43200:  # 12시간 내 DB 캐시 즉시 유효
+                    cached_data = json.loads(cache_row.data_json)
+                    logger.info(f"[DB Fast-Path] PE detail from ExitSignalCache OK ({symbol}): {len(cached_data)} pts")
+                    return cached_data
+    except Exception as db_cache_err:
+        logger.warning(f"Failed to read PE from ExitSignalCache: {db_cache_err}")
+
     try:
         is_kospi_index = symbol in ["KOSPI", "0001"]
         tkr = "^KS11" if is_kospi_index else f"{symbol}.KS"
@@ -1450,11 +1655,25 @@ async def get_pe_detail(symbol: str = "005930", target_ym: str = None):
         
         logger.info(f"PE detail for {symbol}: {len(results)} pts, pe={real_pe:.1f}, last={results[-1]['val'] if results else 'N/A'}")
         
-        if target_ym:
-            # get_exit_signal_data expects monthly data (last element per month) for 12 months, or just the current status.
-            # actually get_pe_detail returns daily? no, it returns daily but get_exit_signal_data just takes the last one for current_status.
-            pass
-            
+        # DB ExitSignalCache에 저장
+        async def _save_pe_cache():
+            try:
+                from db.database import AsyncSessionLocal
+                from db.models import ExitSignalCache
+                from sqlalchemy import select
+                import json
+                async with AsyncSessionLocal() as db:
+                    cache_stmt = select(ExitSignalCache).where(ExitSignalCache.target_ym == cache_db_key)
+                    cache_row = (await db.execute(cache_stmt)).scalar()
+                    if cache_row:
+                        cache_row.data_json = json.dumps(results)
+                    else:
+                        db.add(ExitSignalCache(target_ym=cache_db_key, data_json=json.dumps(results)))
+                    await db.commit()
+            except Exception as e:
+                logger.warning(f"Failed to save PE to ExitSignalCache: {e}")
+        asyncio.create_task(_save_pe_cache())
+
         return results
     except Exception as e:
         logger.error(f"Error fetching PE detail for {symbol}: {e}")
@@ -1601,7 +1820,8 @@ async def sync_us_macro_indicators_job() -> bool:
 
 @router.get("/macro/us")
 async def get_us_macro_indicators():
-    """DB에 캐싱된 10년 치 월별 미국 경기지표(CPI, PPI, PCE YoY) 시계열 데이터 반환"""
+    """DB에 캐싱된 10년 치 월별 미국 경기지표(CPI, PPI, PCE YoY) 시계열 데이터 반환.
+    Stale 데이터 자동 감지 시 백그라운드에서 Self-healing 자동 갱신 트리거."""
     try:
         from db.database import AsyncSessionLocal
         from db.models import USMacroIndicatorLog
@@ -1613,6 +1833,20 @@ async def get_us_macro_indicators():
                 .order_by(USMacroIndicatorLog.date.asc())
             )
             records = result.scalars().all()
+
+        # Self-healing Gap-fill 검사
+        if not records:
+            asyncio.create_task(sync_us_macro_indicators_job())
+        else:
+            latest_rec = records[-1]
+            now_dt = _kst_now()
+            cur_year, cur_month = now_dt.year, now_dt.month
+            prev_ym = f"{cur_year - 1}-12" if cur_month == 1 else f"{cur_year}-{cur_month - 1:02d}"
+
+            # 매월 10일 이후인데 최신월이 전월보다 이전이거나 전월의 cpi_yoy가 비어있다면 백그라운드 수집
+            if now_dt.day >= 10 and (latest_rec.date < prev_ym or (latest_rec.date == prev_ym and latest_rec.cpi_yoy is None)):
+                logger.info(f"[get_us_macro_indicators] Stale detected (latest={latest_rec.date}). Triggering background sync.")
+                asyncio.create_task(sync_us_macro_indicators_job())
             
         return [
             {

@@ -749,8 +749,8 @@ def setup_scheduler():
     # 21:00 - ETF 수익률/변동성/샤프 계산 (price sync 완료 후 실행)
     scheduler.add_job(_job_perf, "cron", hour=21, minute=0, id="daily_perf_calc")
 
-    # 매월 1일 08:00 - 미국 매크로 지표 동기화
-    scheduler.add_job(_job_macro, "cron", day=1, hour=8, minute=0, id="monthly_us_macro_sync")
+    # 매일 08:15 - 미국 매크로 지표(CPI, PPI, PCE 등) 발표 익일 적시 동기화
+    scheduler.add_job(_job_macro, "cron", hour=8, minute=15, id="daily_us_macro_sync")
 
     # 월-금 09:10 (Market Open) 및 15:15 (Market Close) 실행
     scheduler.add_job(_job_disparity, "cron", day_of_week="mon-fri", hour=9, minute=10, id="market_open_disparity_check")

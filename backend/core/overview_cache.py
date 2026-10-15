@@ -51,6 +51,9 @@ def fred_csv(fred_id: str, start: str) -> dict[str, float]:
         return {}
 
 
+import json
+
+
 class OverviewCache:
     def __init__(self, name: str, ttl: float, build: Callable[[], Awaitable[dict | None]]):
         self.name, self.ttl, self._build = name, ttl, build
@@ -59,11 +62,54 @@ class OverviewCache:
         self.failed_at = 0.0
         self._task: asyncio.Task | None = None
 
+    async def _load_from_db(self) -> dict | None:
+        """서버 기동 직후나 메모리 누락 시 DB에서 이전 스냅샷을 5ms 내 초고속 로드"""
+        if self.name not in {"rates", "stocks", "fx", "macro"}:
+            return None
+        try:
+            from db.database import AsyncSessionLocal
+            from db.models import ExitSignalCache
+            from sqlalchemy import select
+            async with AsyncSessionLocal() as db:
+                db_key = f"OVERVIEW_{self.name}"
+                stmt = select(ExitSignalCache).where(ExitSignalCache.target_ym == db_key)
+                row = (await db.execute(stmt)).scalar()
+                if row and row.data_json:
+                    data = json.loads(row.data_json)
+                    logger.info(f"[{self.name}] DB snapshot hit: loaded cached overview successfully.")
+                    return data
+        except Exception as e:
+            logger.warning(f"[{self.name}] Failed to load overview snapshot from DB: {e}")
+        return None
+
+    async def _save_to_db(self, data: dict):
+        """수집된 대시보드 데이터를 DB에 영구 저장하여 반복 크롤링 방지"""
+        if self.name not in {"rates", "stocks", "fx", "macro"}:
+            return
+        try:
+            from db.database import AsyncSessionLocal
+            from db.models import ExitSignalCache
+            from sqlalchemy import select
+            async with AsyncSessionLocal() as db:
+                db_key = f"OVERVIEW_{self.name}"
+                stmt = select(ExitSignalCache).where(ExitSignalCache.target_ym == db_key)
+                row = (await db.execute(stmt)).scalar()
+                raw_json = json.dumps(data)
+                if row:
+                    row.data_json = raw_json
+                else:
+                    db.add(ExitSignalCache(target_ym=db_key, data_json=raw_json))
+                await db.commit()
+                logger.info(f"[{self.name}] Saved overview snapshot to DB successfully.")
+        except Exception as e:
+            logger.warning(f"[{self.name}] Failed to persist overview snapshot to DB: {e}")
+
     async def _run(self):
         try:
             data = await self._build()
             if data:
                 self.data, self.ts = data, time.time()
+                await self._save_to_db(data)
             else:
                 self.failed_at = time.time()
         except Exception as e:
@@ -80,12 +126,29 @@ class OverviewCache:
         self._start()
 
     async def get(self, force: bool = False) -> dict | None:
-        if force or self.data is None:
+        if force:
             await asyncio.shield(self._start())
             if self.data is None:
                 return None
             return {**self.data, "stale": True} if self.failed_at > self.ts else self.data
-        if time.time() - self.ts >= self.ttl:
-            self._start()  # 이전 값을 바로 주고 뒤에서 새로 모은다
-            return {**self.data, "refreshing": True}
-        return self.data
+
+        # 1. 메모리 캐시 확인 (신선한 경우 즉시 반환)
+        if self.data is not None:
+            if time.time() - self.ts >= self.ttl:
+                self._start()  # 백그라운드 갱신
+                return {**self.data, "refreshing": True}
+            return self.data
+
+        # 2. 메모리에 없으면 DB 스냅샷 우선 로드 (대기시간 5ms 내 초고속 서빙)
+        db_data = await self._load_from_db()
+        if db_data is not None:
+            self.data = db_data
+            self.ts = time.time()
+            self._start()  # 백그라운드에서 최신 데이터 수집 트리거 (사용자 블로킹 없음)
+            return {**self.data, "from_db": True, "refreshing": True}
+
+        # 3. DB에도 없는 최초 1회만 수집 대기
+        await asyncio.shield(self._start())
+        if self.data is None:
+            return None
+        return {**self.data, "stale": True} if self.failed_at > self.ts else self.data

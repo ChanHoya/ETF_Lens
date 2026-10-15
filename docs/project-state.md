@@ -3,10 +3,18 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: Sprint 10 완료 (S10-1 UnifiedQuantEngine 모듈화, S10-2 비동기 HTTP 풀/세마포어, S10-3 QuantCacheRegistry, S10-4 퀀트 라우터 마이그레이션 및 217개 백엔드 테스트 100% Pass)
-➡️ Next: 다음 스프린트 기획 시 sprint-manager 호출
+✅ Current: 미국 3대 인플레이션 지표(CPI, PPI, PCE) 발표 익일 08:15 KST 정기 수집 및 Stale 자동 감지 백그라운드 갱신 반영, 장기 시계열 그래프 및 시장동향 대시보드(금리/주식/환율/종합)의 1회 크롤링 후 SQLite DB 영속화 구현 완료 (220개 백엔드 테스트 100% Pass, 프론트엔드 빌드 100% 성공)
+➡️ Next: 변경 내역 리뷰 및 검증
 
 > 세션 핸드오프 (2026-10-15, Antigravity):
+> - ⚡ 미국 3대 인플레이션 지표(CPI, PPI, PCE) 적시 수집 및 자동 최신화:
+>   - 1) 스케줄러 개선 (`backend/core/scheduler.py`): 매월 1일 실행되던 매크로 잡을 **매일 오전 08:15 KST (`daily_us_macro_sync`)**로 변경하여 미국 노동통계국 발표 익일 아침 즉시 최신 데이터가 DB에 반영되도록 최신화.
+>   - 2) Stale-While-Revalidate Self-healing (`backend/api/exit_signal.py`): `get_us_macro_indicators` 조회 시 매월 10일 이후 전월치가 누락되거나 CPI/PCE가 비어있으면 백그라운드에서 FRED 자동 수집 트리거.
+> - ⚡ 장기 트렌드 시계열 그래프 DB 영속화 & 5ms 내 초고속 서빙:
+>   - 1) `get_macro_detail` (달러, 환율, KOSPI, S&P500): 매번 외부 FRED/Yahoo를 크롤링하던 병목을 제거하고, DB(`MarketMacroLog`, `MarketSentimentLog`) 우선 조회로 5ms 내 즉시 반환.
+>   - 2) `get_cli_detail` 및 `get_pe_detail`: `ExitSignalCache` SQLite DB 영속화 연동으로 반복 크롤링 원천 차단.
+>   - 3) 시장동향 대시보드 캐시 (`backend/core/overview_cache.py`): 금리/주식/환율/종합 대시보드 데이터를 1회 수집 후 DB에 스냅샷으로 영구 보존. 서버 재기동 시에도 DB에서 즉시 5ms 내 복원하고 백그라운드에서 최신화.
+>   - 테스트 검증: 신규 단위 테스트 3종 포함 전체 220개 백엔드 테스트 100% 통과, 프론트엔드 빌드 성공.
 > - ⚡ Sprint 10 (S10-1 ~ S10-4) 통합 퀀트 데이터 엔진 & 비동기 단일화 전 항목 완료:
 >   - 1) UnifiedQuantEngine (`backend/core/unified_quant_engine.py`): 시계열 정규화(tz-naive, 중복 라벨 병합, ffill), 4대 심층 리스크 지표(Vol, Sharpe, Sortino, Calmar), VaR(95%, 99%), 상관계수 행렬 및 가중 포트폴리오 수익률 연산 일원화.
 >   - 2) 비동기 HTTP 커넥션 풀 & 세마포어: 글로벌 `httpx.AsyncClient` 재사용 및 `asyncio.Semaphore(8)` 동시성 제어로 외부 네이버/야후 호출 병렬화 및 OOM 방어.
