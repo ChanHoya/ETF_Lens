@@ -17,57 +17,95 @@ from sqlalchemy import select, delete
 
 @pytest.mark.asyncio
 async def test_us_macro_stale_detection_and_get():
-    """미국 매크로 지표 최신 발표치 반영 및 Stale 감지 테스트"""
+    """미국 매크로 지표 최신 발표치 반영 및 Stale 감지 테스트 (실제 DB 데이터 보존)"""
+    backup_records = []
     async with AsyncSessionLocal() as db:
-        # 테스트용 USMacroIndicatorLog 준비
-        await db.execute(delete(USMacroIndicatorLog))
-        # 2026-08 데이터만 존재하고 2026-09(최신 CPI)가 누락된 상황 모의
-        db.add(USMacroIndicatorLog(date="2026-08", cpi_yoy=3.42, ppi_yoy=9.8, pce_yoy=3.0))
-        await db.commit()
+        # 기존 DB 데이터 백업
+        res = await db.execute(select(USMacroIndicatorLog))
+        for r in res.scalars().all():
+            backup_records.append({
+                "date": r.date,
+                "cpi_yoy": r.cpi_yoy,
+                "ppi_yoy": r.ppi_yoy,
+                "pce_yoy": r.pce_yoy
+            })
 
-    with patch("api.exit_signal.sync_us_macro_indicators_job", new_callable=AsyncMock) as mock_sync:
-        mock_sync.return_value = True
-        
-        # 10일 이후 시점 가정 -> 2026-09 결측 감지되어 백그라운드 sync 트리거 확인
-        await seed_us_macro_db_if_empty(force=True)
-        assert mock_sync.called
+    try:
+        async with AsyncSessionLocal() as db:
+            await db.execute(delete(USMacroIndicatorLog))
+            # 2026-08 데이터만 존재하고 2026-09(최신 CPI)가 누락된 상황 모의
+            db.add(USMacroIndicatorLog(date="2026-08", cpi_yoy=3.42, ppi_yoy=9.8, pce_yoy=3.0))
+            await db.commit()
 
-    # 엔드포인트 호출 시 결과 반환 확인
-    data = await get_us_macro_indicators()
-    assert len(data) >= 1
-    assert data[0]["date"] == "2026-08"
-    assert data[0]["cpi_yoy"] == 3.42
+        with patch("api.exit_signal.sync_us_macro_indicators_job", new_callable=AsyncMock) as mock_sync:
+            mock_sync.return_value = True
+            
+            # 10일 이후 시점 가정 -> 2026-09 결측 감지되어 백그라운드 sync 트리거 확인
+            await seed_us_macro_db_if_empty(force=True)
+            assert mock_sync.called
+
+        # 엔드포인트 호출 시 결과 반환 확인
+        data = await get_us_macro_indicators()
+        assert len(data) >= 1
+        assert data[0]["date"] == "2026-08"
+        assert data[0]["cpi_yoy"] == 3.42
+    finally:
+        # 테스트 종료 후 원래 운영 DB 데이터 완벽 복원
+        async with AsyncSessionLocal() as db:
+            await db.execute(delete(USMacroIndicatorLog))
+            if backup_records:
+                for b in backup_records:
+                    db.add(USMacroIndicatorLog(**b))
+            await db.commit()
 
 
 @pytest.mark.asyncio
 async def test_macro_detail_db_fast_path():
-    """get_macro_detail()이 DB에 데이터가 충분할 때 외부 API 호출 없이 즉시 반환하는지 검증"""
+    """get_macro_detail()이 DB에 데이터가 충분할 때 외부 API 호출 없이 즉시 반환하는지 검증 (운영 DB 보존)"""
     today_str = datetime.now().strftime("%Y-%m-%d")
     prev_str = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
 
+    backup_macros = []
+    backup_sents = []
     async with AsyncSessionLocal() as db:
-        await db.execute(delete(MarketMacroLog))
-        await db.execute(delete(MarketSentimentLog))
-        for i in range(50):
-            d = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
-            db.add(MarketMacroLog(date=d, dollar_index=103.5 + i * 0.01, krw=1350.0))
-            db.add(MarketSentimentLog(date=d, kospi=2600.0, sp500=5500.0))
-        await db.commit()
+        for r in (await db.execute(select(MarketMacroLog))).scalars().all():
+            backup_macros.append({"date": r.date, "dollar_index": r.dollar_index, "krw": r.krw})
+        for r in (await db.execute(select(MarketSentimentLog))).scalars().all():
+            backup_sents.append({"date": r.date, "kospi": r.kospi, "sp500": r.sp500})
 
-    with patch("api.exit_signal._fetch_fred_series", new_callable=AsyncMock) as mock_fred, \
-         patch("api.exit_signal._fetch_yahoo_v8", new_callable=AsyncMock) as mock_yf:
-        
-        # global cache clear
-        import api.exit_signal as es
-        es._macro_cache = {}
+    try:
+        async with AsyncSessionLocal() as db:
+            await db.execute(delete(MarketMacroLog))
+            await db.execute(delete(MarketSentimentLog))
+            for i in range(50):
+                d = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
+                db.add(MarketMacroLog(date=d, dollar_index=103.5 + i * 0.01, krw=1350.0))
+                db.add(MarketSentimentLog(date=d, kospi=2600.0, sp500=5500.0))
+            await db.commit()
 
-        results = await get_macro_detail(period="6M")
-        # DB에서 바로 로드했으므로 외부 fred나 yf 호출이 없어야 함
-        assert not mock_fred.called
-        assert not mock_yf.called
-        assert len(results) >= 40
-        assert results[-1]["dollar"] is not None
-        assert results[-1]["krw"] is not None
+        with patch("api.exit_signal._fetch_fred_series", new_callable=AsyncMock) as mock_fred, \
+             patch("api.exit_signal._fetch_yahoo_v8", new_callable=AsyncMock) as mock_yf:
+            
+            # global cache clear
+            import api.exit_signal as es
+            es._macro_cache = {}
+
+            results = await get_macro_detail(period="6M")
+            # DB에서 바로 로드했으므로 외부 fred나 yf 호출이 없어야 함
+            assert not mock_fred.called
+            assert not mock_yf.called
+            assert len(results) >= 40
+            assert results[-1]["dollar"] is not None
+            assert results[-1]["krw"] is not None
+    finally:
+        async with AsyncSessionLocal() as db:
+            await db.execute(delete(MarketMacroLog))
+            await db.execute(delete(MarketSentimentLog))
+            if backup_macros:
+                for b in backup_macros: db.add(MarketMacroLog(**b))
+            if backup_sents:
+                for b in backup_sents: db.add(MarketSentimentLog(**b))
+            await db.commit()
 
 
 @pytest.mark.asyncio

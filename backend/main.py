@@ -238,6 +238,15 @@ async def lifespan(app: FastAPI):
             except Exception as _e:
                 print(f"[Startup] Brazil seeding skipped: {_e}")
 
+            # 1.5. 미국 거시경제 지표(CPI, PPI, PCE) 자동 점검 및 시딩
+            try:
+                from api.exit_signal import seed_us_macro_db_if_empty
+                await seed_us_macro_db_if_empty(force=True)
+                gc.collect()
+                print("[Startup] US Macro indicators check and seed completed.")
+            except Exception as _e:
+                print(f"[Startup] US Macro seeding skipped: {_e}")
+
             # 2. 시장동향 환율·금리·주식·매크로 탭 서버 캐시 순차 예열 (10초 간격 분산)
             try:
                 from api.fx_dashboard import overview_cache as _fx_cache

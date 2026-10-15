@@ -3,7 +3,7 @@ import asyncio
 import requests
 import yfinance as yf
 from datetime import datetime, timedelta, timezone as _tz
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from typing import Dict, List, Optional, Tuple, Any
 import pandas as pd
 from core.quant_sentiment import calculate_realized_volatility, calculate_rsi, calculate_hybrid_fgi
@@ -1819,14 +1819,22 @@ async def sync_us_macro_indicators_job() -> bool:
 
 
 @router.get("/macro/us")
-async def get_us_macro_indicators():
+async def get_us_macro_indicators(response: Response = None, force: bool = False):
     """DB에 캐싱된 10년 치 월별 미국 경기지표(CPI, PPI, PCE YoY) 시계열 데이터 반환.
     Stale 데이터 자동 감지 시 백그라운드에서 Self-healing 자동 갱신 트리거."""
+    if response is not None:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     try:
         from db.database import AsyncSessionLocal
         from db.models import USMacroIndicatorLog
         from sqlalchemy import select
         
+        if force:
+            logger.info("[get_us_macro_indicators] Force refresh requested via query parameter.")
+            await sync_us_macro_indicators_job()
+
         async with AsyncSessionLocal() as db:
             result = await db.execute(
                 select(USMacroIndicatorLog)
@@ -1843,9 +1851,23 @@ async def get_us_macro_indicators():
             cur_year, cur_month = now_dt.year, now_dt.month
             prev_ym = f"{cur_year - 1}-12" if cur_month == 1 else f"{cur_year}-{cur_month - 1:02d}"
 
-            # 매월 10일 이후인데 최신월이 전월보다 이전이거나 전월의 cpi_yoy가 비어있다면 백그라운드 수집
-            if now_dt.day >= 10 and (latest_rec.date < prev_ym or (latest_rec.date == prev_ym and latest_rec.cpi_yoy is None)):
-                logger.info(f"[get_us_macro_indicators] Stale detected (latest={latest_rec.date}). Triggering background sync.")
+            # 지표별 발표 일정 기반 Stale 감지:
+            # 1. CPI: 매월 10일 이후인데 전월 레코드가 없거나 CPI가 비어있을 때
+            # 2. PPI: 매월 14일 이후인데 최신월 PPI가 비어있을 때
+            # 3. PCE: 매월 26일 이후인데 최신월 PCE가 비어있을 때
+            need_sync = False
+            if latest_rec.date < prev_ym:
+                need_sync = True
+            elif latest_rec.date == prev_ym:
+                if now_dt.day >= 10 and latest_rec.cpi_yoy is None:
+                    need_sync = True
+                elif now_dt.day >= 14 and latest_rec.ppi_yoy is None:
+                    need_sync = True
+                elif now_dt.day >= 26 and latest_rec.pce_yoy is None:
+                    need_sync = True
+
+            if need_sync and not force:
+                logger.info(f"[get_us_macro_indicators] Stale detected (latest={latest_rec.date}, cpi={latest_rec.cpi_yoy}, ppi={latest_rec.ppi_yoy}, pce={latest_rec.pce_yoy}). Triggering background sync.")
                 asyncio.create_task(sync_us_macro_indicators_job())
             
         return [

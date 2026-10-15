@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Activity, Calendar, TrendingUp, TrendingDown, RefreshCw, Info, Sparkles, X, ChevronRight } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import KospiExitAnalyzer from '@/components/KospiExitAnalyzer';
@@ -45,29 +45,38 @@ export default function DiscoverTab() {
         } catch (e) {
             console.warn("Failed to load cpi_ppi_pce_cache:", e);
         }
-
-        // 2. Fetch fresh data
-        const fetchFreshData = async () => {
-            try {
-                setRefreshing(true);
-                const res = await fetch(`${API_BASE}/api/v1/exit-signal/macro/us`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (Array.isArray(data) && data.length > 0) {
-                        setMacroData(data);
-                        localStorage.setItem('cpi_ppi_pce_cache', JSON.stringify(data));
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to fetch fresh macro data:", err);
-            } finally {
-                setLoading(false);
-                setRefreshing(false);
-            }
-        };
-
-        fetchFreshData();
     }, []);
+
+    // 2. Fetch fresh data (supports force refresh)
+    const fetchFreshData = useCallback(async (force: boolean = false) => {
+        try {
+            setRefreshing(true);
+            const url = `${API_BASE}/api/v1/exit-signal/macro/us${force ? '?force=true' : ''}`;
+            const res = await fetch(url, {
+                cache: 'no-store',
+                headers: {
+                    'Pragma': 'no-cache',
+                    'Cache-Control': 'no-cache'
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    setMacroData(data);
+                    localStorage.setItem('cpi_ppi_pce_cache', JSON.stringify(data));
+                }
+            }
+        } catch (err) {
+            console.error("Failed to fetch fresh macro data:", err);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchFreshData(false);
+    }, [fetchFreshData]);
 
     const hasData = macroData && macroData.length > 0;
     const latestItem = hasData ? macroData[macroData.length - 1] : null;
@@ -175,6 +184,18 @@ export default function DiscoverTab() {
                                 </div>
                                 <p className="text-sm text-gray-400 font-medium mt-0.5">글로벌 매크로 인플레이션 및 소비자물가지수 등락</p>
                             </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end md:self-center">
+                            <button
+                                onClick={() => fetchFreshData(true)}
+                                disabled={refreshing}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 text-xs font-semibold text-gray-300 hover:text-white transition-all disabled:opacity-50"
+                                title="미국 연준(FRED) 최신 데이터 강제 동기화"
+                            >
+                                <RefreshCw className={`w-3.5 h-3.5 text-indigo-400 ${refreshing ? 'animate-spin' : ''}`} />
+                                <span>{refreshing ? '최신화 중...' : '최신 동기화'}</span>
+                            </button>
                         </div>
                     </div>
                 {activeModal === 'inflation' && (
