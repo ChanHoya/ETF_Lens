@@ -136,6 +136,7 @@ class UnifiedQuantEngine:
         db: Optional[AsyncSession] = None,
         days: int = 3650,
         include_live: bool = True,
+        batch_fetcher: Optional[Any] = None,
     ) -> pd.DataFrame:
         """복수 종목/지수의 과거 일봉 종가를 DB 하이브리드 엔진을 통해 조회하고
         클린 매트릭스(DataFrame)로 반환.
@@ -150,14 +151,15 @@ class UnifiedQuantEngine:
         clean_tickers = [t.strip() for t in tickers if t and t.strip()]
         t0 = time.time()
         close_dict: Dict[str, pd.Series] = {}
+        fetcher = batch_fetcher or get_hybrid_daily_prices_batch
 
         # 1. DB 하이브리드 시계열 엔진 일괄 조회
         try:
             if db is not None:
-                batch_data = await get_hybrid_daily_prices_batch(clean_tickers, db, days=days, include_live=include_live)
+                batch_data = await fetcher(clean_tickers, db, days=days, include_live=include_live)
             else:
                 async with AsyncSessionLocal() as session:
-                    batch_data = await get_hybrid_daily_prices_batch(clean_tickers, session, days=days, include_live=include_live)
+                    batch_data = await fetcher(clean_tickers, session, days=days, include_live=include_live)
 
             for ticker, item in batch_data.items():
                 dates = item.get("dates", [])

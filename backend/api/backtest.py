@@ -14,55 +14,54 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.database import get_db, AsyncSessionLocal
 from core.hybrid_series import get_hybrid_daily_prices_batch
+from core.unified_quant_engine import quant_engine, calculate_mdd as _engine_calc_mdd
+from core.quant_cache_registry import quant_cache, force_malloc_trim
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["backtest"])
 
-# ── 인메모리 결과 캐시 (TTL: 1시간) ───────────────────────────────────────────
-_BACKTEST_CACHE: Dict[str, Dict[str, Any]] = {}
-_REBALANCE_CACHE: Dict[str, Dict[str, Any]] = {}
-_INSIGHT_CACHE: Dict[str, Dict[str, Any]] = {}
+# ── 인메모리 결과 캐시 (전역 QuantCacheRegistry 연동, TTL: 1시간) ─────────────
+_BACKTEST_CACHE = quant_cache._get_store("backtest")
+_REBALANCE_CACHE = quant_cache._get_store("rebalance")
+_INSIGHT_CACHE = quant_cache._get_store("insight")
 _BACKTEST_CACHE_TTL = 3600  # 1 hour
 
 
 def _make_backtest_cache_key(holdings: List["HoldingItem"]) -> str:
     # 종목 코드, 정규화된 비중, 그리고 당일 날짜(KST)로 캐시 키 생성
-    kst_today = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
     canonical_list = sorted(
         [{"c": h.code.strip(), "a": round(float(h.amount), 2)} for h in holdings if h.amount > 0],
         key=lambda x: x["c"]
     )
-    raw = f"{kst_today}:{json.dumps(canonical_list, sort_keys=True)}"
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    return quant_cache.make_key("backtest", canonical_list, include_today=True)
 
 
 def _cleanup_memory():
-    import gc
-    gc.collect()
-    try:
-        import ctypes
-        ctypes.CDLL("libc.so.6").malloc_trim(0)
-    except Exception:
-        pass
+    force_malloc_trim()
 
 
 def _make_rebalance_cache_key(req: "RebalanceBacktestRequest") -> str:
-    kst_today = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
     canonical_list = sorted(
         [{"c": h.code.strip(), "a": round(float(h.amount), 2)} for h in req.holdings if h.amount > 0],
         key=lambda x: x["c"]
     )
-    raw = f"{kst_today}:{req.period}:{req.defense_factor}:{req.safe_asset_code}:{json.dumps(canonical_list, sort_keys=True)}"
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    payload = {
+        "period": req.period,
+        "defense_factor": req.defense_factor,
+        "safe_asset_code": req.safe_asset_code,
+        "holdings": canonical_list,
+    }
+    return quant_cache.make_key("rebalance", payload, include_today=True)
 
 
 def _make_insight_cache_key(results: Dict[str, Any], weights: Dict[str, Any]) -> str:
-    kst_today = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
-    r1 = results.get("1Y", {})
-    r3 = results.get("3Y", {})
-    raw = f"{kst_today}:{json.dumps(r1, sort_keys=True)}:{json.dumps(r3, sort_keys=True)}:{json.dumps(weights, sort_keys=True)}"
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    payload = {
+        "1Y": results.get("1Y", {}),
+        "3Y": results.get("3Y", {}),
+        "weights": weights,
+    }
+    return quant_cache.make_key("insight", payload, include_today=True)
 
 
 async def load_backtest_close_prices(
@@ -71,97 +70,12 @@ async def load_backtest_close_prices(
     days: int = 3650
 ) -> pd.DataFrame:
     """
-    하이브리드 시계열 엔진(DB 캐시 + 실시간 병합)을 통해 10년치 일봉 종가를 초고속 로드.
-    DB에 없는 결측 종목에 대해서만 선별적으로 yfinance fallback 수집.
+    통합 퀀트 데이터 엔진(UnifiedQuantEngine)을 통해 10년치 일봉 종가를 초고속 로드.
+    DB 하이브리드 엔진 우선 조회 및 결측 종목 yfinance fallback 수집.
     """
-    t0 = time.time()
-    logger.info(f"[Backtest] Loading cached close prices for {len(all_tickers)} tickers...")
-    
-    close_dict: Dict[str, pd.Series] = {}
-    missing_tickers: List[str] = []
-
-    # 1. DB 하이브리드 시계열 엔진 우선 조회
-    try:
-        if db is not None:
-            batch_data = await get_hybrid_daily_prices_batch(all_tickers, db, days=days, include_live=True)
-        else:
-            async with AsyncSessionLocal() as session:
-                batch_data = await get_hybrid_daily_prices_batch(all_tickers, session, days=days, include_live=True)
-
-        for ticker, item in batch_data.items():
-            dates = item.get("dates", [])
-            prices = item.get("prices", [])
-            if dates and prices and len(dates) == len(prices):
-                idx = pd.to_datetime(dates).normalize()
-                s = pd.Series(prices, index=idx, name=ticker, dtype=float)
-                # tz 통일 (tz-naive)
-                if hasattr(s.index, "tz") and s.index.tz is not None:
-                    s.index = s.index.tz_localize(None)
-                # 인덱스 중복 제거 및 정렬 (duplicate labels 원천 차단)
-                s = s[~s.index.duplicated(keep="last")].sort_index()
-                # 유효 데이터가 최소 5일 이상인 경우 유효한 것으로 인정
-                if len(s) >= 5:
-                    close_dict[ticker] = s
-                else:
-                    missing_tickers.append(ticker)
-            else:
-                missing_tickers.append(ticker)
-    except Exception as e:
-        logger.warning(f"[Backtest] Hybrid batch fetch encountered error: {e}. Falling back for missing.")
-        missing_tickers = [t for t in all_tickers if t not in close_dict]
-
-    # 2. 누락된 티커만 yfinance fallback 다운로드 (최초 1회만 발생)
-    if missing_tickers:
-        logger.info(f"[Backtest] Fallback downloading for {len(missing_tickers)} missing tickers: {missing_tickers}")
-        try:
-            raw_df = await asyncio.to_thread(
-                yf.download,
-                missing_tickers,
-                period="10y",
-                interval="1d",
-                group_by="ticker",
-                auto_adjust=True,
-                progress=False
-            )
-            if raw_df is not None and not raw_df.empty:
-                if len(missing_tickers) == 1:
-                    t = missing_tickers[0]
-                    if "Close" in raw_df.columns:
-                        s = raw_df["Close"].dropna()
-                        if isinstance(s, pd.DataFrame):
-                            s = s.iloc[:, 0]
-                        if not s.empty:
-                            s.index = pd.to_datetime(s.index).normalize()
-                            if hasattr(s.index, "tz") and s.index.tz is not None:
-                                s.index = s.index.tz_localize(None)
-                            s = s[~s.index.duplicated(keep="last")].sort_index()
-                            close_dict[t] = s
-                else:
-                    for t in missing_tickers:
-                        if t in raw_df and "Close" in raw_df[t]:
-                            s = raw_df[t]["Close"].dropna()
-                            if isinstance(s, pd.DataFrame):
-                                s = s.iloc[:, 0]
-                            if not s.empty:
-                                s.index = pd.to_datetime(s.index).normalize()
-                                if hasattr(s.index, "tz") and s.index.tz is not None:
-                                    s.index = s.index.tz_localize(None)
-                                s = s[~s.index.duplicated(keep="last")].sort_index()
-                                close_dict[t] = s
-        except Exception as yf_err:
-            logger.error(f"[Backtest] Fallback download failed: {yf_err}")
-
-    if not close_dict:
-        return pd.DataFrame()
-
-    # 3. 통합 DataFrame 구축 및 결측치 ffill 처리 (인덱스 유일성 및 정렬 보장)
-    close_prices = pd.DataFrame(close_dict)
-    close_prices = close_prices.loc[~close_prices.index.duplicated(keep="last")].sort_index()
-    close_prices = close_prices.ffill().dropna(how="all")
-    
-    elapsed = time.time() - t0
-    logger.info(f"[Backtest] Loaded {len(close_prices.columns)} series ({len(close_prices)} rows) in {elapsed:.3f}s")
-    return close_prices
+    return await quant_engine.get_normalized_close_matrix(
+        all_tickers, db=db, days=days, include_live=True, batch_fetcher=get_hybrid_daily_prices_batch
+    )
 
 
 class HoldingItem(BaseModel):
@@ -184,9 +98,7 @@ def format_ticker(code: str) -> str:
     return code
 
 def calculate_mdd(cum_returns: pd.Series) -> float:
-    roll_max = cum_returns.cummax()
-    drawdown = cum_returns / roll_max - 1.0
-    return float(drawdown.min() * 100)  # percentage
+    return _engine_calc_mdd(cum_returns)
 
 
 def calculate_risk_metrics(
@@ -196,67 +108,9 @@ def calculate_risk_metrics(
 ) -> Dict[str, float]:
     """
     4대 심층 리스크 메트릭 (연간화 변동성, 샤프 지수, 소르티노 지수, 칼마 지수) 계산
+    UnifiedQuantEngine에 위임하여 연산 무결성 유지.
     """
-    if period_rets.empty or cum_ret.empty:
-        return {
-            "return": 0.0,
-            "mdd": 0.0,
-            "volatility": 0.0,
-            "sharpe": 0.0,
-            "sortino": 0.0,
-            "calmar": 0.0,
-            "annualized_return": 0.0
-        }
-        
-    final_ret = float((cum_ret.iloc[-1] - 1.0) * 100.0)
-    mdd = float(calculate_mdd(cum_ret))
-    
-    # 영업일 수 기반 연간화 기간 산출
-    n_days = max(1, len(period_rets))
-    years = max(n_days / 252.0, 0.08)  # 최소 약 1개월
-    
-    # 연간화 수익률 (CAGR)
-    if (1.0 + final_ret / 100.0) > 0:
-        ann_return = float(((1.0 + final_ret / 100.0) ** (1.0 / years) - 1.0) * 100.0)
-    else:
-        ann_return = float(final_ret / years)
-        
-    # 1. 연간화 변동성 (Annualized Volatility)
-    clean_rets = period_rets.dropna()
-    daily_std = float(clean_rets.std()) if len(clean_rets) > 1 else 0.0
-    ann_vol = float(daily_std * np.sqrt(252.0) * 100.0)
-    
-    # 2. 샤프 지수 (Sharpe Ratio, 무위험 수익률 3.0% 차감)
-    excess_ret = ann_return - rf_annual
-    if ann_vol > 0.001:
-        sharpe = float(excess_ret / ann_vol)
-    else:
-        sharpe = 0.0
-        
-    # 3. 소르티노 지수 (Sortino Ratio, 하방 변동성 적용)
-    downside_rets = clean_rets[clean_rets < 0]
-    if len(downside_rets) > 1 and downside_rets.std() > 0:
-        downside_vol = float(downside_rets.std() * np.sqrt(252.0) * 100.0)
-        sortino = float(excess_ret / downside_vol) if downside_vol > 0.001 else 0.0
-    else:
-        sortino = float(sharpe * 1.5) if sharpe > 0 else 0.0
-        
-    # 4. 칼마 지수 (Calmar Ratio, 연수익률 / |MDD|)
-    abs_mdd = abs(mdd)
-    if abs_mdd > 0.001:
-        calmar = float(ann_return / abs_mdd)
-    else:
-        calmar = 0.0
-        
-    return {
-        "return": round(final_ret, 2),
-        "mdd": round(mdd, 2),
-        "volatility": round(ann_vol, 2),
-        "sharpe": round(sharpe, 2),
-        "sortino": round(sortino, 2),
-        "calmar": round(calmar, 2),
-        "annualized_return": round(ann_return, 2)
-    }
+    return quant_engine.calculate_risk_metrics(period_rets, cum_ret, rf_annual=rf_annual)
 
 @router.post("/run")
 async def run_backtest(req: BacktestRequest, db: AsyncSession = Depends(get_db)):

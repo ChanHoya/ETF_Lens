@@ -13,23 +13,28 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.database import get_db, AsyncSessionLocal
 from core.hybrid_series import get_hybrid_daily_prices_batch
+from core.quant_cache_registry import quant_cache, force_malloc_trim
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["efficient-frontier"])
 
-# ── 인메모리 결과 캐시 (TTL: 1시간) ───────────────────────────────────────────
-_EF_CACHE: Dict[str, Dict[str, Any]] = {}
+# ── 인메모리 결과 캐시 (전역 QuantCacheRegistry 연동, TTL: 1시간) ─────────────
+_EF_CACHE = quant_cache._get_store("efficient_frontier")
 _EF_CACHE_TTL = 3600
 
 
 def _make_ef_cache_key(req: "EfficientFrontierRequest") -> str:
-    kst_today = datetime.now().strftime("%Y-%m-%d")
     canonical = sorted(
         [{"c": h.code.strip(), "a": round(float(h.amount), 2)} for h in req.holdings if h.amount > 0],
         key=lambda x: x["c"]
     )
-    raw = f"{kst_today}:{req.lookback_years}:{req.risk_free_rate}:{req.simulations}:{json.dumps(canonical, sort_keys=True)}"
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    payload = {
+        "lookback_years": req.lookback_years,
+        "risk_free_rate": req.risk_free_rate,
+        "simulations": req.simulations,
+        "holdings": canonical,
+    }
+    return quant_cache.make_key("efficient_frontier", payload, include_today=True)
 
 
 class HoldingItem(BaseModel):
