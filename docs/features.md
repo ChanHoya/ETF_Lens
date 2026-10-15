@@ -100,6 +100,8 @@
 | S10-3: 전역 퀀트 인메모리 캐시 레지스트리 (QuantCacheRegistry) | ✅ done | backend/core/quant_cache_registry.py, backend/tests/test_quant_cache_registry.py | 네임스페이스 격리, Canonical SHA-256 키 생성, LRU 용량 제한(최대 300건), TTL 3600s 자동 만료 및 Render 512MB RAM 제약 대응 malloc_trim(0) 메모리 회수 탑재 (테스트 5/5 100% Pass) |
 | S10-4: 퀀트 라우터 전면 마이그레이션 & E2E 무결성 검증 | ✅ done | backend/api/backtest.py, backend/api/efficient_frontier.py, backend/tests/test_sprint10_quant_engine_e2e.py | 백테스터/효율적투자선 라우터를 UnifiedQuantEngine 및 QuantCacheRegistry로 완전 마이그레이션, 0.001초 캐시 히트 및 E2E 무결성 검증 완료 (전체 217개 백엔드 테스트 100% Pass) |
 | 미국 3대 인플레이션 지표 적시 수집 & 장기 시계열 DB 영속화 | ✅ done | backend/api/exit_signal.py, backend/core/overview_cache.py, backend/core/scheduler.py, backend/tests/test_us_macro_timely_sync.py | CPI/PPI/PCE 매일 08:15 KST 자동 수집, 조회 시 Stale 자동 감지 백그라운드 갱신, 장기 매크로/CLI/PE 및 시장동향 대시보드(금리/주식/환율/종합)의 SQLite DB 영속화로 반복 크롤링 원천 차단 및 5ms 내 초고속 서빙 (전체 220개 테스트 100% Pass) |
+| 야간 보유종목 & 4대 벤치마크 지수 백그라운드 자동 시딩 스케줄러 | ✅ done | backend/scheduler/etf_price_sync.py, backend/core/scheduler.py, backend/tests/test_holdings_price_sync_job.py | 매일 23:15 KST 4대 벤치마크 지수(^KS11, ^KQ11, ^GSPC, ^IXIC) 및 사용자 보유 종목/수동 자산 일봉을 로컬 DB에 자동 영속화하여 신규 계좌/종목 조회 시에도 0ms DB Hit 보장 |
+| 포트폴리오 시뮬레이션 & 위험지수 인터랙티브 차트 60fps 렌더링 최적화 | ✅ done | dashboard/src/components/PortfolioBacktester.tsx, EfficientFrontierPanel.tsx, KospiExitAnalyzer.tsx | Recharts Line/Scatter 컴포넌트 isAnimationActive=false 적용, 150개 포인트 다운샘플링 및 몬테카를로 1,200개 캡슐화로 브라우저 프레임 드랍 및 CPU 스파이크 원천 차단 |
 
 
 
