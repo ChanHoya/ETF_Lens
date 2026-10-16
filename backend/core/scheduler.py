@@ -734,6 +734,36 @@ def setup_scheduler():
         except Exception as e:
             print(f"[scheduler] _job_sector_quant failed: {e}")
 
+    async def _job_sector_insights_weekly():
+        """매주 월요일 장전 5대 섹터 Gemini Expert Report 일괄 비동기 갱신 및 캐시 적재."""
+        try:
+            from api.sector_insight import refresh_all_sector_insights_job
+            await refresh_all_sector_insights_job()
+            trigger_replication_background()
+            gc.collect()
+        except Exception as e:
+            print(f"[scheduler] _job_sector_insights_weekly failed: {e}")
+
+    async def _job_policy_meetings_live_check():
+        """BOK 금통위 / FOMC 정책금리 결정 당일/익일 자동 감지 후 속보 수집 및 텔레그램 알림."""
+        try:
+            from scheduler.meeting_poll import poll_policy_meetings_job
+            await poll_policy_meetings_job()
+            trigger_replication_background()
+            gc.collect()
+        except Exception as e:
+            print(f"[scheduler] _job_policy_meetings_live_check failed: {e}")
+
+    async def _job_semi_stats_sync():
+        """매월 15일/25일 반도체 5대 산업 통계(수출액/단가/물량/가동률/재고) 최신 동기화."""
+        try:
+            from scheduler.semi_stats_sync import semi_stats_sync_job
+            await semi_stats_sync_job()
+            trigger_replication_background()
+            gc.collect()
+        except Exception as e:
+            print(f"[scheduler] _job_semi_stats_sync failed: {e}")
+
     async def _job_keep_alive():
         """Render 유휴 스핀다운 방지: 자기 자신의 /health 를 호출해 idle 타이머를 리셋한다.
         RENDER_EXTERNAL_URL(렌더가 자동 주입)이 없으면 로컬/비-Render 환경이므로 no-op."""
@@ -780,6 +810,15 @@ def setup_scheduler():
 
     # 매주 일요일 23:30 - 14일 이상 지난 배당 데이터(ETFDividendSummary) 백그라운드 자동 갱신
     scheduler.add_job(_job_dividend_refresh, "cron", day_of_week="sun", hour=23, minute=30, id="weekly_dividend_refresh")
+
+    # 매주 월요일 08:20 (KST) - 5대 섹터 Gemini Expert Report 정기 자동 갱신
+    scheduler.add_job(_job_sector_insights_weekly, "cron", day_of_week="mon", hour=8, minute=20, id="weekly_sector_insights_refresh")
+
+    # 매시 5분 (KST) - BOK 금통위 / FOMC 정책금리 발표 당일/익일 한정 자동 감지 & 갱신
+    scheduler.add_job(_job_policy_meetings_live_check, "cron", minute=5, id="hourly_policy_meeting_live_check")
+
+    # 매월 15일 및 25일 08:45 (KST) - 반도체 5대 매크로 통계 동기화
+    scheduler.add_job(_job_semi_stats_sync, "cron", day="15,25", hour=8, minute=45, id="monthly_semi_macro_stats_sync")
 
     # 매일 08:30 (KST) - 브라질 국채 매크로 시계열 동기화 + 신호 전환 알림 + 아침 대시보드 브리핑
     scheduler.add_job(_job_brazil, "cron", hour=8, minute=30, id="daily_brazil_series_sync")

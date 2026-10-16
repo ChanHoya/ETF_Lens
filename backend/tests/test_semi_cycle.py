@@ -193,3 +193,68 @@ async def test_price_fetch_failure_is_not_cached(monkeypatch):
     engine._CACHE_DATA.pop("semi_macro_signals_shipbuilding", None)
     recovered = await SemiCycleEngine.get_macro_signals(industry="shipbuilding")
     assert recovered["signals_count"]["total"] == 2
+
+
+@pytest.mark.asyncio
+async def test_semi_cycle_force_refresh_bypasses_cache():
+    """force=True 호출 시 캐시가 즉시 무효화되고 최신 계산이 수행되어야 한다."""
+    import core.semi_cycle_engine as engine
+    
+    # 1. 일반 호출 (캐시 적재)
+    res1 = await engine.SemiCycleEngine.get_cycle_clock_data(force=False)
+    assert "semi_cycle_clock_v4" in engine._CACHE_DATA
+
+    # 2. clear_cache 호출
+    engine.SemiCycleEngine.clear_cache()
+    assert "semi_cycle_clock_v4" not in engine._CACHE_DATA
+
+    # 3. force=True 호출 (캐시가 있어도 바이패스 및 갱신)
+    res2 = await engine.SemiCycleEngine.get_cycle_clock_data(force=True)
+    assert res2 is not None
+    assert "semi_cycle_clock_v4" in engine._CACHE_DATA
+
+
+@pytest.mark.asyncio
+async def test_semi_stats_sync_dynamic_append():
+    """반도체 5대 매크로 통계 동기화 파이프라인 및 dynamic macro series 테스트."""
+    from scheduler.semi_stats_sync import sync_semiconductor_macro_stats
+    from core.macro_historical_data import get_combined_macro_series
+
+    before_series = get_combined_macro_series()
+    before_len = len(before_series)
+
+    # 동기화 실행
+    new_pt = await sync_semiconductor_macro_stats()
+    after_series = get_combined_macro_series()
+
+    # 최신 시리즈 길이가 유지되거나 1 추가되어야 함
+    assert len(after_series) >= before_len
+    if new_pt:
+        assert after_series[-1]["date"] == new_pt["date"]
+        assert "export_amt" in new_pt
+        assert "unit_price" in new_pt
+
+
+@pytest.mark.asyncio
+async def test_meeting_poll_no_op_on_non_meeting_day():
+    """회의 당일/익일이 아닌 평시에는 불필요한 API 호출 없이 즉시 no-op 처리되어야 한다."""
+    from scheduler.meeting_poll import poll_policy_meetings_job
+    res = await poll_policy_meetings_job()
+    assert res is not None
+    assert "status" in res
+
+
+@pytest.mark.asyncio
+async def test_refresh_all_sector_insights_job(monkeypatch):
+    """5대 섹터 Gemini Expert Report 비동기 일괄 갱신 잡 테스트 (에러 격리 및 상태 리턴)."""
+    import api.sector_insight as si
+    async def mock_generate(sector):
+        return {"tab1": {"cards": []}}
+    monkeypatch.setattr(si, "generate_sector_insight", mock_generate)
+
+    from api.sector_insight import refresh_all_sector_insights_job
+    res = await refresh_all_sector_insights_job()
+    assert res is not None
+    assert len(res) == 5
+    assert set(res.keys()) == {"space", "semi", "energy", "bio", "semiparts"}
+

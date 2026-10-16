@@ -3700,45 +3700,45 @@ async def get_semi_screener():
 
 # ── 반도체 매크로 사이클 & CSCI 퀀트 평가 API ────────────────────────────────
 @router.get("/semi-cycle/clock")
-async def get_semi_cycle_clock():
+async def get_semi_cycle_clock(force: bool = Query(False)):
     """위젯 1: Semiconductor Cycle Clock (사이클 시계 2D 사분면 궤적 & 국면)"""
     from core.semi_cycle_engine import SemiCycleEngine
-    return await SemiCycleEngine.get_cycle_clock_data()
+    return await SemiCycleEngine.get_cycle_clock_data(force=force)
 
 
 @router.get("/semi-cycle/tracker")
-async def get_semi_cycle_tracker():
+async def get_semi_cycle_tracker(force: bool = Query(False)):
     """위젯 2: Hyperscaler CapEx vs Memory Momentum Tracker"""
     from core.semi_cycle_engine import SemiCycleEngine
-    return await SemiCycleEngine.get_capex_momentum_tracker()
+    return await SemiCycleEngine.get_capex_momentum_tracker(force=force)
 
 
 @router.get("/semi-cycle/subsectors")
-async def get_semi_cycle_subsectors():
+async def get_semi_cycle_subsectors(force: bool = Query(False)):
     """위젯 3: Sub-Sector Decoupling Matrix (서브섹터별 밸류에이션 및 EPS 수정)"""
     from core.semi_cycle_engine import SemiCycleEngine
-    return await SemiCycleEngine.get_subsector_decoupling_matrix()
+    return await SemiCycleEngine.get_subsector_decoupling_matrix(force=force)
 
 
 @router.get("/semi-cycle/strategy")
-async def get_semi_cycle_strategy():
+async def get_semi_cycle_strategy(force: bool = Query(False)):
     """위젯 4: Dynamic Semiconductor ETF Rebalancing Matrix (국면별 ETF 배분)"""
     from core.semi_cycle_engine import SemiCycleEngine
-    return await SemiCycleEngine.get_etf_rebalancing_matrix()
+    return await SemiCycleEngine.get_etf_rebalancing_matrix(force=force)
 
 
 @router.get("/semi-cycle/macro-signals")
-async def get_semi_macro_signals(industry: str = "semiconductor"):
+async def get_semi_macro_signals(industry: str = "semiconductor", force: bool = Query(False)):
     """7대 실데이터 신호등(대장주/SOX/수출/단가/물량/가동률/재고 1Y/3Y/5Y/10Y) & 5국면 진단"""
     from core.semi_cycle_engine import SemiCycleEngine
-    return await SemiCycleEngine.get_macro_signals(industry=industry)
+    return await SemiCycleEngine.get_macro_signals(industry=industry, force=force)
 
 
 @router.get("/semi-cycle/industries-summary")
-async def get_semi_industries_summary():
+async def get_semi_industries_summary(force: bool = Query(False)):
     """10대 주요 업종별 사이클 국면 요약 배지 목록"""
     from core.semi_cycle_engine import SemiCycleEngine
-    return await SemiCycleEngine.get_industries_summary()
+    return await SemiCycleEngine.get_industries_summary(force=force)
 
 
 @router.get("/space-chart")

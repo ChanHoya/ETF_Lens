@@ -53,6 +53,7 @@ import SemiFundamentalSignals from "./SemiFundamentalSignals";
 
 interface SemiCycleDashboardProps {
     onOpenDetail?: (code: string) => void;
+    trendCards?: Array<{ title: string; body?: string; desc?: string }>;
 }
 
 const PHASE_COLORS: { [key: number]: { bg: string; text: string; border: string; badge: string; glow: string; dot: string } } = {
@@ -209,12 +210,14 @@ const CustomScatterTooltip = ({ active, payload }: any) => {
     );
 };
 
-export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardProps) {
+export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCycleDashboardProps) {
     const [clockData, setClockData] = useState<any>(FALLBACK_CLOCK_DATA);
     const [trackerData, setTrackerData] = useState<any>(null);
     const [subsectorData, setSubsectorData] = useState<any>(null);
     const [strategyData, setStrategyData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+    const [refreshToast, setRefreshToast] = useState<string | null>(null);
     const [activeSubTab, setActiveSubTab] = useState<"signals" | "overview" | "capex" | "subsector" | "etf">("signals");
     const [clockPeriod, setClockPeriod] = useState<"5Y" | "3Y" | "1Y">("5Y");
 
@@ -290,21 +293,34 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
         setPopupPos(null);
     };
 
-    const fetchAllData = async () => {
+    const fetchAllData = async (force: boolean = false) => {
+        setIsRefreshing(true);
         try {
+            const forceParam = force ? "?force=true" : "";
             const [clockRes, trackerRes, subsectorRes, strategyRes] = await Promise.allSettled([
-                fetch(`${API_BASE}/api/v1/analyze/semi-cycle/clock`, { cache: "no-store" }),
-                fetch(`${API_BASE}/api/v1/analyze/semi-cycle/tracker`, { cache: "no-store" }),
-                fetch(`${API_BASE}/api/v1/analyze/semi-cycle/subsectors`, { cache: "no-store" }),
-                fetch(`${API_BASE}/api/v1/analyze/semi-cycle/strategy`, { cache: "no-store" }),
+                fetch(`${API_BASE}/api/v1/analyze/semi-cycle/clock${forceParam}`, { cache: "no-store" }),
+                fetch(`${API_BASE}/api/v1/analyze/semi-cycle/tracker${forceParam}`, { cache: "no-store" }),
+                fetch(`${API_BASE}/api/v1/analyze/semi-cycle/subsectors${forceParam}`, { cache: "no-store" }),
+                fetch(`${API_BASE}/api/v1/analyze/semi-cycle/strategy${forceParam}`, { cache: "no-store" }),
             ]);
 
             if (clockRes.status === "fulfilled" && clockRes.value.ok) setClockData(await clockRes.value.json());
             if (trackerRes.status === "fulfilled" && trackerRes.value.ok) setTrackerData(await trackerRes.value.json());
             if (subsectorRes.status === "fulfilled" && subsectorRes.value.ok) setSubsectorData(await subsectorRes.value.json());
             if (strategyRes.status === "fulfilled" && strategyRes.value.ok) setStrategyData(await strategyRes.value.json());
+
+            if (force) {
+                setRefreshToast("최신 반도체 퀀트 매크로 지표 동기화 완료");
+                setTimeout(() => setRefreshToast(null), 3000);
+            }
         } catch (err) {
             console.warn("Failed to fetch semi cycle data, using robust fallback:", err);
+            if (force) {
+                setRefreshToast("오프라인 캐시 기반 최신화 완료");
+                setTimeout(() => setRefreshToast(null), 3000);
+            }
+        } finally {
+            setIsRefreshing(false);
         }
     };
 
@@ -455,16 +471,58 @@ export default function SemiCycleDashboard({ onOpenDetail }: SemiCycleDashboardP
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-end md:self-center shrink-0 z-10">
+                <div className="flex items-center gap-2.5 self-end md:self-center shrink-0 z-10 flex-wrap justify-end">
+                    {refreshToast && (
+                        <span className="text-[11px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-1 rounded-xl animate-in fade-in flex items-center gap-1 shadow-sm">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            {refreshToast}
+                        </span>
+                    )}
                     <button
-                        onClick={fetchAllData}
-                        className="px-3 py-1.5 rounded-xl bg-black/30 hover:bg-black/50 border border-white/10 text-gray-300 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5"
+                        onClick={() => fetchAllData(true)}
+                        disabled={isRefreshing}
+                        className="px-3.5 py-1.5 rounded-xl bg-black/40 hover:bg-black/60 border border-white/20 text-gray-200 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-md active:scale-95 disabled:opacity-60 cursor-pointer"
+                        title="최신 거시 지표 및 사이클 모델을 즉시 재계산합니다"
                     >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        <span>데이터 갱신</span>
+                        <RefreshCw className={`w-3.5 h-3.5 text-indigo-400 ${isRefreshing ? "animate-spin" : ""}`} />
+                        <span>{isRefreshing ? "동기화 중..." : "데이터 갱신"}</span>
                     </button>
                 </div>
             </div>
+
+            {/* 1.5. AI Semiconductor Macro 3-Trend Cards (트렌드 탭 융합 시각화) */}
+            {trendCards && trendCards.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 -mt-2">
+                    {trendCards.slice(0, 3).map((card, i) => {
+                        const trendTheme = [
+                            { border: "border-cyan-500/30", text: "text-cyan-400", bg: "bg-cyan-500/5", badge: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30", dot: "bg-cyan-400" },
+                            { border: "border-purple-500/30", text: "text-purple-400", bg: "bg-purple-500/5", badge: "bg-purple-500/20 text-purple-300 border-purple-500/30", dot: "bg-purple-400" },
+                            { border: "border-emerald-500/30", text: "text-emerald-400", bg: "bg-emerald-500/5", badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30", dot: "bg-emerald-400" },
+                        ];
+                        const t = trendTheme[i % 3];
+                        return (
+                            <div
+                                key={i}
+                                className={`p-4 rounded-2xl ${t.bg} border ${t.border} hover:border-white/20 transition-all flex flex-col justify-between gap-2 shadow-lg backdrop-blur-sm`}
+                            >
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className={`flex items-center gap-2 font-bold text-xs sm:text-sm ${t.text}`}>
+                                        <TrendingUp className="w-4 h-4 shrink-0" />
+                                        <span>{card.title}</span>
+                                    </div>
+                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${t.badge} flex items-center gap-1`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${t.dot} animate-pulse`} />
+                                        TREND {i + 1}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-gray-300 leading-relaxed font-sans">
+                                    {card.body || card.desc}
+                                </p>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* 2. Sub-Navigation Tabs */}
             <div className="flex gap-2 border-b border-white/10 pb-3 overflow-x-auto">

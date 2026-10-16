@@ -28,7 +28,7 @@ interface Props {
     onTabChange: (id: string) => void;
     fallback: InsightContent; // 최초 생성 전 보여줄 정적 기본본
     accent?: 'cyan' | 'emerald' | 'amber' | 'purple';
-    children?: React.ReactNode; // 표준 외 탭(예: Semi qcycle) 콘텐츠
+    children?: React.ReactNode | ((content: InsightContent) => React.ReactNode); // 표준 외 탭(예: Semi qcycle) 콘텐츠
 }
 
 const ACCENTS = {
@@ -173,7 +173,7 @@ export default function SectorInsightReport({
                 </div>
             )}
 
-            {activeTab === 'etfs' && (
+            {(activeTab === 'etfs' || activeTab === 'etfs_strategy') && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
                     <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-3">
                         <h5 className={`text-sm font-bold ${a.head} border-b border-white/5 pb-2`}>국내 상장 핵심 ETF</h5>
@@ -200,7 +200,7 @@ export default function SectorInsightReport({
                 </div>
             )}
 
-            {activeTab === 'strategy' && (
+            {(activeTab === 'strategy' || activeTab === 'etfs_strategy') && (
                 <div className="bg-white/[0.02] p-4 border border-white/5 rounded-2xl flex flex-col gap-4 mt-1">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -243,7 +243,7 @@ export default function SectorInsightReport({
             )}
 
             {/* 표준 외 탭(Semi Q-Cycle 등) */}
-            {children}
+            {typeof children === 'function' ? children(content) : children}
         </div>
     );
 }

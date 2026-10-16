@@ -260,3 +260,20 @@ async def generate_sector_insight(sector: str, db: AsyncSession = Depends(get_db
     await db.commit()
 
     return InsightResponse(sector=sector, content=content, generated_at=now.isoformat())
+
+
+async def refresh_all_sector_insights_job() -> dict[str, str]:
+    """모든 섹터(space, semi, energy, semiparts, bio) 리포트를 백그라운드에서 순차 갱신하는 정기 잡."""
+    from db.database import AsyncSessionLocal
+    results = {}
+    async with AsyncSessionLocal() as db:
+        for sector in _SECTORS:
+            try:
+                await generate_sector_insight(sector, db)
+                results[sector] = "success"
+                await asyncio.sleep(2)  # Gemini API Rate Limit 방어
+            except Exception as e:
+                print(f"[sector_insight_job] {sector} failed: {e}")
+                results[sector] = f"failed: {e}"
+    print(f"[sector_insight_job] 5대 섹터 리포트 자동 갱신 완료: {results}")
+    return results

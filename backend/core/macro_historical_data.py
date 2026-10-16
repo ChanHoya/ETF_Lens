@@ -152,3 +152,22 @@ HISTORICAL_MACRO_SERIES: List[Dict[str, Any]] = [
     {"date": "2026-08", "export_amt": 282.0, "unit_price": 243.5, "volume": 214.0, "cap_util": 101.8, "inventory": 100.0},
 ]
 
+_DYNAMIC_SERIES: List[Dict[str, Any]] = []
+
+
+def get_combined_macro_series() -> List[Dict[str, Any]]:
+    """기본 정적 HISTORICAL_MACRO_SERIES와 동적/DB 최신 지표를 결합하여 반환."""
+    if _DYNAMIC_SERIES:
+        merged = {r["date"]: dict(r) for r in HISTORICAL_MACRO_SERIES}
+        for r in _DYNAMIC_SERIES:
+            merged[r["date"]] = dict(r)
+        return sorted(merged.values(), key=lambda x: x["date"])
+    return HISTORICAL_MACRO_SERIES
+
+
+def append_macro_point(point: Dict[str, Any]):
+    """신규 월별 반도체 펀더멘털 지표(수출액/단가지수/물량/가동률/재고)를 동적으로 추가."""
+    global _DYNAMIC_SERIES
+    _DYNAMIC_SERIES = [p for p in _DYNAMIC_SERIES if p["date"] != point.get("date")]
+    _DYNAMIC_SERIES.append(point)
+

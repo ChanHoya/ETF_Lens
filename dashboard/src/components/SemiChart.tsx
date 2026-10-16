@@ -232,7 +232,7 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
     });
     const [isMarketOpen, setIsMarketOpen] = useState<boolean>(() => checkIsUsMarketOpenClient());
     const [disparityData, setDisparityData] = useState<{ [key: string]: any }>({});
-    const [activeInsightTab, setActiveInsightTab] = useState<'macro' | 'etfs' | 'strategy' | 'qcycle' | 'macro_cycle'>('macro_cycle');
+    const [activeInsightTab, setActiveInsightTab] = useState<'macro_cycle' | 'qcycle' | 'etfs_strategy'>('macro_cycle');
 
     // Q-Cycle Screener
     const [screenerData, setScreenerData] = useState<any[]>([]);
@@ -661,23 +661,26 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
                 title="AI 패러다임 쉬프트와 글로벌 반도체 공급망 전략"
                 accent="amber"
                 tabs={[
-                    { id: 'macro_cycle', label: '1. 매크로 4국면 퀀트 사이클 (CSCI)', icon: Compass },
-                    { id: 'macro', label: '2. 매크로 & AI 반도체 트렌드', icon: TrendingUp },
-                    { id: 'etfs', label: '3. 국내외 핵심 ETF 분석', icon: BookOpen },
-                    { id: 'strategy', label: '4. 자산배분 모델 & 가이드', icon: PieChart },
-                    { id: 'qcycle', label: '5. Q-Cycle 퀀트 스크리너', icon: Cpu },
+                    { id: 'macro_cycle', label: '1. 매크로 4국면 퀀트 사이클 & AI 트렌드', icon: Compass },
+                    { id: 'qcycle', label: '2. Q-Cycle 퀀트 스크리너', icon: Cpu },
+                    { id: 'etfs_strategy', label: '3. 핵심 ETF & 자산배분 가이드', icon: BookOpen },
                 ]}
                 activeTab={activeInsightTab}
                 onTabChange={(id) => setActiveInsightTab(id as any)}
                 fallback={SEMI_INSIGHT_FALLBACK}
             >
-                {activeInsightTab === 'macro_cycle' && (
-                    <div className="mt-2">
-                        <SemiCycleDashboard onOpenDetail={onOpenDetail} />
-                    </div>
-                )}
-                {activeInsightTab === 'qcycle' && (
-                    <div className="flex flex-col gap-6 mt-1">
+                {(content) => (
+                    <>
+                        {activeInsightTab === 'macro_cycle' && (
+                            <div className="mt-2">
+                                <SemiCycleDashboard
+                                    onOpenDetail={onOpenDetail}
+                                    trendCards={content.tab1?.cards}
+                                />
+                            </div>
+                        )}
+                        {activeInsightTab === 'qcycle' && (
+                            <div className="flex flex-col gap-6 mt-1">
 
                         {/* 현재 국면 표시 */}
                         <div className="flex flex-col sm:flex-row gap-3">
@@ -914,6 +917,8 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
                             * TTM(최근 4분기 합산) 실제 기준 · 컨센서스/FnGuide 미사용 · 출처: Yahoo Finance · 투자 권유 아님. 음수 PER은 표시 제외.
                         </p>
                     </div>
+                )}
+                    </>
                 )}
             </SectorInsightReport>
 

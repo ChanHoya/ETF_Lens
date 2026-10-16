@@ -348,7 +348,8 @@ def _drawdown_signal(
 
 def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]]]):
     """업종 실데이터 지표 목록과 국면 판정용 점수 정의를 함께 만든다."""
-    from core.macro_historical_data import HISTORICAL_MACRO_SERIES
+    from core.macro_historical_data import get_combined_macro_series
+    macro_series = get_combined_macro_series()
 
     profile = INDUSTRY_PROFILES.get(industry, INDUSTRY_PROFILES["semiconductor"])
     industry_kr = profile["name_kr"]
@@ -415,10 +416,10 @@ def _build_industry_signals(industry: str, closes: Dict[str, List[Dict[str, Any]
         return signals, scored
 
     series_map = {
-        key: [{"date": r["date"], "value": r[key]} for r in HISTORICAL_MACRO_SERIES]
+        key: [{"date": r["date"], "value": r[key]} for r in macro_series]
         for _, _, key in stat_defs
     }
-    last_month = HISTORICAL_MACRO_SERIES[-1]["date"]
+    last_month = macro_series[-1]["date"]
 
     def _yoy_metrics(series: List[Dict[str, Any]]) -> Dict[str, float]:
         return {p["date"]: v for i, p in enumerate(series) if (v := _yoy_at(series, i)) is not None}
@@ -691,24 +692,25 @@ class SemiCycleEngine:
         return phases.get(phase_num, phases[3])
 
     @classmethod
-    async def get_cycle_clock_data(cls) -> Dict[str, Any]:
+    async def get_cycle_clock_data(cls, force: bool = False) -> Dict[str, Any]:
         """
         위젯 1: Semiconductor Cycle Clock (사이클 시계 2D Quadrant)
         - X축: 재고 지수 (DOI Z-Score 역수: 양수면 재고소진 양호)
         - Y축: 수요/출하 모멘텀 (수출 & CapEx Z-Score: 양수면 수요강세)
-        - HISTORICAL_MACRO_SERIES 120개월 실데이터 기반으로 2021.01 ~ 2026.08 전 월별 촘촘한 궤적 산출
+        - get_combined_macro_series 실데이터 기반으로 2021.01 ~ 현재까지 전 월별 촘촘한 궤적 산출
         """
         now_ts = time.time()
         cache_key = "semi_cycle_clock_v4"
-        if cache_key in _CACHE_DATA and (now_ts - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
+        if not force and cache_key in _CACHE_DATA and (now_ts - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
             return _CACHE_DATA[cache_key]["data"]
 
-        from core.macro_historical_data import HISTORICAL_MACRO_SERIES
+        from core.macro_historical_data import get_combined_macro_series
+        macro_series = get_combined_macro_series()
 
-        # 2021-01부터 현재(2026-08)까지 매월 전체 데이터 필터링
-        filtered_series = [item for item in HISTORICAL_MACRO_SERIES if item["date"] >= "2021-01"]
+        # 2021-01부터 현재까지 매월 전체 데이터 필터링
+        filtered_series = [item for item in macro_series if item["date"] >= "2021-01"]
         if not filtered_series:
-            filtered_series = HISTORICAL_MACRO_SERIES[-68:]
+            filtered_series = macro_series[-68:]
 
         full_trajectory = []
         
@@ -811,7 +813,7 @@ class SemiCycleEngine:
         return result
 
     @classmethod
-    async def get_capex_momentum_tracker(cls) -> Dict[str, Any]:
+    async def get_capex_momentum_tracker(cls, force: bool = False) -> Dict[str, Any]:
         """
         위젯 2: Hyperscaler CapEx vs Memory Momentum Tracker
         - 2020Q1부터 현재 분기 및 다음 예상 분기까지 datetime.now() 기준 자동 동적 확장
@@ -819,7 +821,7 @@ class SemiCycleEngine:
         """
         now_ts = time.time()
         cache_key = "semi_capex_tracker_v3"
-        if cache_key in _CACHE_DATA and (now_ts - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
+        if not force and cache_key in _CACHE_DATA and (now_ts - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
             return _CACHE_DATA[cache_key]["data"]
 
         today = datetime.now()
@@ -906,7 +908,7 @@ class SemiCycleEngine:
         return result
 
     @classmethod
-    async def get_subsector_decoupling_matrix(cls) -> Dict[str, Any]:
+    async def get_subsector_decoupling_matrix(cls, force: bool = False) -> Dict[str, Any]:
         """
         위젯 3: Sub-Sector Decoupling Matrix (서브섹터별 밸류에이션 및 이익 수정 비율)
         - 4대 서브섹터: 메모리, 파운드리/비메모리, 소부장/장비, 아날로그/전력
@@ -914,7 +916,7 @@ class SemiCycleEngine:
         """
         now = time.time()
         cache_key = "semi_subsector_matrix"
-        if cache_key in _CACHE_DATA and (now - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
+        if not force and cache_key in _CACHE_DATA and (now - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
             return _CACHE_DATA[cache_key]["data"]
 
         subsectors = [
@@ -990,14 +992,14 @@ class SemiCycleEngine:
         return result
 
     @classmethod
-    async def get_etf_rebalancing_matrix(cls) -> Dict[str, Any]:
+    async def get_etf_rebalancing_matrix(cls, force: bool = False) -> Dict[str, Any]:
         """
         위젯 4: Dynamic Semiconductor ETF Rebalancing Matrix
         - 현재 사이클 국면에 맞춘 12종 반도체 ETF 퀀트 Fit Score 및 리밸런싱 권고
         """
         now = time.time()
         cache_key = "semi_etf_matrix"
-        if cache_key in _CACHE_DATA and (now - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
+        if not force and cache_key in _CACHE_DATA and (now - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
             return _CACHE_DATA[cache_key]["data"]
 
         etf_list = [
@@ -1085,13 +1087,13 @@ class SemiCycleEngine:
         return result
 
     @classmethod
-    async def get_industries_summary(cls) -> Dict[str, Any]:
+    async def get_industries_summary(cls, force: bool = False) -> Dict[str, Any]:
         """
         업종별 사이클 국면 요약 — 각 업종의 실데이터 신호를 같은 엔진으로 판정한다.
         """
         now = time.time()
         cache_key = "semi_industries_summary"
-        if cache_key in _CACHE_DATA and (now - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
+        if not force and cache_key in _CACHE_DATA and (now - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
             return _CACHE_DATA[cache_key]["data"]
 
         # 11개 업종의 대장주·바스켓 티커를 한 번에 내려받는다.
@@ -1123,7 +1125,7 @@ class SemiCycleEngine:
         return result
 
     @classmethod
-    async def get_macro_signals(cls, industry: str = "semiconductor") -> Dict[str, Any]:
+    async def get_macro_signals(cls, industry: str = "semiconductor", force: bool = False) -> Dict[str, Any]:
         """
         업종별 실데이터 신호등 및 5단계 국면 진단 데이터셋 (10Y 시계열)
         - 대장주 낙폭 / 업종 지수는 yfinance 주간 종가에서 산출
@@ -1132,7 +1134,7 @@ class SemiCycleEngine:
         """
         now = time.time()
         cache_key = f"semi_macro_signals_{industry}"
-        if cache_key in _CACHE_DATA and (now - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
+        if not force and cache_key in _CACHE_DATA and (now - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
             return _CACHE_DATA[cache_key]["data"]
 
         if industry not in INDUSTRY_PROFILES:
@@ -1198,4 +1200,10 @@ class SemiCycleEngine:
         if counts["total"] > 0:
             _CACHE_DATA[cache_key] = {"data": result, "ts": now}
         return result
+
+    @classmethod
+    def clear_cache(cls):
+        """캐시를 즉시 비워 최신 데이터를 강제 재계산하도록 함."""
+        global _CACHE_DATA
+        _CACHE_DATA.clear()
 

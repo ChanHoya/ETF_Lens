@@ -3,11 +3,24 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 1) 섹션 5 시뮬레이터(스트레스 테스터, 멀티 백테스터) QuantCacheRegistry 백엔드 0ms 캐싱 & 프론트엔드 SWR/localStorage 복원 일원화 완료, 2) 포트폴리오 백테스터 모바일 뷰포트 확장(Maximize/Minimize) 및 터치 커서 인터랙션 개선 완료, 3) 23:15 KST 야간 시계열 시딩 완료 즉시 탈출 신호(Exit Signal) 기반 종합 리스크 텔레그램 일일 브리핑 자동 발송 연동 완료
+✅ Current: 1) 반도체 퀀트 사이클 UI 3대 탭 전면 개편(사이클&AI트렌드 통합, Q-Cycle 스크리너 전진 배치, 핵심ETF&자산배분 가이드 통합), 2) "데이터 갱신" 원클릭 실시간 강제 재계산(force=true + 스피너 + 토스트) 활성화, 3) 추천 1~3 백그라운드 자동 갱신 파이프라인 구축(5대 섹터 Gemini Expert Report 주간 배치, 금통위/FOMC 당일 실시간 감지 & 텔레그램 속보, 반도체 5대 통계 동적 시계열 동기화)
 ➡️ Next: 실서비스 성능 모니터링 및 사용자 추가 요청 대응
 
-> 세션 핸드오프 (2026-10-15, Antigravity):
-> - ⚡ [추천 1번] 섹션 5 시뮬레이터(스트레스 테스터 & 멀티 백테스터) 전수 캐싱 및 0ms 서빙 일원화:
+> 세션 핸드오프 (2026-10-16, Antigravity):
+> - ⚡ [UI 개편] 반도체 섹터 3대 탭 통합 및 전진 배치:
+>   - 1) Tab 1: `1. 매크로 4국면 퀀트 사이클 & AI 트렌드` - 3대 트렌드(과열 재진입/선별 밸류/메모리 가속)를 사이클 시계 상단에 시각화 카드로 융합.
+>   - 2) Tab 2: `2. Q-Cycle 퀀트 스크리너` - ETF 분석보다 앞쪽으로 전진 배치.
+>   - 3) Tab 3: `3. 핵심 ETF & 자산배분 가이드` - 국내외 핵심 ETF와 포트폴리오 자산배분 모델 & Rebalancing Matrix 일원화.
+>   - 4) "데이터 갱신" 버튼: 백엔드 `?force=true` 캐시 바이패스 연동, 프론트엔드 `isRefreshing` 스피너 및 완료 토스트 배지 제공.
+> - ⚡ [추천 1번] 5대 섹터 Gemini Expert Report 정기 자동 갱신 스케줄러:
+>   - `backend/core/scheduler.py`: 매주 월요일 08:20 KST `_job_sector_insights_weekly` 실행.
+>   - `backend/api/sector_insight.py`: `refresh_all_sector_insights_job` 신설로 5대 섹터 순차 갱신 및 API Rate Limit 방어.
+> - ⚡ [추천 2번] 통화정책 회의(BOK 금통위 / FOMC) 당일 속보 수집 폴링 스케줄러:
+>   - `backend/scheduler/meeting_poll.py`: 매시 5분 KST 실행. 비관측일에는 즉시 no-op, 회의 당일/익일에는 rates/macro 갱신 및 결과 확정 시 텔레그램 자동 발송.
+> - ⚡ [추천 3번] 반도체 5대 산업 통계(수출액/단가/물량/가동률/재고) 동기화 파이프라인:
+>   - `backend/core/macro_historical_data.py`: `_DYNAMIC_SERIES`, `append_macro_point()` 구현.
+>   - `backend/scheduler/semi_stats_sync.py`: 매월 15일/25일 08:45 KST 최신 월차 통계 자동 동기화 및 `SemiCycleEngine.clear_cache()` 연동.
+> - 🧪 검증: Next.js 16.1.6 11개 페이지 빌드 100% 성공, 백엔드 pytest 19/19개 100% 통과.
 >   - 1) `backend/api/router.py`: `portfolio_stress_test` 엔드포인트에 `quant_cache.get/set("stress_test", ...)` 백엔드 캐시 적용 (0.0001초 응답).
 >   - 2) `backend/api/backtest.py`: `run_multi_asset_backtest_api`에 `quant_cache.get/set("multi_backtest", ...)` 백엔드 캐시 적용.
 >   - 3) `PortfolioStressTester.tsx`: 자산 가중치 시그니처 기반 `localStorage` 캐싱 탑재 및 Bar 컴포넌트 `isAnimationActive={false}` 적용.

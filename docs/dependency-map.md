@@ -51,6 +51,9 @@ A living document of module relationships. Update whenever modules are added or 
 | Quant Cache Registry (S10-3) | Core / Infrastructure | Centralized namespace-isolated in-memory cache registry with LRU eviction, TTL, and libc malloc_trim memory reclamation | core/quant_cache_registry | api/backtest, api/efficient_frontier, core/stress_tester | Antigravity |
 | Nightly Holdings & Benchmark Seeder | Core / Infrastructure | Nightly incremental DB seeder for 4 benchmarks (^KS11, ^KQ11, ^GSPC, ^IXIC) and user holdings | scheduler/etf_price_sync, core/scheduler, db/models | api/backtest, api/efficient_frontier, KospiExitAnalyzer, core/risk_digest | Antigravity |
 | Nightly Risk Digest & Seeder Notifier | Core / Application | Comprehensive daily risk score and briefing dispatch via Telegram after nightly price seeder | core/risk_digest, core/scheduler, core/notifier | scheduler | Antigravity |
+| Sector Insights Weekly Auto-Refresh | Application / Infrastructure | Weekly Gemini Expert Report auto-refresh for 5 sectors (semi/space/energy/bio/semiparts) with rate-limit defense | api/sector_insight, core/scheduler | scheduler | Antigravity |
+| Policy Meeting Live Poller & News Flash | Application / Presentation | Hourly live monitoring on BOK/FOMC meeting days, forcing rates/macro updates and Telegram flash alerts | scheduler/meeting_poll, api/rates_dashboard, api/macro_dashboard, core/notifier | scheduler | Antigravity |
+| Semi Macro Statistics Pipeline | Core / Infrastructure | Monthly semi 5-industry macro statistics (exports/unit price/volume/utilization/inventory) dynamic series pipeline | scheduler/semi_stats_sync, core/macro_historical_data, core/semi_cycle_engine | SemiCycleDashboard, scheduler | Antigravity |
 <!-- Add new modules above this line -->
 
 

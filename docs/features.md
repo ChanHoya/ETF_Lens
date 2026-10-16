@@ -105,6 +105,12 @@
 | S11-1: 시뮬레이터(스트레스 테스터, 멀티 백테스터) 0ms 캐싱 & 프론트엔드 최적화 | ✅ done | backend/api/router.py, backend/api/backtest.py, dashboard/src/components/PortfolioStressTester.tsx, MultiAssetBacktester.tsx | QuantCacheRegistry 백엔드 캐시 연동(0.0001초 응답), SWR 및 localStorage 브라우저 즉시 복원, Recharts 다운샘플링 및 isAnimationActive=false 일괄 적용 완료 |
 | S11-2: 포트폴리오 백테스터 모바일 와이드 뷰포트 확장 및 터치 인터랙션 개선 | ✅ done | dashboard/src/components/PortfolioBacktester.tsx | 모바일 화면 전용 차트 세로 높이 확장 토글(350px ↔ 480px, Maximize/Minimize), touch-pan-x 스크롤 충돌 방지 및 점선 터치 커서로 터치 사용성 대폭 향상 |
 | S11-3: 야간 시계열 시딩 완료 알림 및 일일 포트폴리오 리스크 텔레그램 브리핑 | ✅ done | backend/core/risk_digest.py, backend/core/scheduler.py, backend/tests/test_nightly_risk_digest.py | 23:15 KST 시딩 잡 완료 즉시 탈출 신호(Exit Signal) 점수, VKOSPI/VIX, FGI 탐욕지수, 환율/DXY, 금리차 취합 후 개인 텔레그램 봇으로 일일 리포트 자동 발송 |
+| S11-4: 반도체 4국면 퀀트 사이클 & AI 트렌드 통합 대시보드 | ✅ done | dashboard/src/components/SemiCycleDashboard.tsx, SemiChart.tsx, SectorInsightReport.tsx | AI 3대 트렌드 시각화 카드 융합, Q-Cycle 스크리너 전진 배치, 핵심 ETF 및 자산배분 모델 3대 탭 일원화 |
+| S11-5: 반도체 퀀트 사이클 실시간 강제 재계산 | ✅ done | backend/core/semi_cycle_engine.py, backend/api/router.py, SemiCycleDashboard.tsx | ?force=true 캐시 바이패스, clear_cache(), 프론트엔드 로딩 스피너 및 갱신 토스트 배지 제공 |
+| S11-6: 5대 섹터 Gemini Expert Report 주간 자동 갱신 스케줄러 | ✅ done | backend/core/scheduler.py, backend/api/sector_insight.py | 매주 월 08:20 KST 반도체/우주/에너지/바이오/소부장 순차 백그라운드 갱신 및 Rate limit 방어 |
+| S11-7: 정책금리 회의(BOK/FOMC) 실시간 속보 수집 & 텔레그램 연동 | ✅ done | backend/scheduler/meeting_poll.py, backend/core/scheduler.py | 회의 당일/익일 매시 5분 KST 자동 감지, rates/macro 강제 갱신 및 이벤트 결과 확정 시 텔레그램 속보 자동 발송 |
+| S11-8: 반도체 5대 산업 통계 동기화 파이프라인 | ✅ done | backend/scheduler/semi_stats_sync.py, backend/core/macro_historical_data.py | 수출액/단가/물량/가동률/재고 최신 월차 데이터 dynamic 결합 및 매월 15/25일 자동 갱신 |
+
 
 
 
