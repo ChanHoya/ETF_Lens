@@ -16,6 +16,7 @@ import FxTab from "@/components/FxTab";
 import RatesTab from "@/components/RatesTab";
 import StocksTab from "@/components/StocksTab";
 import MacroTab from "@/components/MacroTab";
+import MidtermElectionTab from "@/components/MidtermElectionTab";
 import TodayMarketButton from "@/components/TodayMarketButton";
 import CoveredCallTab from "@/components/CoveredCallTab";
 import BrazilBondTab from "@/components/BrazilBondTab";
@@ -52,7 +53,7 @@ type FavGroup = { id: string; name: string; items: { code: string; name: string 
 const BRAND_KEYWORDS = ['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'];
 const THEME_KEYWORDS = ['커버드콜', '배당', '액티브', 'AI', '반도체', '로봇', '원자력', '2차전지', '조선', '방산', '금융', '바이오'];
 
-function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = false, initialOpenTodayMarket = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension', showMyTab?: boolean, showTffTab?: boolean, initialOpenTodayMarket?: boolean }) {
+function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = false, initialOpenTodayMarket = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension' | 'us_midterm', showMyTab?: boolean, showTffTab?: boolean, initialOpenTodayMarket?: boolean }) {
   const router = useRouter();
   const [slots, setSlots] = useState<{ search: string, code: string }[]>([
     { search: "", code: "" },
@@ -69,7 +70,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
   const [globalSearch, setGlobalSearch] = useState("");
   const [globalActive, setGlobalActive] = useState(false);
   const [period, setPeriod] = useState<string>('6M');
-  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension' | 'us_midterm'>(initialTab);
   const [isTodayMarketOpen, setIsTodayMarketOpen] = useState(initialOpenTodayMarket);
 
   const [etfDictionary, setEtfDictionary] = useState<{ code: string, name: string }[]>([]);
@@ -242,7 +243,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
     if (['select', 'info', 'chart', 'holdings', 'covered_call', ...(showMyTab ? ['dividend'] : []), 'brazil'].includes(activeTab)) {
       return 'analysis';
     }
-    if (['discover', 'fx', 'rates', 'stocks', 'macro'].includes(activeTab)) {
+    if (['discover', 'fx', 'rates', 'stocks', 'macro', 'us_midterm'].includes(activeTab)) {
       return 'discover';
     }
     return activeTab;
@@ -1293,7 +1294,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                 const isAnalysisActive = ['select', 'info', 'chart', 'holdings', 'covered_call', ...(showMyTab ? ['dividend'] : []), 'brazil'].includes(activeTab);
                 const isActive = (tab.id === 'etfcheck' && isEtfCheckModalOpen) ||
                   (tab.id === 'analysis' && isAnalysisActive && !isEtfCheckModalOpen) ||
-                  ((activeTab === tab.id || (tab.id === 'discover' && (activeTab === 'fx' || activeTab === 'rates' || activeTab === 'stocks' || activeTab === 'macro'))) && !isEtfCheckModalOpen);
+                  ((activeTab === tab.id || (tab.id === 'discover' && (activeTab === 'fx' || activeTab === 'rates' || activeTab === 'stocks' || activeTab === 'macro' || activeTab === 'us_midterm'))) && !isEtfCheckModalOpen);
                 return (
                   <Fragment key={tab.id}>
                     {tab.id === 'etftracker' && (
@@ -1340,7 +1341,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                           return;
                         }
                         if (tab.id === 'discover') {
-                          const isAlreadyInMarket = ['macro', 'fx', 'rates', 'stocks', 'discover'].includes(activeTab);
+                          const isAlreadyInMarket = ['macro', 'fx', 'rates', 'stocks', 'discover', 'us_midterm'].includes(activeTab);
                           if (!isAlreadyInMarket) {
                             setActiveTab('macro');
                           }
@@ -1350,7 +1351,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                           setSelectedDetailEtf(null);
                           return;
                         }
-                        setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension');
+                        setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension' | 'us_midterm');
                         setIsTodayMarketOpen(false);
                         setIsEtfCheckModalOpen(false);
                         setNaverEtfCode(null);
@@ -1415,8 +1416,8 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
           </div>
         )}
 
-        {/* 서브탭: 시장동향 탭 선택시 — 오늘의 시장 | 종합(환율/금리/주식) | 환율 | 금리 | 주식 | 시장지표 */}
-        {(activeTab === 'discover' || activeTab === 'fx' || activeTab === 'rates' || activeTab === 'stocks' || activeTab === 'macro') && !isEtfCheckModalOpen && (
+        {/* 서브탭: 시장동향 탭 선택시 — 오늘의 시장 | 종합(환율/금리/주식) | 환율 | 금리 | 주식 | 시장지표 | 미국중간선거('26.11) */}
+        {(activeTab === 'discover' || activeTab === 'fx' || activeTab === 'rates' || activeTab === 'stocks' || activeTab === 'macro' || activeTab === 'us_midterm') && !isEtfCheckModalOpen && (
           <div className="w-full flex justify-center mb-2 relative z-[180]">
             <div className="flex items-center gap-2 md:gap-3 bg-transparent px-3 py-1 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
               <TodayMarketButton isOpen={isTodayMarketOpen} onOpenChange={setIsTodayMarketOpen} />
@@ -1428,10 +1429,11 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                   { id: 'rates', label: '금리' },
                   { id: 'stocks', label: '주식' },
                   { id: 'discover', label: '시장지표' },
+                  { id: 'us_midterm', label: "🗳️ 미국중간선거('26.11)" },
                 ]}
                 activeId={activeTab}
                 onChange={(newId) => {
-                  setActiveTab(newId as 'macro' | 'fx' | 'rates' | 'stocks' | 'discover');
+                  setActiveTab(newId as 'macro' | 'fx' | 'rates' | 'stocks' | 'discover' | 'us_midterm');
                   setIsTodayMarketOpen(false);
                 }}
                 pillClassName="bg-white/20 shadow-inner border border-white/20"
@@ -1968,6 +1970,10 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
           <MacroTab />
         )}
 
+        {activeTab === 'us_midterm' && (
+          <MidtermElectionTab />
+        )}
+
         {activeTab === 'pension' && (
           <PensionWealthHub />
         )}
@@ -2100,7 +2106,7 @@ class GlobalAppErrorBoundary extends React.Component<
 }
 
 export default function MainApp(props: {
-  initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension';
+  initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'macro' | 'pension' | 'us_midterm';
   showMyTab?: boolean;
   showTffTab?: boolean;
   initialOpenTodayMarket?: boolean;

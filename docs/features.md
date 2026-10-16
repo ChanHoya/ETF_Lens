@@ -4,6 +4,7 @@
 
 | Feature | Status | Key Files | Notes |
 |---------|--------|-----------|-------|
+| 미국 중간선거('26.11) 영향 분석 | ✅ done | backend/api/midterm_election.py, MidtermElectionTab.tsx | 5대 모듈(선거 개요, 판세 트래커, 시나리오 매트릭스, 계절성 통계, Core-Satellite 리밸런싱 컨설턴트) |
 | ETF 마스터 DB | ✅ done | backend/api/router.py, db/models.py (ETFMaster) | ~1,000 종목 |
 | ETF 종목 검색 | ✅ done | dashboard/src/components/EtfSearchDropdown.tsx | |
 | ETF 비교 분석 | ✅ done | dashboard/src/components/CompareTable.tsx, CompareChart.tsx | |
