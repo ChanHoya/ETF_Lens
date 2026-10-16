@@ -699,6 +699,10 @@ async def seed_us_macro_db_if_empty(force: bool = False):
                 elif latest_rec.date == prev_ym and latest_rec.cpi_yoy is None:
                     should_sync = True
 
+            # 매월 14일 이후이고 ppi_yoy가 비어있다면 업데이트 필요
+            if now_dt.day >= 14 and latest_rec.date == prev_ym and latest_rec.ppi_yoy is None:
+                should_sync = True
+
             # 매월 25일 이후이고 pce_yoy가 비어있다면 업데이트 필요
             if now_dt.day >= 25 and latest_rec.date == prev_ym and latest_rec.pce_yoy is None:
                 should_sync = True
@@ -1717,17 +1721,60 @@ async def debug_vix_dates():
     return result
 
 
+async def _fetch_bls_recent() -> dict[str, dict[str, float]]:
+    """미국 노동통계국(BLS) 공식 공공 API를 통해 최근 3개년 CPI, PPI 원천 데이터를 직접 수집.
+    - CPI: CUUR0000SA0 (Consumer Price Index - All Urban Consumers)
+    - PPI: WPUFD49207 (Final Demand PPI - 공식 헤드라인 생산자물가지수)
+    FRED에 데이터가 반영되기 전(발표 당일) 선제적으로 갱신 가능.
+    """
+    try:
+        import requests, json
+        headers = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+        cur_year = _kst_now().year
+        payload = json.dumps({
+            "seriesid": ["CUUR0000SA0", "WPUFD49207"],
+            "startyear": str(cur_year - 2),
+            "endyear": str(cur_year)
+        })
+        resp = await asyncio.to_thread(
+            lambda: requests.post("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=payload, headers=headers, timeout=10)
+        )
+        if resp.status_code != 200:
+            return {}
+        res = resp.json()
+        out = {"cpi": {}, "ppi": {}}
+        for s in res.get("Results", {}).get("series", []):
+            sid = s.get("seriesID")
+            key = "cpi" if "CUUR" in sid else "ppi"
+            for d in s.get("data", []):
+                ym = f"{d['year']}-{d['period'][1:]}"
+                try:
+                    out[key][ym] = float(d["value"])
+                except Exception:
+                    pass
+        return out
+    except Exception as e:
+        logger.warning(f"[BLS API] Failed to fetch BLS recent data: {e}")
+        return {}
+
+
 async def sync_us_macro_indicators_job() -> bool:
-    """FRED에서 미국 CPI, PPI, PCE 인덱스를 수집하고 YoY(%)를 계산하여 DB에 저장합니다."""
+    """FRED 및 BLS 공식 API에서 미국 CPI, PPI, PCE 인덱스를 수집하고 YoY(%)를 계산하여 DB에 저장합니다."""
     try:
         from db.database import AsyncSessionLocal
         from db.models import USMacroIndicatorLog
         from sqlalchemy import select
         
-        logger.info("[Macro Sync] Fetching 11 years of monthly CPI, PPI, PCE data from FRED...")
-        # 11년치 (약 4100일) 데이터 수집해 10년치 YoY 계산에 필요한 t-12 시점 확보
+        logger.info("[Macro Sync] Fetching monthly CPI, PPI, PCE data from FRED and BLS...")
+        # 1. FRED 11년치 (약 4100일) 장기 시계열 수집 (10년치 YoY 계산에 필요한 t-12 시점 확보)
+        # CPI: CPIAUCSL (소비자물가지수)
+        # PPI: WPSFD49207 (최종수요 PPI 헤드라인). 미수신 시 PPIACO fallback
+        # PCE: PCEPILFE (Core PCE 물가지수, BEA 원천)
         cpi_raw = await _fetch_fred_series("CPIAUCSL", days=4100)
-        ppi_raw = await _fetch_fred_series("PPIACO", days=4100)
+        ppi_raw = await _fetch_fred_series("WPSFD49207", days=4100)
+        if not ppi_raw:
+            logger.info("[Macro Sync] WPSFD49207 is empty, falling back to PPIACO...")
+            ppi_raw = await _fetch_fred_series("PPIACO", days=4100)
         pce_raw = await _fetch_fred_series("PCEPILFE", days=4100)
         
         def _get_monthly_map(raw_data: dict[str, float]) -> dict[str, float]:
@@ -1741,6 +1788,17 @@ async def sync_us_macro_indicators_job() -> bool:
         ppi_map = _get_monthly_map(ppi_raw)
         pce_map = _get_monthly_map(pce_raw)
         
+        # 2. BLS(미국 노동통계국) 공식 API 실시간 연동 (발표 당일 최신치 즉시 반영)
+        bls_recent = await _fetch_bls_recent()
+        if bls_recent.get("cpi"):
+            for ym, val in bls_recent["cpi"].items():
+                if ym not in cpi_map or ym >= sorted(cpi_map.keys())[-1]:
+                    cpi_map[ym] = val
+        if bls_recent.get("ppi"):
+            for ym, val in bls_recent["ppi"].items():
+                if ym not in ppi_map or ym >= sorted(ppi_map.keys())[-1]:
+                    ppi_map[ym] = val
+
         all_yms = sorted(list(set(cpi_map.keys()) | set(ppi_map.keys()) | set(pce_map.keys())))
         
         def _get_prev_month(ym: str) -> str:
@@ -1788,9 +1846,12 @@ async def sync_us_macro_indicators_job() -> bool:
                     continue
                 if ym in exist_recs:
                     rec = exist_recs[ym]
-                    rec.cpi_yoy = vals["cpi_yoy"]
-                    rec.ppi_yoy = vals["ppi_yoy"]
-                    rec.pce_yoy = vals["pce_yoy"]
+                    if vals["cpi_yoy"] is not None:
+                        rec.cpi_yoy = vals["cpi_yoy"]
+                    if vals["ppi_yoy"] is not None:
+                        rec.ppi_yoy = vals["ppi_yoy"]
+                    if vals["pce_yoy"] is not None:
+                        rec.pce_yoy = vals["pce_yoy"]
                 else:
                     new_objs.append(
                         USMacroIndicatorLog(
