@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Activity, ArrowUpRight, TrendingUp, BookOpen, PieChart } from 'lucide-react';
+import { Activity, ArrowUpRight, TrendingUp, BookOpen, PieChart, Rocket, Radio, Target } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
@@ -607,7 +607,82 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                 activeTab={activeInsightTab}
                 onTabChange={(id) => setActiveInsightTab(id as any)}
                 fallback={SPACE_INSIGHT_FALLBACK}
-            />
+            >
+                {(content) => (
+                    <>
+                        {activeInsightTab === 'macro' && (
+                            <div className="flex flex-col gap-4 mt-1">
+                                {/* 3대 우주항공 밸류체인 맵 */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className="bg-gradient-to-br from-cyan-950/40 via-cyan-900/20 to-black/40 border border-cyan-500/20 rounded-2xl p-4 shadow-lg flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
+                                                    <Rocket className="w-4 h-4" />
+                                                    1. 발사체 & 운송 (Launchers)
+                                                </span>
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300">쇼티지 지속</span>
+                                            </div>
+                                            <p className="text-xs text-gray-300 leading-relaxed font-medium">SpaceX 스타쉽 및 Rocket Lab 뉴트론 중심의 재사용 발사체 혁신. 발사 횟수 연 40% 이상 성장세.</p>
+                                        </div>
+                                        <div className="mt-3 pt-2.5 border-t border-cyan-500/15 flex items-center justify-between text-[11px] text-gray-400">
+                                            <span>대표 기업:</span>
+                                            <b className="text-white font-mono">RKLB, KTOS, LMT</b>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-gradient-to-br from-indigo-950/40 via-indigo-900/20 to-black/40 border border-indigo-500/20 rounded-2xl p-4 shadow-lg flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-indigo-400 flex items-center gap-1.5">
+                                                    <Radio className="w-4 h-4" />
+                                                    2. 위성 통신 & D2C (LEO Telecom)
+                                                </span>
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300">상용화 원년</span>
+                                            </div>
+                                            <p className="text-xs text-gray-300 leading-relaxed font-medium">스마트폰-저궤도 위성 직결(Direct-to-Cell) 서비스 본격화. 전 세계 음영 지역 해소 및 데이터망 확장.</p>
+                                        </div>
+                                        <div className="mt-3 pt-2.5 border-t border-indigo-500/15 flex items-center justify-between text-[11px] text-gray-400">
+                                            <span>대표 기업:</span>
+                                            <b className="text-white font-mono">ASTS, SATS, GSAT</b>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-gradient-to-br from-purple-950/40 via-purple-900/20 to-black/40 border border-purple-500/20 rounded-2xl p-4 shadow-lg flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+                                                    <Target className="w-4 h-4" />
+                                                    3. 탐사·하드웨어 & 방산 (Defense)
+                                                </span>
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300">정부 조달 수혜</span>
+                                            </div>
+                                            <p className="text-xs text-gray-300 leading-relaxed font-medium">NASA 아르테미스 달 탐사 프로젝트 및 미 우주군 국방 예산 증액에 따른 위성 제조·관측 부품 수혜.</p>
+                                        </div>
+                                        <div className="mt-3 pt-2.5 border-t border-purple-500/15 flex items-center justify-between text-[11px] text-gray-400">
+                                            <span>대표 기업:</span>
+                                            <b className="text-white font-mono">LUNR, RDW, PL, BA</b>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 매크로 트렌드 3대 카드 */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    {(content.tab1?.cards ?? []).slice(0, 3).map((c, i) => (
+                                        <div key={i} className="bg-white/[0.02] hover:bg-white/[0.04] transition-all p-4 border border-white/5 rounded-2xl flex flex-col gap-2">
+                                            <div className="flex items-center gap-2 font-bold text-sm text-cyan-300">
+                                                <TrendingUp className="w-4 h-4" />
+                                                <span>{c.title}</span>
+                                            </div>
+                                            <p className="text-xs text-gray-300 leading-relaxed">{c.body}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
+            </SectorInsightReport>
 
             {/* Divider */}
             <div className="w-full border-t border-white/10 my-1"></div>

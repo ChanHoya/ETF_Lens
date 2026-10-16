@@ -3,24 +3,24 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: 1) 반도체 퀀트 사이클 UI 3대 탭 전면 개편(사이클&AI트렌드 통합, Q-Cycle 스크리너 전진 배치, 핵심ETF&자산배분 가이드 통합), 2) "데이터 갱신" 원클릭 실시간 강제 재계산(force=true + 스피너 + 토스트) 활성화, 3) 추천 1~3 백그라운드 자동 갱신 파이프라인 구축(5대 섹터 Gemini Expert Report 주간 배치, 금통위/FOMC 당일 실시간 감지 & 텔레그램 속보, 반도체 5대 통계 동적 시계열 동기화)
-➡️ Next: 실서비스 성능 모니터링 및 사용자 추가 요청 대응
+✅ Current: Sprint 12 완료 — 1) [3번] 모바일 터치 UX 및 반응형 가로 뷰포트 최적화, 2) [1번] 시장동향 '과거 유사국면' 코사인 유사도+가중 유클리드 앙상블 퀀트 매칭 엔진 & 10대 역사적 국면 태깅, 3) [2번] 우주항공 3대 밸류체인 맵 & 수혜 대표주 카드 특화 뷰 확장, 4) [4번] 227개 전 백엔드 테스트 및 Next.js 11개 페이지 최적화 빌드 100% 검증
+➡️ Next: 프로덕션 실서버(Vercel/Render) 실시간 모니터링 및 사용자 피드백 대응
 
-> 세션 핸드오프 (2026-10-16, Antigravity):
-> - ⚡ [UI 개편] 반도체 섹터 3대 탭 통합 및 전진 배치:
->   - 1) Tab 1: `1. 매크로 4국면 퀀트 사이클 & AI 트렌드` - 3대 트렌드(과열 재진입/선별 밸류/메모리 가속)를 사이클 시계 상단에 시각화 카드로 융합.
->   - 2) Tab 2: `2. Q-Cycle 퀀트 스크리너` - ETF 분석보다 앞쪽으로 전진 배치.
->   - 3) Tab 3: `3. 핵심 ETF & 자산배분 가이드` - 국내외 핵심 ETF와 포트폴리오 자산배분 모델 & Rebalancing Matrix 일원화.
->   - 4) "데이터 갱신" 버튼: 백엔드 `?force=true` 캐시 바이패스 연동, 프론트엔드 `isRefreshing` 스피너 및 완료 토스트 배지 제공.
-> - ⚡ [추천 1번] 5대 섹터 Gemini Expert Report 정기 자동 갱신 스케줄러:
->   - `backend/core/scheduler.py`: 매주 월요일 08:20 KST `_job_sector_insights_weekly` 실행.
->   - `backend/api/sector_insight.py`: `refresh_all_sector_insights_job` 신설로 5대 섹터 순차 갱신 및 API Rate Limit 방어.
-> - ⚡ [추천 2번] 통화정책 회의(BOK 금통위 / FOMC) 당일 속보 수집 폴링 스케줄러:
->   - `backend/scheduler/meeting_poll.py`: 매시 5분 KST 실행. 비관측일에는 즉시 no-op, 회의 당일/익일에는 rates/macro 갱신 및 결과 확정 시 텔레그램 자동 발송.
-> - ⚡ [추천 3번] 반도체 5대 산업 통계(수출액/단가/물량/가동률/재고) 동기화 파이프라인:
->   - `backend/core/macro_historical_data.py`: `_DYNAMIC_SERIES`, `append_macro_point()` 구현.
->   - `backend/scheduler/semi_stats_sync.py`: 매월 15일/25일 08:45 KST 최신 월차 통계 자동 동기화 및 `SemiCycleEngine.clear_cache()` 연동.
-> - 🧪 검증: Next.js 16.1.6 11개 페이지 빌드 100% 성공, 백엔드 pytest 19/19개 100% 통과.
+> 세션 핸드오프 (2026-10-16, Antigravity - Sprint 12):
+> - 📱 [S12-1: 모바일 UX 최적화 (사용자 3번 과제)]:
+>   - `SemiCycleDashboard.tsx`: 2D 시계 모바일 높이 축소(`h-[320px] sm:h-[380px]`), 사분면 텍스트 반응형 글자 크기 및 여백 조정, ScatterChart margin 최적화 (`top: 25, right: 15, bottom: 25, left: 15`).
+>   - `SemiChart.tsx`: Q-Cycle 스크리너 테이블 상단에 모바일 전용 `[← 좌우로 스와이프하여 상세 지표 확인 →]` 가이드 배지 및 `touch-pan-x` 스무스 터치 스크롤 적용.
+>   - `MacroTab.tsx`: 과거 유사국면 테이블 상단 모바일 스와이프 안내 배지 및 `min-w-[520px] touch-pan-x` 적용.
+> - 🧠 [S12-2: 과거 유사국면 동적 퀀트 매칭 엔진 (사용자 1번 과제)]:
+>   - `backend/api/macro_dashboard.py`: 코사인 유사도(방향성) + 가중 유클리드 거리(진폭) 앙상블 매칭 엔진 구축 (`FEATURE_WEIGHTS` 적용).
+>   - 10대 역사적 경제위기/호황 국면(1997 외환위기, 2008 금융위기, 2011 신용강등, 2020 팬데믹, 2022 인플레 등) 자동 매칭 라벨링.
+>   - `MacroTab.tsx`: 유사도 % 컬러 강조 및 역사적 국면 배지 시각화 탑재.
+>   - 단위 테스트 `test_analogs_ensemble_similarity_and_regime_tag` 신설 및 17/17 통과.
+> - 🚀 [S12-3: 타 섹터 우주항공 3대 밸류체인 맵 확장 (사용자 2번 과제)]:
+>   - `SpaceChart.tsx`: 발사체·운송 / 위성통신 D2C / 탐사·방산 3대 밸류체인 맵 & 모멘텀 지표 카드 융합.
+> - 🛡️ [S12-4: 프로덕션 무결성 검증 (사용자 4번 과제)]:
+>   - `backend/api/router.py`: FastAPI `Query` 누락 임포트 핫픽스.
+>   - 백엔드 pytest 227개 전 테스트 100% Pass, 프론트엔드 Next.js 11개 페이지 최적화 빌드 100% Pass.
 >   - 1) `backend/api/router.py`: `portfolio_stress_test` 엔드포인트에 `quant_cache.get/set("stress_test", ...)` 백엔드 캐시 적용 (0.0001초 응답).
 >   - 2) `backend/api/backtest.py`: `run_multi_asset_backtest_api`에 `quant_cache.get/set("multi_backtest", ...)` 백엔드 캐시 적용.
 >   - 3) `PortfolioStressTester.tsx`: 자산 가중치 시그니처 기반 `localStorage` 캐싱 탑재 및 Bar 컴포넌트 `isAnimationActive={false}` 적용.

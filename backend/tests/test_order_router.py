@@ -19,6 +19,10 @@ def setup_db(event_loop):
             await conn.run_sync(Base.metadata.create_all)
 
         async with AsyncSessionLocal() as db:
+            from sqlalchemy import delete
+            await db.execute(delete(ETFMaster).where(ETFMaster.code.in_(["396500", "069500"])))
+            await db.commit()
+
             # Add mock ETF master price for alternatives
             etf_alt = ETFMaster(
                 code="396500",

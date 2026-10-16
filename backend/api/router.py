@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from agents.harvester.harvester import ETFHarvester

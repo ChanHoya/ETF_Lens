@@ -3,7 +3,7 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { ResponsiveContainer, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
-import { Compass, RefreshCw, Sparkles, PieChart, History, Network, CalendarClock, Info, Plus, Minus, Circle } from 'lucide-react';
+import { Compass, RefreshCw, Sparkles, PieChart, History, Network, CalendarClock, Info, Plus, Minus, Circle, ArrowLeftRight } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
 import { yearTicks } from '@/lib/chartTicks';
 import { dataAgeMs, useCachedOverview } from '@/lib/useCachedOverview';
@@ -22,7 +22,7 @@ type Overview = {
     allocation: { asset: string; score: number; label: string; reasons: { sign: number; text: string }[] }[];
     analogs: {
         now: Record<string, number>; labels: Record<string, [string, string]>;
-        analogs: { date: string; similarity: number; features: Record<string, number>; after_6m: Outcome; after_12m: Outcome; context: Record<string, string | null> }[];
+        analogs: { date: string; similarity: number; historical_regime?: string | null; features: Record<string, number>; after_6m: Outcome; after_12m: Outcome; context: Record<string, string | null> }[];
         average: { after_6m: Outcome; after_12m: Outcome };
     } | null;
     correlation: { assets: { key: string; label: string }[]; now: (number | null)[][]; long: (number | null)[][]; notable: { text: string; diff: number }[] } | null;
@@ -117,8 +117,14 @@ function Analogs({ a }: { a: NonNullable<Overview['analogs']> }) {
     };
     return (
         <div className="space-y-3">
-            <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+            <div className="sm:hidden flex items-center justify-between text-[11px] text-gray-400 bg-white/[0.03] border border-white/5 rounded-lg px-2.5 py-1.5">
+                <span className="flex items-center gap-1.5 text-emerald-300 font-medium">
+                    <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" />
+                    좌우로 스와이프하여 자산별 6·12개월 성과 확인
+                </span>
+            </div>
+            <div className="overflow-x-auto touch-pan-x scrollbar-thin">
+                <table className="w-full text-xs min-w-[520px]">
                     <thead><tr className="text-gray-500 border-b border-white/10">
                         <th className="text-left py-1.5 font-bold">유사 시점</th><th className="text-right font-bold">유사도</th><th className="text-left font-bold pl-3">그때 국면</th>
                         {outKeys.map(k => <th key={k} className="text-right font-bold">{OUT_LABEL[k]} 6개월 / 12개월</th>)}
@@ -127,8 +133,17 @@ function Analogs({ a }: { a: NonNullable<Overview['analogs']> }) {
                         {a.analogs.map(x => (
                             <tr key={x.date} className="border-b border-white/5 text-gray-200">
                                 <td className="py-1.5 font-mono">{x.date.slice(0, 7)}</td>
-                                <td className="text-right font-bold">{x.similarity}%</td>
-                                <td className="pl-3 text-gray-400">{[x.context.rates, x.context.fx, x.context.kospi && `KOSPI ${x.context.kospi}`].filter(Boolean).join(' · ') || '-'}</td>
+                                <td className="text-right font-bold text-emerald-400">{x.similarity}%</td>
+                                <td className="pl-3 text-gray-400">
+                                    <div className="flex flex-col gap-0.5">
+                                        {x.historical_regime && (
+                                            <span className="inline-block text-[10px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded w-fit">
+                                                {x.historical_regime}
+                                            </span>
+                                        )}
+                                        <span>{[x.context.rates, x.context.fx, x.context.kospi && `KOSPI ${x.context.kospi}`].filter(Boolean).join(' · ') || '-'}</span>
+                                    </div>
+                                </td>
                                 {outKeys.map(k => <td key={k} className="text-right">{cell(x.after_6m, k)} / {cell(x.after_12m, k)}</td>)}
                             </tr>
                         ))}

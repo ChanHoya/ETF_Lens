@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Activity, ArrowUpRight, TrendingUp, BookOpen, PieChart, Cpu, GitBranch, ArrowRight, Target, Compass } from 'lucide-react';
+import { Activity, ArrowUpRight, TrendingUp, BookOpen, PieChart, Cpu, GitBranch, ArrowRight, Target, Compass, ArrowLeftRight } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, ReferenceLine, ZAxis } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
@@ -871,16 +871,24 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
                                     </div>
 
                                     {/* 데이터 테이블 */}
-                                    <div className="mt-4 overflow-x-auto">
-                                        <table className="w-full text-xs">
-                                            <thead>
-                                                <tr className="border-b border-white/10">
-                                                    <th className="px-3 py-2 text-left text-gray-400 font-bold">종목</th>
-                                                    <th className="px-3 py-2 text-center text-gray-400 font-bold">그룹</th>
-                                                    <th className="px-3 py-2 text-right text-gray-400 font-bold">TTM OPM</th>
-                                                    <th className="px-3 py-2 text-right text-gray-400 font-bold">Trailing PER</th>
-                                                </tr>
-                                            </thead>
+                                    <div className="mt-4">
+                                        <div className="sm:hidden flex items-center justify-between text-[11px] text-gray-400 bg-white/[0.03] border border-white/5 rounded-lg px-2.5 py-1.5 mb-2">
+                                            <span className="flex items-center gap-1.5 text-indigo-300 font-medium">
+                                                <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" />
+                                                좌우로 스와이프하여 상세 지표 확인
+                                            </span>
+                                            <span className="text-[10px] text-gray-500">총 {screenerData.length}개 종목</span>
+                                        </div>
+                                        <div className="overflow-x-auto touch-pan-x scrollbar-thin">
+                                            <table className="w-full text-xs min-w-[340px]">
+                                                <thead>
+                                                    <tr className="border-b border-white/10">
+                                                        <th className="px-3 py-2 text-left text-gray-400 font-bold">종목</th>
+                                                        <th className="px-3 py-2 text-center text-gray-400 font-bold">그룹</th>
+                                                        <th className="px-3 py-2 text-right text-gray-400 font-bold">TTM OPM</th>
+                                                        <th className="px-3 py-2 text-right text-gray-400 font-bold">Trailing PER</th>
+                                                    </tr>
+                                                </thead>
                                             <tbody>
                                                 {[...screenerData]
                                                     .sort((a, b) => (b.opm ?? -999) - (a.opm ?? -999))
@@ -909,8 +917,9 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
                                             </tbody>
                                         </table>
                                     </div>
-                                </>
-                            )}
+                                </div>
+                            </>
+                        )}
                         </div>
 
                         <p className="text-[10px] text-gray-600 leading-relaxed">

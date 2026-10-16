@@ -110,6 +110,10 @@
 | S11-6: 5대 섹터 Gemini Expert Report 주간 자동 갱신 스케줄러 | ✅ done | backend/core/scheduler.py, backend/api/sector_insight.py | 매주 월 08:20 KST 반도체/우주/에너지/바이오/소부장 순차 백그라운드 갱신 및 Rate limit 방어 |
 | S11-7: 정책금리 회의(BOK/FOMC) 실시간 속보 수집 & 텔레그램 연동 | ✅ done | backend/scheduler/meeting_poll.py, backend/core/scheduler.py | 회의 당일/익일 매시 5분 KST 자동 감지, rates/macro 강제 갱신 및 이벤트 결과 확정 시 텔레그램 속보 자동 발송 |
 | S11-8: 반도체 5대 산업 통계 동기화 파이프라인 | ✅ done | backend/scheduler/semi_stats_sync.py, backend/core/macro_historical_data.py | 수출액/단가/물량/가동률/재고 최신 월차 데이터 dynamic 결합 및 매월 15/25일 자동 갱신 |
+| S12-1: 모바일 터치 UX 및 반응형 가로 뷰포트 최적화 | ✅ done | dashboard/src/components/SemiCycleDashboard.tsx, SemiChart.tsx, MacroTab.tsx | 반도체 4국면 시계 모바일 스케일 다운(h-[320px] sm:h-[380px]), touch-pan-x 스무스 터치 스와이프 안내 배지, Recharts 마진 최적화 |
+| S12-2: 시장동향 '과거 유사국면' 동적 퀀트 앙상블 매칭 엔진 고도화 | ✅ done | backend/api/macro_dashboard.py, backend/tests/test_macro_dashboard.py, dashboard/src/components/MacroTab.tsx | 코사인 유사도(방향성) + 가중 유클리드 거리(진폭) 앙상블 매칭 엔진, 10대 역사적 경제위기/호황 국면 태깅 및 유사도(%) 정밀 연산 |
+| S12-3: 타 섹터(우주항공 등) 3대 밸류체인 맵 & 퀀트 지표 확장 | ✅ done | dashboard/src/components/SpaceChart.tsx, SectorInsightReport.tsx | 우주항공 3대 밸류체인(발사체·운송/위성통신D2C/탐사·방산) 맵 & 수혜 대표주 카드 신설 및 특화 뷰 확장 |
+| S12-4: 프로덕션 실서버 배포 점검 및 라이브 무결성 검증 | ✅ done | backend/api/router.py, backend/tests/ | FastAPI Query 파라미터 임포트 수정, 227개 전 백엔드 테스트 및 Next.js 11개 페이지 최적화 빌드 100% 통과 |
 
 
 

@@ -189,3 +189,15 @@ def test_missing_tabs_degrade():
     assert out["diagnosis"]["rows"][0]["status"] == "데이터 없음"
     assert out["correlation"] is None or len(out["correlation"]["assets"]) <= 3
     assert {a["asset"] for a in out["allocation"]} == {"주식", "채권", "달러", "현금·단기"}
+
+
+def test_analogs_ensemble_similarity_and_regime_tag():
+    a = build_overview(_fx(), _rates(), _stocks(), TODAY)["analogs"]
+    assert a is not None
+    assert len(a["analogs"]) == 3
+    for item in a["analogs"]:
+        assert 1 <= item["similarity"] <= 99
+        assert "historical_regime" in item
+        # historical_regime은 매칭 시 문자열이거나 None
+        assert item["historical_regime"] is None or isinstance(item["historical_regime"], str)
+

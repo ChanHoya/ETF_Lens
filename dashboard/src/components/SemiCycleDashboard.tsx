@@ -664,24 +664,24 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                         {/* 4 Quadrants Diagram via ScatterChart */}
                         <div
                             ref={chartContainerRef}
-                            className="relative w-full h-[380px] my-2 bg-black/40 rounded-xl border border-white/5 overflow-hidden"
+                            className="relative w-full h-[320px] sm:h-[380px] my-2 bg-black/40 rounded-xl border border-white/5 overflow-hidden touch-pan-x"
                         >
                             {/* 사분면 배경 레이블 */}
-                            <div className="absolute top-3 right-4 text-right pointer-events-none z-0">
-                                <span className="text-xs font-bold text-emerald-400/80">Phase 3: 적극적 재고 축적</span>
-                                <p className="text-[9px] text-gray-500">호황기 · 출하↑ 가격↑ 실적폭발 (현재)</p>
+                            <div className="absolute top-2.5 sm:top-3 right-3 sm:right-4 text-right pointer-events-none z-0">
+                                <span className="text-[10px] sm:text-xs font-bold text-emerald-400/80">Phase 3: 적극적 재고 축적</span>
+                                <p className="text-[8px] sm:text-[9px] text-gray-500 hidden sm:block">호황기 · 출하↑ 가격↑ 실적폭발 (현재)</p>
                             </div>
-                            <div className="absolute top-3 left-4 text-left pointer-events-none z-0">
-                                <span className="text-xs font-bold text-sky-400/80">Phase 2: 소극적 재고 소진</span>
-                                <p className="text-[9px] text-gray-500">회복기 · 단가반등 재고감소 매수최적 (2023H2~24H1)</p>
+                            <div className="absolute top-2.5 sm:top-3 left-3 sm:left-4 text-left pointer-events-none z-0">
+                                <span className="text-[10px] sm:text-xs font-bold text-sky-400/80">Phase 2: 소극적 재고 소진</span>
+                                <p className="text-[8px] sm:text-[9px] text-gray-500 hidden sm:block">회복기 · 단가반등 재고감소 매수최적 (2023H2~24H1)</p>
                             </div>
-                            <div className="absolute bottom-3 left-4 text-left pointer-events-none z-0">
-                                <span className="text-xs font-bold text-rose-400/80">Phase 1: 적극적 재고 소진</span>
-                                <p className="text-[9px] text-gray-500">불황기 · 출하↓ 가격↓ 최악의 바닥 (2022~23H1)</p>
+                            <div className="absolute bottom-2.5 sm:bottom-3 left-3 sm:left-4 text-left pointer-events-none z-0">
+                                <span className="text-[10px] sm:text-xs font-bold text-rose-400/80">Phase 1: 적극적 재고 소진</span>
+                                <p className="text-[8px] sm:text-[9px] text-gray-500 hidden sm:block">불황기 · 출하↓ 가격↓ 최악의 바닥 (2022~23H1)</p>
                             </div>
-                            <div className="absolute bottom-3 right-4 text-right pointer-events-none z-0">
-                                <span className="text-xs font-bold text-amber-400/80">Phase 4: 소극적 재고 축적</span>
-                                <p className="text-[9px] text-gray-500">고점경보 · 마진피크 분할차익실현 (2021H2)</p>
+                            <div className="absolute bottom-2.5 sm:bottom-3 right-3 sm:right-4 text-right pointer-events-none z-0">
+                                <span className="text-[10px] sm:text-xs font-bold text-amber-400/80">Phase 4: 소극적 재고 축적</span>
+                                <p className="text-[8px] sm:text-[9px] text-gray-500 hidden sm:block">고점경보 · 마진피크 분할차익실현 (2021H2)</p>
                             </div>
 
                             {/* 활성 지점 플로팅 팝업 정보창 (마우스로 자유롭게 이동 가능 + 궤적 외곽 기본 배치) */}
@@ -796,7 +796,7 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                             )}
 
                             <ResponsiveContainer width="100%" height="100%">
-                                <ScatterChart margin={{ top: 30, right: 30, bottom: 30, left: 30 }}>
+                                <ScatterChart margin={{ top: 25, right: 15, bottom: 25, left: 15 }}>
                                     <CartesianGrid stroke="rgba(255,255,255,0.05)" />
                                     <XAxis
                                         type="number"

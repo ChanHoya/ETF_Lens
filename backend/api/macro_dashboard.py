@@ -86,17 +86,77 @@ def _active(regimes: list[dict], when: pd.Timestamp) -> str | None:
     return None
 
 
+# 가중치 매트릭스: 매크로 국면 핵심 동인(금리 스프레드, 환율 모멘텀, 공포지수) 가중치
+FEATURE_WEIGHTS = {
+    "us10_chg": 1.2,
+    "krbase_chg": 1.2,
+    "curve": 1.3,
+    "krw_chg": 1.3,
+    "dxy_chg": 1.1,
+    "vix": 1.1,
+    "kospi_chg": 1.0,
+    "spx_chg": 1.0,
+}
+
+HISTORICAL_REGIMES = [
+    ("1997-01-01", "1998-12-31", "외환위기 & 원화 급락"),
+    ("2000-01-01", "2001-12-31", "닷컴버블 붕괴 & 금리인하"),
+    ("2004-01-01", "2006-12-31", "차이나붐 & 원자재 슈퍼사이클"),
+    ("2007-07-01", "2009-03-31", "글로벌 금융위기 & 신용경색"),
+    ("2011-05-01", "2012-10-31", "미 신용강등 & 유럽 재정위기"),
+    ("2015-06-01", "2016-03-31", "위안화 절하 & 미 금리인상 착수"),
+    ("2018-01-01", "2019-09-30", "미·중 무역갈등 & 장단기 역전"),
+    ("2020-02-01", "2021-06-30", "코로나 팬데믹 & 유동성 랠리"),
+    ("2022-01-01", "2023-06-30", "40년 만의 인플레 & 초고속 긴축"),
+    ("2023-07-01", "2024-12-31", "AI 붐 & 고금리 장기화"),
+]
+
+def _match_historical_regime(dt: pd.Timestamp) -> str | None:
+    dt_str = dt.strftime("%Y-%m-%d")
+    for start, end, label in HISTORICAL_REGIMES:
+        if start <= dt_str <= end:
+            return label
+    return None
+
+
 def find_analogs(w: pd.DataFrame, f: pd.DataFrame, regimes: dict, top: int = 3) -> dict | None:
-    """현재 특징과 가장 비슷한 과거 주(최근 2년 제외, 서로 26주 이상 떨어짐)와 이후 26·52주 결과."""
+    """현재 특징과 가장 비슷한 과거 주(최근 2년 제외, 서로 26주 이상 떨어짐)와 이후 26·52주 결과.
+    코사인 유사도(방향성) + 가중 유클리드 거리(진폭) 앙상블 퀀트 매칭 적용.
+    """
     f = f.dropna()
     if len(f) < EXCLUDE_RECENT + 60:
         return None
     z = ((f - f.mean()) / f.std(ddof=0).replace(0, np.nan)).dropna(axis=1)
     now = z.iloc[-1]
     cand = z[z.index <= z.index[-1] - pd.Timedelta(weeks=EXCLUDE_RECENT)]
-    dist = np.sqrt(((cand - now) ** 2).sum(axis=1)).sort_values()
+
+    # 가중치 벡터 생성
+    w_vec = np.array([FEATURE_WEIGHTS.get(col, 1.0) for col in cand.columns])
+
+    # 1) 가중 유클리드 거리
+    diff_sq = ((cand - now) ** 2) * w_vec
+    w_dist = np.sqrt(diff_sq.sum(axis=1))
+
+    # 2) 코사인 유사도 (방향 벡터 일치도)
+    now_vals = now.values
+    cand_vals = cand.values
+    now_norm = np.sqrt(np.sum((now_vals ** 2) * w_vec))
+    cand_norm = np.sqrt(np.sum((cand_vals ** 2) * w_vec, axis=1))
+    dot_prod = np.sum((cand_vals * now_vals) * w_vec, axis=1)
+    cos_sim = dot_prod / (cand_norm * now_norm + 1e-9)
+    cos_sim = pd.Series(np.clip(cos_sim, -1.0, 1.0), index=cand.index)
+
+    # 3) 앙상블 점수 (정규화된 거리 50% + 코사인 유사도 50%)
+    max_d = float(w_dist.max()) or 1.0
+    norm_dist = w_dist / max_d
+    # 0~1 스케일 변환 (높을수록 유사)
+    ensemble_similarity = 0.5 * (1.0 - norm_dist) + 0.5 * ((cos_sim + 1.0) / 2.0)
+
+    # 유사도 내림차순 정렬
+    ranked = ensemble_similarity.sort_values(ascending=False)
+
     picks: list[pd.Timestamp] = []
-    for t in dist.index:
+    for t in ranked.index:
         if all(abs((t - p).days) >= MIN_GAP * 7 for p in picks):
             picks.append(t)
         if len(picks) == top:
@@ -112,9 +172,10 @@ def find_analogs(w: pd.DataFrame, f: pd.DataFrame, regimes: dict, top: int = 3) 
             out["us10y_bp"] = _r((row1["us10y"] - row0["us10y"]) * 100, 0)
         return out
 
-    max_d = float(dist.max()) or 1.0
     items = [{
-        "date": t.strftime("%Y-%m-%d"), "similarity": int(round((1 - float(dist[t]) / max_d) * 100)),
+        "date": t.strftime("%Y-%m-%d"),
+        "similarity": max(1, min(99, int(round(float(ensemble_similarity[t]) * 100)))),
+        "historical_regime": _match_historical_regime(t),
         "features": {k: _r(f.loc[t, k], 1) for k in f.columns},
         "after_6m": fwd(t, 26), "after_12m": fwd(t, 52),
         "context": {k: _active(regimes.get(k, []), t) for k in ("rates", "fx", "kospi")},
