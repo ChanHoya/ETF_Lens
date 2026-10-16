@@ -362,3 +362,14 @@
 - **해결**:
   1. `UnifiedQuantEngine.get_normalized_close_matrix`에 `batch_fetcher: Optional[Any] = None` 의존성 주입(DI) 파라미터를 신설하여 `fetcher = batch_fetcher or get_hybrid_daily_prices_batch` 패턴 적용.
   2. 상위 라우터(`api/backtest.py`)에서 `batch_fetcher=get_hybrid_daily_prices_batch`를 전달함으로써 상위 네임스페이스의 mock patch가 공통 엔진 내부로 완벽히 전파되도록 보장.
+
+### [FP-042] FastAPI 대형 라우터에 쿼리 파라미터 추가 시 Query 임포트 누락으로 인한 전사 테스트 수집(Collection) 실패
+- **증상**: 엔드포인트 파라미터로 `force: bool = Query(False)`를 도입했을 때, 해당 라우터를 임포트하는 수십 개의 단위 테스트 수집 단계에서 `NameError: name 'Query' is not defined`가 발생하며 전체 테스트가 중단됨.
+- **원인**: 6,000줄 규모의 대형 라우터(`backend/api/router.py`) 상단 `from fastapi import APIRouter, Depends`에 `Query`가 누락되어 있었음.
+- **해결**: FastAPI 의존성 및 특수 파라미터(`Query`, `Path`, `Body`, `Header`) 사용 시 최상단 모듈 임포트를 즉시 동기화하고, 커밋 전 `pytest --collect-only` 또는 전체 테스트 실행을 필수로 수행.
+
+### [FP-043] SQLite 테스트 픽스처의 모의 마스터 레코드 삽입 시 UNIQUE constraint failed 충돌
+- **증상**: 단위 테스트 실행 시 `sqlalchemy.exc.IntegrityError: UNIQUE constraint failed: etf_master.code` 발생.
+- **원인**: 선행 테스트나 기존 로컬 DB에 특정 코드(예: `396500`, `069500`)가 잔존한 상태에서 `setup_db` 픽스처가 `db.add_all()`을 무조건 실행하여 고유키 충돌 유발.
+- **해결**: 테스트 픽스처 내 삽입 전 `await db.execute(delete(ETFMaster).where(ETFMaster.code.in_(target_codes)))`로 사전 정리(cleanup-before-insert)를 수행하여 테스트 실행 순서에 영향을 받지 않는 멱등성(Idempotency) 보장.
+
