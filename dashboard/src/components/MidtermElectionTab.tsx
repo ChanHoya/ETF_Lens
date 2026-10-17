@@ -88,6 +88,62 @@ export default function MidtermElectionTab() {
     const [loading, setLoading] = useState<boolean>(true);
     const [refreshing, setRefreshing] = useState<boolean>(false);
 
+    // 1950~2026 역사적 사이클 차트 필터 및 오버레이 상태
+    const [cyclePeriod, setCyclePeriod] = useState<"5Y" | "10Y" | "30Y" | "ALL">("ALL");
+    const [showFedRate, setShowFedRate] = useState<boolean>(true); // 미국 기준금리(Fed Rate) 오버레이
+    const [showEvents, setShowEvents] = useState<boolean>(true); // 주요 역사적 이벤트 마커
+
+    // 선택 기간별 필터링 데이터
+    const filteredCycles = useMemo(() => {
+        const list = historical?.historical_cycles || [];
+        if (!list.length) return [];
+        if (cyclePeriod === "5Y") return list.filter((d: any) => d.year >= 2021);
+        if (cyclePeriod === "10Y") return list.filter((d: any) => d.year >= 2016);
+        if (cyclePeriod === "30Y") return list.filter((d: any) => d.year >= 1996);
+        return list;
+    }, [historical, cyclePeriod]);
+
+    // 선택 기간 내 선거 주기별 성과 통계
+    const cycleStats = useMemo(() => {
+        if (!filteredCycles.length) return null;
+        const presYears = filteredCycles.filter((d: any) => d.election_type === "presidential" && d.sp500_return !== null);
+        const midYears = filteredCycles.filter((d: any) => d.election_type === "midterm" && d.sp500_return !== null);
+        const offYears = filteredCycles.filter((d: any) => d.election_type === "none" && d.sp500_return !== null);
+
+        const calcAvg = (arr: any[]) => {
+            if (!arr.length) return 0;
+            const sum = arr.reduce((acc, cur) => acc + (cur.sp500_return || 0), 0);
+            return +(sum / arr.length).toFixed(1);
+        };
+
+        const calcWinRate = (arr: any[]) => {
+            if (!arr.length) return 0;
+            const wins = arr.filter((d) => (d.sp500_return || 0) > 0).length;
+            return Math.round((wins / arr.length) * 100);
+        };
+
+        const sortedByReturn = [...filteredCycles]
+            .filter((d: any) => d.sp500_return !== null)
+            .sort((a: any, b: any) => (b.sp500_return || 0) - (a.sp500_return || 0));
+
+        const bestYear = sortedByReturn[0] || null;
+        const worstYear = sortedByReturn[sortedByReturn.length - 1] || null;
+
+        return {
+            presAvg: calcAvg(presYears),
+            presWinRate: calcWinRate(presYears),
+            presCount: presYears.length,
+            midAvg: calcAvg(midYears),
+            midWinRate: calcWinRate(midYears),
+            midCount: midYears.length,
+            offAvg: calcAvg(offYears),
+            offWinRate: calcWinRate(offYears),
+            offCount: offYears.length,
+            bestYear,
+            worstYear,
+        };
+    }, [filteredCycles]);
+
     // Interview Modal State
     const [isInterviewModalOpen, setIsInterviewModalOpen] = useState<boolean>(false);
     const [interviewAnswers, setInterviewAnswers] = useState({
@@ -821,49 +877,182 @@ export default function MidtermElectionTab() {
                 </div>
 
                 {/* 실제 1950~현재까지의 S&P 500 / 나스닥 사이클 그래프 (첨부2 신규 하단 그래프) */}
-                <div className="flex flex-col gap-3 pt-4 border-t border-white/5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex flex-col gap-4 pt-4 border-t border-white/5">
+                    {/* Header & Controls */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                         <div>
-                            <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                                <Activity className="w-4 h-4 text-indigo-400" />
-                                1950~현재(2026) 실제 S&P 500 / 나스닥 사이클 및 선거 주기
-                            </h4>
-                            <p className="text-[11px] text-gray-400">
-                                대통령선거 해(파스텔 블루 밴드), 중간선거 해(파스텔 레드 밴드), 일반 해(흰색) 구간별 실제 지수 궤적
+                            <div className="flex items-center gap-2">
+                                <h4 className="text-sm md:text-base font-bold text-white flex items-center gap-2">
+                                    <Activity className="w-4 h-4 text-indigo-400" />
+                                    1950~현재(2026) 실제 S&P 500 / 나스닥 사이클 및 선거 주기
+                                </h4>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                    도트 상시표시 & 멀티 지표
+                                </span>
+                            </div>
+                            <p className="text-[11px] text-gray-400 mt-0.5">
+                                대통령선거 해(파란색 도트), 중간선거 해(빨간색 도트), 미 연준 기준금리(주황색) 및 주요 역사적 사건 복합 오버레이
                             </p>
                         </div>
-                        {/* Legend Banners */}
-                        <div className="flex items-center gap-2 text-[10px] font-bold">
-                            <span className="px-2.5 py-1 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-blue-400" />
-                                대통령선거 해
-                            </span>
-                            <span className="px-2.5 py-1 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-rose-400" />
-                                중간선거 해
-                            </span>
-                            <span className="px-2.5 py-1 rounded-md bg-white/5 text-gray-300 border border-white/10 flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-white/50" />
-                                일반 해
-                            </span>
+
+                        {/* Filter & Toggle Controls */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            {/* Period Filter (5Y, 10Y, 30Y, ALL) */}
+                            <div className="flex items-center bg-black/50 border border-white/10 rounded-xl p-1 gap-1">
+                                {(["5Y", "10Y", "30Y", "ALL"] as const).map((period) => (
+                                    <button
+                                        key={period}
+                                        onClick={() => setCyclePeriod(period)}
+                                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                                            cyclePeriod === period
+                                                ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/20 scale-[1.02]"
+                                                : "text-gray-400 hover:text-white hover:bg-white/5"
+                                        }`}
+                                    >
+                                        {period === "ALL" ? "전체 (1950~)" : period}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Additional Indicator Toggles */}
+                            <div className="flex items-center gap-1.5 bg-black/50 border border-white/10 rounded-xl p-1">
+                                <button
+                                    onClick={() => setShowFedRate(!showFedRate)}
+                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all ${
+                                        showFedRate
+                                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                                            : "text-gray-500 hover:text-gray-300 border border-transparent"
+                                    }`}
+                                    title="미국 연방기금 기준금리(Fed Funds Rate) 오버레이 토글"
+                                >
+                                    <DollarSign className="w-3 h-3" />
+                                    <span>기준금리(Fed)</span>
+                                </button>
+                                <button
+                                    onClick={() => setShowEvents(!showEvents)}
+                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all ${
+                                        showEvents
+                                            ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
+                                            : "text-gray-500 hover:text-gray-300 border border-transparent"
+                                    }`}
+                                    title="역사적 주요 정치/경제 이벤트 마커 토글"
+                                >
+                                    <Landmark className="w-3 h-3" />
+                                    <span>주요 이벤트</span>
+                                </button>
+                            </div>
+
+                            {/* Dot Legends */}
+                            <div className="hidden sm:flex items-center gap-2 text-[10px] font-bold ml-1">
+                                <span className="px-2 py-1 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1.5">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-white" />
+                                    대선 해 (도트)
+                                </span>
+                                <span className="px-2 py-1 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1.5">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 border border-white" />
+                                    중간선거 해 (도트)
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 relative" style={{ height: "420px" }}>
+                    {/* Dynamic KPI Stats Bar based on Selected Period */}
+                    {cycleStats && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                            <div className="bg-[#141622] border border-blue-500/30 rounded-xl p-3 flex flex-col gap-1">
+                                <div className="flex items-center justify-between text-blue-400 text-[11px] font-bold">
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                                        대통령선거 해 평균
+                                    </span>
+                                    <span className="text-[10px] text-gray-400 font-normal">총 {cycleStats.presCount}회</span>
+                                </div>
+                                <div className="flex items-baseline justify-between mt-1">
+                                    <span className={`text-base font-black font-mono ${cycleStats.presAvg >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                                        {cycleStats.presAvg >= 0 ? "+" : ""}{cycleStats.presAvg}%
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">
+                                        상승확률 <span className="text-white font-bold">{cycleStats.presWinRate}%</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="bg-[#141622] border border-rose-500/30 rounded-xl p-3 flex flex-col gap-1">
+                                <div className="flex items-center justify-between text-rose-400 text-[11px] font-bold">
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
+                                        중간선거 해 평균
+                                    </span>
+                                    <span className="text-[10px] text-gray-400 font-normal">총 {cycleStats.midCount}회</span>
+                                </div>
+                                <div className="flex items-baseline justify-between mt-1">
+                                    <span className={`text-base font-black font-mono ${cycleStats.midAvg >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                                        {cycleStats.midAvg >= 0 ? "+" : ""}{cycleStats.midAvg}%
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">
+                                        상승확률 <span className="text-white font-bold">{cycleStats.midWinRate}%</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="bg-[#141622] border border-white/10 rounded-xl p-3 flex flex-col gap-1">
+                                <div className="flex items-center justify-between text-gray-300 text-[11px] font-bold">
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-gray-400" />
+                                        일반 해 평균
+                                    </span>
+                                    <span className="text-[10px] text-gray-400 font-normal">총 {cycleStats.offCount}회</span>
+                                </div>
+                                <div className="flex items-baseline justify-between mt-1">
+                                    <span className={`text-base font-black font-mono ${cycleStats.offAvg >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                                        {cycleStats.offAvg >= 0 ? "+" : ""}{cycleStats.offAvg}%
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">
+                                        상승확률 <span className="text-white font-bold">{cycleStats.offWinRate}%</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="bg-[#141622] border border-amber-500/20 rounded-xl p-3 flex flex-col gap-1">
+                                <div className="flex items-center justify-between text-amber-400 text-[11px] font-bold">
+                                    <span className="flex items-center gap-1.5">
+                                        <Sparkles className="w-3 h-3 text-amber-300" />
+                                        기간 내 최고/최저 해
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">S&P 500</span>
+                                </div>
+                                <div className="flex items-center justify-between text-[11px] font-mono mt-1">
+                                    <span className="text-emerald-400">
+                                        최고: {cycleStats.bestYear ? `${cycleStats.bestYear.year}년(+${cycleStats.bestYear.sp500_return}%)` : "-"}
+                                    </span>
+                                    <span className="text-rose-400">
+                                        최저: {cycleStats.worstYear ? `${cycleStats.worstYear.year}년(${cycleStats.worstYear.sp500_return}%)` : "-"}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Chart Container */}
+                    <div className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 relative" style={{ height: "440px" }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={historical?.historical_cycles || []} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                            <LineChart
+                                key={`historical-cycle-chart-${cyclePeriod}`}
+                                data={filteredCycles}
+                                margin={{ top: 25, right: showFedRate ? 45 : 30, left: 10, bottom: 20 }}
+                            >
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis
                                     dataKey="year"
                                     stroke="#71717a"
-                                    tick={{ fontSize: 10 }}
+                                    tick={{ fontSize: 10, fill: "#9ca3af" }}
                                     tickLine={false}
-                                    interval={3}
+                                    interval={cyclePeriod === "5Y" ? 0 : cyclePeriod === "10Y" ? 0 : cyclePeriod === "30Y" ? 2 : 4}
                                 />
                                 <YAxis
                                     yAxisId="sp"
                                     stroke="#10b981"
-                                    tick={{ fontSize: 10 }}
+                                    tick={{ fontSize: 10, fill: "#10b981" }}
                                     tickLine={false}
                                     domain={["auto", "auto"]}
                                     tickFormatter={(v) => `${v.toLocaleString()}`}
@@ -872,40 +1061,23 @@ export default function MidtermElectionTab() {
                                     yAxisId="nq"
                                     orientation="right"
                                     stroke="#a855f7"
-                                    tick={{ fontSize: 10 }}
+                                    tick={{ fontSize: 10, fill: "#a855f7" }}
                                     tickLine={false}
                                     domain={["auto", "auto"]}
                                     tickFormatter={(v) => `${v.toLocaleString()}`}
                                 />
-
-                                {/* Pastel Election Cycle Background Bands */}
-                                {historical?.historical_cycles?.map((item: any) => {
-                                    if (item.election_type === "presidential") {
-                                        return (
-                                            <ReferenceArea
-                                                key={`pres_${item.year}`}
-                                                yAxisId="sp"
-                                                x1={item.year}
-                                                x2={item.year}
-                                                fill="rgba(59, 130, 246, 0.22)"
-                                                stroke="none"
-                                            />
-                                        );
-                                    }
-                                    if (item.election_type === "midterm") {
-                                        return (
-                                            <ReferenceArea
-                                                key={`mid_${item.year}`}
-                                                yAxisId="sp"
-                                                x1={item.year}
-                                                x2={item.year}
-                                                fill="rgba(239, 68, 68, 0.22)"
-                                                stroke="none"
-                                            />
-                                        );
-                                    }
-                                    return null;
-                                })}
+                                {showFedRate && (
+                                    <YAxis
+                                        yAxisId="fed"
+                                        orientation="right"
+                                        stroke="#f59e0b"
+                                        tick={{ fontSize: 9, fill: "#f59e0b" }}
+                                        tickLine={false}
+                                        domain={[0, cyclePeriod === "5Y" || cyclePeriod === "10Y" ? 8 : 20]}
+                                        unit="%"
+                                        tickFormatter={(v) => `${v}%`}
+                                    />
+                                )}
 
                                 <RechartsTooltip
                                     content={({ active, payload, label }) => {
@@ -914,37 +1086,69 @@ export default function MidtermElectionTab() {
                                             const isPres = d.election_type === "presidential";
                                             const isMid = d.election_type === "midterm";
                                             return (
-                                                <div className="bg-[#0e101a] border border-white/15 rounded-xl p-3 shadow-2xl text-xs flex flex-col gap-1.5 min-w-[200px]">
-                                                    <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
-                                                        <span className="font-bold text-white font-mono text-sm">{label}년</span>
-                                                        <span
-                                                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                                                isPres
-                                                                    ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                                                                    : isMid
-                                                                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                                                                    : "bg-white/10 text-gray-300"
-                                                            }`}
-                                                        >
-                                                            {d.election_label || (isPres ? "대통령선거" : isMid ? "중간선거" : "일반 해")}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center text-emerald-400">
-                                                        <span>S&P 500:</span>
-                                                        <span className="font-mono font-bold">
-                                                            {d.sp500?.toLocaleString()} pt
-                                                            {d.sp500_return !== null && ` (${d.sp500_return > 0 ? "+" : ""}${d.sp500_return}%)`}
-                                                        </span>
-                                                    </div>
-                                                    {d.nasdaq !== null && (
-                                                        <div className="flex justify-between items-center text-purple-400">
-                                                            <span>나스닥(NASDAQ):</span>
-                                                            <span className="font-mono font-bold">
-                                                                {d.nasdaq?.toLocaleString()} pt
-                                                                {d.nasdaq_return !== null && ` (${d.nasdaq_return > 0 ? "+" : ""}${d.nasdaq_return}%)`}
+                                                <div className="bg-[#0e101a] border border-white/20 rounded-xl p-3.5 shadow-2xl text-xs flex flex-col gap-2 min-w-[240px] backdrop-blur-md">
+                                                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-white font-mono text-sm">{label}년</span>
+                                                            <span
+                                                                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                                                    isPres
+                                                                        ? "bg-blue-500/25 text-blue-300 border border-blue-500/40"
+                                                                        : isMid
+                                                                        ? "bg-rose-500/25 text-rose-300 border border-rose-500/40"
+                                                                        : "bg-white/10 text-gray-300"
+                                                                }`}
+                                                            >
+                                                                {d.election_label || (isPres ? "대통령선거" : isMid ? "중간선거" : "일반 해")}
                                                             </span>
                                                         </div>
+                                                    </div>
+
+                                                    {/* Major Historical Event Badge */}
+                                                    {d.major_event && (
+                                                        <div className="bg-purple-950/40 border border-purple-500/30 rounded-lg px-2.5 py-1 text-[11px] text-purple-200 flex items-center gap-1.5 font-medium">
+                                                            <Landmark className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                                                            <span>{d.major_event}</span>
+                                                        </div>
                                                     )}
+
+                                                    <div className="flex flex-col gap-1.5 pt-0.5">
+                                                        <div className="flex justify-between items-center text-emerald-400">
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                                                                S&P 500:
+                                                            </span>
+                                                            <span className="font-mono font-bold">
+                                                                {d.sp500?.toLocaleString()} pt
+                                                                {d.sp500_return !== null && ` (${d.sp500_return > 0 ? "+" : ""}${d.sp500_return}%)`}
+                                                            </span>
+                                                        </div>
+
+                                                        {d.nasdaq !== null && (
+                                                            <div className="flex justify-between items-center text-purple-400">
+                                                                <span className="flex items-center gap-1.5">
+                                                                    <span className="w-2 h-2 rounded-full bg-purple-400" />
+                                                                    나스닥(NASDAQ):
+                                                                </span>
+                                                                <span className="font-mono font-bold">
+                                                                    {d.nasdaq?.toLocaleString()} pt
+                                                                    {d.nasdaq_return !== null && ` (${d.nasdaq_return > 0 ? "+" : ""}${d.nasdaq_return}%)`}
+                                                                </span>
+                                                            </div>
+                                                        )}
+
+                                                        {d.fed_rate !== undefined && d.fed_rate !== null && (
+                                                            <div className="flex justify-between items-center text-amber-400 border-t border-white/5 pt-1 mt-0.5">
+                                                                <span className="flex items-center gap-1.5">
+                                                                    <DollarSign className="w-3 h-3 text-amber-400" />
+                                                                    미 기준금리(Fed Rate):
+                                                                </span>
+                                                                <span className="font-mono font-bold text-amber-300">
+                                                                    {d.fed_rate}%
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             );
                                         }
@@ -952,16 +1156,54 @@ export default function MidtermElectionTab() {
                                     }}
                                 />
                                 <Legend verticalAlign="top" height={36} iconType="circle" />
+
+                                {/* S&P 500 Line with Always-Visible Election Dots */}
                                 <Line
                                     yAxisId="sp"
                                     type="monotone"
                                     name="S&P 500 지수 (좌측축)"
                                     dataKey="sp500"
                                     stroke="#10b981"
-                                    strokeWidth={2}
-                                    dot={false}
-                                    activeDot={{ r: 5, fill: "#10b981" }}
+                                    strokeWidth={2.2}
+                                    isAnimationActive={false}
+                                    dot={(props: any) => {
+                                        const { cx, cy, payload } = props;
+                                        if (cx == null || cy == null || !payload) return null;
+                                        const isPres = payload.election_type === "presidential";
+                                        const isMid = payload.election_type === "midterm";
+
+                                        if (isPres) {
+                                            return (
+                                                <g key={`sp-pres-dot-${payload.year}`}>
+                                                    <circle cx={cx} cy={cy} r={7} fill="#3b82f6" fillOpacity={0.35} />
+                                                    <circle cx={cx} cy={cy} r={4.5} fill="#3b82f6" stroke="#ffffff" strokeWidth={1.5} />
+                                                </g>
+                                            );
+                                        }
+                                        if (isMid) {
+                                            return (
+                                                <g key={`sp-mid-dot-${payload.year}`}>
+                                                    <circle cx={cx} cy={cy} r={7} fill="#f43f5e" fillOpacity={0.35} />
+                                                    <circle cx={cx} cy={cy} r={4.5} fill="#f43f5e" stroke="#ffffff" strokeWidth={1.5} />
+                                                </g>
+                                            );
+                                        }
+                                        // 일반 해: 5Y나 10Y일 때는 살짝 보이고 전체일 때는 1.5px로 은은하게
+                                        return (
+                                            <circle
+                                                key={`sp-off-dot-${payload.year}`}
+                                                cx={cx}
+                                                cy={cy}
+                                                r={cyclePeriod === "5Y" || cyclePeriod === "10Y" ? 2.5 : 1.5}
+                                                fill="#ffffff"
+                                                fillOpacity={0.4}
+                                            />
+                                        );
+                                    }}
+                                    activeDot={{ r: 6, fill: "#10b981", stroke: "#ffffff", strokeWidth: 2 }}
                                 />
+
+                                {/* NASDAQ Line */}
                                 <Line
                                     yAxisId="nq"
                                     type="monotone"
@@ -969,12 +1211,101 @@ export default function MidtermElectionTab() {
                                     dataKey="nasdaq"
                                     stroke="#a855f7"
                                     strokeWidth={2}
-                                    dot={false}
-                                    activeDot={{ r: 5, fill: "#a855f7" }}
+                                    isAnimationActive={false}
+                                    dot={(props: any) => {
+                                        const { cx, cy, payload } = props;
+                                        if (cx == null || cy == null || !payload) return null;
+                                        // 나스닥 라인에서는 간결한 원형 도트 적용
+                                        const isPres = payload.election_type === "presidential";
+                                        const isMid = payload.election_type === "midterm";
+                                        if (isPres) {
+                                            return <circle key={`nq-pres-${payload.year}`} cx={cx} cy={cy} r={3.5} fill="#60a5fa" stroke="#1e1b4b" strokeWidth={1} />;
+                                        }
+                                        if (isMid) {
+                                            return <circle key={`nq-mid-${payload.year}`} cx={cx} cy={cy} r={3.5} fill="#fb7185" stroke="#1e1b4b" strokeWidth={1} />;
+                                        }
+                                        return null;
+                                    }}
+                                    activeDot={{ r: 5, fill: "#a855f7", stroke: "#ffffff", strokeWidth: 2 }}
                                 />
+
+                                {/* Fed Rate Overlay Line */}
+                                {showFedRate && (
+                                    <Line
+                                        yAxisId="fed"
+                                        type="monotone"
+                                        name="미 연준 기준금리 (Fed Rate %)"
+                                        dataKey="fed_rate"
+                                        stroke="#f59e0b"
+                                        strokeWidth={2.2}
+                                        strokeDasharray="5 3"
+                                        isAnimationActive={false}
+                                        dot={(props: any) => {
+                                            const { cx, cy, payload } = props;
+                                            if (cx == null || cy == null || !payload) return null;
+                                            return (
+                                                <circle
+                                                    key={`fed-dot-${payload.year}`}
+                                                    cx={cx}
+                                                    cy={cy}
+                                                    r={cyclePeriod === "5Y" || cyclePeriod === "10Y" ? 3.5 : 2}
+                                                    fill="#f59e0b"
+                                                    stroke="#ffffff"
+                                                    strokeWidth={1}
+                                                />
+                                            );
+                                        }}
+                                        activeDot={{ r: 5, fill: "#f59e0b", stroke: "#ffffff", strokeWidth: 2 }}
+                                    />
+                                )}
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
+
+                    {/* Historical Macro Events Quick Bar (선택 기간 내 주요 사건 표시) */}
+                    {showEvents && (
+                        <div className="bg-[#12131c] border border-white/5 rounded-xl p-3.5 flex flex-col gap-2">
+                            <div className="flex items-center justify-between text-xs font-bold text-gray-300">
+                                <span className="flex items-center gap-1.5 text-purple-300">
+                                    <Landmark className="w-3.5 h-3.5" />
+                                    선택 기간({cyclePeriod === "ALL" ? "1950~2026 전체" : cyclePeriod}) 내 주요 정치·경제 매크로 이벤트 타임라인
+                                </span>
+                                <span className="text-[10px] text-gray-500 font-normal">
+                                    연준 금리 피벗 & 선거 연계 분석
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 pt-1">
+                                {filteredCycles
+                                    .filter((d: any) => d.major_event)
+                                    .slice(-8)
+                                    .map((d: any) => (
+                                        <div
+                                            key={`event-chip-${d.year}`}
+                                            className="px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 text-[11px] flex items-center gap-1.5 hover:border-purple-500/40 transition-colors"
+                                        >
+                                            <span className="font-mono font-bold text-purple-400">{d.year}년</span>
+                                            <span
+                                                className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                                                    d.election_type === "presidential"
+                                                        ? "bg-blue-500/20 text-blue-300"
+                                                        : d.election_type === "midterm"
+                                                        ? "bg-rose-500/20 text-rose-300"
+                                                        : "bg-white/5 text-gray-400"
+                                                }`}
+                                            >
+                                                {d.election_type === "presidential" ? "대선" : d.election_type === "midterm" ? "중간선거" : "일반"}
+                                            </span>
+                                            <span className="text-gray-200">{d.major_event}</span>
+                                            {d.fed_rate !== undefined && (
+                                                <span className="text-amber-400/80 font-mono text-[10px]">
+                                                    ({d.fed_rate}%)
+                                                </span>
+                                            )}
+                                        </div>
+                                    ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="bg-[#151722] border border-white/5 rounded-xl p-4 text-xs text-gray-300 leading-relaxed flex items-start gap-3">

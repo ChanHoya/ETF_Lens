@@ -103,6 +103,9 @@ async def test_midterm_historical_endpoint():
     assert "presidential" in election_types
     assert "midterm" in election_types
     assert "none" in election_types
+    assert "fed_rate" in cycles[0]
+    assert "major_event" in cycles[0]
+    assert any(c.get("major_event") is not None for c in cycles)
 
 
 @pytest.mark.asyncio
