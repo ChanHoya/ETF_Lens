@@ -4,7 +4,9 @@
 
 | Feature | Status | Key Files | Notes |
 |---------|--------|-----------|-------|
-| 미국 중간선거('26.11) 영향 분석 | ✅ done | backend/api/midterm_election.py, MidtermElectionTab.tsx | 5대 모듈(선거 개요, 판세 트래커, 시나리오 매트릭스, 계절성 통계, Core-Satellite 리밸런싱 컨설턴트) |
+| 글로벌 유가 및 에너지 시장 동향 분석 | ✅ done | backend/api/oil_dashboard.py, OilTab.tsx | 3대 벤치마크(WTI·Brent·Dubai) 실시간 시세, 스프레드, EIA 재고·생산량, 정제마진, 3대 지정학 초크포인트, 실전 ETF 플레이북 |
+| 시장동향 '종합' 진정한 다차원 거시 분석 | ✅ done | backend/api/macro_dashboard.py, MacroTab.tsx | '종합(환율/금리/주식)' → '종합' 명칭 개편, 글로벌 5대 거시 핵심 지표(유가, VIX, CPI 인플레, 장단기 금리차, DXY) 통합 패널 탑재 |
+| 미국 중간선거('26.11) 영향 분석 고도화 | ✅ done | backend/api/midterm_election.py, MidtermElectionTab.tsx, MidtermPortfolioProposal.tsx | 중간선거 3대 법칙, 나스닥 계절성 및 1950~2026 연도별 사이클(대선/중간선거 파스텔 밴드), AI 투자성향 인터뷰 팝업, My KIS 실시간 포트폴리오 리밸런싱 제안 연동 |
 | ETF 마스터 DB | ✅ done | backend/api/router.py, db/models.py (ETFMaster) | ~1,000 종목 |
 | ETF 종목 검색 | ✅ done | dashboard/src/components/EtfSearchDropdown.tsx | |
 | ETF 비교 분석 | ✅ done | dashboard/src/components/CompareTable.tsx, CompareChart.tsx | |

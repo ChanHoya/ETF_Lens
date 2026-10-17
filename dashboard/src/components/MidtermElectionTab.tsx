@@ -24,7 +24,10 @@ import {
     BarChart3,
     Activity,
     Info,
-    Flame
+    Flame,
+    X,
+    FileText,
+    HelpCircle
 } from "lucide-react";
 import {
     LineChart,
@@ -34,7 +37,8 @@ import {
     CartesianGrid,
     Tooltip as RechartsTooltip,
     ResponsiveContainer,
-    Legend
+    Legend,
+    ReferenceArea
 } from "recharts";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -48,9 +52,21 @@ export default function MidtermElectionTab() {
 
     const [selectedScenarioId, setSelectedScenarioId] = useState<string>("gridlock");
     const [techWeight, setTechWeight] = useState<number>(55.0);
+    const [dividendWeight, setDividendWeight] = useState<number>(27.0);
+    const [safeWeight, setSafeWeight] = useState<number>(18.0);
     const [riskProfile, setRiskProfile] = useState<"conservative" | "neutral" | "aggressive">("neutral");
     const [loading, setLoading] = useState<boolean>(true);
     const [refreshing, setRefreshing] = useState<boolean>(false);
+
+    // Interview Modal State
+    const [isInterviewModalOpen, setIsInterviewModalOpen] = useState<boolean>(false);
+    const [interviewAnswers, setInterviewAnswers] = useState({
+        techWeight: 55,
+        dividendWeight: 27,
+        safeWeight: 18,
+        riskProfile: "neutral" as "conservative" | "neutral" | "aggressive",
+        focusTheme: "ai_infra"
+    });
 
     // Fetch all midterm election data
     const fetchAllData = async (isManual: boolean = false) => {
@@ -71,7 +87,7 @@ export default function MidtermElectionTab() {
             if (histRes.ok) setHistorical(await histRes.json());
 
             // Initial portfolio guide
-            await fetchPortfolioGuide(techWeight, riskProfile);
+            await fetchPortfolioGuide(techWeight, riskProfile, dividendWeight, safeWeight);
         } catch (err) {
             console.error("Failed to load midterm election data:", err);
         } finally {
@@ -81,13 +97,17 @@ export default function MidtermElectionTab() {
     };
 
     // Calculate portfolio guide dynamically
-    const fetchPortfolioGuide = async (tw: number, rp: string) => {
+    const fetchPortfolioGuide = async (tw: number, rp: string, dw?: number, sw?: number) => {
         try {
+            const curDw = dw !== undefined ? dw : dividendWeight;
+            const curSw = sw !== undefined ? sw : safeWeight;
             const res = await fetch(`${API_BASE}/api/v1/midterm/portfolio-guide`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     tech_weight: tw,
+                    dividend_weight: curDw,
+                    safe_weight: curSw,
                     risk_profile: rp,
                     interested_themes: ["big_tech", "semi_hardware", "b2b_saas", "dividend_growth"]
                 })
@@ -104,15 +124,36 @@ export default function MidtermElectionTab() {
         fetchAllData(false);
     }, []);
 
+    // Slider adjustment updates tech, dividend, safe synchronously
     const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = parseFloat(e.target.value);
         setTechWeight(val);
-        fetchPortfolioGuide(val, riskProfile);
+        const remaining = Math.max(0, 100 - val);
+        const newDiv = Math.round(remaining * 0.6);
+        const newSafe = Math.round(remaining - newDiv);
+        setDividendWeight(newDiv);
+        setSafeWeight(newSafe);
+        fetchPortfolioGuide(val, riskProfile, newDiv, newSafe);
     };
 
     const handleProfileChange = (p: "conservative" | "neutral" | "aggressive") => {
         setRiskProfile(p);
-        fetchPortfolioGuide(techWeight, p);
+        fetchPortfolioGuide(techWeight, p, dividendWeight, safeWeight);
+    };
+
+    // Apply interview results to dashboard
+    const handleApplyInterview = () => {
+        const tw = interviewAnswers.techWeight;
+        const dw = interviewAnswers.dividendWeight;
+        const sw = interviewAnswers.safeWeight;
+        const rp = interviewAnswers.riskProfile;
+
+        setTechWeight(tw);
+        setDividendWeight(dw);
+        setSafeWeight(sw);
+        setRiskProfile(rp);
+        fetchPortfolioGuide(tw, rp, dw, sw);
+        setIsInterviewModalOpen(false);
     };
 
     // Selected scenario object
@@ -158,7 +199,7 @@ export default function MidtermElectionTab() {
                 </div>
             </div>
 
-            {/* Section 1: 1. 미국 대통령 중간선거 개요 */}
+            {/* Section 1: 1. 미국 대통령 중간선거 개요 & 3대 핵심 법칙 (첨부1 대체 완료) */}
             <div className="w-full bg-[#121217]/70 border border-white/10 rounded-3xl p-5 md:p-7 backdrop-blur-md shadow-xl flex flex-col gap-6">
                 <div className="flex items-center justify-between border-b border-white/10 pb-4">
                     <div className="flex items-center gap-3">
@@ -248,31 +289,70 @@ export default function MidtermElectionTab() {
                     </div>
                 </div>
 
-                {/* Constitutional Core Fact Check Card */}
-                <div className="bg-gradient-to-br from-[#1b1928] to-[#121420] border border-amber-500/30 rounded-2xl p-5 md:p-6 shadow-lg">
-                    <div className="flex items-start gap-4">
-                        <div className="p-2.5 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 shrink-0 mt-0.5">
-                            <ShieldAlert className="w-6 h-6" />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-500/20">
-                                    헌법적 팩트체크
-                                </span>
-                                <h4 className="text-base md:text-lg font-bold text-white">
-                                    "트럼프 대통령이 중간선거에서 패배하면 대통령 재선거를 하는가?"
+                {/* 첨부1 대체: 미국 중간선거와 의회 권력 지형의 3대 핵심 법칙 */}
+                <div className="bg-gradient-to-br from-[#181a2e] via-[#151726] to-[#121420] border border-indigo-500/30 rounded-2xl p-5 md:p-6 shadow-xl flex flex-col gap-4">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                        <div className="flex items-center gap-2.5">
+                            <span className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                                <FileText className="w-5 h-5" />
+                            </span>
+                            <div>
+                                <h4 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
+                                    {overview?.midterm_deep_dive?.title || "미국 중간선거와 의회 권력 지형의 3대 핵심 법칙"}
                                 </h4>
+                                <p className="text-xs text-gray-400">
+                                    {overview?.midterm_deep_dive?.subtitle || "워싱턴 정가의 입법 교착(Gridlock)과 금융시장 반응 메커니즘"}
+                                </p>
                             </div>
-                            <div className="text-sm font-black text-rose-300 flex items-center gap-2">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                대통령 재선거는 절대 실시하지 않습니다. (4년 임기 불변)
-                            </div>
-                            <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
-                                미국 헌법 제2조에 따라 대통령의 임기는 4년(2025.01 ~ 2029.01)으로 확고히 보장됩니다.
-                                중간선거에서 여당(공화당)이 패배할 경우 발생하는 변화는 '대통령 교체'가 아니라,
-                                행정부와 입법부(의회)의 권력이 나뉘는 <span className="text-amber-300 font-bold underline underline-offset-2">분점정부(Divided Government / Gridlock)</span> 체제로의 전환입니다.
-                            </p>
                         </div>
+                        <span className="hidden sm:inline-flex text-[11px] font-bold text-indigo-300 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
+                            역대 통계 기반 팩트 분석
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {(overview?.midterm_deep_dive?.rules || [
+                            {
+                                rule_name: "중간선거의 저주 (Midterm Curse)",
+                                badge: "역사적 정규 패턴",
+                                color: "rose",
+                                desc: "1934년 이후 22차례 중간선거 중 집권 여당이 하원에서 의석을 잃은 경우가 19차례(86.4%, 평균 -26석 상실)에 달합니다. 유권자들의 견제 심리로 인해 여당 패배 및 분점정부(Gridlock) 형성이 정형화된 패턴입니다."
+                            },
+                            {
+                                rule_name: "상·하원의 비대칭 교체 주기와 완충 효과",
+                                badge: "헌법적 제동 장치",
+                                color: "purple",
+                                desc: "하원은 2년마다 435석 전원이 여론에 직접 노출되어 급변하는 반면, 상원은 6년 임기로 1/3씩 교체되어 정권 초기의 급진적 법안이나 세제 개편을 완충하는 헌법적 제동 장치 역할을 수행합니다."
+                            },
+                            {
+                                rule_name: "입법 교착(Gridlock)과 행정명령 정치",
+                                badge: "통상·외교 독자 권한",
+                                color: "indigo",
+                                desc: "의회가 분할되면 재정 확장이나 세제 감세 법안 제정은 동결되지만, 대통령은 무역확장법 232조 및 통상법 301조 등 행정명령(Executive Order)을 통해 대외 관세·안보 통제 드라이브를 집중 행사합니다."
+                            }
+                        ]).map((rule: any, rIdx: number) => {
+                            const badgeColor =
+                                rule.color === "rose" ? "bg-rose-500/15 text-rose-300 border-rose-500/30" :
+                                rule.color === "purple" ? "bg-purple-500/15 text-purple-300 border-purple-500/30" :
+                                "bg-indigo-500/15 text-indigo-300 border-indigo-500/30";
+
+                            return (
+                                <div key={rIdx} className="bg-[#12131c]/80 border border-white/5 rounded-xl p-4 flex flex-col justify-between hover:border-white/20 transition-all">
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeColor}`}>
+                                                {rule.badge}
+                                            </span>
+                                            <span className="text-[11px] font-mono text-gray-500">Law 0{rIdx + 1}</span>
+                                        </div>
+                                        <h5 className="text-sm font-bold text-white mb-2">{rule.rule_name}</h5>
+                                        <p className="text-xs text-gray-300 leading-relaxed">
+                                            {rule.desc}
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
@@ -467,7 +547,7 @@ export default function MidtermElectionTab() {
                             </div>
                         </div>
 
-                        {/* Sector Impacts (Overweight vs Neutral vs Underweight) */}
+                        {/* Sector Impacts */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {currentScenario.sector_impacts?.map((imp: any, idx: number) => {
                                 const isOver = imp.category.includes("수혜");
@@ -509,7 +589,7 @@ export default function MidtermElectionTab() {
                 )}
             </div>
 
-            {/* Section 4: 4. 역대 중간선거 S&P 500 계절성 통계 */}
+            {/* Section 4: 4. 역대 중간선거 S&P 500 / 나스닥 계절성 및 1950~2026 실제 사이클 그래프 (첨부2 고도화) */}
             <div className="w-full bg-[#121217]/70 border border-white/10 rounded-3xl p-5 md:p-7 backdrop-blur-md shadow-xl flex flex-col gap-6">
                 <div className="flex items-center justify-between border-b border-white/10 pb-4">
                     <div className="flex items-center gap-3">
@@ -518,10 +598,10 @@ export default function MidtermElectionTab() {
                         </div>
                         <div>
                             <h3 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
-                                4. 역대 중간선거 S&P 500 계절성 통계 (1950~2022 플레이북)
+                                4. 역대 중간선거 S&P 500 & 나스닥 계절성 통계 (1950~2022 플레이북)
                             </h3>
                             <p className="text-xs text-gray-400">
-                                19회 중간선거 사이클 분석: 선거 전 8~10월 바닥 형성 후 12개월간 안도 랠리 패턴
+                                19회 중간선거 사이클 분석: 선거 전 8~10월 바닥 형성 후 12개월간 안도 랠리 패턴 (나스닥 추가 및 77개년 실전 사이클)
                             </p>
                         </div>
                     </div>
@@ -567,40 +647,223 @@ export default function MidtermElectionTab() {
                     </div>
                 </div>
 
-                {/* S&P 500 Historical Seasonality LineChart */}
-                <div className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 relative" style={{ height: "340px" }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={historical?.trajectory || []} margin={{ top: 15, right: 20, left: -10, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                            <XAxis dataKey="month" stroke="#71717a" tick={{ fontSize: 11 }} tickLine={false} />
-                            <YAxis domain={["auto", "auto"]} stroke="#71717a" tick={{ fontSize: 11 }} tickLine={false} />
-                            <RechartsTooltip
-                                contentStyle={{
-                                    backgroundColor: "rgba(10, 10, 15, 0.95)",
-                                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                                    borderRadius: "12px"
-                                }}
-                            />
-                            <Legend verticalAlign="top" height={36} iconType="circle" />
-                            <Line
-                                type="monotone"
-                                name="중간선거 해 (1950~2022 평균)"
-                                dataKey="midterm_year"
-                                stroke="#f59e0b"
-                                strokeWidth={3}
-                                dot={{ r: 3, fill: "#f59e0b" }}
-                            />
-                            <Line
-                                type="monotone"
-                                name="일반 해 (S&P 500 전체 평균)"
-                                dataKey="general_year"
-                                stroke="#71717a"
-                                strokeWidth={2}
-                                strokeDasharray="4 4"
-                                dot={false}
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
+                {/* S&P 500 & 나스닥 월별 평균 추이 그래프 (첨부2 상단) */}
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+                            <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+                            월별 평균 지수 추이 (1월=100 기준 S&P 500 및 나스닥 비교)
+                        </h4>
+                        <span className="text-[10px] text-gray-500">선거 해 8~10월 바닥 형성 후 11월 급반등 궤적</span>
+                    </div>
+                    <div className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 relative" style={{ height: "340px" }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={historical?.trajectory || []} margin={{ top: 15, right: 20, left: -10, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                <XAxis dataKey="month" stroke="#71717a" tick={{ fontSize: 11 }} tickLine={false} />
+                                <YAxis domain={["auto", "auto"]} stroke="#71717a" tick={{ fontSize: 11 }} tickLine={false} />
+                                <RechartsTooltip
+                                    contentStyle={{
+                                        backgroundColor: "rgba(10, 10, 15, 0.95)",
+                                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                                        borderRadius: "12px"
+                                    }}
+                                />
+                                <Legend verticalAlign="top" height={36} iconType="circle" />
+                                <Line
+                                    type="monotone"
+                                    name="S&P 500 중간선거 해"
+                                    dataKey="midterm_year"
+                                    stroke="#f59e0b"
+                                    strokeWidth={3}
+                                    dot={{ r: 3, fill: "#f59e0b" }}
+                                />
+                                <Line
+                                    type="monotone"
+                                    name="나스닥 중간선거 해"
+                                    dataKey="nasdaq_midterm"
+                                    stroke="#a855f7"
+                                    strokeWidth={2.5}
+                                    dot={{ r: 3, fill: "#a855f7" }}
+                                />
+                                <Line
+                                    type="monotone"
+                                    name="S&P 500 일반 해"
+                                    dataKey="general_year"
+                                    stroke="#71717a"
+                                    strokeWidth={1.5}
+                                    strokeDasharray="4 4"
+                                    dot={false}
+                                />
+                                <Line
+                                    type="monotone"
+                                    name="나스닥 일반 해"
+                                    dataKey="nasdaq_general"
+                                    stroke="#38bdf8"
+                                    strokeWidth={1.5}
+                                    strokeDasharray="2 2"
+                                    dot={false}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* 실제 1950~현재까지의 S&P 500 / 나스닥 사이클 그래프 (첨부2 신규 하단 그래프) */}
+                <div className="flex flex-col gap-3 pt-4 border-t border-white/5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-indigo-400" />
+                                1950~현재(2026) 실제 S&P 500 / 나스닥 사이클 및 선거 주기
+                            </h4>
+                            <p className="text-[11px] text-gray-400">
+                                대통령선거 해(파스텔 블루 밴드), 중간선거 해(파스텔 레드 밴드), 일반 해(흰색) 구간별 실제 지수 궤적
+                            </p>
+                        </div>
+                        {/* Legend Banners */}
+                        <div className="flex items-center gap-2 text-[10px] font-bold">
+                            <span className="px-2.5 py-1 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-blue-400" />
+                                대통령선거 해
+                            </span>
+                            <span className="px-2.5 py-1 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-rose-400" />
+                                중간선거 해
+                            </span>
+                            <span className="px-2.5 py-1 rounded-md bg-white/5 text-gray-300 border border-white/10 flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-white/50" />
+                                일반 해
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 relative" style={{ height: "420px" }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={historical?.historical_cycles || []} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                <XAxis
+                                    dataKey="year"
+                                    stroke="#71717a"
+                                    tick={{ fontSize: 10 }}
+                                    tickLine={false}
+                                    interval={3}
+                                />
+                                <YAxis
+                                    yAxisId="sp"
+                                    stroke="#10b981"
+                                    tick={{ fontSize: 10 }}
+                                    tickLine={false}
+                                    domain={["auto", "auto"]}
+                                    tickFormatter={(v) => `${v.toLocaleString()}`}
+                                />
+                                <YAxis
+                                    yAxisId="nq"
+                                    orientation="right"
+                                    stroke="#a855f7"
+                                    tick={{ fontSize: 10 }}
+                                    tickLine={false}
+                                    domain={["auto", "auto"]}
+                                    tickFormatter={(v) => `${v.toLocaleString()}`}
+                                />
+
+                                {/* Pastel Election Cycle Background Bands */}
+                                {historical?.historical_cycles?.map((item: any) => {
+                                    if (item.election_type === "presidential") {
+                                        return (
+                                            <ReferenceArea
+                                                key={`pres_${item.year}`}
+                                                yAxisId="sp"
+                                                x1={item.year}
+                                                x2={item.year}
+                                                fill="rgba(59, 130, 246, 0.22)"
+                                                stroke="none"
+                                            />
+                                        );
+                                    }
+                                    if (item.election_type === "midterm") {
+                                        return (
+                                            <ReferenceArea
+                                                key={`mid_${item.year}`}
+                                                yAxisId="sp"
+                                                x1={item.year}
+                                                x2={item.year}
+                                                fill="rgba(239, 68, 68, 0.22)"
+                                                stroke="none"
+                                            />
+                                        );
+                                    }
+                                    return null;
+                                })}
+
+                                <RechartsTooltip
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            const d = payload[0].payload;
+                                            const isPres = d.election_type === "presidential";
+                                            const isMid = d.election_type === "midterm";
+                                            return (
+                                                <div className="bg-[#0e101a] border border-white/15 rounded-xl p-3 shadow-2xl text-xs flex flex-col gap-1.5 min-w-[200px]">
+                                                    <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+                                                        <span className="font-bold text-white font-mono text-sm">{label}년</span>
+                                                        <span
+                                                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                                                isPres
+                                                                    ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                                                                    : isMid
+                                                                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                                                                    : "bg-white/10 text-gray-300"
+                                                            }`}
+                                                        >
+                                                            {d.election_label || (isPres ? "대통령선거" : isMid ? "중간선거" : "일반 해")}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-emerald-400">
+                                                        <span>S&P 500:</span>
+                                                        <span className="font-mono font-bold">
+                                                            {d.sp500?.toLocaleString()} pt
+                                                            {d.sp500_return !== null && ` (${d.sp500_return > 0 ? "+" : ""}${d.sp500_return}%)`}
+                                                        </span>
+                                                    </div>
+                                                    {d.nasdaq !== null && (
+                                                        <div className="flex justify-between items-center text-purple-400">
+                                                            <span>나스닥(NASDAQ):</span>
+                                                            <span className="font-mono font-bold">
+                                                                {d.nasdaq?.toLocaleString()} pt
+                                                                {d.nasdaq_return !== null && ` (${d.nasdaq_return > 0 ? "+" : ""}${d.nasdaq_return}%)`}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
+                                />
+                                <Legend verticalAlign="top" height={36} iconType="circle" />
+                                <Line
+                                    yAxisId="sp"
+                                    type="monotone"
+                                    name="S&P 500 지수 (좌측축)"
+                                    dataKey="sp500"
+                                    stroke="#10b981"
+                                    strokeWidth={2}
+                                    dot={false}
+                                    activeDot={{ r: 5, fill: "#10b981" }}
+                                />
+                                <Line
+                                    yAxisId="nq"
+                                    type="monotone"
+                                    name="나스닥 지수 (우측축)"
+                                    dataKey="nasdaq"
+                                    stroke="#a855f7"
+                                    strokeWidth={2}
+                                    dot={false}
+                                    activeDot={{ r: 5, fill: "#a855f7" }}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
                 <div className="bg-[#151722] border border-white/5 rounded-xl p-4 text-xs text-gray-300 leading-relaxed flex items-start gap-3">
@@ -609,9 +872,9 @@ export default function MidtermElectionTab() {
                 </div>
             </div>
 
-            {/* Section 5: 5. AI 맞춤형 포트폴리오 리밸런싱 컨설턴트 */}
+            {/* Section 5: 5. AI 맞춤형 포트폴리오 리밸런싱 컨설턴트 (첨부3 실시간 동기화 & 인터뷰 팝업 완료) */}
             <div className="w-full bg-[#121217]/70 border border-white/10 rounded-3xl p-5 md:p-7 backdrop-blur-md shadow-xl flex flex-col gap-6">
-                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400">
                             <Sliders className="w-5 h-5" />
@@ -625,6 +888,15 @@ export default function MidtermElectionTab() {
                             </p>
                         </div>
                     </div>
+
+                    {/* Interview Trigger Button */}
+                    <button
+                        onClick={() => setIsInterviewModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 active:scale-95 text-xs font-bold text-white shadow-lg transition-all"
+                    >
+                        <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                        <span>AI 투자성향 & 자산배분 진단 인터뷰</span>
+                    </button>
                 </div>
 
                 {/* Consultation Controls (Slider & Buttons) */}
@@ -653,7 +925,7 @@ export default function MidtermElectionTab() {
 
                     {/* Risk Profile Selector */}
                     <div className="flex flex-col gap-2">
-                        <label className="text-xs font-bold text-gray-300">고객 투자 성향</label>
+                        <label className="text-xs font-bold text-gray-300">고객 투자 성향 (자유 변경 가능)</label>
                         <div className="grid grid-cols-3 gap-2">
                             {(["conservative", "neutral", "aggressive"] as const).map((p) => (
                                 <button
@@ -670,7 +942,7 @@ export default function MidtermElectionTab() {
                             ))}
                         </div>
                         <span className="text-[10px] text-gray-400">
-                            * 질문 답변 기준: 위험 중립형(시장 평균 수익률 추구, 균형 배분)
+                            * 현재 설정: {riskProfile === "conservative" ? "안정 추구형 (방어 자산 극대화)" : riskProfile === "neutral" ? "위험 중립형 (시장 균형 배분)" : "적극 투자형 (빅테크 성장 유지)"}
                         </span>
                     </div>
                 </div>
@@ -708,108 +980,296 @@ export default function MidtermElectionTab() {
                     </div>
                 )}
 
-                {/* Current vs Target Allocation Comparison */}
-                {portfolioGuide?.current_vs_target && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-[#181a26]/70 border border-white/10 rounded-2xl p-5">
-                            <span className="text-xs font-bold text-gray-400 block mb-3">현재 추정 포트폴리오 비중</span>
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between text-xs">
+                {/* Current vs Target Allocation Comparison (실시간 동적 바 반영 버그 수정) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* 왼쪽: 현재 보유 포트폴리오 비중 (슬라이더 및 인터뷰 값과 100% 실시간 연동) */}
+                    <div className="bg-[#181a26]/70 border border-white/10 rounded-2xl p-5">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-bold text-gray-400">현재 추정 포트폴리오 비중</span>
+                            <span className="text-[10px] text-indigo-400 font-mono font-bold">실시간 동기화</span>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            <div>
+                                <div className="flex justify-between text-xs mb-1">
                                     <span className="text-rose-400 font-bold">성장 기술주</span>
-                                    <span className="font-mono font-bold text-white">{portfolioGuide.current_vs_target.current.tech_growth}%</span>
+                                    <span className="font-mono font-bold text-white">{techWeight.toFixed(0)}%</span>
                                 </div>
-                                <div className="w-full h-2 bg-black/50 rounded-full overflow-hidden">
-                                    <div style={{ width: `${portfolioGuide.current_vs_target.current.tech_growth}%` }} className="h-full bg-rose-500" />
+                                <div className="w-full h-2.5 bg-black/50 rounded-full overflow-hidden">
+                                    <div
+                                        style={{ width: `${Math.min(100, Math.max(0, techWeight))}%` }}
+                                        className="h-full bg-rose-500 transition-all duration-300"
+                                    />
                                 </div>
+                            </div>
 
-                                <div className="flex justify-between text-xs mt-1">
+                            <div>
+                                <div className="flex justify-between text-xs mb-1">
                                     <span className="text-indigo-400 font-bold">인컴/배당 자산</span>
-                                    <span className="font-mono font-bold text-white">{portfolioGuide.current_vs_target.current.other_dividend}%</span>
+                                    <span className="font-mono font-bold text-white">{dividendWeight.toFixed(0)}%</span>
                                 </div>
-                                <div className="w-full h-2 bg-black/50 rounded-full overflow-hidden">
-                                    <div style={{ width: `${portfolioGuide.current_vs_target.current.other_dividend}%` }} className="h-full bg-indigo-500" />
+                                <div className="w-full h-2.5 bg-black/50 rounded-full overflow-hidden">
+                                    <div
+                                        style={{ width: `${Math.min(100, Math.max(0, dividendWeight))}%` }}
+                                        className="h-full bg-indigo-500 transition-all duration-300"
+                                    />
                                 </div>
+                            </div>
 
-                                <div className="flex justify-between text-xs mt-1">
+                            <div>
+                                <div className="flex justify-between text-xs mb-1">
                                     <span className="text-emerald-400 font-bold">안전/채권 자산</span>
-                                    <span className="font-mono font-bold text-white">{portfolioGuide.current_vs_target.current.safe_haven}%</span>
+                                    <span className="font-mono font-bold text-white">{safeWeight.toFixed(0)}%</span>
                                 </div>
-                                <div className="w-full h-2 bg-black/50 rounded-full overflow-hidden">
-                                    <div style={{ width: `${portfolioGuide.current_vs_target.current.safe_haven}%` }} className="h-full bg-emerald-500" />
+                                <div className="w-full h-2.5 bg-black/50 rounded-full overflow-hidden">
+                                    <div
+                                        style={{ width: `${Math.min(100, Math.max(0, safeWeight))}%` }}
+                                        className="h-full bg-emerald-500 transition-all duration-300"
+                                    />
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div className="bg-gradient-to-br from-[#1b1e33] to-[#141624] border border-indigo-500/30 rounded-2xl p-5">
-                            <span className="text-xs font-bold text-indigo-300 block mb-3">Core-Satellite 목표 리밸런싱 비중</span>
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between text-xs">
+                    {/* 오른쪽: 목표 리밸런싱 비중 */}
+                    <div className="bg-gradient-to-br from-[#1b1e33] to-[#141624] border border-indigo-500/30 rounded-2xl p-5">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-bold text-indigo-300">Core-Satellite 목표 리밸런싱 비중</span>
+                            <span className="text-[10px] text-indigo-400 font-bold">Gridlock 최적 모델</span>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            <div>
+                                <div className="flex justify-between text-xs mb-1">
                                     <span className="text-indigo-300 font-bold">성장 자산 (빅테크/B2B AI)</span>
-                                    <span className="font-mono font-bold text-white">{portfolioGuide.current_vs_target.target.tech_growth}% (목표)</span>
+                                    <span className="font-mono font-bold text-white">
+                                        {portfolioGuide?.current_vs_target?.target?.tech_growth || 38}% (목표)
+                                    </span>
                                 </div>
-                                <div className="w-full h-2 bg-black/50 rounded-full overflow-hidden">
-                                    <div style={{ width: `${portfolioGuide.current_vs_target.target.tech_growth}%` }} className="h-full bg-indigo-400" />
-                                </div>
-
-                                <div className="flex justify-between text-xs mt-1">
-                                    <span className="text-indigo-300 font-bold">인컴/배당 (SCHD 등 배당성장)</span>
-                                    <span className="font-mono font-bold text-white">{portfolioGuide.current_vs_target.target.dividend_income}% (목표)</span>
-                                </div>
-                                <div className="w-full h-2 bg-black/50 rounded-full overflow-hidden">
-                                    <div style={{ width: `${portfolioGuide.current_vs_target.target.dividend_income}%` }} className="h-full bg-indigo-500" />
-                                </div>
-
-                                <div className="flex justify-between text-xs mt-1">
-                                    <span className="text-emerald-400 font-bold">안전자산 (미국 중장기 국채 TLT)</span>
-                                    <span className="font-mono font-bold text-white">{portfolioGuide.current_vs_target.target.safe_haven}% (목표)</span>
-                                </div>
-                                <div className="w-full h-2 bg-black/50 rounded-full overflow-hidden">
-                                    <div style={{ width: `${portfolioGuide.current_vs_target.target.safe_haven}%` }} className="h-full bg-emerald-400" />
+                                <div className="w-full h-2.5 bg-black/50 rounded-full overflow-hidden">
+                                    <div
+                                        style={{ width: `${portfolioGuide?.current_vs_target?.target?.tech_growth || 38}%` }}
+                                        className="h-full bg-indigo-500 transition-all duration-500"
+                                    />
                                 </div>
                             </div>
+
+                            <div>
+                                <div className="flex justify-between text-xs mb-1">
+                                    <span className="text-purple-300 font-bold">인컴/배당 (SCHD 등 배당성장)</span>
+                                    <span className="font-mono font-bold text-white">
+                                        {portfolioGuide?.current_vs_target?.target?.dividend_income || 42}% (목표)
+                                    </span>
+                                </div>
+                                <div className="w-full h-2.5 bg-black/50 rounded-full overflow-hidden">
+                                    <div
+                                        style={{ width: `${portfolioGuide?.current_vs_target?.target?.dividend_income || 42}%` }}
+                                        className="h-full bg-purple-500 transition-all duration-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="flex justify-between text-xs mb-1">
+                                    <span className="text-emerald-300 font-bold">안전자산 (미국 중장기 국채 TLT)</span>
+                                    <span className="font-mono font-bold text-white">
+                                        {portfolioGuide?.current_vs_target?.target?.safe_haven || 20}% (목표)
+                                    </span>
+                                </div>
+                                <div className="w-full h-2.5 bg-black/50 rounded-full overflow-hidden">
+                                    <div
+                                        style={{ width: `${portfolioGuide?.current_vs_target?.target?.safe_haven || 20}%` }}
+                                        className="h-full bg-emerald-500 transition-all duration-500"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Action Plans 3 Steps */}
+                {portfolioGuide?.action_plans && (
+                    <div className="flex flex-col gap-3">
+                        <h4 className="text-sm font-bold text-gray-300 flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-indigo-400" />
+                            주요그룹별 세부 리밸런싱 실행 로드맵
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {portfolioGuide.action_plans.map((ap: any) => (
+                                <div key={ap.step} className="bg-[#181a26]/70 border border-white/10 rounded-2xl p-5 flex flex-col justify-between">
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-[10px] font-bold px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                                STEP 0{ap.step}
+                                            </span>
+                                            <span className="text-xs text-gray-400 font-semibold">{ap.category}</span>
+                                        </div>
+                                        <h5 className="text-sm font-bold text-white mb-2">{ap.action}</h5>
+                                        <div className="flex flex-col gap-2 mt-3">
+                                            {ap.targets?.map((t: any, tIdx: number) => (
+                                                <div key={tIdx} className="bg-black/40 rounded-xl p-3 border border-white/5">
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <span className="text-xs font-bold text-white">{t.symbol}</span>
+                                                        <span className="text-[10px] font-bold text-indigo-300">{t.action_type}</span>
+                                                    </div>
+                                                    <p className="text-[11px] text-gray-400 leading-relaxed">{t.advice}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}
+            </div>
 
-                {/* 3 Step Action Plans */}
-                <div>
-                    <h4 className="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-indigo-400" />
-                        종목군별 세부 리밸런싱 실행 로드맵
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {portfolioGuide?.action_plans?.map((plan: any) => (
-                            <div key={plan.step} className="bg-[#181a26]/70 border border-white/10 rounded-2xl p-5 flex flex-col justify-between">
+            {/* AI 투자성향 & 자산배분 진단 인터뷰 팝업 모달 */}
+            {isInterviewModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="relative w-full max-w-xl bg-[#151726] border border-indigo-500/40 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col gap-5 text-gray-200">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg">
+                                    <Sparkles className="w-5 h-5" />
+                                </div>
                                 <div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <span className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 font-mono text-xs font-bold flex items-center justify-center">
-                                            {plan.step}
-                                        </span>
-                                        <span className="text-xs font-bold text-gray-400">{plan.category}</span>
-                                    </div>
-                                    <h5 className="text-sm font-bold text-white mb-3">{plan.action}</h5>
-
-                                    <div className="flex flex-col gap-2.5">
-                                        {plan.targets?.map((t: any, tIdx: number) => (
-                                            <div key={tIdx} className="bg-black/30 rounded-xl p-3 border border-white/5">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <span className="text-xs font-bold text-white">{t.symbol}</span>
-                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white/10 text-indigo-300">
-                                                        {t.action_type}
-                                                    </span>
-                                                </div>
-                                                <p className="text-[11px] text-gray-400 leading-relaxed">
-                                                    {t.advice}
-                                                </p>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <h3 className="text-lg font-black text-white">
+                                        고객 투자성향 & 자산배분 AI 인터뷰
+                                    </h3>
+                                    <p className="text-xs text-gray-400">
+                                        현재 보유 비중과 투자 성향을 진단하여 최적의 중간선거 리밸런싱 모델을 설계합니다.
+                                    </p>
                                 </div>
                             </div>
-                        ))}
+                            <button
+                                onClick={() => setIsInterviewModalOpen(false)}
+                                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Question 1: Tech Weight */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-xs font-bold text-white flex items-center justify-between">
+                                <span>Q1. 현재 포트폴리오에서 빅테크 및 성장 기술주 비중은 어느 정도인가요?</span>
+                                <span className="text-indigo-400 font-mono text-sm">{interviewAnswers.techWeight}%</span>
+                            </label>
+                            <input
+                                type="range"
+                                min="10"
+                                max="90"
+                                step="5"
+                                value={interviewAnswers.techWeight}
+                                onChange={(e) => {
+                                    const tw = parseInt(e.target.value);
+                                    const remaining = Math.max(0, 100 - tw);
+                                    const dw = Math.round(remaining * 0.6);
+                                    const sw = Math.round(remaining - dw);
+                                    setInterviewAnswers({
+                                        ...interviewAnswers,
+                                        techWeight: tw,
+                                        dividendWeight: dw,
+                                        safeWeight: sw
+                                    });
+                                }}
+                                className="w-full h-2 bg-black/50 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                            />
+                            <div className="flex justify-between text-[10px] text-gray-500">
+                                <span>10% (보수적)</span>
+                                <span>50% (집중 기준)</span>
+                                <span>90% (초집중)</span>
+                            </div>
+                        </div>
+
+                        {/* Question 2 & 3: Dividend & Safe Weights */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1.5 bg-black/30 p-3.5 rounded-xl border border-white/5">
+                                <label className="text-[11px] font-bold text-gray-300">Q2. 인컴/배당 자산 비중</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="90"
+                                        value={interviewAnswers.dividendWeight}
+                                        onChange={(e) => {
+                                            const dw = Math.max(0, parseInt(e.target.value) || 0);
+                                            const sw = Math.max(0, 100 - interviewAnswers.techWeight - dw);
+                                            setInterviewAnswers({ ...interviewAnswers, dividendWeight: dw, safeWeight: sw });
+                                        }}
+                                        className="w-full bg-[#181a26] border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
+                                    />
+                                    <span className="text-xs text-gray-400">%</span>
+                                </div>
+                                <span className="text-[10px] text-gray-500">SCHD, 커버드콜, 리츠 등</span>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5 bg-black/30 p-3.5 rounded-xl border border-white/5">
+                                <label className="text-[11px] font-bold text-gray-300">Q3. 안전/국채 자산 비중</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="90"
+                                        value={interviewAnswers.safeWeight}
+                                        onChange={(e) => {
+                                            const sw = Math.max(0, parseInt(e.target.value) || 0);
+                                            setInterviewAnswers({ ...interviewAnswers, safeWeight: sw });
+                                        }}
+                                        className="w-full bg-[#181a26] border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
+                                    />
+                                    <span className="text-xs text-gray-400">%</span>
+                                </div>
+                                <span className="text-[10px] text-gray-500">TLT, 미국채, 단기자금</span>
+                            </div>
+                        </div>
+
+                        {/* Question 4: Risk Profile */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-xs font-bold text-white">
+                                Q4. 시장 변동성 및 하방 리스크에 대한 본인의 투자 성향은?
+                            </label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {[
+                                    { id: "conservative", title: "안정 추구형", sub: "원금 보존 및 고배당 우선" },
+                                    { id: "neutral", title: "위험 중립형", sub: "시장 수익률 및 균형 배분" },
+                                    { id: "aggressive", title: "적극 투자형", sub: "빅테크 알파 및 고성장 추구" }
+                                ].map((item) => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => setInterviewAnswers({ ...interviewAnswers, riskProfile: item.id as any })}
+                                        className={`p-3 rounded-2xl border text-left transition-all flex flex-col gap-1 ${
+                                            interviewAnswers.riskProfile === item.id
+                                                ? "bg-indigo-600/30 border-indigo-400 text-white shadow-lg"
+                                                : "bg-white/5 border-white/5 text-gray-400 hover:text-white"
+                                        }`}
+                                    >
+                                        <span className="text-xs font-bold text-white">{item.title}</span>
+                                        <span className="text-[10px] text-gray-400 leading-tight">{item.sub}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Modal Action Buttons */}
+                        <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10 mt-2">
+                            <button
+                                onClick={() => setIsInterviewModalOpen(false)}
+                                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-300 transition-all"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={handleApplyInterview}
+                                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 active:scale-95 text-xs font-bold text-white shadow-lg transition-all flex items-center gap-1.5"
+                            >
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>진단 결과 내 포트폴리오에 적용하기</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }
