@@ -17,12 +17,18 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 
 
 
-> 세션 핸드오프 (2026-10-17, Antigravity - Sprint 20: 부동산 실데이터 백엔드 파이프라인 & Fallback & UI 연동):
-> - 🏛️ [S20-1~3: 백엔드 수집 파이프라인 및 엔드포인트 (`models.py`, `real_estate_collector.py`, `real_estate.py`)]:
->   - 서울 열린데이터광장 OpenAPI 연동 및 키 미설정/`sample` 시 내부 검증 캐시 자동 전환.
->   - `/api/v1/real-estate/market-trends?period=1Y|2Y|ALL` 시계열 조회 및 `/summary` 4대 거시 지표 제공.
->   - `backend/tests/test_real_estate.py` 6개 단위 테스트 작성 및 100% Pass.
->   - `scheduler.py`: 매주 월요일 04:30 KST `_job_real_estate_sync` 자동 롤링 동기화 등록.
+> 세션 핸드오프 (2026-10-17, Antigravity - Sprint 22~23: 서울 25개 구 & 수도권 38개 거점 히트맵, 6계층 사다리, 배당 방어율 ICR 위젯 완료):
+> - 🗺️ [Sprint 22: 서울 25개 자치구 히트맵 & 갭투자 위험 레이더 (S22-1~4)]:
+>   - 서울 25개 구 실거래가 및 전세가율 정규화 데이터셋 & `/api/v1/real-estate/districts` 엔드포인트.
+>   - 갭투자 역전세 단지 6개소 탐지(도봉, 금천, 노원 등), 인터랙티브 히트맵 시각화 UI 구축.
+> - 🌐 [Sprint 23: 수도권 38개 거점 확장 & 6계층 사다리 & 주담대 ICR 배당 방어율 (S23-1~4)]:
+>   - 경기 10개 핵심지(분당, 과천, 광명 등) 및 인천 3대 거점(송도, 청라, 부평) 실거래가 데이터 모델 및 API (`region` 파라미터).
+>   - 6계층 양극화 사다리(평당 8,400만~1,750만) 벤토 그리드 및 8대 역전세 위험 단지 레이더.
+>   - 내 부동산 자산 시세/대출 입력 및 월 ETF 배당금 대비 주담대 이자 방어율(ICR 173%), DSCR, 잉여금 시뮬레이터(`RealEstateMortgageShieldWidget.tsx`).
+> - 🎨 [차트 테마 표준화]:
+>   - `ExitSignalModals.tsx`, `Modals.tsx`에 `useChartHighlight` 훅 및 툴팁/레전드 스타일 표준화 적용.
+> - ✅ [무결성 및 배포 상태]:
+>   - 백엔드 pytest 8개 100% Pass, Next.js 16.1.6 11개 페이지 최적화 빌드 완료, 원격 origin/main 푸시 완료.
 > - 🖥️ [S20-4: 프론트엔드 연동 (`RealEstateTab.tsx`)]:
 >   - 백엔드 REST API 비동기 fetch 및 로컬 캐시 fallback 안전망 구축.
 >   - 상단 연동 모드 상태 배지(`검증된 캐시 연동 (sample 대기)`) 및 `[실데이터 갱신]` 수동 트리거 버튼 탑재.

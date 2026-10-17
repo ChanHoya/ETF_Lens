@@ -561,6 +561,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [period, setPeriod] = useState<number>(60); // Default to 3M (60 business days)
+    const highlight = useChartHighlight();
 
     const periods = [
         { label: '1M', days: 20 },
@@ -644,7 +645,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                                         const isLast = payload[0]?.payload === displayData[displayData.length - 1];
                                         const displayLabel = `${label} ${isLast ? '(최근/전일)' : ''}`;
                                         return (
-                                            <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
+                                            <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[11px]">
                                                 <p className="text-gray-400 mb-2">{displayLabel}</p>
                                                 {sortedPayload.map((entry: any, index: number) => {
                                                     const isPct = entry.name.includes('VKOSPI') || entry.name.includes('Proxy') || entry.name.includes('프록시');
@@ -666,7 +667,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                                     return null;
                                 }}
                             />
-                            <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                            <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={highlight.handleLegendClick} formatter={highlight.renderLegendText} />
 
                             {/* FGI Elements */}
                             {isFgi && <ReferenceArea yAxisId="left" y1={0} y2={25} strokeOpacity={0} fill="#34d399" fillOpacity={0.15} />}
@@ -696,7 +697,19 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                                     lines.sort((a, b) => (lData[b.dataKey] || 0) - (lData[a.dataKey] || 0));
                                 }
                                 return lines.map(l => (
-                                    <Line key={l.dataKey} yAxisId={l.yAxisId} type="monotone" name={l.name} dataKey={l.dataKey} stroke={l.color} strokeWidth={l.width} strokeDasharray={l.dash || undefined} dot={false} activeDot={l.yAxisId === 'left' ? { r: 5 } : false} />
+                                    <Line 
+                                        key={l.dataKey} 
+                                        yAxisId={l.yAxisId} 
+                                        type="monotone" 
+                                        name={l.name} 
+                                        dataKey={l.dataKey} 
+                                        stroke={l.color} 
+                                        strokeWidth={highlight.getStrokeWidth(l.dataKey, l.width)} 
+                                        strokeOpacity={highlight.getOpacity(l.dataKey)}
+                                        strokeDasharray={l.dash || undefined} 
+                                        dot={false} 
+                                        activeDot={l.yAxisId === 'left' ? { r: 5 } : false} 
+                                    />
                                 ));
                             })()}
                         </LineChart>
@@ -874,7 +887,7 @@ export function T10y2yModalContent() {
                                         const zoneColor = val < -0.4 ? '#f97316' : val < 0 ? '#eab308' : '#10b981';
                                         const zoneLabel = val < -0.4 ? '경계 (2점)' : val < 0 ? '주의 (1점)' : '안정 (0점)';
                                         return (
-                                            <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
+                                            <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[11px]">
                                                 <p className="text-gray-400 mb-1">{label}</p>
                                                 <div className="flex items-center gap-2 font-medium" style={{ color: zoneColor }}>
                                                     <span>장단기 금리차 :</span>
@@ -1040,7 +1053,7 @@ export function HySpreadModalContent() {
                                         const zoneColor = val >= 6.5 ? '#ef4444' : val >= 5.0 ? '#f97316' : val >= 3.5 ? '#eab308' : '#10b981';
                                         const zoneLabel = val >= 6.5 ? '위험 (3점)' : val >= 5.0 ? '경계 (2점)' : val >= 3.5 ? '주의 (1점)' : '안정 (0점)';
                                         return (
-                                            <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
+                                            <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[11px]">
                                                 <p className="text-gray-400 mb-1">{label}</p>
                                                 <div className="flex items-center gap-2 font-medium" style={{ color: zoneColor }}>
                                                     <span>하이일드 스프레드 :</span>

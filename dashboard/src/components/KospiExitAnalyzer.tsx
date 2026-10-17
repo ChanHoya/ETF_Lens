@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ShieldAlert, TrendingDown, DollarSign, Activity, AlertTriangle, ArrowRight, Info, ChevronRight, BarChart2, X, AlertCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
+import { useChartHighlight } from '../lib/chartTheme';
 import { DollarModalContent, PerModalContent, CliModalContent, SentimentModalContent, T10y2yModalContent, HySpreadModalContent } from './ExitSignalModals';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import RiskGaugeChart from './RiskGaugeChart';
@@ -103,6 +104,7 @@ export default function KospiExitAnalyzer() {
     ];
 
     // Current Active Status
+    const dollarHighlight = useChartHighlight();
     const [dollarIndex, setDollarIndex] = useState(mockDollarData[11].val);
     const [dollarKrw, setDollarKrw] = useState(mockDollarData[11].krw);
     const [forwardPer, setForwardPer] = useState(mockPerData[11].val);
@@ -547,13 +549,13 @@ export default function KospiExitAnalyzer() {
                                 <YAxis yAxisId="left" domain={['auto', 'auto']} hide={true} />
                                 <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} hide={true} />
                                 <RechartsTooltip
-                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', borderRadius: '8px' }}
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', borderRadius: '8px' }}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
                                             const isLast = payload[0]?.payload === chartDollar[chartDollar.length - 1];
                                             const displayLabel = `${label} ${isLast ? '(최근)' : ''}`;
                                             return (
-                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[10px]">
+                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[11px]">
                                                     <p className="text-gray-400 mb-1">{displayLabel}</p>
                                                     {payload.map((entry: any, index: number) => (
                                                         <div key={`item-${index}`} className="flex items-center gap-2 font-medium" style={{ color: entry.color }}>
@@ -572,11 +574,44 @@ export default function KospiExitAnalyzer() {
                                     height={18} 
                                     iconSize={6} 
                                     iconType="circle"
-                                    wrapperStyle={{ fontSize: '9px', marginTop: '-5px', marginBottom: '5px' }} 
-                                    formatter={(value) => <span className="text-[10px] text-gray-400 font-semibold">{value === 'DXY' ? '달러인덱스 (DXY)' : '원/달러 환율 (KRW)'}</span>}
+                                    onClick={dollarHighlight.handleLegendClick}
+                                    wrapperStyle={{ fontSize: '10px', marginTop: '-5px', marginBottom: '5px' }} 
+                                    formatter={(value) => {
+                                        const isDimmed = dollarHighlight.highlightedKey && dollarHighlight.highlightedKey !== value;
+                                        const isSelected = dollarHighlight.highlightedKey === value;
+                                        return (
+                                            <span 
+                                                className={`text-[10px] font-semibold cursor-pointer transition-opacity ${isSelected ? 'font-bold underline' : 'text-gray-400'}`}
+                                                style={{ opacity: isDimmed ? 0.35 : 1 }}
+                                            >
+                                                {value === 'DXY' ? '달러인덱스 (DXY)' : '원/달러 환율 (KRW)'}
+                                            </span>
+                                        );
+                                    }}
                                 />
-                                <Line name="DXY" yAxisId="left" type="monotone" dataKey="dollar" stroke={dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#10b981')} strokeWidth={2} dot={false} isAnimationActive={false} />
-                                <Line name="krw" yAxisId="right" type="monotone" dataKey="krw" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" dot={false} isAnimationActive={false} />
+                                <Line 
+                                    name="DXY" 
+                                    yAxisId="left" 
+                                    type="monotone" 
+                                    dataKey="dollar" 
+                                    stroke={dollarIndex >= 101.5 ? '#f43f5e' : (dollarIndex >= 100 ? '#f59e0b' : '#10b981')} 
+                                    strokeWidth={dollarHighlight.getStrokeWidth('dollar', 2)} 
+                                    strokeOpacity={dollarHighlight.getOpacity('dollar')}
+                                    dot={false} 
+                                    isAnimationActive={false} 
+                                />
+                                <Line 
+                                    name="krw" 
+                                    yAxisId="right" 
+                                    type="monotone" 
+                                    dataKey="krw" 
+                                    stroke="#3b82f6" 
+                                    strokeWidth={dollarHighlight.getStrokeWidth('krw', 1)} 
+                                    strokeOpacity={dollarHighlight.getOpacity('krw')}
+                                    strokeDasharray="3 3" 
+                                    dot={false} 
+                                    isAnimationActive={false} 
+                                />
                             </LineChart>
                         </ResponsiveContainer>
                         )}

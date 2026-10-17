@@ -3,6 +3,7 @@ import { Star, Plus, Edit2, Trash2, Check, X, Share2, Store, Download, Lock, Ref
 import { ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, PieChart, Pie, Cell } from "recharts";
 import { FavGroup } from '../hooks/useFavorites';
 import { API_BASE } from '../lib/apiConfig';
+import { useChartHighlight, STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE } from '../lib/chartTheme';
 
 type ModalsProps = {
     isFavModalOpen: boolean;
@@ -238,6 +239,9 @@ export default function Modals({
     isEtfCheckModalOpen, setIsEtfCheckModalOpen, hasOpenedEtfCheck,
     naverEtfCode, setNaverEtfCode
 }: ModalsProps) {
+    const priceHighlight = useChartHighlight();
+    const navHighlight = useChartHighlight();
+    const volHighlight = useChartHighlight();
 
     // ── ETF 상세 모달 스크롤 관리 ──────────────────────────────────────────
     const detailScrollRef = React.useRef<HTMLDivElement>(null);
@@ -825,7 +829,7 @@ export default function Modals({
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                                                     <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 11 }} tickMargin={10} stroke="#1e293b" minTickGap={30} />
                                                     <YAxis orientation="right" width={55} tick={{ fill: '#e2e8f0', fontSize: 11 }} tickFormatter={(val) => `${val > 0 ? '+' : ''}${val.toFixed(1)}%`} stroke="#1e293b" axisLine={false} domain={detailChartData.domainLeft as any} />
-                                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} formatter={(val: any, name: string, props: any) => {
+                                                    <Tooltip contentStyle={STANDARD_TOOLTIP_STYLE} formatter={(val: any, name: string, props: any) => {
                                                         const isUSD = isStock || selectedDetailEtf.etf_code?.toUpperCase() === 'ARKX';
                                                         const sign = val > 0 ? '+' : '';
                                                         if (name === detailChartData.benchmarkName) return [`${sign}${Number(val).toFixed(2)}%`, name];
@@ -837,12 +841,37 @@ export default function Modals({
                                                         }
                                                         return [`${sign}${Number(val).toFixed(2)}%`, name];
                                                     }} />
-                                                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                                                    <Line type="monotone" dataKey="rel_yield" name={detailChartData.benchmarkName} stroke="#3b82f6" strokeWidth={2} dot={false} />
+                                                    <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={priceHighlight.handleLegendClick} formatter={priceHighlight.renderLegendText} />
+                                                    <Line 
+                                                        type="monotone" 
+                                                        dataKey="rel_yield" 
+                                                        name={detailChartData.benchmarkName} 
+                                                        stroke="#3b82f6" 
+                                                        strokeWidth={priceHighlight.getStrokeWidth('rel_yield', 2)} 
+                                                        strokeOpacity={priceHighlight.getOpacity('rel_yield')}
+                                                        dot={false} 
+                                                    />
                                                     {isStock && !isKoreanStock && (
-                                                        <Line type="monotone" dataKey="space_yield" name="미국 우주섹터(ARKX)" stroke="#f59e0b" strokeWidth={1.8} strokeDasharray="3 3" dot={false} />
+                                                        <Line 
+                                                            type="monotone" 
+                                                            dataKey="space_yield" 
+                                                            name="미국 우주섹터(ARKX)" 
+                                                            stroke="#f59e0b" 
+                                                            strokeWidth={priceHighlight.getStrokeWidth('space_yield', 1.8)} 
+                                                            strokeOpacity={priceHighlight.getOpacity('space_yield')}
+                                                            strokeDasharray="3 3" 
+                                                            dot={false} 
+                                                        />
                                                     )}
-                                                    <Line type="monotone" dataKey="stock_yield" name={selectedDetailEtf.etf_name} stroke="#ef4444" strokeWidth={2} dot={false} />
+                                                    <Line 
+                                                        type="monotone" 
+                                                        dataKey="stock_yield" 
+                                                        name={selectedDetailEtf.etf_name} 
+                                                        stroke="#ef4444" 
+                                                        strokeWidth={priceHighlight.getStrokeWidth('stock_yield', 2)} 
+                                                        strokeOpacity={priceHighlight.getOpacity('stock_yield')}
+                                                        dot={false} 
+                                                    />
                                                 </ComposedChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -934,11 +963,39 @@ export default function Modals({
                                                         <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 11 }} tickMargin={10} stroke="#1e293b" minTickGap={15} />
                                                         <YAxis yAxisId="left" width={55} tick={{ fill: '#ef4444', fontSize: 11 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="#1e293b" axisLine={false} domain={['auto', 'auto']} />
                                                         <YAxis yAxisId="right" orientation="right" tick={{ fill: '#3b82f6', fontSize: 11 }} tickFormatter={(val) => `${val.toFixed(2)}`} stroke="#1e293b" axisLine={false} domain={[-0.5, 0.5]} />
-                                                        <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
-                                                        <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                                                        <Bar yAxisId="right" dataKey="diff" name="괴리율" fill="#3b82f6" maxBarSize={4} />
-                                                        <Line yAxisId="left" type="monotone" dataKey="nav" name="순자산가치(NAV)" stroke="#ef4444" strokeWidth={2} dot={false} connectNulls={true} />
-                                                        <Line yAxisId="left" type="monotone" dataKey="price" name="ETF 종가" stroke="#84cc16" strokeDasharray="5 5" strokeWidth={2} dot={false} connectNulls={true} />
+                                                        <Tooltip contentStyle={STANDARD_TOOLTIP_STYLE} />
+                                                        <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={navHighlight.handleLegendClick} formatter={navHighlight.renderLegendText} />
+                                                        <Bar 
+                                                            yAxisId="right" 
+                                                            dataKey="diff" 
+                                                            name="괴리율" 
+                                                            fill="#3b82f6" 
+                                                            fillOpacity={navHighlight.getOpacity('diff')}
+                                                            maxBarSize={4} 
+                                                        />
+                                                        <Line 
+                                                            yAxisId="left" 
+                                                            type="monotone" 
+                                                            dataKey="nav" 
+                                                            name="순자산가치(NAV)" 
+                                                            stroke="#ef4444" 
+                                                            strokeWidth={navHighlight.getStrokeWidth('nav', 2)} 
+                                                            strokeOpacity={navHighlight.getOpacity('nav')}
+                                                            dot={false} 
+                                                            connectNulls={true} 
+                                                        />
+                                                        <Line 
+                                                            yAxisId="left" 
+                                                            type="monotone" 
+                                                            dataKey="price" 
+                                                            name="ETF 종가" 
+                                                            stroke="#84cc16" 
+                                                            strokeDasharray="5 5" 
+                                                            strokeWidth={navHighlight.getStrokeWidth('price', 2)} 
+                                                            strokeOpacity={navHighlight.getOpacity('price')}
+                                                            dot={false} 
+                                                            connectNulls={true} 
+                                                        />
                                                     </ComposedChart>
                                                 </ResponsiveContainer>
                                             </div>
@@ -1108,10 +1165,27 @@ export default function Modals({
                                                     <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11 }} tickMargin={10} stroke="#1e293b" />
                                                     <YAxis yAxisId="left" tick={{ fill: '#3b82f6', fontSize: 11 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="#1e293b" axisLine={false} />
                                                     <YAxis yAxisId="right" orientation="right" tick={{ fill: '#ef4444', fontSize: 11 }} tickFormatter={(val) => `${val.toLocaleString()}`} stroke="#1e293b" axisLine={false} />
-                                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
-                                                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                                                    <Bar yAxisId="left" dataKey="volume" name="월간평균거래량(좌)" fill="#3b82f6" maxBarSize={15} />
-                                                    <Line yAxisId="right" type="monotone" dataKey="value" name="월간평균거래대금(우)" stroke="#ea580c" strokeWidth={2} dot={{ r: 3 }} connectNulls={true} />
+                                                    <Tooltip contentStyle={STANDARD_TOOLTIP_STYLE} />
+                                                    <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={volHighlight.handleLegendClick} formatter={volHighlight.renderLegendText} />
+                                                    <Bar 
+                                                        yAxisId="left" 
+                                                        dataKey="volume" 
+                                                        name="월간평균거래량(좌)" 
+                                                        fill="#3b82f6" 
+                                                        fillOpacity={volHighlight.getOpacity('volume')}
+                                                        maxBarSize={15} 
+                                                    />
+                                                    <Line 
+                                                        yAxisId="right" 
+                                                        type="monotone" 
+                                                        dataKey="value" 
+                                                        name="월간평균거래대금(우)" 
+                                                        stroke="#ea580c" 
+                                                        strokeWidth={volHighlight.getStrokeWidth('value', 2)} 
+                                                        strokeOpacity={volHighlight.getOpacity('value')}
+                                                        dot={{ r: 3 }} 
+                                                        connectNulls={true} 
+                                                    />
                                                 </ComposedChart>
                                             </ResponsiveContainer>
                                         </div>
