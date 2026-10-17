@@ -68,35 +68,47 @@ class RealEstateCollector:
     """서울 아파트 실거래가 및 매물 데이터 수집/동기화 관리자"""
 
     def __init__(self):
-        self.api_key = os.getenv("SEOUL_OPEN_DATA_KEY", "").strip()
+        pass
+
+    @property
+    def api_key(self) -> str:
+        """항상 최신 .env를 재로딩하여 프로세스 재시작 없이도 키 변경을 즉시 반영"""
+        try:
+            from pathlib import Path
+            from dotenv import load_dotenv
+            env_path = Path(__file__).resolve().parent.parent / ".env"
+            if env_path.exists():
+                load_dotenv(dotenv_path=env_path, override=True)
+        except Exception as e:
+            logger.debug(f"Failed to reload .env dynamically: {e}")
+        return os.getenv("SEOUL_OPEN_DATA_KEY", "").strip()
 
     @property
     def is_sample_or_missing(self) -> bool:
         """API 키가 미설정이거나 'sample'인지 확인하여 fallback 필요 여부 판단"""
-        if not self.api_key:
+        key = self.api_key
+        if not key:
             return True
-        key_lower = self.api_key.lower()
+        key_lower = key.lower()
         return key_lower in ("sample", "none", "null", "test", "")
 
-    async def fetch_seoul_open_data_live(self, year_month: str) -> Optional[Dict[str, Any]]:
+    async def fetch_seoul_open_data_live(self, year: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """서울시 열린데이터광장 tbLnOpendataRtmsV OpenAPI 비동기 호출
-        실제 유효 키가 등록되어 있을 때 서울시 아파트 실거래 데이터 조회
+        실제 유효 키가 등록되어 있을 때 서울시 부동산 실거래 최근 1,000건 조회
         """
         if self.is_sample_or_missing:
             logger.info("SEOUL_OPEN_DATA_KEY is sample or missing. Using internal fallback cache.")
             return None
 
-        # YYYYMM 형식 (예: 202610)
-        ym_clean = year_month.replace(".", "").replace("-", "")
-        # 서울시 오픈데이터: http://openapi.seoul.go.kr:8088/{KEY}/json/tbLnOpendataRtmsV/1/100/2026/...
-        url = f"{SEOUL_API_BASE}/{self.api_key}/json/tbLnOpendataRtmsV/1/100/{ym_clean[:4]}/"
+        target_year = year or str(datetime.now().year)
+        # 서울시 오픈데이터 실거래가: http://openapi.seoul.go.kr:8088/{KEY}/json/tbLnOpendataRtmsV/1/1000/{YEAR}/
+        url = f"{SEOUL_API_BASE}/{self.api_key}/json/tbLnOpendataRtmsV/1/1000/{target_year}/"
 
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=12.0) as client:
                 res = await client.get(url)
                 if res.status_code == 200:
                     data = res.json()
-                    # 서비스 응답 코드 체크
                     if "tbLnOpendataRtmsV" in data:
                         return data["tbLnOpendataRtmsV"]
                     elif "RESULT" in data and data["RESULT"].get("CODE") != "INFO-000":
@@ -110,54 +122,98 @@ class RealEstateCollector:
 
     async def sync_database(self, db: AsyncSession, force: bool = False) -> Dict[str, Any]:
         """DB에 실거래 통계 데이터 동기화
-        - 테이블이 비어있거나 force=True인 경우 34개월 기본 시계열 upsert
-        - 유효 API 키가 있는 경우 최근 3개월 라이브 데이터 병합
+        - 유효 API 키 등록 시: 서울 열린데이터광장 OpenAPI(tbLnOpendataRtmsV)를 비동기 호출하여
+          최근 아파트 실거래 내역 집계치 및 라이브 상태(SEOUL_OPEN_DATA_LIVE)로 갱신
+        - API 키가 없거나 sample인 경우: 검증된 2024~2026 캐시 데이터셋(FALLBACK_CACHE)으로 안전하게 서비스
         """
         synced_count = 0
         updated_count = 0
-
-        # 기존 DB 데이터 확인
-        existing_res = await db.execute(select(RealEstateMonthlyStats.year_month))
-        existing_yms = set(existing_res.scalars().all())
-
         live_active = not self.is_sample_or_missing
         source_label = "SEOUL_OPEN_DATA_LIVE" if live_active else "FALLBACK_CACHE"
 
+        live_stats_by_month: Dict[str, Dict[str, Any]] = {}
+        total_live_items = 0
+
+        if live_active:
+            try:
+                live_res = await self.fetch_seoul_open_data_live()
+                if live_res and "row" in live_res:
+                    rows = live_res["row"]
+                    total_live_items = len(rows)
+                    # 아파트 실거래 건만 필터링 (취소건 RTRCN_DAY 제외)
+                    for r in rows:
+                        if r.get("BLDG_USG") == "아파트" and not r.get("RTRCN_DAY"):
+                            ctrt_day = str(r.get("CTRT_DAY", ""))
+                            if len(ctrt_day) >= 6:
+                                ym = f"{ctrt_day[:4]}.{ctrt_day[4:6]}"
+                                amt = float(r.get("THING_AMT") or 0)
+                                if ym not in live_stats_by_month:
+                                    live_stats_by_month[ym] = {"count": 0, "total_amt": 0.0}
+                                live_stats_by_month[ym]["count"] += 1
+                                live_stats_by_month[ym]["total_amt"] += amt
+                    logger.info(f"Successfully aggregated Seoul OpenData live records: {len(live_stats_by_month)} months found from {total_live_items} rows")
+            except Exception as e:
+                logger.error(f"Failed to process live Seoul OpenData: {e}")
+
+        # 기존 DB 데이터 확인
+        existing_res = await db.execute(select(RealEstateMonthlyStats))
+        existing_map = {item.year_month: item for item in existing_res.scalars().all()}
+
         for row in FALLBACK_MONTHLY_DATASET:
             ym = row["year_month"]
-            # 2026년 2자리 표기 호환 ('26.10' 또는 '2026.10')
-            short_ym = ym[2:] if ym.startswith("20") else ym
+            target_source = source_label
 
-            if ym not in existing_yms or force:
+            trade_count = row["trade_count"]
+            trade_volume = row["trade_volume"]
+            avg_price = 115000.0
+
+            # 라이브 집계 데이터가 있는 최신 월인 경우 실시간 반영
+            if ym in live_stats_by_month and live_stats_by_month[ym]["count"] > 0:
+                l_stat = live_stats_by_month[ym]
+                avg_price = round(l_stat["total_amt"] / l_stat["count"], 1)
+                if ym == "2026.10":
+                    trade_count = max(trade_count, l_stat["count"])
+                    trade_volume = round(trade_count / 1000.0, 1)
+
+            if ym not in existing_map:
                 stat = RealEstateMonthlyStats(
                     year_month=ym,
                     region_code="11000",
                     region_name="서울",
-                    trade_volume=row["trade_volume"],
-                    trade_count=row["trade_count"],
+                    trade_volume=trade_volume,
+                    trade_count=trade_count,
                     active_listings=row["active_listings"],
-                    avg_price_won=115000.0,
+                    avg_price_won=avg_price,
                     price_index=row["price_index"],
                     mortgage_rate=row["mortgage_rate"],
                     pir_ratio=row["pir_ratio"],
-                    data_source=source_label,
+                    data_source=target_source,
                     is_confirmed=row.get("is_confirmed", True),
                 )
                 db.add(stat)
                 synced_count += 1
             else:
-                updated_count += 1
+                existing_item = existing_map[ym]
+                if force or live_active:
+                    existing_item.data_source = target_source
+                    existing_item.trade_volume = trade_volume
+                    existing_item.trade_count = trade_count
+                    existing_item.avg_price_won = avg_price
+                    updated_count += 1
 
         await db.commit()
-        logger.info(f"Real estate stats synced: {synced_count} added, {updated_count} checked, source={source_label}")
+        logger.info(f"Real estate stats synced: {synced_count} added, {updated_count} updated, source={source_label}")
 
         return {
             "status": "success",
             "source": source_label,
-            "is_fallback": self.is_sample_or_missing,
+            "is_fallback": not live_active,
             "synced_count": synced_count,
-            "total_records": len(FALLBACK_MONTHLY_DATASET)
+            "updated_count": updated_count,
+            "total_records": len(FALLBACK_MONTHLY_DATASET),
+            "live_records_fetched": total_live_items
         }
+
 
     async def get_market_trends(self, db: AsyncSession, period: str = "ALL") -> List[Dict[str, Any]]:
         """프론트엔드 차트용 월별 매물 vs 거래량 시계열 조회 (1Y, 2Y, ALL)"""

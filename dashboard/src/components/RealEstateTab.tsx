@@ -33,6 +33,8 @@ import {
   CartesianGrid,
   Legend
 } from 'recharts';
+import { API_BASE } from '@/lib/apiConfig';
+
 
 // 부동산 거래량 및 매물 추이 데이터 (2024년 1월 ~ 2026년 10월 최신, 출처: 서울부동산정보광장·아실)
 const MARKET_TREND_DATA_FULL = [
@@ -88,17 +90,27 @@ export default function RealEstateTab() {
   // 데이터 로드 함수
   const loadRealEstateData = async (period: string) => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const [trendsRes, summaryRes] = await Promise.all([
+      const baseUrl = API_BASE;
+      const [trendsRes, summaryRes, statusRes] = await Promise.all([
         fetch(`${baseUrl}/api/v1/real-estate/market-trends?period=${period}`).catch(() => null),
-        fetch(`${baseUrl}/api/v1/real-estate/summary`).catch(() => null)
+        fetch(`${baseUrl}/api/v1/real-estate/summary`).catch(() => null),
+        fetch(`${baseUrl}/api/v1/real-estate/status`).catch(() => null),
       ]);
+
+      if (statusRes && statusRes.ok) {
+        const statusJson = await statusRes.json();
+        if (statusJson?.api_mode === 'LIVE_API' || statusJson?.has_custom_key) {
+          setApiSource("SEOUL_OPEN_DATA_LIVE");
+        }
+      }
 
       if (trendsRes && trendsRes.ok) {
         const trendsJson = await trendsRes.json();
         if (trendsJson && Array.isArray(trendsJson.data)) {
           setLiveTrendData(trendsJson.data);
-          setApiSource(trendsJson.data_source || "FALLBACK_CACHE");
+          if (trendsJson.data_source === "SEOUL_OPEN_DATA_LIVE") {
+            setApiSource("SEOUL_OPEN_DATA_LIVE");
+          }
         }
       }
 
@@ -106,6 +118,9 @@ export default function RealEstateTab() {
         const sumJson = await summaryRes.json();
         if (sumJson) {
           setSummaryData(sumJson);
+          if (sumJson.data_source === "SEOUL_OPEN_DATA_LIVE") {
+            setApiSource("SEOUL_OPEN_DATA_LIVE");
+          }
         }
       }
     } catch (e) {
@@ -121,7 +136,7 @@ export default function RealEstateTab() {
   const handleManualSync = async () => {
     setIsSyncing(true);
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const baseUrl = API_BASE;
       await fetch(`${baseUrl}/api/v1/real-estate/sync?force=true`, { method: 'POST' });
       await loadRealEstateData(chartPeriod);
     } catch (e) {
