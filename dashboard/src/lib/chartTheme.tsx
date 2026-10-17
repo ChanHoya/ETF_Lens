@@ -36,6 +36,10 @@ export const STANDARD_LEGEND_WRAPPER_STYLE: CSSProperties = {
   paddingTop: '6px',
 };
 
+// 하위 호환 별칭 (혹시 모를 미정의 참조 방지)
+export const TOOLTIP_STYLE = STANDARD_TOOLTIP_STYLE;
+export const LEGEND_WRAPPER_STYLE = STANDARD_LEGEND_WRAPPER_STYLE;
+
 /**
  * 범례 클릭 인터랙티브 하이라이트 훅
  * - highlightedKey: 현재 선택된 데이터 키 (null이면 전체 표시)

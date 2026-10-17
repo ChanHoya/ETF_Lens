@@ -336,7 +336,7 @@ export default function MarketDetailModal({
                                         />
                                     )}
                                     <RechartsTooltip
-                                        contentStyle={TOOLTIP_STYLE}
+                                        contentStyle={STANDARD_TOOLTIP_STYLE}
                                         labelFormatter={(label) => `일자: ${label}`}
                                         formatter={(val: any, name: any) => {
                                             const cfg = series.find(s => s.name === name || s.key === name);
