@@ -5,7 +5,7 @@
 | Feature | Status | Key Files | Notes |
 |---------|--------|-----------|-------|
 | 미국 선거 주기 사이클 차트 도트(Dot) 상시 표시 & 기간 필터(5Y/10Y/30Y/ALL) & Fed 기준금리·역사적 매크로 이벤트 오버레이 | ✅ done | backend/api/midterm_election.py, MidtermElectionTab.tsx | 1950~2026 77개년 S&P500·나스닥 사이클 차트 상에 대선 해(파란 발광 링+도트) 및 중간선거 해(빨간 발광 링+도트) 상시 렌더링, 5Y/10Y/30Y/전체 기간 필터 스위처, 연준 기준금리(Fed Funds Rate) 듀얼 Y축 및 역사적 이벤트 오버레이 토글, 선택 기간별 동적 4대 KPI 카드 연동 |
-| 유가·정제마진 주식시장 영향 가이드 & AI 종합 진단 & 10Y 매크로 오버레이 팝업 | ✅ done | backend/api/oil_dashboard.py, OilTab.tsx | 원유 수급·정제마진의 주식시장/섹터(정유/화학/항공/기술주) 파급 경로 및 실전 판단 가이드, 2026년도 최신 차트, 최상단 AI 종합 진단 위젯, 6M/1Y/5Y/10Y 기간별 S&P500·Nasdaq·달러지수·CPI·PPI·PCE 복합 비교 팝업 모달 탑재 |
+| 유가·정제마진 주식시장 영향 가이드 & AI 종합 진단 & 10Y 매크로 오버레이 팝업 | ✅ done | backend/api/oil_dashboard.py, OilTab.tsx | 원유 수급·정제마진의 주식시장/섹터(정유/화학/항공/기술주) 파급 경로 및 실전 판단 가이드, 2026년도 최신 차트, 최상단 AI 종합 진단 위젯, 6M/1Y/5Y/10Y 기간별 S&P500·Nasdaq·달러지수·CPI·PPI·PCE 복합 비교 팝업 모달 탑재, WTI·Brent·Dubai·스프레드 대시보드-모달 간 실시간 시세(2026-10) 100% 일치화, 유가-PPI 핵심 연동 및 Recharts 듀얼/멀티 Y축 분리 스케일 정상화 |
 | 유가 급변(±3.5%) & VIX 스파이크 텔레그램 스마트 경보 | ✅ done | backend/core/macro_alert_engine.py, NotificationSettings.tsx | 유가 급등락·호르무즈 위험점수 및 VIX 20/25p 돌파 시 내 포트폴리오 영향도 요약 멀티채널 발송 & 테스트 엔드포인트 연동 |
 | 9대 글로벌 위기 포트폴리오 스트레스 테스터 (오일쇼크 포함) | ✅ done | backend/core/stress_tester.py, PortfolioStressTester.tsx | 오일 쇼크 $120 폭등(1970s/2022) 및 마이너스 유가(2020.04) 2대 시나리오 추가, 9대 위기 비교 바 차트 및 MDD 진단 |
 | 미국 중간선거 4대 시나리오 인터랙티브 시뮬레이터 & D-Day | ✅ done | backend/api/midterm_election.py, MidtermElectionTab.tsx | 2026.11.03 D-Day 실시간 카운트다운, 상원(34석) & 하원(435석) 장악 정당 조합 인터랙티브 토글 및 4대 시나리오 즉시 매핑 |

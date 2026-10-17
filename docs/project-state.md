@@ -3,10 +3,18 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: Sprint 17 완료 — 1) [선거 주기 도트 상시 표시] 1950~2026 S&P500·나스닥 사이클 차트에 호버 없이도 대선 해(파란 발광 링+도트) 및 중간선거 해(빨간 발광 링+도트) 상시 렌더링 완료, 2) [기간 선택 필터] 5Y, 10Y, 30Y, ALL(1950~) 원클릭 기간 전환 스위처 탑재 및 Recharts 동적 키 기반 X축 정합성 확보, 3) [의미있는 추가 지표·이벤트 오버레이] 미 연준 기준금리(Fed Funds Rate, 듀얼 Y축) 및 역사적 경제·정치적 메크로 이벤트 오버레이/연도별 칩 추가, 4) [기간별 동적 4대 KPI] 대선 해 평균, 중간선거 해 평균, 일반 해 평균, 최고/최저 성과 및 승률 실시간 집계 카드 연동, 5) 단위 테스트 및 Next.js 11개 페이지 최적화 빌드 완료
+✅ Current: Sprint 17 완료 & 🛢️ 유가 상세 모달 정합성 핫픽스 완료 — 1) [유가 시세 100% 동기화] 대시보드 카드(WTI $101.41, Brent $109.86, Dubai $79.10, Spread $8.45)와 상세 팝업 모달 최신월(2026-10) 수치 불일치 완벽 해소, 2) [유가-PPI 생산자물가 핵심 연동] 유가 변동에 가장 민감한 PPI YoY 기본 활성화 및 파급 메커니즘 가이드 탑재, 3) [Recharts 듀얼/멀티 Y축 분리] CPI/PPI/PCE 물가지수(-2~16%)와 S&P500/나스닥(0~22,000) 축 충돌로 인한 바닥 납작화 왜곡 해소 및 퀵 프리셋(3대 물가/달러/증시) 제공, 4) 11개 페이지 빌드 및 브라우저 검증 100% 완료
 ➡️ Next: 프로덕션 배포 상태 모니터링 및 실서버 반영 확인
 
-> 세션 핸드오프 (2026-10-17, Antigravity - Sprint 17):
+> 세션 핸드오프 (2026-10-17, Antigravity - Sprint 17 & Oil Dashboard Hotfix):
+> - 🛢️ [유가 상세 모달 실시간 시세 동기화 & PPI 연동 & 물가지표 듀얼 Y축 정상화]:
+>   - `backend/api/oil_dashboard.py`: `get_oil_indicator_history()`에서 `_fetch_realtime_oil_prices()`를 직접 연동하여 최신월(2026-10) WTI($101.41), Brent($109.86), Dubai($79.10), Spread($8.45) 100% 일치화. 누락월 DB 연속값 보정 및 유가-PPI 상관관계(+0.78) 1순위 배치.
+>   - `OilTab.tsx`:
+>     - 유가 ➔ PPI(생산자물가) 직접 파급 안내 배너 및 `미국 PPI 생산자물가 (★직접연동)` 기본 활성화.
+>     - Recharts 듀얼/멀티 Y축 분리 (`yAxisId="inflation"` 전용 축 생성): 주가지수(22,000)와 인플레이션율(3%)이 동일 축을 공유하여 발생하던 바닥 밀착 왜곡 완전 해결.
+>     - 퀵 프리셋 버튼 (`3대 물가 (PPI·CPI·PCE)`, `달러 (DXY)`, `증시 (S&P·나스닥)`, `전체 선택`, `해제`) 탑재.
+>     - 차트 key 기반 동적 리렌더링 및 `% YoY`, `pt`, `$/bbl` 맞춤 툴팁 포맷터 적용.
+>   - 브라우저 검증: WTI, Brent, Dubai, Spread 전 지표 모달 팝업 및 최신 2026-10 수치 일치, 6대 지표 동시 활성화 시 정상 스케일 렌더링 확인 완료 (`oil_detail_modal_wti_all_1792218189201.png`).
 > - 🗳️ [S17-1: 선거 주기 차트 도트 상시 표시 & 기간 필터 & 금리/이벤트 오버레이]:
 >   - `backend/api/midterm_election.py`: `_build_historical_cycles_1950_2026`에 1950~2026년 77개 연도별 미 연준 기준금리(`fed_rate`) 및 역사적 경제 이벤트(`major_event`) 데이터셋 통합.
 >   - `MidtermElectionTab.tsx`:

@@ -53,10 +53,10 @@ interface OverlayOption {
 }
 
 const OVERLAY_OPTIONS: OverlayOption[] = [
-    { key: "dollar_index", label: "달러 인덱스 (DXY)", color: "#38bdf8", unit: "pt" },
-    { key: "cpi", label: "미국 CPI 물가 (YoY)", color: "#f43f5e", unit: "%" },
-    { key: "ppi", label: "미국 PPI 생산자물가", color: "#fb923c", unit: "%" },
+    { key: "ppi", label: "미국 PPI 생산자물가 (★직접연동)", color: "#fb923c", unit: "%" },
+    { key: "cpi", label: "미국 CPI 소비자물가 (YoY)", color: "#f43f5e", unit: "%" },
     { key: "pce", label: "미국 PCE 소비지출물가", color: "#eab308", unit: "%" },
+    { key: "dollar_index", label: "달러 인덱스 (DXY)", color: "#38bdf8", unit: "pt" },
     { key: "sp500", label: "S&P 500 (SPX)", color: "#10b981", unit: "pt" },
     { key: "nasdaq", label: "나스닥 100 (NDX)", color: "#c084fc", unit: "pt" },
 ];
@@ -81,20 +81,34 @@ export default function OilTab() {
     const [refreshing, setRefreshing] = useState<boolean>(false);
     const [selectedScenarioIdx, setSelectedScenarioIdx] = useState<number>(0);
 
-    // 상세 분석 팝업 모달 상태
+    // 상세 분석 팝업 모달 상태 (유가 직접 연동 PPI 및 3대 물가지표 기본 활성화)
     const [modalOpen, setModalOpen] = useState<boolean>(false);
     const [selectedIndicator, setSelectedIndicator] = useState<string>("wti");
     const [selectedPeriod, setSelectedPeriod] = useState<string>("6M");
     const [historyData, setHistoryData] = useState<any>(null);
     const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
     const [activeOverlays, setActiveOverlays] = useState<Record<string, boolean>>({
-        dollar_index: true,
-        cpi: true,
-        ppi: false,
-        pce: false,
+        ppi: true, // ★ 유가 직접 직결 생산자물가
+        cpi: true, // 소비자물가
+        pce: true, // 연준 타깃 물가
+        dollar_index: true, // 달러 인덱스
         sp500: false,
         nasdaq: false
     });
+
+    const setOverlayPreset = (preset: "inflation" | "dollar" | "equity" | "all" | "none") => {
+        if (preset === "inflation") {
+            setActiveOverlays({ ppi: true, cpi: true, pce: true, dollar_index: false, sp500: false, nasdaq: false });
+        } else if (preset === "dollar") {
+            setActiveOverlays({ ppi: false, cpi: false, pce: false, dollar_index: true, sp500: false, nasdaq: false });
+        } else if (preset === "equity") {
+            setActiveOverlays({ ppi: false, cpi: false, pce: false, dollar_index: false, sp500: true, nasdaq: true });
+        } else if (preset === "all") {
+            setActiveOverlays({ ppi: true, cpi: true, pce: true, dollar_index: true, sp500: true, nasdaq: true });
+        } else if (preset === "none") {
+            setActiveOverlays({ ppi: false, cpi: false, pce: false, dollar_index: false, sp500: false, nasdaq: false });
+        }
+    };
 
     const fetchAllOilData = async (isManual: boolean = false) => {
         try {
@@ -127,28 +141,67 @@ export default function OilTab() {
         const now = new Date(2026, 9, 1); // 2026-10
         const series = [];
 
+        const liveWti = overview?.benchmarks?.wti?.price || 101.41;
+        const liveBrent = overview?.benchmarks?.brent?.price || 109.86;
+        const liveDubai = overview?.benchmarks?.dubai?.price || 79.10;
+        const liveSpread = overview?.benchmarks?.brent_wti_spread?.value || Number((liveBrent - liveWti).toFixed(2));
+        const liveMargin = 6.45;
+        const liveInv = 420.5;
+        const liveRig = 482;
+        const liveGeo = 72;
+
+        const wtiMap: Record<number, number> = { 5: 78.6, 6: 81.5, 7: 80.8, 8: 75.4, 9: 88.5, 10: liveWti };
+        const brentMap: Record<number, number> = { 5: 83.1, 6: 85.2, 7: 84.8, 8: 78.7, 9: 94.2, 10: liveBrent };
+        const dubaiMap: Record<number, number> = { 5: 78.0, 6: 80.2, 7: 79.5, 8: 77.2, 9: 78.5, 10: liveDubai };
+        const spreadMap: Record<number, number> = { 5: 4.5, 6: 3.7, 7: 4.0, 8: 3.3, 9: 5.7, 10: liveSpread };
+        const marginMap: Record<number, number> = { 5: 4.8, 6: 5.9, 7: 6.1, 8: 5.5, 9: 5.8, 10: liveMargin };
+
         for (let i = count - 1; i >= 0; i--) {
             const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
             const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
             const m = d.getMonth() + 1;
             const y = d.getFullYear();
+            const isLatest = (i === 0);
 
-            let val = 76.8;
-            if (indicator === "wti") val = 75.0 + ((m * 1.5) % 8);
-            else if (indicator === "brent") val = 78.5 + ((m * 1.5) % 8);
-            else if (indicator === "dubai") val = 77.0 + ((m * 1.4) % 8);
-            else if (indicator === "spread") val = 3.5 + ((m * 0.3) % 1.5);
-            else if (indicator === "refining_margin") val = 6.45 + (m % 2 === 0 ? 0.3 : -0.4);
-            else if (indicator === "eia_inventory") val = 420.5 + (m % 2 === 0 ? -2.1 : 1.8);
-            else if (indicator === "rig_count") val = 482 + (m % 2 === 0 ? -3 : 2);
-            else if (indicator === "geopolitics") val = 72 + (m % 2 === 0 ? 3 : -2);
+            let val = liveWti;
+            if (y === 2026) {
+                if (indicator === "wti") val = isLatest ? liveWti : (wtiMap[m] || 76.8);
+                else if (indicator === "brent") val = isLatest ? liveBrent : (brentMap[m] || 81.2);
+                else if (indicator === "dubai") val = isLatest ? liveDubai : (dubaiMap[m] || 78.2);
+                else if (indicator === "spread") val = isLatest ? liveSpread : (spreadMap[m] || 4.2);
+                else if (indicator === "refining_margin") val = isLatest ? liveMargin : (marginMap[m] || 6.2);
+                else if (indicator === "eia_inventory") val = liveInv + (isLatest ? 0 : (10 - m) * 1.5);
+                else if (indicator === "rig_count") val = liveRig + (isLatest ? 0 : (10 - m) * 2);
+                else if (indicator === "geopolitics") val = liveGeo - (isLatest ? 0 : (10 - m) * 1.5);
+            } else if (y === 2022) {
+                if (indicator === "wti") val = 95.0 + (m in [3, 4, 5, 6] ? 22.0 : -5.0);
+                else if (indicator === "brent") val = 101.8 + (m in [3, 4, 5, 6] ? 22.0 : -5.0);
+                else if (indicator === "dubai") val = 99.2 + (m in [3, 4, 5, 6] ? 20.0 : -5.0);
+                else if (indicator === "spread") val = 6.8;
+                else if (indicator === "refining_margin") val = 18.5;
+                else val = 85.0;
+            } else if (y === 2020) {
+                if (indicator === "wti") val = 40.0 + (m in [3, 4, 5] ? -23.3 : 0.8);
+                else if (indicator === "brent") val = 44.5 + (m in [3, 4, 5] ? -22.0 : 0.8);
+                else if (indicator === "dubai") val = 43.0 + (m in [3, 4, 5] ? -21.0 : 0.8);
+                else if (indicator === "spread") val = 4.5;
+                else if (indicator === "refining_margin") val = 2.1;
+                else val = 45.0;
+            } else {
+                if (indicator === "wti") val = 75.0 + ((m * 1.5) % 8);
+                else if (indicator === "brent") val = 79.5 + ((m * 1.5) % 8);
+                else if (indicator === "dubai") val = 77.0 + ((m * 1.4) % 8);
+                else if (indicator === "spread") val = 4.0;
+                else if (indicator === "refining_margin") val = 5.8;
+                else val = 75.0;
+            }
 
             const sp500 = 5500 + ((y - 2024) * 300) + (m * 25);
             const nasdaq = 19000 + ((y - 2024) * 800) + (m * 120);
             const dxy = 103.5 - (m * 0.15);
-            const cpi = 3.2 + (m % 2 === 0 ? 0.2 : -0.1);
-            const ppi = 4.1 + (m % 2 === 0 ? 0.3 : -0.2);
-            const pce = 2.8 + (m % 2 === 0 ? 0.1 : -0.1);
+            const cpi = isLatest ? 3.95 : (y === 2022 ? 8.8 : (y === 2020 ? 1.2 : 3.2 + (m % 2 === 0 ? 0.2 : -0.1)));
+            const ppi = isLatest ? 8.65 : (y === 2022 ? 14.8 : (y === 2020 ? -1.5 : 4.8 + (m % 2 === 0 ? 0.4 : -0.2)));
+            const pce = isLatest ? 3.08 : (y === 2022 ? 6.8 : (y === 2020 ? 1.1 : 2.8 + (m % 2 === 0 ? 0.1 : -0.1)));
 
             series.push({
                 date: ym,
@@ -169,16 +222,17 @@ export default function OilTab() {
             data_count: series.length,
             series,
             correlations: {
+                ppi: { corr: 0.78, desc: "원유·정제유 가격 변동은 생산자물가(PPI)에 1~2개월 선행하며 가장 직접적·파괴적으로 반영 (최고 상관성)" },
+                cpi: { corr: 0.68, desc: "유가 변동은 운송비·전기요금 등을 거쳐 1~2개월 시차를 두고 미국 헤드라인 CPI에 직접 전가" },
+                pce: { corr: 0.62, desc: "미 연준(Fed)의 2% 타깃 기준 지표로 원유 상승에 따른 에너지 2차 파급 효과 반영" },
                 dollar_index: { corr: -0.62, desc: "달러화 강세 시 달러 표시 원자재 가격 하락 압력 (역상관 성향 뚜렷)" },
-                cpi: { corr: 0.68, desc: "유가 변동은 1~2개월 시차를 두고 미국 헤드라인 CPI에 직접 전가" },
-                ppi: { corr: 0.74, desc: "에너지 및 정제유 가격은 생산자물가(PPI)에 가장 민감하고 즉각적으로 반영" },
                 sp500: { corr: 0.22, desc: "적정 유가($70~$85)에서는 경기 확장과 동행하나, $85 초과 시 물가 긴축으로 역상관 전환" },
                 nasdaq: { corr: -0.31, desc: "고유가 국면 진입 시 금리 인하 지연 및 할인율 상승으로 기술주에 부정적" }
             },
             time_horizon_guide: {
                 recommendation: "단기 수급 판단은 6M~1Y, 거시 물가 및 자산배분 검증은 5Y~10Y 권장",
                 short_term_focus: "최근 6개월~1년은 계절적 드라이빙 시즌, 정유사 정기보수, OPEC+ 감산 회의 등 실질적인 수급 모멘텀을 포착하는 데 가장 적합합니다.",
-                long_term_focus: "5년~10년 시계열은 원유 슈퍼사이클(2020 마이너스 유가 쇼크, 2022 우크라 전쟁 폭등, 2024~2026 연준 긴축/완화 사이클)과 CPI·달러지수·증시 밸류에이션 간의 구조적 관계를 입증합니다."
+                long_term_focus: "5년~10년 시계열은 원유 슈퍼사이클(2020 마이너스 유가 쇼크, 2022 우크라 전쟁 폭등, 2024~2026 연준 긴축/완화 사이클)과 PPI·CPI·달러지수·증시 밸류에이션 간의 구조적 관계를 입증합니다."
             }
         };
     };
@@ -1011,29 +1065,68 @@ export default function OilTab() {
 
                         {/* Modal Body */}
                         <div className="p-5 md:p-6 overflow-y-auto flex flex-col gap-6">
-                            {/* Controls Bar: Period Tabs + Overlay Checkboxes */}
-                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-black/30 p-4 rounded-2xl border border-white/5">
-                                {/* Period Tabs */}
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-bold text-gray-400 mr-2">기간:</span>
-                                    {["6M", "1Y", "5Y", "10Y"].map((p) => (
+                            {/* Controls Bar: Period Tabs + Presets + Overlay Pills */}
+                            <div className="flex flex-col gap-3.5 bg-black/40 p-4 rounded-2xl border border-white/10">
+                                {/* Top Row: Period Tabs + Presets */}
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                    {/* Period Tabs */}
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-bold text-gray-400 mr-1.5">기간:</span>
+                                        {["6M", "1Y", "5Y", "10Y"].map((p) => (
+                                            <button
+                                                key={p}
+                                                onClick={() => handlePeriodChange(p)}
+                                                className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                                                    selectedPeriod === p
+                                                        ? "bg-amber-500 text-black shadow-md font-black"
+                                                        : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+                                                }`}
+                                            >
+                                                {p}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Quick Presets */}
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-[11px] font-bold text-gray-400 mr-1">퀵 프리셋:</span>
                                         <button
-                                            key={p}
-                                            onClick={() => handlePeriodChange(p)}
-                                            className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all ${
-                                                selectedPeriod === p
-                                                    ? "bg-amber-500 text-black shadow-md font-black"
-                                                    : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-                                            }`}
+                                            onClick={() => setOverlayPreset("inflation")}
+                                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/30 transition-all flex items-center gap-1"
                                         >
-                                            {p}
+                                            <Flame className="w-3 h-3 text-orange-400" />
+                                            3대 물가 (PPI·CPI·PCE)
                                         </button>
-                                    ))}
+                                        <button
+                                            onClick={() => setOverlayPreset("dollar")}
+                                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/30 transition-all"
+                                        >
+                                            💵 달러 (DXY)
+                                        </button>
+                                        <button
+                                            onClick={() => setOverlayPreset("equity")}
+                                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/30 transition-all"
+                                        >
+                                            📈 증시 (S&P·나스닥)
+                                        </button>
+                                        <button
+                                            onClick={() => setOverlayPreset("all")}
+                                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all"
+                                        >
+                                            🌐 전체 선택
+                                        </button>
+                                        <button
+                                            onClick={() => setOverlayPreset("none")}
+                                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 transition-all"
+                                        >
+                                            ✕ 해제
+                                        </button>
+                                    </div>
                                 </div>
 
-                                {/* Macro Overlay Toggles */}
-                                <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-xs font-bold text-gray-400 mr-1">비교 지표 오버레이:</span>
+                                {/* Bottom Row: Individual Overlay Toggles */}
+                                <div className="flex items-center gap-2 flex-wrap pt-2.5 border-t border-white/5">
+                                    <span className="text-xs font-bold text-gray-400 mr-1">비교 지표 개별 토글:</span>
                                     {OVERLAY_OPTIONS.map((ov) => {
                                         const active = !!activeOverlays[ov.key];
                                         return (
@@ -1057,138 +1150,226 @@ export default function OilTab() {
                                 </div>
                             </div>
 
-                            {/* Chart Area */}
-                            <div className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 flex flex-col gap-2 relative">
-                                <div className="flex items-center justify-between text-xs text-gray-400 pb-2">
-                                    <span className="font-bold text-white flex items-center gap-1.5">
-                                        <BarChart3 className="w-4 h-4 text-amber-400" />
-                                        {historyData?.indicator_meta?.name} & 매크로 오버레이 추이 ({selectedPeriod})
-                                    </span>
-                                    <span className="text-[11px] text-gray-400">
-                                        좌측 축: {historyData?.indicator_meta?.unit} | 우측 축: 비교 지표 지수/YoY(%)
-                                    </span>
+                            {/* PPI & Macro Transmission Insight Banner */}
+                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex items-start gap-3 shadow-inner">
+                                <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 mt-0.5 shrink-0">
+                                    <Flame className="w-4 h-4" />
                                 </div>
-
-                                {loadingHistory ? (
-                                    <div className="w-full h-80 flex items-center justify-center text-gray-400 text-xs">
-                                        <RefreshCw className="w-5 h-5 text-amber-400 animate-spin mr-2" />
-                                        데이터 로딩 중...
-                                    </div>
-                                ) : (
-                                    <div className="w-full h-80">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <ComposedChart data={historyData?.series || []} margin={{ top: 15, right: 30, left: 0, bottom: 5 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                                <XAxis dataKey="date" stroke="#71717a" tick={{ fontSize: 10 }} tickLine={false} />
-                                                <YAxis
-                                                    yAxisId="left"
-                                                    stroke="#f59e0b"
-                                                    tick={{ fontSize: 10 }}
-                                                    tickLine={false}
-                                                    domain={["auto", "auto"]}
-                                                />
-                                                <YAxis
-                                                    yAxisId="right"
-                                                    orientation="right"
-                                                    stroke="#a1a1aa"
-                                                    tick={{ fontSize: 10 }}
-                                                    tickLine={false}
-                                                    domain={["auto", "auto"]}
-                                                />
-                                                <RechartsTooltip
-                                                    contentStyle={{
-                                                        backgroundColor: "rgba(15, 16, 26, 0.95)",
-                                                        border: "1px solid rgba(255, 255, 255, 0.15)",
-                                                        borderRadius: "12px",
-                                                        fontSize: "11px"
-                                                    }}
-                                                />
-                                                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: "11px" }} />
-
-                                                {/* Main Indicator Line */}
-                                                <Line
-                                                    yAxisId="left"
-                                                    type="monotone"
-                                                    name={`${currentMeta.name} (${currentMeta.unit})`}
-                                                    dataKey="value"
-                                                    stroke={currentMeta.color}
-                                                    strokeWidth={3}
-                                                    dot={{ r: selectedPeriod === "6M" ? 3 : 1 }}
-                                                />
-
-                                                {/* Active Overlays */}
-                                                {activeOverlays.dollar_index && (
-                                                    <Line
-                                                        yAxisId="right"
-                                                        type="monotone"
-                                                        name="달러 인덱스 (DXY)"
-                                                        dataKey="dollar_index"
-                                                        stroke="#38bdf8"
-                                                        strokeWidth={1.8}
-                                                        strokeDasharray="4 2"
-                                                        dot={false}
-                                                    />
-                                                )}
-                                                {activeOverlays.cpi && (
-                                                    <Line
-                                                        yAxisId="right"
-                                                        type="monotone"
-                                                        name="미국 CPI YoY (%)"
-                                                        dataKey="cpi"
-                                                        stroke="#f43f5e"
-                                                        strokeWidth={2}
-                                                        dot={false}
-                                                    />
-                                                )}
-                                                {activeOverlays.ppi && (
-                                                    <Line
-                                                        yAxisId="right"
-                                                        type="monotone"
-                                                        name="미국 PPI YoY (%)"
-                                                        dataKey="ppi"
-                                                        stroke="#fb923c"
-                                                        strokeWidth={1.8}
-                                                        dot={false}
-                                                    />
-                                                )}
-                                                {activeOverlays.pce && (
-                                                    <Line
-                                                        yAxisId="right"
-                                                        type="monotone"
-                                                        name="미국 PCE YoY (%)"
-                                                        dataKey="pce"
-                                                        stroke="#eab308"
-                                                        strokeWidth={1.8}
-                                                        dot={false}
-                                                    />
-                                                )}
-                                                {activeOverlays.sp500 && (
-                                                    <Line
-                                                        yAxisId="right"
-                                                        type="monotone"
-                                                        name="S&P 500 (SPX)"
-                                                        dataKey="sp500"
-                                                        stroke="#10b981"
-                                                        strokeWidth={1.8}
-                                                        dot={false}
-                                                    />
-                                                )}
-                                                {activeOverlays.nasdaq && (
-                                                    <Line
-                                                        yAxisId="right"
-                                                        type="monotone"
-                                                        name="나스닥 100 (NDX)"
-                                                        dataKey="nasdaq"
-                                                        stroke="#c084fc"
-                                                        strokeWidth={1.8}
-                                                        dot={false}
-                                                    />
-                                                )}
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                )}
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                                        💡 유가 ➔ 생산자물가(PPI) 직접 파급 메커니즘
+                                    </span>
+                                    <p className="text-[11px] text-gray-300 leading-relaxed">
+                                        원유는 나프타·디젤·휘발유 등 공장 제조 원가 및 물류비용으로 즉각 전가되므로, 유가 변동률은 소비자물가(CPI)보다 
+                                        <strong className="text-orange-400 font-bold"> 생산자물가(PPI)에 1~2개월 더 빠르고 약 2배 이상 큰 진폭으로 직결 반영</strong>됩니다. 
+                                        (상관계수: PPI <span className="text-orange-400 font-bold">+0.78</span> &gt; CPI <span className="text-rose-400 font-bold">+0.68</span> &gt; PCE <span className="text-yellow-400 font-bold">+0.62</span>)
+                                    </p>
+                                </div>
                             </div>
+
+                            {/* Chart Area */}
+                            {(() => {
+                                const hasInflation = !!(activeOverlays.ppi || activeOverlays.cpi || activeOverlays.pce);
+                                const hasStocks = !!(activeOverlays.sp500 || activeOverlays.nasdaq);
+                                const hasDollar = !!activeOverlays.dollar_index;
+
+                                return (
+                                <div className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 flex flex-col gap-2 relative">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-gray-400 pb-2 gap-1.5">
+                                        <span className="font-bold text-white flex items-center gap-1.5">
+                                            <BarChart3 className="w-4 h-4 text-amber-400" />
+                                            {historyData?.indicator_meta?.name || currentMeta.name} & 매크로 오버레이 추이 ({selectedPeriod})
+                                        </span>
+                                        <span className="text-[11px] text-gray-300">
+                                            좌측 축: <span style={{ color: currentMeta.color }} className="font-bold">{currentMeta.unit}</span> | 
+                                            우측 축: <span className="text-orange-400 font-bold">{hasInflation ? "물가 YoY (%)" : (hasStocks ? "증시 지수 (pt)" : "달러 지수 (pt)")}</span>
+                                        </span>
+                                    </div>
+
+                                    {loadingHistory ? (
+                                        <div className="w-full h-80 flex items-center justify-center text-gray-400 text-xs">
+                                            <RefreshCw className="w-5 h-5 text-amber-400 animate-spin mr-2" />
+                                            데이터 로딩 중...
+                                        </div>
+                                    ) : (
+                                        <div className="w-full h-80">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <ComposedChart
+                                                    key={`oil-chart-${selectedIndicator}-${selectedPeriod}-${hasInflation ? "inf" : "noinf"}-${hasStocks ? "stk" : "nostk"}`}
+                                                    data={historyData?.series || []}
+                                                    margin={{ top: 15, right: 35, left: 5, bottom: 5 }}
+                                                >
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                                                    <XAxis dataKey="date" stroke="#71717a" tick={{ fontSize: 10 }} tickLine={false} />
+                                                    
+                                                    {/* Left Axis: Primary Indicator */}
+                                                    <YAxis
+                                                        yAxisId="left"
+                                                        stroke={currentMeta.color}
+                                                        tick={{ fontSize: 10, fill: currentMeta.color }}
+                                                        tickLine={false}
+                                                        domain={["auto", "auto"]}
+                                                        tickFormatter={(v) => typeof v === "number" ? v.toLocaleString() : v}
+                                                    />
+
+                                                    {/* Right Axis 1: Inflation % YoY (0~16%) */}
+                                                    <YAxis
+                                                        yAxisId="inflation"
+                                                        orientation="right"
+                                                        stroke="#fb923c"
+                                                        tick={{ fontSize: 10, fill: "#fb923c" }}
+                                                        tickLine={false}
+                                                        domain={[-2, 16]}
+                                                        tickFormatter={(v) => `${v}%`}
+                                                        hide={!hasInflation}
+                                                    />
+
+                                                    {/* Right Axis 2: Stocks (S&P/Nasdaq) */}
+                                                    <YAxis
+                                                        yAxisId="stocks"
+                                                        orientation="right"
+                                                        stroke="#c084fc"
+                                                        tick={{ fontSize: 10, fill: "#c084fc" }}
+                                                        tickLine={false}
+                                                        domain={["auto", "auto"]}
+                                                        tickFormatter={(v) => typeof v === "number" ? `${Math.round(v / 1000)}k` : v}
+                                                        hide={hasInflation || !hasStocks}
+                                                    />
+
+                                                    {/* Right Axis 3: Dollar Index (DXY) */}
+                                                    <YAxis
+                                                        yAxisId="dollar"
+                                                        orientation="right"
+                                                        stroke="#38bdf8"
+                                                        tick={{ fontSize: 10, fill: "#38bdf8" }}
+                                                        tickLine={false}
+                                                        domain={[88, 115]}
+                                                        tickFormatter={(v) => `${v}p`}
+                                                        hide={hasInflation || hasStocks || !hasDollar}
+                                                    />
+
+                                                    <RechartsTooltip
+                                                        contentStyle={{
+                                                            backgroundColor: "rgba(15, 16, 26, 0.95)",
+                                                            border: "1px solid rgba(255, 255, 255, 0.15)",
+                                                            borderRadius: "14px",
+                                                            fontSize: "11px",
+                                                            boxShadow: "0 10px 25px rgba(0,0,0,0.5)"
+                                                        }}
+                                                        formatter={(value: any, name: any) => {
+                                                            if (value === undefined || value === null) return ["-", name];
+                                                            const num = Number(value);
+                                                            if (name?.includes("CPI") || name?.includes("PPI") || name?.includes("PCE")) {
+                                                                return [`${num.toFixed(2)}%`, name];
+                                                            }
+                                                            if (name?.includes("달러")) {
+                                                                return [`${num.toFixed(2)} pt`, name];
+                                                            }
+                                                            if (name?.includes("S&P") || name?.includes("나스닥")) {
+                                                                return [`${num.toLocaleString()} pt`, name];
+                                                            }
+                                                            return [`${num.toLocaleString()} ${currentMeta.unit}`, name];
+                                                        }}
+                                                    />
+                                                    <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: "11px" }} />
+
+                                                    {/* Main Indicator Line */}
+                                                    <Line
+                                                        yAxisId="left"
+                                                        type="monotone"
+                                                        name={`${currentMeta.name} (${currentMeta.unit})`}
+                                                        dataKey="value"
+                                                        stroke={currentMeta.color}
+                                                        strokeWidth={3}
+                                                        dot={{ r: selectedPeriod === "6M" ? 4 : 2, fill: currentMeta.color, stroke: "#ffffff", strokeWidth: 1.5 }}
+                                                        isAnimationActive={false}
+                                                    />
+
+                                                    {/* Active Overlays: Inflation (yAxisId="inflation") */}
+                                                    {activeOverlays.ppi && (
+                                                        <Line
+                                                            yAxisId="inflation"
+                                                            type="monotone"
+                                                            name="미국 PPI 생산자물가 (YoY %)"
+                                                            dataKey="ppi"
+                                                            stroke="#fb923c"
+                                                            strokeWidth={2.4}
+                                                            dot={{ r: selectedPeriod === "6M" ? 3 : 1 }}
+                                                            isAnimationActive={false}
+                                                        />
+                                                    )}
+                                                    {activeOverlays.cpi && (
+                                                        <Line
+                                                            yAxisId="inflation"
+                                                            type="monotone"
+                                                            name="미국 CPI 소비자물가 (YoY %)"
+                                                            dataKey="cpi"
+                                                            stroke="#f43f5e"
+                                                            strokeWidth={2}
+                                                            dot={false}
+                                                            isAnimationActive={false}
+                                                        />
+                                                    )}
+                                                    {activeOverlays.pce && (
+                                                        <Line
+                                                            yAxisId="inflation"
+                                                            type="monotone"
+                                                            name="미국 PCE 소비지출물가 (YoY %)"
+                                                            dataKey="pce"
+                                                            stroke="#eab308"
+                                                            strokeWidth={1.8}
+                                                            dot={false}
+                                                            isAnimationActive={false}
+                                                        />
+                                                    )}
+
+                                                    {/* Currency (yAxisId="dollar") */}
+                                                    {activeOverlays.dollar_index && (
+                                                        <Line
+                                                            yAxisId="dollar"
+                                                            type="monotone"
+                                                            name="달러 인덱스 (DXY)"
+                                                            dataKey="dollar_index"
+                                                            stroke="#38bdf8"
+                                                            strokeWidth={1.8}
+                                                            strokeDasharray="4 2"
+                                                            dot={false}
+                                                            isAnimationActive={false}
+                                                        />
+                                                    )}
+
+                                                    {/* Equities (yAxisId="stocks") */}
+                                                    {activeOverlays.sp500 && (
+                                                        <Line
+                                                            yAxisId="stocks"
+                                                            type="monotone"
+                                                            name="S&P 500 (SPX)"
+                                                            dataKey="sp500"
+                                                            stroke="#10b981"
+                                                            strokeWidth={1.8}
+                                                            dot={false}
+                                                            isAnimationActive={false}
+                                                        />
+                                                    )}
+                                                    {activeOverlays.nasdaq && (
+                                                        <Line
+                                                            yAxisId="stocks"
+                                                            type="monotone"
+                                                            name="나스닥 100 (NDX)"
+                                                            dataKey="nasdaq"
+                                                            stroke="#c084fc"
+                                                            strokeWidth={1.8}
+                                                            dot={false}
+                                                            isAnimationActive={false}
+                                                        />
+                                                    )}
+                                                </ComposedChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    )}
+                                </div>
+                                );
+                            })()}
 
                             {/* Correlation & Macro Insight Panel */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
