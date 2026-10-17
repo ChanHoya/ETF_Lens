@@ -113,18 +113,20 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
         }
     };
 
-    // ── 트리거 버튼 (헤더용) ─────────────────────────────────────────
+    // ── 트리거 버튼 (헤더용: 텍스트 제거 및 원형 아이콘 버튼 간소화) ──
     if (renderTrigger) {
         return (
             <button
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold transition-all duration-300 border whitespace-nowrap ${isOpen
+                title={isOpen ? "AI Assistant 닫기" : "AI Assistant"}
+                aria-label="AI Assistant"
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-bold transition-all duration-300 border shrink-0 active:scale-95 cursor-pointer ${isOpen
                     ? 'bg-rose-500/20 text-rose-400 border-rose-500/50 hover:bg-rose-500/30'
                     : 'bg-indigo-500/20 text-indigo-400 border-indigo-500/50 hover:bg-indigo-500/30 hover:scale-105 shadow-[0_0_12px_rgba(99,102,241,0.25)]'
                     }`}
             >
                 {isOpen ? <X className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-                <span className="text-sm hidden sm:inline">AI Assistant</span>
             </button>
         );
     }

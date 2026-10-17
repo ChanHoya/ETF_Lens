@@ -1231,26 +1231,27 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
             <div className="flex flex-col items-start cursor-pointer group shrink-0" onClick={handleReset}>
               <h1 className="text-white group-hover:opacity-80 transition-opacity">
                 <span className="sr-only">i-Prism</span>
-                <IPrismLogo className="h-7 sm:h-8 md:h-11 w-auto" />
+                <IPrismLogo className="h-[19px] sm:h-[22px] md:h-[29px] w-auto" />
               </h1>
             </div>
 
-            {/* 우측 툴버튼 + 버전/연동 상태 정보 */}
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {/* Dark / Light 화면 모드 토글 */}
+            {/* 우측 툴버튼 (테마 · 전체화면 · AI Assistant 원형 아이콘 버튼 세트) */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Dark / Light 화면 모드 원형 단일 토글 */}
               <ThemeToggle />
 
-              {/* 전체화면 확대 버튼 */}
+              {/* 전체화면 확대 원형 아이콘 버튼 */}
               <button
+                type="button"
                 onClick={toggleFullscreen}
-                title={isFullscreen ? "화면 복원" : "전체 화면 확대"}
-                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 hover:text-indigo-100 text-xs sm:text-sm font-bold transition-all shadow-sm shrink-0 backdrop-blur-md active:scale-95 cursor-pointer"
+                title={isFullscreen ? "화면 복원" : "전체화면 확대"}
+                aria-label={isFullscreen ? "화면 복원" : "전체화면 확대"}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 hover:text-indigo-100 transition-all shadow-sm shrink-0 backdrop-blur-md active:scale-95 cursor-pointer"
               >
-                {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" /> : <Maximize2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />}
-                <span>{isFullscreen ? "복원" : "전체화면"}</span>
+                {isFullscreen ? <Minimize2 className="w-4 h-4 text-indigo-400" /> : <Maximize2 className="w-4 h-4 text-indigo-400" />}
               </button>
 
-              {/* AI Assistant 버튼 */}
+              {/* AI Assistant 원형 아이콘 버튼 */}
               <ChatBot renderTrigger isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
             </div>
           </div>

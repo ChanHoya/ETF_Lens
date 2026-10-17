@@ -26,7 +26,6 @@ export default function ThemeToggle() {
         }
     };
 
-    const pill = 'flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-xs font-bold transition-colors';
     return (
         <button
             type="button"
@@ -35,16 +34,13 @@ export default function ThemeToggle() {
             aria-checked={light}
             aria-label="화면 모드 전환 (Dark / Light)"
             title={light ? '다크 모드로 전환' : '라이트 모드로 전환'}
-            className="flex items-center gap-0.5 p-0.5 rounded-full bg-white/5 border border-white/15 shrink-0 cursor-pointer active:scale-95 transition-transform"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/15 border border-white/15 text-gray-300 hover:text-white transition-all shadow-sm shrink-0 backdrop-blur-md active:scale-95 cursor-pointer"
         >
-            <span className={`${pill} ${!light ? 'bg-indigo-500 text-white shadow' : 'text-gray-400'}`}>
-                <Moon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Dark</span>
-            </span>
-            <span className={`${pill} ${light ? 'bg-amber-400 text-black shadow' : 'text-gray-400'}`}>
-                <Sun className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Light</span>
-            </span>
+            {light ? (
+                <Sun className="w-4 h-4 text-amber-500 animate-in spin-in-180 duration-300" />
+            ) : (
+                <Moon className="w-4 h-4 text-indigo-400 animate-in spin-in-180 duration-300" />
+            )}
         </button>
     );
 }
