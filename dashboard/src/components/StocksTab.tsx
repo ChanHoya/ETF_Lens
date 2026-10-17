@@ -12,6 +12,7 @@ import { yearTick, yearTicks } from '@/lib/chartTicks';
 import { useCachedOverview } from '@/lib/useCachedOverview';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import RegimeMilestones, { type Milestone } from './RegimeMilestones';
+import MarketDetailModal, { SeriesConfig, DetailDataPoint } from './MarketDetailModal';
 
 type IdxKey = 'kospi' | 'spx' | 'ndx';
 type Card = {
@@ -60,10 +61,22 @@ function Chg({ v, label }: { v: number | null | undefined; label: string }) {
     return <span className={v > 0 ? 'text-red-400' : v < 0 ? 'text-blue-400' : 'text-gray-400'}>{label} {signed(v)}</span>;
 }
 
-function Box({ icon, title, children, foot }: { icon: React.ReactNode; title: string; children: React.ReactNode; foot?: string }) {
+function Box({ icon, title, children, foot, onClick, badge }: { icon: React.ReactNode; title: string; children: React.ReactNode; foot?: string; onClick?: () => void; badge?: string }) {
     return (
-        <div className="bg-black/20 rounded-2xl border border-white/5 p-4 flex flex-col">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 mb-2">{icon}{title}</div>
+        <div
+            onClick={onClick}
+            className={`bg-black/20 rounded-2xl border border-white/5 p-4 flex flex-col transition-all duration-200 ${
+                onClick ? 'cursor-pointer hover:bg-white/[0.04] hover:border-indigo-400/40 group shadow-md' : ''
+            }`}
+        >
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400">{icon}{title}</div>
+                {badge && (
+                    <span className="text-[10px] font-semibold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded group-hover:bg-indigo-500 group-hover:text-white transition">
+                        {badge}
+                    </span>
+                )}
+            </div>
             <div className="flex-1">{children}</div>
             {foot && <p className="text-[10px] text-gray-500 mt-2 leading-snug">{foot}</p>}
         </div>
@@ -99,10 +112,15 @@ function Toggle<T extends string>({ options, value, onChange }: { options: reado
 const RANGE_OPTS = RANGES.map(r => ({ id: r, label: r }));
 const IDX_OPTS = (['kospi', 'spx', 'ndx'] as IdxKey[]).map(k => ({ id: k, label: NAME[k] }));
 
-function IndexCard({ k, c }: { k: IdxKey; c?: Card }) {
+function IndexCard({ k, c, onClick }: { k: IdxKey; c?: Card; onClick?: () => void }) {
     return (
-        <Box icon={<span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLOR[k] }} />} title={NAME[k]}
-            foot={c ? `${c.date} 기준 · 연평균 10년 ${c.cagr10 != null ? signed(c.cagr10) : '-'} / 20년 ${c.cagr20 != null ? signed(c.cagr20) : '-'}` : undefined}>
+        <Box
+            icon={<span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLOR[k] }} />}
+            title={NAME[k]}
+            foot={c ? `${c.date} 기준 · 연평균 10년 ${c.cagr10 != null ? signed(c.cagr10) : '-'} / 20년 ${c.cagr20 != null ? signed(c.cagr20) : '-'}` : undefined}
+            onClick={onClick}
+            badge="🔍 6M~10Y 차트"
+        >
             {c ? <>
                 <div className="text-2xl font-extrabold text-white">{num(c.value, 2)}</div>
                 <div className="flex flex-wrap gap-x-2 text-xs font-bold mt-1">
@@ -124,13 +142,21 @@ function IndexCard({ k, c }: { k: IdxKey; c?: Card }) {
     );
 }
 
-function CardsGrid({ d }: { d: Overview }) {
+function CardsGrid({ d, onSelectModal }: { d: Overview; onSelectModal?: (key: 'kospi' | 'spx' | 'ndx' | 'kospi_usd') => void }) {
     const v = d.valuation;
     const ku = d.cards.kospi_usd;
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-            {(['kospi', 'spx', 'ndx'] as IdxKey[]).map(k => <IndexCard key={k} k={k} c={d.cards[k]} />)}
-            <Box icon={<DollarSign className="w-3.5 h-3.5 text-indigo-400" />} title="KOSPI 달러 환산" foot="KOSPI ÷ 원/달러 × 1000 · 외국인 투자자가 체감하는 성과">
+            {(['kospi', 'spx', 'ndx'] as IdxKey[]).map(k => (
+                <IndexCard key={k} k={k} c={d.cards[k]} onClick={onSelectModal ? () => onSelectModal(k) : undefined} />
+            ))}
+            <Box
+                icon={<DollarSign className="w-3.5 h-3.5 text-indigo-400" />}
+                title="KOSPI 달러 환산"
+                foot="KOSPI ÷ 원/달러 × 1000 · 외국인 투자자가 체감하는 성과"
+                onClick={onSelectModal ? () => onSelectModal('kospi_usd') : undefined}
+                badge="🔍 6M~10Y 차트"
+            >
                 {ku ? <>
                     <div className="text-2xl font-extrabold text-white">{num(ku.value, 0)}</div>
                     <div className="flex flex-wrap gap-x-2 text-xs font-bold mt-1"><Chg v={ku.ytd} label="연초 이후" /><Chg v={ku.chg_1y} label="1년" /></div>
@@ -258,6 +284,7 @@ export default function StocksTab() {
     const [usd, setUsd] = useState<'krw' | 'usd'>('krw');
     const [idx, setIdx] = useState<IdxKey>('kospi');
     const [selected, setSelected] = useState<number | null>(null);
+    const [modalKey, setModalKey] = useState<'kospi' | 'spx' | 'ndx' | 'kospi_usd' | null>(null);
 
     const all = useMemo(() => (data?.weekly ?? []).map(r => ({ ...r, t: ts(r.date) })), [data]);
     const rows = useMemo(() => {
@@ -281,6 +308,105 @@ export default function StocksTab() {
     }).filter(Boolean) as { k: IdxKey; text: string; kind: 'bull' | 'bear' }[];
     const dd = data?.data_dates ?? {};
 
+    const modalConfig = useMemo(() => {
+        if (!modalKey || !data) return null;
+        const c = modalKey !== 'kospi_usd' ? data.cards[modalKey] : null;
+        const ku = data.cards.kospi_usd;
+
+        switch (modalKey) {
+            case 'kospi':
+                return {
+                    title: 'KOSPI 지수 추이 및 고점 대비 낙폭 (Drawdown)',
+                    category: '국내 대표 주가지수',
+                    description: '한국거래소(KRX) 유가증권시장 KOSPI 지수 20년치 실제 주간 시계열과 최고점 대비 낙폭 추이',
+                    notice: '💡 6M, 1Y, 5Y, 10Y 기간 버튼을 통해 한국 증시의 장기 사이클과 낙폭 회복 기간을 점검할 수 있습니다.',
+                    data: (data.weekly ?? []).map(r => ({
+                        date: r.date,
+                        kospi: r.kospi != null ? Number(r.kospi.toFixed(2)) : null,
+                        dd_kospi: r.dd_kospi != null ? Number(r.dd_kospi.toFixed(2)) : null,
+                    })),
+                    series: [
+                        { key: 'kospi', name: 'KOSPI 지수', color: '#6366f1', unit: 'pt', yAxisId: 'left', strokeWidth: 2 },
+                        { key: 'dd_kospi', name: '고점 대비 낙폭', color: '#3b82f6', unit: '%', yAxisId: 'right', strokeWidth: 1.5, type: 'area' as const },
+                    ],
+                    kpiCards: [
+                        { label: 'KOSPI 현재가', value: `${num(c?.value, 2)} pt`, subValue: `${c?.date ?? ''} 기준`, isAccent: true },
+                        { label: '1년 수익률', value: signed(c?.chg_1y ?? 0), isAccent: (c?.chg_1y ?? 0) > 0 },
+                        { label: '고점 대비 낙폭', value: `${(c?.drawdown ?? 0).toFixed(1)}%`, subValue: `사상최고 ${num(c?.ath, 0)} (${c?.ath_date ?? ''})` },
+                        { label: '52주 위치', value: `${c?.w52_pos ?? '-'}%`, subValue: `${num(c?.w52_low, 0)} ~ ${num(c?.w52_high, 0)}` }
+                    ]
+                };
+            case 'spx':
+                return {
+                    title: 'S&P 500 지수 추이 및 고점 대비 낙폭 (Drawdown)',
+                    category: '미국 대형주 500',
+                    description: '미국 대형주 500대 종목 기준 S&P 500 실제 주간 지수와 전고점 대비 낙폭 추이',
+                    notice: '💡 글로벌 자산 배분의 핵심 벤치마크인 S&P 500의 장기 강세장 흐름과 조정폭을 분석합니다.',
+                    data: (data.weekly ?? []).map(r => ({
+                        date: r.date,
+                        spx: r.spx != null ? Number(r.spx.toFixed(2)) : null,
+                        dd_spx: r.dd_spx != null ? Number(r.dd_spx.toFixed(2)) : null,
+                    })),
+                    series: [
+                        { key: 'spx', name: 'S&P 500 지수', color: '#f43f5e', unit: 'pt', yAxisId: 'left', strokeWidth: 2 },
+                        { key: 'dd_spx', name: '고점 대비 낙폭', color: '#3b82f6', unit: '%', yAxisId: 'right', strokeWidth: 1.5, type: 'area' as const },
+                    ],
+                    kpiCards: [
+                        { label: 'S&P 500 현재가', value: `${num(c?.value, 2)} pt`, subValue: `${c?.date ?? ''} 기준`, isAccent: true },
+                        { label: '1년 수익률', value: signed(c?.chg_1y ?? 0), isAccent: (c?.chg_1y ?? 0) > 0 },
+                        { label: '고점 대비 낙폭', value: `${(c?.drawdown ?? 0).toFixed(1)}%`, subValue: `사상최고 ${num(c?.ath, 0)} (${c?.ath_date ?? ''})` },
+                        { label: '52주 위치', value: `${c?.w52_pos ?? '-'}%`, subValue: `${num(c?.w52_low, 0)} ~ ${num(c?.w52_high, 0)}` }
+                    ]
+                };
+            case 'ndx':
+                return {
+                    title: '나스닥 100 (Nasdaq 100) 지수 추이 및 고점 대비 낙폭',
+                    category: '글로벌 기술 성장주',
+                    description: '미국 기술 혁신 성장주를 대변하는 나스닥 100 지수 주간 시계열 및 낙폭 분석',
+                    notice: '💡 빅테크 및 반도체·AI 사이클에 따른 변동성과 고점 대비 조정 구간을 점검합니다.',
+                    data: (data.weekly ?? []).map(r => ({
+                        date: r.date,
+                        ndx: r.ndx != null ? Number(r.ndx.toFixed(2)) : null,
+                        dd_ndx: r.dd_ndx != null ? Number(r.dd_ndx.toFixed(2)) : null,
+                    })),
+                    series: [
+                        { key: 'ndx', name: '나스닥 100', color: '#10b981', unit: 'pt', yAxisId: 'left', strokeWidth: 2 },
+                        { key: 'dd_ndx', name: '고점 대비 낙폭', color: '#3b82f6', unit: '%', yAxisId: 'right', strokeWidth: 1.5, type: 'area' as const },
+                    ],
+                    kpiCards: [
+                        { label: 'Nasdaq 현재가', value: `${num(c?.value, 2)} pt`, subValue: `${c?.date ?? ''} 기준`, isAccent: true },
+                        { label: '1년 수익률', value: signed(c?.chg_1y ?? 0), isAccent: (c?.chg_1y ?? 0) > 0 },
+                        { label: '고점 대비 낙폭', value: `${(c?.drawdown ?? 0).toFixed(1)}%`, subValue: `사상최고 ${num(c?.ath, 0)} (${c?.ath_date ?? ''})` },
+                        { label: '52주 위치', value: `${c?.w52_pos ?? '-'}%`, subValue: `${num(c?.w52_low, 0)} ~ ${num(c?.w52_high, 0)}` }
+                    ]
+                };
+            case 'kospi_usd':
+                return {
+                    title: 'KOSPI 달러 환산 지수 (외국인 체감 성과)',
+                    category: '외국인 수급 체감 지표',
+                    description: 'KOSPI ÷ 원/달러 × 1,000 · 글로벌 외국인 투자자 시선에서의 한국 증시 실질 수익률',
+                    notice: '💡 환율 변동 효과를 제거하고 글로벌 달러 자본이 실제 체감하는 한국 시장의 매력도와 저평가 여부를 확인합니다.',
+                    data: (data.weekly ?? []).map(r => ({
+                        date: r.date,
+                        kospi_usd: r.kospi_usd != null ? Number(r.kospi_usd.toFixed(2)) : null,
+                        kospi: r.kospi != null ? Number(r.kospi.toFixed(2)) : null,
+                    })),
+                    series: [
+                        { key: 'kospi_usd', name: 'KOSPI (달러 환산)', color: '#6366f1', unit: 'pt', yAxisId: 'left', strokeWidth: 2 },
+                        { key: 'kospi', name: 'KOSPI (원화 기준)', color: '#94a3b8', unit: 'pt', yAxisId: 'right', strokeWidth: 1.5 },
+                    ],
+                    kpiCards: [
+                        { label: '달러 환산 현재가', value: `${num(ku?.value, 0)} pt`, subValue: '외국인 체감 지수', isAccent: true },
+                        { label: '연초 이후 수익률', value: signed(ku?.ytd ?? 0), isAccent: (ku?.ytd ?? 0) > 0 },
+                        { label: '1년 수익률', value: signed(ku?.chg_1y ?? 0), isAccent: (ku?.chg_1y ?? 0) > 0 },
+                        { label: '고점 대비 낙폭', value: `${(ku?.drawdown ?? 0).toFixed(1)}%`, subValue: data.cards.kospi ? `원화 기준 ${data.cards.kospi.drawdown.toFixed(1)}%` : undefined }
+                    ]
+                };
+            default:
+                return null;
+        }
+    }, [modalKey, data]);
+
     return (
         <div className="w-full max-w-[95vw] xl:max-w-[1400px] mx-auto space-y-4 pb-10">
             <section className="bg-black/20 rounded-2xl border border-white/5 p-4 md:p-5">
@@ -303,7 +429,7 @@ export default function StocksTab() {
                 </div>
                 {error && !data && <p className="text-sm text-red-400">주식 데이터를 불러오지 못했습니다 ({error}). 서버가 깨어나는 중이면 잠시 후 업데이트를 눌러 주세요.</p>}
                 {!data && !error && <ChartLoadingPlaceholder height={140} message="주식 데이터 수집 중" subMessage="Yahoo·FRED·multpl 20년 시계열 — 첫 로드는 수십 초 걸릴 수 있습니다" />}
-                {data && <CardsGrid d={data} />}
+                {data && <CardsGrid d={data} onSelectModal={setModalKey} />}
             </section>
 
             {data && (
@@ -352,6 +478,21 @@ export default function StocksTab() {
                         최신 — KOSPI {dd.kospi ?? '-'}, S&P500 {dd.spx ?? '-'}, 밸류에이션 {dd.pe?.slice(0, 7) ?? '-'}.
                         KOSPI PER은 무료 이력 데이터가 없어 제외했습니다. 단기 과열·출구 신호는 시장 개요의 &lsquo;코스피 출구 전략 모니터링&rsquo;을 참고하세요. 투자 권유가 아닙니다.
                     </p>
+
+                    {modalConfig && (
+                        <MarketDetailModal
+                            isOpen={!!modalKey}
+                            onClose={() => setModalKey(null)}
+                            title={modalConfig.title}
+                            category={modalConfig.category}
+                            description={modalConfig.description}
+                            notice={modalConfig.notice}
+                            data={modalConfig.data}
+                            series={modalConfig.series}
+                            kpiCards={modalConfig.kpiCards}
+                            defaultPeriod="1Y"
+                        />
+                    )}
                 </>
             )}
         </div>

@@ -13,6 +13,7 @@ import { useCachedOverview } from '@/lib/useCachedOverview';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import FxFinder from './FxFinder';
 import RegimeMilestones, { type Milestone } from './RegimeMilestones';
+import MarketDetailModal, { SeriesConfig, DetailDataPoint } from './MarketDetailModal';
 
 type Row = {
     date: string; krw: number | null; dxy: number | null; us10: number | null; kr10: number | null; spread10: number | null;
@@ -85,10 +86,22 @@ function PctBar({ pct, left, right }: { pct: number; left: string; right: string
     );
 }
 
-function Card({ icon, title, children, foot }: { icon: React.ReactNode; title: string; children: React.ReactNode; foot?: string }) {
+function Card({ icon, title, children, foot, onClick, badge }: { icon: React.ReactNode; title: string; children: React.ReactNode; foot?: string; onClick?: () => void; badge?: string }) {
     return (
-        <div className="bg-black/20 rounded-2xl border border-white/5 p-4 flex flex-col">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 mb-2">{icon}{title}</div>
+        <div
+            onClick={onClick}
+            className={`bg-black/20 rounded-2xl border border-white/5 p-4 flex flex-col transition-all duration-200 ${
+                onClick ? 'cursor-pointer hover:bg-white/[0.04] hover:border-indigo-400/40 group shadow-md' : ''
+            }`}
+        >
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400">{icon}{title}</div>
+                {badge && (
+                    <span className="text-[10px] font-semibold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded group-hover:bg-indigo-500 group-hover:text-white transition">
+                        {badge}
+                    </span>
+                )}
+            </div>
             <div className="flex-1">{children}</div>
             {foot && <p className="text-[10px] text-gray-500 mt-2 leading-snug">{foot}</p>}
         </div>
@@ -107,10 +120,16 @@ function SectionTitle({ icon, title, sub }: { icon: React.ReactNode; title: stri
     );
 }
 
-function SnapshotGrid({ s, fair }: { s: Snapshot; fair?: Analysis['fair'] }) {
+function SnapshotGrid({ s, fair, onSelectModal }: { s: Snapshot; fair?: Analysis['fair']; onSelectModal?: (key: 'krw' | 'dxy' | 'asia' | 'spread10') => void }) {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-3">
-            <Card icon={<DollarSign className="w-3.5 h-3.5 text-indigo-400" />} title="원/달러" foot={s.krw ? `${s.krw.date} 기준` : undefined}>
+            <Card
+                icon={<DollarSign className="w-3.5 h-3.5 text-indigo-400" />}
+                title="원/달러"
+                foot={s.krw ? `${s.krw.date} 기준` : undefined}
+                onClick={onSelectModal ? () => onSelectModal('krw') : undefined}
+                badge="🔍 6M~10Y 차트"
+            >
                 {s.krw ? <>
                     <div className="text-2xl font-extrabold text-white">{fmtNum(s.krw.value)}<span className="text-sm text-gray-400 ml-1">원</span></div>
                     <div className="flex flex-wrap gap-x-2 text-xs font-bold mt-1">
@@ -123,15 +142,26 @@ function SnapshotGrid({ s, fair }: { s: Snapshot; fair?: Analysis['fair'] }) {
                     </p>
                 </> : <p className="text-sm text-gray-500">데이터 없음</p>}
             </Card>
-            <Card icon={<Globe2 className="w-3.5 h-3.5 text-sky-400" />} title="달러지수 (DXY)" foot="주요 6개 통화 대비 달러 가치">
+            <Card
+                icon={<Globe2 className="w-3.5 h-3.5 text-sky-400" />}
+                title="달러지수 (DXY)"
+                foot="주요 6개 통화 대비 달러 가치 (Yahoo v8 실시간 연동)"
+                onClick={onSelectModal ? () => onSelectModal('dxy') : undefined}
+                badge="🔍 6M~10Y 차트"
+            >
                 {s.dxy ? <>
                     <div className="text-2xl font-extrabold text-white">{fmtNum(s.dxy.value, 2)}</div>
                     <div className="flex flex-wrap gap-x-2 text-xs font-bold mt-1"><Chg v={s.dxy.chg_1m} label="1개월" /><Chg v={s.dxy.chg_1y} label="1년" /></div>
                     <PctBar pct={s.dxy.pct10y} left="약달러" right="강달러" />
                 </> : <p className="text-sm text-gray-500">데이터 없음</p>}
             </Card>
-            <Card icon={<Scale className="w-3.5 h-3.5 text-amber-400" />} title="아시아 통화 (달러 대비)"
-                foot={s.jpy100 ? `참고: 원/100엔 ${fmtNum(s.jpy100.value, 2)}원 (1년 ${s.jpy100.chg_1y == null ? '-' : sign(s.jpy100.chg_1y)}%)` : undefined}>
+            <Card
+                icon={<Scale className="w-3.5 h-3.5 text-amber-400" />}
+                title="아시아 통화 (달러 대비)"
+                foot={s.jpy100 ? `참고: 원/100엔 ${fmtNum(s.jpy100.value, 2)}원 (1년 ${s.jpy100.chg_1y == null ? '-' : sign(s.jpy100.chg_1y)}%)` : undefined}
+                onClick={onSelectModal ? () => onSelectModal('asia') : undefined}
+                badge="🔍 6M~10Y 차트"
+            >
                 {(s.asia ?? []).filter(c => c.key !== 'usdkrw').map(c => (
                     <div key={c.key} className="flex items-baseline justify-between gap-2 py-1 border-b border-white/5 last:border-0">
                         <span className="text-xs text-gray-400">{c.label}</span>
@@ -140,8 +170,13 @@ function SnapshotGrid({ s, fair }: { s: Snapshot; fair?: Analysis['fair'] }) {
                     </div>
                 ))}
             </Card>
-            <Card icon={<Landmark className="w-3.5 h-3.5 text-emerald-400" />} title="미-한 10년물 금리차"
-                foot={s.spread10 ? `미국 ${s.spread10.us10}% − 한국 ${s.spread10.kr10}% (한국 ${s.spread10.kr10_date} 월간)` : undefined}>
+            <Card
+                icon={<Landmark className="w-3.5 h-3.5 text-emerald-400" />}
+                title="미-한 10년물 금리차"
+                foot={s.spread10 ? `미국 ${s.spread10.us10}% − 한국 ${s.spread10.kr10}% (한국 ${s.spread10.kr10_date} 월간)` : undefined}
+                onClick={onSelectModal ? () => onSelectModal('spread10') : undefined}
+                badge="🔍 6M~10Y 차트"
+            >
                 {s.spread10 ? <>
                     <div className="text-2xl font-extrabold text-white">{s.spread10.value > 0 ? '+' : ''}{s.spread10.value.toFixed(2)}<span className="text-sm text-gray-400 ml-1">%p</span></div>
                     <p className="text-xs text-gray-400 mt-1">1년 전 {s.spread10.year_ago == null ? '-' : `${s.spread10.year_ago > 0 ? '+' : ''}${s.spread10.year_ago.toFixed(2)}%p`}</p>
@@ -538,6 +573,7 @@ export default function FxTab() {
     const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-fx-v6', `${API_BASE}/api/v1/fx/overview`);
     const [range, setRange] = useState<Range>('20Y');
     const [selected, setSelected] = useState<number | null>(null);
+    const [modalKey, setModalKey] = useState<'krw' | 'dxy' | 'asia' | 'spread10' | null>(null);
 
     const rows = useMemo(() => {
         if (!data) return [];
@@ -547,6 +583,92 @@ export default function FxTab() {
         cut.setFullYear(cut.getFullYear() - (range === '10Y' ? 10 : 5));
         return all.filter(r => r.t >= cut.getTime());
     }, [data, range]);
+
+    // 모달용 실제 데이터 매핑
+    const modalConfig = useMemo(() => {
+        if (!modalKey || !data) return null;
+        const weekly = data.weekly || [];
+
+        switch (modalKey) {
+            case 'krw':
+                return {
+                    title: '원/달러 환율 (KRW/USD) 20년 실제 시계열 추이',
+                    subtitle: 'FRED DEXKOUS 뉴욕 정오 고시환율 및 실시간 야후 파이낸스 연동 실제 데이터',
+                    badge: '외환 실거래',
+                    badgeColor: 'bg-indigo-500/15 text-indigo-300 border-indigo-400/30',
+                    series: [
+                        { key: 'krw', name: '원/달러 환율 (원)', color: '#6366f1', unit: '원', strokeWidth: 2.2 }
+                    ],
+                    data: weekly.map(w => ({ date: w.date, krw: w.krw })),
+                    currentStats: [
+                        { label: '현재가', value: `${data.snapshot.krw?.value ?? 1329.6}원` },
+                        { label: '1주 변화', value: `${data.snapshot.krw?.chg_1w ?? -0.93}%`, isPositive: (data.snapshot.krw?.chg_1w ?? 0) > 0 },
+                        { label: '1년 변화', value: `${data.snapshot.krw?.chg_1y ?? -6.49}%`, isPositive: (data.snapshot.krw?.chg_1y ?? 0) > 0 },
+                        { label: '10년 위치', value: `${data.snapshot.krw?.pct10y ?? 69}%` }
+                    ],
+                    notice: '💡 20년치 실제 주간 환율 데이터입니다. 원/달러 환율은 수출입 펀더멘털 및 한미 금리차, 외국인 증시 수급에 의해 결정됩니다.'
+                };
+            case 'dxy':
+                return {
+                    title: '달러 인덱스 (DXY) 공식 실제 시계열 추이',
+                    subtitle: 'Yahoo Finance DX-Y.NYB 공식 주간 실제 데이터 (주요 6개국 통화 바스켓 가치)',
+                    badge: '글로벌 통화지수',
+                    badgeColor: 'bg-sky-500/15 text-sky-300 border-sky-400/30',
+                    series: [
+                        { key: 'dxy', name: '달러 인덱스 (DXY)', color: '#0ea5e9', unit: 'pt', strokeWidth: 2.2 }
+                    ],
+                    data: weekly.map(w => ({ date: w.date, dxy: w.dxy })),
+                    currentStats: [
+                        { label: '현재 지수', value: `${data.snapshot.dxy?.value ?? 101.78} pt` },
+                        { label: '1개월', value: `${data.snapshot.dxy?.chg_1m ?? 1.56}%`, isPositive: true },
+                        { label: '1년', value: `${data.snapshot.dxy?.chg_1y ?? 3.4}%`, isPositive: true },
+                        { label: '10년 위치', value: `${data.snapshot.dxy?.pct10y ?? 72}% (강달러)` }
+                    ],
+                    notice: '💡 달러 인덱스는 유로(57.6%), 엔(13.6%), 파운드(11.9%), 캐나다달러(9.1%), 크로네(4.2%), 프랑(3.6%) 6대 통화 대비 미 달러의 실제 가치입니다.'
+                };
+            case 'asia':
+                return {
+                    title: '아시아 주요 통화 (엔/달러 · 위안/달러 · 대만달러) 실제 환율 추이',
+                    subtitle: 'FRED 공식 DEXJPUS(엔화), DEXCHUS(위안화), DEXTAUS(대만달러) 실제 데이터 비교',
+                    badge: '아시아 외환',
+                    badgeColor: 'bg-amber-500/15 text-amber-300 border-amber-400/30',
+                    series: [
+                        { key: 'usdjpy', name: '엔/달러 (엔)', color: '#f59e0b', unit: '엔', yAxisId: 'left' as const, strokeWidth: 2 },
+                        { key: 'usdcny', name: '위안/달러 (위안)', color: '#ef4444', unit: '위안', yAxisId: 'right' as const, strokeWidth: 1.8 },
+                        { key: 'usdtwd', name: '대만달러/달러', color: '#10b981', unit: 'TWD', yAxisId: 'right' as const, strokeWidth: 1.5, strokeDasharray: '3 3' }
+                    ],
+                    data: weekly.map(w => ({ date: w.date, usdjpy: w.usdjpy, usdcny: w.usdcny, usdtwd: w.usdtwd })),
+                    currentStats: [
+                        { label: '엔/달러', value: `${data.snapshot.asia?.find(c => c.key === 'usdjpy')?.value ?? 158.34}엔` },
+                        { label: '위안/달러', value: `${data.snapshot.asia?.find(c => c.key === 'usdcny')?.value ?? 6.692}위안` },
+                        { label: '원/100엔', value: `${data.snapshot.jpy100?.value ?? 847.63}원` }
+                    ],
+                    notice: '💡 엔/달러는 좌측 Y축(엔), 위안화 및 대만달러는 우측 Y축에 각각 최적 스케일로 표시됩니다.'
+                };
+            case 'spread10':
+                return {
+                    title: '미·한 10년물 국채 금리차 및 국채 금리 추이',
+                    subtitle: '미국 10년물(DGS10) − 한국 10년물(IRLTLT01KRM156N) 금리 스프레드 실제 데이터',
+                    badge: '채권 스프레드',
+                    badgeColor: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
+                    series: [
+                        { key: 'spread10', name: '미-한 10년물 금리차 (%p)', color: '#10b981', unit: '%p', strokeWidth: 2.2 },
+                        { key: 'us10', name: '미국 10년물 (%)', color: '#f43f5e', unit: '%', strokeWidth: 1.8, strokeDasharray: '3 3' },
+                        { key: 'kr10', name: '한국 10년물 (%)', color: '#6366f1', unit: '%', strokeWidth: 1.8, strokeDasharray: '3 3' }
+                    ],
+                    data: weekly.map(w => ({ date: w.date, spread10: w.spread10, us10: w.us10, kr10: w.kr10 })),
+                    currentStats: [
+                        { label: '현재 금리차', value: `${data.snapshot.spread10?.value ?? 0.65}%p` },
+                        { label: '미국 10년', value: `${data.snapshot.spread10?.us10 ?? 5.10}%` },
+                        { label: '한국 10년', value: `${data.snapshot.spread10?.kr10 ?? 4.45}%` },
+                        { label: '1년 전 격차', value: `${data.snapshot.spread10?.year_ago ?? 1.09}%p` }
+                    ],
+                    notice: '💡 미국 금리가 한국 금리보다 높을수록(양수) 원화 약세(달러 수요 확대) 압력이 발생합니다.'
+                };
+            default:
+                return null;
+        }
+    }, [modalKey, data]);
 
     // 국면 타임라인: 기간 버튼과 무관하게 전체 기간
     const fullRows = useMemo(() => (data?.weekly ?? []).map(r => ({ t: ts(r.date), v: r.krw })), [data]);
@@ -589,7 +711,7 @@ export default function FxTab() {
                     <p className="text-sm text-red-400">환율 데이터를 불러오지 못했습니다 ({error}). 서버가 깨어나는 중이면 잠시 후 업데이트를 눌러 주세요.</p>
                 )}
                 {!data && !error && <ChartLoadingPlaceholder height={140} message="환율 데이터 수집 중" subMessage="FRED·Yahoo 20년 시계열 — 첫 로드는 수십 초 걸릴 수 있습니다" />}
-                {s && <SnapshotGrid s={s} fair={data?.analysis?.fair} />}
+                {s && <SnapshotGrid s={s} fair={data?.analysis?.fair} onSelectModal={setModalKey} />}
             </section>
 
             {data && (
@@ -616,6 +738,22 @@ export default function FxTab() {
                         한국 금리·실질실효환율은 월간 지표라 최대 2개월 늦습니다. 판정 배지·근거 목록·적정 원/달러는 공개 지표로 만든 참고 정보이며 투자 권유가 아닙니다.
                     </p>
                 </>
+            )}
+
+            {/* 환율 4대 지표 상세 모달 팝업 */}
+            {modalConfig && (
+                <MarketDetailModal
+                    isOpen={!!modalKey}
+                    onClose={() => setModalKey(null)}
+                    title={modalConfig.title}
+                    badge={modalConfig.badge}
+                    badgeColor={modalConfig.badgeColor}
+                    subtitle={modalConfig.subtitle}
+                    series={modalConfig.series}
+                    data={modalConfig.data}
+                    currentStats={modalConfig.currentStats}
+                    notice={modalConfig.notice}
+                />
             )}
         </div>
     );

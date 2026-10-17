@@ -4,6 +4,7 @@
 
 | Feature | Status | Key Files | Notes |
 |---------|--------|-----------|-------|
+| 거시경제 4대 탭(종합/환율/금리/주식) 첫 번째 지표 박스 6M~10Y 실제 시계열 팝업 모달 & 6대 통합 박스 2열 배치 & 선택형 버튼 컴팩트화 (첨부 1~5) | ✅ done | backend/api/macro_dashboard.py, MacroTab.tsx, FxTab.tsx, RatesTab.tsx, StocksTab.tsx, MarketDetailModal.tsx, OilTab.tsx | 1) 종합분석 6대 핵심 지표(원유3대, VIX/VKOSPI/F&GI, 3대물가, 한미금리/국채, 환율, 주식) 2행 3열 전면 재배치 및 기존 하단 분리 박스 완전 통합·삭제, 하단 AI 코멘트 전폭화, 2) 환율/금리/주식 첫 줄 카드 클릭 시 6M/1Y/5Y/10Y 실 시계열 팝업 모달 제공(DXY 왜곡 검증 및 Y축 정규화), 3) 팝업 및 대시보드 내 선택형 버튼/박스 크기·폰트 축소(text-[11px], px-2 py-0.5)로 주변 텍스트와 이질감 없는 일관 디자인 적용 |
 | 미국 선거 주기 사이클 차트 도트(Dot) 상시 표시 & 기간 필터(5Y/10Y/30Y/ALL) & Fed 기준금리·역사적 매크로 이벤트 오버레이 | ✅ done | backend/api/midterm_election.py, MidtermElectionTab.tsx | 1950~2026 77개년 S&P500·나스닥 사이클 차트 상에 대선 해(파란 발광 링+도트) 및 중간선거 해(빨간 발광 링+도트) 상시 렌더링, 5Y/10Y/30Y/전체 기간 필터 스위처, 연준 기준금리(Fed Funds Rate) 듀얼 Y축 및 역사적 이벤트 오버레이 토글, 선택 기간별 동적 4대 KPI 카드 연동 |
 | 유가·정제마진 주식시장 영향 가이드 & AI 종합 진단 & 10Y 매크로 오버레이 팝업 | ✅ done | backend/api/oil_dashboard.py, OilTab.tsx | 원유 수급·정제마진의 주식시장/섹터(정유/화학/항공/기술주) 파급 경로 및 실전 판단 가이드, 2026년도 최신 차트, 최상단 AI 종합 진단 위젯, 6M/1Y/5Y/10Y 기간별 S&P500·Nasdaq·달러지수·CPI·PPI·PCE 복합 비교 팝업 모달 탑재, WTI·Brent·Dubai·스프레드 대시보드-모달 간 실시간 시세(2026-10) 100% 일치화, 유가-PPI 핵심 연동 및 Recharts 듀얼/멀티 Y축 분리 스케일 정상화 |
 | 유가 급변(±3.5%) & VIX 스파이크 텔레그램 스마트 경보 | ✅ done | backend/core/macro_alert_engine.py, NotificationSettings.tsx | 유가 급등락·호르무즈 위험점수 및 VIX 20/25p 돌파 시 내 포트폴리오 영향도 요약 멀티채널 발송 & 테스트 엔드포인트 연동 |

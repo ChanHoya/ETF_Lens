@@ -13,6 +13,7 @@ import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import SpreadBasisInfo from './SpreadBasisInfo';
 import RegimeMilestones, { type Milestone } from './RegimeMilestones';
 import { useCachedOverview } from '@/lib/useCachedOverview';
+import MarketDetailModal, { SeriesConfig, DetailDataPoint } from './MarketDetailModal';
 
 type Change = { date: string; from: number; to: number; bp: number } | null;
 type Meeting = { date: string; d_day: number } | null;
@@ -80,10 +81,22 @@ function Bp({ v, label }: { v: number | null | undefined; label: string }) {
     return <span className={cls}>{label} {v > 0 ? '+' : ''}{v.toFixed(0)}bp</span>;
 }
 
-function Card({ icon, title, children, foot }: { icon: React.ReactNode; title: string; children: React.ReactNode; foot?: string }) {
+function Card({ icon, title, children, foot, onClick, badge }: { icon: React.ReactNode; title: string; children: React.ReactNode; foot?: string; onClick?: () => void; badge?: string }) {
     return (
-        <div className="bg-black/20 rounded-2xl border border-white/5 p-4 flex flex-col">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 mb-2">{icon}{title}</div>
+        <div
+            onClick={onClick}
+            className={`bg-black/20 rounded-2xl border border-white/5 p-4 flex flex-col transition-all duration-200 ${
+                onClick ? 'cursor-pointer hover:bg-white/[0.04] hover:border-indigo-400/40 group shadow-md' : ''
+            }`}
+        >
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400">{icon}{title}</div>
+                {badge && (
+                    <span className="text-[10px] font-semibold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded group-hover:bg-indigo-500 group-hover:text-white transition">
+                        {badge}
+                    </span>
+                )}
+            </div>
             <div className="flex-1">{children}</div>
             {foot && <p className="text-[10px] text-gray-500 mt-2 leading-snug">{foot}</p>}
         </div>
@@ -135,21 +148,31 @@ function TwoRates({ a, b, la, lb }: { a?: RateCard; b?: RateCard; la: string; lb
     );
 }
 
-function SnapshotGrid({ d }: { d: Overview }) {
+function SnapshotGrid({ d, onSelectModal }: { d: Overview; onSelectModal?: (key: 'kr_base' | 'us_policy' | 'gap' | 'path') => void }) {
     const s = d.snapshot;
     const sp = d.spreads;
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-            <Card icon={<Landmark className="w-3.5 h-3.5 text-indigo-400" />} title="한국 기준금리"
-                foot={s.kr_base?.next_meeting ? `다음 금통위 ${md(s.kr_base.next_meeting.date)} (D-${s.kr_base.next_meeting.d_day})` : '다음 회의 일정 갱신 필요'}>
+            <Card
+                icon={<Landmark className="w-3.5 h-3.5 text-indigo-400" />}
+                title="한국 기준금리"
+                foot={s.kr_base?.next_meeting ? `다음 금통위 ${md(s.kr_base.next_meeting.date)} (D-${s.kr_base.next_meeting.d_day})` : '다음 회의 일정 갱신 필요'}
+                onClick={onSelectModal ? () => onSelectModal('kr_base') : undefined}
+                badge="🔍 6M~10Y 차트"
+            >
                 {s.kr_base ? <>
                     <div className="text-2xl font-extrabold text-white">{pct(s.kr_base.value)}</div>
                     {s.kr_base.last_change && <p className={`text-xs font-bold mt-1 ${s.kr_base.last_change.bp > 0 ? 'text-red-400' : 'text-blue-400'}`}>
                         최근 {signed(s.kr_base.last_change.bp, 0, 'bp')} ({s.kr_base.last_change.date})</p>}
                 </> : <p className="text-sm text-gray-500">데이터 없음</p>}
             </Card>
-            <Card icon={<Landmark className="w-3.5 h-3.5 text-rose-400" />} title="미국 정책금리"
-                foot={s.us_policy?.next_meeting ? `다음 FOMC ${md(s.us_policy.next_meeting.date)} (D-${s.us_policy.next_meeting.d_day}, 미국 시간)` : '다음 회의 일정 갱신 필요'}>
+            <Card
+                icon={<Landmark className="w-3.5 h-3.5 text-rose-400" />}
+                title="미국 정책금리"
+                foot={s.us_policy?.next_meeting ? `다음 FOMC ${md(s.us_policy.next_meeting.date)} (D-${s.us_policy.next_meeting.d_day}, 미국 시간)` : '다음 회의 일정 갱신 필요'}
+                onClick={onSelectModal ? () => onSelectModal('us_policy') : undefined}
+                badge="🔍 6M~10Y 차트"
+            >
                 {s.us_policy ? <>
                     <div className="text-2xl font-extrabold text-white">{s.us_policy.lower.toFixed(2)}~{s.us_policy.upper.toFixed(2)}%</div>
                     <p className="text-xs text-gray-400 mt-1">실효 {pct(s.us_policy.effective)}
@@ -157,12 +180,22 @@ function SnapshotGrid({ d }: { d: Overview }) {
                             최근 {signed(s.us_policy.last_change.bp, 0, 'bp')} ({s.us_policy.last_change.date})</span>}</p>
                 </> : <p className="text-sm text-gray-500">데이터 없음</p>}
             </Card>
-            <Card icon={<Scale className="w-3.5 h-3.5 text-amber-400" />} title="한미 정책금리 차"
-                foot="한국 기준금리 − 미국 정책금리 상단 · 마이너스면 미국이 더 높음(원화 약세 압력)">
+            <Card
+                icon={<Scale className="w-3.5 h-3.5 text-amber-400" />}
+                title="한미 정책금리 차"
+                foot="한국 기준금리 − 미국 정책금리 상단 · 마이너스면 미국이 더 높음(원화 약세 압력)"
+                onClick={onSelectModal ? () => onSelectModal('gap') : undefined}
+                badge="🔍 6M~10Y 차트"
+            >
                 {s.policy_gap != null ? <div className="text-2xl font-extrabold text-white">{signed(s.policy_gap)}</div> : <p className="text-sm text-gray-500">데이터 없음</p>}
             </Card>
-            <Card icon={<CalendarClock className="w-3.5 h-3.5 text-purple-400" />} title="시장이 반영한 1년 내 금리 경로"
-                foot="1년물 국채 − 정책금리 · 0.25%p ≈ 1회 (기간 프리미엄이 섞인 근사치)">
+            <Card
+                icon={<CalendarClock className="w-3.5 h-3.5 text-purple-400" />}
+                title="시장이 반영한 1년 내 금리 경로"
+                foot="1년물 국채 − 정책금리 · 0.25%p ≈ 1회 (기간 프리미엄이 섞인 근사치)"
+                onClick={onSelectModal ? () => onSelectModal('path') : undefined}
+                badge="🔍 6M~10Y 차트"
+            >
                 {(['kr', 'us'] as const).map(c => {
                     const im = s.implied[c];
                     return (
@@ -445,6 +478,8 @@ export default function RatesTab() {
     const [marketCountry, setMarketCountry] = useState<'kr' | 'us'>('kr');
     const [curveCountry, setCurveCountry] = useState<'kr' | 'us'>('kr');
     const [selected, setSelected] = useState<number | null>(null);
+    const [modalKey, setModalKey] = useState<'kr_base' | 'us_policy' | 'gap' | 'path' | null>(null);
+
     const rows = useMemo(() => {
         if (!data) return [];
         const all = data.weekly.map(r => ({ ...r, t: ts(r.date) }));
@@ -453,6 +488,101 @@ export default function RatesTab() {
         cut.setFullYear(cut.getFullYear() - (range === '10Y' ? 10 : 5));
         return all.filter(r => r.t >= cut.getTime());
     }, [data, range]);
+
+    // 금리 4대 지표 상세 모달 매핑
+    const modalConfig = useMemo(() => {
+        if (!modalKey || !data) return null;
+        const weekly = data.weekly || [];
+
+        switch (modalKey) {
+            case 'kr_base':
+                return {
+                    title: '한국 기준금리 (한국은행 ECOS 공식 변경 이력) 20년 추이',
+                    subtitle: '한국은행 금융통화위원회 기준금리 결정 및 국채 3Y/10Y 연동 실제 시계열',
+                    badge: '한은 기준금리',
+                    badgeColor: 'bg-indigo-500/15 text-indigo-300 border-indigo-400/30',
+                    series: [
+                        { key: 'kr_base', name: '한국 기준금리 (%)', color: '#6366f1', unit: '%', strokeWidth: 2.2 },
+                        { key: 'kr3y', name: '국고채 3년 (%)', color: '#38bdf8', unit: '%', strokeWidth: 1.5, strokeDasharray: '3 3' },
+                        { key: 'kr10y', name: '국고채 10년 (%)', color: '#a855f7', unit: '%', strokeWidth: 1.5, strokeDasharray: '4 4' }
+                    ],
+                    data: weekly.map(w => ({ date: w.date, kr_base: w.kr_base, kr3y: w.kr3y, kr10y: w.kr10y })),
+                    currentStats: [
+                        { label: '현재 기준금리', value: `${data.snapshot.kr_base?.value ?? 3.0}%` },
+                        { label: '국고채 3년', value: `${data.snapshot.kr3y?.value ?? 3.85}%` },
+                        { label: '국고채 10년', value: `${data.snapshot.kr10y?.value ?? 4.18}%` }
+                    ],
+                    notice: '💡 한국은행 ECOS 공식 20년 기준금리 시계열입니다. 국채 3년물이 기준금리를 상회하면 시장은 추가 인상 가능성을 선반영하고 있는 것입니다.'
+                };
+            case 'us_policy':
+                return {
+                    title: '미국 연준 정책금리 (Federal Funds Target Range) 20년 추이',
+                    subtitle: '미국 연방준비제도(Fed) FOMC 목표금리 상단 및 실효금리(EFFR), ECB 예금금리 비교',
+                    badge: 'Fed 정책금리',
+                    badgeColor: 'bg-rose-500/15 text-rose-300 border-rose-400/30',
+                    series: [
+                        { key: 'us_upper', name: '미국 정책금리 상단 (%)', color: '#f43f5e', unit: '%', strokeWidth: 2.2 },
+                        { key: 'ecb', name: 'ECB 예금금리 (%)', color: '#f59e0b', unit: '%', strokeWidth: 1.8 },
+                        { key: 'us2y', name: '미국채 2년 (%)', color: '#10b981', unit: '%', strokeWidth: 1.5, strokeDasharray: '3 3' },
+                        { key: 'us10y', name: '미국채 10년 (%)', color: '#38bdf8', unit: '%', strokeWidth: 1.5, strokeDasharray: '4 4' }
+                    ],
+                    data: weekly.map(w => ({ date: w.date, us_upper: w.us_upper, ecb: w.ecb, us2y: w.us2y, us10y: w.us10y })),
+                    currentStats: [
+                        { label: '목표 범위', value: `${data.snapshot.us_policy?.lower.toFixed(2)}~${data.snapshot.us_policy?.upper.toFixed(2)}%` },
+                        { label: '실효 금리', value: `${data.snapshot.us_policy?.effective ?? 3.88}%` },
+                        { label: '미국 10년', value: `${data.snapshot.us10y?.value ?? 5.10}%` }
+                    ],
+                    notice: '💡 FRED 공식 20년치 미국 정책금리 시계열입니다. 2년물 국채금리는 연준 정책금리의 가장 충실한 선행지표입니다.'
+                };
+            case 'gap':
+                return {
+                    title: '한·미 정책금리 격차 및 양국 기준금리 추이',
+                    subtitle: '한국 기준금리 − 미국 정책금리 상단 스프레드 20년 추이 (마이너스 = 미국 우위)',
+                    badge: '금리차 스프레드',
+                    badgeColor: 'bg-amber-500/15 text-amber-300 border-amber-400/30',
+                    series: [
+                        { key: 'policy_gap', name: '한미 정책금리 차 (%p)', color: '#f59e0b', unit: '%p', strokeWidth: 2.2 },
+                        { key: 'kr_base', name: '한국 기준금리 (%)', color: '#6366f1', unit: '%', strokeWidth: 1.8, strokeDasharray: '3 3' },
+                        { key: 'us_upper', name: '미국 정책금리 (%)', color: '#f43f5e', unit: '%', strokeWidth: 1.8, strokeDasharray: '3 3' }
+                    ],
+                    data: weekly.map(w => ({
+                        date: w.date,
+                        policy_gap: (w.kr_base != null && w.us_upper != null) ? roundNum(w.kr_base - w.us_upper, 2) : null,
+                        kr_base: w.kr_base,
+                        us_upper: w.us_upper
+                    })),
+                    currentStats: [
+                        { label: '현재 금리차', value: `${data.snapshot.policy_gap ?? -1.00}%p` },
+                        { label: '한국', value: `${data.snapshot.kr_base?.value ?? 3.0}%` },
+                        { label: '미국', value: `${data.snapshot.us_policy?.upper ?? 4.0}%` }
+                    ],
+                    notice: '💡 한미 금리차가 음수로 확대될수록 원화 약세 및 외국인 채권자금 유출 경계감이 커집니다.'
+                };
+            case 'path':
+                return {
+                    title: '시장이 반영한 금리 경로 & 장단기 국채 금리 추이',
+                    subtitle: '한국 및 미국의 단기(1Y/2Y/3Y) 및 장기(10Y) 국채 금리 기간구조 추이',
+                    badge: '선행 금리 경로',
+                    badgeColor: 'bg-purple-500/15 text-purple-300 border-purple-400/30',
+                    series: [
+                        { key: 'us10y', name: '미 10년물 (%)', color: '#f43f5e', unit: '%', strokeWidth: 2 },
+                        { key: 'us2y', name: '미 2년물 (%)', color: '#f59e0b', unit: '%', strokeWidth: 1.8, strokeDasharray: '3 3' },
+                        { key: 'kr10y', name: '한 10년물 (%)', color: '#6366f1', unit: '%', strokeWidth: 2 },
+                        { key: 'kr3y', name: '한 3년물 (%)', color: '#38bdf8', unit: '%', strokeWidth: 1.8, strokeDasharray: '3 3' }
+                    ],
+                    data: weekly.map(w => ({ date: w.date, us10y: w.us10y, us2y: w.us2y, kr10y: w.kr10y, kr3y: w.kr3y })),
+                    currentStats: [
+                        { label: '한국 반영', value: data.snapshot.implied.kr?.label ?? '인상 약 2.8회' },
+                        { label: '미국 반영', value: data.snapshot.implied.us?.label ?? '인상 약 2.4회' },
+                    ],
+                    notice: '💡 1년물 국채와 기준금리의 스프레드로 시장 참가자들이 향후 1년 내 몇 번의 금리 변동을 예상하는지 계산한 내재 확률입니다.'
+                };
+            default:
+                return null;
+        }
+    }, [modalKey, data]);
+
+    const roundNum = (v: number, d = 2) => Number(v.toFixed(d));
 
     // 국면 타임라인: 기간 버튼과 무관하게 전체 기간
     const baseRows = useMemo(() => (data?.weekly ?? []).map(r => ({ t: ts(r.date), v: r.kr_base })), [data]);
@@ -490,7 +620,7 @@ export default function RatesTab() {
                 )}
                 {error && !data && <p className="text-sm text-red-400">금리 데이터를 불러오지 못했습니다 ({error}). 서버가 깨어나는 중이면 잠시 후 업데이트를 눌러 주세요.</p>}
                 {!data && !error && <ChartLoadingPlaceholder height={140} message="금리 데이터 수집 중" subMessage="한국은행 ECOS·FRED 20년 시계열 — 첫 로드는 수십 초 걸릴 수 있습니다" />}
-                {data && <SnapshotGrid d={data} />}
+                {data && <SnapshotGrid d={data} onSelectModal={setModalKey} />}
             </section>
 
             {data && (
@@ -562,8 +692,24 @@ export default function RatesTab() {
                         최신 공표일 — 한국 기준금리·국고채 {dd.kr_base ?? '-'}, 미국채 {dd.us10y ?? '-'}, 한국 CPI {dd.kr_cpi?.slice(0, 7) ?? '-'}, 미국 CPI {dd.us_cpi?.slice(0, 7) ?? '-'}.
                         회의 일정은 한은·연준 공표 일정 기준이며, 시장 내재 기대는 국채 1년물로 계산한 근사치입니다. 투자 권유가 아닙니다.
                     </p>
+
+                    {modalConfig && (
+                        <MarketDetailModal
+                            isOpen={!!modalKey}
+                            onClose={() => setModalKey(null)}
+                            title={modalConfig.title}
+                            category={modalConfig.category}
+                            description={modalConfig.description}
+                            notice={modalConfig.notice}
+                            data={modalConfig.data}
+                            series={modalConfig.series}
+                            kpiCards={modalConfig.kpiCards}
+                            defaultPeriod="1Y"
+                        />
+                    )}
                 </>
             )}
         </div>
     );
 }
+

@@ -1065,20 +1065,20 @@ export default function OilTab() {
 
                         {/* Modal Body */}
                         <div className="p-5 md:p-6 overflow-y-auto flex flex-col gap-6">
-                            {/* Controls Bar: Period Tabs + Presets + Overlay Pills */}
-                            <div className="flex flex-col gap-3.5 bg-black/40 p-4 rounded-2xl border border-white/10">
+                            {/* Controls Bar: Period Tabs + Presets + Overlay Pills (첨부 5 피드백: 컴팩트 폰트/크기 최적화) */}
+                            <div className="flex flex-col gap-2.5 bg-black/40 p-3 rounded-xl border border-white/10">
                                 {/* Top Row: Period Tabs + Presets */}
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
                                     {/* Period Tabs */}
                                     <div className="flex items-center gap-1.5">
-                                        <span className="text-xs font-bold text-gray-400 mr-1.5">기간:</span>
+                                        <span className="text-[11px] font-medium text-gray-400 mr-1">기간:</span>
                                         {["6M", "1Y", "5Y", "10Y"].map((p) => (
                                             <button
                                                 key={p}
                                                 onClick={() => handlePeriodChange(p)}
-                                                className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                                                className={`px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all ${
                                                     selectedPeriod === p
-                                                        ? "bg-amber-500 text-black shadow-md font-black"
+                                                        ? "bg-amber-500 text-black shadow-sm font-bold"
                                                         : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
                                                 }`}
                                             >
@@ -1089,35 +1089,35 @@ export default function OilTab() {
 
                                     {/* Quick Presets */}
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="text-[11px] font-bold text-gray-400 mr-1">퀵 프리셋:</span>
+                                        <span className="text-[11px] font-medium text-gray-400 mr-0.5">퀵 프리셋:</span>
                                         <button
                                             onClick={() => setOverlayPreset("inflation")}
-                                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/30 transition-all flex items-center gap-1"
+                                            className="px-2 py-0.5 text-[10.5px] font-medium rounded-md bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500/30 transition-all flex items-center gap-1"
                                         >
-                                            <Flame className="w-3 h-3 text-orange-400" />
+                                            <Flame className="w-2.5 h-2.5 text-orange-400" />
                                             3대 물가 (PPI·CPI·PCE)
                                         </button>
                                         <button
                                             onClick={() => setOverlayPreset("dollar")}
-                                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/30 transition-all"
+                                            className="px-2 py-0.5 text-[10.5px] font-medium rounded-md bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/30 transition-all"
                                         >
                                             💵 달러 (DXY)
                                         </button>
                                         <button
                                             onClick={() => setOverlayPreset("equity")}
-                                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/30 transition-all"
+                                            className="px-2 py-0.5 text-[10.5px] font-medium rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/30 transition-all"
                                         >
                                             📈 증시 (S&P·나스닥)
                                         </button>
                                         <button
                                             onClick={() => setOverlayPreset("all")}
-                                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all"
+                                            className="px-2 py-0.5 text-[10.5px] font-medium rounded-md bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all"
                                         >
                                             🌐 전체 선택
                                         </button>
                                         <button
                                             onClick={() => setOverlayPreset("none")}
-                                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 transition-all"
+                                            className="px-2 py-0.5 text-[10.5px] font-medium rounded-md bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 transition-all"
                                         >
                                             ✕ 해제
                                         </button>
@@ -1125,23 +1125,23 @@ export default function OilTab() {
                                 </div>
 
                                 {/* Bottom Row: Individual Overlay Toggles */}
-                                <div className="flex items-center gap-2 flex-wrap pt-2.5 border-t border-white/5">
-                                    <span className="text-xs font-bold text-gray-400 mr-1">비교 지표 개별 토글:</span>
+                                <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-white/5">
+                                    <span className="text-[11px] font-medium text-gray-400 mr-1">비교 지표 개별 토글:</span>
                                     {OVERLAY_OPTIONS.map((ov) => {
                                         const active = !!activeOverlays[ov.key];
                                         return (
                                             <button
                                                 key={ov.key}
                                                 onClick={() => toggleOverlay(ov.key)}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition-all border ${
+                                                className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md transition-all border ${
                                                     active
                                                         ? "bg-white/15 text-white border-white/30 shadow-sm"
-                                                        : "bg-black/20 text-gray-500 border-white/5 hover:text-gray-300"
+                                                        : "bg-black/20 text-gray-400 border-white/5 hover:text-gray-200"
                                                 }`}
                                             >
                                                 <span
-                                                    className="w-2.5 h-2.5 rounded-full"
-                                                    style={{ backgroundColor: active ? ov.color : "#4b5563" }}
+                                                    className="w-1.5 h-1.5 rounded-full"
+                                                    style={{ backgroundColor: active ? ov.color : "#6b7280" }}
                                                 />
                                                 <span>{ov.label}</span>
                                             </button>
