@@ -17,3 +17,6 @@ backend/scratch/
 .claude/
 .rtk/
 dummy_key
+*.db
+*.db-*
+*.db-journal
