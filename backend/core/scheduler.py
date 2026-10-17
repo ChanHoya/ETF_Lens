@@ -764,6 +764,16 @@ def setup_scheduler():
         except Exception as e:
             print(f"[scheduler] _job_semi_stats_sync failed: {e}")
 
+    async def _job_macro_smart_alerts():
+        """유가 급변(±3.5%) 및 VIX 스파이크(20+) 모니터링 & 스마트 경보 (S15-1)."""
+        try:
+            from core.macro_alert_engine import check_macro_smart_alerts
+            res = await check_macro_smart_alerts()
+            if res.get("alert_sent"):
+                print(f"[scheduler] Macro smart alert sent: {res.get('reasons')}")
+        except Exception as e:
+            print(f"[scheduler] _job_macro_smart_alerts failed: {e}")
+
     async def _job_keep_alive():
         """Render 유휴 스핀다운 방지: 자기 자신의 /health 를 호출해 idle 타이머를 리셋한다.
         RENDER_EXTERNAL_URL(렌더가 자동 주입)이 없으면 로컬/비-Render 환경이므로 no-op."""
@@ -829,6 +839,9 @@ def setup_scheduler():
     # 10분마다 self-ping → Render idle(15분) 스핀다운 방지. 외부 서버/서비스 불필요.
     # RENDER_EXTERNAL_URL 미설정(로컬) 시 잡은 실행돼도 즉시 no-op.
     scheduler.add_job(_job_keep_alive, "interval", minutes=10, id="render_keep_alive")
+
+    # 월-금 09:30 및 16:30 - 유가 급변(±3.5%) 및 VIX 스파이크 스마트 레이더 모니터링 (S15-1)
+    scheduler.add_job(_job_macro_smart_alerts, "cron", day_of_week="mon-fri", hour="9,16", minute=30, id="macro_smart_alerts_check")
 
     scheduler.start()
     print("DB and Email Scheduler started.")

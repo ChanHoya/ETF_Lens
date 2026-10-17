@@ -122,7 +122,9 @@ async def lifespan(app: FastAPI):
                         ("channel_slack", "INTEGER DEFAULT 0"),
                         ("alert_disparity", "INTEGER DEFAULT 1"),
                         ("disparity_threshold", "REAL DEFAULT 2.0"),
-                        ("disparity_target_scope", "TEXT DEFAULT 'PORTFOLIO'")
+                        ("disparity_target_scope", "TEXT DEFAULT 'PORTFOLIO'"),
+                        ("alert_oil_shock", "INTEGER DEFAULT 1"),
+                        ("alert_vix_spike", "INTEGER DEFAULT 1")
                     ]
                     for col_name, col_type in cols_sqlite:
                         try:
@@ -138,7 +140,9 @@ async def lifespan(app: FastAPI):
                         ("channel_slack", "INTEGER DEFAULT 0"),
                         ("alert_disparity", "INTEGER DEFAULT 1"),
                         ("disparity_threshold", "DOUBLE PRECISION DEFAULT 2.0"),
-                        ("disparity_target_scope", "VARCHAR DEFAULT 'PORTFOLIO'")
+                        ("disparity_target_scope", "VARCHAR DEFAULT 'PORTFOLIO'"),
+                        ("alert_oil_shock", "INTEGER DEFAULT 1"),
+                        ("alert_vix_spike", "INTEGER DEFAULT 1")
                     ]
                     for col_name, col_type in cols_pg:
                         await conn.execute(text(f"ALTER TABLE notification_settings ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))

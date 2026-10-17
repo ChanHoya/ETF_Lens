@@ -3,28 +3,26 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: Sprint 14 완료 — 1) [시장동향] 신규 '유가' 서브탭 & 5대 모듈(3대 벤치마크 시세, Brent-WTI 스프레드, EIA 재고·수급, 싱가포르 정제마진, 3대 지정학 초크포인트, 실전 ETF 플레이북) 구축 완료, 2) '종합' 서브탭 명칭 개편 및 글로벌 5대 거시 핵심 지표(유가, VIX, 물가 CPI, 금리차, DXY) 통합 패널 탑재, 3) 미국 중간선거 분석 고도화(3대 법칙 대체, 나스닥 계절성 & 1950~2026 연도별 사이클 파스텔 대선/중간선거 밴드, AI 투자성향 인터뷰 팝업 및 실시간 바 반응형 연동), 4) My 메뉴 KIS 실시간 포트폴리오 중간선거 대응 리밸런싱 제안 신설, 5) 백엔드 237개 전 테스트 100% Pass 및 Next.js 11개 페이지 최적화 빌드 완료
+✅ Current: Sprint 15 완료 — 1) [스마트 경보] 유가 급변(±3.5%) & VIX 스파이크(20/25+) 텔레그램 스마트 경보 및 보유자산 민감도 분석 엔진(`macro_alert_engine.py`, `NotificationSettings.tsx`) 구축 완료, 2) [스트레스 테스터] 오일쇼크 $120 폭등 & 마이너스 유가 붕괴 2대 시나리오 추가로 9대 글로벌 위기 충격 진단(`stress_tester.py`, `PortfolioStressTester.tsx`) 확장 완료, 3) [중간선거] 2026.11.03 D-Day 카운트다운 및 상원(34석)/하원(435석) 장악 정당 조합 인터랙티브 4대 시나리오 시뮬레이터(`midterm_election.py`, `MidtermElectionTab.tsx`) 구축 완료, 4) [프로덕션] 14대 스케줄러 잡 및 Render 백엔드 / Vercel 프론트엔드 실서버 동기화 점검 완료, 5) 백엔드 245개 전 테스트 100% Pass 및 Next.js 11개 페이지 최적화 빌드 완료
 ➡️ Next: 프로덕션 실서버(Vercel/Render) 실시간 모니터링 및 사용자 피드백 대응
 
-> 세션 핸드오프 (2026-10-17, Antigravity - Sprint 14):
-> - 🛢️ [S14-1: 글로벌 유가 및 에너지 시장 동향 신규 서브탭 & 퀀트 API]:
->   - `backend/api/oil_dashboard.py`: 4대 엔드포인트 구축 (`/overview`, `/fundamentals`, `/geopolitics`, `/etf-playbook`).
->   - 3대 글로벌 벤치마크 원유 시세(WTI, Brent, Dubai) 실시간 시세 및 Brent-WTI 스프레드($3.60).
->   - 원유 수급 펀더멘털: EIA 주간 원유 재고(-218만 bbl), 미국 일일 생산량(1,352만 bpd), 베이커휴즈 오일 리그 수(482기).
->   - 싱가포르 복합 정제마진($6.45/bbl, 손익분기점 $4.5 상회로 정유사 호조) 및 6개월 복합 추이 차트.
->   - 3대 해상 초크포인트(호르무즈 해협, 홍해-바브엘만데브, 러시아 우랄유) 지정학 리스크 레이더.
->   - 실전 ETF 플레이북: 고유가($85+) 수혜(XLE, USO, 조선) vs 저유가($65~$75) 수혜(대한항공, JETS, 화학, QQQ).
->   - `dashboard/src/components/OilTab.tsx`: 4대 모듈 다크 글래스모피즘 Recharts 컴포넌트 개발.
-> - 🌐 [S14-2: 시장동향 '종합' 개편 & 글로벌 5대 거시 핵심 지표 통합 모니터링]:
->   - `MainApp.tsx`: 서브탭 '종합(환율/금리/주식)'을 '종합'으로 명칭 단순화, 주식 오른쪽에 '유가' 서브탭 신설.
->   - `backend/api/macro_dashboard.py`: `macro_vital_indicators` (WTI 유가, VIX, BLS 9월 CPI, 미 10Y-2Y 금리차, DXY) 통합 제공.
->   - `MacroTab.tsx`: `VitalIndicatorsPanel` 탑재로 유가, 공포지수, 물가(인플레)를 아우르는 진정한 종합 분석 제공.
-> - 🗳️ [S14-3: 미국 중간선거 분석 고도화 & My KIS 계좌 연동]:
->   - `MidtermElectionTab.tsx`: 첨부1 대체(3대 법칙: 중간선거의 저주, 비대칭 교체 주기, 입법 교착/행정명령), 첨부2 고도화(나스닥 계절성 및 1950~2026 77개년 S&P 500 / 나스닥 사이클 Recharts 라인차트 + 파스텔 블루 대선/파스텔 레드 중간선거 밴드), 첨부3 고도화(AI 투자성향 인터뷰 팝업 모달 + 왼쪽 비중 막대 실시간 반응형 연동).
->   - `dashboard/src/components/MidtermPortfolioProposal.tsx`: My 메뉴 전용 중간선거 리밸런싱(Trim, Rotate, Shield) 제안 컴포넌트 개발 및 `MyDashboard.tsx` 연동.
-> - 🛡️ [S14-4: 전방위 무결성 검증 & 테스트]:
->   - `backend/tests/test_oil_dashboard.py` 신설 및 `test_midterm_election.py` 보강.
->   - 백엔드 pytest 237개 전체 테스트 100% Pass, Next.js 11개 페이지 최적화 빌드 100% Pass.
+> 세션 핸드오프 (2026-10-17, Antigravity - Sprint 15):
+> - 🛢️ [S15-1: 유가 급변 & VIX 스파이크 텔레그램 스마트 경보 엔진]:
+>   - `backend/core/macro_alert_engine.py`: WTI 급등락(±3.5%), VIX 20/25 돌파 및 호르무즈 해협 지정학 위험도 감지 시 멀티채널 자동 경보 발송.
+>   - 사용자 보유 자산(ManualAsset) 중 수혜 자산(에너지, 조선, 방산) vs 취약 자산(항공, 화학, 고성장주) 노출 비중 정밀 산출 및 행동 수칙 포맷팅.
+>   - `backend/api/notification_settings.py` & `db/models.py`: `alert_oil_shock`, `alert_vix_spike` DB 컬럼 및 API 스키마 확장, `/test-macro-alert` 즉시 검증 엔드포인트 신설.
+>   - `backend/core/scheduler.py`: 월-금 09:30, 16:30 일 2회 정기 점검 크론 잡(`macro_smart_alerts_check`) 가동.
+>   - `NotificationSettings.tsx`: 유가 급변 및 VIX 스파이크 개인화 알림 토글 스위치 및 [⚡ 긴급 레이더 테스트] 원클릭 발송 버튼 탑재.
+> - ⚡ [S15-2: 9대 글로벌 위기 포트폴리오 스트레스 테스터 (오일쇼크 연동)]:
+>   - `backend/core/stress_tester.py`: `oil_shock_spike`(유가 $120 폭등 및 스태그플레이션) 및 `oil_demand_crash`(2020.04 마이너스 유가 -$37 배럴 쇼크) 2대 신규 시나리오 탑재 (총 9대 시나리오 체계 완성).
+>   - `PortfolioStressTester.tsx`: '9대 글로벌 위기 충격 진단 (오일쇼크 포함)' 배지 및 9분할 그리드 뷰, 오일쇼크 선택 시 전용 경보 뱃지 및 MDD/방어점수 렌더링.
+> - 🗳️ [S15-3: 미국 중간선거 4대 시나리오 인터랙티브 판세 시뮬레이터 & D-Day]:
+>   - `backend/api/midterm_election.py`: `reverse_gridlock`(역분점정부) 4대 시나리오 확장 및 `/api/v1/midterm/simulate` 상·하원 조합 매핑 엔드포인트 신설.
+>   - `MidtermElectionTab.tsx`: 2026.11.03 기준 실시간 D-Day 카운트다운 배지(일/시간/분) 및 상원(34석: 공화 vs 민주) & 하원(435석: 민주 vs 공화) 인터랙티브 조합 토글 버튼 탑재.
+> - 🌐 [S15-4: 프로덕션 실서버(Render/Vercel) 배포 점검 & 무결성 테스트]:
+>   - `backend/api/health_monitor.py`: `/live-summary` 엔드포인트 S15 4대 파이프라인(스마트 경보, 9대 스트레스 테스터, 4대 중간선거 시뮬레이터, 유가 퀀트 대시보드) 최신 반영.
+>   - `backend/tests/test_macro_smart_alerts.py`, `test_oil_stress_tester.py`, `test_midterm_4_scenarios.py` 8종 신규 작성 및 전체 245개 테스트 100% Pass 검증.
+>   - Next.js 16.1.6 11개 페이지 최적화 빌드 100% 성공 검증.
 > - 📱 [S12-1: 모바일 UX 최적화 (사용자 3번 과제)]:
 >   - `SemiCycleDashboard.tsx`: 2D 시계 모바일 높이 축소(`h-[320px] sm:h-[380px]`), 사분면 텍스트 반응형 글자 크기 및 여백 조정, ScatterChart margin 최적화 (`top: 25, right: 15, bottom: 25, left: 15`).
 >   - `SemiChart.tsx`: Q-Cycle 스크리너 테이블 상단에 모바일 전용 `[← 좌우로 스와이프하여 상세 지표 확인 →]` 가이드 배지 및 `touch-pan-x` 스무스 터치 스크롤 적용.

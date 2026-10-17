@@ -58,12 +58,13 @@ async def test_midterm_scenarios_endpoint():
     data = res.json()
     assert "scenarios" in data
     scenarios = data["scenarios"]
-    assert len(scenarios) == 3
+    assert len(scenarios) == 4
     
     scenario_ids = [s["id"] for s in scenarios]
     assert "gridlock" in scenario_ids
     assert "red_hold" in scenario_ids
     assert "blue_wave" in scenario_ids
+    assert "reverse_gridlock" in scenario_ids
     
     gridlock = next(s for s in scenarios if s["id"] == "gridlock")
     assert gridlock["is_base"] is True

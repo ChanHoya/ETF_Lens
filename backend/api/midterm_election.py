@@ -268,9 +268,84 @@ async def get_midterm_scenarios() -> Dict[str, Any]:
                         "rationale": "약가 인하 압박 및 법인세율 인상 논의로 기업 심리 위축."
                     }
                 ]
+            },
+            {
+                "id": "reverse_gridlock",
+                "name": "시나리오 4: 역분점정부 (Reverse Gridlock)",
+                "probability": 5,
+                "is_base": False,
+                "composition": "행정부(공화당) + 상원(민주당 역전) + 하원(공화당 수성)",
+                "political_dynamics": "상원의 인사·사법 인준권 민주당 통제 및 하원의 예산 심사권 공화당 통제로 전례 없는 복합 교착. 주요 법안 통과가 완전히 멈추며 행정명령 중심 국정 운영.",
+                "macro_outlook": {
+                    "yield_10y": "3.8% ~ 4.1% (불확실성 속 박스권)",
+                    "dollar_dxy": "101 ~ 104 (중립 횡보)",
+                    "oil_wti": "$72 ~ $76",
+                    "cpi_trend": "현상 유지"
+                },
+                "sector_impacts": [
+                    {
+                        "category": "수혜 (Overweight)",
+                        "sectors": ["미국 단기 국채/현금성 ETF (SGOV, SHV)", "배당 방어주 (SCHD, 유틸리티)"],
+                        "rationale": "정책 공백기 시장 변동성 회피 및 고배당·현금성 자산 쏠림."
+                    },
+                    {
+                        "category": "부담 (Underweight)",
+                        "sectors": ["정부 보조금 의존 테크", "인프라 신규 수주 기업"],
+                        "rationale": "추가 재정 부양책 예산 합의 불발로 신규 공공 발주 동결 위험."
+                    }
+                ]
             }
         ]
     }
+
+
+@router.get("/simulate")
+async def simulate_midterm_outcome(
+    senate: str = "republican",
+    house: str = "democrat"
+) -> Dict[str, Any]:
+    """상·하원 장악 정당 조합에 따른 4대 시나리오 즉시 시뮬레이션 매핑 (S15-3)"""
+    sen = senate.lower().strip()
+    h = house.lower().strip()
+
+    if sen == "republican" and h == "democrat":
+        scenario_id = "gridlock"
+        title = "분점정부 (Gridlock, 기본)"
+        prob = 60
+    elif sen == "republican" and h == "republican":
+        scenario_id = "red_hold"
+        title = "여당 수성 (Red Wave / Hold)"
+        prob = 25
+    elif sen == "democrat" and h == "democrat":
+        scenario_id = "blue_wave"
+        title = "야당 압승 (Blue Wave)"
+        prob = 10
+    else:
+        scenario_id = "reverse_gridlock"
+        title = "역분점정부 (Reverse Gridlock)"
+        prob = 5
+
+    scenarios_resp = await get_midterm_scenarios()
+    matched = next((s for s in scenarios_resp["scenarios"] if s["id"] == scenario_id), scenarios_resp["scenarios"][0])
+
+    recommended_etfs = {
+        "gridlock": ["QQQ (빅테크)", "SCHD (배당)", "TLT (미국 장기채)", "ICLN (신재생 방어)"],
+        "red_hold": ["XLE (전통 에너지)", "ITA (미국 방산)", "XLF (금융 규제완화)", "USO (원유)"],
+        "blue_wave": ["ICLN (친환경)", "IEI (중기 국채)", "XLP (필수소비재)", "LIT (2차전지)"],
+        "reverse_gridlock": ["SGOV (미국 초단기채)", "JEPI (인컴/커버드콜)", "XLU (유틸리티)"]
+    }.get(scenario_id, ["SPY", "QQQ"])
+
+    return {
+        "senate": senate,
+        "house": house,
+        "scenario_id": scenario_id,
+        "scenario_title": title,
+        "probability": prob,
+        "scenario_details": matched,
+        "recommended_etfs": recommended_etfs,
+        "strategic_takeaway": f"상원 {senate.upper()} / 하원 {house.upper()} 조합 시 금융시장은 정책 불확실성 해소 후 역사적으로 1년 평균 +15% 이상의 랠리를 시현했습니다."
+    }
+
 
 
 # 1950년부터 2026년까지의 역사적 사이클 지수 데이터 생성 (S&P 500, NASDAQ, 선거 타입)

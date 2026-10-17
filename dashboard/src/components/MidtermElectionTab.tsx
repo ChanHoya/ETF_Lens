@@ -51,6 +51,36 @@ export default function MidtermElectionTab() {
     const [portfolioGuide, setPortfolioGuide] = useState<any>(null);
 
     const [selectedScenarioId, setSelectedScenarioId] = useState<string>("gridlock");
+    const [simSenate, setSimSenate] = useState<"republican" | "democrat">("republican");
+    const [simHouse, setSimHouse] = useState<"republican" | "democrat">("democrat");
+
+    const handleChamberChange = (sen: "republican" | "democrat", h: "republican" | "democrat") => {
+        setSimSenate(sen);
+        setSimHouse(h);
+        if (sen === "republican" && h === "democrat") setSelectedScenarioId("gridlock");
+        else if (sen === "republican" && h === "republican") setSelectedScenarioId("red_hold");
+        else if (sen === "democrat" && h === "democrat") setSelectedScenarioId("blue_wave");
+        else setSelectedScenarioId("reverse_gridlock");
+    };
+
+    const handleScenarioSelect = (id: string) => {
+        setSelectedScenarioId(id);
+        if (id === "gridlock") { setSimSenate("republican"); setSimHouse("democrat"); }
+        else if (id === "red_hold") { setSimSenate("republican"); setSimHouse("republican"); }
+        else if (id === "blue_wave") { setSimSenate("democrat"); setSimHouse("democrat"); }
+        else if (id === "reverse_gridlock") { setSimSenate("democrat"); setSimHouse("republican"); }
+    };
+
+    const countdown = useMemo(() => {
+        const target = new Date("2026-11-03T00:00:00").getTime();
+        const now = new Date().getTime();
+        const diff = Math.max(0, target - now);
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        return { days, hours, minutes };
+    }, []);
+
     const [techWeight, setTechWeight] = useState<number>(55.0);
     const [dividendWeight, setDividendWeight] = useState<number>(27.0);
     const [safeWeight, setSafeWeight] = useState<number>(18.0);
@@ -174,9 +204,9 @@ export default function MidtermElectionTab() {
                                 <Vote className="w-3.5 h-3.5" />
                                 2026 미국 중간선거 분석
                             </span>
-                            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5">
-                                <Clock className="w-3.5 h-3.5" />
-                                {overview?.d_day !== undefined ? `D-${overview.d_day} (2026-11-03)` : "2026년 11월 3일"}
+                            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5 shadow-sm">
+                                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                                D-{countdown.days}일 {countdown.hours}시간 {countdown.minutes}분 (2026.11.03)
                             </span>
                         </div>
                         <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-2">
@@ -473,7 +503,7 @@ export default function MidtermElectionTab() {
                 </div>
             </div>
 
-            {/* Section 3: 3. 3대 선거 시나리오별 금융시장 영향 매트릭스 */}
+            {/* Section 3: 3. 4대 선거 시나리오 인터랙티브 판세 시뮬레이터 & 금융시장 영향 매트릭스 */}
             <div className="w-full bg-[#121217]/70 border border-white/10 rounded-3xl p-5 md:p-7 backdrop-blur-md shadow-xl flex flex-col gap-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
                     <div className="flex items-center gap-3">
@@ -482,30 +512,111 @@ export default function MidtermElectionTab() {
                         </div>
                         <div>
                             <h3 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
-                                3. 3대 선거 시나리오별 금융시장 영향 매트릭스
+                                3. 4대 선거 시나리오 인터랙티브 판세 시뮬레이터
+                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/30">
+                                    상·하원 조합 실시간 연동
+                                </span>
                             </h3>
                             <p className="text-xs text-gray-400">
-                                의회 구성 시나리오에 따른 거시경제 전망 및 섹터별 수혜/부담 상세 분석
+                                상원(34석) 및 하원(435석) 장악 정당 조합을 직접 클릭하여 의회 권력 지형별 수혜/부담 섹터를 시뮬레이션합니다.
                             </p>
                         </div>
                     </div>
 
                     {/* Scenario Switcher Tabs */}
-                    <div className="flex items-center bg-black/40 border border-white/10 rounded-xl p-1 gap-1">
+                    <div className="flex flex-wrap items-center bg-black/40 border border-white/10 rounded-xl p-1 gap-1">
                         {scenariosData?.scenarios?.map((sc: any) => (
                             <button
                                 key={sc.id}
-                                onClick={() => setSelectedScenarioId(sc.id)}
+                                onClick={() => handleScenarioSelect(sc.id)}
                                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                                     selectedScenarioId === sc.id
-                                        ? "bg-indigo-600 text-white shadow-lg"
+                                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40"
                                         : "text-gray-400 hover:text-white"
                                 }`}
                             >
-                                {sc.id === "gridlock" ? "분점정부 (Gridlock, 65%)" :
-                                 sc.id === "red_hold" ? "공화 수성 (25%)" : "민주 압승 (10%)"}
+                                {sc.id === "gridlock" ? "분점정부 (60%)" :
+                                 sc.id === "red_hold" ? "여당 수성 (25%)" :
+                                 sc.id === "blue_wave" ? "야당 압승 (10%)" : "역분점정부 (5%)"}
                             </button>
                         ))}
+                    </div>
+                </div>
+
+                {/* 인터랙티브 상원 & 하원 장악 시뮬레이터 컨트롤러 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/30 p-4 rounded-2xl border border-white/5">
+                    {/* 상원 컨트롤러 */}
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-gray-300 flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
+                                상원 (Senate, 34석 선출)
+                            </span>
+                            <span className="text-[11px] text-gray-500 font-mono">인사·조약 인준권 보유</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => handleChamberChange("republican", simHouse)}
+                                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                                    simSenate === "republican"
+                                        ? "bg-rose-500/20 border-rose-500/60 text-rose-200 shadow-md shadow-rose-950/40"
+                                        : "bg-black/40 border-white/5 text-gray-400 hover:text-gray-200"
+                                }`}
+                            >
+                                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                                🔴 공화당 수성 (우세)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleChamberChange("democrat", simHouse)}
+                                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                                    simSenate === "democrat"
+                                        ? "bg-blue-500/20 border-blue-500/60 text-blue-200 shadow-md shadow-blue-950/40"
+                                        : "bg-black/40 border-white/5 text-gray-400 hover:text-gray-200"
+                                }`}
+                            >
+                                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                                🔵 민주당 역전
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* 하원 컨트롤러 */}
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-gray-300 flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+                                하원 (House, 435석 전원 선출)
+                            </span>
+                            <span className="text-[11px] text-gray-500 font-mono">예산안 발의권 보유</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => handleChamberChange(simSenate, "democrat")}
+                                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                                    simHouse === "democrat"
+                                        ? "bg-blue-500/20 border-blue-500/60 text-blue-200 shadow-md shadow-blue-950/40"
+                                        : "bg-black/40 border-white/5 text-gray-400 hover:text-gray-200"
+                                }`}
+                            >
+                                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                                🔵 민주당 탈환 (우세)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleChamberChange(simSenate, "republican")}
+                                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                                    simHouse === "republican"
+                                        ? "bg-rose-500/20 border-rose-500/60 text-rose-200 shadow-md shadow-rose-950/40"
+                                        : "bg-black/40 border-white/5 text-gray-400 hover:text-gray-200"
+                                }`}
+                            >
+                                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                                🔴 공화당 수성
+                            </button>
+                        </div>
                     </div>
                 </div>
 
