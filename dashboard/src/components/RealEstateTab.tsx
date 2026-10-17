@@ -33,7 +33,8 @@ import {
   CartesianGrid,
   Legend
 } from 'recharts';
-import { API_BASE } from '@/lib/apiConfig';
+import { getApiBase } from '@/lib/apiConfig';
+
 
 
 // 부동산 거래량 및 매물 추이 데이터 (2024년 1월 ~ 2026년 10월 최신, 출처: 서울부동산정보광장·아실)
@@ -90,7 +91,7 @@ export default function RealEstateTab() {
   // 데이터 로드 함수
   const loadRealEstateData = async (period: string) => {
     try {
-      const baseUrl = API_BASE;
+      const baseUrl = getApiBase();
       const [trendsRes, summaryRes, statusRes] = await Promise.all([
         fetch(`${baseUrl}/api/v1/real-estate/market-trends?period=${period}`).catch(() => null),
         fetch(`${baseUrl}/api/v1/real-estate/summary`).catch(() => null),
@@ -136,7 +137,7 @@ export default function RealEstateTab() {
   const handleManualSync = async () => {
     setIsSyncing(true);
     try {
-      const baseUrl = API_BASE;
+      const baseUrl = getApiBase();
       await fetch(`${baseUrl}/api/v1/real-estate/sync?force=true`, { method: 'POST' });
       await loadRealEstateData(chartPeriod);
     } catch (e) {
