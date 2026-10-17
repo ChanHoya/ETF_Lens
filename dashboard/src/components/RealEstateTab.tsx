@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Building2,
   TrendingDown,
@@ -79,12 +79,67 @@ export default function RealEstateTab() {
   // 차트 시계열 기간 선택 (1Y: 최근1년, 2Y: 최근2년, ALL: 2024~2026 전체)
   const [chartPeriod, setChartPeriod] = useState<'1Y' | '2Y' | 'ALL'>('ALL');
 
-  // 선택된 기간에 따른 데이터 필터링
+  // 백엔드 라이브 데이터 및 동기화 상태
+  const [liveTrendData, setLiveTrendData] = useState<any[] | null>(null);
+  const [summaryData, setSummaryData] = useState<any | null>(null);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [apiSource, setApiSource] = useState<string>("FALLBACK_CACHE");
+
+  // 데이터 로드 함수
+  const loadRealEstateData = async (period: string) => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const [trendsRes, summaryRes] = await Promise.all([
+        fetch(`${baseUrl}/api/v1/real-estate/market-trends?period=${period}`).catch(() => null),
+        fetch(`${baseUrl}/api/v1/real-estate/summary`).catch(() => null)
+      ]);
+
+      if (trendsRes && trendsRes.ok) {
+        const trendsJson = await trendsRes.json();
+        if (trendsJson && Array.isArray(trendsJson.data)) {
+          setLiveTrendData(trendsJson.data);
+          setApiSource(trendsJson.data_source || "FALLBACK_CACHE");
+        }
+      }
+
+      if (summaryRes && summaryRes.ok) {
+        const sumJson = await summaryRes.json();
+        if (sumJson) {
+          setSummaryData(sumJson);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch live real estate data, using client fallback", e);
+    }
+  };
+
+  useEffect(() => {
+    loadRealEstateData(chartPeriod);
+  }, [chartPeriod]);
+
+  // 수동 동기화 트리거
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      await fetch(`${baseUrl}/api/v1/real-estate/sync?force=true`, { method: 'POST' });
+      await loadRealEstateData(chartPeriod);
+    } catch (e) {
+      console.warn("Sync failed", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // 선택된 기간에 따른 데이터 필터링 (라이브 데이터 우선, 없으면 로컬 데이터셋 사용)
   const filteredTrendData = useMemo(() => {
+    if (liveTrendData && liveTrendData.length > 0) {
+      return liveTrendData;
+    }
     if (chartPeriod === '1Y') return MARKET_TREND_DATA_FULL.slice(-12);
     if (chartPeriod === '2Y') return MARKET_TREND_DATA_FULL.slice(-24);
     return MARKET_TREND_DATA_FULL;
-  }, [chartPeriod]);
+  }, [chartPeriod, liveTrendData]);
 
   // 부동산 vs ETF 시뮬레이터 상태
   const [propertyPrice, setPropertyPrice] = useState<number>(12); // 억원
@@ -137,7 +192,7 @@ export default function RealEstateTab() {
         <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
                 <Building2 className="w-3.5 h-3.5" />
                 부동산 인텔리전스 레이더
@@ -145,6 +200,14 @@ export default function RealEstateTab() {
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-300 border border-red-500/30">
                 <AlertTriangle className="w-3 h-3" />
                 거래절벽 심화 경보 (2026.10 최신)
+              </span>
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                apiSource === "SEOUL_OPEN_DATA_LIVE"
+                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                  : "bg-blue-500/20 text-blue-300 border-blue-500/30"
+              }`}>
+                <Activity className="w-3 h-3" />
+                {apiSource === "SEOUL_OPEN_DATA_LIVE" ? "서울 오픈데이터 라이브 연동" : "검증된 캐시 연동 (sample 대기)"}
               </span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
@@ -156,6 +219,16 @@ export default function RealEstateTab() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs transition-all duration-200 shadow-sm disabled:opacity-50 cursor-pointer"
+              title="서울시 오픈데이터 및 실거래 통계 새로고침"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-blue-400" : ""}`} />
+              <span>{isSyncing ? "동기화 중..." : "실데이터 갱신"}</span>
+            </button>
             <a
               href="https://www.youtube.com/watch?v=3jlTPFa706E"
               target="_blank"
@@ -175,57 +248,81 @@ export default function RealEstateTab() {
         <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-blue-500/40 transition-all">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>서울 아파트 매물 적체</span>
-            <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400 font-semibold">장기 고착화</span>
+            <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400 font-semibold">
+              {summaryData?.active_listings?.status || "장기 고착화"}
+            </span>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">83,400여 건</span>
+            <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              {summaryData?.active_listings?.value ? `${summaryData.active_listings.value}` : "83,400여 건"}
+            </span>
             <span className="text-xs font-semibold text-red-500 flex items-center">
               <TrendingUp className="w-3.5 h-3.5 inline mr-0.5" /> 2026.10 최신
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">피크(9만건) 대비 소폭 해소되었으나 평년(4~5만건) 대비 2배 적체</p>
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+            {summaryData?.active_listings?.desc || "피크(9만건) 대비 소폭 해소되었으나 평년(4~5만건) 대비 2배 적체"}
+          </p>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-blue-500/40 transition-all">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>서울 월 실거래량</span>
-            <span className="text-[11px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 font-semibold">제한적 거래</span>
+            <span className="text-[11px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 font-semibold">
+              {summaryData?.monthly_trade_volume?.status || "제한적 거래"}
+            </span>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">3,800여 건</span>
+            <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              {summaryData?.monthly_trade_volume?.value || "3,800여 건"}
+            </span>
             <span className="text-xs font-semibold text-blue-500 flex items-center">
               <TrendingDown className="w-3.5 h-3.5 inline mr-0.5" /> -57.3% (24.07 대비)
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">2024년 7월 피크(8.9천건) 대비 절반 수준에 머문 거래 정체</p>
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+            {summaryData?.monthly_trade_volume?.desc || "2024년 7월 피크(8.9천건) 대비 절반 수준에 머문 거래 정체"}
+          </p>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-blue-500/40 transition-all">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>시중 주담대 실질금리</span>
-            <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-medium">가산금리 방어</span>
+            <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-medium">
+              {summaryData?.mortgage_rate?.status || "가산금리 방어"}
+            </span>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">3.85 ~ 4.40%</span>
+            <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              {summaryData?.mortgage_rate?.value ? `${summaryData.mortgage_rate.value}` : "3.85 ~ 4.40%"}
+            </span>
             <span className="text-xs font-semibold text-emerald-500 flex items-center">
               기준금리 인하 반영
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">기준금리 인하에도 은행 관리 강화로 실질 대출금리 4% 안팎 유지</p>
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+            {summaryData?.mortgage_rate?.desc || "기준금리 인하에도 은행 관리 강화로 실질 대출금리 4% 안팎 유지"}
+          </p>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-blue-500/40 transition-all">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>서울 아파트 PIR</span>
-            <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400 font-semibold">극단적 고평가</span>
+            <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400 font-semibold">
+              {summaryData?.pir_ratio?.status || "극단적 고평가"}
+            </span>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">25.2 배</span>
+            <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              {summaryData?.pir_ratio?.value ? `${summaryData.pir_ratio.value}` : "25.2 배"}
+            </span>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
               OECD 평균(7~10배) 대비 2.5배
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">중위소득 가구가 소득 전액을 25년 모아야 서울 아파트 1채 구입</p>
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+            {summaryData?.pir_ratio?.desc || "중위소득 가구가 소득 전액을 25년 모아야 서울 아파트 1채 구입"}
+          </p>
         </div>
       </div>
 

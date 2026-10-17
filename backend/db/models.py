@@ -5,6 +5,7 @@ from sqlalchemy import (
     Text,
     DateTime,
     Float,
+    Boolean,
     ForeignKey,
     UniqueConstraint,
 )
@@ -432,6 +433,26 @@ class SectorLeaderQuant(Base):
     div_yield = Column(Float, nullable=True)
     stock_6m_ret = Column(Float, nullable=True)
     kospi_6m_ret = Column(Float, nullable=True)
+class RealEstateMonthlyStats(Base):
+    """서울 아파트 월별 실거래량, 매물 적체량, 매매평균가, 금리, PIR 종합 통계 캐시"""
+    __tablename__ = "real_estate_monthly_stats"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    year_month = Column(String(7), unique=True, index=True)      # 'YYYY.MM' (예: '2026.10')
+    region_code = Column(String(5), default="11000", index=True) # 서울특별시 (11000)
+    region_name = Column(String(50), default="서울")
+
+    trade_volume = Column(Float, nullable=False)                 # 월간 실거래 계약 건수 (천 건 단위, e.g. 3.8)
+    trade_count = Column(Integer, nullable=True)                 # 실제 건수 (e.g. 3800)
+    active_listings = Column(Float, nullable=True)               # 아파트 매물 적체량 (천 건 단위, e.g. 83.4)
+    avg_price_won = Column(Float, nullable=True)                 # 평균 실거래가 (만원)
+    price_index = Column(Float, nullable=True)                   # 매매가격지수 (기준: 100)
+    mortgage_rate = Column(Float, nullable=True)                 # 주담대 실질금리 (%)
+    pir_ratio = Column(Float, nullable=True)                     # 소득 대비 주택가격(PIR)
+
+    data_source = Column(String(50), default="SEOUL_OPEN_DATA")  # SEOUL_OPEN_DATA, MOLIT, FALLBACK_CACHE
+    is_confirmed = Column(Boolean, default=False)                # 30일 경과 확정치 여부
+    created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 

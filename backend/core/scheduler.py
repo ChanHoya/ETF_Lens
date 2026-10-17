@@ -774,6 +774,19 @@ def setup_scheduler():
         except Exception as e:
             print(f"[scheduler] _job_macro_smart_alerts failed: {e}")
 
+    async def _job_real_estate_sync():
+        """매주 월요일 장전 서울 아파트 실거래가 및 매물 적체량 통계 자동 동기화 (S20)."""
+        try:
+            from core.real_estate_collector import real_estate_collector
+            from db.database import AsyncSessionLocal
+            async with AsyncSessionLocal() as db:
+                await real_estate_collector.sync_database(db)
+            trigger_replication_background()
+            gc.collect()
+            print("[scheduler] Real estate weekly sync completed.")
+        except Exception as e:
+            print(f"[scheduler] _job_real_estate_sync failed: {e}")
+
     async def _job_keep_alive():
         """Render 유휴 스핀다운 방지: 자기 자신의 /health 를 호출해 idle 타이머를 리셋한다.
         RENDER_EXTERNAL_URL(렌더가 자동 주입)이 없으면 로컬/비-Render 환경이므로 no-op."""
@@ -842,6 +855,9 @@ def setup_scheduler():
 
     # 월-금 09:30 및 16:30 - 유가 급변(±3.5%) 및 VIX 스파이크 스마트 레이더 모니터링 (S15-1)
     scheduler.add_job(_job_macro_smart_alerts, "cron", day_of_week="mon-fri", hour="9,16", minute=30, id="macro_smart_alerts_check")
+
+    # 매주 월요일 04:30 (KST) - 서울 아파트 실거래가 및 매물 적체량 통계 롤링 동기화 (S20)
+    scheduler.add_job(_job_real_estate_sync, "cron", day_of_week="mon", hour=4, minute=30, id="weekly_real_estate_sync")
 
     scheduler.start()
     print("DB and Email Scheduler started.")

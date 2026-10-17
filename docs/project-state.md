@@ -3,16 +3,24 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: [부동산 섹션 2026년 10월 최신 데이터 시계열 확장 & 사후 검증 패널 구축 (완료)]:
-1) [부동산 시계열 2024~2026 최신 전면 확장]: 서울 아파트 매물 적체량 및 월간 실거래량을 2024년 1월부터 2026년 10월 현재까지(34개월) 전면 확장 반영 (출처: 서울부동산정보광장, 아실).
-2) [기간 선택 인터랙티브 필터 신설]: 차트 상단에 `1Y (최근1년)`, `2Y (최근2년)`, `ALL (2024~2026 전체)` 컴팩트 스위처를 탑재하여 원하는 기간별 매물-거래량 역동성 분석 지원.
-3) [4대 거시 지표 2026.10 최신치 동기화]: 매물 적체량 83,400여 건(장기 고착화), 월 실거래량 3,800여 건(24.07 대비 -57.3% 거래정체), 주담대 실질금리 3.85~4.40%, PIR 25.2배 갱신.
-4) [영상 속 전문가 진단 2025~2026년 실증 사후 검증 패널 탑재]: 2024년 가을 당시 예고된 '정책모기지 소진 후 거래절벽'과 '환금성 마비'가 2025~2026년 실제로 어떻게 진행되었는지 팩트체크 브릿지 설명 제공.
-5) [매크로 팝업창 지표 확장 & MarketDetailModal 토글 UX]: 원유 팝업창 CPI/PPI 연동 및 전 매크로 팝업창 KOSPI/S&P 500 연동, 인터랙티브 지표 필터 칩 적용.
-6) Next.js 11개 페이지 최적화 프로덕션 빌드 100% 통과 및 브라우저 E2E 검증 완료.
-➡️ Next: 프로덕션 배포 상태 모니터링 및 실시간 부동산 API 연동 검토
+✅ Current: Sprint 20 완료 — [부동산 실데이터 백엔드 수집 파이프라인 & sample 키 안전 Fallback & 프론트 연동 (S20-1~4)]:
+1) [S20-1: DB 스키마 & 수집 엔진 코어]: `RealEstateMonthlyStats` 모델 생성, `real_estate_collector.py` 구축. `SEOUL_OPEN_DATA_KEY`가 없거나 `sample`인 경우 에러 없이 34개월간의 실제 통계 캐시(2024.01~2026.10)로 안전 Fallback 지원.
+2) [S20-2: 매물 적체량 & 금리/PIR 집계 엔진]: 서울시 실거래량 + 아실 매물 적체량 + 한국은행 주담대 금리 종합 월간 통계 생성 및 upsert 로직 구현.
+3) [S20-3: FastAPI 엔드포인트 & 단위 테스트 & 스케줄러]: `/api/v1/real-estate/market-trends`, `/summary`, `/sync`, `/status` 구축, pytest 6종 단위 테스트 100% 통과, 매주 월요일 04:30 KST 자동 동기화 cron 등록.
+4) [S20-4: 프론트엔드 실시간 API 연동 & 새로고침 UI]: `RealEstateTab.tsx`에서 백엔드 API 연동, `[검증된 캐시 연동 (sample 대기)]` 상태 배지, `[🔄 실데이터 갱신]` 즉시 동기화 버튼 탑재, 브라우저 E2E 검증 완료.
+5) Next.js 11개 페이지 빌드 100% 성공 (`code 0`).
+➡️ Next: 사용자가 실제 서울 열린데이터광장 인증키 발급 시 .env 등록 후 실서버 라이브 검증
 
-> 세션 핸드오프 (2026-10-17, Antigravity - 매크로 팝업창 지표 확장 & MarketDetailModal 토글 UX):
+> 세션 핸드오프 (2026-10-17, Antigravity - Sprint 20: 부동산 실데이터 백엔드 파이프라인 & Fallback & UI 연동):
+> - 🏛️ [S20-1~3: 백엔드 수집 파이프라인 및 엔드포인트 (`models.py`, `real_estate_collector.py`, `real_estate.py`)]:
+>   - 서울 열린데이터광장 OpenAPI 연동 및 키 미설정/`sample` 시 내부 검증 캐시 자동 전환.
+>   - `/api/v1/real-estate/market-trends?period=1Y|2Y|ALL` 시계열 조회 및 `/summary` 4대 거시 지표 제공.
+>   - `backend/tests/test_real_estate.py` 6개 단위 테스트 작성 및 100% Pass.
+>   - `scheduler.py`: 매주 월요일 04:30 KST `_job_real_estate_sync` 자동 롤링 동기화 등록.
+> - 🖥️ [S20-4: 프론트엔드 연동 (`RealEstateTab.tsx`)]:
+>   - 백엔드 REST API 비동기 fetch 및 로컬 캐시 fallback 안전망 구축.
+>   - 상단 연동 모드 상태 배지(`검증된 캐시 연동 (sample 대기)`) 및 `[실데이터 갱신]` 수동 트리거 버튼 탑재.
+>   - 4대 지표 카드와 Recharts 34개월 차트 실시간 바인딩 확인.
 > - 🛢️ [원유 팝업창 CPI/PPI 연동 (`macro_dashboard.py`, `MacroTab.tsx`)]:
 >   - WTI, Brent, Dubai, 스프레드와 함께 미국 CPI 및 PPI(% YoY)를 우측 Y축에 추가.
 >   - 유가 변동이 PPI(선행)와 CPI(전가)로 이어지는 매크로 전파 경로 비교 분석 제공.
