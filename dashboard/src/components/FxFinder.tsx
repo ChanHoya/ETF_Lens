@@ -11,8 +11,6 @@ export default function FxFinder() {
     const [analysisData, setAnalysisData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const highlight = useChartHighlight();
-
     // 1. Fetch currency pairs list
     useEffect(() => {
         const fetchPairs = async () => {
@@ -175,6 +173,7 @@ const X_MIN = -17, X_MAX = 17;
 
 // 원/달러 변화율(가로) 한 축 위에 환노출(기울어진 선)과 환헤지(수평선)를 겹쳐, 어느 지점부터 유리·불리가 바뀌는지 보여 준다
 function ScenarioChart({ data }: { data: any }) {
+    const highlight = useChartHighlight();
     const st = data.statistics || {};
     const rows = (data.scenarios || []).map((sc: any) => ({
         x: sc.fx_change_pct, u: sc.unhedged_return, h: sc.hedged_return, fx: sc.expected_fx, label: sc.label, adv: sc.advantage_unhedged,
@@ -219,13 +218,14 @@ function ScenarioChart({ data }: { data: any }) {
                         <Legend 
                             wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} 
                             onClick={highlight.handleLegendClick} 
+                            formatter={highlight.renderLegendText}
                         />
                         <Line 
                             dataKey="u" 
                             name="환노출 수익률" 
                             stroke="#10b981" 
-                            strokeWidth={highlight.getSeriesStrokeWidth("환노출 수익률", 2.2)} 
-                            strokeOpacity={highlight.getSeriesOpacity("환노출 수익률")}
+                            strokeWidth={highlight.getStrokeWidth("u", 2.2, 3.5)} 
+                            strokeOpacity={highlight.getOpacity("u")}
                             dot={{ r: 4 }} 
                             isAnimationActive={false}
                         >
@@ -235,8 +235,8 @@ function ScenarioChart({ data }: { data: any }) {
                             dataKey="h" 
                             name="환헤지 수익률" 
                             stroke="#818cf8" 
-                            strokeWidth={highlight.getSeriesStrokeWidth("환헤지 수익률", 2)} 
-                            strokeOpacity={highlight.getSeriesOpacity("환헤지 수익률")}
+                            strokeWidth={highlight.getStrokeWidth("h", 2, 3.5)} 
+                            strokeOpacity={highlight.getOpacity("h")}
                             strokeDasharray="6 3" 
                             dot={{ r: 3 }} 
                             isAnimationActive={false} 

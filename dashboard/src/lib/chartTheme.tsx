@@ -106,6 +106,8 @@ export function useChartHighlight(initialKey: string | null = null) {
     isHighlighted,
     getOpacity,
     getStrokeWidth,
+    getSeriesOpacity: getOpacity,
+    getSeriesStrokeWidth: getStrokeWidth,
     renderLegendText,
   };
 }
