@@ -13,7 +13,7 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 1) [S23-1: 수도권 38개 거점 데이터 모델 & API 구축]: 경기 10개 핵심지(분당, 과천, 광명, 동탄, 평촌, 수지, 광교, 하남, 일산, 시흥) 및 인천 3대 거점(송도, 청라/검단, 부평) 실거래 데이터셋 구축 및 `/districts?region=seoul|gyeonggi|incheon|ALL` API 지원.
 2) [S23-2: 수도권 광역 히트맵 UI & 6계층 양극화 사다리 벤토 그리드]: `SeoulDistrictHeatmap.tsx` 광역 탭 확장 및 평당가 8,400만(강남) ~ 1,750만(부평) 6대 계층별 평당가-전세가율 양극화 사다리 인포그래픽 신설.
 3) [S23-3: 내 보유 부동산 자산 & 배당금 대출이자 방어율 (ICR/DSCR) 위젯]: `RealEstateMortgageShieldWidget.tsx` 신설. 내 부동산 시세·대출 잔액·금리 입력, 월 주담대 이자 vs 월 ETF 배당금 실시간 대조, 이자 보상 배율(ICR 173% 완전 방어), 월 흑자 잉여금(+114.5만원), 금리 스트레스 시뮬레이션 탑재.
-4) [S23-4: 무결성 검증 및 E2E 테스트 통과]: pytest 8개 통과, Next.js 11개 페이지 최적화 빌드 통과(`code 0`), 브라우저 E2E 검증 완료.
+4) [S23-4: 국민평형(84㎡/34평) 환산 시세 토글 & 무결성 검증 통과]: `SeoulDistrictHeatmap.tsx`에 34평 국평 환산(평당가×34평) ↔ 구 전체 평균 토글 스위처 및 병기 표기 탑재, pytest 8개 통과, Next.js 11개 페이지 최적화 빌드 통과(`code 0`), 브라우저 E2E 검증 완료.
 
 
 

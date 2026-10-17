@@ -149,9 +149,18 @@ export default function SeoulDistrictHeatmap() {
   const [meta, setMeta] = useState<DistrictMeta | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string>('ALL'); // ALL, seoul, gyeonggi, incheon
   const [selectedZone, setSelectedZone] = useState<string>('ALL');
+  const [priceMode, setPriceMode] = useState<'pyeong34' | 'total_avg'>('pyeong34'); // 국민평형 34평 기준 vs 구 전체 평균
   const [sortBy, setSortBy] = useState<string>('jeonse_desc');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // 34평형(국민평형 84㎡) 환산 헬퍼
+  const getPyeong34Prices = (district: DistrictItem) => {
+    // 평당가(만원) * 34평 = 34평 총 매매가(만원) -> 1억(10,000만원) 단위 환산(소수점 1자리)
+    const sale34 = Math.round((district.price_per_pyeong * 34) / 1000) / 10;
+    const jeonse34 = Math.round((sale34 * (district.jeonse_ratio / 100)) * 10) / 10;
+    return { sale34, jeonse34 };
+  };
 
   useEffect(() => {
     async function fetchDistrictData() {
@@ -212,13 +221,17 @@ export default function SeoulDistrictHeatmap() {
     } else if (sortBy === 'jeonse_asc') {
       result.sort((a, b) => a.jeonse_ratio - b.jeonse_ratio);
     } else if (sortBy === 'price_desc') {
-      result.sort((a, b) => b.avg_sale_price - a.avg_sale_price);
+      if (priceMode === 'pyeong34') {
+        result.sort((a, b) => b.price_per_pyeong - a.price_per_pyeong);
+      } else {
+        result.sort((a, b) => b.avg_sale_price - a.avg_sale_price);
+      }
     } else if (sortBy === 'volume_desc') {
       result.sort((a, b) => b.trade_count - a.trade_count);
     }
 
     return result;
-  }, [districts, selectedRegion, selectedZone, searchQuery, sortBy]);
+  }, [districts, selectedRegion, selectedZone, searchQuery, sortBy, priceMode]);
 
   // 위험도 배지 렌더러
   const renderRiskBadge = (level: string, label: string) => {
@@ -335,7 +348,7 @@ export default function SeoulDistrictHeatmap() {
             </div>
           </div>
           <span className="text-[11px] text-slate-400 font-medium self-end sm:self-center">
-            자료: 2024~2026 국토부 실거래가 기준
+            자료: 서울시 열린데이터광장(서울 25개 구) & 국토교통부 실거래가 공개시스템(경기·인천 정규화 2024~2026.10)
           </span>
         </div>
 
@@ -378,7 +391,7 @@ export default function SeoulDistrictHeatmap() {
 
       {/* 3. 광역 스위처 & 필터 & 검색 바 */}
       <div className="space-y-3 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-        {/* 상단 1열: 광역 지역 스위처 (수도권 전체 / 서울 / 경기 / 인천) */}
+        {/* 상단 1열: 광역 지역 스위처 (수도권 전체 / 서울 / 경기 / 인천) & 평형 기준 스위처 */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-1.5 text-xs font-bold">
             <span className="text-slate-500 dark:text-slate-400 mr-1 flex items-center gap-1">
@@ -405,8 +418,51 @@ export default function SeoulDistrictHeatmap() {
             ))}
           </div>
 
-          <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            표시 대상: <span className="font-bold text-indigo-600 dark:text-indigo-400">{filteredDistricts.length}</span>개 거점
+          {/* 평형 기준 토글 스위처 */}
+          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+            <button
+              type="button"
+              onClick={() => setPriceMode('pyeong34')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                priceMode === 'pyeong34'
+                  ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <Building className="w-3.5 h-3.5 text-amber-300" />
+              국민평형 84㎡(34평) 환산
+            </button>
+            <button
+              type="button"
+              onClick={() => setPriceMode('total_avg')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                priceMode === 'total_avg'
+                  ? 'bg-slate-700 dark:bg-slate-200 text-white dark:text-slate-900 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              구 전체 평균 (소형 포함)
+            </button>
+          </div>
+        </div>
+
+        {/* 평형 기준 안내 배너 */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-xs">
+          <div className="flex items-center gap-2 text-indigo-900 dark:text-indigo-200">
+            <Info className="w-4 h-4 shrink-0 text-indigo-500" />
+            {priceMode === 'pyeong34' ? (
+              <span>
+                <strong>국민평형(전용 84㎡ / 공급 34평) 환산 시세:</strong> 각 거점의 실제 거래 평당가 × 34평으로 정밀 환산된 가격입니다. (포털 체감 대장주 시세와 일치)
+              </span>
+            ) : (
+              <span>
+                <strong>구 전체 실거래 평균 모드:</strong> 소형(10~20평대 구축)부터 대형까지 신고된 모든 실거래 건의 단순 가중평균입니다. (소형 비중이 높아 상대적으로 낮게 집계)
+              </span>
+            )}
+          </div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">
+            거점 수: <span className="font-bold text-indigo-600 dark:text-indigo-400">{filteredDistricts.length}</span>개 | 정렬: {priceMode === 'pyeong34' ? '34평 환산가 기준' : '구 전체평균 기준'}
           </div>
         </div>
 
@@ -592,32 +648,54 @@ export default function SeoulDistrictHeatmap() {
                 </div>
 
                 {/* 가격 정보 4분할 */}
-                <div className="grid grid-cols-2 gap-1.5 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-[11px] mb-2.5">
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">평균 매매가</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      {district.avg_sale_price}억
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">평균 전세가</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      {district.avg_jeonse_price}억
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">평당 매매가</span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      {district.price_per_pyeong.toLocaleString()}만
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">최근 거래량</span>
-                    <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                      {district.trade_count}건
-                    </span>
-                  </div>
-                </div>
+                {(() => {
+                  const { sale34, jeonse34 } = getPyeong34Prices(district);
+                  const isPyeong34 = priceMode === 'pyeong34';
+                  const mainSale = isPyeong34 ? `${sale34}억` : `${district.avg_sale_price}억`;
+                  const mainJeonse = isPyeong34 ? `${jeonse34}억` : `${district.avg_jeonse_price}억`;
+                  const subSaleLabel = isPyeong34 
+                    ? `구 평균: ${district.avg_sale_price}억` 
+                    : `34평 국평: ${sale34}억`;
+
+                  return (
+                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-[11px] mb-2.5 border border-slate-100 dark:border-slate-800/80">
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <div>
+                          <div className="flex items-center gap-1 text-slate-400 text-[10px] mb-0.5">
+                            <span>{isPyeong34 ? '34평(84㎡) 매매' : '구 전체 매매'}</span>
+                            <span className={`px-1 py-0.2 rounded text-[8.5px] font-bold ${
+                              isPyeong34 
+                                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300' 
+                                : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                            }`}>
+                              {isPyeong34 ? '국평' : '평균'}
+                            </span>
+                          </div>
+                          <div className="text-[15px] font-black text-slate-900 dark:text-white tracking-tight">
+                            {mainSale}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1 text-slate-400 text-[10px] mb-0.5">
+                            <span>{isPyeong34 ? '34평 전세' : '구 전체 전세'}</span>
+                          </div>
+                          <div className="text-[15px] font-extrabold text-slate-700 dark:text-slate-200 tracking-tight">
+                            {mainJeonse}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60 text-[10px]">
+                        <span className="text-slate-500 dark:text-slate-400 font-medium">
+                          평당 <strong className="text-slate-700 dark:text-slate-200">{district.price_per_pyeong.toLocaleString()}만</strong>
+                        </span>
+                        <span className="font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-1.5 py-0.5 rounded">
+                          {subSaleLabel}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* 하단 진단 설명 */}
