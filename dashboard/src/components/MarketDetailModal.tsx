@@ -114,10 +114,40 @@ export default function MarketDetailModal({
         return filtered.length > 0 ? filtered : sorted;
     }, [data, period]);
 
+    const [hiddenSeries, setHiddenSeries] = useState<Record<string, boolean>>({});
+
+    // 모달이 열릴 때나 타이틀이 바뀔 때 초기화
+    useEffect(() => {
+        setHiddenSeries({});
+    }, [isOpen, title]);
+
+    const toggleSeries = (key: string) => {
+        setHiddenSeries(prev => ({
+            ...prev,
+            [key]: !prev[key]
+        }));
+    };
+
+    // 활성화된 시리즈 목록
+    const activeSeries = useMemo(() => {
+        return series.filter(s => !hiddenSeries[s.key]);
+    }, [series, hiddenSeries]);
+
     // 듀얼 Y축 사용 여부 판단
     const hasRightAxis = useMemo(() => {
-        return series.some(s => s.yAxisId === 'right');
-    }, [series]);
+        return activeSeries.some(s => s.yAxisId === 'right');
+    }, [activeSeries]);
+
+    // 우측 축 지표들의 주 단위 판별
+    const rightAxisUnit = useMemo(() => {
+        const rightList = activeSeries.filter(s => s.yAxisId === 'right');
+        if (rightList.length === 0) return '';
+        const allPercent = rightList.every(s => s.unit?.includes('%'));
+        if (allPercent) return '%';
+        const allPt = rightList.every(s => s.unit?.includes('pt'));
+        if (allPt) return 'pt';
+        return '';
+    }, [activeSeries]);
 
     // X축 눈금 레이블 포맷터
     const formatXAxis = (dateStr: string) => {
@@ -165,7 +195,7 @@ export default function MarketDetailModal({
                     </button>
                 </div>
 
-                {/* 2. Control Toolbar (첨부 5 피드백 반영: 컴팩트한 선택형 버튼) */}
+                {/* 2. Control Toolbar (기간 선택 및 실시간 요약 칩) */}
                 <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-2.5 bg-[#181a28]/60 border-b border-white/5">
                     {/* 기간 선택 버튼 (컴팩트: text-xs, px-2 py-0.5) */}
                     <div className="flex items-center gap-1.5">
@@ -206,6 +236,59 @@ export default function MarketDetailModal({
                     )}
                 </div>
 
+                {/* 2-1. Indicator Filter Chips (사용자가 원하는 라인만 켜고 끌 수 있는 인터랙티브 필터) */}
+                {series && series.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 px-5 py-2 bg-[#151827] border-b border-white/5">
+                        <span className="text-[10px] font-bold text-gray-400 mr-1">지표 선택:</span>
+                        {series.map(s => {
+                            const isHidden = !!hiddenSeries[s.key];
+                            return (
+                                <button
+                                    key={s.key}
+                                    type="button"
+                                    onClick={() => toggleSeries(s.key)}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border transition-all ${
+                                        isHidden
+                                            ? 'bg-white/[0.02] border-white/5 text-gray-500 opacity-50 line-through'
+                                            : 'bg-white/[0.06] border-white/15 text-gray-200 hover:bg-white/10 shadow-sm'
+                                    }`}
+                                    title={`${s.name} ${isHidden ? '차트에 표시하기' : '차트에서 숨기기'}`}
+                                >
+                                    <span
+                                        className="w-2 h-2 rounded-full inline-block shrink-0"
+                                        style={{ backgroundColor: isHidden ? '#6b7280' : s.color }}
+                                    />
+                                    <span>{s.name}</span>
+                                    {s.yAxisId === 'right' && (
+                                        <span className="text-[9px] px-1 py-0.2 bg-white/10 text-amber-300/80 rounded font-mono">우측축</span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                        {series.length >= 4 && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const anyHidden = series.some(s => hiddenSeries[s.key]);
+                                    if (anyHidden) {
+                                        setHiddenSeries({});
+                                    } else {
+                                        const newHidden: Record<string, boolean> = {};
+                                        // 우측축 지표들을 숨겨 메인 지표만 남김
+                                        series.forEach(s => {
+                                            if (s.yAxisId === 'right') newHidden[s.key] = true;
+                                        });
+                                        setHiddenSeries(newHidden);
+                                    }
+                                }}
+                                className="text-[10px] font-semibold text-indigo-400 hover:text-indigo-300 underline ml-2 cursor-pointer"
+                            >
+                                {series.some(s => hiddenSeries[s.key]) ? '전체 보기' : '메인 지표만'}
+                            </button>
+                        )}
+                    </div>
+                )}
+
                 {/* 3. Main Chart Area */}
                 <div className="p-5 flex-1 flex flex-col min-h-[340px] overflow-y-auto">
                     {description && (
@@ -219,12 +302,16 @@ export default function MarketDetailModal({
                             <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
                                 시계열 데이터를 불러오는 중이거나 데이터가 없습니다.
                             </div>
+                        ) : activeSeries.length === 0 ? (
+                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                                상단 지표 필터에서 최소 하나의 지표를 선택해주세요.
+                            </div>
                         ) : (
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart
-                                    key={`modal-chart-${period}`}
+                                    key={`modal-chart-${period}-${activeSeries.map(s => s.key).join('-')}`}
                                     data={filteredData}
-                                    margin={{ top: 10, right: hasRightAxis ? 15 : 5, left: -10, bottom: 0 }}
+                                    margin={{ top: 10, right: hasRightAxis ? 20 : 5, left: -10, bottom: 0 }}
                                 >
                                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff0a" vertical={false} />
                                     <XAxis
@@ -239,7 +326,7 @@ export default function MarketDetailModal({
                                         tick={axisTick}
                                         domain={['auto', 'auto']}
                                         stroke="#ffffff15"
-                                        tickFormatter={(v: number) => (Math.abs(v) >= 1000 ? v.toLocaleString() : v.toString())}
+                                        tickFormatter={(v: number) => (Math.abs(v) >= 1000 ? v.toLocaleString() : (v % 1 !== 0 ? v.toFixed(1) : v.toString()))}
                                     />
                                     {hasRightAxis && (
                                         <YAxis
@@ -248,7 +335,11 @@ export default function MarketDetailModal({
                                             tick={axisTick}
                                             domain={['auto', 'auto']}
                                             stroke="#ffffff15"
-                                            tickFormatter={(v: number) => `${v}%`}
+                                            tickFormatter={(v: number) => {
+                                                if (rightAxisUnit === '%') return `${v}%`;
+                                                if (Math.abs(v) >= 1000) return v.toLocaleString();
+                                                return v % 1 !== 0 ? v.toFixed(1) : v.toString();
+                                            }}
                                         />
                                     )}
                                     <RechartsTooltip
@@ -267,7 +358,7 @@ export default function MarketDetailModal({
                                         wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
                                         iconType="plainline"
                                     />
-                                    {series.map(s => (
+                                    {activeSeries.map(s => (
                                         <Line
                                             key={s.key}
                                             type="monotone"

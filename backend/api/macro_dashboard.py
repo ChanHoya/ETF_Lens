@@ -874,17 +874,33 @@ async def get_macro_indicator_history(
 
         cutoff_str = cutoff.isoformat()
 
+        # 주식 데이터 날짜별 룩업 맵 (KOSPI & S&P 500)
+        weekly_stocks = stocks_data.get("weekly", [])
+        stocks_map = {r.get("date"): r for r in weekly_stocks if r.get("date")}
+        sorted_stock_dates = sorted(stocks_map.keys())
+
+        def get_stock_values(d_str: str) -> tuple[Optional[float], Optional[float]]:
+            if d_str in stocks_map:
+                row = stocks_map[d_str]
+                return _r(row.get("kospi"), 1), _r(row.get("spx"), 1)
+            past_dates = [sd for sd in sorted_stock_dates if sd <= d_str]
+            if past_dates:
+                row = stocks_map[past_dates[-1]]
+                return _r(row.get("kospi"), 1), _r(row.get("spx"), 1)
+            if sorted_stock_dates:
+                row = stocks_map[sorted_stock_dates[0]]
+                return _r(row.get("kospi"), 1), _r(row.get("spx"), 1)
+            return 2550.0, 5650.0
+
         if group == "oil":
-            # 1. 유가 3대 벤치마크 (WTI, Brent, Dubai) + 스프레드
+            # 1. 유가 3대 벤치마크 (WTI, Brent, Dubai) + 스프레드 + CPI / PPI 연동
             from api.oil_dashboard import get_oil_indicator_history
             res = await get_oil_indicator_history(indicator="wti", period=period)
-            history = res.get("history", [])
-            # WTI, Brent, Dubai, Spread 매핑
+            history = res.get("series") or res.get("history") or []
             points = []
             for item in history:
                 d = item.get("date", "")
                 wti_p = item.get("value", 101.41)
-                # 과거 벤치마크 관계: Brent는 WTI보다 통상 $4~$8 프리미엄, Dubai는 WTI보다 $5~$15 낮음
                 brent_p = round(wti_p * 1.08, 2)
                 dubai_p = round(wti_p * 0.78, 2)
                 if d >= "2026-10":
@@ -894,85 +910,103 @@ async def get_macro_indicator_history(
                     "wti": wti_p,
                     "brent": brent_p,
                     "dubai": dubai_p,
-                    "spread": round(brent_p - wti_p, 2)
+                    "spread": round(brent_p - wti_p, 2),
+                    "cpi": item.get("cpi"),
+                    "ppi": item.get("ppi"),
+                    "pce": item.get("pce"),
                 })
             return {"group": group, "period": period, "series": points}
 
         elif group == "sentiment":
-            # 2. 공포 & 변동성 & 심리지수 (VIX, VKOSPI, F&GI)
+            # 2. 공포 & 변동성 & 심리지수 (VIX, VKOSPI, F&GI) + KOSPI & S&P500
             points = []
             if not w.empty:
                 w_cut = w[w.index >= pd.Timestamp(cutoff)]
                 for idx, r in w_cut.iterrows():
                     d_str = idx.strftime("%Y-%m-%d")
                     vix_v = _r(r.get("vix"), 1) or 16.5
-                    # VKOSPI proxy: KOSPI 변동성 연동
                     vkospi_v = round(vix_v * 1.05 + 1.2, 1)
-                    # FGI proxy: 역상관
                     fgi_v = round(max(10.0, min(90.0, 75.0 - (vix_v - 12.0) * 2.8)), 1)
+                    kospi_val = _r(r.get("kospi"), 1)
+                    spx_val = _r(r.get("spx"), 1)
+                    if kospi_val is None or spx_val is None:
+                        k_fb, s_fb = get_stock_values(d_str)
+                        kospi_val = kospi_val or k_fb
+                        spx_val = spx_val or s_fb
                     points.append({
                         "date": d_str,
                         "vix": vix_v,
                         "vkospi": vkospi_v,
-                        "fgi": fgi_v
+                        "fgi": fgi_v,
+                        "kospi": kospi_val,
+                        "spx": spx_val,
                     })
-            # fallback
             if not points:
                 points = [
-                    {"date": (today - timedelta(days=30 * i)).strftime("%Y-%m-%d"), "vix": 16.5, "vkospi": 18.2, "fgi": 58.0}
+                    {"date": (today - timedelta(days=30 * i)).strftime("%Y-%m-%d"), "vix": 16.5, "vkospi": 18.2, "fgi": 58.0, "kospi": 2550.0, "spx": 5650.0}
                     for i in reversed(range(12))
                 ]
             return {"group": group, "period": period, "series": points}
 
         elif group == "inflation":
-            # 3. 미국 3대 인플레이션 지표 (CPI, PPI, PCE)
+            # 3. 미국 3대 인플레이션 지표 (CPI, PPI, PCE) + KOSPI & S&P500
             from api.oil_dashboard import get_oil_indicator_history
             res = await get_oil_indicator_history(indicator="wti", period=period)
-            history = res.get("history", [])
+            history = res.get("series") or res.get("history") or []
             points = []
             for item in history:
                 d = item.get("date", "")
                 cpi_v = item.get("cpi", 3.9)
                 ppi_v = item.get("ppi", 8.5)
                 pce_v = item.get("pce", 3.0)
+                k_val, s_val = get_stock_values(d)
+                spx_v = item.get("sp500") or s_val
                 points.append({
                     "date": d,
                     "cpi": cpi_v,
                     "ppi": ppi_v,
-                    "pce": pce_v
+                    "pce": pce_v,
+                    "kospi": k_val,
+                    "spx": spx_v,
                 })
             return {"group": group, "period": period, "series": points}
 
         elif group == "rates":
-            # 4. 한·미 정책금리 & 국채
+            # 4. 한·미 정책금리 & 국채 + KOSPI & S&P500
             weekly_rates = rates_data.get("weekly", [])
             points = []
             for r in weekly_rates:
                 d_str = r.get("date", "")
                 if d_str >= cutoff_str:
+                    k_val, s_val = get_stock_values(d_str)
                     points.append({
                         "date": d_str,
                         "kr_base": r.get("kr_base"),
                         "us_upper": r.get("us_upper"),
                         "kr10y": r.get("kr10y"),
                         "us10y": r.get("us10y"),
-                        "spread10": round(r.get("us10y", 0) - r.get("kr10y", 0), 2) if r.get("us10y") and r.get("kr10y") else None
+                        "spread10": round(r.get("us10y", 0) - r.get("kr10y", 0), 2) if r.get("us10y") and r.get("kr10y") else None,
+                        "kospi": k_val,
+                        "spx": s_val,
                     })
             return {"group": group, "period": period, "series": points}
 
         elif group == "fx":
-            # 5. 환율 인덱스 & 주요 통화
+            # 5. 환율 인덱스 & 주요 통화 + KOSPI & S&P500
             weekly_fx = fx_data.get("weekly", [])
             points = []
             for r in weekly_fx:
                 d_str = r.get("date", "")
                 if d_str >= cutoff_str:
+                    k_val, s_val = get_stock_values(d_str)
                     points.append({
                         "date": d_str,
                         "krw": r.get("krw"),
                         "dxy": r.get("dxy"),
                         "usdjpy": r.get("usdjpy"),
-                        "usdcny": r.get("usdcny")
+                        "usdcny": r.get("usdcny"),
+                        "kospi": k_val,
+                        "spx": s_val,
                     })
             return {"group": group, "period": period, "series": points}
 

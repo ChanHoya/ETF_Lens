@@ -306,7 +306,7 @@ async def get_oil_etf_playbook() -> Dict[str, Any]:
 async def get_oil_indicator_history(
     indicator: str = Query("wti", description="wti, brent, dubai, spread, refining_margin, eia_inventory, rig_count, geopolitics"),
     period: str = Query("6M", description="6M, 1Y, 5Y, 10Y"),
-    db: AsyncSession = Depends(get_db)
+    db: Optional[AsyncSession] = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     유가/에너지 세부 지표 히스토리 및 거시경제(S&P500, Nasdaq, 달러인덱스, CPI, PPI, PCE) 복합 비교 데이터
@@ -339,12 +339,28 @@ async def get_oil_indicator_history(
     months_count = period_map.get(period, 6)
 
     # 1. DB에서 USMacroIndicatorLog (CPI, PPI, PCE) 조회
-    macro_stmt = select(USMacroIndicatorLog).order_by(USMacroIndicatorLog.date.desc()).limit(months_count + 12)
-    macro_res = await db.execute(macro_stmt)
-    macro_records = macro_res.scalars().all()
-    cpi_map = {r.date: r.cpi_yoy for r in macro_records}
-    ppi_map = {r.date: r.ppi_yoy for r in macro_records}
-    pce_map = {r.date: r.pce_yoy for r in macro_records}
+    cpi_map: Dict[str, float] = {}
+    ppi_map: Dict[str, float] = {}
+    pce_map: Dict[str, float] = {}
+    try:
+        if isinstance(db, AsyncSession):
+            macro_stmt = select(USMacroIndicatorLog).order_by(USMacroIndicatorLog.date.desc()).limit(months_count + 12)
+            macro_res = await db.execute(macro_stmt)
+            macro_records = macro_res.scalars().all()
+            cpi_map = {r.date: r.cpi_yoy for r in macro_records}
+            ppi_map = {r.date: r.ppi_yoy for r in macro_records}
+            pce_map = {r.date: r.pce_yoy for r in macro_records}
+        else:
+            from db.database import AsyncSessionLocal
+            async with AsyncSessionLocal() as session:
+                macro_stmt = select(USMacroIndicatorLog).order_by(USMacroIndicatorLog.date.desc()).limit(months_count + 12)
+                macro_res = await session.execute(macro_stmt)
+                macro_records = macro_res.scalars().all()
+                cpi_map = {r.date: r.cpi_yoy for r in macro_records}
+                ppi_map = {r.date: r.ppi_yoy for r in macro_records}
+                pce_map = {r.date: r.pce_yoy for r in macro_records}
+    except Exception as e:
+        logger.warning(f"Could not load USMacroIndicatorLog from DB: {e}")
 
     # 2. 기준 월 목록 생성 (최근 2026-10부터 역산)
     now = datetime(2026, 10, 1)

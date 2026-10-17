@@ -144,13 +144,15 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
             case 'oil':
                 return {
                     title: '원유 3대 벤치마크 (WTI · Brent · Dubai) & 스프레드 추이',
-                    subtitle: 'WTI, 북해산 브렌트유, 중동 두바이유 가격 및 Brent-WTI 스프레드 통합 비교',
+                    subtitle: 'WTI, 북해산 브렌트유, 중동 두바이유 가격 및 Brent-WTI 스프레드, 물가 지표(CPI/PPI) 통합 비교',
                     badge: '원자재 핵심',
                     badgeColor: 'bg-amber-500/15 text-amber-300 border-amber-400/30',
                     series: [
                         { key: 'wti', name: 'WTI ($/bbl)', color: '#f59e0b', unit: '$/bbl', strokeWidth: 2.2 },
                         { key: 'brent', name: '브렌트유 ($/bbl)', color: '#0ea5e9', unit: '$/bbl', strokeWidth: 2 },
                         { key: 'dubai', name: '두바이유 ($/bbl)', color: '#a855f7', unit: '$/bbl', strokeWidth: 1.8 },
+                        { key: 'cpi', name: '소비자물가 CPI (% YoY)', color: '#f43f5e', unit: '% YoY', yAxisId: 'right', strokeWidth: 1.8, strokeDasharray: '3 3' },
+                        { key: 'ppi', name: '생산자물가 PPI (% YoY)', color: '#10b981', unit: '% YoY', yAxisId: 'right', strokeWidth: 1.8, strokeDasharray: '4 4' },
                     ],
                     currentStats: [
                         { label: 'WTI', value: '$101.41', change: '+6.0%', isPositive: true },
@@ -158,48 +160,52 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                         { label: 'Dubai', value: '$79.10', change: '-0.88%', isPositive: false },
                         { label: '스프레드', value: '$8.45' },
                     ],
-                    notice: '💡 WTI는 미국 내륙, Brent는 해상 수송 글로벌 지표, Dubai는 아시아(한국) 도입 단가 기준입니다. 배럴당 $100 돌파는 글로벌 생산자물가(PPI)에 즉각적인 상방 압력을 줍니다.'
+                    notice: '💡 WTI는 미국 내륙, Brent는 해상 수송 글로벌 지표, Dubai는 아시아(한국) 도입 단가 기준입니다. 유가 변동은 원자재 및 운송비 경로를 거쳐 생산자물가(PPI)에 1~2개월 선행 반영되며, 이후 소비자물가(CPI)로 전가됩니다.'
                 };
             case 'sentiment':
                 return {
                     title: '공포 & 변동성 & 심리지수 (VIX · VKOSPI · F&GI) 추이',
-                    subtitle: '미국 VIX, 코스피 VKOSPI 및 CNN 하이브리드 공포탐욕지수 통합 비교',
+                    subtitle: '미국 VIX, 코스피 VKOSPI, 공포탐욕지수 및 S&P 500 · KOSPI 지수 통합 비교',
                     badge: '시장 심리',
                     badgeColor: 'bg-purple-500/15 text-purple-300 border-purple-400/30',
                     series: [
                         { key: 'vix', name: '미국 VIX (S&P500)', color: '#ec4899', unit: 'pt', strokeWidth: 2 },
                         { key: 'vkospi', name: '한국 VKOSPI (KOSPI)', color: '#10b981', unit: 'pt', strokeWidth: 2 },
                         { key: 'fgi', name: '공포탐욕지수 (F&GI)', color: '#f59e0b', unit: 'pt', strokeWidth: 1.8, strokeDasharray: '4 4' },
+                        { key: 'spx', name: 'S&P 500 (pt)', color: '#38bdf8', unit: 'pt', yAxisId: 'right', strokeWidth: 2 },
+                        { key: 'kospi', name: 'KOSPI (pt)', color: '#818cf8', unit: 'pt', yAxisId: 'right', strokeWidth: 1.8, strokeDasharray: '3 3' },
                     ],
                     currentStats: [
                         { label: 'VIX', value: '16.5 pt', change: '안정' },
                         { label: 'VKOSPI', value: '18.2 pt', change: '보통' },
                         { label: 'F&GI', value: '58 pt', change: '탐욕 우세' },
                     ],
-                    notice: '💡 VIX 20 미만은 안정 국면이며, FGI가 60을 상회하면 시장의 위험 선호 심리가 견조함을 의미합니다.'
+                    notice: '💡 VIX와 VKOSPI는 각각 S&P 500 및 KOSPI 주가지수와 강한 역상관(-0.7~-0.8)을 보입니다. 시장 공포가 극에 달할 때 지수의 중장기 저점 매수 기회가 형성됩니다.'
                 };
             case 'inflation':
                 return {
                     title: '미국 3대 인플레이션 지표 (CPI · PPI · PCE) 추이',
-                    subtitle: '미국 소비자물가(CPI), 생산자물가(PPI), 개인소비지출(PCE) 전년비(YoY) 통합 비교',
+                    subtitle: '미국 소비자물가(CPI), 생산자물가(PPI), 개인소비지출(PCE) 전년비(YoY) 및 S&P 500 · KOSPI 비교',
                     badge: '물가 지표',
                     badgeColor: 'bg-rose-500/15 text-rose-300 border-rose-400/30',
                     series: [
                         { key: 'cpi', name: '소비자물가 CPI (% YoY)', color: '#f43f5e', unit: '% YoY', strokeWidth: 2 },
                         { key: 'ppi', name: '생산자물가 PPI (% YoY)', color: '#f59e0b', unit: '% YoY', strokeWidth: 2.2 },
                         { key: 'pce', name: '개인소비지출 PCE (% YoY)', color: '#10b981', unit: '% YoY', strokeWidth: 2 },
+                        { key: 'spx', name: 'S&P 500 (pt)', color: '#38bdf8', unit: 'pt', yAxisId: 'right', strokeWidth: 1.8 },
+                        { key: 'kospi', name: 'KOSPI (pt)', color: '#818cf8', unit: 'pt', yAxisId: 'right', strokeWidth: 1.8, strokeDasharray: '3 3' },
                     ],
                     currentStats: [
                         { label: 'CPI', value: '3.9%', change: '소비자물가' },
                         { label: 'PPI', value: '8.5%', change: '★유가 직접연동', isPositive: true },
                         { label: 'PCE', value: '3.0%', change: '연준목표 상회' },
                     ],
-                    notice: '💡 유가 급등은 원자재와 중간재 원가를 높여 생산자물가(PPI)에 가장 먼저 반영되며, 1~2개월 시차를 두고 CPI와 PCE로 전가됩니다.'
+                    notice: '💡 유가 급등은 원자재와 중간재 원가를 높여 생산자물가(PPI)에 가장 먼저 반영되며, 1~2개월 시차를 두고 CPI와 PCE로 전가됩니다. 인플레 급등은 연준의 긴축을 유발해 증시 밸류에이션(PER)을 압박합니다.'
                 };
             case 'rates':
                 return {
                     title: '한·미 정책금리 및 장단기 국채 금리 추이',
-                    subtitle: '한국 기준금리, 미국 정책금리, 국채 10년물 및 장단기 금리차 비교',
+                    subtitle: '한국 기준금리, 미국 정책금리, 국채 10년물 및 S&P 500 · KOSPI 비교',
                     badge: '통화 정책',
                     badgeColor: 'bg-sky-500/15 text-sky-300 border-sky-400/30',
                     series: [
@@ -207,6 +213,8 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                         { key: 'us_upper', name: '미국 정책금리 상단 (%)', color: '#f43f5e', unit: '%', strokeWidth: 2 },
                         { key: 'us10y', name: '미국 국채 10년 (%)', color: '#10b981', unit: '%', strokeWidth: 1.5, strokeDasharray: '3 3' },
                         { key: 'kr10y', name: '한국 국고채 10년 (%)', color: '#38bdf8', unit: '%', strokeWidth: 1.5, strokeDasharray: '3 3' },
+                        { key: 'spx', name: 'S&P 500 (pt)', color: '#f59e0b', unit: 'pt', yAxisId: 'right', strokeWidth: 1.8 },
+                        { key: 'kospi', name: 'KOSPI (pt)', color: '#ec4899', unit: 'pt', yAxisId: 'right', strokeWidth: 1.8, strokeDasharray: '3 3' },
                     ],
                     currentStats: [
                         { label: '한국 기준금리', value: '3.00%' },
@@ -214,25 +222,27 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                         { label: '정책금리차', value: '-1.00%p' },
                         { label: '미 10Y-2Y', value: '+0.12%p' },
                     ],
-                    notice: '💡 한미 정책금리 역전폭이 -1.00%p 수준이며, 미 10Y-2Y 금리차 역전 해소는 경기 침체 우려 완화 신호로 해석됩니다.'
+                    notice: '💡 한미 정책금리와 국채 10년물 금리는 할인율로 작용하여 한·미 증시(KOSPI, S&P 500)의 중기 유동성 및 밸류에이션 방향성을 결정합니다.'
                 };
             case 'fx':
                 return {
                     title: '환율 인덱스 (원/달러 · 달러지수 DXY · 주요 통화) 추이',
-                    subtitle: '원/달러 환율, 주요 6개국 달러 인덱스(DXY), 엔/달러, 위안/달러 실제 데이터 비교',
+                    subtitle: '원/달러 환율, 달러 인덱스(DXY), 엔/달러 및 S&P 500 · KOSPI 비교',
                     badge: '외환 시장',
                     badgeColor: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
                     series: [
                         { key: 'krw', name: '원/달러 환율 (원)', color: '#6366f1', unit: '원', yAxisId: 'left', strokeWidth: 2.2 },
                         { key: 'dxy', name: '달러 인덱스 (pt)', color: '#10b981', unit: 'pt', yAxisId: 'right', strokeWidth: 2 },
                         { key: 'usdjpy', name: '엔/달러 (엔)', color: '#f59e0b', unit: '엔', yAxisId: 'right', strokeWidth: 1.5, strokeDasharray: '3 3' },
+                        { key: 'kospi', name: 'KOSPI (pt)', color: '#a855f7', unit: 'pt', yAxisId: 'right', strokeWidth: 1.8 },
+                        { key: 'spx', name: 'S&P 500 (pt)', color: '#38bdf8', unit: 'pt', yAxisId: 'right', strokeWidth: 1.8, strokeDasharray: '3 3' },
                     ],
                     currentStats: [
                         { label: '원/달러', value: '1,329.6원', change: '-6.5% (1Y)' },
                         { label: '달러지수', value: '101.78 pt', change: '+3.4% (1Y)', isPositive: true },
                         { label: '엔/달러', value: '158.34 엔' },
                     ],
-                    notice: '💡 달러 인덱스(DXY)는 주요 6개국 통화 대비 달러화 가치를 나타내며, 달러 강세는 원화 환율 상승 및 외국인 수급에 영향을 미칩니다.'
+                    notice: '💡 달러 강세 및 원/달러 환율 상승(원화 약세) 국면에서는 외국인 순매도 압력으로 KOSPI가 하방 압력을 받는 경향이 뚜렷합니다.'
                 };
             case 'stocks':
                 return {
