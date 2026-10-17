@@ -7,6 +7,7 @@ import RiskAlertBanner from './RiskAlertBanner';
 import { Sparkles, TrendingUp, ShieldAlert, Scale, Layers } from 'lucide-react';
 import PortfolioTreemap from './PortfolioTreemap';
 import RebalanceProposal from './RebalanceProposal';
+import MidtermPortfolioProposal from './MidtermPortfolioProposal';
 import DbSyncControl from './DbSyncControl';
 import NotificationSettings from './NotificationSettings';
 import EfficientFrontierPanel from './EfficientFrontierPanel';
@@ -529,6 +530,9 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
 
             {/* AI 리밸런싱 제안 */}
             <RebalanceProposal />
+
+            {/* 나의 포트폴리오 중간선거 대응 리밸런싱 제안 */}
+            <MidtermPortfolioProposal />
 
             {/* 무중단 DB 동기화 및 백업 제어 */}
             <DbSyncControl />

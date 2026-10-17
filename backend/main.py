@@ -30,6 +30,7 @@ from api.rates_dashboard import router as rates_dashboard_router
 from api.stocks_dashboard import router as stocks_dashboard_router
 from api.macro_dashboard import router as macro_dashboard_router
 from api.midterm_election import router as midterm_election_router
+from api.oil_dashboard import router as oil_dashboard_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -355,6 +356,7 @@ app.include_router(rates_dashboard_router, prefix="/api/v1/rates")
 app.include_router(stocks_dashboard_router, prefix="/api/v1/stocks")
 app.include_router(macro_dashboard_router, prefix="/api/v1/macro")
 app.include_router(midterm_election_router, prefix="/api/v1/midterm")
+app.include_router(oil_dashboard_router, prefix="/api/v1/oil")
 
 
 @app.get("/health")

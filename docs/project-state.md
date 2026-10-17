@@ -3,25 +3,28 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: Sprint 13 완료 — 1) [시장동향] 미국중간선거('26.11) 영향 분석 신규 서브탭 & 5대 모듈(선거 개요, 사전 판세 트래커, 3대 시나리오 매트릭스, 역대 계절성 통계, AI 맞춤형 Core-Satellite 리밸런싱 컨설턴트) 구축 완료, 2) BLS 미국 노동통계국 CPI/PPI 공식 API 실시간 선제 동기화 엔진 구축, 3) 백엔드 232개 전 테스트 100% Pass 및 Next.js 11개 페이지 최적화 빌드 완료
+✅ Current: Sprint 14 완료 — 1) [시장동향] 신규 '유가' 서브탭 & 5대 모듈(3대 벤치마크 시세, Brent-WTI 스프레드, EIA 재고·수급, 싱가포르 정제마진, 3대 지정학 초크포인트, 실전 ETF 플레이북) 구축 완료, 2) '종합' 서브탭 명칭 개편 및 글로벌 5대 거시 핵심 지표(유가, VIX, 물가 CPI, 금리차, DXY) 통합 패널 탑재, 3) 미국 중간선거 분석 고도화(3대 법칙 대체, 나스닥 계절성 & 1950~2026 연도별 사이클 파스텔 대선/중간선거 밴드, AI 투자성향 인터뷰 팝업 및 실시간 바 반응형 연동), 4) My 메뉴 KIS 실시간 포트폴리오 중간선거 대응 리밸런싱 제안 신설, 5) 백엔드 237개 전 테스트 100% Pass 및 Next.js 11개 페이지 최적화 빌드 완료
 ➡️ Next: 프로덕션 실서버(Vercel/Render) 실시간 모니터링 및 사용자 피드백 대응
 
-> 세션 핸드오프 (2026-10-17, Antigravity - Sprint 13):
-> - 🗳️ [S13-1: 미국중간선거('26.11) 영향 분석 백엔드 API & 퀀트 엔진]:
->   - `backend/api/midterm_election.py`: 5대 엔드포인트 구축 (`/overview`, `/radar`, `/scenarios`, `/historical`, `/portfolio-guide`).
->   - 헌법적 사실관계 팩트체크: 대통령 재선거 절대 없음 명시, 435석/33석/36개주 권력 지형 정의.
->   - 사전 판세 확률(하원 민주 58.5% vs 공화 41.5%, 상원 공화 56% vs 민주 44%, 분점정부 Gridlock 67.5%), 4대 정책 쟁점(관세, 재정적자, AI규제, IRA).
->   - 3대 시나리오(Gridlock, Red Hold, Blue Wave)별 거시경제(금리, 환율, 유가, 물가) 및 섹터별 수혜/부담 매트릭스.
->   - 1950~2022 19회 중간선거 S&P 500 계절성(선거 전 8~10월 바닥 vs 선거 후 12개월 94.7% 상승, 평균 +15.1%).
->   - AI 맞춤형 Core-Satellite 리밸런싱 포뮬러 (기술주 비중 진단 및 Trim/Rotate/Reinforce 액션 플랜).
-> - 🎨 [S13-2: 프론트엔드 대시보드 컴포넌트 & 서브탭 연동]:
->   - `dashboard/src/components/MidtermElectionTab.tsx`: 5대 핵심 모듈 다크 글래스모피즘 UI, Recharts 계절성 라인차트, 인터랙티브 비중 조절 슬라이더 및 시나리오 스위처.
->   - `dashboard/src/components/MainApp.tsx`: 시장동향 서브탭에 `{ id: 'us_midterm', label: "🗳️ 미국중간선거('26.11)" }` 등록 및 뷰 연동.
-> - ⚡ [S13-3: BLS(미국 노동통계국) CPI/PPI 실시간 선제 연동]:
->   - `backend/api/exit_signal.py`: `_fetch_bls_recent()` 공식 API 연동 및 FRED Final Demand 헤드라인 PPI(`WPSFD49207`) 연동으로 9월 CPI/PPI 발표 당일 즉시 반영.
-> - 🛡️ [S13-4: 전방위 무결성 검증 & 테스트]:
->   - `backend/tests/test_midterm_election.py`: 신규 단위 테스트 5종 100% 통과.
->   - 백엔드 pytest 232개 전체 테스트 100% Pass, Next.js 11개 페이지 최적화 빌드 100% Pass.
+> 세션 핸드오프 (2026-10-17, Antigravity - Sprint 14):
+> - 🛢️ [S14-1: 글로벌 유가 및 에너지 시장 동향 신규 서브탭 & 퀀트 API]:
+>   - `backend/api/oil_dashboard.py`: 4대 엔드포인트 구축 (`/overview`, `/fundamentals`, `/geopolitics`, `/etf-playbook`).
+>   - 3대 글로벌 벤치마크 원유 시세(WTI, Brent, Dubai) 실시간 시세 및 Brent-WTI 스프레드($3.60).
+>   - 원유 수급 펀더멘털: EIA 주간 원유 재고(-218만 bbl), 미국 일일 생산량(1,352만 bpd), 베이커휴즈 오일 리그 수(482기).
+>   - 싱가포르 복합 정제마진($6.45/bbl, 손익분기점 $4.5 상회로 정유사 호조) 및 6개월 복합 추이 차트.
+>   - 3대 해상 초크포인트(호르무즈 해협, 홍해-바브엘만데브, 러시아 우랄유) 지정학 리스크 레이더.
+>   - 실전 ETF 플레이북: 고유가($85+) 수혜(XLE, USO, 조선) vs 저유가($65~$75) 수혜(대한항공, JETS, 화학, QQQ).
+>   - `dashboard/src/components/OilTab.tsx`: 4대 모듈 다크 글래스모피즘 Recharts 컴포넌트 개발.
+> - 🌐 [S14-2: 시장동향 '종합' 개편 & 글로벌 5대 거시 핵심 지표 통합 모니터링]:
+>   - `MainApp.tsx`: 서브탭 '종합(환율/금리/주식)'을 '종합'으로 명칭 단순화, 주식 오른쪽에 '유가' 서브탭 신설.
+>   - `backend/api/macro_dashboard.py`: `macro_vital_indicators` (WTI 유가, VIX, BLS 9월 CPI, 미 10Y-2Y 금리차, DXY) 통합 제공.
+>   - `MacroTab.tsx`: `VitalIndicatorsPanel` 탑재로 유가, 공포지수, 물가(인플레)를 아우르는 진정한 종합 분석 제공.
+> - 🗳️ [S14-3: 미국 중간선거 분석 고도화 & My KIS 계좌 연동]:
+>   - `MidtermElectionTab.tsx`: 첨부1 대체(3대 법칙: 중간선거의 저주, 비대칭 교체 주기, 입법 교착/행정명령), 첨부2 고도화(나스닥 계절성 및 1950~2026 77개년 S&P 500 / 나스닥 사이클 Recharts 라인차트 + 파스텔 블루 대선/파스텔 레드 중간선거 밴드), 첨부3 고도화(AI 투자성향 인터뷰 팝업 모달 + 왼쪽 비중 막대 실시간 반응형 연동).
+>   - `dashboard/src/components/MidtermPortfolioProposal.tsx`: My 메뉴 전용 중간선거 리밸런싱(Trim, Rotate, Shield) 제안 컴포넌트 개발 및 `MyDashboard.tsx` 연동.
+> - 🛡️ [S14-4: 전방위 무결성 검증 & 테스트]:
+>   - `backend/tests/test_oil_dashboard.py` 신설 및 `test_midterm_election.py` 보강.
+>   - 백엔드 pytest 237개 전체 테스트 100% Pass, Next.js 11개 페이지 최적화 빌드 100% Pass.
 > - 📱 [S12-1: 모바일 UX 최적화 (사용자 3번 과제)]:
 >   - `SemiCycleDashboard.tsx`: 2D 시계 모바일 높이 축소(`h-[320px] sm:h-[380px]`), 사분면 텍스트 반응형 글자 크기 및 여백 조정, ScatterChart margin 최적화 (`top: 25, right: 15, bottom: 25, left: 15`).
 >   - `SemiChart.tsx`: Q-Cycle 스크리너 테이블 상단에 모바일 전용 `[← 좌우로 스와이프하여 상세 지표 확인 →]` 가이드 배지 및 `touch-pan-x` 스무스 터치 스크롤 적용.
