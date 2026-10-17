@@ -56,7 +56,9 @@ A living document of module relationships. Update whenever modules are added or 
 | Semi Macro Statistics Pipeline | Core / Infrastructure | Monthly semi 5-industry macro statistics (exports/unit price/volume/utilization/inventory) dynamic series pipeline | scheduler/semi_stats_sync, core/macro_historical_data, core/semi_cycle_engine | SemiCycleDashboard, scheduler | Antigravity |
 | Real Estate Live Pipeline (S20) | Core / Application | Seoul OpenData (tbLnOpendataRtmsV) live transaction sync, monthly stats fallback cache, and FastAPI endpoints | core/real_estate_collector, api/real_estate, db/models | RealEstateTab, scheduler | Antigravity |
 | Real Estate vs ETF Simulator (S21) | Core / Presentation | 10-year net worth projection, loan amortization/bullet math, progressive holding tax, and DSR house-poor risk diagnosis | lib/realEstateSimulator, RealEstateSimulatorSection | RealEstateTab | Antigravity |
+| Seoul District Heatmap & Risk Radar (S22) | Presentation / Core | Seoul 25-district transaction & jeonse ratio heatmap, gap investment risk radar, and expert research briefing | core/real_estate_collector, api/real_estate, SeoulDistrictHeatmap | RealEstateTab | Antigravity |
 <!-- Add new modules above this line -->
+
 
 
 

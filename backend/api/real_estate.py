@@ -77,3 +77,39 @@ async def get_real_estate_status():
         "key_prefix": "sample" if is_sample else (real_estate_collector.api_key[:4] + "****" if len(real_estate_collector.api_key) >= 4 else "****"),
         "notice": "SEOUL_OPEN_DATA_KEY가 sample이거나 미설정된 경우, 2024~2026 검증된 실제 기반 캐시로 안전하게 서비스됩니다."
     }
+
+
+@router.get("/districts")
+async def get_district_heatmap(
+    zone: Optional[str] = Query(None, description="권역 필터 (gangnam_plus, core_center, south_west, north_east, north_west)"),
+    sort_by: Optional[str] = Query("jeonse_desc", description="정렬 (jeonse_desc, jeonse_asc, price_desc, volume_desc)"),
+    db: AsyncSession = Depends(get_db)
+):
+    """서울 25개 자치구별 실거래가/전세가율 히트맵 및 갭투자 위험 단지 레이더"""
+    try:
+        data = await real_estate_collector.get_district_stats(db)
+        districts = data["districts"]
+
+        # 권역 필터링
+        if zone and zone != "ALL":
+            districts = [d for d in districts if d.get("zone") == zone]
+
+        # 정렬
+        if sort_by == "jeonse_desc":
+            districts = sorted(districts, key=lambda x: x["jeonse_ratio"], reverse=True)
+        elif sort_by == "jeonse_asc":
+            districts = sorted(districts, key=lambda x: x["jeonse_ratio"])
+        elif sort_by == "price_desc":
+            districts = sorted(districts, key=lambda x: x["avg_sale_price"], reverse=True)
+        elif sort_by == "volume_desc":
+            districts = sorted(districts, key=lambda x: x["trade_count"], reverse=True)
+
+        return {
+            "meta": data["meta"],
+            "districts": districts,
+            "risk_complexes": data["risk_complexes"]
+        }
+    except Exception as e:
+        logger.error(f"Error fetching district heatmap data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+

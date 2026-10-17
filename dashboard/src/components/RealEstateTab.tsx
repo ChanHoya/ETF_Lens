@@ -35,6 +35,7 @@ import {
 } from 'recharts';
 import { getApiBase } from '@/lib/apiConfig';
 import RealEstateSimulatorSection from './RealEstateSimulatorSection';
+import SeoulDistrictHeatmap from './SeoulDistrictHeatmap';
 
 
 
@@ -637,9 +638,13 @@ export default function RealEstateTab() {
         </div>
       </div>
 
+      {/* S22: 서울 25개 자치구별 실거래가 & 전세가율 히트맵 / 갭투자 위험 레이더 */}
+      <SeoulDistrictHeatmap />
+
       {/* S21: 실물 부동산 vs 금융자산(배당 ETF) 기회비용 & 10개년 복리 정밀 시뮬레이터 */}
       <RealEstateSimulatorSection />
     </div>
   );
 }
+
 
