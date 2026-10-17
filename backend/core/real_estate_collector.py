@@ -19,6 +19,11 @@ from sqlalchemy import select
 
 from db.models import RealEstateMonthlyStats
 
+try:
+    from core.molit_collector import molit_collector
+except ImportError:
+    from backend.core.molit_collector import molit_collector
+
 logger = logging.getLogger(__name__)
 
 # 기본 서울 열린데이터광장 엔드포인트
@@ -392,6 +397,14 @@ class RealEstateCollector:
         await db.commit()
         logger.info(f"Real estate stats synced: {synced_count} added, {updated_count} updated, source={source_label}")
 
+        # 국토교통부 수도권(경기/인천) 13대 거점 실시간 실거래가 병렬 동기화
+        metro_synced = 0
+        try:
+            metro_results = await molit_collector.collect_metro_district_stats()
+            metro_synced = len(metro_results)
+        except Exception as e:
+            logger.warning(f"MOLIT metro sync failed during db sync: {e}")
+
         return {
             "status": "success",
             "source": source_label,
@@ -399,7 +412,9 @@ class RealEstateCollector:
             "synced_count": synced_count,
             "updated_count": updated_count,
             "total_records": len(FALLBACK_MONTHLY_DATASET),
-            "live_records_fetched": total_live_items
+            "live_records_fetched": total_live_items,
+            "metro_records_synced": metro_synced,
+            "molit_status": molit_collector.get_api_status()
         }
 
 
@@ -506,6 +521,22 @@ class RealEstateCollector:
         all_districts = [dict(d) for d in FALLBACK_DISTRICT_DATASET]
         all_risk_complexes = [dict(c) for c in FALLBACK_RISK_COMPLEXES]
 
+        # 국토교통부 수도권(경기/인천 13대 거점) 실시간 수집 데이터 오버레이 매핑
+        metro_live_map = molit_collector._cached_results
+        if not metro_live_map:
+            try:
+                metro_stats = await molit_collector.collect_metro_district_stats()
+                metro_live_map = {d["code"]: d for d in metro_stats}
+            except Exception as e:
+                logger.warning(f"Failed to fetch MOLIT metro stats: {e}")
+                metro_live_map = {}
+
+        if metro_live_map:
+            for i, d in enumerate(all_districts):
+                code = d.get("code")
+                if code in metro_live_map:
+                    all_districts[i] = dict(metro_live_map[code])
+
         # 지역 필터링
         if region and region != "ALL":
             districts = [d for d in all_districts if d.get("region") == region]
@@ -539,6 +570,9 @@ class RealEstateCollector:
         highest_jeonse = {"name": sorted_by_ratio[0]["name"], "ratio": sorted_by_ratio[0]["jeonse_ratio"]} if sorted_by_ratio else {"name": "-", "ratio": 0}
         lowest_jeonse = {"name": sorted_by_ratio[-1]["name"], "ratio": sorted_by_ratio[-1]["jeonse_ratio"]} if sorted_by_ratio else {"name": "-", "ratio": 0}
 
+        seoul_live = not self.is_sample_or_missing
+        molit_status = molit_collector.get_api_status()
+
         return {
             "districts": districts,
             "risk_complexes": risk_complexes,
@@ -556,8 +590,16 @@ class RealEstateCollector:
                 "prime_count": prime_count,
                 "highest_jeonse_district": highest_jeonse,
                 "lowest_jeonse_district": lowest_jeonse,
-                "data_source": "SEOUL_OPEN_DATA_LIVE" if not self.is_sample_or_missing else "FALLBACK_CACHE",
+                "data_source": "SEOUL_OPEN_DATA_LIVE" if seoul_live else "FALLBACK_CACHE",
                 "is_fallback": self.is_sample_or_missing,
+                "seoul_status": {
+                    "api_name": "SEOUL_OPEN_DATA",
+                    "provider": "서울시 열린데이터광장",
+                    "is_live": seoul_live,
+                    "status": "LIVE_ACTIVE" if seoul_live else "FALLBACK_CACHE_ACTIVE",
+                    "data_source": "SEOUL_OPEN_DATA_LIVE" if seoul_live else "FALLBACK_CACHE"
+                },
+                "molit_status": molit_status,
                 "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
         }

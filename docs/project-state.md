@@ -3,21 +3,20 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: Sprint 22 완료 — [서울 25개 자치구별 실거래가 & 전세가율 히트맵 / 갭투자 위험 레이더 (S22-1~4)]:
-1) [S22-1: 25개 자치구 데이터셋 & REST API]: `real_estate_collector.py` 및 `real_estate.py`에 서울 25개 구 정규화 데이터 구축 및 `GET /api/v1/real-estate/districts` 엔드포인트 구현.
-2) [S22-2: 갭투자 역전세 의심 단지 6개소 레이더]: 도봉구 창동주공17단지, 금천구 벽산5단지, 노원구 상계주공11단지 등 추적.
-3) [S22-3: 인터랙티브 히트맵 UI & 리서치 브리핑]: `SeoulDistrictHeatmap.tsx` 신설 및 `RealEstateTab.tsx` 임베드.
-4) [S22-4: 테스트 & E2E 무결성]: pytest 8개 통과, Next.js 11개 페이지 최적화 빌드(`code 0`), 브라우저 E2E 검증 완료.
+✅ Recent: Sprint 23 완료 — [수도권 38개 거점 실거래가 히트맵 & 6계층 양극화 사다리 & 주담대 ICR 배당 방어율 위젯 & 34평 국평 환산 토글]
 
-🚀 Current: Sprint 23 완료 — [수도권(경기 10개 핵심지·인천 3대 거점) 실거래가 히트맵 확장 & 6계층 양극화 사다리 & 내 부동산 배당금 대출이자 방어율(ICR) 위젯 (S23-1~4)]:
-1) [S23-1: 수도권 38개 거점 데이터 모델 & API 구축]: 경기 10개 핵심지(분당, 과천, 광명, 동탄, 평촌, 수지, 광교, 하남, 일산, 시흥) 및 인천 3대 거점(송도, 청라/검단, 부평) 실거래 데이터셋 구축 및 `/districts?region=seoul|gyeonggi|incheon|ALL` API 지원.
-2) [S23-2: 수도권 광역 히트맵 UI & 6계층 양극화 사다리 벤토 그리드]: `SeoulDistrictHeatmap.tsx` 광역 탭 확장 및 평당가 8,400만(강남) ~ 1,750만(부평) 6대 계층별 평당가-전세가율 양극화 사다리 인포그래픽 신설.
-3) [S23-3: 내 보유 부동산 자산 & 배당금 대출이자 방어율 (ICR/DSCR) 위젯]: `RealEstateMortgageShieldWidget.tsx` 신설. 내 부동산 시세·대출 잔액·금리 입력, 월 주담대 이자 vs 월 ETF 배당금 실시간 대조, 이자 보상 배율(ICR 173% 완전 방어), 월 흑자 잉여금(+114.5만원), 금리 스트레스 시뮬레이션 탑재.
-4) [S23-4: 국민평형(84㎡/34평) 환산 시세 토글 & 무결성 검증 통과]: `SeoulDistrictHeatmap.tsx`에 34평 국평 환산(평당가×34평) ↔ 구 전체 평균 토글 스위처 및 병기 표기 탑재, pytest 8개 통과, Next.js 11개 페이지 최적화 빌드 통과(`code 0`), 브라우저 E2E 검증 완료.
+🚀 Current: Sprint 24 완료 — [국토교통부(MOLIT) 실거래가 OpenAPI 공식 연동 & 수도권(경기 10개 핵심지·인천 3대 거점) 실시간 수집 파이프라인 구축 (S24-1~4)]:
+1) [S24-1: 국토부 실거래가 OpenAPI 클라이언트 & 13대 거점 LAWD_CD 매핑]: `molit_collector.py` 신설. 아파트 매매 실거래 상세자료(`RTMSDataSvcAptTradeDev`) 및 전월세(`RTMSDataSvcAptRent`) API 비동기 수집 클라이언트 구축, 경기 10개 핵심지(분당, 과천, 광명, 동탄 등) 및 인천 3대 거점(송도, 청라, 부평) 법정동 시군구코드 매핑.
+2) [S24-2: 국토부 XML 파서 & 평당가/전세가율 정규화 & Fallback 안전망]: `xml.etree.ElementTree` 기반 거래금액/전용면적 추출, 평당가 및 전세가율 연산, `MOLIT_API_KEY` 부재/쿼터 초과 시 검증된 캐시 데이터셋으로 무중단 자동 전환.
+3) [S24-3: FastAPI 엔드포인트 & 주간 자동 롤링 스케줄러 통합]: `/districts` 및 `/sync`에 서울(서울열린데이터) + 수도권(국토부) 2대 공공 API 동시 병렬 수집 결합, `/status`에 `seoul_status`와 `molit_status` 듀얼 핑 노출, 매주 월요일 04:30 KST 자동 롤링 동기화.
+4) [S24-4: 프론트엔드 듀얼 연동 배지 & E2E 브라우저 및 단위 테스트 검증]: `SeoulDistrictHeatmap.tsx` 상단에 `[서울: OpenAPI 라이브 | 수도권: 국토부 MOLIT 실시간]` 듀얼 연동 상태 칩 반영, pytest 11개 100% Pass, Next.js 11개 페이지 최적화 빌드 완료 및 브라우저 E2E 검증 완료.
 
-
-
-> 세션 핸드오프 (2026-10-17, Antigravity - Sprint 22~23: 서울 25개 구 & 수도권 38개 거점 히트맵, 6계층 사다리, 배당 방어율 ICR 위젯 완료):
+> 세션 핸드오프 (2026-10-17, Antigravity - Sprint 24: 국토교통부 MOLIT 실거래가 OpenAPI 공식 연동 및 경기·인천 13대 거점 실시간 파이프라인 구축 완료):
+> - 🏛️ [Sprint 24: 국토교통부(MOLIT) 실거래가 OpenAPI 공식 연동 (S24-1~4)]:
+>   - `backend/core/molit_collector.py`: 수도권 13대 거점 법정동 매핑, 아파트 매매/전월세 실거래 상세자료 수집, XML 파싱 및 평당가 연산, Fallback 안전망.
+>   - `backend/core/real_estate_collector.py` & `backend/api/real_estate.py`: 국토부 API 오버레이 결합, `/status` 듀얼 상태 응답, `sync_database` 병렬 동기화.
+>   - `dashboard/src/components/SeoulDistrictHeatmap.tsx`: `[서울: 서울시 OpenAPI 라이브 | 수도권: 국토교통부 MOLIT 실시간]` 듀얼 상태 칩 탑재.
+>   - 테스트 & 빌드: pytest 11개 전 테스트 100% 통과 (`11 passed in 5.55s`), Next.js 11개 페이지 최적화 빌드 완료 (`code 0`), 브라우저 E2E 검증 완료.
 > - 🗺️ [Sprint 22: 서울 25개 자치구 히트맵 & 갭투자 위험 레이더 (S22-1~4)]:
 >   - 서울 25개 구 실거래가 및 전세가율 정규화 데이터셋 & `/api/v1/real-estate/districts` 엔드포인트.
 >   - 갭투자 역전세 단지 6개소 탐지(도봉, 금천, 노원 등), 인터랙티브 히트맵 시각화 UI 구축.

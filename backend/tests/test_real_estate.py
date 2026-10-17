@@ -154,3 +154,83 @@ def test_real_estate_districts_filtering_and_sorting():
     assert districts_jeonse[0]["jeonse_ratio"] >= districts_jeonse[1]["jeonse_ratio"]
 
 
+def test_molit_collector_fallback_and_status():
+    """국토교통부 MOLIT 수집기 Fallback 감지 및 API 상태 검증"""
+    try:
+        from core.molit_collector import molit_collector
+    except ImportError:
+        from backend.core.molit_collector import molit_collector
+
+    with patch.dict(os.environ, {"MOLIT_API_KEY": "sample"}):
+        collector = molit_collector.__class__()
+        collector.api_key = "sample"
+        assert collector.is_sample_or_missing is True
+        status = collector.get_api_status()
+        assert status["provider"] == "국토교통부 공공데이터포털"
+        assert status["covered_districts"] == 13
+
+
+def test_molit_xml_parser():
+    """국토부 아파트 실거래가 XML 응답 파싱 및 금액 정규화 검증"""
+    try:
+        from core.molit_collector import molit_collector
+    except ImportError:
+        from backend.core.molit_collector import molit_collector
+
+    sample_xml = """<?xml version="1.0" encoding="UTF-8"?>
+    <response>
+      <header>
+        <resultCode>00</resultCode>
+        <resultMsg>NORMAL SERVICE.</resultMsg>
+      </header>
+      <body>
+        <items>
+          <item>
+            <dealAmount>   165,000</dealAmount>
+            <buildYear>2004</buildYear>
+            <dealYear>2026</dealYear>
+            <dealMonth>10</dealMonth>
+            <dealDay>15</dealDay>
+            <dong>정자동</dong>
+            <aptNm>파크뷰</aptNm>
+            <excluUseAr>84.99</excluUseAr>
+            <floor>18</floor>
+            <sggCd>41135</sggCd>
+          </item>
+          <item>
+            <dealAmount>   120,000</dealAmount>
+            <buildYear>2010</buildYear>
+            <dealYear>2026</dealYear>
+            <dealMonth>10</dealMonth>
+            <dealDay>12</dealDay>
+            <dong>이매동</dong>
+            <aptNm>아름마을</aptNm>
+            <excluUseAr>59.85</excluUseAr>
+            <floor>10</floor>
+            <sggCd>41135</sggCd>
+          </item>
+        </items>
+      </body>
+    </response>
+    """
+    collector = molit_collector.__class__()
+    parsed = collector.parse_molit_xml(sample_xml)
+    assert len(parsed) == 2
+    assert parsed[0]["apt_name"] == "파크뷰"
+    assert parsed[0]["amount_won"] == 165000.0  # 16.5억 (만원 단위)
+    assert parsed[0]["area_sqm"] == 84.99
+    assert parsed[0]["deal_date"] == "2026.10.15"
+
+
+def test_real_estate_status_dual_api():
+    """GET /api/v1/real-estate/status 서울시 + 국토부 듀얼 상태 응답 검증"""
+    res = client.get("/api/v1/real-estate/status")
+    assert res.status_code == 200
+    data = res.json()
+    assert "seoul_status" in data
+    assert "molit_status" in data
+    assert data["seoul_status"]["provider"] == "서울시 열린데이터광장"
+    assert data["molit_status"]["provider"] == "국토교통부 공공데이터포털"
+    assert data["molit_status"]["covered_districts"] == 13
+
+

@@ -68,14 +68,28 @@ async def sync_real_estate_data(
 
 @router.get("/status")
 async def get_real_estate_status():
-    """부동산 수집 파이프라인 및 인증키 연동 상태 진단"""
+    """부동산 수집 파이프라인 및 서울/국토부 2대 인증키 연동 상태 진단"""
     is_sample = real_estate_collector.is_sample_or_missing
+    try:
+        from core.molit_collector import molit_collector
+    except ImportError:
+        from backend.core.molit_collector import molit_collector
+
+    molit_info = molit_collector.get_api_status()
+
     return {
         "status": "ready",
         "api_mode": "FALLBACK_CACHE" if is_sample else "LIVE_API",
         "has_custom_key": not is_sample,
         "key_prefix": "sample" if is_sample else (real_estate_collector.api_key[:4] + "****" if len(real_estate_collector.api_key) >= 4 else "****"),
-        "notice": "SEOUL_OPEN_DATA_KEY가 sample이거나 미설정된 경우, 2024~2026 검증된 실제 기반 캐시로 안전하게 서비스됩니다."
+        "seoul_status": {
+            "api_name": "SEOUL_OPEN_DATA",
+            "provider": "서울시 열린데이터광장",
+            "is_live": not is_sample,
+            "status": "LIVE_ACTIVE" if not is_sample else "FALLBACK_CACHE_ACTIVE"
+        },
+        "molit_status": molit_info,
+        "notice": "공공 API 키가 미설정된 경우, 2024~2026 검증된 국토부·서울시 정규화 캐시로 무중단 안전 서비스됩니다."
     }
 
 

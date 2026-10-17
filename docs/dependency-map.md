@@ -58,6 +58,7 @@ A living document of module relationships. Update whenever modules are added or 
 | Real Estate vs ETF Simulator (S21) | Core / Presentation | 10-year net worth projection, loan amortization/bullet math, progressive holding tax, and DSR house-poor risk diagnosis | lib/realEstateSimulator, RealEstateSimulatorSection | RealEstateTab | Antigravity |
 | Seoul District Heatmap & Risk Radar (S22) | Presentation / Core | Seoul 25-district transaction & jeonse ratio heatmap, gap investment risk radar, and expert research briefing | core/real_estate_collector, api/real_estate, SeoulDistrictHeatmap | RealEstateTab | Antigravity |
 | Capital Metro Heatmap & ICR Shield (S23) | Presentation / Core | Metro 38-district heatmap, 6-tier ladder bento grid, and personal real estate mortgage ICR dividend shield widget | core/real_estate_collector, api/real_estate, RealEstateMortgageShieldWidget, SeoulDistrictHeatmap | RealEstateTab | Antigravity |
+| MOLIT Public Data Collector (S24) | Core / Application | Ministry of Land, Infrastructure and Transport (MOLIT) live transaction API collector for 13 Gyeonggi/Incheon districts, XML parsing, fallback shield, and dual API status | core/molit_collector, core/real_estate_collector, api/real_estate | SeoulDistrictHeatmap, scheduler | Antigravity |
 <!-- Add new modules above this line -->
 
 

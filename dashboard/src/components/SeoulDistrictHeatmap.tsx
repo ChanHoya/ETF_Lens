@@ -72,6 +72,19 @@ export interface DistrictMeta {
   lowest_jeonse_district: { name: string; ratio: number };
   data_source: string;
   is_fallback: boolean;
+  seoul_status?: {
+    api_name: string;
+    provider: string;
+    is_live: boolean;
+    status: string;
+  };
+  molit_status?: {
+    api_name: string;
+    provider: string;
+    is_live: boolean;
+    status: string;
+    data_source: string;
+  };
   updated_at: string;
 }
 
@@ -275,13 +288,17 @@ export default function SeoulDistrictHeatmap() {
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex flex-wrap items-center gap-2 mb-1.5">
               <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-wider uppercase bg-indigo-500/30 text-indigo-300 border border-indigo-400/30">
                 Seoul & Capital Metro 38 Districts Heatmap
               </span>
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                수도권 38개 거점 실거래 전수 연동
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                서울(25구): {meta?.seoul_status?.is_live ? '서울시 OpenAPI 라이브' : '검증 캐시 연동'}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                수도권(13거점): {meta?.molit_status?.is_live ? '국토부 MOLIT 실시간' : '국토부 정규화 통계'}
               </span>
             </div>
             <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
