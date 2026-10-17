@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, DollarSign, Activity, CalendarDays } from 'lu
 import {
   ResponsiveContainer, ComposedChart, Area, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell, ReferenceLine
 } from 'recharts';
+import { useChartHighlight, STANDARD_LEGEND_WRAPPER_STYLE } from '../../../lib/chartTheme';
 
 interface Props {
   data: TffCumulativeSummary;
@@ -14,6 +15,8 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
   const { totalData, yearlyData, monthlyData } = data;
   const [hoveredDataKey, setHoveredDataKey] = useState<string | null>(null);
   const chartWrapRef = useRef<HTMLDivElement>(null);
+  const assetHighlight = useChartHighlight();
+  const returnHighlight = useChartHighlight();
 
   // 막대/포인트 가운데에 표시되는 흰색 세로선 커서
   const VLineCursor = (props: any) => {
@@ -41,9 +44,9 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
         pointerEvents: 'none',
         minWidth: '180px',
       }}>
-        <p style={{ color: '#9ca3af', marginBottom: '8px', fontSize: '12px' }}>{label}</p>
+        <p style={{ color: '#9ca3af', marginBottom: '8px', fontSize: '11px' }}>{label}</p>
         {payload.map((entry: any, i: number) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '14px', fontSize: '13px', marginBottom: '3px' }}>
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '14px', fontSize: '11px', marginBottom: '3px' }}>
             <span style={{ color: entry.color || entry.stroke || '#cbd5e1', fontWeight: 600 }}>{entry.name}</span>
             <span style={{ color: '#f8fafc', fontWeight: 700 }}>{valueFormatter(entry.value)}</span>
           </div>
@@ -211,7 +214,9 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     content={<SeriesTooltip valueFormatter={(v: number) => formatMoney(v) + '원'} />}
                   />
                   <Legend 
-                    wrapperStyle={{ paddingTop: '10px' }} 
+                    wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                    onClick={assetHighlight.handleLegendClick}
+                    formatter={assetHighlight.renderLegendText}
                     onMouseEnter={(e: any) => setHoveredDataKey(e.dataKey)}
                     onMouseLeave={() => setHoveredDataKey(null)}
                   />
@@ -227,9 +232,9 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     dataKey="endValue" 
                     name="기말평가액" 
                     stroke="#818cf8" 
-                    strokeWidth={3}
-                    strokeOpacity={hoveredDataKey && hoveredDataKey !== 'endValue' ? 0.3 : 1}
-                    fillOpacity={hoveredDataKey && hoveredDataKey !== 'endValue' ? 0.3 : 1} 
+                    strokeWidth={assetHighlight.getStrokeWidth('endValue', 3)}
+                    strokeOpacity={assetHighlight.getOpacity('endValue')}
+                    fillOpacity={assetHighlight.getOpacity('endValue')} 
                     fill="url(#colorAsset)" 
                   />
                   {/* 수익금액 바 차트 */}
@@ -237,7 +242,7 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     dataKey="profitAmount"
                     name="월별 투자수익금"
                     fill="#f43f5e"
-                    fillOpacity={hoveredDataKey && hoveredDataKey !== 'profitAmount' ? 0.2 : 1}
+                    fillOpacity={assetHighlight.getOpacity('profitAmount')}
                     radius={[4, 4, 0, 0]}
                     barSize={16}
                     maxBarSize={40}
@@ -254,9 +259,9 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     dataKey="accProfitAmount" 
                     name="누적 투자수익금" 
                     stroke="#10b981" 
-                    strokeWidth={2} 
-                    strokeOpacity={hoveredDataKey && hoveredDataKey !== 'accProfitAmount' ? 0.2 : 1}
-                    fillOpacity={hoveredDataKey && hoveredDataKey !== 'accProfitAmount' ? 0.2 : 1} 
+                    strokeWidth={assetHighlight.getStrokeWidth('accProfitAmount', 2)} 
+                    strokeOpacity={assetHighlight.getOpacity('accProfitAmount')}
+                    fillOpacity={assetHighlight.getOpacity('accProfitAmount')} 
                     fill="url(#colorProfit)"
                     dot={false}
                   />
@@ -303,7 +308,9 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     content={<SeriesTooltip valueFormatter={(v: number) => v.toFixed(1) + '%'} />}
                   />
                   <Legend 
-                    wrapperStyle={{ paddingTop: '10px' }} 
+                    wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                    onClick={returnHighlight.handleLegendClick}
+                    formatter={returnHighlight.renderLegendText}
                     onMouseEnter={(e: any) => setHoveredDataKey(e.dataKey)}
                     onMouseLeave={() => setHoveredDataKey(null)}
                   />
@@ -318,11 +325,8 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     dataKey="returnRateDisp" 
                     name="TFF 수익률" 
                     stroke="#f43f5e" 
-                    strokeWidth={2} 
-                    strokeOpacity={
-                      !hoveredDataKey || hoveredDataKey === 'returnRateDisp' ? 1 :
-                      (hoveredDataKey === 'kospiRateDisp' || hoveredDataKey === 'sp500RateDisp') ? 0.4 : 0.15
-                    }
+                    strokeWidth={returnHighlight.getStrokeWidth('returnRateDisp', 2)} 
+                    strokeOpacity={returnHighlight.getOpacity('returnRateDisp')}
                     dot={(!hoveredDataKey || hoveredDataKey === 'returnRateDisp') ? { r: 3, fill: '#f43f5e', stroke: '#1e1e2d', strokeWidth: 1 } : false} 
                     activeDot={{ r: 5 }}
                   />
@@ -331,11 +335,8 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     dataKey="kospiRateDisp" 
                     name="KOSPI 수익률" 
                     stroke="#eab308" 
-                    strokeWidth={1.5} 
-                    strokeOpacity={
-                      !hoveredDataKey || hoveredDataKey === 'kospiRateDisp' ? 1 :
-                      (hoveredDataKey === 'returnRateDisp' || hoveredDataKey === 'sp500RateDisp') ? 0.4 : 0.15
-                    }
+                    strokeWidth={returnHighlight.getStrokeWidth('kospiRateDisp', 1.5)} 
+                    strokeOpacity={returnHighlight.getOpacity('kospiRateDisp')}
                     strokeDasharray="3 3" 
                     connectNulls={true}
                     dot={(!hoveredDataKey || hoveredDataKey === 'kospiRateDisp') ? { r: 2, fill: '#eab308' } : false}
@@ -345,11 +346,8 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
                     dataKey="sp500RateDisp" 
                     name="S&P500 수익률" 
                     stroke="#60a5fa" 
-                    strokeWidth={1.5} 
-                    strokeOpacity={
-                      !hoveredDataKey || hoveredDataKey === 'sp500RateDisp' ? 1 :
-                      (hoveredDataKey === 'returnRateDisp' || hoveredDataKey === 'kospiRateDisp') ? 0.4 : 0.15
-                    }
+                    strokeWidth={returnHighlight.getStrokeWidth('sp500RateDisp', 1.5)} 
+                    strokeOpacity={returnHighlight.getOpacity('sp500RateDisp')}
                     strokeDasharray="3 3" 
                     connectNulls={true}
                     dot={(!hoveredDataKey || hoveredDataKey === 'sp500RateDisp') ? { r: 2, fill: '#60a5fa' } : false}

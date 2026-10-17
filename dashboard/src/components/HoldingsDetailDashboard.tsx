@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { computeDivergingScale } from "@/lib/divergingBar";
 import { UNSET_LABEL } from "@/lib/sectorOptions";
+import { useChartHighlight, STANDARD_LEGEND_WRAPPER_STYLE } from "@/lib/chartTheme";
 
 interface HoldingsDetailDashboardProps {
     isOpen: boolean;
@@ -64,7 +65,7 @@ const PieTooltipContent = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
     const d = payload[0].payload;
     return (
-        <div className="bg-[#1e2030] border border-white/10 rounded-xl px-4 py-3 shadow-2xl text-xs">
+        <div className="bg-[#1e2030] border border-white/10 rounded-xl px-4 py-3 shadow-2xl text-[11px]">
             <p className="font-bold text-white mb-1">{d.name}</p>
             <p className="text-gray-300">
                 평가금액: <span className="font-mono font-semibold text-white">{fmtKRW(d.value)}원</span>
@@ -85,7 +86,7 @@ const BarTooltipContent = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
     const d = payload[0].payload;
     return (
-        <div className="bg-[#1e2030] border border-white/10 rounded-xl px-4 py-3 shadow-2xl text-xs">
+        <div className="bg-[#1e2030] border border-white/10 rounded-xl px-4 py-3 shadow-2xl text-[11px]">
             <p className="font-bold text-white mb-1">{d.name}</p>
             {payload.map((p: any, i: number) => (
                 <p key={i} className="text-gray-300">
@@ -127,6 +128,8 @@ export default function HoldingsDetailDashboard({
     allHoldings,
 }: HoldingsDetailDashboardProps) {
     const [activeTab, setActiveTab] = useState<TabKey>("stock");
+    const pieHighlight = useChartHighlight();
+    const barHighlight = useChartHighlight();
 
     const currentData = useMemo(() => {
         const field = TABS.find((t) => t.key === activeTab)?.field ?? "name";
@@ -213,25 +216,42 @@ export default function HoldingsDetailDashboard({
                                     <Pie
                                         data={pieData}
                                         cx="50%"
-                                        cy="50%"
+                                        cy="45%"
                                         innerRadius={55}
                                         outerRadius={95}
                                         paddingAngle={2}
                                         dataKey="value"
                                         stroke="none"
                                     >
-                                        {pieData.map((_: any, i: number) => (
-                                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                                        ))}
+                                        {pieData.map((d: any, i: number) => {
+                                            const isDimmed = pieHighlight.highlightedKey && pieHighlight.highlightedKey !== d.name;
+                                            return (
+                                                <Cell 
+                                                    key={i} 
+                                                    fill={CHART_COLORS[i % CHART_COLORS.length]} 
+                                                    fillOpacity={isDimmed ? 0.3 : 1}
+                                                />
+                                            );
+                                        })}
                                     </Pie>
                                     <Tooltip content={<PieTooltipContent />} />
                                     <Legend
                                         verticalAlign="bottom"
                                         iconType="circle"
                                         iconSize={7}
-                                        formatter={(value: string) => (
-                                            <span className="text-[10px] text-gray-300">{value}</span>
-                                        )}
+                                        onClick={pieHighlight.handleLegendClick}
+                                        formatter={(value: string) => {
+                                            const isDimmed = pieHighlight.highlightedKey && pieHighlight.highlightedKey !== value;
+                                            const isSelected = pieHighlight.highlightedKey === value;
+                                            return (
+                                                <span 
+                                                    className={`text-[10px] cursor-pointer transition-opacity ${isSelected ? 'font-bold underline text-white' : 'text-gray-300'}`}
+                                                    style={{ opacity: isDimmed ? 0.35 : 1 }}
+                                                >
+                                                    {value}
+                                                </span>
+                                            );
+                                        }}
                                     />
                                 </PieChart>
                             </ResponsiveContainer>
@@ -266,12 +286,24 @@ export default function HoldingsDetailDashboard({
                                     <Legend
                                         iconType="circle"
                                         iconSize={8}
-                                        formatter={(value: string) => (
-                                            <span className="text-[11px] text-gray-300">{value}</span>
-                                        )}
+                                        wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                        onClick={barHighlight.handleLegendClick}
+                                        formatter={barHighlight.renderLegendText}
                                     />
-                                    <Bar dataKey="purchaseAmount" name="매수총액" fill="#64748b" radius={[3, 3, 0, 0]} />
-                                    <Bar dataKey="value" name="평가총액" fill="#a855f7" radius={[3, 3, 0, 0]} />
+                                    <Bar 
+                                        dataKey="purchaseAmount" 
+                                        name="매수총액" 
+                                        fill="#64748b" 
+                                        fillOpacity={barHighlight.getOpacity('purchaseAmount')}
+                                        radius={[3, 3, 0, 0]} 
+                                    />
+                                    <Bar 
+                                        dataKey="value" 
+                                        name="평가총액" 
+                                        fill="#a855f7" 
+                                        fillOpacity={barHighlight.getOpacity('value')}
+                                        radius={[3, 3, 0, 0]} 
+                                    />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>

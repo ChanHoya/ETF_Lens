@@ -8,6 +8,7 @@ import MacroCompass from '@/components/MacroCompass';
 import MacroRegimeQuadrant from '@/components/MacroRegimeQuadrant';
 import AIInsight from '@/components/AIInsight';
 import { API_BASE } from '@/lib/apiConfig';
+import { useChartHighlight, STANDARD_LEGEND_WRAPPER_STYLE } from '@/lib/chartTheme';
 
 const FALLBACK_MACRO_DATA = [
     { "date": "2024-03", "cpi_yoy": 3.5, "ppi_yoy": 2.1, "pce_yoy": 2.8 },
@@ -30,6 +31,8 @@ export default function DiscoverTab() {
     const [timeframe, setTimeframe] = useState<'1Y' | '3Y' | '5Y' | 'ALL'>('3Y');
     const [refreshing, setRefreshing] = useState<boolean>(false);
     const [activeModal, setActiveModal] = useState<'inflation' | null>(null);
+
+    const inflationHighlight = useChartHighlight();
 
     useEffect(() => {
         // 1. Load from cache
@@ -301,7 +304,7 @@ export default function DiscoverTab() {
                                                 content={({ active, payload, label }) => {
                                                     if (active && payload && payload.length) {
                                                         return (
-                                                            <div className="bg-[#0e0e12]/95 border border-white/10 p-3 rounded-2xl shadow-xl backdrop-blur-md text-[12px] flex flex-col gap-1.5 min-w-[155px]">
+                                                            <div className="bg-[#0e0e12]/95 border border-white/10 p-3 rounded-2xl shadow-xl backdrop-blur-md text-[11px] flex flex-col gap-1.5 min-w-[155px]">
                                                                 <p className="text-gray-400 font-semibold mb-1 flex items-center gap-1.5">
                                                                     <Calendar className="w-3.5 h-3.5 text-indigo-400" />
                                                                     {label}
@@ -329,23 +332,16 @@ export default function DiscoverTab() {
                                                 height={36} 
                                                 iconType="circle"
                                                 iconSize={8}
-                                                content={({ payload }) => (
-                                                    <div className="flex justify-center gap-6 text-[11px] font-semibold text-gray-400 mb-2">
-                                                        {payload?.map((entry: any, index: number) => (
-                                                            <div key={index} className="flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors">
-                                                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
-                                                                <span>{entry.value}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
+                                                wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                                onClick={inflationHighlight.handleLegendClick}
                                             />
                                             <Line 
                                                 type="monotone" 
                                                 name="CPI (소비자물가)" 
                                                 dataKey="cpi_yoy" 
                                                 stroke="#3b82f6" 
-                                                strokeWidth={3} 
+                                                strokeWidth={inflationHighlight.getSeriesStrokeWidth("CPI (소비자물가)", 3)} 
+                                                strokeOpacity={inflationHighlight.getSeriesOpacity("CPI (소비자물가)")}
                                                 dot={{ r: 2, fill: '#3b82f6', strokeWidth: 0 }} 
                                                 activeDot={{ r: 5, strokeWidth: 0 }}
                                                 filter="url(#glow-cpi-modal)"
@@ -355,7 +351,8 @@ export default function DiscoverTab() {
                                                 name="PPI (생산자물가)" 
                                                 dataKey="ppi_yoy" 
                                                 stroke="#10b981" 
-                                                strokeWidth={3} 
+                                                strokeWidth={inflationHighlight.getSeriesStrokeWidth("PPI (생산자물가)", 3)} 
+                                                strokeOpacity={inflationHighlight.getSeriesOpacity("PPI (생산자물가)")}
                                                 dot={{ r: 2, fill: '#10b981', strokeWidth: 0 }} 
                                                 activeDot={{ r: 5, strokeWidth: 0 }}
                                                 filter="url(#glow-ppi-modal)"
@@ -365,7 +362,8 @@ export default function DiscoverTab() {
                                                 name="PCE (개인소비지출)" 
                                                 dataKey="pce_yoy" 
                                                 stroke="#ec4899" 
-                                                strokeWidth={3} 
+                                                strokeWidth={inflationHighlight.getSeriesStrokeWidth("PCE (개인소비지출)", 3)} 
+                                                strokeOpacity={inflationHighlight.getSeriesOpacity("PCE (개인소비지출)")}
                                                 dot={{ r: 2, fill: '#ec4899', strokeWidth: 0 }} 
                                                 activeDot={{ r: 5, strokeWidth: 0 }}
                                                 filter="url(#glow-pce-modal)"

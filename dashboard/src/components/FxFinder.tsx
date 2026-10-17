@@ -3,12 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { ResponsiveContainer, LineChart, ComposedChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ReferenceArea, ReferenceLine, LabelList } from 'recharts';
 import { DollarSign, ArrowRightLeft, TrendingUp, AlertTriangle, CheckCircle, HelpCircle } from 'lucide-react';
+import { useChartHighlight, STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE } from '@/lib/chartTheme';
 
 export default function FxFinder() {
     const [pairs, setPairs] = useState<any[]>([]);
     const [selectedPair, setSelectedPair] = useState<any>(null);
     const [analysisData, setAnalysisData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    const highlight = useChartHighlight();
 
     // 1. Fetch currency pairs list
     useEffect(() => {
@@ -210,14 +213,34 @@ function ScenarioChart({ data }: { data: any }) {
                         {be != null && <ReferenceLine x={be} stroke="#f59e0b" strokeDasharray="4 3"
                             label={{ value: `손익분기 ${be > 0 ? '+' : ''}${be}%${beFx ? ` (≈${beFx.toLocaleString('ko-KR')}원)` : ''}`, position: 'top', fill: '#fbbf24', fontSize: 10 }} />}
                         <Tooltip
-                            contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '11px' }}
+                            contentStyle={STANDARD_TOOLTIP_STYLE}
                             labelFormatter={(x: any) => { const r = rows.find((q: any) => q.x === x); return r ? `${r.label} · 예상 환율 ${Math.round(r.fx).toLocaleString('ko-KR')}원` : `${x}%`; }}
                             formatter={(v: any, name: any) => [typeof v === 'number' ? SIGN(v) : v, name]} />
-                        <Legend wrapperStyle={{ fontSize: 11 }} />
-                        <Line dataKey="u" name="환노출 수익률" stroke="#10b981" strokeWidth={2.2} dot={{ r: 4 }} isAnimationActive={false}>
+                        <Legend 
+                            wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} 
+                            onClick={highlight.handleLegendClick} 
+                        />
+                        <Line 
+                            dataKey="u" 
+                            name="환노출 수익률" 
+                            stroke="#10b981" 
+                            strokeWidth={highlight.getSeriesStrokeWidth("환노출 수익률", 2.2)} 
+                            strokeOpacity={highlight.getSeriesOpacity("환노출 수익률")}
+                            dot={{ r: 4 }} 
+                            isAnimationActive={false}
+                        >
                             <LabelList dataKey="u" position="top" formatter={(v: any) => SIGN(Number(v))} style={{ fill: '#6ee7b7', fontSize: 10 }} />
                         </Line>
-                        <Line dataKey="h" name="환헤지 수익률" stroke="#818cf8" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 3 }} isAnimationActive={false} />
+                        <Line 
+                            dataKey="h" 
+                            name="환헤지 수익률" 
+                            stroke="#818cf8" 
+                            strokeWidth={highlight.getSeriesStrokeWidth("환헤지 수익률", 2)} 
+                            strokeOpacity={highlight.getSeriesOpacity("환헤지 수익률")}
+                            strokeDasharray="6 3" 
+                            dot={{ r: 3 }} 
+                            isAnimationActive={false} 
+                        />
                     </ComposedChart>
                 </ResponsiveContainer>
             </div>

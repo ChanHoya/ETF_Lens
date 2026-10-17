@@ -6,6 +6,7 @@ import {
     BarChart, Bar, Legend
 } from 'recharts';
 import { Loader2, TrendingUp, AlertTriangle, Play, RefreshCw, Star, Shield, Target, Info } from 'lucide-react';
+import { useChartHighlight, STANDARD_LEGEND_WRAPPER_STYLE } from '@/lib/chartTheme';
 
 /* ─── Types ─── */
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -86,7 +87,7 @@ const ScatterTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
     const d = payload[0]?.payload as ScatterPoint;
     return (
-        <div className="bg-[#0f0f1a]/95 border border-white/10 rounded-xl px-3 py-2 text-xs shadow-xl backdrop-blur-md">
+        <div className="bg-[#0f0f1a]/95 border border-white/10 rounded-xl px-3 py-2 text-[11px] shadow-xl backdrop-blur-md">
             <p className="text-gray-400 mb-1">포트폴리오</p>
             <p className="text-white">수익률: <span className="text-emerald-400 font-bold">{d?.return?.toFixed(2)}%</span></p>
             <p className="text-white">변동성: <span className="text-sky-400 font-bold">{d?.volatility?.toFixed(2)}%</span></p>
@@ -161,6 +162,7 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
     const [lookbackYears, setLookbackYears] = useState<number>(1);
     const [riskFreeRate, setRiskFreeRate] = useState<number>(3.0);
     const [isLoading, setIsLoading] = useState(false);
+    const barHighlight = useChartHighlight();
     const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<EFResult | null>(null);
     const [showInfoModal, setShowInfoModal] = useState<boolean>(false);
@@ -591,17 +593,16 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
                                         }}
                                     />
                                     <Legend
-                                        wrapperStyle={{ fontSize: '11px', paddingTop: '12px' }}
+                                        wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                        onClick={barHighlight.handleLegendClick}
                                         formatter={(value) => {
-                                            if (value === 'current') return '🔴 현재';
-                                            if (value === 'maxSharpe') return '⭐ Max Sharpe';
-                                            if (value === 'minVar') return '🔵 Min Var';
-                                            return value;
+                                            const label = value === 'current' ? '🔴 현재' : (value === 'maxSharpe' ? '⭐ Max Sharpe' : (value === 'minVar' ? '🔵 Min Var' : value));
+                                            return barHighlight.renderLegendText(label, { dataKey: value });
                                         }}
                                     />
-                                    <Bar dataKey="current" name="current" fill="#f43f5e" fillOpacity={0.65} radius={[0, 4, 4, 0]} />
-                                    <Bar dataKey="maxSharpe" name="maxSharpe" fill="#f59e0b" fillOpacity={0.65} radius={[0, 4, 4, 0]} />
-                                    <Bar dataKey="minVar" name="minVar" fill="#0ea5e9" fillOpacity={0.55} radius={[0, 4, 4, 0]} />
+                                    <Bar dataKey="current" name="current" fill="#f43f5e" fillOpacity={barHighlight.getOpacity('current', 0.65)} radius={[0, 4, 4, 0]} />
+                                    <Bar dataKey="maxSharpe" name="maxSharpe" fill="#f59e0b" fillOpacity={barHighlight.getOpacity('maxSharpe', 0.65)} radius={[0, 4, 4, 0]} />
+                                    <Bar dataKey="minVar" name="minVar" fill="#0ea5e9" fillOpacity={barHighlight.getOpacity('minVar', 0.55)} radius={[0, 4, 4, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>

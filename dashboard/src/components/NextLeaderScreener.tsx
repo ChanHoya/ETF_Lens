@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { API_BASE } from '@/lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
+import { useChartHighlight, STANDARD_LEGEND_WRAPPER_STYLE } from '@/lib/chartTheme';
 
 interface NextLeaderScreenerProps {
     onOpenDetail?: (code: string) => void;
@@ -28,6 +29,9 @@ export default function NextLeaderScreener({ onOpenDetail }: NextLeaderScreenerP
     
     const [selectedSector, setSelectedSector] = useState<string>("조선");
     const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+
+    const spreadHighlight = useChartHighlight();
+    const capexHighlight = useChartHighlight();
 
     // Fetch Polarization data
     useEffect(() => {
@@ -93,7 +97,7 @@ export default function NextLeaderScreener({ onOpenDetail }: NextLeaderScreenerP
     const PolarizationTooltip = ({ active, payload, label }: any) => {
         if (!active || !payload || payload.length === 0) return null;
         return (
-            <div className="bg-[#121217]/95 border border-white/10 rounded-2xl p-4 shadow-2xl text-xs min-w-[220px] backdrop-blur-md">
+            <div className="bg-[#121217]/95 border border-white/10 rounded-2xl p-3 shadow-2xl text-[11px] min-w-[220px] backdrop-blur-md">
                 <p className="text-gray-400 font-bold mb-2">{label}</p>
                 {payload.map((entry: any) => {
                     const val = entry.value;
@@ -117,7 +121,7 @@ export default function NextLeaderScreener({ onOpenDetail }: NextLeaderScreenerP
         if (!active || !payload || payload.length === 0) return null;
         const totalVal = payload.reduce((sum: number, entry: any) => sum + (entry.name !== "Total" ? entry.value : 0), 0);
         return (
-            <div className="bg-[#121217]/95 border border-white/10 rounded-2xl p-4 shadow-2xl text-xs min-w-[200px] backdrop-blur-md">
+            <div className="bg-[#121217]/95 border border-white/10 rounded-2xl p-3 shadow-2xl text-[11px] min-w-[200px] backdrop-blur-md">
                 <p className="text-gray-400 font-bold mb-2">{label} 분기별 투자액</p>
                 {payload.map((entry: any) => {
                     if (entry.name === "Total") return null;
@@ -216,15 +220,16 @@ export default function NextLeaderScreener({ onOpenDetail }: NextLeaderScreenerP
                                         height={36} 
                                         iconType="circle"
                                         iconSize={8}
-                                        wrapperStyle={{ fontSize: '11px', fontWeight: 'semibold', paddingBottom: '10px' }}
+                                        wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                        onClick={spreadHighlight.handleLegendClick}
                                     />
                                     <Area 
                                         type="monotone" 
                                         dataKey="spread" 
                                         name="수익률 스프레드 (대형주-중소형주)" 
                                         stroke="#6366f1" 
-                                        strokeWidth={1.5}
-                                        fillOpacity={1} 
+                                        strokeWidth={spreadHighlight.getSeriesStrokeWidth("수익률 스프레드 (대형주-중소형주)", 1.5)}
+                                        fillOpacity={spreadHighlight.getSeriesOpacity("수익률 스프레드 (대형주-중소형주)")} 
                                         fill="url(#colorSpread)" 
                                     />
                                     <Line 
@@ -232,7 +237,8 @@ export default function NextLeaderScreener({ onOpenDetail }: NextLeaderScreenerP
                                         dataKey="large_cap_return" 
                                         name="KODEX 대형주" 
                                         stroke="#10b981" 
-                                        strokeWidth={2} 
+                                        strokeWidth={spreadHighlight.getSeriesStrokeWidth("KODEX 대형주", 2)} 
+                                        strokeOpacity={spreadHighlight.getSeriesOpacity("KODEX 대형주")}
                                         dot={false}
                                     />
                                     <Line 
@@ -240,7 +246,8 @@ export default function NextLeaderScreener({ onOpenDetail }: NextLeaderScreenerP
                                         dataKey="small_cap_return" 
                                         name="KODEX 200중소형" 
                                         stroke="#f59e0b" 
-                                        strokeWidth={2} 
+                                        strokeWidth={spreadHighlight.getSeriesStrokeWidth("KODEX 200중소형", 2)} 
+                                        strokeOpacity={spreadHighlight.getSeriesOpacity("KODEX 200중소형")}
                                         dot={false}
                                     />
                                 </ComposedChart>
@@ -343,11 +350,19 @@ export default function NextLeaderScreener({ onOpenDetail }: NextLeaderScreenerP
                                             tickFormatter={(val) => `$${val}B`}
                                         />
                                         <RechartsTooltip content={<CapexTooltip />} />
-                                        <Bar dataKey="msft" name="MSFT" stackId="a" fill="#10b981" />
-                                        <Bar dataKey="goog" name="GOOGL" stackId="a" fill="#3b82f6" />
-                                        <Bar dataKey="meta" name="META" stackId="a" fill="#ec4899" />
-                                        <Bar dataKey="amzn" name="AMZN" stackId="a" fill="#f59e0b" />
-                                        <Bar dataKey="nvda" name="NVDA" stackId="a" fill="#8b5cf6" />
+                                        <Legend 
+                                            verticalAlign="top" 
+                                            height={24} 
+                                            iconType="circle" 
+                                            iconSize={8} 
+                                            wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} 
+                                            onClick={capexHighlight.handleLegendClick} 
+                                        />
+                                        <Bar dataKey="msft" name="MSFT" stackId="a" fill="#10b981" opacity={capexHighlight.getSeriesOpacity("MSFT")} />
+                                        <Bar dataKey="goog" name="GOOGL" stackId="a" fill="#3b82f6" opacity={capexHighlight.getSeriesOpacity("GOOGL")} />
+                                        <Bar dataKey="meta" name="META" stackId="a" fill="#ec4899" opacity={capexHighlight.getSeriesOpacity("META")} />
+                                        <Bar dataKey="amzn" name="AMZN" stackId="a" fill="#f59e0b" opacity={capexHighlight.getSeriesOpacity("AMZN")} />
+                                        <Bar dataKey="nvda" name="NVDA" stackId="a" fill="#8b5cf6" opacity={capexHighlight.getSeriesOpacity("NVDA")} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             ) : (

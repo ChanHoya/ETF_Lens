@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { API_BASE } from "@/lib/apiConfig";
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE } from "@/lib/chartTheme";
 import { Loader2, Sparkles, RefreshCw, Shield, Maximize2, Minimize2 } from "lucide-react";
 
 type HoldingProps = {
@@ -448,14 +449,31 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
                                         <XAxis dataKey="date" stroke="none" tick={{ fill: '#71717a', fontSize: 12 }} minTickGap={isExpanded ? 20 : 30} />
                                         <YAxis stroke="none" tick={{ fill: '#71717a', fontSize: 12 }} domain={['auto', 'auto']} tickFormatter={(val) => `${val.toFixed(0)}%`} />
                                         <RechartsTooltip 
-                                            contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                            contentStyle={STANDARD_TOOLTIP_STYLE}
                                             formatter={(val: number) => [`${val.toFixed(2)}%`]}
                                             labelStyle={{ color: '#a1a1aa', marginBottom: '8px' }}
                                             cursor={{ stroke: 'rgba(168, 85, 247, 0.4)', strokeWidth: 1.5, strokeDasharray: '4 4' }}
                                         />
                                         <Legend 
+                                            wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                            onClick={(e: any) => {
+                                                if (!e || !e.dataKey) return;
+                                                setActiveHighlight(prev => prev === e.dataKey ? null : e.dataKey);
+                                            }}
                                             onMouseEnter={(e: any) => setActiveHighlight(e.dataKey)}
                                             onMouseLeave={() => setActiveHighlight(null)}
+                                            formatter={(value, entry: any) => {
+                                                const isDimmed = activeHighlight && activeHighlight !== entry.dataKey;
+                                                const isSelected = activeHighlight === entry.dataKey;
+                                                return (
+                                                    <span 
+                                                        className={`cursor-pointer transition-opacity text-[11px] ${isSelected ? 'font-bold underline' : ''}`}
+                                                        style={{ opacity: isDimmed ? 0.35 : 1 }}
+                                                    >
+                                                        {value}
+                                                    </span>
+                                                );
+                                            }}
                                         />
                                         {LINE_CONFIG.map(cfg => {
                                             if (sampledChartData.length > 0 && !(cfg.key in sampledChartData[0])) return null;
