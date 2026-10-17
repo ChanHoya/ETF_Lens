@@ -54,10 +54,23 @@
 - **원인**: `.db` 파일 커밋
 - **해결**: `.gitignore` 확인
 
+## 네트워크 및 환경 설정
+
+### Next.js SSR 모듈 상수 평가로 인한 로컬/배포 API 타겟 고정 (API_BASE 고정 버그)
+- **증상**: 로컬 환경(`localhost:3005`)에서 실행 중임에도 원격 배포 서버(Render)로 API 요청이 전송되어 로컬 신규 키 및 실시간 백엔드 변경이 미반영됨
+- **원인**: `export const API_BASE = ...` 상수가 SSR/번들 초기화 시점에 `NEXT_PUBLIC_API_URL`로 영구 평가되어 클라이언트 브라우저에서도 원격 URL로 고정됨
+- **해결**: `export const getApiBase = () => typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : ...` 런타임 동적 체크 함수를 도입하여 브라우저 실행 시점에 로컬 백엔드를 우선 바인딩함
+
+### 백엔드 런타임 중 .env 파일 수정 시 환경변수 미갱신
+- **증상**: 사용자가 `backend/.env`에 신규 OpenAPI 인증키를 등록했으나, uvicorn 프로세스가 여전히 이전 `sample` 상태를 유지하여 Fallback 캐시로만 동작함
+- **원인**: 수집기 클래스가 `__init__` 시점에 `os.getenv()`를 1회만 캐싱하여 프로세스 재시작 전까지 파일 변경을 감지하지 못함
+- **해결**: `api_key`를 `@property`로 구현하고 `dotenv.load_dotenv(override=True)`를 실행하여 서버 재시작 없이도 파일 변경 즉시 새 키가 메모리에 반영되도록 개선함
+
 ## 네트워크 및 보안 (CORS)
 
 ### "Failed to fetch" — CORS 차단
 - **증상**: 브라우저에서 서버가 살아있음에도 API 호출 실패 (서버 로그에는 기록 안 됨)
+
 - **원인**: `CORSMiddleware` 설정에서 `allow_origins=["*"]`와 `allow_credentials=True`를 동시에 사용
 - **해결**: `allow_origins`에 실제 도메인(`https://etf-lens.vercel.app`)을 명시하거나, `allow_credentials=False`
 

@@ -54,7 +54,10 @@ A living document of module relationships. Update whenever modules are added or 
 | Sector Insights Weekly Auto-Refresh | Application / Infrastructure | Weekly Gemini Expert Report auto-refresh for 5 sectors (semi/space/energy/bio/semiparts) with rate-limit defense | api/sector_insight, core/scheduler | scheduler | Antigravity |
 | Policy Meeting Live Poller & News Flash | Application / Presentation | Hourly live monitoring on BOK/FOMC meeting days, forcing rates/macro updates and Telegram flash alerts | scheduler/meeting_poll, api/rates_dashboard, api/macro_dashboard, core/notifier | scheduler | Antigravity |
 | Semi Macro Statistics Pipeline | Core / Infrastructure | Monthly semi 5-industry macro statistics (exports/unit price/volume/utilization/inventory) dynamic series pipeline | scheduler/semi_stats_sync, core/macro_historical_data, core/semi_cycle_engine | SemiCycleDashboard, scheduler | Antigravity |
+| Real Estate Live Pipeline (S20) | Core / Application | Seoul OpenData (tbLnOpendataRtmsV) live transaction sync, monthly stats fallback cache, and FastAPI endpoints | core/real_estate_collector, api/real_estate, db/models | RealEstateTab, scheduler | Antigravity |
+| Real Estate vs ETF Simulator (S21) | Core / Presentation | 10-year net worth projection, loan amortization/bullet math, progressive holding tax, and DSR house-poor risk diagnosis | lib/realEstateSimulator, RealEstateSimulatorSection | RealEstateTab | Antigravity |
 <!-- Add new modules above this line -->
+
 
 
 ## Dependency Rules
