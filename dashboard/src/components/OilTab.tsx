@@ -1032,7 +1032,7 @@ export default function OilTab() {
             {modalOpen && (() => {
                 const currentMeta = historyData?.indicator_meta || INDICATOR_META_MAP[selectedIndicator] || INDICATOR_META_MAP["wti"];
                 return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
                     <div className="bg-[#13141f] border border-white/15 rounded-3xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
                         {/* Modal Header */}
                         <div className="p-5 md:p-6 border-b border-white/10 flex items-center justify-between bg-[#181a28]">

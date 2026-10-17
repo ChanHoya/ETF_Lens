@@ -1566,7 +1566,7 @@ export default function MidtermElectionTab() {
 
             {/* AI 투자성향 & 자산배분 진단 인터뷰 팝업 모달 */}
             {isInterviewModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
                     <div className="relative w-full max-w-xl bg-[#151726] border border-indigo-500/40 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col gap-5 text-gray-200">
                         {/* Modal Header */}
                         <div className="flex items-center justify-between border-b border-white/10 pb-4">

@@ -73,6 +73,7 @@ const fmtDate = (t: number) => new Date(t).toISOString().slice(0, 10);
 const pct = (v: number | null | undefined, d = 2) => (v == null ? '-' : `${v.toFixed(d)}%`);
 const signed = (v: number, d = 2, unit = '%p') => `${v > 0 ? '+' : ''}${v.toFixed(d)}${unit}`;
 const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+const roundNum = (v: number, d = 2) => Number(v.toFixed(d));
 
 // 금리 변화는 bp. 국내 관례대로 오르면 빨강, 내리면 파랑
 function Bp({ v, label }: { v: number | null | undefined; label: string }) {
@@ -581,8 +582,6 @@ export default function RatesTab() {
                 return null;
         }
     }, [modalKey, data]);
-
-    const roundNum = (v: number, d = 2) => Number(v.toFixed(d));
 
     // 국면 타임라인: 기간 버튼과 무관하게 전체 기간
     const baseRows = useMemo(() => (data?.weekly ?? []).map(r => ({ t: ts(r.date), v: r.kr_base })), [data]);
