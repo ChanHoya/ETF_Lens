@@ -48,6 +48,16 @@ const PensionWealthHub = dynamic(() => import("@/components/pension/PensionWealt
   ),
 });
 
+const RealEstateTab = dynamic(() => import("@/components/RealEstateTab"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center p-12 text-indigo-400 gap-2">
+      <Loader2 className="w-6 h-6 animate-spin" />
+      <span>부동산 인텔리전스 로딩 중...</span>
+    </div>
+  ),
+});
+
 const OilTab = dynamic(() => import("@/components/OilTab"), {
   ssr: false,
   loading: () => (
@@ -63,7 +73,7 @@ type FavGroup = { id: string; name: string; items: { code: string; name: string 
 const BRAND_KEYWORDS = ['1Q', 'ACE', 'HANARO', 'KIWOOM', 'KODEX', 'KoAct', 'PLUS', 'RISE', 'SOL', 'TIGER', 'TIME'];
 const THEME_KEYWORDS = ['커버드콜', '배당', '액티브', 'AI', '반도체', '로봇', '원자력', '2차전지', '조선', '방산', '금융', '바이오'];
 
-function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = false, initialOpenTodayMarket = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'oil' | 'macro' | 'pension' | 'us_midterm', showMyTab?: boolean, showTffTab?: boolean, initialOpenTodayMarket?: boolean }) {
+function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = false, initialOpenTodayMarket = false }: { initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'oil' | 'macro' | 'pension' | 'real_estate' | 'us_midterm', showMyTab?: boolean, showTffTab?: boolean, initialOpenTodayMarket?: boolean }) {
   const router = useRouter();
   const [slots, setSlots] = useState<{ search: string, code: string }[]>([
     { search: "", code: "" },
@@ -80,7 +90,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
   const [globalSearch, setGlobalSearch] = useState("");
   const [globalActive, setGlobalActive] = useState(false);
   const [period, setPeriod] = useState<string>('6M');
-  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'oil' | 'macro' | 'pension' | 'us_midterm'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'oil' | 'macro' | 'pension' | 'real_estate' | 'us_midterm'>(initialTab);
   const [isTodayMarketOpen, setIsTodayMarketOpen] = useState(initialOpenTodayMarket);
 
   const [etfDictionary, setEtfDictionary] = useState<{ code: string, name: string }[]>([]);
@@ -1297,6 +1307,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                 { id: 'sector', label: '섹터분석' },
                 { id: 'discover', label: '시장동향' },
                 { id: 'pension', label: '연금·절세' },
+                { id: 'real_estate', label: '부동산' },
                 ...(showTffTab ? [{ id: 'tff', label: 'TFF_Fund' }] : []),
                 ...(showMyTab ? [{ id: 'my', label: 'My' }] : []),
                 { id: 'etftracker', label: 'ETF추적기', isExternal: true },
@@ -1337,6 +1348,13 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                           setSelectedDetailEtf(null);
                           return;
                         }
+                        if (tab.id === 'real_estate') {
+                          setActiveTab('real_estate');
+                          setIsEtfCheckModalOpen(false);
+                          setNaverEtfCode(null);
+                          setSelectedDetailEtf(null);
+                          return;
+                        }
                         if (tab.id === 'my') {
                           setActiveTab('my');
                           return;
@@ -1362,7 +1380,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                           setSelectedDetailEtf(null);
                           return;
                         }
-                        setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'oil' | 'macro' | 'pension' | 'us_midterm');
+                        setActiveTab(tab.id as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'oil' | 'macro' | 'pension' | 'real_estate' | 'us_midterm');
                         setIsTodayMarketOpen(false);
                         setIsEtfCheckModalOpen(false);
                         setNaverEtfCode(null);
@@ -1994,6 +2012,10 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
           <PensionWealthHub />
         )}
 
+        {activeTab === 'real_estate' && (
+          <RealEstateTab />
+        )}
+
 
 
         <Modals
@@ -2122,7 +2144,7 @@ class GlobalAppErrorBoundary extends React.Component<
 }
 
 export default function MainApp(props: {
-  initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'oil' | 'macro' | 'pension' | 'us_midterm';
+  initialTab?: 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'my' | 'tff' | 'sector' | 'brazil' | 'fx' | 'rates' | 'stocks' | 'oil' | 'macro' | 'pension' | 'real_estate' | 'us_midterm';
   showMyTab?: boolean;
   showTffTab?: boolean;
   initialOpenTodayMarket?: boolean;
