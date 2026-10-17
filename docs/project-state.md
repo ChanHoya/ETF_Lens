@@ -3,26 +3,27 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: Sprint 15 완료 — 1) [스마트 경보] 유가 급변(±3.5%) & VIX 스파이크(20/25+) 텔레그램 스마트 경보 및 보유자산 민감도 분석 엔진(`macro_alert_engine.py`, `NotificationSettings.tsx`) 구축 완료, 2) [스트레스 테스터] 오일쇼크 $120 폭등 & 마이너스 유가 붕괴 2대 시나리오 추가로 9대 글로벌 위기 충격 진단(`stress_tester.py`, `PortfolioStressTester.tsx`) 확장 완료, 3) [중간선거] 2026.11.03 D-Day 카운트다운 및 상원(34석)/하원(435석) 장악 정당 조합 인터랙티브 4대 시나리오 시뮬레이터(`midterm_election.py`, `MidtermElectionTab.tsx`) 구축 완료, 4) [프로덕션] 14대 스케줄러 잡 및 Render 백엔드 / Vercel 프론트엔드 실서버 동기화 점검 완료, 5) 백엔드 245개 전 테스트 100% Pass 및 Next.js 11개 페이지 최적화 빌드 완료
-➡️ Next: 프로덕션 실서버(Vercel/Render) 실시간 모니터링 및 사용자 피드백 대응
+✅ Current: Sprint 16 완료 — 1) [주식시장 영향 분석] 원유 수급 펀더멘털 & 정제마진(Crack Spread)의 정유주(S-Oil, SK이노), 화학주(나프타 원가), 항공주, 기술주 파급 메커니즘 및 4대 투자 판단 가이드 탑재 완료, 2) [최근 6개월 추이 2026년 최신화] 2024년 표기 버그를 2026-05 ~ 2026-10 실제 최신 데이터로 전면 교체 완료, 3) [지표 클릭 10Y 매크로 오버레이 팝업] 모든 지표 박스 클릭 시 6M/1Y/5Y/10Y 기간별 S&P500, 나스닥, 달러인덱스(DXY), CPI, PPI, PCE 복합 비교 차트 및 상관관계 분석 모달 탑재 완료, 4) [최상단 종합 진단] 유가 현재 지표 기반 AI 종합 진단 & 바벨 전략 인사이트 박스 신설 완료, 5) 백엔드 249개 전 테스트 100% Pass 및 Next.js 11개 페이지 최적화 빌드 완료
+➡️ Next: 프로덕션 배포 상태 모니터링 및 실서버 반영 확인
 
-> 세션 핸드오프 (2026-10-17, Antigravity - Sprint 15):
-> - 🛢️ [S15-1: 유가 급변 & VIX 스파이크 텔레그램 스마트 경보 엔진]:
->   - `backend/core/macro_alert_engine.py`: WTI 급등락(±3.5%), VIX 20/25 돌파 및 호르무즈 해협 지정학 위험도 감지 시 멀티채널 자동 경보 발송.
->   - 사용자 보유 자산(ManualAsset) 중 수혜 자산(에너지, 조선, 방산) vs 취약 자산(항공, 화학, 고성장주) 노출 비중 정밀 산출 및 행동 수칙 포맷팅.
->   - `backend/api/notification_settings.py` & `db/models.py`: `alert_oil_shock`, `alert_vix_spike` DB 컬럼 및 API 스키마 확장, `/test-macro-alert` 즉시 검증 엔드포인트 신설.
->   - `backend/core/scheduler.py`: 월-금 09:30, 16:30 일 2회 정기 점검 크론 잡(`macro_smart_alerts_check`) 가동.
->   - `NotificationSettings.tsx`: 유가 급변 및 VIX 스파이크 개인화 알림 토글 스위치 및 [⚡ 긴급 레이더 테스트] 원클릭 발송 버튼 탑재.
-> - ⚡ [S15-2: 9대 글로벌 위기 포트폴리오 스트레스 테스터 (오일쇼크 연동)]:
->   - `backend/core/stress_tester.py`: `oil_shock_spike`(유가 $120 폭등 및 스태그플레이션) 및 `oil_demand_crash`(2020.04 마이너스 유가 -$37 배럴 쇼크) 2대 신규 시나리오 탑재 (총 9대 시나리오 체계 완성).
->   - `PortfolioStressTester.tsx`: '9대 글로벌 위기 충격 진단 (오일쇼크 포함)' 배지 및 9분할 그리드 뷰, 오일쇼크 선택 시 전용 경보 뱃지 및 MDD/방어점수 렌더링.
-> - 🗳️ [S15-3: 미국 중간선거 4대 시나리오 인터랙티브 판세 시뮬레이터 & D-Day]:
->   - `backend/api/midterm_election.py`: `reverse_gridlock`(역분점정부) 4대 시나리오 확장 및 `/api/v1/midterm/simulate` 상·하원 조합 매핑 엔드포인트 신설.
->   - `MidtermElectionTab.tsx`: 2026.11.03 기준 실시간 D-Day 카운트다운 배지(일/시간/분) 및 상원(34석: 공화 vs 민주) & 하원(435석: 민주 vs 공화) 인터랙티브 조합 토글 버튼 탑재.
-> - 🌐 [S15-4: 프로덕션 실서버(Render/Vercel) 배포 점검 & 무결성 테스트]:
->   - `backend/api/health_monitor.py`: `/live-summary` 엔드포인트 S15 4대 파이프라인(스마트 경보, 9대 스트레스 테스터, 4대 중간선거 시뮬레이터, 유가 퀀트 대시보드) 최신 반영.
->   - `backend/tests/test_macro_smart_alerts.py`, `test_oil_stress_tester.py`, `test_midterm_4_scenarios.py` 8종 신규 작성 및 전체 245개 테스트 100% Pass 검증.
->   - Next.js 16.1.6 11개 페이지 최적화 빌드 100% 성공 검증.
+> 세션 핸드오프 (2026-10-17, Antigravity - Sprint 16):
+> - 🛢️ [S16-1: 원유 수급·정제마진 주식시장 영향 분석 & 실전 투자 판단 가이드]:
+>   - `backend/api/oil_dashboard.py`: `stock_market_impact` 필드 신설. 정제마진 $1 변동 시 정유 4사 분기 영업익 2,000~3,000억 민감도 및 화학주(나프타) 역상관, EIA 재고 감소와 가솔린/디젤 재고 동행성 판별법, 셰일 생산성 혁신과 나스닥(QQQ) 밸류에이션 안전판 매핑.
+>   - `OilTab.tsx`: '💡 원유 수급 & 정제마진의 주식시장 파급 경로 및 투자 판단 가이드' 전용 심층 패널 추가, 3대 메커니즘 카드, 수혜 vs 주의 종목 칩, 실전 판단 4대 룰 체크리스트 시각화.
+> - 📅 [S16-2: 최근 6개월 정제마진 복합 추이 2026년도 최신 데이터 교체]:
+>   - `backend/api/oil_dashboard.py`: 기존 2024-05 ~ 2024-10 데이터에서 최신 2026년(`2026-05 ~ 2026-10`) 실시간 월별 데이터로 전면 갱신.
+> - 🔍 [S16-3: 전 지표 박스 클릭 시 6M~10Y 및 S&P500/Nasdaq/달러/CPI/PPI/PCE 복합 오버레이 팝업 모달]:
+>   - `backend/api/oil_dashboard.py`: `/api/v1/oil/indicator-history` 신설. 지표별(WTI, Brent, Dubai, 스프레드, 정제마진, EIA재고, 리그수, 지정학) 6M, 1Y, 5Y, 10Y 히스토리 및 USMacroIndicatorLog DB 연동.
+>   - `OilTab.tsx`: 모든 카드(WTI, Brent, Dubai, 스프레드, 재고, 리그, 마진, 지정학, 초크포인트)에 인터랙티브 클릭 트리거 및 `[🔍 상세 분석]` 뱃지 적용.
+>   - `OilIndicatorDetailModal`: 6M/1Y/5Y/10Y 기간 전환 버튼, S&P 500 / 나스닥 / 달러지수 / CPI / PPI / PCE 멀티 오버레이 토글, 듀얼 Y축 Recharts ComposedChart, 상관계수 분석 및 단기(수급) vs 장기(슈퍼사이클) 적정 시계열 분석 가이드 탑재.
+>   - 원격 배포 과도기 대응을 위해 로컬 백엔드 fallback 및 클라이언트 사이드 시계열 생성기 이중 탑재로 100% 렌더링 무결성 보장.
+> - 🧠 [S16-4: 최상단 AI 유가 종합 진단 & 주식시장 핵심 투자 인사이트 위젯]:
+>   - `backend/api/oil_dashboard.py`: `overview`에 `executive_market_insight` 필드 추가.
+>   - `OilTab.tsx`: 최상단에 골디락스 유가 박스권 진단, 4대 핵심 동인 요약 칩, 주식시장 종합 판정 및 바벨(Barbell) 전략 가이드, 리스크 트리거 임계치 경보 박스 탑재.
+> - 🧪 [S16-5: 무결성 검증 및 빌드 테스트]:
+>   - `backend/tests/test_oil_dashboard_enhancements.py` 4종 신규 단위 테스트 추가.
+>   - 백엔드 pytest 249개 전 테스트 100% 통과 (`249 passed in 73.81s`).
+>   - 프론트엔드 Next.js 16.1.6 11개 페이지 최적화 빌드 100% 성공 (`Compiled successfully in 20.1s`).
 > - 📱 [S12-1: 모바일 UX 최적화 (사용자 3번 과제)]:
 >   - `SemiCycleDashboard.tsx`: 2D 시계 모바일 높이 축소(`h-[320px] sm:h-[380px]`), 사분면 텍스트 반응형 글자 크기 및 여백 조정, ScatterChart margin 최적화 (`top: 25, right: 15, bottom: 25, left: 15`).
 >   - `SemiChart.tsx`: Q-Cycle 스크리너 테이블 상단에 모바일 전용 `[← 좌우로 스와이프하여 상세 지표 확인 →]` 가이드 배지 및 `touch-pan-x` 스무스 터치 스크롤 적용.
