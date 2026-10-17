@@ -3,13 +3,19 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Current: Sprint 20 완료 — [부동산 실데이터 백엔드 수집 파이프라인 & sample 키 안전 Fallback & 프론트 연동 (S20-1~4)]:
-1) [S20-1: DB 스키마 & 수집 엔진 코어]: `RealEstateMonthlyStats` 모델 생성, `real_estate_collector.py` 구축. `SEOUL_OPEN_DATA_KEY`가 없거나 `sample`인 경우 에러 없이 34개월간의 실제 통계 캐시(2024.01~2026.10)로 안전 Fallback 지원.
-2) [S20-2: 매물 적체량 & 금리/PIR 집계 엔진]: 서울시 실거래량 + 아실 매물 적체량 + 한국은행 주담대 금리 종합 월간 통계 생성 및 upsert 로직 구현.
-3) [S20-3: FastAPI 엔드포인트 & 단위 테스트 & 스케줄러]: `/api/v1/real-estate/market-trends`, `/summary`, `/sync`, `/status` 구축, pytest 6종 단위 테스트 100% 통과, 매주 월요일 04:30 KST 자동 동기화 cron 등록.
-4) [S20-4: 프론트엔드 실시간 API 연동 & 새로고침 UI]: `RealEstateTab.tsx`에서 백엔드 API 연동, `[검증된 캐시 연동 (sample 대기)]` 상태 배지, `[🔄 실데이터 갱신]` 즉시 동기화 버튼 탑재, 브라우저 E2E 검증 완료.
-5) Next.js 11개 페이지 빌드 100% 성공 (`code 0`).
-➡️ Next: 사용자가 실제 서울 열린데이터광장 인증키 발급 시 .env 등록 후 실서버 라이브 검증
+✅ Recent: Sprint 20 완료 — [부동산 실데이터 백엔드 수집 파이프라인 & 서울시 OpenAPI 실시간 연동 & Fallback (S20-1~4)]:
+1) 서울 열린데이터광장 OpenAPI(`tbLnOpendataRtmsV`) 실시간 연동 및 인증키 등록 완료.
+2) `/market-trends`, `/summary`, `/sync`, `/status` API 구축 및 매주 월 04:30 KST 스케줄러 탑재.
+3) 프론트엔드 `[서울 오픈데이터 라이브 연동]` 초록 배지 활성화 및 `[실데이터 갱신]` 수동 트리거 구축.
+4) 테스트 6종 통과 및 배포 무결성 검증 완료.
+
+🚀 Current: Sprint 21 완료 — [실물 부동산 vs 배당 ETF 기회비용 시뮬레이터 고도화 (S21-1~4)]:
+1) [S21-1: 금융 수학 & 세무 엔진]: `realEstateSimulator.ts` 신설. 원리금균등/원금균등/만기일시 대출상환, 주택수별 취득세·중개보수·종부세·재산세 정밀화.
+2) [S21-2: 10개년 순자산 Recharts 차트]: 10년차 순자산 궤적 비교 및 승자 뱃지(`🏆 10년 후 배당 ETF 복리 승리 (+6.5억 원 우세)`) 탑재.
+3) [S21-3: 월간 실질 현금흐름 대조 & DSR 진단]: 월간 순유출(-283만원) vs 월간 배당 유입(+272만원), 월 가처분 격차(555만원), DSR(32.7%) 하우스푸어 위험 진단 위젯 완성.
+4) [S21-4: E2E 브라우저 검증 및 빌드 무결성]: Next.js 11개 페이지 최적화 빌드 100% 통과(`code 0`), 브라우저 E2E 검증 완료.
+
+
 
 > 세션 핸드오프 (2026-10-17, Antigravity - Sprint 20: 부동산 실데이터 백엔드 파이프라인 & Fallback & UI 연동):
 > - 🏛️ [S20-1~3: 백엔드 수집 파이프라인 및 엔드포인트 (`models.py`, `real_estate_collector.py`, `real_estate.py`)]:
