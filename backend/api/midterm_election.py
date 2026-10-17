@@ -428,7 +428,7 @@ def _build_historical_cycles_1950_2026() -> List[Dict[str, Any]]:
         (2023, 4769.8, 15011.3, 5.3, "none", "일반 해 (AI 붐)", "생성형 AI 혁명 / 매그니피센트7 랠리"),
         (2024, 5881.5, 19281.4, 4.5, "presidential", "대선 (트럼프 2기)", "연준 피벗(금리인하) / 트럼프 2기 당선"),
         (2025, 6050.0, 19800.0, 3.8, "none", "대선 1년차", "관세 정책 및 규제완화 기대"),
-        (2026, 6280.0, 20950.0, 3.3, "midterm", "중간선거 (트럼프 2기, 현재)", "중간선거의 해 / 골디락스 국면")
+        (2026, 7659.4, 26140.0, 3.8, "midterm", "중간선거 (트럼프 2기, 현재)", "중간선거의 해 / 골디락스 국면")
     ]
     
     result = []
@@ -657,10 +657,10 @@ async def get_my_midterm_rebalance_proposal() -> Dict[str, Any]:
         
         sample_items = []
         for h in holdings:
-            val = float(h.eval_amount or 0.0) if hasattr(h, "eval_amount") else 0.0
+            val = float(getattr(h, "eval_amount", 0.0) or 0.0)
             total_eval += val
-            name = (h.stock_name or h.name or "").upper()
-            code = (h.stock_code or h.code or "").upper()
+            name = (getattr(h, "stock_name", None) or getattr(h, "name", None) or getattr(h, "ticker", "") or "").upper()
+            code = (getattr(h, "stock_code", None) or getattr(h, "code", None) or getattr(h, "ticker", "") or "").upper()
             
             is_tech = code in tech_symbols or any(k in name for k in tech_kr_keywords)
             is_div = "배당" in name or "SCHD" in code or "고배당" in name or "커버드콜" in name
@@ -668,7 +668,7 @@ async def get_my_midterm_rebalance_proposal() -> Dict[str, Any]:
             
             if is_tech:
                 tech_eval += val
-                sample_items.append({"name": h.stock_name or h.name, "code": code, "type": "tech", "val": val})
+                sample_items.append({"name": name, "code": code, "type": "tech", "val": val})
             elif is_div:
                 dividend_eval += val
             elif is_bond:

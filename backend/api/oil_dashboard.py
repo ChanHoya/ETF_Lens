@@ -362,6 +362,32 @@ async def get_oil_indicator_history(
     except Exception as e:
         logger.warning(f"Could not load USMacroIndicatorLog from DB: {e}")
 
+    # 1-1. 실제 주식(KOSPI, S&P 500, Nasdaq) 및 달러인덱스 시계열 로드
+    stocks_monthly: Dict[str, Dict[str, float]] = {}
+    try:
+        from api.stocks_dashboard import overview_cache as stocks_cache
+        from api.fx_dashboard import overview_cache as fx_cache
+        stocks_data = await stocks_cache.get() or {}
+        fx_data = await fx_cache.get() or {}
+        for r in stocks_data.get("weekly", []):
+            d = r.get("date", "")
+            if d:
+                ym = d[:7]
+                stocks_monthly[ym] = {
+                    "sp500": r.get("spx"),
+                    "kospi": r.get("kospi"),
+                    "nasdaq": r.get("ndx"),
+                }
+        for r in fx_data.get("weekly", []):
+            d = r.get("date", "")
+            if d:
+                ym = d[:7]
+                if ym not in stocks_monthly:
+                    stocks_monthly[ym] = {}
+                stocks_monthly[ym]["dollar_index"] = r.get("dxy")
+    except Exception as e:
+        logger.warning(f"Could not load real stock/fx series in oil_dashboard: {e}")
+
     # 2. 기준 월 목록 생성 (최근 2026-10부터 역산)
     now = datetime(2026, 10, 1)
     dates: List[str] = []
@@ -512,12 +538,20 @@ async def get_oil_indicator_history(
         ppi_val = db_ppi if db_ppi is not None else (8.65 if ym == "2026-10" else round(cpi_val * 1.3, 2))
         pce_val = db_pce if db_pce is not None else (3.08 if ym == "2026-10" else round(cpi_val * 0.9, 2))
 
+        # 실제 시장 지수(Yahoo Finance 실제 종가) 우선 적용
+        stk = stocks_monthly.get(ym) or {}
+        sp500_val = stk.get("sp500") if stk.get("sp500") is not None else sp500_base
+        kospi_val = stk.get("kospi") if stk.get("kospi") is not None else (round(sp500_val * 0.74, 1) if sp500_val else 2550.0)
+        nasdaq_val = stk.get("nasdaq") if stk.get("nasdaq") is not None else nasdaq_base
+        dxy_val = stk.get("dollar_index") if stk.get("dollar_index") is not None else dxy_base
+
         series.append({
             "date": ym,
             "value": val,
-            "sp500": round(sp500_base, 1),
-            "nasdaq": round(nasdaq_base, 1),
-            "dollar_index": round(dxy_base, 2),
+            "sp500": round(float(sp500_val), 1) if sp500_val is not None else None,
+            "kospi": round(float(kospi_val), 1) if kospi_val is not None else None,
+            "nasdaq": round(float(nasdaq_val), 1) if nasdaq_val is not None else None,
+            "dollar_index": round(float(dxy_val), 2) if dxy_val is not None else None,
             "cpi": round(cpi_val, 2),
             "ppi": round(ppi_val, 2),
             "pce": round(pce_val, 2)
@@ -530,6 +564,7 @@ async def get_oil_indicator_history(
         "pce": {"corr": 0.62, "desc": "미 연준(Fed)의 2% 타깃 기준 지표로 원유 상승에 따른 에너지 2차 파급 효과 반영"},
         "dollar_index": {"corr": -0.62, "desc": "달러화 강세 시 달러 표시 원자재 가격 하락 압력 (역상관 성향 뚜렷)"},
         "sp500": {"corr": 0.22, "desc": "적정 유가($70~$85)에서는 경기 확장과 동행하나, $85 초과 시 물가 긴축으로 역상관 전환"},
+        "kospi": {"corr": 0.35, "desc": "한국 수출 제조업(반도체/화학) 및 원자재 코스트 영향으로 유가 변동에 민감하게 반응"},
         "nasdaq": {"corr": -0.31, "desc": "고유가 국면 진입 시 금리 인하 지연 및 할인율 상승으로 기술주에 부정적"}
     }
 

@@ -58,6 +58,7 @@ const OVERLAY_OPTIONS: OverlayOption[] = [
     { key: "cpi", label: "미국 CPI 소비자물가 (YoY)", color: "#f43f5e", unit: "%" },
     { key: "pce", label: "미국 PCE 소비지출물가", color: "#eab308", unit: "%" },
     { key: "dollar_index", label: "달러 인덱스 (DXY)", color: "#38bdf8", unit: "pt" },
+    { key: "kospi", label: "KOSPI 지수", color: "#818cf8", unit: "pt" },
     { key: "sp500", label: "S&P 500 (SPX)", color: "#10b981", unit: "pt" },
     { key: "nasdaq", label: "나스닥 100 (NDX)", color: "#c084fc", unit: "pt" },
 ];
@@ -93,6 +94,7 @@ export default function OilTab() {
         cpi: true, // 소비자물가
         pce: true, // 연준 타깃 물가
         dollar_index: true, // 달러 인덱스
+        kospi: false,
         sp500: false,
         nasdaq: false
     });
@@ -102,15 +104,15 @@ export default function OilTab() {
 
     const setOverlayPreset = (preset: "inflation" | "dollar" | "equity" | "all" | "none") => {
         if (preset === "inflation") {
-            setActiveOverlays({ ppi: true, cpi: true, pce: true, dollar_index: false, sp500: false, nasdaq: false });
+            setActiveOverlays({ ppi: true, cpi: true, pce: true, dollar_index: false, kospi: false, sp500: false, nasdaq: false });
         } else if (preset === "dollar") {
-            setActiveOverlays({ ppi: false, cpi: false, pce: false, dollar_index: true, sp500: false, nasdaq: false });
+            setActiveOverlays({ ppi: false, cpi: false, pce: false, dollar_index: true, kospi: false, sp500: false, nasdaq: false });
         } else if (preset === "equity") {
-            setActiveOverlays({ ppi: false, cpi: false, pce: false, dollar_index: false, sp500: true, nasdaq: true });
+            setActiveOverlays({ ppi: false, cpi: false, pce: false, dollar_index: false, kospi: true, sp500: true, nasdaq: true });
         } else if (preset === "all") {
-            setActiveOverlays({ ppi: true, cpi: true, pce: true, dollar_index: true, sp500: true, nasdaq: true });
+            setActiveOverlays({ ppi: true, cpi: true, pce: true, dollar_index: true, kospi: true, sp500: true, nasdaq: true });
         } else if (preset === "none") {
-            setActiveOverlays({ ppi: false, cpi: false, pce: false, dollar_index: false, sp500: false, nasdaq: false });
+            setActiveOverlays({ ppi: false, cpi: false, pce: false, dollar_index: false, kospi: false, sp500: false, nasdaq: false });
         }
     };
 
@@ -210,6 +212,7 @@ export default function OilTab() {
             series.push({
                 date: ym,
                 value: Number(val.toFixed(2)),
+                kospi: Math.round(sp500 * 0.74),
                 sp500: Math.round(sp500),
                 nasdaq: Math.round(nasdaq),
                 dollar_index: Number(dxy.toFixed(2)),
@@ -1268,7 +1271,7 @@ export default function OilTab() {
                                                             if (name?.includes("달러")) {
                                                                 return [`${num.toFixed(2)} pt`, name];
                                                             }
-                                                            if (name?.includes("S&P") || name?.includes("나스닥")) {
+                                                            if (name?.includes("S&P") || name?.includes("나스닥") || name?.includes("KOSPI")) {
                                                                 return [`${num.toLocaleString()} pt`, name];
                                                             }
                                                             return [`${num.toLocaleString()} ${currentMeta.unit}`, name];
@@ -1354,6 +1357,20 @@ export default function OilTab() {
                                                     )}
 
                                                     {/* Equities (yAxisId="stocks") */}
+                                                    {activeOverlays.kospi && (
+                                                        <Line
+                                                            yAxisId="stocks"
+                                                            type="monotone"
+                                                            name="KOSPI 지수"
+                                                            dataKey="kospi"
+                                                            stroke="#818cf8"
+                                                            strokeWidth={getModalStrokeWidth('kospi', 1.8, 3.2)}
+                                                            strokeOpacity={getModalOpacity('kospi')}
+                                                            strokeDasharray="3 3"
+                                                            dot={false}
+                                                            isAnimationActive={false}
+                                                        />
+                                                    )}
                                                     {activeOverlays.sp500 && (
                                                         <Line
                                                             yAxisId="stocks"

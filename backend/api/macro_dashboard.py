@@ -905,6 +905,9 @@ async def get_macro_indicator_history(
                 dubai_p = round(wti_p * 0.78, 2)
                 if d >= "2026-10":
                     wti_p, brent_p, dubai_p = 101.41, 109.86, 79.10
+                k_val, s_val = get_stock_values(d)
+                spx_v = item.get("sp500") or s_val
+                kospi_v = item.get("kospi") or k_val
                 points.append({
                     "date": d,
                     "wti": wti_p,
@@ -914,6 +917,8 @@ async def get_macro_indicator_history(
                     "cpi": item.get("cpi"),
                     "ppi": item.get("ppi"),
                     "pce": item.get("pce"),
+                    "kospi": kospi_v,
+                    "spx": spx_v,
                 })
             return {"group": group, "period": period, "series": points}
 
@@ -961,12 +966,13 @@ async def get_macro_indicator_history(
                 pce_v = item.get("pce", 3.0)
                 k_val, s_val = get_stock_values(d)
                 spx_v = item.get("sp500") or s_val
+                kospi_v = item.get("kospi") or k_val
                 points.append({
                     "date": d,
                     "cpi": cpi_v,
                     "ppi": ppi_v,
                     "pce": pce_v,
-                    "kospi": k_val,
+                    "kospi": kospi_v,
                     "spx": spx_v,
                 })
             return {"group": group, "period": period, "series": points}
