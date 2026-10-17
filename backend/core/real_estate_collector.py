@@ -68,11 +68,13 @@ class RealEstateCollector:
     """서울 아파트 실거래가 및 매물 데이터 수집/동기화 관리자"""
 
     def __init__(self):
-        pass
+        self._override_key = None
 
     @property
     def api_key(self) -> str:
-        """항상 최신 .env를 재로딩하여 프로세스 재시작 없이도 키 변경을 즉시 반영"""
+        """항상 최신 .env를 재로딩하여 프로세스 재시작 없이도 키 변경을 즉시 반영 (테스트 등 수동 오버라이드 지원)"""
+        if self._override_key is not None:
+            return self._override_key
         try:
             from pathlib import Path
             from dotenv import load_dotenv
@@ -82,6 +84,11 @@ class RealEstateCollector:
         except Exception as e:
             logger.debug(f"Failed to reload .env dynamically: {e}")
         return os.getenv("SEOUL_OPEN_DATA_KEY", "").strip()
+
+    @api_key.setter
+    def api_key(self, val: str):
+        self._override_key = val
+
 
     @property
     def is_sample_or_missing(self) -> bool:
