@@ -192,6 +192,8 @@ class MolitRealEstateCollector:
         self._override_key: Optional[str] = None
         self._cached_results: Dict[str, Dict[str, Any]] = {}
         self._last_synced_at: Optional[str] = None
+        self._has_successful_live_fetch: bool = False
+        self._last_error: Optional[str] = None
 
     @property
     def api_key(self) -> str:
@@ -303,10 +305,18 @@ class MolitRealEstateCollector:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 res = await client.get(MOLIT_TRADE_API_BASE, params=params)
                 if res.status_code == 200:
-                    return self.parse_molit_xml(res.text)
+                    items = self.parse_molit_xml(res.text)
+                    if items:
+                        self._has_successful_live_fetch = True
+                    return items
+                elif res.status_code == 403:
+                    self._last_error = "SERVICE_KEY_IS_NOT_REGISTERED_ERROR (403)"
+                    logger.warning(f"MOLIT Trade API 403: {self._last_error}")
                 else:
+                    self._last_error = f"HTTP_{res.status_code}"
                     logger.warning(f"MOLIT Trade API HTTP {res.status_code} for LAWD_CD {lawd_cd}")
         except Exception as e:
+            self._last_error = str(e)
             logger.error(f"Error calling MOLIT Trade API for {lawd_cd}: {e}")
 
         return []
@@ -329,6 +339,9 @@ class MolitRealEstateCollector:
                 res = await client.get(MOLIT_RENT_API_BASE, params=params)
                 if res.status_code == 200:
                     return self.parse_molit_xml(res.text)
+                elif res.status_code == 403:
+                    self._last_error = "SERVICE_KEY_IS_NOT_REGISTERED_ERROR (403)"
+                    logger.warning(f"MOLIT Rent API 403: {self._last_error}")
                 else:
                     logger.warning(f"MOLIT Rent API HTTP {res.status_code} for LAWD_CD {lawd_cd}")
         except Exception as e:
@@ -338,23 +351,22 @@ class MolitRealEstateCollector:
 
     async def collect_metro_district_stats(self, target_ymd: Optional[str] = None) -> List[Dict[str, Any]]:
         """수도권 13대 거점 실시간 실거래가 수집 및 정규화
-        - 유효 키 있을 경우: 국토교통부 API 호출하여 실거래가/평당가/전세가율 갱신
-        - 유효 키 없을 경우: 내장 기준치(base_price/base_jeonse)로 안전 Fallback
+        - 유효 키 있고 실제 정상 응답 시: 국토교통부 API 데이터로 실시간 갱신
+        - 유효 키 없거나 403/미등록 에러 시: 내장 기준치(base_price/base_jeonse)로 안전 Fallback
         """
         now = datetime.now()
         # 최근 월 계약년월 (예: 202610 또는 직전월)
         ymd = target_ymd or f"{now.year}{str(now.month).zfill(2)}"
         
-        live_active = not self.is_sample_or_missing
-        source_label = "MOLIT_API_LIVE" if live_active else "FALLBACK_CACHE"
-
+        has_key = not self.is_sample_or_missing
         results: List[Dict[str, Any]] = []
+        any_live_fetched = False
 
         for code, meta in METRO_DISTRICT_REGISTRY.items():
             trade_items: List[Dict[str, Any]] = []
             rent_items: List[Dict[str, Any]] = []
 
-            if live_active:
+            if has_key:
                 try:
                     # 매매와 전세 비동기 동시 수집
                     t_res, r_res = await asyncio.gather(
@@ -369,8 +381,10 @@ class MolitRealEstateCollector:
                 except Exception as e:
                     logger.warning(f"Live collection failed for district {meta['name']} ({code}): {e}")
 
-            # 라이브 데이터가 존재하면 평균 및 평당가 연산
+            # 라이브 데이터가 실제로 1건 이상 수집되었을 때만 LIVE 모드 적용
             if trade_items:
+                any_live_fetched = True
+                is_district_live = True
                 valid_trades = [t for t in trade_items if t["amount_won"] > 0]
                 trade_count = len(valid_trades)
                 avg_sale_manwon = sum(t["amount_won"] for t in valid_trades) / trade_count if trade_count > 0 else (meta["base_price"] * 10000)
@@ -393,7 +407,8 @@ class MolitRealEstateCollector:
 
                 jeonse_ratio = round((avg_jeonse_price / avg_sale_price) * 100, 1) if avg_sale_price > 0 else 60.0
             else:
-                # Fallback 기본 데이터
+                # Fallback 기본 데이터 (정규화 캐시)
+                is_district_live = False
                 avg_sale_price = meta["base_price"]
                 avg_jeonse_price = meta["base_jeonse"]
                 jeonse_ratio = round((avg_jeonse_price / avg_sale_price) * 100, 1)
@@ -414,26 +429,34 @@ class MolitRealEstateCollector:
                 "risk_level": meta["risk_level"],
                 "risk_label": meta["risk_label"],
                 "risk_desc": meta["risk_desc"],
-                "data_source": source_label,
-                "is_fallback": not live_active
+                "data_source": "MOLIT_API_LIVE" if is_district_live else "FALLBACK_CACHE",
+                "is_fallback": not is_district_live
             })
 
+        self._has_successful_live_fetch = any_live_fetched
         self._last_synced_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self._cached_results = {d["code"]: d for d in results}
-        logger.info(f"MOLIT collector processed {len(results)} metro districts (Mode: {source_label})")
+        mode_label = "MOLIT_API_LIVE" if any_live_fetched else "FALLBACK_CACHE"
+        logger.info(f"MOLIT collector processed {len(results)} metro districts (Mode: {mode_label})")
         return results
 
     def get_api_status(self) -> Dict[str, Any]:
         """국토부 실거래가 API 연동 상태 진단"""
-        live_active = not self.is_sample_or_missing
+        has_key = not self.is_sample_or_missing
+        is_live = has_key and self._has_successful_live_fetch
+
+        status_text = "LIVE_ACTIVE" if is_live else ("UNREGISTERED_KEY_ERROR" if (has_key and self._last_error) else "FALLBACK_CACHE_ACTIVE")
+
         return {
             "api_name": "MOLIT_PUBLIC_DATA",
             "provider": "국토교통부 공공데이터포털",
-            "is_live": live_active,
-            "status": "LIVE_ACTIVE" if live_active else "FALLBACK_CACHE_ACTIVE",
+            "has_key": has_key,
+            "is_live": is_live,
+            "status": status_text,
+            "last_error": self._last_error,
             "covered_districts": len(METRO_DISTRICT_REGISTRY),
             "last_synced_at": self._last_synced_at or "2026-10-17 00:00:00",
-            "data_source": "MOLIT_API_LIVE" if live_active else "FALLBACK_CACHE"
+            "data_source": "MOLIT_API_LIVE" if is_live else "FALLBACK_CACHE"
         }
 
 
