@@ -180,7 +180,7 @@ export default function PortfolioStressTester({ holdings }: PortfolioStressTeste
             <h2 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2">
               포트폴리오 스트레스 테스터
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold">
-                7대 글로벌 위기 충격 진단
+                9대 글로벌 위기 충격 진단 (오일쇼크 포함)
               </span>
             </h2>
           </div>
@@ -277,14 +277,14 @@ export default function PortfolioStressTester({ holdings }: PortfolioStressTeste
         </div>
       )}
 
-      {/* ── 2. 7대 시나리오 탭 셀렉터 ── */}
+      {/* ── 2. 9대 시나리오 탭 셀렉터 ── */}
       {stressData && (
         <div className="flex flex-col gap-2">
           <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-rose-400" />
-            7대 역사적 위기 시나리오 선택
+            9대 역사적 위기 시나리오 선택 (오일쇼크·원유급락 포함)
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-2">
             {Object.keys(stressData).map(key => {
               const sc = stressData[key];
               const isSelected = activeScenarioKey === key;
@@ -424,12 +424,12 @@ export default function PortfolioStressTester({ holdings }: PortfolioStressTeste
             </div>
           </div>
 
-          {/* ── 4. 7대 시나리오 한눈에 비교 Recharts 바 차트 ── */}
+          {/* ── 4. 9대 시나리오 한눈에 비교 Recharts 바 차트 ── */}
           <div className="bg-black/35 border border-white/10 rounded-2xl p-4 md:p-5 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
                 <Activity className="w-3.5 h-3.5 text-indigo-400" />
-                7대 위기 시나리오별 포트폴리오 예상 수익률 비교
+                9대 위기 시나리오별 포트폴리오 예상 수익률 비교 (오일쇼크 포함)
               </h4>
               <span className="text-[11px] text-gray-500">붉은 막대: 예상 낙폭(%)</span>
             </div>

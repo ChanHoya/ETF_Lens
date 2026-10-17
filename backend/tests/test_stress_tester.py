@@ -42,8 +42,8 @@ async def test_run_stress_test_calculation():
     async with AsyncSessionLocal() as db:
         res = await run_stress_test(db, portfolio, total_eval_amount=total_eval)
 
-        # 7대 시나리오 모두 포함 검증
-        assert len(res) == 7
+        # 9대 시나리오 모두 포함 검증 (오일쇼크 포함)
+        assert len(res) == 9
         for key in SCENARIOS.keys():
             assert key in res
             sc = res[key]

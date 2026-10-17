@@ -4,6 +4,10 @@
 
 | Feature | Status | Key Files | Notes |
 |---------|--------|-----------|-------|
+| 유가 급변(±3.5%) & VIX 스파이크 텔레그램 스마트 경보 | ✅ done | backend/core/macro_alert_engine.py, NotificationSettings.tsx | 유가 급등락·호르무즈 위험점수 및 VIX 20/25p 돌파 시 내 포트폴리오 영향도 요약 멀티채널 발송 & 테스트 엔드포인트 연동 |
+| 9대 글로벌 위기 포트폴리오 스트레스 테스터 (오일쇼크 포함) | ✅ done | backend/core/stress_tester.py, PortfolioStressTester.tsx | 오일 쇼크 $120 폭등(1970s/2022) 및 마이너스 유가(2020.04) 2대 시나리오 추가, 9대 위기 비교 바 차트 및 MDD 진단 |
+| 미국 중간선거 4대 시나리오 인터랙티브 시뮬레이터 & D-Day | ✅ done | backend/api/midterm_election.py, MidtermElectionTab.tsx | 2026.11.03 D-Day 실시간 카운트다운, 상원(34석) & 하원(435석) 장악 정당 조합 인터랙티브 토글 및 4대 시나리오 즉시 매핑 |
+| 프로덕션 실서버(Render/Vercel) 배포 점검 및 라이브 동기화 | ✅ done | backend/api/health_monitor.py, backend/tests/test_live_e2e_sync.py | 14대 스케줄러 잡 및 245개 전 테스트 100% Pass, Render 백엔드 및 Vercel 프론트엔드 실서버 정상 동작 확인 |
 | 글로벌 유가 및 에너지 시장 동향 분석 | ✅ done | backend/api/oil_dashboard.py, OilTab.tsx | 3대 벤치마크(WTI·Brent·Dubai) 실시간 시세, 스프레드, EIA 재고·생산량, 정제마진, 3대 지정학 초크포인트, 실전 ETF 플레이북 |
 | 시장동향 '종합' 진정한 다차원 거시 분석 | ✅ done | backend/api/macro_dashboard.py, MacroTab.tsx | '종합(환율/금리/주식)' → '종합' 명칭 개편, 글로벌 5대 거시 핵심 지표(유가, VIX, CPI 인플레, 장단기 금리차, DXY) 통합 패널 탑재 |
 | 미국 중간선거('26.11) 영향 분석 고도화 | ✅ done | backend/api/midterm_election.py, MidtermElectionTab.tsx, MidtermPortfolioProposal.tsx | 중간선거 3대 법칙, 나스닥 계절성 및 1950~2026 연도별 사이클(대선/중간선거 파스텔 밴드), AI 투자성향 인터뷰 팝업, My KIS 실시간 포트폴리오 리밸런싱 제안 연동 |

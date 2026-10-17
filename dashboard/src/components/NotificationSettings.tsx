@@ -32,6 +32,11 @@ export default function NotificationSettings() {
     const [disparityThreshold, setDisparityThreshold] = useState(2.0);
     const [disparityTargetScope, setDisparityTargetScope] = useState<'PORTFOLIO' | 'ALL'>('PORTFOLIO');
 
+    // 유가 및 VIX 스마트 경보 (S15-1)
+    const [alertOilShock, setAlertOilShock] = useState(true);
+    const [alertVixSpike, setAlertVixSpike] = useState(true);
+    const [isTestingMacro, setIsTestingMacro] = useState(false);
+
     // UI 상태
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -67,6 +72,9 @@ export default function NotificationSettings() {
                     const parsedThreshold = data.disparity_threshold ? parseFloat(data.disparity_threshold) : 2.0;
                     setDisparityThreshold(!isNaN(parsedThreshold) && parsedThreshold > 0 ? parsedThreshold : 2.0);
                     setDisparityTargetScope(data.disparity_target_scope === 'ALL' ? 'ALL' : 'PORTFOLIO');
+
+                    setAlertOilShock(data.alert_oil_shock !== 0);
+                    setAlertVixSpike(data.alert_vix_spike !== 0);
                 }
             } catch (err) {
                 console.error("Failed to fetch notification settings:", err);
@@ -103,7 +111,9 @@ export default function NotificationSettings() {
                     alert_brazil: alertBrazil ? 1 : 0,
                     alert_disparity: alertDisparity ? 1 : 0,
                     disparity_threshold: disparityThreshold,
-                    disparity_target_scope: disparityTargetScope
+                    disparity_target_scope: disparityTargetScope,
+                    alert_oil_shock: alertOilShock ? 1 : 0,
+                    alert_vix_spike: alertVixSpike ? 1 : 0
                 })
             });
             const data = await res.json();
@@ -119,6 +129,26 @@ export default function NotificationSettings() {
             showToast('error', err.message || '네트워크 오류가 발생했습니다.');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleTestMacroAlert = async () => {
+        setIsTestingMacro(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/notification/test-macro-alert`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                showToast('success', data.msg || '유가/VIX 스마트 알림을 성공적으로 발송했습니다. 메신저를 확인하세요!');
+            } else {
+                showToast('error', data.detail || '테스트 발송에 실패했습니다.');
+            }
+        } catch (err: any) {
+            showToast('error', err.message || '네트워크 오류가 발생했습니다.');
+        } finally {
+            setIsTestingMacro(false);
         }
     };
 
@@ -423,6 +453,66 @@ export default function NotificationSettings() {
                                             />
                                             <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
                                         </label>
+                                    </div>
+
+                                    {/* 🛢️ 유가 급변 & 지정학 리스크 알림 (S15-1) */}
+                                    <div className="flex items-center justify-between p-3.5 bg-amber-500/[0.03] border border-amber-500/20 rounded-2xl hover:border-amber-500/40 transition-colors">
+                                        <div>
+                                            <h4 className="text-xs sm:text-sm font-bold text-amber-200 flex items-center gap-1.5">
+                                                <span>🛢️ 유가 급변(±3.5%) 및 지정학 충격 알림</span>
+                                            </h4>
+                                            <p className="text-[11px] text-gray-400 mt-0.5">WTI/브렌트유 급등락 및 호르무즈 해협 위기 시 내 포트폴리오 영향도 요약 발송</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer ml-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={alertOilShock}
+                                                onChange={(e) => setAlertOilShock(e.target.checked)}
+                                                className="sr-only peer"
+                                            />
+                                            <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                                        </label>
+                                    </div>
+
+                                    {/* ⚡ VIX 스파이크(공포지수 20+) 알림 (S15-1) */}
+                                    <div className="flex items-center justify-between p-3.5 bg-rose-500/[0.03] border border-rose-500/20 rounded-2xl hover:border-rose-500/40 transition-colors">
+                                        <div>
+                                            <h4 className="text-xs sm:text-sm font-bold text-rose-200 flex items-center gap-1.5">
+                                                <span>⚡ VIX 스파이크(공포지수 20+) 알림</span>
+                                            </h4>
+                                            <p className="text-[11px] text-gray-400 mt-0.5">시장 변동성 급등 위험 구간 진입 시 헤지 전략 및 행동 수칙 브리핑</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer ml-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={alertVixSpike}
+                                                onChange={(e) => setAlertVixSpike(e.target.checked)}
+                                                className="sr-only peer"
+                                            />
+                                            <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600"></div>
+                                        </label>
+                                    </div>
+
+                                    {/* 매크로 긴급 레이더 테스트 발송 버튼 */}
+                                    <div className="mt-1 pt-3 border-t border-white/5 flex items-center justify-between">
+                                        <span className="text-[11px] text-gray-400">유가/VIX 긴급 레이더 알림 포맷을 지금 즉시 테스트해 보세요:</span>
+                                        <button
+                                            type="button"
+                                            onClick={handleTestMacroAlert}
+                                            disabled={isTestingMacro}
+                                            className="px-3 py-1.5 bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white font-bold text-[11px] rounded-xl transition-all shadow-md shadow-rose-950/40 disabled:opacity-50 flex items-center gap-1.5"
+                                        >
+                                            {isTestingMacro ? (
+                                                <>
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    <span>발송 중...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span>⚡ 긴급 레이더 테스트</span>
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
                                 </div>
                             </div>

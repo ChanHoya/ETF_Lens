@@ -239,6 +239,8 @@ class NotificationSettings(Base):
     alert_disparity = Column(Integer, default=1) # 괴리율 실시간 경보
     disparity_threshold = Column(Float, default=2.0) # 괴리율 절대값 임계치 (%) 기본 2.0%
     disparity_target_scope = Column(String, default="PORTFOLIO") # 'PORTFOLIO' vs 'ALL'
+    alert_oil_shock = Column(Integer, default=1) # 유가 급변(±3.5%) 및 지정학 충격 알림 (0: 비활성, 1: 활성)
+    alert_vix_spike = Column(Integer, default=1) # VIX 스파이크(20/25 돌파) 알림 (0: 비활성, 1: 활성)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 

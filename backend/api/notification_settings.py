@@ -37,6 +37,9 @@ class SettingsSchema(BaseModel):
     alert_disparity: Optional[int] = Field(None, description="1 if ETF disparity rate alert enabled, 0 otherwise")
     disparity_threshold: Optional[float] = Field(None, description="Disparity absolute threshold in % (e.g. 2.0)")
     disparity_target_scope: Optional[str] = Field(None, description="'PORTFOLIO' (보유/관심) or 'ALL' (전체 시장)")
+    # 유가 & VIX 스마트 경보 (S15-1)
+    alert_oil_shock: Optional[int] = Field(None, description="1 if oil shock (±3.5%) alert enabled, 0 otherwise")
+    alert_vix_spike: Optional[int] = Field(None, description="1 if VIX spike (20+) alert enabled, 0 otherwise")
 
 
 class TestSchema(BaseModel):
@@ -94,7 +97,9 @@ async def get_settings(chat_id: Optional[str] = None, db: AsyncSession = Depends
             alert_brazil=1,
             alert_disparity=1,
             disparity_threshold=2.0,
-            disparity_target_scope="PORTFOLIO"
+            disparity_target_scope="PORTFOLIO",
+            alert_oil_shock=1,
+            alert_vix_spike=1
         )
 
     return SettingsSchema(
@@ -111,7 +116,9 @@ async def get_settings(chat_id: Optional[str] = None, db: AsyncSession = Depends
         alert_brazil=getattr(settings, "alert_brazil", 1),
         alert_disparity=getattr(settings, "alert_disparity", 1),
         disparity_threshold=getattr(settings, "disparity_threshold", 2.0) or 2.0,
-        disparity_target_scope=getattr(settings, "disparity_target_scope", "PORTFOLIO") or "PORTFOLIO"
+        disparity_target_scope=getattr(settings, "disparity_target_scope", "PORTFOLIO") or "PORTFOLIO",
+        alert_oil_shock=getattr(settings, "alert_oil_shock", 1),
+        alert_vix_spike=getattr(settings, "alert_vix_spike", 1)
     )
 
 
@@ -188,6 +195,10 @@ async def save_settings(data: SettingsSchema, db: AsyncSession = Depends(get_db)
         settings.disparity_threshold = round(float(data.disparity_threshold), 2)
     if data.disparity_target_scope is not None:
         settings.disparity_target_scope = data.disparity_target_scope
+    if data.alert_oil_shock is not None:
+        settings.alert_oil_shock = data.alert_oil_shock
+    if data.alert_vix_spike is not None:
+        settings.alert_vix_spike = data.alert_vix_spike
 
     try:
         await db.commit()
@@ -295,3 +306,14 @@ async def test_notification(data: TestSchema, db: AsyncSession = Depends(get_db)
 
     else:
         raise HTTPException(status_code=400, detail=f"지원하지 않는 알림 채널입니다: {target_channel}")
+
+
+@router.post("/test-macro-alert")
+async def test_macro_alert():
+    """유가 급변(WTI ±3.5%) 및 VIX 스파이크 긴급 레이더 테스트 발송 (S15-1)"""
+    from core.macro_alert_engine import send_test_macro_smart_alert
+    try:
+        res = await send_test_macro_smart_alert()
+        return {"status": "success", "msg": "유가 & VIX 긴급 스마트 경보 테스트 발송 완료!", "data": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"매크로 긴급 알림 발송 중 오류: {e}")

@@ -231,6 +231,10 @@ def _is_category_enabled(settings: NotificationSettings, category: str) -> bool:
         return getattr(settings, "alert_brazil", 1) == 1
     if category == "disparity":
         return getattr(settings, "alert_disparity", 1) == 1
+    if category == "oil_shock":
+        return getattr(settings, "alert_oil_shock", 1) == 1
+    if category == "vix_spike":
+        return getattr(settings, "alert_vix_spike", 1) == 1
     return True
 
 
