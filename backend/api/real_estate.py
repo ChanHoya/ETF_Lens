@@ -81,14 +81,16 @@ async def get_real_estate_status():
 
 @router.get("/districts")
 async def get_district_heatmap(
-    zone: Optional[str] = Query(None, description="권역 필터 (gangnam_plus, core_center, south_west, north_east, north_west)"),
+    region: Optional[str] = Query(None, description="광역 지역 필터 (seoul, gyeonggi, incheon, ALL)"),
+    zone: Optional[str] = Query(None, description="상세 권역 필터 (gangnam_plus, core_center, south_west, north_east, north_west, gyeonggi_south, gyeonggi_east, gyeonggi_north, incheon)"),
     sort_by: Optional[str] = Query("jeonse_desc", description="정렬 (jeonse_desc, jeonse_asc, price_desc, volume_desc)"),
     db: AsyncSession = Depends(get_db)
 ):
-    """서울 25개 자치구별 실거래가/전세가율 히트맵 및 갭투자 위험 단지 레이더"""
+    """서울 25개 자치구 및 수도권(경기/인천) 실거래가/전세가율 히트맵 및 갭투자 위험 단지 레이더"""
     try:
-        data = await real_estate_collector.get_district_stats(db)
+        data = await real_estate_collector.get_district_stats(db, region=region)
         districts = data["districts"]
+
 
         # 권역 필터링
         if zone and zone != "ALL":

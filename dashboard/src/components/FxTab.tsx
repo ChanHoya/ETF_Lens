@@ -59,7 +59,9 @@ const KIND_STYLE: Record<Regime['kind'], { label: string; fill: string; badge: s
     down: { label: '원화 강세 ↓', fill: '#10b981', badge: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30' },
     range: { label: '박스권', fill: '#94a3b8', badge: 'bg-white/5 text-gray-300 border-white/15' },
 };
-const TOOLTIP_STYLE = { background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 };
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
+
+const axisTick = { fill: '#9ca3af', fontSize: 10 };
 
 const ts = (d: string) => Date.parse(d);
 const fmtDate = (t: number) => new Date(t).toISOString().slice(0, 10);
@@ -211,6 +213,7 @@ function BalanceSection({ s }: { s: Snapshot }) {
     const v = s.verdict;
     const f = s.flows;
     const rows = useMemo(() => (f?.rows ?? []).map(r => ({ ...r, t: ts(`${r.date}-01`) })), [f]);
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
     const side = (title: string, items: string[], cls: string, Icon: typeof TrendingDown) => (
         <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3">
             <p className={`flex items-center gap-1.5 text-xs font-bold mb-2 ${cls}`}><Icon className="w-3.5 h-3.5" />{title} · {items.length}개</p>
@@ -251,13 +254,13 @@ function BalanceSection({ s }: { s: Snapshot }) {
                                 <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                                 <YAxis tick={axisTick} width={48} tickFormatter={(x: number) => x.toLocaleString('ko-KR')} />
                                 <ReferenceLine y={0} stroke="#ffffff40" />
-                                <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t)).slice(0, 7)}
+                                <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t)).slice(0, 7)}
                                     formatter={(x, name) => [typeof x === 'number' ? `${x.toLocaleString('ko-KR')}억달러` : x, name]} />
-                                <Legend wrapperStyle={{ fontSize: 12 }} />
-                                <Bar dataKey="ca" name="경상수지" stackId="f" fill="#10b981" fillOpacity={0.55} isAnimationActive={false} />
-                                <Bar dataKey="out" name="내국인 해외투자" stackId="f" fill="#f43f5e" fillOpacity={0.55} isAnimationActive={false} />
-                                <Bar dataKey="inflow" name="외국인 국내투자" stackId="f" fill="#38bdf8" fillOpacity={0.55} isAnimationActive={false} />
-                                <Line dataKey="net" name="순유입" stroke="#e5e7eb" dot={false} strokeWidth={2} isAnimationActive={false} />
+                                <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
+                                <Bar dataKey="ca" name="경상수지" stackId="f" fill="#10b981" fillOpacity={getOpacity('ca', 0.55, 0.15)} isAnimationActive={false} />
+                                <Bar dataKey="out" name="내국인 해외투자" stackId="f" fill="#f43f5e" fillOpacity={getOpacity('out', 0.55, 0.15)} isAnimationActive={false} />
+                                <Bar dataKey="inflow" name="외국인 국내투자" stackId="f" fill="#38bdf8" fillOpacity={getOpacity('inflow', 0.55, 0.15)} isAnimationActive={false} />
+                                <Line dataKey="net" name="순유입" stroke="#e5e7eb" dot={false} strokeWidth={getStrokeWidth('net', 2, 3.5)} strokeOpacity={getOpacity('net')} isAnimationActive={false} />
                             </ComposedChart>
                         </ResponsiveContainer>
                         <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
@@ -286,8 +289,6 @@ function RangeButtons({ range, setRange }: { range: Range; setRange: (r: Range) 
     );
 }
 
-const axisTick = { fill: '#9ca3af', fontSize: 11 };
-
 // 상관계수 해석 — 주간 변화 기준
 const corrLabel = (v: number | null) => v == null ? '-' : v >= 0.6 ? '강한 동조' : v >= 0.3 ? '보통 동조' : v > -0.3 ? '거의 무관' : '반대로 움직임';
 const CORR_SERIES = [
@@ -312,6 +313,7 @@ function OverlayChart({ rows }: { rows: (Row & { t: number })[] }) {
     const [key, setKey] = useState<OverlayKey>('dxy');
     const [flip, setFlip] = useState(false);
     const o = OVERLAY.find(x => x.key === key)!;
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
     return (
         <>
             <div className="flex flex-wrap items-center gap-1.5 mb-2">
@@ -334,11 +336,11 @@ function OverlayChart({ rows }: { rows: (Row & { t: number })[] }) {
                     <YAxis yAxisId="cmp" tick={axisTick} domain={['auto', 'auto']} width={48} reversed={flip}
                         tickFormatter={(v: number) => `${v.toLocaleString('ko-KR')}${o.unit}`} />
                     <YAxis yAxisId="krw" orientation="right" tick={axisTick} domain={['auto', 'auto']} width={48} />
-                    <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))}
+                    <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))}
                         formatter={(v, name) => [typeof v === 'number' ? v.toLocaleString('ko-KR') : v, name]} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Line yAxisId="cmp" dataKey={key} name={`${o.name} (좌${flip ? ', 뒤집음' : ''})`} stroke={o.color} dot={false} strokeWidth={1.6} connectNulls isAnimationActive={false} />
-                    <Line yAxisId="krw" dataKey="krw" name="원/달러 (우)" stroke="#6366f1" dot={false} strokeWidth={2} connectNulls isAnimationActive={false} />
+                    <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
+                    <Line yAxisId="cmp" dataKey={key} name={`${o.name} (좌${flip ? ', 뒤집음' : ''})`} stroke={o.color} dot={false} strokeWidth={getStrokeWidth(key, 1.6, 3.2)} strokeOpacity={getOpacity(key)} connectNulls isAnimationActive={false} />
+                    <Line yAxisId="krw" dataKey="krw" name="원/달러 (우)" stroke="#6366f1" dot={false} strokeWidth={getStrokeWidth('krw', 2, 3.5)} strokeOpacity={getOpacity('krw')} connectNulls isAnimationActive={false} />
                 </ComposedChart>
             </ResponsiveContainer>
         </>
@@ -346,6 +348,7 @@ function OverlayChart({ rows }: { rows: (Row & { t: number })[] }) {
 }
 
 function CorrChart({ rows, now }: { rows: (Analysis['corr'][number] & { t: number })[]; now: Analysis['corr_now'] }) {
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
     return (
         <>
             <div className="flex flex-wrap gap-2 mb-2">
@@ -361,10 +364,10 @@ function CorrChart({ rows, now }: { rows: (Analysis['corr'][number] & { t: numbe
                     <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                     <YAxis domain={[-1, 1]} ticks={[-1, -0.5, 0, 0.5, 1]} tick={axisTick} width={36} />
                     <ReferenceLine y={0} stroke="#ffffff30" />
-                    <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
+                    <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
                     {CORR_SERIES.map(c => (
-                        <Line key={c.key} dataKey={c.key} name={`원/달러 vs ${c.name}`} stroke={c.color} dot={false} strokeWidth={1.6} connectNulls isAnimationActive={false} />
+                        <Line key={c.key} dataKey={c.key} name={`원/달러 vs ${c.name}`} stroke={c.color} dot={false} strokeWidth={getStrokeWidth(c.key, 1.6, 3.2)} strokeOpacity={getOpacity(c.key)} connectNulls isAnimationActive={false} />
                     ))}
                 </ComposedChart>
             </ResponsiveContainer>
@@ -374,6 +377,7 @@ function CorrChart({ rows, now }: { rows: (Analysis['corr'][number] & { t: numbe
 
 function FairChart({ fair }: { fair: NonNullable<Analysis['fair']> }) {
     const rows = useMemo(() => fair.rows.map(r => ({ ...r, t: ts(r.date) })), [fair]);
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
     return (
         <ResponsiveContainer width="100%" height={260}>
             <ComposedChart data={rows} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
@@ -382,12 +386,12 @@ function FairChart({ fair }: { fair: NonNullable<Analysis['fair']> }) {
                 <YAxis yAxisId="gap" tick={axisTick} width={44} tickFormatter={(v: number) => `${v}%`} />
                 <YAxis yAxisId="krw" orientation="right" tick={axisTick} domain={['auto', 'auto']} width={48} />
                 <ReferenceLine yAxisId="gap" y={0} stroke="#ffffff30" />
-                <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))}
+                <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))}
                     formatter={(v, name) => [typeof v === 'number' ? v.toLocaleString('ko-KR') : v, name]} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Area yAxisId="gap" dataKey="gap" name="괴리 (좌, %)" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.15} strokeWidth={1} isAnimationActive={false} />
-                <Line yAxisId="krw" dataKey="actual" name="실제 원/달러 (우)" stroke="#6366f1" dot={false} strokeWidth={2} isAnimationActive={false} />
-                <Line yAxisId="krw" dataKey="fitted" name="달러지수로 본 적정 (우)" stroke="#9ca3af" strokeDasharray="5 3" dot={false} strokeWidth={1.5} isAnimationActive={false} />
+                <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
+                <Area yAxisId="gap" dataKey="gap" name="괴리 (좌, %)" stroke="#f43f5e" fill="#f43f5e" fillOpacity={getOpacity('gap', 0.15, 0.05)} strokeWidth={getStrokeWidth('gap', 1, 2.5)} isAnimationActive={false} />
+                <Line yAxisId="krw" dataKey="actual" name="실제 원/달러 (우)" stroke="#6366f1" dot={false} strokeWidth={getStrokeWidth('actual', 2, 3.5)} strokeOpacity={getOpacity('actual')} isAnimationActive={false} />
+                <Line yAxisId="krw" dataKey="fitted" name="달러지수로 본 적정 (우)" stroke="#9ca3af" strokeDasharray="5 3" dot={false} strokeWidth={getStrokeWidth('fitted', 1.5, 3)} strokeOpacity={getOpacity('fitted')} isAnimationActive={false} />
             </ComposedChart>
         </ResponsiveContainer>
     );
@@ -504,6 +508,7 @@ function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row 
     const rr = an.reer;
     const rrLast = rr?.rows[rr.rows.length - 1];
     const rrGap = rr && rrLast ? (rrLast.reer / rr.avg - 1) * 100 : null;
+    const { handleLegendClick: handleAsiaLegendClick, getOpacity: getAsiaOpacity, getStrokeWidth: getAsiaStrokeWidth, renderLegendText: renderAsiaLegendText } = useChartHighlight();
     return (
         <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <div className="bg-black/20 rounded-2xl border border-white/5 p-4">
@@ -523,7 +528,7 @@ function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row 
                             <ReferenceLine y={rr.avg} stroke="#9ca3af" strokeDasharray="5 3" />
                             <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(reerRows)} interval={0} tick={axisTick} />
                             <YAxis tick={axisTick} domain={['auto', 'auto']} width={40} />
-                            <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t)).slice(0, 7)} />
+                            <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t)).slice(0, 7)} />
                             <Line dataKey="reer" name="실질실효환율" stroke="#38bdf8" dot={false} strokeWidth={2} isAnimationActive={false} />
                         </ComposedChart>
                     </ResponsiveContainer>
@@ -556,10 +561,10 @@ function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row 
                         <ReferenceLine y={100} stroke="#ffffff30" />
                         <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(asia)} interval={0} tick={axisTick} />
                         <YAxis tick={axisTick} domain={['auto', 'auto']} width={40} />
-                        <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
-                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
+                        <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleAsiaLegendClick} formatter={renderAsiaLegendText} />
                         {ASIA.map(a => (
-                            <Line key={a.key} dataKey={a.key} name={a.name} stroke={a.color} dot={false} strokeWidth={a.key === 'krw' ? 2.2 : 1.5} connectNulls isAnimationActive={false} />
+                            <Line key={a.key} dataKey={a.key} name={a.name} stroke={a.color} dot={false} strokeWidth={getAsiaStrokeWidth(a.key, a.key === 'krw' ? 2.2 : 1.5, (a.key === 'krw' ? 2.2 : 1.5) + 1.5)} strokeOpacity={getAsiaOpacity(a.key)} connectNulls isAnimationActive={false} />
                         ))}
                     </ComposedChart>
                 </ResponsiveContainer>

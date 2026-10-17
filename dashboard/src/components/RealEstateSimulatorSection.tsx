@@ -30,6 +30,7 @@ import {
   CartesianGrid,
   Legend
 } from 'recharts';
+import { STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
 import {
   RepaymentMethod,
   SimulatorParams,
@@ -41,6 +42,7 @@ import {
 } from '@/lib/realEstateSimulator';
 
 export default function RealEstateSimulatorSection() {
+  const chartHighlight = useChartHighlight();
   // 기본 시뮬레이션 파라미터 상태
   const [propertyPrice, setPropertyPrice] = useState<number>(12); // 억원
   const [loanRatio, setLoanRatio] = useState<number>(40); // LTV %
@@ -546,7 +548,7 @@ export default function RealEstateSimulatorSection() {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
                     return (
-                      <div className="rounded-xl bg-slate-900/95 border border-slate-700 p-3 shadow-xl text-white text-xs space-y-1.5 min-w-[210px]">
+                      <div className="rounded-xl bg-slate-900/95 border border-slate-700 p-3 shadow-xl text-white text-[11px] space-y-1.5 min-w-[210px]">
                         <p className="font-bold border-b border-slate-700 pb-1 text-slate-300">{label}</p>
                         <div className="flex justify-between items-center text-emerald-400 font-semibold">
                           <span>배당 ETF 순자산:</span>
@@ -583,23 +585,29 @@ export default function RealEstateSimulatorSection() {
               <Legend
                 verticalAlign="top"
                 align="right"
-                wrapperStyle={{ paddingBottom: '8px', fontSize: '11px' }}
+                wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                onClick={chartHighlight.handleLegendClick}
+                formatter={chartHighlight.renderLegendText}
               />
               <Area
                 type="monotone"
                 dataKey="etfNetWorth"
                 name="배당 ETF 복리 순자산"
                 stroke="#10b981"
-                strokeWidth={2.5}
+                strokeWidth={chartHighlight.getStrokeWidth('etfNetWorth', 2.5)}
+                strokeOpacity={chartHighlight.getOpacity('etfNetWorth')}
                 fill="url(#etfGradient)"
+                fillOpacity={chartHighlight.highlightedKey === 'etfNetWorth' ? 0.9 : chartHighlight.highlightedKey ? 0.2 : 0.6}
               />
               <Area
                 type="monotone"
                 dataKey="reNetWorth"
                 name="아파트 순자산 (가액-대출)"
                 stroke="#6366f1"
-                strokeWidth={2}
+                strokeWidth={chartHighlight.getStrokeWidth('reNetWorth', 2)}
+                strokeOpacity={chartHighlight.getOpacity('reNetWorth')}
                 fill="url(#reGradient)"
+                fillOpacity={chartHighlight.highlightedKey === 'reNetWorth' ? 0.9 : chartHighlight.highlightedKey ? 0.2 : 0.6}
               />
             </ComposedChart>
           </ResponsiveContainer>

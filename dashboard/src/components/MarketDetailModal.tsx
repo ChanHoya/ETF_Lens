@@ -43,15 +43,7 @@ export interface MarketDetailModalProps {
 const PERIODS = ['6M', '1Y', '5Y', '10Y'] as const;
 type Period = typeof PERIODS[number];
 
-const TOOLTIP_STYLE = {
-    background: '#151722f0',
-    backdropFilter: 'blur(8px)',
-    border: '1px solid #ffffff20',
-    borderRadius: 10,
-    fontSize: 11,
-    boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-    padding: '8px 12px'
-};
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
 
 const axisTick = { fill: '#9ca3af', fontSize: 10 };
 
@@ -115,6 +107,7 @@ export default function MarketDetailModal({
     }, [data, period]);
 
     const [hiddenSeries, setHiddenSeries] = useState<Record<string, boolean>>({});
+    const { highlightedKey, handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
 
     // 모달이 열릴 때나 타이틀이 바뀔 때 초기화
     useEffect(() => {
@@ -355,24 +348,31 @@ export default function MarketDetailModal({
                                         }}
                                     />
                                     <Legend
-                                        wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                                        wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
                                         iconType="plainline"
+                                        onClick={handleLegendClick}
+                                        formatter={renderLegendText}
                                     />
-                                    {activeSeries.map(s => (
-                                        <Line
-                                            key={s.key}
-                                            type="monotone"
-                                            dataKey={s.key}
-                                            name={s.name}
-                                            stroke={s.color}
-                                            yAxisId={s.yAxisId || 'left'}
-                                            strokeWidth={s.strokeWidth || 2}
-                                            strokeDasharray={s.strokeDasharray}
-                                            dot={s.dot ? { r: 2.5, fill: s.color } : false}
-                                            connectNulls
-                                            isAnimationActive={false}
-                                        />
-                                    ))}
+                                    {activeSeries.map(s => {
+                                        const opacity = getOpacity(s.key, 1, 0.2);
+                                        const width = getStrokeWidth(s.key, s.strokeWidth || 2, (s.strokeWidth || 2) + 1.5);
+                                        return (
+                                            <Line
+                                                key={s.key}
+                                                type="monotone"
+                                                dataKey={s.key}
+                                                name={s.name}
+                                                stroke={s.color}
+                                                yAxisId={s.yAxisId || 'left'}
+                                                strokeWidth={width}
+                                                strokeOpacity={opacity}
+                                                strokeDasharray={s.strokeDasharray}
+                                                dot={s.dot ? { r: 2.5, fill: s.color, opacity } : false}
+                                                connectNulls
+                                                isAnimationActive={false}
+                                            />
+                                        );
+                                    })}
                                 </ComposedChart>
                             </ResponsiveContainer>
                         )}

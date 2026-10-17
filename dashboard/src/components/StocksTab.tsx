@@ -39,12 +39,13 @@ type Overview = {
     regimes: Partial<Record<IdxKey, Regime[]>>; data_dates: Record<string, string>; updated_at: string; stale?: boolean;
 };
 
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
+
 const NAME: Record<IdxKey, string> = { kospi: 'KOSPI', spx: 'S&P500', ndx: 'Nasdaq' };
 const COLOR: Record<IdxKey, string> = { kospi: '#6366f1', spx: '#f43f5e', ndx: '#10b981' };
 const RANGES = ['5Y', '10Y', '20Y'] as const;
 type Range = typeof RANGES[number];
-const TOOLTIP_STYLE = { background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 };
-const axisTick = { fill: '#9ca3af', fontSize: 11 };
+const axisTick = { fill: '#9ca3af', fontSize: 10 };
 const KIND = {
     bull: { label: '강세장 ↑', fill: '#ef4444', badge: 'bg-red-500/15 text-red-300 border-red-400/30' },
     bear: { label: '약세장 ↓', fill: '#3b82f6', badge: 'bg-blue-500/15 text-blue-300 border-blue-400/30' },
@@ -221,6 +222,8 @@ function RelativeChart({ rows, usd }: { rows: (Row & { t: number })[]; usd: bool
             return o;
         });
     }, [rows]);
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
+    const kospiKey = usd ? 'kospi_usd' : 'kospi';
     return (
         <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -228,17 +231,18 @@ function RelativeChart({ rows, usd }: { rows: (Row & { t: number })[]; usd: bool
                 <ReferenceLine y={100} stroke="#ffffff30" />
                 <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(data)} interval={0} tick={axisTick} />
                 <YAxis tick={axisTick} width={44} domain={['auto', 'auto']} />
-                <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line dataKey={usd ? 'kospi_usd' : 'kospi'} name={usd ? 'KOSPI (달러 환산)' : 'KOSPI'} stroke={COLOR.kospi} dot={false} strokeWidth={2} connectNulls isAnimationActive={false} />
-                <Line dataKey="spx" name="S&P500" stroke={COLOR.spx} dot={false} strokeWidth={1.6} connectNulls isAnimationActive={false} />
-                <Line dataKey="ndx" name="Nasdaq" stroke={COLOR.ndx} dot={false} strokeWidth={1.6} connectNulls isAnimationActive={false} />
+                <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
+                <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
+                <Line dataKey={kospiKey} name={usd ? 'KOSPI (달러 환산)' : 'KOSPI'} stroke={COLOR.kospi} dot={false} strokeWidth={getStrokeWidth(kospiKey, 2, 3.5)} strokeOpacity={getOpacity(kospiKey)} connectNulls isAnimationActive={false} />
+                <Line dataKey="spx" name="S&P500" stroke={COLOR.spx} dot={false} strokeWidth={getStrokeWidth('spx', 1.6, 3.2)} strokeOpacity={getOpacity('spx')} connectNulls isAnimationActive={false} />
+                <Line dataKey="ndx" name="Nasdaq" stroke={COLOR.ndx} dot={false} strokeWidth={getStrokeWidth('ndx', 1.6, 3.2)} strokeOpacity={getOpacity('ndx')} connectNulls isAnimationActive={false} />
             </LineChart>
         </ResponsiveContainer>
     );
 }
 
 function DrawdownChart({ rows }: { rows: (Row & { t: number })[] }) {
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
     return (
         <ResponsiveContainer width="100%" height={300}>
             <LineChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -246,11 +250,14 @@ function DrawdownChart({ rows }: { rows: (Row & { t: number })[] }) {
                 <ReferenceLine y={-20} stroke="#f59e0b" strokeDasharray="4 4" />
                 <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                 <YAxis tick={axisTick} width={44} tickFormatter={(v: number) => `${v}%`} />
-                <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                {(['kospi', 'spx', 'ndx'] as IdxKey[]).map(k => (
-                    <Line key={k} dataKey={`dd_${k}`} name={NAME[k]} stroke={COLOR[k]} dot={false} strokeWidth={k === 'kospi' ? 2 : 1.5} connectNulls isAnimationActive={false} />
-                ))}
+                <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
+                <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
+                {(['kospi', 'spx', 'ndx'] as IdxKey[]).map(k => {
+                    const dataKey = `dd_${k}`;
+                    return (
+                        <Line key={k} dataKey={dataKey} name={NAME[k]} stroke={COLOR[k]} dot={false} strokeWidth={getStrokeWidth(dataKey, k === 'kospi' ? 2 : 1.5, (k === 'kospi' ? 2 : 1.5) + 1.5)} strokeOpacity={getOpacity(dataKey)} connectNulls isAnimationActive={false} />
+                    );
+                })}
             </LineChart>
         </ResponsiveContainer>
     );
@@ -258,6 +265,7 @@ function DrawdownChart({ rows }: { rows: (Row & { t: number })[] }) {
 
 function ValuationChart({ v }: { v: NonNullable<Overview['valuation']> }) {
     const data = useMemo(() => v.rows.map(r => ({ ...r, t: ts(`${r.date}-01`) })), [v]);
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
     return (
         <ResponsiveContainer width="100%" height={300}>
             <ComposedChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
@@ -267,11 +275,11 @@ function ValuationChart({ v }: { v: NonNullable<Overview['valuation']> }) {
                 <YAxis yAxisId="x" tick={axisTick} width={40} domain={[0, 60]} allowDataOverflow />
                 <YAxis yAxisId="erp" orientation="right" tick={axisTick} width={44} tickFormatter={(x: number) => `${x}%p`} />
                 <ReferenceLine yAxisId="erp" y={0} stroke="#f59e0b" strokeDasharray="4 4" />
-                <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t)).slice(0, 7)} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line yAxisId="x" dataKey="pe" name="PER (좌)" stroke="#f59e0b" dot={false} strokeWidth={1.5} connectNulls isAnimationActive={false} />
-                <Line yAxisId="x" dataKey="cape" name="Shiller CAPE (좌)" stroke="#f43f5e" dot={false} strokeWidth={1.8} connectNulls isAnimationActive={false} />
-                <Line yAxisId="erp" dataKey="erp" name="위험 프리미엄 (우, %p)" stroke="#38bdf8" dot={false} strokeWidth={1.8} connectNulls isAnimationActive={false} />
+                <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t)).slice(0, 7)} />
+                <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
+                <Line yAxisId="x" dataKey="pe" name="PER (좌)" stroke="#f59e0b" dot={false} strokeWidth={getStrokeWidth('pe', 1.5, 3)} strokeOpacity={getOpacity('pe')} connectNulls isAnimationActive={false} />
+                <Line yAxisId="x" dataKey="cape" name="Shiller CAPE (좌)" stroke="#f43f5e" dot={false} strokeWidth={getStrokeWidth('cape', 1.8, 3.2)} strokeOpacity={getOpacity('cape')} connectNulls isAnimationActive={false} />
+                <Line yAxisId="erp" dataKey="erp" name="위험 프리미엄 (우, %p)" stroke="#38bdf8" dot={false} strokeWidth={getStrokeWidth('erp', 1.8, 3.2)} strokeOpacity={getOpacity('erp')} connectNulls isAnimationActive={false} />
             </ComposedChart>
         </ResponsiveContainer>
     );

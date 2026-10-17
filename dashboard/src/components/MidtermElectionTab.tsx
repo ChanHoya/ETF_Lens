@@ -40,6 +40,7 @@ import {
     Legend,
     ReferenceArea
 } from "recharts";
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from "@/lib/chartTheme";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -92,6 +93,9 @@ export default function MidtermElectionTab() {
     const [cyclePeriod, setCyclePeriod] = useState<"5Y" | "10Y" | "30Y" | "ALL">("ALL");
     const [showFedRate, setShowFedRate] = useState<boolean>(true); // 미국 기준금리(Fed Rate) 오버레이
     const [showEvents, setShowEvents] = useState<boolean>(true); // 주요 역사적 이벤트 마커
+
+    const trajectoryHighlight = useChartHighlight();
+    const macroHistHighlight = useChartHighlight();
 
     // 선택 기간별 필터링 데이터
     const filteredCycles = useMemo(() => {
@@ -829,20 +833,22 @@ export default function MidtermElectionTab() {
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis dataKey="month" stroke="#71717a" tick={{ fontSize: 11 }} tickLine={false} />
                                 <YAxis domain={["auto", "auto"]} stroke="#71717a" tick={{ fontSize: 11 }} tickLine={false} />
-                                <RechartsTooltip
-                                    contentStyle={{
-                                        backgroundColor: "rgba(10, 10, 15, 0.95)",
-                                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                                        borderRadius: "12px"
-                                    }}
+                                <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} />
+                                <Legend
+                                    verticalAlign="top"
+                                    height={36}
+                                    iconType="circle"
+                                    wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                    onClick={trajectoryHighlight.handleLegendClick}
+                                    formatter={trajectoryHighlight.renderLegendText}
                                 />
-                                <Legend verticalAlign="top" height={36} iconType="circle" />
                                 <Line
                                     type="monotone"
                                     name="S&P 500 중간선거 해"
                                     dataKey="midterm_year"
                                     stroke="#f59e0b"
-                                    strokeWidth={3}
+                                    strokeWidth={trajectoryHighlight.getStrokeWidth("midterm_year", 3)}
+                                    strokeOpacity={trajectoryHighlight.getOpacity("midterm_year")}
                                     dot={{ r: 3, fill: "#f59e0b" }}
                                 />
                                 <Line
@@ -850,7 +856,8 @@ export default function MidtermElectionTab() {
                                     name="나스닥 중간선거 해"
                                     dataKey="nasdaq_midterm"
                                     stroke="#a855f7"
-                                    strokeWidth={2.5}
+                                    strokeWidth={trajectoryHighlight.getStrokeWidth("nasdaq_midterm", 2.5)}
+                                    strokeOpacity={trajectoryHighlight.getOpacity("nasdaq_midterm")}
                                     dot={{ r: 3, fill: "#a855f7" }}
                                 />
                                 <Line
@@ -858,7 +865,8 @@ export default function MidtermElectionTab() {
                                     name="S&P 500 일반 해"
                                     dataKey="general_year"
                                     stroke="#71717a"
-                                    strokeWidth={1.5}
+                                    strokeWidth={trajectoryHighlight.getStrokeWidth("general_year", 1.5)}
+                                    strokeOpacity={trajectoryHighlight.getOpacity("general_year")}
                                     strokeDasharray="4 4"
                                     dot={false}
                                 />
@@ -867,7 +875,8 @@ export default function MidtermElectionTab() {
                                     name="나스닥 일반 해"
                                     dataKey="nasdaq_general"
                                     stroke="#38bdf8"
-                                    strokeWidth={1.5}
+                                    strokeWidth={trajectoryHighlight.getStrokeWidth("nasdaq_general", 1.5)}
+                                    strokeOpacity={trajectoryHighlight.getOpacity("nasdaq_general")}
                                     strokeDasharray="2 2"
                                     dot={false}
                                 />
@@ -1086,10 +1095,10 @@ export default function MidtermElectionTab() {
                                             const isPres = d.election_type === "presidential";
                                             const isMid = d.election_type === "midterm";
                                             return (
-                                                <div className="bg-[#0e101a] border border-white/20 rounded-xl p-3.5 shadow-2xl text-xs flex flex-col gap-2 min-w-[240px] backdrop-blur-md">
-                                                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                                                <div className="bg-[#0e101a] border border-white/20 rounded-xl p-3 shadow-2xl text-[11px] flex flex-col gap-1.5 min-w-[220px] backdrop-blur-md">
+                                                    <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-bold text-white font-mono text-sm">{label}년</span>
+                                                            <span className="font-bold text-white font-mono text-xs">{label}년</span>
                                                             <span
                                                                 className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                                                     isPres
@@ -1155,7 +1164,14 @@ export default function MidtermElectionTab() {
                                         return null;
                                     }}
                                 />
-                                <Legend verticalAlign="top" height={36} iconType="circle" />
+                                <Legend
+                                    verticalAlign="top"
+                                    height={36}
+                                    iconType="circle"
+                                    wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                    onClick={macroHistHighlight.handleLegendClick}
+                                    formatter={macroHistHighlight.renderLegendText}
+                                />
 
                                 {/* S&P 500 Line with Always-Visible Election Dots */}
                                 <Line
@@ -1164,7 +1180,8 @@ export default function MidtermElectionTab() {
                                     name="S&P 500 지수 (좌측축)"
                                     dataKey="sp500"
                                     stroke="#10b981"
-                                    strokeWidth={2.2}
+                                    strokeWidth={macroHistHighlight.getStrokeWidth("sp500", 2.2)}
+                                    strokeOpacity={macroHistHighlight.getOpacity("sp500")}
                                     isAnimationActive={false}
                                     dot={(props: any) => {
                                         const { cx, cy, payload } = props;
@@ -1210,7 +1227,8 @@ export default function MidtermElectionTab() {
                                     name="나스닥 지수 (우측축)"
                                     dataKey="nasdaq"
                                     stroke="#a855f7"
-                                    strokeWidth={2}
+                                    strokeWidth={macroHistHighlight.getStrokeWidth("nasdaq", 2)}
+                                    strokeOpacity={macroHistHighlight.getOpacity("nasdaq")}
                                     isAnimationActive={false}
                                     dot={(props: any) => {
                                         const { cx, cy, payload } = props;

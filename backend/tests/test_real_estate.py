@@ -87,31 +87,51 @@ def test_real_estate_summary():
 
 
 def test_real_estate_districts_all():
-    """GET /api/v1/real-estate/districts 서울 25개 자치구 전체 및 갭투자 위험단지 반환 검증"""
+    """GET /api/v1/real-estate/districts 서울 및 수도권 전체 38개 거점 및 갭투자 위험단지 반환 검증"""
     res = client.get("/api/v1/real-estate/districts")
     assert res.status_code == 200
     data = res.json()
     assert "meta" in data
     assert "districts" in data
     assert "risk_complexes" in data
-    assert len(data["districts"]) == 25
-    assert len(data["risk_complexes"]) >= 5
-    assert data["meta"]["total_districts"] == 25
+    assert len(data["districts"]) == 38
+    assert len(data["risk_complexes"]) >= 8
+    assert data["meta"]["total_districts"] == 38
     assert data["meta"]["avg_seoul_jeonse_ratio"] > 50.0
+    assert data["meta"]["avg_gyeonggi_jeonse_ratio"] > 50.0
+    assert data["meta"]["avg_incheon_jeonse_ratio"] > 60.0
 
     # 필수 필드 무결성 확인
     gangnam = next(d for d in data["districts"] if d["name"] == "강남구")
     assert gangnam["avg_sale_price"] > 20.0
     assert gangnam["risk_level"] == "prime"
 
-    geumcheon = next(d for d in data["districts"] if d["name"] == "금천구")
-    assert geumcheon["jeonse_ratio"] >= 75.0
-    assert geumcheon["risk_level"] == "critical"
+    bundang = next(d for d in data["districts"] if "분당구" in d["name"])
+    assert bundang["region"] == "gyeonggi"
+    assert bundang["avg_sale_price"] > 15.0
+
+    songdo = next(d for d in data["districts"] if "송도" in d["name"])
+    assert songdo["region"] == "incheon"
 
 
 def test_real_estate_districts_filtering_and_sorting():
-    """GET /api/v1/real-estate/districts 권역 필터 및 정렬 옵션 검증"""
-    # 1. gangnam_plus 권역 필터
+    """GET /api/v1/real-estate/districts 광역 지역 및 권역 필터, 정렬 옵션 검증"""
+    # 1. region=seoul 서울 25개 구 필터
+    res_seoul = client.get("/api/v1/real-estate/districts?region=seoul")
+    assert res_seoul.status_code == 200
+    assert len(res_seoul.json()["districts"]) == 25
+
+    # 2. region=gyeonggi 경기 10개 핵심지 필터
+    res_gyeonggi = client.get("/api/v1/real-estate/districts?region=gyeonggi")
+    assert res_gyeonggi.status_code == 200
+    assert len(res_gyeonggi.json()["districts"]) == 10
+
+    # 3. region=incheon 인천 3개 거점 필터
+    res_incheon = client.get("/api/v1/real-estate/districts?region=incheon")
+    assert res_incheon.status_code == 200
+    assert len(res_incheon.json()["districts"]) == 3
+
+    # 4. gangnam_plus 권역 필터
     res_zone = client.get("/api/v1/real-estate/districts?zone=gangnam_plus")
     assert res_zone.status_code == 200
     data_zone = res_zone.json()
@@ -119,17 +139,18 @@ def test_real_estate_districts_filtering_and_sorting():
     names = {d["name"] for d in data_zone["districts"]}
     assert names == {"강남구", "서초구", "송파구", "용산구"}
 
-    # 2. price_desc 매매가순 정렬
+    # 5. price_desc 매매가순 정렬
     res_price = client.get("/api/v1/real-estate/districts?sort_by=price_desc")
     assert res_price.status_code == 200
     districts_price = res_price.json()["districts"]
     assert districts_price[0]["name"] == "강남구"
     assert districts_price[0]["avg_sale_price"] >= districts_price[1]["avg_sale_price"]
 
-    # 3. jeonse_desc 전세가율 역순 정렬
+    # 6. jeonse_desc 전세가율 역순 정렬
     res_jeonse = client.get("/api/v1/real-estate/districts?sort_by=jeonse_desc")
     assert res_jeonse.status_code == 200
     districts_jeonse = res_jeonse.json()["districts"]
     assert districts_jeonse[0]["risk_level"] == "critical"
     assert districts_jeonse[0]["jeonse_ratio"] >= districts_jeonse[1]["jeonse_ratio"]
+
 

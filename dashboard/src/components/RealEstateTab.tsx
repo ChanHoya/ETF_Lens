@@ -33,9 +33,11 @@ import {
   CartesianGrid,
   Legend
 } from 'recharts';
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
 import { getApiBase } from '@/lib/apiConfig';
 import RealEstateSimulatorSection from './RealEstateSimulatorSection';
 import SeoulDistrictHeatmap from './SeoulDistrictHeatmap';
+import RealEstateMortgageShieldWidget from './RealEstateMortgageShieldWidget';
 
 
 
@@ -79,6 +81,7 @@ const MARKET_TREND_DATA_FULL = [
 ];
 
 export default function RealEstateTab() {
+  const chartHighlight = useChartHighlight();
   // 전문가 뷰 선택 (전체, 엘리엇, 박은정)
   const [selectedExpert, setSelectedExpert] = useState<'all' | 'elliot' | 'park'>('all');
 
@@ -611,21 +614,39 @@ export default function RealEstateTab() {
               <YAxis yAxisId="left" orientation="left" domain={[0, 10]} tick={{ fontSize: 11 }} />
               <YAxis yAxisId="right" orientation="right" domain={[70, 95]} tick={{ fontSize: 11 }} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                  borderColor: '#334155',
-                  borderRadius: '0.75rem',
-                  fontSize: '12px',
-                  color: '#fff'
-                }}
+                contentStyle={STANDARD_TOOLTIP_STYLE}
                 formatter={(val: any, name: any) => {
                   if (name === '실거래량') return [`${val}천 건`, name];
                   if (name === '매물적체량') return [`${val}천 건`, name];
                   return [val, name];
                 }}
               />
-              <Bar yAxisId="left" dataKey="volume" name="실거래량" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={chartPeriod === 'ALL' ? 12 : 18} />
-              <Line yAxisId="right" type="monotone" dataKey="listings" name="매물적체량" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 2.5 }} />
+              <Legend
+                verticalAlign="top"
+                align="right"
+                wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                onClick={chartHighlight.handleLegendClick}
+                formatter={chartHighlight.renderLegendText}
+              />
+              <Bar
+                yAxisId="left"
+                dataKey="volume"
+                name="실거래량"
+                fill="#3b82f6"
+                radius={[4, 4, 0, 0]}
+                barSize={chartPeriod === 'ALL' ? 12 : 18}
+                opacity={chartHighlight.highlightedKey === 'volume' ? 1 : chartHighlight.highlightedKey ? 0.25 : 0.85}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="listings"
+                name="매물적체량"
+                stroke="#ef4444"
+                strokeWidth={chartHighlight.getStrokeWidth('listings', 2.5)}
+                strokeOpacity={chartHighlight.getOpacity('listings')}
+                dot={{ r: 2.5 }}
+              />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -643,8 +664,12 @@ export default function RealEstateTab() {
 
       {/* S21: 실물 부동산 vs 금융자산(배당 ETF) 기회비용 & 10개년 복리 정밀 시뮬레이터 */}
       <RealEstateSimulatorSection />
+
+      {/* S23: 내 부동산 자산 & 배당금 대출이자 방어율 (ICR) 위젯 */}
+      <RealEstateMortgageShieldWidget />
     </div>
   );
 }
+
 
 

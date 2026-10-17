@@ -5,6 +5,7 @@ import { Activity, Globe, Zap, Landmark, Shield, Rocket, FlaskConical, Cpu } fro
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
 
 interface SectorComparisonChartProps {
     region: 'KR' | 'US' | 'ALL';
@@ -17,6 +18,7 @@ export default function SectorComparisonChart({ region, selectedSector = null }:
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
+    const { highlightedKey, handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
     const [keys, setKeys] = useState<string[]>([]);
     const [originalData, setOriginalData] = useState<any[]>([]);
 
@@ -171,7 +173,7 @@ export default function SectorComparisonChart({ region, selectedSector = null }:
         const prevRow = currentIdx > 0 ? chartData[currentIdx - 1] : null;
 
         return (
-            <div className="bg-[#121217]/95 border border-white/10 rounded-xl p-3 shadow-2xl backdrop-blur-xl min-w-[240px]">
+            <div className="bg-[#121217]/95 border border-white/10 rounded-xl p-3 shadow-2xl backdrop-blur-xl min-w-[240px] text-[11px]">
                 <p className="text-gray-400 text-[10px] mb-2 font-mono">{label}</p>
                 <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                     {payload.sort((a:any, b:any) => b.value - a.value).map((entry: any) => {
@@ -184,14 +186,14 @@ export default function SectorComparisonChart({ region, selectedSector = null }:
                         const isUp = dailyPct !== null && parseFloat(dailyPct) >= 0;
 
                         return (
-                            <div key={entry.dataKey} className="flex justify-between items-center gap-4">
+                            <div key={entry.dataKey} className="flex justify-between items-center gap-4 text-[11px]">
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                    <span className="text-white/80 font-bold text-xs truncate max-w-[100px]">
+                                    <span className="text-white/80 font-bold text-[11px] truncate max-w-[100px]">
                                         {entry.dataKey}
                                     </span>
                                 </div>
-                                <div className="flex items-center gap-2 font-mono text-xs">
+                                <div className="flex items-center gap-2 font-mono text-[11px]">
                                     <span className="text-white font-bold">{val.toFixed(1)}%</span>
                                     {dailyPct !== null && (
                                         <span className={isUp ? 'text-emerald-400' : 'text-rose-400'}>
@@ -282,28 +284,33 @@ export default function SectorComparisonChart({ region, selectedSector = null }:
                             />
                             <RechartsTooltip content={<CustomTooltip />} />
                             <Legend
+                                onClick={handleLegendClick}
                                 onMouseEnter={handleLegendMouseEnter}
                                 onMouseLeave={handleLegendMouseLeave}
-                                wrapperStyle={{ paddingTop: '20px', fontSize: '11px' }}
+                                wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                formatter={renderLegendText}
                                 iconType="circle"
                             />
                             {visibleKeys.map((k) => {
                                 const originalIdx = keys.indexOf(k);
                                 const color = colors[originalIdx % colors.length];
+                                const activeKey = highlightedKey || hoveredLine;
+                                const isHighlighted = activeKey === k;
+                                const isDimmed = activeKey !== null && !isHighlighted;
                                 return (
                                     <Line
                                         key={k}
                                         type="monotone"
                                         dataKey={k}
                                         stroke={color}
-                                        strokeWidth={hoveredLine === k ? 4 : hoveredLine ? 1 : 2}
+                                        strokeWidth={isHighlighted ? 4 : isDimmed ? 1 : 2}
                                         dot={false}
                                         activeDot={{ r: 4, strokeWidth: 0, fill: color }}
                                         name={k}
                                         connectNulls={true}
                                         style={{
-                                            opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8,
-                                            transition: 'all 0.3s ease'
+                                            opacity: isHighlighted ? 1 : isDimmed ? 0.2 : 0.85,
+                                            transition: 'all 0.2s ease'
                                         }}
                                     />
                                 );

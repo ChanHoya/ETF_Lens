@@ -42,6 +42,7 @@ import {
     Tooltip as RechartsTooltip,
     Legend
 } from "recharts";
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from "@/lib/chartTheme";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -95,6 +96,9 @@ export default function OilTab() {
         sp500: false,
         nasdaq: false
     });
+
+    const { handleLegendClick: handleSpreadLegendClick, getOpacity: getSpreadOpacity, getStrokeWidth: getSpreadStrokeWidth, renderLegendText: renderSpreadLegendText } = useChartHighlight();
+    const { handleLegendClick: handleModalLegendClick, getOpacity: getModalOpacity, getStrokeWidth: getModalStrokeWidth, renderLegendText: renderModalLegendText } = useChartHighlight();
 
     const setOverlayPreset = (preset: "inflation" | "dollar" | "equity" | "all" | "none") => {
         if (preset === "inflation") {
@@ -803,20 +807,23 @@ export default function OilTab() {
                                 <XAxis dataKey="date" stroke="#71717a" tick={{ fontSize: 11 }} tickLine={false} />
                                 <YAxis yAxisId="price" domain={["auto", "auto"]} stroke="#71717a" tick={{ fontSize: 11 }} tickLine={false} />
                                 <YAxis yAxisId="margin" orientation="right" domain={[0, 10]} stroke="#10b981" tick={{ fontSize: 11 }} tickLine={false} />
-                                <RechartsTooltip
-                                    contentStyle={{
-                                        backgroundColor: "rgba(10, 10, 15, 0.95)",
-                                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                                        borderRadius: "12px"
-                                    }}
+                                <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} />
+                                <Legend
+                                    verticalAlign="top"
+                                    height={36}
+                                    iconType="circle"
+                                    wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                    onClick={handleSpreadLegendClick}
+                                    formatter={renderSpreadLegendText}
                                 />
-                                <Legend verticalAlign="top" height={36} iconType="circle" />
                                 <Bar
                                     yAxisId="margin"
                                     name="정제마진 ($/bbl)"
                                     dataKey="refining_margin"
                                     fill="rgba(16, 185, 129, 0.4)"
+                                    fillOpacity={getSpreadOpacity('refining_margin', 0.4, 0.1)}
                                     stroke="#10b981"
+                                    strokeOpacity={getSpreadOpacity('refining_margin', 1, 0.2)}
                                     radius={[4, 4, 0, 0]}
                                 />
                                 <Line
@@ -825,8 +832,9 @@ export default function OilTab() {
                                     name="WTI 유가 ($)"
                                     dataKey="wti"
                                     stroke="#f59e0b"
-                                    strokeWidth={2.5}
-                                    dot={{ r: 3, fill: "#f59e0b" }}
+                                    strokeWidth={getSpreadStrokeWidth('wti', 2.5, 4)}
+                                    strokeOpacity={getSpreadOpacity('wti')}
+                                    dot={{ r: 3, fill: "#f59e0b", opacity: getSpreadOpacity('wti') }}
                                 />
                                 <Line
                                     yAxisId="price"
@@ -834,8 +842,9 @@ export default function OilTab() {
                                     name="Brent 유가 ($)"
                                     dataKey="brent"
                                     stroke="#38bdf8"
-                                    strokeWidth={2}
-                                    dot={{ r: 3, fill: "#38bdf8" }}
+                                    strokeWidth={getSpreadStrokeWidth('brent', 2, 3.5)}
+                                    strokeOpacity={getSpreadOpacity('brent')}
+                                    dot={{ r: 3, fill: "#38bdf8", opacity: getSpreadOpacity('brent') }}
                                 />
                             </ComposedChart>
                         </ResponsiveContainer>
@@ -1249,18 +1258,12 @@ export default function OilTab() {
                                                     />
 
                                                     <RechartsTooltip
-                                                        contentStyle={{
-                                                            backgroundColor: "rgba(15, 16, 26, 0.95)",
-                                                            border: "1px solid rgba(255, 255, 255, 0.15)",
-                                                            borderRadius: "14px",
-                                                            fontSize: "11px",
-                                                            boxShadow: "0 10px 25px rgba(0,0,0,0.5)"
-                                                        }}
+                                                        contentStyle={STANDARD_TOOLTIP_STYLE}
                                                         formatter={(value: any, name: any) => {
                                                             if (value === undefined || value === null) return ["-", name];
                                                             const num = Number(value);
                                                             if (name?.includes("CPI") || name?.includes("PPI") || name?.includes("PCE")) {
-                                                                return [`${num.toFixed(2)}%`, name];
+                                                                 return [`${num.toFixed(2)}%`, name];
                                                             }
                                                             if (name?.includes("달러")) {
                                                                 return [`${num.toFixed(2)} pt`, name];
@@ -1271,7 +1274,14 @@ export default function OilTab() {
                                                             return [`${num.toLocaleString()} ${currentMeta.unit}`, name];
                                                         }}
                                                     />
-                                                    <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: "11px" }} />
+                                                    <Legend
+                                                        verticalAlign="top"
+                                                        height={36}
+                                                        iconType="circle"
+                                                        wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                                        onClick={handleModalLegendClick}
+                                                        formatter={renderModalLegendText}
+                                                    />
 
                                                     {/* Main Indicator Line */}
                                                     <Line
@@ -1280,8 +1290,9 @@ export default function OilTab() {
                                                         name={`${currentMeta.name} (${currentMeta.unit})`}
                                                         dataKey="value"
                                                         stroke={currentMeta.color}
-                                                        strokeWidth={3}
-                                                        dot={{ r: selectedPeriod === "6M" ? 4 : 2, fill: currentMeta.color, stroke: "#ffffff", strokeWidth: 1.5 }}
+                                                        strokeWidth={getModalStrokeWidth('value', 3, 4.5)}
+                                                        strokeOpacity={getModalOpacity('value')}
+                                                        dot={{ r: selectedPeriod === "6M" ? 4 : 2, fill: currentMeta.color, stroke: "#ffffff", strokeWidth: 1.5, opacity: getModalOpacity('value') }}
                                                         isAnimationActive={false}
                                                     />
 
@@ -1293,8 +1304,9 @@ export default function OilTab() {
                                                             name="미국 PPI 생산자물가 (YoY %)"
                                                             dataKey="ppi"
                                                             stroke="#fb923c"
-                                                            strokeWidth={2.4}
-                                                            dot={{ r: selectedPeriod === "6M" ? 3 : 1 }}
+                                                            strokeWidth={getModalStrokeWidth('ppi', 2.4, 3.8)}
+                                                            strokeOpacity={getModalOpacity('ppi')}
+                                                            dot={{ r: selectedPeriod === "6M" ? 3 : 1, opacity: getModalOpacity('ppi') }}
                                                             isAnimationActive={false}
                                                         />
                                                     )}
@@ -1305,7 +1317,8 @@ export default function OilTab() {
                                                             name="미국 CPI 소비자물가 (YoY %)"
                                                             dataKey="cpi"
                                                             stroke="#f43f5e"
-                                                            strokeWidth={2}
+                                                            strokeWidth={getModalStrokeWidth('cpi', 2, 3.5)}
+                                                            strokeOpacity={getModalOpacity('cpi')}
                                                             dot={false}
                                                             isAnimationActive={false}
                                                         />
@@ -1317,7 +1330,8 @@ export default function OilTab() {
                                                             name="미국 PCE 소비지출물가 (YoY %)"
                                                             dataKey="pce"
                                                             stroke="#eab308"
-                                                            strokeWidth={1.8}
+                                                            strokeWidth={getModalStrokeWidth('pce', 1.8, 3.2)}
+                                                            strokeOpacity={getModalOpacity('pce')}
                                                             dot={false}
                                                             isAnimationActive={false}
                                                         />
@@ -1331,7 +1345,8 @@ export default function OilTab() {
                                                             name="달러 인덱스 (DXY)"
                                                             dataKey="dollar_index"
                                                             stroke="#38bdf8"
-                                                            strokeWidth={1.8}
+                                                            strokeWidth={getModalStrokeWidth('dollar_index', 1.8, 3.2)}
+                                                            strokeOpacity={getModalOpacity('dollar_index')}
                                                             strokeDasharray="4 2"
                                                             dot={false}
                                                             isAnimationActive={false}
@@ -1346,7 +1361,8 @@ export default function OilTab() {
                                                             name="S&P 500 (SPX)"
                                                             dataKey="sp500"
                                                             stroke="#10b981"
-                                                            strokeWidth={1.8}
+                                                            strokeWidth={getModalStrokeWidth('sp500', 1.8, 3.2)}
+                                                            strokeOpacity={getModalOpacity('sp500')}
                                                             dot={false}
                                                             isAnimationActive={false}
                                                         />
@@ -1358,7 +1374,8 @@ export default function OilTab() {
                                                             name="나스닥 100 (NDX)"
                                                             dataKey="nasdaq"
                                                             stroke="#c084fc"
-                                                            strokeWidth={1.8}
+                                                            strokeWidth={getModalStrokeWidth('nasdaq', 1.8, 3.2)}
+                                                            strokeOpacity={getModalOpacity('nasdaq')}
                                                             dot={false}
                                                             isAnimationActive={false}
                                                         />

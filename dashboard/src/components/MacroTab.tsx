@@ -41,8 +41,9 @@ type Overview = {
     updated_at: string;
 };
 
-const TOOLTIP_STYLE = { background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 };
-const axisTick = { fill: '#9ca3af', fontSize: 11 };
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
+
+const axisTick = { fill: '#9ca3af', fontSize: 10 };
 const L_W = 52, R_W = 56; // 통합 타임라인 좌·우 Y축 폭 — 아래 트랙을 플롯 영역과 맞춘다
 const SEG_COLOR: Record<string, string> = {
     hike: '#ef4444', cut: '#3b82f6', hold: '#94a3b8', up: '#ef4444', down: '#10b981', range: '#94a3b8', bull: '#ef4444', bear: '#3b82f6',
@@ -722,6 +723,7 @@ function Correlation({ c }: { c: NonNullable<Overview['correlation']> }) {
 // 3트랙 통합 타임라인: 위 차트(KOSPI·원/달러)와 같은 시간축 위에 금리·환율·KOSPI 국면 막대를 겹쳐 본다
 function LaneTimeline({ t }: { t: Overview['timeline'] }) {
     const series = useMemo(() => t.series.map(r => ({ ...r, t: ts(r.date) })), [t]);
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
     const [sel, setSel] = useState<{ lane: number; seg: number } | null>(() => {
         const k = t.lanes.findIndex(l => l.key === 'kospi');
         return k >= 0 && t.lanes[k].segments.length ? { lane: k, seg: t.lanes[k].segments.length - 1 } : null;
@@ -738,10 +740,10 @@ function LaneTimeline({ t }: { t: Overview['timeline'] }) {
                     <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} ticks={years} tickFormatter={(x: number) => String(new Date(x).getUTCFullYear())} interval={0} tick={axisTick} />
                     <YAxis yAxisId="k" width={L_W} tick={axisTick} domain={['auto', 'auto']} />
                     <YAxis yAxisId="w" orientation="right" width={R_W} tick={axisTick} domain={['auto', 'auto']} />
-                    <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(x) => new Date(Number(x)).toISOString().slice(0, 10)} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Line yAxisId="k" dataKey="kospi" name="KOSPI (좌)" stroke="#6366f1" dot={false} strokeWidth={1.8} connectNulls isAnimationActive={false} />
-                    <Line yAxisId="w" dataKey="krw" name="원/달러 (우)" stroke="#f59e0b" dot={false} strokeWidth={1.4} connectNulls isAnimationActive={false} />
+                    <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(x) => new Date(Number(x)).toISOString().slice(0, 10)} />
+                    <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
+                    <Line yAxisId="k" dataKey="kospi" name="KOSPI (좌)" stroke="#6366f1" dot={false} strokeWidth={getStrokeWidth('kospi', 1.8, 3.2)} strokeOpacity={getOpacity('kospi')} connectNulls isAnimationActive={false} />
+                    <Line yAxisId="w" dataKey="krw" name="원/달러 (우)" stroke="#f59e0b" dot={false} strokeWidth={getStrokeWidth('krw', 1.4, 3)} strokeOpacity={getOpacity('krw')} connectNulls isAnimationActive={false} />
                 </ComposedChart>
             </ResponsiveContainer>
             <div className="mt-2 space-y-1.5">

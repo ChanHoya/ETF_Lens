@@ -185,6 +185,7 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
     });
     const [error, setError] = useState<string | null>(null);
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
+    const [highlightedLine, setHighlightedLine] = useState<string | null>(null);
     const [selectedEtf, setSelectedEtf] = useState<string | null>(null);
     const [marketTab, setMarketTab] = useState<'KR' | 'KR_US' | 'US'>('KR');
 
@@ -374,10 +375,10 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
         return (
             <div style={{
                 backgroundColor: 'rgba(18, 18, 23, 0.97)', border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', padding: '10px 14px',
-                fontSize: '12px', minWidth: '210px',
+                borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', padding: '8px 12px',
+                fontSize: '11px', minWidth: '200px',
             }}>
-                <p style={{ color: 'rgba(255,255,255,0.45)', marginBottom: '8px', fontSize: '11px' }}>{label}</p>
+                <p style={{ color: 'rgba(255,255,255,0.45)', marginBottom: '6px', fontSize: '11px' }}>{label}</p>
                 {payload.map((entry: any) => {
                     const val: number = entry.value;
                     if (val === undefined || val === null || isNaN(val)) return null;
@@ -387,18 +388,18 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                     const dailyColor = dailyPct === null ? 'rgba(255,255,255,0.3)' : isUp ? '#34d399' : '#f87171';
                     const dailyText = dailyPct === null ? '' : isUp ? `(+${dailyPct}%)` : `(${dailyPct}%)`;
                     return (
-                        <div key={entry.dataKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+                        <div key={entry.dataKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '3px' }}>
                             <span style={{ color: entry.color, fontWeight: 'bold' }}>{entry.dataKey}</span>
                             <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                                 {val.toFixed(1)}%
                                 {dailyPct !== null && (
-                                    <span style={{ color: dailyColor, marginLeft: '6px', fontSize: '11px' }}>{dailyText}</span>
+                                    <span style={{ color: dailyColor, marginLeft: '5px', fontSize: '10px' }}>{dailyText}</span>
                                 )}
                             </span>
                         </div>
                     );
                 })}
-                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '9px', marginTop: '6px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '5px' }}>
+                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '9px', marginTop: '5px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '4px' }}>
                     기준점 100 대비 &nbsp;·&nbsp; 괄호 = 전일대비 증감율
                 </p>
             </div>
@@ -431,14 +432,20 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 justify-center mt-0.5">
                 <span className="text-[10px] font-bold text-gray-500 mr-1 uppercase tracking-wider">{label}</span>
                 {items.map((entry: any, index: number) => {
-                    const isSelected = selectedEtf === entry.value;
+                    const isSelected = (highlightedLine || selectedEtf) === entry.value;
+                    const isDimmed = (highlightedLine || selectedEtf) !== null && !isSelected;
                     return (
                         <button
                             key={`${keyPrefix}-${index}`}
                             onMouseEnter={() => setHoveredLine(entry.value)}
                             onMouseLeave={() => setHoveredLine(null)}
-                            onClick={() => setSelectedEtf(prev => prev === entry.value ? null : entry.value)}
-                            className={`flex items-center gap-1.5 transition-all hover:text-white ${isSelected ? 'text-white font-bold scale-105' : 'text-gray-400'}`}
+                            onClick={() => {
+                                setHighlightedLine(prev => prev === entry.value ? null : entry.value);
+                                setSelectedEtf(prev => prev === entry.value ? null : entry.value);
+                            }}
+                            className={`flex items-center gap-1.5 transition-all hover:text-white cursor-pointer ${
+                                isSelected ? 'text-white font-bold underline' : isDimmed ? 'text-gray-500 opacity-60' : 'text-gray-300'
+                            }`}
                         >
                             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
                             <span>{entry.value}</span>
@@ -449,22 +456,31 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
         );
 
         return (
-            <div className="flex flex-col gap-2 mt-4 text-xs font-semibold select-none">
+            <div className="flex flex-col gap-2 mt-4 text-[11px] font-semibold select-none">
                 {renderGroup(koreanItems, '국내상장(국내주식):', 'kr')}
                 {renderGroup(krUsItems, '국내상장(해외주식):', 'krus')}
                 {renderGroup(usItems, '해외상장 ETF:', 'us')}
                 {constituentItems.length > 0 && (
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 justify-center mt-2 border-t border-white/5 pt-2">
                         <span className="text-[9px] font-bold text-gray-500 mr-1 uppercase tracking-wider">편입종목:</span>
-                        {constituentItems.map((entry: any, index: number) => (
-                            <div key={`holding-${index}`}
-                                onMouseEnter={() => setHoveredLine(entry.value)}
-                                onMouseLeave={() => setHoveredLine(null)}
-                                className="flex items-center gap-1 text-[10px] text-gray-400 font-mono transition-colors">
-                                <span className="w-2 h-0.5" style={{ backgroundColor: entry.color }} />
-                                <span>{entry.value}</span>
-                            </div>
-                        ))}
+                        {constituentItems.map((entry: any, index: number) => {
+                            const isSelected = highlightedLine === entry.value;
+                            const isDimmed = highlightedLine !== null && !isSelected;
+                            return (
+                                <button
+                                    key={`holding-${index}`}
+                                    onMouseEnter={() => setHoveredLine(entry.value)}
+                                    onMouseLeave={() => setHoveredLine(null)}
+                                    onClick={() => setHighlightedLine(prev => prev === entry.value ? null : entry.value)}
+                                    className={`flex items-center gap-1 text-[10px] font-mono transition-colors cursor-pointer ${
+                                        isSelected ? 'text-white font-bold underline' : isDimmed ? 'text-gray-600' : 'text-gray-400'
+                                    }`}
+                                >
+                                    <span className="w-2 h-0.5" style={{ backgroundColor: entry.color }} />
+                                    <span>{entry.value}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -496,8 +512,8 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
         if (!active || !payload?.length) return null;
         const d = payload[0]?.payload;
         return (
-            <div style={{ backgroundColor: 'rgba(18,18,35,0.97)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 14px', fontSize: '12px' }}>
-                <div style={{ fontWeight: 'bold', color: '#fff', marginBottom: '6px' }}>{d?.name} <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 'normal' }}>({d?.ticker})</span></div>
+            <div style={{ backgroundColor: 'rgba(18,18,35,0.97)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '8px 12px', fontSize: '11px' }}>
+                <div style={{ fontWeight: 'bold', color: '#fff', marginBottom: '4px' }}>{d?.name} <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 'normal' }}>({d?.ticker})</span></div>
                 <div style={{ color: '#94a3b8' }}>OPM (TTM): <span style={{ color: '#34d399', fontWeight: 'bold' }}>{d?.opm != null ? `${d.opm}%` : 'N/A'}</span></div>
                 <div style={{ color: '#94a3b8' }}>Trailing PER: <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{d?.per != null ? `${d.per}x` : 'N/A'}</span></div>
                 <div style={{ color: '#6b7280', marginTop: '4px', fontSize: '10px' }}>{d?.group}</div>
@@ -817,13 +833,16 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                                 {keys.map((k, idx) => {
                                     const isConstituent = !baseEtfKeys.includes(k);
                                     if (!selectedEtf && !isConstituent && !activeTabEtfs.includes(k)) return null;
+                                    const activeHighlight = hoveredLine || highlightedLine;
+                                    const isHigh = activeHighlight === k;
+
                                     return (
                                         <Line key={k} type="monotone" dataKey={k} stroke={colors[idx % colors.length]}
-                                            strokeWidth={hoveredLine === k ? (isConstituent ? 3 : 4) : hoveredLine ? 1 : (isConstituent ? 1.5 : 2)}
+                                            strokeWidth={isHigh ? (isConstituent ? 3.5 : 4) : activeHighlight ? 1 : (isConstituent ? 1.5 : 2)}
                                             strokeDasharray={isConstituent ? "4 4" : undefined} dot={false}
                                             activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
                                             name={k} connectNulls={true}
-                                            style={{ opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8, transition: 'all 0.3s ease' }} />
+                                            style={{ opacity: isHigh ? 1 : activeHighlight ? 0.2 : 0.85, transition: 'all 0.3s ease' }} />
                                     );
                                 })}
                             </LineChart>

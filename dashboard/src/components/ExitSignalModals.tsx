@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from 'recharts';
 import { Search } from 'lucide-react';
 import { API_BASE } from '../lib/apiConfig';
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '../lib/chartTheme';
 
 const useVisualSort = (data: any[], keys: string[]) => {
     return React.useMemo(() => {
@@ -25,6 +25,7 @@ export function DollarModalContent() {
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+    const highlight = useChartHighlight();
 
     useEffect(() => {
         const fetchMacro = async () => {
@@ -133,8 +134,8 @@ export function DollarModalContent() {
                                     const isLast = payload[0]?.payload === filteredData[filteredData.length - 1];
                                     const displayLabel = `${label} ${isLast ? '(최근/전일)' : ''}`;
                                     return (
-                                        <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
-                                            <p className="text-gray-400 mb-2">{displayLabel}</p>
+                                        <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[11px]">
+                                            <p className="text-gray-400 mb-1.5">{displayLabel}</p>
                                             {sortedPayload.map((entry: any, index: number) => {
                                                 let displayValue = entry.value;
                                                 let name = entry.name;
@@ -157,29 +158,44 @@ export function DollarModalContent() {
                             }}
                         />
 
-                        <Line yAxisId="left" connectNulls type="monotone" name="달러 인덱스" dataKey="dollar" stroke="#34d399" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                        <Line yAxisId="left" connectNulls type="stepAfter" name="USD/KRW" dataKey="krw10" stroke="#60a5fa" strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={{ r: 6 }} />
-                        <Line yAxisId="right" connectNulls type="monotone" name="KOSPI" dataKey="kospi" stroke="#f43f5e" strokeWidth={1.5} dot={false} />
-                        <Line yAxisId="right" connectNulls type="monotone" name="S&P 500" dataKey="sp500" stroke="#a78bfa" strokeWidth={1.5} dot={false} />
+                        <Legend
+                            wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                            onClick={highlight.handleLegendClick}
+                            formatter={highlight.renderLegendText}
+                        />
+
+                        <Line yAxisId="left" connectNulls type="monotone" name="달러 인덱스" dataKey="dollar" stroke="#34d399" strokeWidth={highlight.getStrokeWidth('dollar', 3)} strokeOpacity={highlight.getOpacity('dollar')} dot={false} activeDot={{ r: 6 }} />
+                        <Line yAxisId="left" connectNulls type="stepAfter" name="USD/KRW" dataKey="krw10" stroke="#60a5fa" strokeWidth={highlight.getStrokeWidth('krw10', 2)} strokeOpacity={highlight.getOpacity('krw10')} strokeDasharray="4 4" dot={false} activeDot={{ r: 6 }} />
+                        <Line yAxisId="right" connectNulls type="monotone" name="KOSPI" dataKey="kospi" stroke="#f43f5e" strokeWidth={highlight.getStrokeWidth('kospi', 1.5)} strokeOpacity={highlight.getOpacity('kospi')} dot={false} />
+                        <Line yAxisId="right" connectNulls type="monotone" name="S&P 500" dataKey="sp500" stroke="#a78bfa" strokeWidth={highlight.getStrokeWidth('sp500', 1.5)} strokeOpacity={highlight.getOpacity('sp500')} dot={false} />
                     </LineChart>
                 </ResponsiveContainer>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-400 justify-center">
+            <div className="mt-3 flex flex-wrap gap-4 text-[11px] text-gray-400 justify-center">
                 {(() => {
                     const currentD = hoverIndex !== null && filteredData[hoverIndex] ? filteredData[hoverIndex] : (filteredData.length > 0 ? filteredData[filteredData.length - 1] : null);
                     const items = [
-                        { name: '원/달러 환율', dataKey: 'krw10', node: <><div className="w-3 h-3 border-2 border-blue-400 border-dashed rounded-sm"></div> 원/달러 환율 (÷10)</> },
-                        { name: '달러 인덱스', dataKey: 'dollar', node: <><div className="w-3 h-3 bg-emerald-400 rounded-sm"></div> 달러 인덱스</> },
-                        { name: 'S&P 500', dataKey: 'sp500', node: <><div className="w-3 h-3 bg-purple-400 rounded-sm"></div> S&P 500</> },
-                        { name: 'KOSPI', dataKey: 'kospi', node: <><div className="w-3 h-3 bg-rose-400 rounded-sm"></div> KOSPI</> }
+                        { name: '원/달러 환율', dataKey: 'krw10', node: <><div className="w-2.5 h-2.5 border-2 border-blue-400 border-dashed rounded-sm"></div> 원/달러 환율 (÷10)</> },
+                        { name: '달러 인덱스', dataKey: 'dollar', node: <><div className="w-2.5 h-2.5 bg-emerald-400 rounded-sm"></div> 달러 인덱스</> },
+                        { name: 'S&P 500', dataKey: 'sp500', node: <><div className="w-2.5 h-2.5 bg-purple-400 rounded-sm"></div> S&P 500</> },
+                        { name: 'KOSPI', dataKey: 'kospi', node: <><div className="w-2.5 h-2.5 bg-rose-400 rounded-sm"></div> KOSPI</> }
                     ];
                     if (currentD) {
                         items.sort((a, b) => getNorm(b.dataKey, (currentD as any)[b.dataKey]) - getNorm(a.dataKey, (currentD as any)[a.dataKey]));
                     }
-                    return items.map(item => (
-                        <div key={item.name} className="flex items-center gap-2">{item.node}</div>
-                    ));
+                    return items.map(item => {
+                        const isSelected = highlight.highlightedKey === item.dataKey;
+                        return (
+                            <button
+                                key={item.name}
+                                onClick={() => highlight.handleLegendClick({ dataKey: item.dataKey })}
+                                className={`flex items-center gap-1.5 cursor-pointer transition-colors ${isSelected ? 'text-white font-bold underline' : 'text-gray-400 hover:text-gray-200'}`}
+                            >
+                                {item.node}
+                            </button>
+                        );
+                    });
                 })()}
             </div>
         </div>
@@ -352,6 +368,8 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
 export function CliModalContent() {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const leftHighlight = useChartHighlight();
+    const rightHighlight = useChartHighlight();
 
     useEffect(() => {
         const fetchCli = async () => {
@@ -424,8 +442,8 @@ export function CliModalContent() {
                                             const isLast = payload[0]?.payload === data[data.length - 1];
                                             const displayLabel = `${payload[0]?.payload?.date || label} ${isLast ? '(최근/전일)' : ''}`;
                                             return (
-                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
-                                                    <p className="text-gray-400 mb-2">{displayLabel}</p>
+                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[11px]">
+                                                    <p className="text-gray-400 mb-1.5">{displayLabel}</p>
                                                     {sortedPayload.map((entry: any, index: number) => (
                                                         <div key={`item-${index}`} className="flex items-center gap-2 mb-1 font-medium" style={{ color: entry.color }}>
                                                             <span>{entry.name} :</span>
@@ -438,14 +456,21 @@ export function CliModalContent() {
                                         return null;
                                     }}
                                 />
-                                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#aaa' }} />
+                                <Legend
+                                    verticalAlign="top"
+                                    height={36}
+                                    iconType="circle"
+                                    wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                    onClick={leftHighlight.handleLegendClick}
+                                    formatter={leftHighlight.renderLegendText}
+                                />
 
                                 {/* Crisis Highlights */}
                                 <ReferenceArea yAxisId="cli" x1="2020-01" x2="2020-12" strokeOpacity={0} fill="#f43f5e" fillOpacity={0.15} />
                                 <ReferenceArea yAxisId="cli" x1="2022-01" x2="2022-12" strokeOpacity={0} fill="#f43f5e" fillOpacity={0.15} />
 
-                                <Line yAxisId="kospi" type="monotone" name="KOSPI" dataKey="kospi" stroke="#60a5fa" strokeWidth={2} dot={false} />
-                                <Line yAxisId="cli" type="monotone" name="한국 CLI" dataKey="kor_cli" stroke="#f43f5e" strokeWidth={3} dot={false} />
+                                <Line yAxisId="kospi" type="monotone" name="KOSPI" dataKey="kospi" stroke="#60a5fa" strokeWidth={leftHighlight.getStrokeWidth('kospi', 2)} strokeOpacity={leftHighlight.getOpacity('kospi')} dot={false} />
+                                <Line yAxisId="cli" type="monotone" name="한국 CLI" dataKey="kor_cli" stroke="#f43f5e" strokeWidth={leftHighlight.getStrokeWidth('kor_cli', 3)} strokeOpacity={leftHighlight.getOpacity('kor_cli')} dot={false} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -467,8 +492,8 @@ export function CliModalContent() {
                                             const isLast = payload[0]?.payload === data[data.length - 1];
                                             const displayLabel = `${payload[0]?.payload?.date || label} ${isLast ? '(최근/전일)' : ''}`;
                                             return (
-                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[12px]">
-                                                    <p className="text-gray-400 mb-2">{displayLabel}</p>
+                                                <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[11px]">
+                                                    <p className="text-gray-400 mb-1.5">{displayLabel}</p>
                                                     {sortedPayload.map((entry: any, index: number) => (
                                                         <div key={`item-${index}`} className="flex items-center gap-2 mb-1 font-medium" style={{ color: entry.color }}>
                                                             <span>{entry.name} :</span>
@@ -481,7 +506,14 @@ export function CliModalContent() {
                                         return null;
                                     }}
                                 />
-                                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#aaa' }} />
+                                <Legend
+                                    verticalAlign="top"
+                                    height={36}
+                                    iconType="circle"
+                                    wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                    onClick={rightHighlight.handleLegendClick}
+                                    formatter={rightHighlight.renderLegendText}
+                                />
 
                                 <ReferenceArea x1="2020-01" x2="2020-12" strokeOpacity={0} fill="#64748b" fillOpacity={0.2} />
                                 <ReferenceArea x1="2022-01" x2="2022-12" strokeOpacity={0} fill="#64748b" fillOpacity={0.2} />
@@ -496,7 +528,17 @@ export function CliModalContent() {
                                         lines.sort((a, b) => (lastData[b.key] || 0) - (lastData[a.key] || 0));
                                     }
                                     return lines.map(l => (
-                                        <Line key={l.key} type="monotone" name={l.name} dataKey={l.key} stroke={l.stroke} strokeWidth={l.width} strokeDasharray={l.dash || undefined} dot={false} />
+                                        <Line
+                                            key={l.key}
+                                            type="monotone"
+                                            name={l.name}
+                                            dataKey={l.key}
+                                            stroke={l.stroke}
+                                            strokeWidth={rightHighlight.getStrokeWidth(l.key, l.width)}
+                                            strokeOpacity={rightHighlight.getOpacity(l.key)}
+                                            strokeDasharray={l.dash || undefined}
+                                            dot={false}
+                                        />
                                     ));
                                 })()}
                             </LineChart>

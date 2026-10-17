@@ -53,10 +53,11 @@ type Overview = {
     data_dates: Record<string, string>; updated_at: string; stale?: boolean; ecos_key?: boolean;
 };
 
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
+
 const RANGES = ['5Y', '10Y', '20Y'] as const;
 type Range = typeof RANGES[number];
-const TOOLTIP_STYLE = { background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 };
-const axisTick = { fill: '#9ca3af', fontSize: 11 };
+const axisTick = { fill: '#9ca3af', fontSize: 10 };
 const KIND: Record<Regime['kind'], { label: string; fill: string; badge: string }> = {
     hike: { label: '인상 ↑', fill: '#ef4444', badge: 'bg-red-500/15 text-red-300 border-red-400/30' },
     cut: { label: '인하 ↓', fill: '#3b82f6', badge: 'bg-blue-500/15 text-blue-300 border-blue-400/30' },
@@ -247,6 +248,7 @@ function SnapshotGrid({ d, onSelectModal }: { d: Overview; onSelectModal?: (key:
 function PolicyChart({ rows, regimes, selected }: { rows: (Row & { t: number })[]; regimes: Regime[]; selected: number | null }) {
     const from = rows[0]?.t ?? 0;
     const to = rows[rows.length - 1]?.t ?? 0;
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
     return (
         <ResponsiveContainer width="100%" height={300}>
             <ComposedChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -257,11 +259,11 @@ function PolicyChart({ rows, regimes, selected }: { rows: (Row & { t: number })[
                 ))}
                 <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                 <YAxis tick={axisTick} width={40} tickFormatter={(v: number) => `${v}%`} />
-                <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line type="stepAfter" dataKey="kr_base" name="한국 기준금리" stroke="#6366f1" dot={false} strokeWidth={2.2} connectNulls isAnimationActive={false} />
-                <Line type="stepAfter" dataKey="us_upper" name="미국 정책금리(상단)" stroke="#f43f5e" dot={false} strokeWidth={1.8} connectNulls isAnimationActive={false} />
-                <Line type="stepAfter" dataKey="ecb" name="ECB 예금금리" stroke="#f59e0b" dot={false} strokeWidth={1.4} connectNulls isAnimationActive={false} />
+                <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
+                <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
+                <Line type="stepAfter" dataKey="kr_base" name="한국 기준금리" stroke="#6366f1" dot={false} strokeWidth={getStrokeWidth('kr_base', 2.2, 3.5)} strokeOpacity={getOpacity('kr_base')} connectNulls isAnimationActive={false} />
+                <Line type="stepAfter" dataKey="us_upper" name="미국 정책금리(상단)" stroke="#f43f5e" dot={false} strokeWidth={getStrokeWidth('us_upper', 1.8, 3.2)} strokeOpacity={getOpacity('us_upper')} connectNulls isAnimationActive={false} />
+                <Line type="stepAfter" dataKey="ecb" name="ECB 예금금리" stroke="#f59e0b" dot={false} strokeWidth={getStrokeWidth('ecb', 1.4, 2.8)} strokeOpacity={getOpacity('ecb')} connectNulls isAnimationActive={false} />
             </ComposedChart>
         </ResponsiveContainer>
     );
@@ -271,17 +273,18 @@ function MarketChart({ rows, country }: { rows: (Row & { t: number })[]; country
     const lines = country === 'kr'
         ? [{ k: 'kr_base', n: '기준금리', c: '#6366f1', step: true }, { k: 'kr3y', n: '국고채 3년', c: '#38bdf8', step: false }, { k: 'kr10y', n: '국고채 10년', c: '#10b981', step: false }]
         : [{ k: 'us_upper', n: '정책금리(상단)', c: '#f43f5e', step: true }, { k: 'us2y', n: '미국채 2년', c: '#f59e0b', step: false }, { k: 'us10y', n: '미국채 10년', c: '#a78bfa', step: false }];
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
     return (
         <ResponsiveContainer width="100%" height={300}>
             <LineChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                 <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                 <YAxis tick={axisTick} width={40} tickFormatter={(v: number) => `${v}%`} />
-                <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
+                <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
                 {lines.map(l => (
                     <Line key={l.k} type={l.step ? 'stepAfter' : 'monotone'} dataKey={l.k} name={l.n} stroke={l.c}
-                        dot={false} strokeWidth={l.step ? 2.2 : 1.6} connectNulls isAnimationActive={false} />
+                        dot={false} strokeWidth={getStrokeWidth(l.k, l.step ? 2.2 : 1.6, (l.step ? 2.2 : 1.6) + 1.5)} strokeOpacity={getOpacity(l.k)} connectNulls isAnimationActive={false} />
                 ))}
             </LineChart>
         </ResponsiveContainer>
@@ -291,6 +294,7 @@ function MarketChart({ rows, country }: { rows: (Row & { t: number })[]; country
 function SpreadChart({ rows, recessions }: { rows: (Row & { t: number })[]; recessions: Overview['recessions'] }) {
     const from = rows[0]?.t ?? 0;
     const to = rows[rows.length - 1]?.t ?? 0;
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
     return (
         <ResponsiveContainer width="100%" height={300}>
             <LineChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -301,11 +305,11 @@ function SpreadChart({ rows, recessions }: { rows: (Row & { t: number })[]; rece
                 <ReferenceLine y={0} stroke="#f59e0b" strokeDasharray="4 4" />
                 <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                 <YAxis tick={axisTick} width={44} tickFormatter={(v: number) => `${v}%p`} />
-                <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line dataKey="kr_10_3" name="한국 10년−3년" stroke="#6366f1" dot={false} strokeWidth={2} connectNulls isAnimationActive={false} />
-                <Line dataKey="us_10_3" name="미국 10년−3년" stroke="#f43f5e" dot={false} strokeWidth={2} connectNulls isAnimationActive={false} />
-                <Line dataKey="us_10_3m" name="미국 10년−3개월 (참고)" stroke="#9ca3af" strokeDasharray="4 3" dot={false} strokeWidth={1.2} connectNulls isAnimationActive={false} />
+                <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
+                <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
+                <Line dataKey="kr_10_3" name="한국 10년−3년" stroke="#6366f1" dot={false} strokeWidth={getStrokeWidth('kr_10_3', 2, 3.5)} strokeOpacity={getOpacity('kr_10_3')} connectNulls isAnimationActive={false} />
+                <Line dataKey="us_10_3" name="미국 10년−3년" stroke="#f43f5e" dot={false} strokeWidth={getStrokeWidth('us_10_3', 2, 3.5)} strokeOpacity={getOpacity('us_10_3')} connectNulls isAnimationActive={false} />
+                <Line dataKey="us_10_3m" name="미국 10년−3개월 (참고)" stroke="#9ca3af" strokeDasharray="4 3" dot={false} strokeWidth={getStrokeWidth('us_10_3m', 1.2, 2.5)} strokeOpacity={getOpacity('us_10_3m')} connectNulls isAnimationActive={false} />
             </LineChart>
         </ResponsiveContainer>
     );
@@ -313,17 +317,18 @@ function SpreadChart({ rows, recessions }: { rows: (Row & { t: number })[]; rece
 
 function CurveChart({ curve }: { curve: Overview['curves']['kr'] }) {
     const data = curve.now.map((p, i) => ({ tenor: p.tenor, now: p.value, m1: curve.m1[i]?.value ?? null, y1: curve.y1[i]?.value ?? null }));
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
     return (
         <ResponsiveContainer width="100%" height={220}>
             <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                 <XAxis dataKey="tenor" tick={axisTick} />
                 <YAxis tick={axisTick} width={40} domain={['auto', 'auto']} tickFormatter={(v: number) => `${v}%`} />
-                <RechartsTooltip contentStyle={TOOLTIP_STYLE} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line dataKey="y1" name="1년 전" stroke="#9ca3af" strokeDasharray="4 3" dot={{ r: 2 }} isAnimationActive={false} />
-                <Line dataKey="m1" name="1개월 전" stroke="#38bdf8" dot={{ r: 2 }} isAnimationActive={false} />
-                <Line dataKey="now" name={`현재 (${curve.date})`} stroke="#6366f1" strokeWidth={2.4} dot={{ r: 3 }} isAnimationActive={false} />
+                <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} />
+                <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
+                <Line dataKey="y1" name="1년 전" stroke="#9ca3af" strokeDasharray="4 3" strokeWidth={getStrokeWidth('y1', 1.5, 3)} strokeOpacity={getOpacity('y1')} dot={{ r: 2 }} isAnimationActive={false} />
+                <Line dataKey="m1" name="1개월 전" stroke="#38bdf8" strokeWidth={getStrokeWidth('m1', 1.8, 3.2)} strokeOpacity={getOpacity('m1')} dot={{ r: 2 }} isAnimationActive={false} />
+                <Line dataKey="now" name={`현재 (${curve.date})`} stroke="#6366f1" strokeWidth={getStrokeWidth('now', 2.4, 4)} strokeOpacity={getOpacity('now')} dot={{ r: 3 }} isAnimationActive={false} />
             </LineChart>
         </ResponsiveContainer>
     );
@@ -417,7 +422,7 @@ function TermSection({ terms, rows, range, setRange }: { terms: NonNullable<Term
                                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                                     <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                                     <YAxis tick={axisTick} width={36} domain={['auto', 'auto']} tickFormatter={(v: number) => `${v}%`} />
-                                    <RechartsTooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
+                                    <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
                                     <Line dataKey={L.kr as string} name="한국" stroke="#6366f1" dot={false} strokeWidth={1.8} connectNulls isAnimationActive={false} />
                                     <Line dataKey={L.us as string} name="미국" stroke="#f43f5e" dot={false} strokeWidth={1.6} connectNulls isAnimationActive={false} />
                                     {r.key === 'ultra' && <Line dataKey="kr50y" name="한국 50년" stroke="#f59e0b" strokeDasharray="4 3" dot={false} strokeWidth={1.4} connectNulls isAnimationActive={false} />}

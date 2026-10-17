@@ -102,6 +102,7 @@ export default function BioChart({ onOpenDetail }: BioChartProps) {
     });
     const [error, setError] = useState<string | null>(null);
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
+    const [highlightedLine, setHighlightedLine] = useState<string | null>(null);
     const [selectedEtf, setSelectedEtf] = useState<string | null>(null);
     
     // Holdings comparison state (SWR Cache First)
@@ -288,11 +289,11 @@ export default function BioChart({ onOpenDetail }: BioChartProps) {
                 border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: '12px',
                 boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                padding: '10px 14px',
-                fontSize: '12px',
+                padding: '8px 12px',
+                fontSize: '11px',
                 minWidth: '210px',
             }}>
-                <p style={{ color: 'rgba(255,255,255,0.45)', marginBottom: '8px', fontSize: '11px' }}>
+                <p style={{ color: 'rgba(255,255,255,0.45)', marginBottom: '6px', fontSize: '11px' }}>
                     {label}
                 </p>
                 {payload.map((entry: any) => {
@@ -451,32 +452,50 @@ export default function BioChart({ onOpenDetail }: BioChartProps) {
                                 <Legend
                                     onClick={(o) => {
                                         const clickedKey = o.dataKey as string;
+                                        setHighlightedLine(prev => prev === clickedKey ? null : clickedKey);
                                         if (etfsToSelect.includes(clickedKey)) {
                                             setSelectedEtf(prev => prev === clickedKey ? null : clickedKey);
                                         }
                                     }}
                                     onMouseEnter={handleLegendMouseEnter}
                                     onMouseLeave={handleLegendMouseLeave}
-                                    wrapperStyle={{ paddingTop: '10px', fontSize: '12px', cursor: 'pointer' }}
+                                    wrapperStyle={{ paddingTop: '10px', fontSize: '11px', cursor: 'pointer' }}
+                                    formatter={(value: string) => {
+                                        const selected = (highlightedLine || selectedEtf) === value;
+                                        const dimmed = (highlightedLine || selectedEtf) !== null && !selected;
+                                        return (
+                                            <span style={{
+                                                fontSize: '11px',
+                                                color: dimmed ? 'rgba(255, 255, 255, 0.35)' : '#cbd5e1',
+                                                fontWeight: selected ? 700 : 400,
+                                                textDecoration: selected ? 'underline' : 'none',
+                                            }}>
+                                                {value}
+                                            </span>
+                                        );
+                                    }}
                                     iconType="circle"
                                 />
                                 {keys.map((k, idx) => {
                                     const isConstituent = !baseEtfKeys.includes(k);
+                                    const activeHighlight = highlightedLine || hoveredLine;
+                                    const isHighlighted = activeHighlight === k;
+                                    const isDimmed = activeHighlight !== null && !isHighlighted;
                                     return (
                                         <Line
                                             key={k}
                                             type="monotone"
                                             dataKey={k}
                                             stroke={colors[idx % colors.length]}
-                                            strokeWidth={hoveredLine === k ? (isConstituent ? 3 : 4) : hoveredLine ? 1 : (isConstituent ? 1.5 : 2)}
+                                            strokeWidth={isHighlighted ? (isConstituent ? 3.5 : 4) : isDimmed ? 1 : (isConstituent ? 1.5 : 2)}
                                             strokeDasharray={isConstituent ? "4 4" : undefined}
                                             dot={false}
                                             activeDot={{ r: 4, strokeWidth: 0, fill: colors[idx % colors.length] }}
                                             name={k}
                                             connectNulls={true}
                                             style={{
-                                                opacity: hoveredLine === k ? 1 : hoveredLine ? 0.3 : 0.8,
-                                                transition: 'all 0.3s ease'
+                                                opacity: isHighlighted ? 1 : isDimmed ? 0.2 : 0.85,
+                                                transition: 'all 0.2s ease'
                                             }}
                                         />
                                     );

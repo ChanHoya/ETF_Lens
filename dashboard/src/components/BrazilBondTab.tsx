@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import BrazilTotalReturnSimulator from './BrazilTotalReturnSimulator';
 import { API_BASE } from '@/lib/apiConfig';
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
 
 // ── 타입 ────────────────────────────────────────────────────────────────────
 interface Indicator {
@@ -1383,10 +1384,10 @@ function RateCycleTooltip({ active, payload, label }: any) {
         { k: '_tt_ipca', name: 'IPCA(12M)', color: '#fbbf24' },
     ].filter(it => row[it.k] !== undefined && row[it.k] !== null);
     return (
-        <div style={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12, padding: '8px 10px' }}>
-            <div style={{ color: '#9ca3af', marginBottom: 4 }}>{label}</div>
+        <div style={{ ...STANDARD_TOOLTIP_STYLE, padding: '8px 10px' }}>
+            <div style={{ color: '#9ca3af', marginBottom: 4, fontWeight: 600 }}>{label}</div>
             {items.map(it => (
-                <div key={it.k} style={{ color: it.color }}>{it.name} : <b>{Number(row[it.k]).toFixed(2)}</b></div>
+                <div key={it.k} style={{ color: it.color, padding: '1px 0' }}>{it.name} : <b>{Number(row[it.k]).toFixed(2)}</b></div>
             ))}
         </div>
     );
@@ -1394,6 +1395,7 @@ function RateCycleTooltip({ active, payload, label }: any) {
 
 function RateCycleChart({ history, summary }: { history: Record<string, { date: string; value: number }[]>; summary?: Summary }) {
     const [range, setRange] = useState<'10Y' | '1Y' | '6M' | '3M'>('1Y');
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
 
     const selic = summary?.indicators.find(i => i.key === 'selic_target')?.value ?? null;
     const y5 = summary?.indicators.find(i => i.key === 'y5')?.value ?? null;
@@ -1509,11 +1511,11 @@ function RateCycleChart({ history, summary }: { history: Record<string, { date: 
                     <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} />
                     <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} domain={['auto', 'auto']} />
                     <RechartsTooltip content={<RateCycleTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Line type="monotone" dataKey="selic_target" name="기준금리(Selic)" stroke="#818cf8" dot={false} strokeWidth={2} connectNulls={true} />
-                    <Line type="monotone" dataKey="y5_fred_adjusted" name="5년물 국채금리 (역사적/FRED)" stroke="#f97316" dot={false} strokeWidth={2} connectNulls={true} />
-                    <Line type="monotone" dataKey="y5" name="5년물 국채금리 (실제/최근)" stroke="#34d399" dot={false} strokeWidth={2} connectNulls={true} />
-                    <Line type="monotone" dataKey="ipca_12m" name="IPCA(12M)" stroke="#fbbf24" dot={false} strokeWidth={1.5} connectNulls={true} />
+                    <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
+                    <Line type="monotone" dataKey="selic_target" name="기준금리(Selic)" stroke="#818cf8" dot={false} strokeWidth={getStrokeWidth('selic_target', 2, 3.5)} strokeOpacity={getOpacity('selic_target')} connectNulls={true} />
+                    <Line type="monotone" dataKey="y5_fred_adjusted" name="5년물 국채금리 (역사적/FRED)" stroke="#f97316" dot={false} strokeWidth={getStrokeWidth('y5_fred_adjusted', 2, 3.5)} strokeOpacity={getOpacity('y5_fred_adjusted')} connectNulls={true} />
+                    <Line type="monotone" dataKey="y5" name="5년물 국채금리 (실제/최근)" stroke="#34d399" dot={false} strokeWidth={getStrokeWidth('y5', 2, 3.5)} strokeOpacity={getOpacity('y5')} connectNulls={true} />
+                    <Line type="monotone" dataKey="ipca_12m" name="IPCA(12M)" stroke="#fbbf24" dot={false} strokeWidth={getStrokeWidth('ipca_12m', 1.5, 3)} strokeOpacity={getOpacity('ipca_12m')} connectNulls={true} />
                 </LineChart>
             </ResponsiveContainer>
 
@@ -1593,6 +1595,7 @@ function BrlTrendBadge({ usdbrl }: { usdbrl?: Summary['usd_brl'] }) {
 
 function FxChart({ history, target }: { history: Record<string, { date: string; value: number }[]>; target: number }) {
     const [range, setRange] = useState<'1M' | '3M' | '6M' | '1Y' | '3Y' | '10Y'>('1Y');
+    const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
 
     const data = useMemo(() => {
         const merged = mergeSeries(history, ['brl_krw', 'usd_brl']);
@@ -1631,11 +1634,11 @@ function FxChart({ history, target }: { history: Record<string, { date: string; 
                     <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} />
                     <YAxis yAxisId="krw" tick={{ fill: '#fbbf24', fontSize: 11 }} domain={['auto', 'auto']} width={44} />
                     <YAxis yAxisId="brl" orientation="right" tick={{ fill: '#60a5fa', fontSize: 11 }} domain={['auto', 'auto']} width={40} />
-                    <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} />
+                    <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
                     <ReferenceLine yAxisId="krw" y={target} stroke="#34d399" strokeDasharray="5 5" label={{ value: `타겟 ${target}원`, fill: '#34d399', fontSize: 11, position: 'insideTopRight' }} />
-                    <Line yAxisId="krw" type="monotone" dataKey="brl_krw" name="원/헤알(좌)" stroke="#fbbf24" dot={false} strokeWidth={2} connectNulls={true} />
-                    <Line yAxisId="brl" type="monotone" dataKey="usd_brl" name="달러/헤알(우)" stroke="#60a5fa" dot={false} strokeWidth={2} connectNulls={true} />
+                    <Line yAxisId="krw" type="monotone" dataKey="brl_krw" name="원/헤알(좌)" stroke="#fbbf24" dot={false} strokeWidth={getStrokeWidth('brl_krw', 2, 3.5)} strokeOpacity={getOpacity('brl_krw')} connectNulls={true} />
+                    <Line yAxisId="brl" type="monotone" dataKey="usd_brl" name="달러/헤알(우)" stroke="#60a5fa" dot={false} strokeWidth={getStrokeWidth('usd_brl', 2, 3.5)} strokeOpacity={getOpacity('usd_brl')} connectNulls={true} />
                 </LineChart>
             </ResponsiveContainer>
         </div>
@@ -1650,7 +1653,7 @@ function CarryCushionChart({ points }: { points: CarryPoint[] }) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                 <XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 12 }} />
                 <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} unit="%" />
-                <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }}
+                <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE}
                     formatter={(v: any) => [`${fmt(v, 1)}%`, '원화 누적수익']} />
                 <ReferenceLine y={0} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: '손익분기', fill: '#f59e0b', fontSize: 12, position: 'insideBottomRight' }} />
                 <Line type="monotone" dataKey="ret" name="원화 누적수익" stroke="#34d399" strokeWidth={2.5}

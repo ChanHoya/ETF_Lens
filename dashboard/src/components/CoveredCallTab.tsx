@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, TrendingUp, TrendingDown, X, Info, ShieldAlert, BarChart3, Activity, Hourglass, Check, Plus, Star, Bookmark, Save, Download, Trash2 } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, ZAxis, ReferenceLine } from 'recharts';
 import { API_BASE } from '../lib/apiConfig';
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE } from '../lib/chartTheme';
 
 // Benchmark Options for Users to Select
 export const BENCHMARK_OPTIONS = [
@@ -73,7 +74,9 @@ export default function CoveredCallTab({
     const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
     const [chartPeriod, setChartPeriod] = useState('1Y');
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
+    const [highlightedLine, setHighlightedLine] = useState<string | null>(null);
     const [hoveredScatterItem, setHoveredScatterItem] = useState<string | null>(null);
+    const [highlightedScatterItem, setHighlightedScatterItem] = useState<string | null>(null);
     const [realChartData, setRealChartData] = useState<any[]>([]);
     const [isPrMap, setIsPrMap] = useState<any>({});
     const [isLoadingData, setIsLoadingData] = useState(false);
@@ -83,11 +86,11 @@ export default function CoveredCallTab({
         if (active && payload && payload.length) {
             const data = payload[0].payload;
             return (
-                <div className="bg-[#0c0a18]/95 border border-white/10 p-4 rounded-xl shadow-2xl z-50">
-                    <p className="font-bold text-gray-200 mb-2">{data.name}</p>
-                    <div className="flex flex-col gap-1.5">
-                        <p className="text-emerald-400 text-[13px] flex justify-between gap-6"><span>상승 참여율:</span> <span className="font-mono font-bold">{data.upside}%</span></p>
-                        <p className="text-blue-400 text-[13px] flex justify-between gap-6"><span>하락 참여율:</span> <span className="font-mono font-bold">{data.downside}%</span></p>
+                <div className="bg-[#0c0a18]/95 border border-white/10 p-3 rounded-xl shadow-2xl z-50 text-[11px]">
+                    <p className="font-bold text-gray-200 mb-1.5 text-[11px]">{data.name}</p>
+                    <div className="flex flex-col gap-1">
+                        <p className="text-emerald-400 text-[11px] flex justify-between gap-4"><span>상승 참여율:</span> <span className="font-mono font-bold">{data.upside}%</span></p>
+                        <p className="text-blue-400 text-[11px] flex justify-between gap-4"><span>하락 참여율:</span> <span className="font-mono font-bold">{data.downside}%</span></p>
                     </div>
                 </div>
             );
@@ -99,11 +102,11 @@ export default function CoveredCallTab({
         if (active && payload && payload.length) {
             const data = payload[0].payload;
             return (
-                <div className="bg-[#0c0a18]/95 border border-white/10 p-4 rounded-xl shadow-2xl z-50">
-                    <p className="font-bold text-gray-200 mb-2">{data.name}</p>
-                    <div className="flex flex-col gap-1.5">
-                        <p className="text-indigo-400 text-[13px] flex justify-between gap-6"><span>수익률 ({chartPeriod}):</span> <span className="font-mono font-bold">{data.trPeriod > 0 ? '+' : ''}{data.trPeriod}%</span></p>
-                        <p className="text-slate-300 text-[13px] flex justify-between gap-6"><span>초과 수익(괴리):</span> <span className="font-mono font-bold">{data.diffBenchmark > 0 ? '+' : ''}{data.diffBenchmark}%</span></p>
+                <div className="bg-[#0c0a18]/95 border border-white/10 p-3 rounded-xl shadow-2xl z-50 text-[11px]">
+                    <p className="font-bold text-gray-200 mb-1.5 text-[11px]">{data.name}</p>
+                    <div className="flex flex-col gap-1">
+                        <p className="text-indigo-400 text-[11px] flex justify-between gap-4"><span>수익률 ({chartPeriod}):</span> <span className="font-mono font-bold">{data.trPeriod > 0 ? '+' : ''}{data.trPeriod}%</span></p>
+                        <p className="text-slate-300 text-[11px] flex justify-between gap-4"><span>초과 수익(괴리):</span> <span className="font-mono font-bold">{data.diffBenchmark > 0 ? '+' : ''}{data.diffBenchmark}%</span></p>
                     </div>
                 </div>
             );
@@ -779,23 +782,61 @@ export default function CoveredCallTab({
                                             <XAxis dataKey="date" stroke="rgba(255,255,255,0.3)" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} tickMargin={10} minTickGap={30} />
                                             <YAxis stroke="rgba(255,255,255,0.3)" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} tickFormatter={(val) => `${val}% `} />
                                             <RechartsTooltip
-                                                contentStyle={{ backgroundColor: 'rgba(12,10,24,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
-                                                itemStyle={{ fontWeight: 600 }}
-                                                labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}
+                                                contentStyle={STANDARD_TOOLTIP_STYLE}
+                                                itemStyle={{ fontWeight: 600, fontSize: '11px' }}
+                                                labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: '4px', fontSize: '11px' }}
                                                 formatter={(val: number) => [`${val}% `, '']}
                                             />
-                                            <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" onMouseEnter={(e: any) => setHoveredLine(e?.dataKey || null)} onMouseLeave={() => setHoveredLine(null)} />
+                                            <Legend
+                                                wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                                iconType="circle"
+                                                onClick={(e: any) => setHighlightedLine(prev => prev === (e?.dataKey || e?.value) ? null : (e?.dataKey || e?.value))}
+                                                onMouseEnter={(e: any) => setHoveredLine(e?.dataKey || null)}
+                                                onMouseLeave={() => setHoveredLine(null)}
+                                            />
                                             {/* Render main benchmark from the first item */}
-                                            <Line type="monotone" name={`${selectedForCompare[0].index} (TR 기준)`} dataKey="Benchmark" stroke="#f43f5e" strokeWidth={hoveredLine === 'Benchmark' || hoveredLine !== null ? 4 : 3} strokeDasharray="5 5" dot={false} connectNulls={true} opacity={hoveredLine === 'Benchmark' ? 1.0 : (hoveredLine ? 0.8 : 1.0)} onMouseEnter={() => setHoveredLine('Benchmark')} onMouseLeave={() => setHoveredLine(null)} />
+                                            {(() => {
+                                                const activeHighlight = hoveredLine || highlightedLine;
+                                                const isBenchHigh = activeHighlight === 'Benchmark';
+                                                return (
+                                                    <Line
+                                                        type="monotone"
+                                                        name={`${selectedForCompare[0].index} (TR 기준)`}
+                                                        dataKey="Benchmark"
+                                                        stroke="#f43f5e"
+                                                        strokeWidth={isBenchHigh ? 4.5 : activeHighlight ? 1.5 : 3}
+                                                        strokeDasharray="5 5"
+                                                        dot={false}
+                                                        connectNulls={true}
+                                                        opacity={isBenchHigh ? 1.0 : activeHighlight ? 0.25 : 1.0}
+                                                        onMouseEnter={() => setHoveredLine('Benchmark')}
+                                                        onMouseLeave={() => setHoveredLine(null)}
+                                                    />
+                                                );
+                                            })()}
 
                                             {/* Render lines for each selected ETF */}
                                             {selectedForCompare.map((item, idx) => {
                                                 const colors = ['#818cf8', '#34d399', '#fbbf24', '#a78bfa', '#60a5fa', '#f87171', '#34d399'];
-                                                const isHovered = hoveredLine === item.ticker;
+                                                const activeHighlight = hoveredLine || highlightedLine;
+                                                const isHigh = activeHighlight === item.ticker;
                                                 const isPr = isPrMap[item.ticker] === true;
                                                 return (
-                                                    <Line key={item.ticker} type="monotone" name={`${item.name}${isPr ? ' (PR)' : ''} `} dataKey={item.ticker} stroke={colors[idx % colors.length]} strokeWidth={isHovered ? 5 : 2.5} opacity={hoveredLine && !isHovered ? 0.2 : 1} dot={false} activeDot={{ r: isHovered ? 6 : 4 }} connectNulls={true} onMouseEnter={() => setHoveredLine(item.ticker)} onMouseLeave={() => setHoveredLine(null)} />
-                                                )
+                                                    <Line
+                                                        key={item.ticker}
+                                                        type="monotone"
+                                                        name={`${item.name}${isPr ? ' (PR)' : ''} `}
+                                                        dataKey={item.ticker}
+                                                        stroke={colors[idx % colors.length]}
+                                                        strokeWidth={isHigh ? 4.5 : activeHighlight ? 1.5 : 2.5}
+                                                        opacity={isHigh ? 1 : activeHighlight ? 0.25 : 1}
+                                                        dot={false}
+                                                        activeDot={{ r: isHigh ? 6 : 4 }}
+                                                        connectNulls={true}
+                                                        onMouseEnter={() => setHoveredLine(item.ticker)}
+                                                        onMouseLeave={() => setHoveredLine(null)}
+                                                    />
+                                                );
                                             })}
                                         </LineChart>
                                     </ResponsiveContainer>
@@ -928,7 +969,16 @@ export default function CoveredCallTab({
                                                 />
                                                 <ZAxis type="category" dataKey="ticker" name="종목" />
                                                 <RechartsTooltip content={<CustomReturnTooltip />} cursor={{ strokeDasharray: '3 3' }} />
-                                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} iconType="circle" onMouseEnter={handleLegendMouseEnter} onMouseLeave={handleLegendMouseLeave} />
+                                                <Legend
+                                                    wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                                    iconType="circle"
+                                                    onClick={(e: any) => {
+                                                        const item = selectedForCompare.find(x => x.name === e.value);
+                                                        if (item) setHighlightedScatterItem(prev => prev === item.ticker ? null : item.ticker);
+                                                    }}
+                                                    onMouseEnter={handleLegendMouseEnter}
+                                                    onMouseLeave={handleLegendMouseLeave}
+                                                />
 
                                                 <ReferenceLine x={0} stroke="#f43f5e" strokeDasharray="3 3" label={{ position: 'top', value: '지수 일치(0%)', fill: '#f43f5e', fontSize: 10 }} />
                                                 <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3" />
@@ -949,7 +999,8 @@ export default function CoveredCallTab({
                                                     // Custom dot rendering for animated highlight
                                                     const CustomDot = (props: any) => {
                                                         const { cx, cy, fill } = props;
-                                                        const isHovered = hoveredScatterItem === item.ticker;
+                                                        const activeScatter = hoveredScatterItem || highlightedScatterItem;
+                                                        const isHovered = activeScatter === item.ticker;
                                                         return (
                                                             <circle
                                                                 cx={cx}
@@ -957,7 +1008,7 @@ export default function CoveredCallTab({
                                                                 r={isHovered ? 12 : 7}
                                                                 fill={fill}
                                                                 className={isHovered ? "animate-pulse shadow-lg" : "transition-all duration-300"}
-                                                                opacity={hoveredScatterItem && !isHovered ? 0.3 : 1}
+                                                                opacity={activeScatter && !isHovered ? 0.25 : 1}
                                                             />
                                                         );
                                                     };
@@ -1011,7 +1062,16 @@ export default function CoveredCallTab({
                                                 />
                                                 <ZAxis type="category" dataKey="ticker" name="종목" />
                                                 <RechartsTooltip content={<CustomScatterTooltip />} cursor={{ strokeDasharray: '3 3' }} />
-                                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} iconType="circle" onMouseEnter={handleLegendMouseEnter} onMouseLeave={handleLegendMouseLeave} />
+                                                <Legend
+                                                    wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                                    iconType="circle"
+                                                    onClick={(e: any) => {
+                                                        const item = selectedForCompare.find(x => x.name === e.value);
+                                                        if (item) setHighlightedScatterItem(prev => prev === item.ticker ? null : item.ticker);
+                                                    }}
+                                                    onMouseEnter={handleLegendMouseEnter}
+                                                    onMouseLeave={handleLegendMouseLeave}
+                                                />
 
                                                 <ReferenceLine x={100} stroke="#f43f5e" strokeDasharray="3 3" label={{ position: 'top', value: '지수 하락(100%)', fill: '#f43f5e', fontSize: 10 }} />
                                                 <ReferenceLine y={100} stroke="#f43f5e" strokeDasharray="3 3" label={{ position: 'right', value: '지수 상승(100%)', fill: '#f43f5e', fontSize: 10 }} />
@@ -1028,10 +1088,10 @@ export default function CoveredCallTab({
                                                         downside: Number(downCap.toFixed(1))
                                                     }];
 
-                                                    // Custom dot rendering for animated highlight
                                                     const CustomDot = (props: any) => {
                                                         const { cx, cy, fill } = props;
-                                                        const isHovered = hoveredScatterItem === item.ticker;
+                                                        const activeScatter = hoveredScatterItem || highlightedScatterItem;
+                                                        const isHovered = activeScatter === item.ticker;
                                                         return (
                                                             <circle
                                                                 cx={cx}
@@ -1039,7 +1099,7 @@ export default function CoveredCallTab({
                                                                 r={isHovered ? 12 : 7}
                                                                 fill={fill}
                                                                 className={isHovered ? "animate-pulse shadow-lg" : "transition-all duration-300"}
-                                                                opacity={hoveredScatterItem && !isHovered ? 0.3 : 1}
+                                                                opacity={activeScatter && !isHovered ? 0.25 : 1}
                                                             />
                                                         );
                                                     };

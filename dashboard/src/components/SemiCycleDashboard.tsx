@@ -47,9 +47,11 @@ import {
     Line,
     Legend,
     Cell,
-} from "recharts";
+} from 'recharts';
 import { API_BASE } from "../lib/apiConfig";
+
 import SemiFundamentalSignals from "./SemiFundamentalSignals";
+import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from "../lib/chartTheme";
 
 interface SemiCycleDashboardProps {
     onOpenDetail?: (code: string) => void;
@@ -220,6 +222,7 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
     const [refreshToast, setRefreshToast] = useState<string | null>(null);
     const [activeSubTab, setActiveSubTab] = useState<"signals" | "overview" | "capex" | "subsector" | "etf">("signals");
     const [clockPeriod, setClockPeriod] = useState<"5Y" | "3Y" | "1Y">("5Y");
+    const capexChartHighlight = useChartHighlight();
 
     // 시뮬레이션 애니메이션 상태
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -1100,12 +1103,7 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                                 <YAxis yAxisId="left" tick={{ fill: "#a855f7", fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                                 <YAxis yAxisId="right" orientation="right" tick={{ fill: "#10b981", fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                                 <RechartsTooltip
-                                    contentStyle={{
-                                        backgroundColor: "#12141c",
-                                        borderColor: "rgba(255,255,255,0.15)",
-                                        borderRadius: 12,
-                                        fontSize: 11,
-                                    }}
+                                    contentStyle={STANDARD_TOOLTIP_STYLE}
                                     formatter={(value: any, name: any) => [`${value}%`, name]}
                                 />
                                 <Legend
@@ -1113,7 +1111,9 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                                     align="right"
                                     iconType="circle"
                                     iconSize={8}
-                                    formatter={(val) => <span className="text-[11px] text-gray-300">{val}</span>}
+                                    wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}
+                                    onClick={capexChartHighlight.handleLegendClick}
+                                    formatter={capexChartHighlight.renderLegendText}
                                 />
                                 <Bar
                                     yAxisId="left"
@@ -1121,7 +1121,7 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                                     name="빅테크 CapEx YoY (%)"
                                     fill="#8b5cf6"
                                     radius={[3, 3, 0, 0]}
-                                    opacity={0.8}
+                                    opacity={capexChartHighlight.highlightedKey === 'bigtech_capex_yoy' ? 1 : capexChartHighlight.highlightedKey ? 0.2 : 0.8}
                                 />
                                 <Line
                                     yAxisId="right"
@@ -1129,7 +1129,8 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                                     dataKey="kr_export_yoy"
                                     name="한국 반도체 수출 YoY (%)"
                                     stroke="#10b981"
-                                    strokeWidth={2.2}
+                                    strokeWidth={capexChartHighlight.getStrokeWidth('kr_export_yoy', 2.2)}
+                                    strokeOpacity={capexChartHighlight.getOpacity('kr_export_yoy')}
                                     dot={{ r: 2 }}
                                 />
                                 <Line
@@ -1138,7 +1139,8 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                                     dataKey="sox_return_yoy"
                                     name="SOX 지수 수익률 YoY (%)"
                                     stroke="#38bdf8"
-                                    strokeWidth={1.5}
+                                    strokeWidth={capexChartHighlight.getStrokeWidth('sox_return_yoy', 1.5)}
+                                    strokeOpacity={capexChartHighlight.getOpacity('sox_return_yoy')}
                                     strokeDasharray="3 3"
                                     dot={false}
                                 />
