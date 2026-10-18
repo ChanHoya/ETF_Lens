@@ -58,7 +58,7 @@ async def get_all_notification_settings():
     return []
 
 
-async def _send_single_telegram_message(text: str, token: str, chat_id: str) -> tuple[bool, str]:
+async def _send_single_telegram_message(text: str, token: str, chat_id: str, reply_markup: dict = None) -> tuple[bool, str]:
     """Helper function to send a message to a single Telegram recipient."""
     if not token or not chat_id:
         return False, "토큰 또는 Chat ID가 설정되지 않았습니다."
@@ -73,6 +73,8 @@ async def _send_single_telegram_message(text: str, token: str, chat_id: str) -> 
         "parse_mode": "HTML",
         "disable_web_page_preview": True
     }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -238,9 +240,16 @@ def _is_category_enabled(settings: NotificationSettings, category: str) -> bool:
     return True
 
 
-async def send_telegram_message(text: str, force: bool = False, category: str = "general", test_token: str = None, test_chat_id: str = None) -> tuple[bool, str]:
+async def send_telegram_message(
+    text: str,
+    force: bool = False,
+    category: str = "general",
+    test_token: str = None,
+    test_chat_id: str = None,
+    reply_markup: dict = None
+) -> tuple[bool, str]:
     """
-    Send a message via Telegram Bot API asynchronously.
+    Send a message via Telegram Bot API asynchronously with optional inline reply_markup.
     If test_token or test_chat_id is specified, sends to that single target.
     Otherwise, broadcasts to all registered settings in the database.
     """
@@ -248,7 +257,7 @@ async def send_telegram_message(text: str, force: bool = False, category: str = 
     if test_token or test_chat_id:
         token = test_token or os.environ.get("TELEGRAM_TOKEN")
         chat_id = test_chat_id or os.environ.get("TELEGRAM_CHAT_ID")
-        return await _send_single_telegram_message(text, token, chat_id)
+        return await _send_single_telegram_message(text, token, chat_id, reply_markup=reply_markup)
 
     # 2. Retrieve all database settings
     all_settings = await get_all_notification_settings()
@@ -258,7 +267,7 @@ async def send_telegram_message(text: str, force: bool = False, category: str = 
         chat_id = os.environ.get("TELEGRAM_CHAT_ID")
         if token and chat_id:
             logger.info("[Notifier] Database settings empty. Falling back to environment variables.")
-            return await _send_single_telegram_message(text, token, chat_id)
+            return await _send_single_telegram_message(text, token, chat_id, reply_markup=reply_markup)
         else:
             logger.warning("[Notifier] Telegram Token or Chat ID not configured. Skipping notification.")
             return False, "토큰 또는 Chat ID가 설정되지 않았습니다."
@@ -279,7 +288,7 @@ async def send_telegram_message(text: str, force: bool = False, category: str = 
             continue
 
         total_count += 1
-        success, err = await _send_single_telegram_message(text, settings.telegram_token, settings.telegram_chat_id)
+        success, err = await _send_single_telegram_message(text, settings.telegram_token, settings.telegram_chat_id, reply_markup=reply_markup)
         if success:
             any_success = True
             success_count += 1
@@ -297,7 +306,13 @@ async def send_telegram_message(text: str, force: bool = False, category: str = 
         return False, "; ".join(error_messages)
 
 
-async def broadcast_notification(text: str, category: str = "general", title: str = None, force: bool = False) -> dict:
+async def broadcast_notification(
+    text: str,
+    category: str = "general",
+    title: str = None,
+    force: bool = False,
+    reply_markup: dict = None
+) -> dict:
     """
     등록된 모든 사용자 대상 멀티채널(Telegram, Discord, Slack) 통합 비동기 멀티캐스트 발송.
     """
@@ -314,7 +329,7 @@ async def broadcast_notification(text: str, category: str = "general", title: st
         token = os.environ.get("TELEGRAM_TOKEN")
         chat_id = os.environ.get("TELEGRAM_CHAT_ID")
         if token and chat_id:
-            ok, err = await _send_single_telegram_message(text, token, chat_id)
+            ok, err = await _send_single_telegram_message(text, token, chat_id, reply_markup=reply_markup)
             if ok:
                 results["telegram"]["success"] += 1
                 results["any_success"] = True
@@ -327,7 +342,7 @@ async def broadcast_notification(text: str, category: str = "general", title: st
 
     async def _send_tg(s):
         results["telegram"]["total"] += 1
-        ok, err = await _send_single_telegram_message(text, s.telegram_token, s.telegram_chat_id)
+        ok, err = await _send_single_telegram_message(text, s.telegram_token, s.telegram_chat_id, reply_markup=reply_markup)
         if ok:
             results["telegram"]["success"] += 1
             results["any_success"] = True

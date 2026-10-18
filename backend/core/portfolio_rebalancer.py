@@ -12,6 +12,8 @@ backend/core/portfolio_rebalancer.py
 
 from typing import Dict, List, Any, Optional
 import math
+from datetime import datetime, timezone, timedelta
+from core.notifier import broadcast_notification
 
 class PortfolioRebalancer:
     """
@@ -330,3 +332,85 @@ class PortfolioRebalancer:
             "action_guide": action_guide,
             "tax_tip": tax_tip,
         }
+
+
+async def check_portfolio_drift_and_notify(
+    holdings: List[Dict[str, Any]],
+    target_weights: Optional[Dict[str, float]] = None,
+    threshold_drift_score: float = 85.0,
+    force_notify: bool = False
+) -> Dict[str, Any]:
+    """
+    포트폴리오의 비중 괴리(Drift)를 분석하고, 허용 임계치(기본 85점 미만)를 벗어날 경우
+    텔레그램 인라인 버튼(대시보드 바로가기 및 모의주문 생성)이 포함된 경보를 발송합니다.
+    """
+    # 목표 비중이 지정되지 않은 경우 균등 배분 가정
+    if not target_weights and holdings:
+        eq_w = round(100.0 / len(holdings), 1)
+        target_weights = {str(h.get("code")): eq_w for h in holdings}
+
+    analysis = PortfolioRebalancer.analyze_and_rebalance(
+        holdings=holdings,
+        target_weights=target_weights or {},
+        mode="full"
+    )
+
+    drift_score = analysis.get("drift_score", 100)
+    items = analysis.get("items", [])
+    
+    # 5%p 이상 괴리 종목 추출
+    divergent_items = [it for it in items if abs(it.get("drift_pct", 0.0)) >= 5.0]
+    needs_alert = (drift_score < threshold_drift_score) or (len(divergent_items) > 0) or force_notify
+
+    result = {
+        "drift_score": drift_score,
+        "divergent_items_count": len(divergent_items),
+        "needs_alert": needs_alert,
+        "notification_dispatched": False,
+        "analysis": analysis
+    }
+
+    if needs_alert:
+        kst = timezone(timedelta(hours=9))
+        now_kst = datetime.now(kst).strftime("%Y-%m-%d %H:%M")
+
+        status_emoji = "🚨" if drift_score < 75 else "⚠️"
+        over_items = [it for it in items if it.get("drift_pct", 0.0) >= 5.0]
+        under_items = [it for it in items if it.get("drift_pct", 0.0) <= -5.0]
+
+        over_str = ", ".join([f"{it['name']}(+{it['drift_pct']:.1f}%p)" for it in over_items[:2]]) or "없음"
+        under_str = ", ".join([f"{it['name']}({it['drift_pct']:.1f}%p)" for it in under_items[:2]]) or "없음"
+
+        total_trade_won = analysis.get("total_buy_val", 0) + analysis.get("total_sell_val", 0)
+
+        message = (
+            f"<b>{status_emoji} [i-Prism] 포트폴리오 목표 비중 이탈(Drift) 경보</b>\n"
+            f"⏱ <i>기준 시각: {now_kst} KST</i>\n\n"
+            f"<b>📊 자산배분 정렬 진단</b>\n"
+            f"• 비중 정렬 점수: <b>{drift_score:.1f}점</b> (임계치: {threshold_drift_score}점)\n"
+            f"• 과열/초과 종목: <b>{over_str}</b>\n"
+            f"• 소외/부족 종목: <b>{under_str}</b>\n"
+            f"• 정렬 필요 총 매매액: <b>약 {total_trade_won:,.0f}원</b>\n\n"
+            f"💡 <i>하단 버튼을 누르면 웹 대시보드에서 원클릭 모의 주문 설계안을 즉시 확인하고 실행할 수 있습니다.</i>"
+        )
+
+        reply_markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "📊 대시보드 진단 보기", "url": "http://localhost:3005/my"},
+                    {"text": "⚡ 원클릭 모의 주문 생성", "url": "http://localhost:3005/my?tab=rebalance"}
+                ]
+            ]
+        }
+
+        notif_res = await broadcast_notification(
+            text=message,
+            category="rebalance",
+            title="i-Prism 포트폴리오 리밸런싱 이탈 경보",
+            force=force_notify,
+            reply_markup=reply_markup
+        )
+        result["notification_dispatched"] = notif_res.get("any_success", False)
+
+    return result
+

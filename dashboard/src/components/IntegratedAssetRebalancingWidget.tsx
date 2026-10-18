@@ -4,10 +4,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Building2, Wallet, Landmark, TrendingUp, AlertCircle, 
   CheckCircle2, ArrowRight, ShieldCheck, Scale, RefreshCw,
-  Sparkles, Layers, DollarSign
+  Sparkles, Layers, DollarSign, Printer, Download, FileSpreadsheet
 } from 'lucide-react';
 import { getApiBase } from '@/lib/apiConfig';
 import { NumberPopIn } from './common/NumberPopIn';
+import IntegratedAssetReportModal from './IntegratedAssetReportModal';
 
 interface IntegratedAssetProps {
   financialNetWorth: number;     // 주식/ETF + 현금 예수금 (원)
@@ -49,6 +50,90 @@ export default function IntegratedAssetRebalancingWidget({
   const [includeRealEstate, setIncludeRealEstate] = useState<boolean>(true);
   const [includeTff, setIncludeTff] = useState<boolean>(true);
   const [isLoadingTff, setIsLoadingTff] = useState<boolean>(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
+
+  // CSV/엑셀 다운로드 핸들러 (UTF-8 with BOM)
+  const handleDownloadExcelCsv = () => {
+    try {
+      const rows: string[][] = [
+        ["i-Prism 가계 종합 자산 및 포트폴리오 리밸런싱 명세서"],
+        [`작성일자`, new Date().toISOString().split('T')[0]],
+        [],
+        ["[1. 자산군별 총괄 요약]"],
+        ["자산군", "평가총액(원)", "부채금액(원)", "순자산(원)", "비중(%)"],
+        [
+          "실물 부동산",
+          String(Math.round(realEstateStats.grossAssetWon)),
+          String(Math.round(realEstateStats.debtWon)),
+          String(Math.round(realEstateStats.netWorthWon)),
+          realEstateRatio.toFixed(1)
+        ],
+        [
+          "금융 투자 (주식/ETF)",
+          String(Math.round(financialInvestAmount)),
+          "0",
+          String(Math.round(financialInvestAmount)),
+          equityRatio.toFixed(1)
+        ],
+        [
+          "보유 예수금 (현금)",
+          String(Math.round(financialCashAmount)),
+          "0",
+          String(Math.round(financialCashAmount)),
+          cashRatio.toFixed(1)
+        ],
+        [
+          "TFF 대체 펀드",
+          String(Math.round(tffFundAmount)),
+          "0",
+          String(Math.round(tffFundAmount)),
+          tffRatio.toFixed(1)
+        ],
+        [
+          "가계 총 순자산 (Grand Net Worth)",
+          String(Math.round(grandTotalNetWorth + realEstateStats.debtWon)),
+          String(Math.round(realEstateStats.debtWon)),
+          String(Math.round(grandTotalNetWorth)),
+          "100.0"
+        ],
+        [],
+        ["[2. 등록된 실물 부동산 상세]"],
+        ["단지명", "전용면적(㎡)", "평형", "취득가액(억)", "현재 추정시세(억)", "담보대출(억)", "전세보증금(억)", "순자산(억)", "건전성등급"],
+      ];
+
+      apartments.forEach(apt => {
+        const evalMarket = apt.evaluation?.estimated_market_price_won ?? apt.purchase_price_won;
+        const loan = apt.evaluation?.loan_balance_won ?? apt.loan_balance_won ?? 0;
+        const jeonse = apt.evaluation?.jeonse_deposit_won ?? apt.jeonse_deposit_won ?? 0;
+        const netEok = Math.max(0, evalMarket - loan - jeonse);
+        const grade = apt.evaluation?.health_label ?? "안전";
+        rows.push([
+          apt.complex_name,
+          String(apt.area_sqm),
+          String(apt.area_pyeong),
+          String(apt.purchase_price_won),
+          String(evalMarket),
+          String(loan),
+          String(jeonse),
+          String(netEok.toFixed(2)),
+          grade
+        ]);
+      });
+
+      const csvContent = "\uFEFF" + rows.map(e => e.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `i-Prism_가계자산명세_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error("CSV download error", e);
+      alert("CSV 다운로드 중 오류가 발생했습니다.");
+    }
+  };
 
   // 1. 아파트 데이터 로드 (localStorage)
   const loadApartments = () => {
@@ -242,8 +327,26 @@ export default function IntegratedAssetRebalancingWidget({
           </div>
         </div>
 
-        {/* 토글 스위치들 */}
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+        {/* 기능 버튼 및 토글 스위치들 */}
+        <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+          <button
+            onClick={() => setIsReportModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs font-semibold shadow transition-all active:scale-95 cursor-pointer"
+            title="A4 규격 가계 종합 자산 진단 보고서 출력/PDF 저장"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>📄 진단 리포트 출력</span>
+          </button>
+
+          <button
+            onClick={handleDownloadExcelCsv}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white text-xs font-semibold shadow transition-all active:scale-95 cursor-pointer"
+            title="전체 자산 및 부동산 명세 CSV/엑셀 다운로드"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>📥 엑셀(CSV)</span>
+          </button>
+
           <label className="flex items-center gap-1.5 text-xs text-gray-300 bg-white/[0.04] px-2.5 py-1.5 rounded-lg border border-white/10 cursor-pointer hover:bg-white/[0.08] transition-colors">
             <input 
               type="checkbox" 
@@ -400,6 +503,22 @@ export default function IntegratedAssetRebalancingWidget({
           </div>
         </div>
       </div>
+
+      {/* 종합 가계 자산 진단 보고서 A4 모달 */}
+      <IntegratedAssetReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        grandTotalNetWorth={grandTotalNetWorth}
+        realEstateNetWorth={realEstateStats.netWorthWon}
+        realEstateGross={realEstateStats.grossAssetWon}
+        realEstateDebt={realEstateStats.debtWon}
+        financialNetWorth={financialNetWorth}
+        financialInvestAmount={financialInvestAmount}
+        financialCashAmount={financialCashAmount}
+        tffAmount={tffFundAmount}
+        apartmentsCount={apartments.length}
+        diagnosis={diagnosis}
+      />
     </div>
   );
 }

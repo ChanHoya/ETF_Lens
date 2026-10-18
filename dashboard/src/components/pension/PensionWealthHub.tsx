@@ -20,6 +20,7 @@ import {
 } from '@/lib/pensionRules';
 import TaxShieldRadar from '@/components/TaxShieldRadar';
 import IsaPensionConversionSimulator from '@/components/pension/IsaPensionConversionSimulator';
+import PensionWaterfallShieldPlanner from '@/components/pension/PensionWaterfallShieldPlanner';
 
 function PensionWealthHubInner() {
   const [activeSubTab, setActiveSubTab] = useState<'tax' | 'nps' | 'withdrawal' | 'shield' | 'isa_withdrawal'>('tax');
@@ -187,7 +188,7 @@ function PensionWealthHubInner() {
             }`}
           >
             <ShieldAlert className="w-4 h-4 text-rose-300" />
-            <span>4. 금융소득 2,000만 & 건보료 방어</span>
+            <span>4. 다계좌 Waterfall & 건보료 피부양자 방어</span>
           </button>
 
           <button
@@ -917,10 +918,16 @@ function PensionWealthHubInner() {
         </div>
       )}
 
-      {/* ── [서브탭 4] 금융소득 2,000만원 & 건보료 피부양자 방어 트래커 ─────── */}
+      {/* ── [서브탭 4] 다계좌 인출 Waterfall & 건보료 피부양자 방어 플래너 ─────── */}
       {activeSubTab === 'shield' && (
-        <div className="flex flex-col gap-5">
-          <TaxShieldRadar />
+        <div className="flex flex-col gap-6">
+          <PensionWaterfallShieldPlanner />
+          <div className="border-t border-white/10 pt-4">
+            <h3 className="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" /> 종합 금융소득 2,000만원 절세 레이더
+            </h3>
+            <TaxShieldRadar />
+          </div>
         </div>
       )}
 

@@ -15,6 +15,7 @@ import {
     ChevronDown, ChevronUp, X, Edit3, Plus,
 } from 'lucide-react';
 import BrazilTotalReturnSimulator from './BrazilTotalReturnSimulator';
+import BrazilElectionCopomTracker from './brazil/BrazilElectionCopomTracker';
 import { API_BASE } from '@/lib/apiConfig';
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
 
@@ -704,6 +705,11 @@ export default function BrazilBondTab() {
                 <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
                     <Info className="w-3 h-3" /> 비중은 유동 금융자산의 최대 5~10% 이내(위성 포지션), 만기 3~5년 스위트스팟 권장.
                 </p>
+            </section>
+
+            {/* ── 2026 브라질 대선 D-Day 여론조사 집계 & Copom 금리 인하 확률 예측기 ── */}
+            <section>
+                <BrazilElectionCopomTracker />
             </section>
 
             {/* ── 10월 대선 3대 시나리오 & Tranche 3 실시간 투자 가이드 ─────── */}

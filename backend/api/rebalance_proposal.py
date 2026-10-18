@@ -5,6 +5,7 @@ import asyncio
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
 from google import genai
 from google.genai import types
 
@@ -272,3 +273,55 @@ async def get_rebalance_proposal(request: Request, db: AsyncSession = Depends(ge
     except Exception as e:
         logger.error(f"[rebalance] API Error: {e}")
         return {"status": "error", "msg": str(e)}
+
+
+class DriftAlertRequest(BaseModel):
+    holdings: Optional[list[dict]] = None
+    target_weights: Optional[dict[str, float]] = None
+    threshold_drift_score: float = 85.0
+    force_notify: bool = False
+
+
+@router.post("/drift-alert")
+async def trigger_drift_alert(
+    req: DriftAlertRequest = DriftAlertRequest(),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    포트폴리오 목표 비중 괴리(Drift)를 진단하고 텔레그램 인라인 버튼 경보를 발송합니다.
+    """
+    from core.portfolio_rebalancer import check_portfolio_drift_and_notify
+
+    holdings = req.holdings
+    if not holdings:
+        # Fallback to manual assets or default holdings
+        from sqlalchemy import select
+        from db.models import ManualAsset
+        q = select(ManualAsset)
+        manual_rows = (await db.execute(q)).scalars().all()
+        if manual_rows:
+            holdings = [
+                {
+                    "code": m.ticker or "MANUAL",
+                    "name": m.asset_name,
+                    "current_val": float(m.eval_amount or 0.0),
+                    "current_price": float(m.eval_amount or 0.0),
+                    "current_qty": 1,
+                }
+                for m in manual_rows
+            ]
+        else:
+            holdings = [
+                {"code": "360750", "name": "TIGER 미국S&P500", "current_val": 60_000_000, "current_price": 60_000, "current_qty": 1000},
+                {"code": "069500", "name": "KODEX 200", "current_val": 25_000_000, "current_price": 25_000, "current_qty": 1000},
+                {"code": "453850", "name": "ACE 미국30년국채액티브(H)", "current_val": 15_000_000, "current_price": 15_000, "current_qty": 1000},
+            ]
+
+    res = await check_portfolio_drift_and_notify(
+        holdings=holdings,
+        target_weights=req.target_weights,
+        threshold_drift_score=req.threshold_drift_score,
+        force_notify=req.force_notify
+    )
+    return res
+
