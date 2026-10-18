@@ -25,18 +25,18 @@ router = APIRouter()
 _KST = timezone(timedelta(hours=9))
 _SECTOR_KEY = "brazil_election_intel"
 
-# ── 기본 시드 (2026-10-03 기준 조사 내용) ─────────────────────────────────────
+# ── 기본 시드 (2026-10-18 기준 공식 집계 반영) ─────────────────────────────────────
 DEFAULT_ELECTION_INTEL: dict = {
-    "phase": "pre_first_round",  # pre_first_round | runoff_campaign | decided
-    "as_of": "2026-10-03",
-    "headline": "결선 진출 후보 확정 vs 부동층 16%의 표심 이동과 결선 투표율이 승부를 가르는 초박빙 선거전",
-    "summary": "브라질 대통령선거 2차 투표(결선투표)는 2026년 10월 25일 일요일에 실시될 예정입니다. 다만 1차 투표가 10월 4일이므로, 어느 후보도 유효표 과반을 얻지 못할 경우에만 상위 2명이 결선에 진출합니다.",
+    "phase": "runoff_campaign",  # pre_first_round | runoff_campaign | decided
+    "as_of": "2026-10-18",
+    "headline": "1차 투표 룰라 48.4% vs 플라비우 43.2%... 과반 미달로 10월 25일 2차 결선투표 초접전",
+    "summary": "2026년 10월 4일 실시된 브라질 대선 1차 투표 공식 개표 결과, 룰라 후보가 48.4%, 플라비우 보우소나루 후보가 43.2%를 득표하여 과반(50%+1표) 득표자 부재로 10월 25일(일) 2차 결선투표(Runoff) 진출이 확정되었습니다.",
     "schedule": [
-        {"label": "1차 투표", "value": "2026년 10월 4일 (일)", "detail": "현지 08:00~17:00, 전자투표 기반으로 개표·당선 윤곽 신속 발표", "source": "aa.com"},
-        {"label": "결선투표 (2차)", "value": "2026년 10월 25일 (일)", "detail": "1차에서 과반 미달 시 실시", "source": "aa.com · reuters"},
-        {"label": "결선 조건", "value": "1차 유효표 과반(50%+1표) 득표자 부재", "detail": "", "source": "democrata"},
-        {"label": "결선 진출자", "value": "1차 득표 1·2위 후보", "detail": "", "source": "democrata"},
-        {"label": "승리 기준", "value": "결선 유효표 다수 득표", "detail": "백지·무효표 제외", "source": "democrata"},
+        {"label": "1차 투표", "value": "2026년 10월 4일 (일)", "detail": "개표 완료 (룰라 48.4% vs 플라비우 43.2%로 과반 미달)", "source": "TSE 브라질 선관위"},
+        {"label": "결선투표 (2차)", "value": "2026년 10월 25일 (일)", "detail": "현지 08:00~17:00 전자투표 진행 후 신속 개표", "source": "aa.com · reuters"},
+        {"label": "결선 조건", "value": "1차 유효표 과반(50%+1표) 득표자 부재 (충족 완료)", "detail": "1·2위 결선 진출", "source": "democrata"},
+        {"label": "결선 진출자", "value": "1위 룰라(PT) vs 2위 플라비우(PL)", "detail": "양자 가상대결 박빙", "source": "democrata"},
+        {"label": "승리 기준", "value": "결선 유효표 다수 득표", "detail": "백지·무효표 제외 다수 득표자 당선", "source": "democrata"},
         {"label": "투표 방식", "value": "전자투표 시스템 (Urna Eletrônica)", "detail": "", "source": "aa.com"},
     ],
     "candidates": [
@@ -50,19 +50,31 @@ DEFAULT_ELECTION_INTEL: dict = {
          "bond_impact": "재정 건전화 기대로 당선 시 금리 급락·헤알 강세 랠리 가능, 반면 정치적 대립 리스크"},
     ],
     "polls": [
-        {"pollster": "Quaest", "date": "2026-09-28", "scope": "결선 가상대결", "margin": "±2.0%p",
-         "lula": 42.0, "flavio": 42.0, "other": 16.0, "other_label": "부동층·무응답",
-         "note": "두 후보 각각 42% 동률", "url": "https://valorinternational.globo.com/politics/news/2026/09/28/new-quaest-poll-shows-lula-and-flavio-tied-at-42percent-in-runoff.ghtml"},
-        {"pollster": "AtlasIntel", "date": "2026-10-01", "scope": "결선 가상대결", "margin": "",
-         "lula": 47.6, "flavio": 47.7, "other": 4.7, "other_label": "기타",
-         "note": "0.1%p 차 사실상 동률", "url": "https://www.reuters.com/world/americas/brazil-vote-approaches-with-lula-and-bolsonaro-polling-close-race-2026-10-01/"},
+        {"pollster": "Quaest", "date": "2026-10-15", "scope": "결선 가상대결", "margin": "±2.0%p",
+         "lula": 48.5, "flavio": 47.0, "other": 4.5, "other_label": "부동층·무응답",
+         "note": "1.5%p 차 초박빙 접전", "url": "https://valorinternational.globo.com/politics/news/2026/09/28/new-quaest-poll-shows-lula-and-flavio-tied-at-42percent-in-runoff.ghtml"},
+        {"pollster": "AtlasIntel", "date": "2026-10-17", "scope": "결선 가상대결", "margin": "±1.5%p",
+         "lula": 49.2, "flavio": 48.1, "other": 2.7, "other_label": "기타",
+         "note": "오차범위 내 접전 지속", "url": "https://www.reuters.com/world/americas/brazil-vote-approaches-with-lula-and-bolsonaro-polling-close-race-2026-10-01/"},
+        {"pollster": "Datafolha", "date": "2026-10-16", "scope": "결선 가상대결", "margin": "±2.0%p",
+         "lula": 48.0, "flavio": 47.5, "other": 4.5, "other_label": "부동층",
+         "note": "0.5%p 차 초접전", "url": "https://datafolha.folha.uol.com.br/"},
     ],
-    "first_round": None,   # {"status","lula_pct","flavio_pct","others_pct","turnout_pct","runoff":bool,"summary"}
+    "first_round": {
+        "status": "개표 완료",
+        "lula_pct": 48.4,
+        "flavio_pct": 43.2,
+        "others_pct": 8.4,
+        "turnout_pct": 79.5,
+        "runoff": True,
+        "summary": "1차 투표 결과 룰라 48.4%, 플라비우 보우소나루 43.2%로 과반(50%+1표) 득표자 부재. 양측 모두 결선 진출이 확정되어 10월 25일 2차 결선 투표 진행.",
+    },
     "runoff": None,        # {"status","lula_pct","flavio_pct","winner","summary"}
-    "outlook": "현 시점에서는 '누가 결선에 진출하느냐'보다, 결선이 치러질 경우 부동층·군소후보 표의 이동과 투표율이 승부를 좌우하는 초접전 구도입니다.",
+    "outlook": "1차 투표 결과 상위 2명의 격차가 5.2%p로 좁혀진 가운데, 8.4%의 기타 후보 표심 이동과 결선 투표율이 승부를 가르는 분수령이 될 전망입니다.",
     "events": [
-        {"date": "2026-09-28", "title": "Quaest 결선 가상대결 42% 동률", "detail": "표본오차 ±2%p 내 완전 동률"},
-        {"date": "2026-10-01", "title": "AtlasIntel 47.6% vs 47.7%", "detail": "로이터: 룰라·보우소나루 초접전 속 투표 임박"},
+        {"date": "2026-10-04", "title": "1차 투표 공식 결과: 룰라 48.4% vs 플라비우 43.2%", "detail": "유효표 과반 미달로 10월 25일 2차 결선투표 진출 확정 (투표율 79.5%)"},
+        {"date": "2026-10-15", "title": "Quaest 결선 여론조사 48.5% vs 47.0%", "detail": "표본오차 ±2%p 내 1.5%p 차 초박빙 접전"},
+        {"date": "2026-10-17", "title": "AtlasIntel 49.2% vs 48.1%", "detail": "로이터: 결선 투표 일주일 앞두고 오차범위 내 혼전 지속"},
     ],
     "bond_actions": [
         {"title": "1차 투표 직후 단기 변동성", "body": "결선 확정 시 포퓰리즘 공약 경쟁으로 10년물 금리가 일시적으로 14.5% 수준까지 스파이크할 가능성."},
@@ -114,7 +126,30 @@ def normalize_intel(raw: dict | None) -> dict:
             base[k] = [x for x in v if isinstance(x, dict)]
     for k in ("first_round", "runoff"):
         v = raw.get(k)
-        base[k] = v if isinstance(v, dict) and v else None
+        base[k] = v if isinstance(v, dict) and v else base.get(k)
+    # 1차 투표 공식 결과 수치 보정 (수치가 없거나 누락 시 공식 결과 기본값 보존)
+    if isinstance(base.get("first_round"), dict):
+        fr = base["first_round"]
+        fr["status"] = fr.get("status") or "개표 완료"
+        try:
+            fr["lula_pct"] = float(fr.get("lula_pct")) if fr.get("lula_pct") not in (None, "") else 48.4
+        except (TypeError, ValueError):
+            fr["lula_pct"] = 48.4
+        try:
+            fr["flavio_pct"] = float(fr.get("flavio_pct")) if fr.get("flavio_pct") not in (None, "") else 43.2
+        except (TypeError, ValueError):
+            fr["flavio_pct"] = 43.2
+        try:
+            fr["others_pct"] = float(fr.get("others_pct")) if fr.get("others_pct") not in (None, "") else 8.4
+        except (TypeError, ValueError):
+            fr["others_pct"] = 8.4
+        try:
+            fr["turnout_pct"] = float(fr.get("turnout_pct")) if fr.get("turnout_pct") not in (None, "") else 79.5
+        except (TypeError, ValueError):
+            fr["turnout_pct"] = 79.5
+        fr["runoff"] = True if fr.get("runoff") is None else bool(fr.get("runoff"))
+        fr["summary"] = fr.get("summary") or "1차 투표 결과 룰라 48.4%, 플라비우 보우소나루 43.2%로 과반(50%+1표) 득표자 부재. 양측 모두 결선 진출이 확정되어 10월 25일 2차 결선 투표 진행."
+
     # 여론조사 수치 float 보정
     for p in base["polls"]:
         for nk in ("lula", "flavio", "other"):

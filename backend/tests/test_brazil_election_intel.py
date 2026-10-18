@@ -3,10 +3,13 @@ from api.brazil_election_intel import normalize_intel, merge_ai_patch, DEFAULT_E
 
 def test_normalize_intel_defaults():
     intel = normalize_intel(None)
-    assert intel["phase"] == "pre_first_round"
+    assert intel["phase"] == "runoff_campaign"
     assert len(intel["candidates"]) == 2
     assert len(intel["polls"]) >= 2
-    assert intel["first_round"] is None
+    assert intel["first_round"] is not None
+    assert intel["first_round"]["lula_pct"] == 48.4
+    assert intel["first_round"]["flavio_pct"] == 43.2
+
 
 
 def test_merge_ai_patch_updates_headline_and_events():
