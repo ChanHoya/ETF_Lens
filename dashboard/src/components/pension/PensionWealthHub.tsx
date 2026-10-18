@@ -21,9 +21,11 @@ import {
 import TaxShieldRadar from '@/components/TaxShieldRadar';
 import IsaPensionConversionSimulator from '@/components/pension/IsaPensionConversionSimulator';
 import PensionWaterfallShieldPlanner from '@/components/pension/PensionWaterfallShieldPlanner';
+import MonteCarloRetirementSimulator from '@/components/pension/MonteCarloRetirementSimulator';
+import YearEndTaxSettlementPlanner from '@/components/pension/YearEndTaxSettlementPlanner';
 
 function PensionWealthHubInner() {
-  const [activeSubTab, setActiveSubTab] = useState<'tax' | 'nps' | 'withdrawal' | 'shield' | 'isa_withdrawal'>('tax');
+  const [activeSubTab, setActiveSubTab] = useState<'tax' | 'nps' | 'withdrawal' | 'shield' | 'isa_withdrawal' | 'monte_carlo'>('tax');
 
   // ── 서브탭 1 상태: 연금 3총사 절세 ─────────────────────────────────────
   const [incomeLevel, setIncomeLevel] = useState<'under55' | 'over55'>('under55');
@@ -202,13 +204,34 @@ function PensionWealthHubInner() {
             <Sparkles className="w-4 h-4 text-amber-400" />
             <span>5. ISA 전환 & 20개년 인출 시뮬레이터</span>
           </button>
+
+          <button
+            onClick={() => setActiveSubTab('monte_carlo')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
+              activeSubTab === 'monte_carlo'
+                ? 'bg-gradient-to-r from-emerald-500 via-teal-600 to-indigo-600 text-white shadow-lg shadow-teal-500/25 ring-1 ring-teal-400/50'
+                : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4 text-emerald-400" />
+            <span>6. 몬테카를로 은퇴 자산 고갈 확률 (1,000회)</span>
+          </button>
         </div>
       </div>
 
 
       {/* ── [서브탭 1] 연금 3총사 절세 & 과세이연 시뮬레이터 ────────────────── */}
       {activeSubTab === 'tax' && (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-6">
+          {/* 연말정산 골든타임 추가 납입 역산 플래너 */}
+          <YearEndTaxSettlementPlanner />
+
+          <div className="border-t border-white/10 pt-4">
+            <h3 className="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" /> 연금 3총사(연금저축·IRP·ISA) 20개년 과세이연 복리 증식 시뮬레이터
+            </h3>
+          </div>
+
           {/* 4대 핵심 요약 Bento 카드 */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {/* 카드 1: 연간 세액공제 환급액 */}
@@ -935,6 +958,13 @@ function PensionWealthHubInner() {
       {activeSubTab === 'isa_withdrawal' && (
         <div className="flex flex-col gap-5">
           <IsaPensionConversionSimulator />
+        </div>
+      )}
+
+      {/* ── [서브탭 6] 몬테카를로 은퇴 자산 고갈 확률 시뮬레이터 ───────────── */}
+      {activeSubTab === 'monte_carlo' && (
+        <div className="flex flex-col gap-5">
+          <MonteCarloRetirementSimulator />
         </div>
       )}
 

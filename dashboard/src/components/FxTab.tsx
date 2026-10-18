@@ -15,6 +15,7 @@ import FxFinder from './FxFinder';
 import RegimeMilestones, { type Milestone } from './RegimeMilestones';
 import MarketDetailModal, { SeriesConfig, DetailDataPoint } from './MarketDetailModal';
 import DxyFormulaSection from './DxyFormulaSection';
+import FxTimingRadarWidget from './fx/FxTimingRadarWidget';
 
 type Row = {
     date: string; krw: number | null; dxy: number | null; us10: number | null; kr10: number | null; spread10: number | null;
@@ -787,6 +788,7 @@ export default function FxTab() {
 
             {data && (
                 <>
+                    <FxTimingRadarWidget />
                     <BalanceSection s={data.snapshot} />
 
                     {data.analysis && (

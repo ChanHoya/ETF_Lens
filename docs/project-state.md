@@ -3,14 +3,14 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: Sprint 27 완료 — [후보 1~4 통합 기능 일괄 개발 완료]
+✅ Recent: Sprint 28 완료 — [후보 1~4 4대 고도화 기능 일괄 개발 및 브라우저 E2E 검증 완료]
 
-🚀 Current: Sprint 28 완료 — [후보 1~4 4대 고도화 기능 일괄 개발 및 브라우저 E2E 검증 완료]:
-1) [S28-1: 통합 자산 관리 & 리포팅] 전 자산(부동산+주식+연금+TFF) 원클릭 종합 가계 리포트 & 엑셀 내보내기: A4 인쇄 규격(@media print) 및 PDF 저장용 가계 순자산 종합 진단서 모달(`IntegratedAssetReportModal.tsx`) 생성, 자산군별 평가액/비중/사분면 진단 및 CSV/엑셀(UTF-8 BOM) 다운로드 지원.
-2) [S28-2: 스마트 텔레그램] 목표 비중 이탈 경보 & 텔레그램 인라인 버튼 모의 주문 연동: 포트폴리오 비중 정렬 점수(<85점) 및 5%p 이상 괴리 감지 시 텔레그램 reply_markup 인라인 키보드(대시보드 바로가기 및 원클릭 모의 주문 생성 링크) 탑재 알림 발송 (`notifier.py`, `portfolio_rebalancer.py`, `rebalance_proposal.py`).
-3) [S28-3: 연금·절세 심화] 다계좌 인출 순서 최적화(Waterfall) & 건보료 피부양자 방어 안전 인출 플래너: 4단계 황금 인출 순서(비과세원금 0% → 이연퇴직금 30~40%감면 → 사적연금 연 1500만 이하 5.5% 저율분리과세 → 국민연금) 정밀 수학 엔진 및 국민연금 100% 반영 기반 건보료 피부양자 연 2,000만원 한도 방어 안전 게이지 위젯 탑재 (`PensionWaterfallShieldPlanner.tsx`, `PensionWealthHub.tsx`).
-4) [S28-4: 글로벌 매크로 & 브라질] 2026 브라질 대선 D-Day 실시간 여론조사 집계 & Copom 금리 인하 확률 예측기: 2026 브라질 대선(10/25 결선) D-Day 실시간 카운트다운, 4대 여론조사(Quaest, AtlasIntel, Datafolha 등) 평균 지지율 바이폴라 게이지 바, 차기 Copom(11/5) 기준금리 인하 확률 모델(25bp 인하 68%, 동결 22%, 50bp 인하 10%) 및 선물 내재 기대치(-22bp) 분석 위젯 완비 (`brazil_election_intel.py`, `BrazilElectionCopomTracker.tsx`, `BrazilBondTab.tsx`).
-5) [검증 상태]: 백엔드 pytest 신규 및 기존 테스트 100% 통과 (4 passed), Next.js 11개 페이지 최적화 프로덕션 빌드 성공 (`code 0`), 브라우저 서브에이전트 E2E 검증 완료.
+🚀 Current: Sprint 29 완료 — [후보 1~4 4대 혁신 기능 일괄 개발 및 E2E 무결성 검증 완료]:
+1) [S29-1: 통합 자산 & AI 자산배분] 가계 총자산 몬테카를로 은퇴 자산 고갈 확률 시뮬레이터: Box-Muller 가우시안 난수 기반 1,000회 시뮬레이션, 35개년 자산 고갈 확률(%), 10%/50%/90% 분위수 Recharts Area 차트, 한국형 안전 인출률(3.2%) 연동 (`MonteCarloRetirementSimulator.tsx`, `PensionWealthHub.tsx`).
+2) [S29-2: 스마트 텔레그램 & 챗봇] 텔레그램 대화형 자산 조회 & 원클릭 리밸런싱 주문 승인 봇: Webhook `POST /api/v1/telegram/webhook` 구현 (`/asset` 가계 순자산 브리핑, `/rebalance` 이탈 분석 및 모의 주문 안내, `callback_query: exec_rebalance` 가상 체결 및 결과 회신), 단위 테스트 100% 통과 (`telegram_bot.py`, `test_telegram_bot.py`).
+3) [S29-3: 연금·절세 & 세무 리포팅] 연말정산 대비 11~12월 '골든타임' 추가 납입 맞춤형 세액공제 역산 플래너 & 국세청 증빙 뷰: 연금저축(600만) + IRP(300만) 누적 납입 잔여 한도 역산, 16.5% vs 13.2% 환급 보너스 실시간 계산, 2026 귀속 연말정산 명세표 테이블 및 A4 인쇄/PDF 증빙 뷰 (`YearEndTaxSettlementPlanner.tsx`, `PensionWealthHub.tsx`).
+4) [S29-4: 글로벌 매크로 & 환율] 원·달러 / 원·헤알 실시간 환전 타이밍 적기 지수 & 환헤지(H) 스위칭 레이더: `GET /api/v1/fx/timing-index` 엔드포인트 구현 (원/달러 과열도 82점 및 환헤지 ETF 70% 스위칭 가이드, 원/헤알 바닥권 247원 & +1,100bp 캐리마진 기반 3단계 분할 환전 플랜), 레이더 위젯 마운트 (`FxTimingRadarWidget.tsx`, `FxTab.tsx`, `test_fx_timing.py`).
+5) [검증 상태]: 백엔드 pytest 신규 및 기존 테스트 100% 통과 (8 passed), Next.js 11개 페이지 최적화 프로덕션 빌드 성공 (`code 0`), 브라우저 서브에이전트 E2E 검증 완료.
 
 > 세션 핸드오프 (2026-10-17, Antigravity - Sprint 24: 국토교통부 MOLIT 실거래가 OpenAPI 공식 연동 및 경기·인천 13대 거점 실시간 파이프라인 구축 완료):
 > - 🏛️ [Sprint 24: 국토교통부(MOLIT) 실거래가 OpenAPI 공식 연동 (S24-1~4)]:
