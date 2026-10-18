@@ -40,6 +40,7 @@ export interface MarketDetailModalProps {
     kpiCards?: { label: string; value: string | number; change?: string; subValue?: string; isPositive?: boolean; isAccent?: boolean }[];
     notice?: string;
     defaultPeriod?: '6M' | '1Y' | '5Y' | '10Y';
+    rebaseOnPeriod?: boolean;
     children?: React.ReactNode;
     headerActions?: React.ReactNode;
     maxWidthClassName?: string;
@@ -67,6 +68,7 @@ export default function MarketDetailModal({
     kpiCards,
     notice,
     defaultPeriod = '1Y',
+    rebaseOnPeriod = false,
     children,
     headerActions,
     maxWidthClassName = 'max-w-4xl',
@@ -91,7 +93,7 @@ export default function MarketDetailModal({
         };
     }, [isOpen, onClose]);
 
-    // 기간별 데이터 필터링
+    // 기간별 데이터 필터링 (필요 시 선택 기간 시작점 기준 100 정규화)
     const filteredData = useMemo(() => {
         if (!data || data.length === 0) return [];
         const sorted = [...data].sort((a, b) => a.date.localeCompare(b.date));
@@ -111,8 +113,33 @@ export default function MarketDetailModal({
 
         const cutoffStr = cutoffDate.toISOString().slice(0, 10);
         const filtered = sorted.filter(d => d.date >= cutoffStr);
-        return filtered.length > 0 ? filtered : sorted;
-    }, [data, period]);
+        const result = filtered.length > 0 ? filtered : sorted;
+
+        if (!rebaseOnPeriod || result.length === 0) return result;
+
+        // 선택한 기간의 첫 유효 관측치를 Base=100으로 정규화
+        const baseValues: Record<string, number> = {};
+        series.forEach(s => {
+            const field = s.rawKey || s.key;
+            const firstValid = result.find(r => r[field] != null && typeof r[field] === 'number' && (r[field] as number) > 0);
+            if (firstValid) {
+                baseValues[s.key] = firstValid[field] as number;
+            }
+        });
+
+        return result.map(row => {
+            const newRow = { ...row };
+            series.forEach(s => {
+                const base = baseValues[s.key];
+                const field = s.rawKey || s.key;
+                const cur = row[field];
+                if (base && cur != null && typeof cur === 'number') {
+                    newRow[s.key] = +((cur / base) * 100).toFixed(2);
+                }
+            });
+            return newRow;
+        });
+    }, [data, period, rebaseOnPeriod, series]);
 
     const [hiddenSeries, setHiddenSeries] = useState<Record<string, boolean>>({});
     const { highlightedKey, handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();

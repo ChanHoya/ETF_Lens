@@ -580,8 +580,18 @@ function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row 
 }
 
 export default function FxTab() {
-    // 재진입 시 캐시를 즉시 그리고, 서버 기준 시각이 1시간 넘었을 때만 백그라운드 갱신
-    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-fx-v6', `${API_BASE}/api/v1/fx/overview`);
+    // 재진입 시 캐시를 즉시 그리고, 서버 기준 시각이 1시간 넘었거나 신규 통화 데이터가 없으면 백그라운드 갱신
+    const { data, refreshing, error, refresh } = useCachedOverview<Overview>(
+        'iprism-fx-v7',
+        `${API_BASE}/api/v1/fx/overview`,
+        {
+            isStale: (d) => {
+                if (!d?.weekly || d.weekly.length === 0) return true;
+                const last = d.weekly[d.weekly.length - 1];
+                return last.eurusd == null || last.gbpusd == null || last.usdcad == null;
+            }
+        }
+    );
     const [range, setRange] = useState<Range>('20Y');
     const [selected, setSelected] = useState<number | null>(null);
     const [modalKey, setModalKey] = useState<'krw' | 'dxy' | 'asia' | 'spread10' | null>(null);
@@ -620,28 +630,15 @@ export default function FxTab() {
                     notice: '💡 20년치 실제 주간 환율 데이터입니다. 원/달러 환율은 수출입 펀더멘털 및 한미 금리차, 외국인 증시 수급에 의해 결정됩니다.'
                 };
             case 'dxy': {
-                // 6대 통화 기준값 (전체 시계열의 첫 유효 관측치를 100으로 정규화)
-                const validFirst = (key: keyof Row) => {
-                    const row = weekly.find(w => w[key] != null && (w[key] as number) > 0);
-                    return row ? (row[key] as number) : 1;
-                };
-                const baseEur = validFirst('eurusd');
-                const baseJpy = validFirst('usdjpy');
-                const baseGbp = validFirst('gbpusd');
-                const baseCad = validFirst('usdcad');
-                const baseSek = validFirst('usdsek');
-                const baseChf = validFirst('usdchf');
-
                 const dxyData = weekly.map(w => ({
                     date: w.date,
                     dxy: w.dxy,
-                    // 100 기준 통화 지수 (Base = 100)
-                    eurusd_idx: w.eurusd != null ? +((w.eurusd / baseEur) * 100).toFixed(2) : null,
-                    usdjpy_idx: w.usdjpy != null ? +((w.usdjpy / baseJpy) * 100).toFixed(2) : null,
-                    gbpusd_idx: w.gbpusd != null ? +((w.gbpusd / baseGbp) * 100).toFixed(2) : null,
-                    usdcad_idx: w.usdcad != null ? +((w.usdcad / baseCad) * 100).toFixed(2) : null,
-                    usdsek_idx: w.usdsek != null ? +((w.usdsek / baseSek) * 100).toFixed(2) : null,
-                    usdchf_idx: w.usdchf != null ? +((w.usdchf / baseChf) * 100).toFixed(2) : null,
+                    eurusd_idx: w.eurusd,
+                    usdjpy_idx: w.usdjpy,
+                    gbpusd_idx: w.gbpusd,
+                    usdcad_idx: w.usdcad,
+                    usdsek_idx: w.usdsek,
+                    usdchf_idx: w.usdchf,
                     // 툴팁용 실제 환율 원본 수치
                     eurusd: w.eurusd,
                     usdjpy: w.usdjpy,
@@ -659,8 +656,9 @@ export default function FxTab() {
                     badge: '글로벌 통화지수',
                     badgeColor: 'bg-sky-500/15 text-sky-300 border-sky-400/30',
                     maxWidthClassName: 'max-w-5xl',
+                    rebaseOnPeriod: true,
                     series: [
-                        { key: 'dxy', name: '달러 인덱스 (DXY)', color: '#38bdf8', unit: 'pt', strokeWidth: 2.8 },
+                        { key: 'dxy', name: '달러 인덱스 (DXY)', color: '#38bdf8', unit: 'pt', strokeWidth: 2.8, rawKey: 'dxy', rawUnit: 'pt' },
                         { key: 'eurusd_idx', name: '유로 지수 (57.6%)', color: '#3b82f6', unit: 'pt', strokeWidth: 2, rawKey: 'eurusd', rawUnit: 'EUR/USD' },
                         { key: 'usdjpy_idx', name: '엔화 지수 (13.6%)', color: '#f59e0b', unit: 'pt', strokeWidth: 1.8, rawKey: 'usdjpy', rawUnit: '엔' },
                         { key: 'gbpusd_idx', name: '파운드 지수 (11.9%)', color: '#a855f7', unit: 'pt', strokeWidth: 1.8, rawKey: 'gbpusd', rawUnit: 'GBP/USD' },
@@ -675,7 +673,7 @@ export default function FxTab() {
                         { label: '1년', value: `${data.snapshot.dxy?.chg_1y ?? 3.4}%`, isPositive: true },
                         { label: '10년 위치', value: `${data.snapshot.dxy?.pct10y ?? 72}% (강달러)` }
                     ],
-                    notice: '💡 6대 통화 지수는 기준 시점(Base=100) 상대 지수로 정규화하여 달러 인덱스와의 동조 및 역방향 등락률을 왜곡 없이 동일 선상에서 비교합니다. 상단 지표 필터를 눌러 특정 통화만 켜고 끌 수 있습니다.',
+                    notice: '💡 달러 인덱스 및 6대 통화 지수는 선택 기간의 시작 시점(Base=100)을 기준으로 정규화하여, 6개 통화와 달러 인덱스의 상대적 등락률을 왜곡 없이 동일 선상(100pt)에서 비교합니다. 툴팁에서 실제 환율 원본 수치도 함께 확인하실 수 있습니다.',
                     children: <DxyFormulaSection basketData={basket} />
                 };
             }
@@ -806,6 +804,7 @@ export default function FxTab() {
                     data={modalConfig.data}
                     currentStats={modalConfig.currentStats}
                     notice={modalConfig.notice}
+                    rebaseOnPeriod={(modalConfig as any).rebaseOnPeriod}
                     maxWidthClassName={(modalConfig as any).maxWidthClassName}
                 >
                     {(modalConfig as any).children}
