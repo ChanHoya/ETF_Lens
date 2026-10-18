@@ -12,6 +12,7 @@ import PortfolioDetailView from './views/PortfolioDetailView';
 import OverviewView from './views/OverviewView';
 import YtmView from './views/YtmView';
 import MonthlyView from './views/MonthlyView';
+import BrazilBondCompoundSimulator from './views/BrazilBondCompoundSimulator';
 import SlidingTabs from '../common/SlidingTabs';
 
 const LOCAL_STORAGE_KEY = 'tff_fund_data';
@@ -33,9 +34,10 @@ export default function TffDashboard({ onOpenDetail }: Props) {
     const [rawLog, setRawLog] = useState<any>(null); // 디버깅용 엑셀 원본 JSON
     const [isDragging, setIsDragging] = useState(false);
     const [isParsing, setIsParsing] = useState(false);
-    const [activeSubTab, setActiveSubTab] = useState<'overview'|'cumulative'|'assets'|'ytm'|'monthly'>('overview');
+    const [activeSubTab, setActiveSubTab] = useState<'overview'|'cumulative'|'assets'|'ytm'|'monthly'|'brazil'>('overview');
     const [selectedMonth, setSelectedMonth] = useState<string>(''); // For monthly view filter
     const [showUploadModal, setShowUploadModal] = useState(false);
+    const [showStandaloneSimulator, setShowStandaloneSimulator] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // 현 시점 추정 시뮬레이션 상태
@@ -653,6 +655,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                 { id: 'assets', label: '종목별 수익율' },
                                 { id: 'ytm', label: 'YTM 현황' },
                                 { id: 'monthly', label: '월별 분석' },
+                                { id: 'brazil', label: '🇧🇷 브라질 국채 복리' },
                             ]}
                             activeId={activeSubTab}
                             onChange={(id) => setActiveSubTab(id as any)}
@@ -771,12 +774,20 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                     대시보드에 표시할 공유 데이터가 아직 업로드되지 않았습니다. <br />
                                     마스터 관리자가 첫 번째 엑셀 파일을 업로드하면 이곳에서 전체 투자참여자가 실시간으로 조회가 가능합니다.
                                 </p>
-                                <button
-                                    onClick={openPasscodeModal}
-                                    className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-sm rounded-xl transition-all shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center gap-2"
-                                >
-                                    <Key className="w-4 h-4 text-amber-400" /> 마스터 권한으로 로그인
-                                </button>
+                                <div className="flex flex-col sm:flex-row items-center gap-3">
+                                    <button
+                                        onClick={openPasscodeModal}
+                                        className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-sm rounded-xl transition-all shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center gap-2"
+                                    >
+                                        <Key className="w-4 h-4 text-amber-400" /> 마스터 권한으로 로그인
+                                    </button>
+                                    <button
+                                        onClick={() => setShowStandaloneSimulator(!showStandaloneSimulator)}
+                                        className="px-5 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold text-sm rounded-xl border border-emerald-500/30 transition-all flex items-center gap-2"
+                                    >
+                                        🇧🇷 브라질 국채 복리 시뮬레이터
+                                    </button>
+                                </div>
                             </div>
                         )}
 
@@ -787,6 +798,13 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                             >
                                 <History className="w-4 h-4" /> 히스토리에서 최근 데이터 불러오기 ({historyRecords.length})
                             </button>
+                        )}
+
+                        {/* 독립 브라질 국채 시뮬레이터 뷰 */}
+                        {showStandaloneSimulator && (
+                            <div className="w-full mt-6 pt-6 border-t border-white/10">
+                                <BrazilBondCompoundSimulator />
+                            </div>
                         )}
                     </div>
                 )}
@@ -858,6 +876,10 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                         <div className="text-gray-400 py-10 text-center">월 데이터를 선택해주세요.</div>
                                     )}
                                 </div>
+                            )}
+
+                            {activeSubTab === 'brazil' && (
+                                <BrazilBondCompoundSimulator />
                             )}
                         </div>
                         

@@ -1,7 +1,7 @@
 "use client";
 // 보유 종목을 종목/금융사/섹터 기준으로 집계해 차트와 표로 보여주는 대시보드 모달
-import React, { useMemo, useState } from "react";
-import { X, BarChart3, Building2, Layers, Tag, TrendingUp, PieChart as PieIcon } from "lucide-react";
+import React, { useMemo, useState, useEffect } from "react";
+import { X, BarChart3, Building2, Layers, Tag, TrendingUp, PieChart as PieIcon, Sparkles, AlertCircle, ShieldAlert, DollarSign, ArrowRight } from "lucide-react";
 import {
     PieChart,
     Pie,
@@ -18,6 +18,7 @@ import {
 import { computeDivergingScale } from "@/lib/divergingBar";
 import { UNSET_LABEL } from "@/lib/sectorOptions";
 import { useChartHighlight, STANDARD_LEGEND_WRAPPER_STYLE } from "@/lib/chartTheme";
+import { getApiBase } from "@/lib/apiConfig";
 
 interface HoldingsDetailDashboardProps {
     isOpen: boolean;
@@ -31,7 +32,7 @@ const CHART_COLORS = [
     "#f97316", "#8b5cf6",
 ];
 
-type TabKey = "stock" | "broker" | "sector" | "classification";
+type TabKey = "stock" | "broker" | "sector" | "classification" | "xray";
 
 /** 탭 키 → 집계에 쓸 holding 필드명과 화면 라벨 */
 const TABS: { key: TabKey; field: string; label: string; icon: React.ReactNode }[] = [
@@ -39,6 +40,7 @@ const TABS: { key: TabKey; field: string; label: string; icon: React.ReactNode }
     { key: "broker", field: "broker", label: "금융사별", icon: <Building2 className="w-3.5 h-3.5" /> },
     { key: "sector", field: "sector", label: "섹터별", icon: <Layers className="w-3.5 h-3.5" /> },
     { key: "classification", field: "classification", label: "분류별", icon: <Tag className="w-3.5 h-3.5" /> },
+    { key: "xray", field: "xray", label: "포트폴리오 X-Ray", icon: <Sparkles className="w-3.5 h-3.5 text-amber-300" /> },
 ];
 
 const TAB_LABELS: Record<TabKey, string> = {
@@ -46,6 +48,7 @@ const TAB_LABELS: Record<TabKey, string> = {
     broker: "금융사",
     sector: "섹터",
     classification: "분류",
+    xray: "X-Ray 정밀 진단",
 };
 
 const fmtKRW = (n: number) => {
@@ -145,6 +148,35 @@ export default function HoldingsDetailDashboard({
         [returnRankData]
     );
 
+    const [xrayData, setXrayData] = useState<any | null>(null);
+    const [xrayLoading, setXrayLoading] = useState<boolean>(false);
+
+    useEffect(() => {
+        if (!isOpen || activeTab !== "xray") return;
+        let isMounted = true;
+        async function fetchXray() {
+            try {
+                setXrayLoading(true);
+                const baseUrl = getApiBase();
+                const res = await fetch(`${baseUrl}/api/v1/my/portfolio/xray`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ holdings: allHoldings })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (isMounted) setXrayData(data);
+                }
+            } catch (e) {
+                console.warn("Failed to fetch portfolio xray", e);
+            } finally {
+                if (isMounted) setXrayLoading(false);
+            }
+        }
+        fetchXray();
+        return () => { isMounted = false; };
+    }, [isOpen, activeTab, allHoldings]);
+
     // 훅은 모두 호출한 뒤에 닫힘 처리한다.
     // (조기 return 을 훅 위에 두면 isOpen 이 바뀔 때 훅 개수가 달라져 React 가 예외를 던진다)
     if (!isOpen) return null;
@@ -203,7 +235,191 @@ export default function HoldingsDetailDashboard({
 
                 {/* Content */}
                 <div className="p-6 flex flex-col gap-5">
-                    {/* Charts Row */}
+                    {activeTab === "xray" ? (
+                        <div className="flex flex-col gap-5 animate-in fade-in duration-200">
+                            {xrayLoading && (
+                                <div className="py-20 flex flex-col items-center justify-center gap-3">
+                                    <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                                    <span className="text-xs text-gray-400 font-mono">보유 ETF 구성 종목 분해 및 숨은 실질비용 집계 중...</span>
+                                </div>
+                            )}
+
+                            {!xrayLoading && xrayData && (
+                                <>
+                                    {/* 3대 요약 카드 */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                                        <div className="p-4 rounded-2xl bg-[#161922] border border-white/10 flex flex-col justify-between">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs text-gray-400">가중평균 실질 총비용 (Real TER)</span>
+                                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                                                    공시보수+기타비용
+                                                </span>
+                                            </div>
+                                            <div className="my-2">
+                                                <div className="text-2xl font-black text-white font-mono">
+                                                    연 {xrayData.cost_analysis.weighted_real_ter}%
+                                                </div>
+                                                <div className="text-[11px] text-indigo-300 mt-0.5">
+                                                    공시 보수(연 {xrayData.cost_analysis.weighted_stated_ter}%) 대비 +{xrayData.cost_analysis.hidden_ter_spread}%p 숨은 비용
+                                                </div>
+                                            </div>
+                                            <div className="text-[10px] text-gray-500">
+                                                지수사용료, 회계감사비, 매매중개수수료율 포함
+                                            </div>
+                                        </div>
+
+                                        <div className="p-4 rounded-2xl bg-[#161922] border border-amber-500/20 flex flex-col justify-between">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs text-gray-400">연간 숨은 비용 (추정액)</span>
+                                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                                                    연간 손실액
+                                                </span>
+                                            </div>
+                                            <div className="my-2">
+                                                <div className="text-2xl font-black text-amber-300 font-mono">
+                                                    -{fmtKRW(xrayData.cost_analysis.annual_hidden_cost_won)}원
+                                                </div>
+                                                <div className="text-[11px] text-gray-400 mt-0.5">
+                                                    총 실질 비용: 연 -{fmtKRW(xrayData.cost_analysis.total_annual_real_cost_won)}원
+                                                </div>
+                                            </div>
+                                            <div className="text-[10px] text-gray-500">
+                                                순자산가치(NAV)에서 매일 자동 차감되는 숨은 비용
+                                            </div>
+                                        </div>
+
+                                        <div className="p-4 rounded-2xl bg-[#161922] border border-purple-500/20 flex flex-col justify-between">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs text-gray-400">종목 중복 편입 경보</span>
+                                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                                                    집중도 체크
+                                                </span>
+                                            </div>
+                                            <div className="my-2">
+                                                <div className="text-2xl font-black text-purple-300 font-mono">
+                                                    {xrayData.overlap_analysis.overlap_warning_count}개 종목
+                                                </div>
+                                                <div className="text-[11px] text-gray-400 mt-0.5">
+                                                    복수 ETF에 걸쳐 3% 이상 중복 노출된 핵심주
+                                                </div>
+                                            </div>
+                                            <div className="text-[10px] text-gray-500">
+                                                특정 기업 과다 노출로 인한 분산 효과 저하 방지
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 2열 상세: 중복도 레이더 & ETF 비용 비교 */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        {/* 좌측: 종목 중복도 레이더 */}
+                                        <div className="p-5 rounded-2xl bg-[#161922] border border-white/10 flex flex-col justify-between">
+                                            <div>
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                                                        <Sparkles className="w-4 h-4 text-purple-400" />
+                                                        포트폴리오 실질 종목 노출도 (Top 10)
+                                                    </h3>
+                                                    <span className="text-[10px] text-gray-400">실질 비중 합산</span>
+                                                </div>
+                                                <p className="text-[11px] text-gray-400 mb-4 leading-relaxed">
+                                                    {xrayData.overlap_analysis.diagnosis}
+                                                </p>
+                                                <div className="space-y-2.5">
+                                                    {xrayData.overlap_analysis.top_underlying_stocks.map((stock: any, idx: number) => (
+                                                        <div key={idx} className="p-2.5 rounded-xl bg-black/20 border border-white/5 flex flex-col gap-1.5">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs font-bold text-white">{stock.stock_name}</span>
+                                                                    {stock.is_overlapped && (
+                                                                        <span className="text-[9px] px-1.5 py-0.2 rounded font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                                                            {stock.overlap_count}개 ETF 중복
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <span className="text-xs font-mono font-black text-indigo-300">{stock.effective_weight_pct}%</span>
+                                                                    <span className="text-[10px] font-mono text-gray-500 ml-1.5">({fmtShort(stock.effective_amount_won)})</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {stock.contributing_etfs.map((etf: any, eIdx: number) => (
+                                                                    <span key={eIdx} className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-gray-400">
+                                                                        {etf.etf_name.length > 15 ? etf.etf_name.slice(0, 15) + '...' : etf.etf_name} ({etf.etf_weight}%)
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 우측: ETF별 실질 비용 분석 & 진단 */}
+                                        <div className="p-5 rounded-2xl bg-[#161922] border border-white/10 flex flex-col justify-between">
+                                            <div>
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                                                        <DollarSign className="w-4 h-4 text-amber-400" />
+                                                        보유 ETF별 공시보수 vs 실질 총비용
+                                                    </h3>
+                                                    <span className="text-[10px] text-gray-400">KOFIA 공시 기준</span>
+                                                </div>
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-xs border-collapse">
+                                                        <thead>
+                                                            <tr className="border-b border-white/10 text-gray-400 font-semibold">
+                                                                <th className="py-2 px-2 text-left">ETF 상품명</th>
+                                                                <th className="py-2 px-2 text-right">공시보수</th>
+                                                                <th className="py-2 px-2 text-right">실질보수</th>
+                                                                <th className="py-2 px-2 text-right">숨은비용</th>
+                                                                <th className="py-2 px-2 text-right">연 실질비용</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-white/5">
+                                                            {xrayData.cost_analysis.etf_cost_items.map((item: any, i: number) => (
+                                                                <tr key={i} className="hover:bg-white/[0.03]">
+                                                                    <td className="py-2 px-2 font-bold text-white max-w-[140px] truncate" title={item.name}>
+                                                                        {item.name}
+                                                                    </td>
+                                                                    <td className="py-2 px-2 text-right font-mono text-gray-400">
+                                                                        {item.stated_ter}%
+                                                                    </td>
+                                                                    <td className="py-2 px-2 text-right font-mono font-bold text-rose-300">
+                                                                        {item.real_ter}%
+                                                                    </td>
+                                                                    <td className="py-2 px-2 text-right font-mono text-amber-400">
+                                                                        +{item.hidden_fee_diff}%p
+                                                                    </td>
+                                                                    <td className="py-2 px-2 text-right font-mono text-gray-300">
+                                                                        {fmtKRW(item.annual_real_cost_won)}원
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            {/* 하단 진단 가이드 */}
+                                            <div className="mt-4 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200/90 leading-relaxed flex items-start gap-2.5">
+                                                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                                                <div>
+                                                    <div className="font-bold text-white mb-0.5">
+                                                        비용 진단: {xrayData.cost_analysis.cost_label}
+                                                    </div>
+                                                    <p className="text-[11px] text-gray-300">
+                                                        {xrayData.cost_analysis.cost_diagnosis}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    ) : (
+                        <>
+                            {/* Charts Row */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         {/* Pie Chart */}
                         <div className="p-5 rounded-2xl bg-[#161922] border border-white/10">
@@ -402,6 +618,8 @@ export default function HoldingsDetailDashboard({
                             </table>
                         </div>
                     </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

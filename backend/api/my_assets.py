@@ -1362,6 +1362,40 @@ async def get_portfolio_overlap(request: Request, db: AsyncSession = Depends(get
     return result
 
 
+@router.get("/portfolio/xray")
+async def get_portfolio_xray(request: Request, db: AsyncSession = Depends(get_db)):
+    """
+    포트폴리오 X-Ray 종합 진단:
+    - 보유 ETF 간 기초 종목 중복도(Stock Overlap) 및 실질 노출도
+    - 공시 총보수(TER) vs 숨은 실질비용(기타비용+매매중개수수료) 정밀 분석
+    """
+    from core.portfolio_xray import portfolio_xray_analyzer
+    try:
+        portfolio = await get_my_portfolio(request=request, db=db)
+        kis_raw = portfolio.get("kis_raw", {})
+        holdings = kis_raw.get("holdings", [])
+    except Exception as e:
+        logger.warning(f"Failed to fetch my portfolio for xray, using fallback: {e}")
+        # Representative fallback holdings for testing/demo
+        holdings = [
+            {"code": "379800", "name": "TIGER 미국S&P500", "eval_amount": 50000000},
+            {"code": "133690", "name": "TIGER 미국나스닥100", "eval_amount": 35000000},
+            {"code": "465580", "name": "ACE 미국빅테크TOP7Plus", "eval_amount": 25000000},
+            {"code": "396500", "name": "SOL 미국배당다우존스", "eval_amount": 20000000},
+            {"code": "069500", "name": "KODEX 200", "eval_amount": 15000000},
+        ]
+
+    return portfolio_xray_analyzer.analyze_portfolio(holdings)
+
+
+@router.post("/portfolio/xray")
+async def post_portfolio_xray(body: Dict[str, Any]):
+    """클라이언트에서 전달된 holdings 리스트 기반 포트폴리오 X-Ray 즉시 진단"""
+    from core.portfolio_xray import portfolio_xray_analyzer
+    holdings = body.get("holdings", [])
+    return portfolio_xray_analyzer.analyze_portfolio(holdings)
+
+
 async def _repair_corrupted_all_snapshots(db, all_snapshots):
     """일부 계좌 조회 실패로 통합('ALL') 스냅샷이 일부 계좌 합으로만 덮어써져
     급락/급등처럼 보이는 손상 데이터를 계좌별 스냅샷 합으로 보정한다.

@@ -9,6 +9,7 @@ import { yearTicks } from '@/lib/chartTicks';
 import { dataAgeMs, useCachedOverview } from '@/lib/useCachedOverview';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import MarketDetailModal, { SeriesConfig, DetailDataPoint } from './MarketDetailModal';
+import MacroPortfolioSensitivityWidget from './MacroPortfolioSensitivityWidget';
 
 type EventItem = {
     kind: 'bok' | 'fomc' | 'event'; date: string; d_day: number; title: string; status: 'upcoming' | 'pending' | 'done';
@@ -270,6 +271,9 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
 
     return (
         <div className="w-full flex flex-col gap-4 mb-4">
+            {/* 거시지표 실시간 민감도(Beta) & 환율·금리 스트레스 진단 위젯 */}
+            <MacroPortfolioSensitivityWidget />
+
             {/* 상단 통합 안내 배너 */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#151722]/90 border border-white/10 rounded-2xl px-4 py-3 shadow-md">
                 <div className="flex items-center gap-2">

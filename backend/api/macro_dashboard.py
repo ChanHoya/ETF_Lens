@@ -1037,3 +1037,55 @@ async def get_macro_indicator_history(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/portfolio-sensitivity")
+async def get_macro_portfolio_sensitivity(
+    target_fx: Optional[float] = Query(None, description="시뮬레이션 대상 목표 환율"),
+    delta_yield_bp: float = Query(0.0, description="시뮬레이션 대상 금리 변동 (bp)")
+):
+    """
+    거시경제 지표(환율, 금리) 변동에 따른 실시간 포트폴리오 민감도 및 스트레스 테스트 분석
+    """
+    try:
+        from core.macro_portfolio_bridge import calculate_portfolio_macro_sensitivity
+        from api.my_assets import _PORTFOLIO_CACHE
+
+        # 1. 환율 캐시에서 현재 원/달러 환율 가져오기
+        try:
+            from api.fx_dashboard import overview_cache as fx_c
+            fx_data = await fx_c.get() or {}
+            current_fx = float(fx_data.get("snapshot", {}).get("krw", {}).get("value") or 1360.0)
+        except Exception:
+            current_fx = 1360.0
+
+        # 2. 보유 종목 리스트 획득 (KIS 캐시 우선, 없으면 fallback)
+        holdings = []
+        if _PORTFOLIO_CACHE and "kis_raw" in _PORTFOLIO_CACHE:
+            holdings = _PORTFOLIO_CACHE["kis_raw"].get("holdings", [])
+
+        # KIS 캐시가 없으면 대표 포트폴리오 데이터셋을 활용한 스마트 Fallback
+        if not holdings:
+            holdings = [
+                {"code": "379800", "name": "KODEX 미국S&P500TR", "eval_amount": 38500000},
+                {"code": "402970", "name": "TIGER 미국배당다우존스", "eval_amount": 27000000},
+                {"code": "453850", "name": "ACE 미국30년국채액티브", "eval_amount": 18500000},
+                {"code": "449190", "name": "ACE 미국S&P500(H)", "eval_amount": 12000000},
+                {"code": "069500", "name": "KODEX 200", "eval_amount": 14000000},
+            ]
+            is_fallback = True
+        else:
+            is_fallback = False
+
+        res = calculate_portfolio_macro_sensitivity(
+            holdings=holdings,
+            current_fx=current_fx,
+            target_fx=target_fx,
+            delta_yield_bp=delta_yield_bp
+        )
+        res["is_demo_fallback"] = is_fallback
+        return res
+    except Exception as e:
+        logger.error(f"Error calculating portfolio sensitivity: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+

@@ -38,6 +38,8 @@ import { getApiBase } from '@/lib/apiConfig';
 import RealEstateSimulatorSection from './RealEstateSimulatorSection';
 import SeoulDistrictHeatmap from './SeoulDistrictHeatmap';
 import RealEstateMortgageShieldWidget from './RealEstateMortgageShieldWidget';
+import MajorComplexTimeseriesModal from './MajorComplexTimeseriesModal';
+import MyApartmentPortfolioWidget from './MyApartmentPortfolioWidget';
 
 
 
@@ -93,6 +95,10 @@ export default function RealEstateTab() {
   const [summaryData, setSummaryData] = useState<any | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [apiSource, setApiSource] = useState<string>("FALLBACK_CACHE");
+
+  // 대단지 실거래 시계열 모달 상태
+  const [selectedComplexForModal, setSelectedComplexForModal] = useState<string | null>(null);
+  const [isComplexModalOpen, setIsComplexModalOpen] = useState<boolean>(false);
 
   // 데이터 로드 함수
   const loadRealEstateData = async (period: string) => {
@@ -661,6 +667,21 @@ export default function RealEstateTab() {
 
       {/* S22: 서울 25개 자치구별 실거래가 & 전세가율 히트맵 / 갭투자 위험 레이더 */}
       <SeoulDistrictHeatmap />
+
+      {/* S26-2: 국토부 실거래가 기반 내 아파트 등록 & LTV/DSR 스트레스 진단 위젯 */}
+      <MyApartmentPortfolioWidget 
+        onOpenComplexModal={(name) => {
+          setSelectedComplexForModal(name);
+          setIsComplexModalOpen(true);
+        }}
+      />
+
+      {/* 국토부 실거래가 기반 대단지 2개년 시계열 팝업 모달 */}
+      <MajorComplexTimeseriesModal
+        complexName={selectedComplexForModal}
+        isOpen={isComplexModalOpen}
+        onClose={() => setIsComplexModalOpen(false)}
+      />
 
       {/* S21: 실물 부동산 vs 금융자산(배당 ETF) 기회비용 & 10개년 복리 정밀 시뮬레이터 */}
       <RealEstateSimulatorSection />

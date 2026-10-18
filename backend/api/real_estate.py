@@ -129,3 +129,58 @@ async def get_district_heatmap(
         logger.error(f"Error fetching district heatmap data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+from pydantic import BaseModel
+from core.real_estate_complex_service import real_estate_complex_service
+
+
+class EvaluateApartmentRequest(BaseModel):
+    complex_name: str
+    area_sqm: float = 84.8
+    purchase_price_won: float # 억 단위 (예: 15.0)
+    loan_balance_won: float = 0.0 # 대출 잔액 (억)
+    jeonse_deposit_won: float = 0.0 # 전세 보증금 (억)
+    annual_income_won: float = 1.0 # 연소득 (억)
+    mortgage_rate_pct: float = 4.2 # 대출 금리 (%)
+
+
+@router.get("/complexes")
+async def get_major_complexes():
+    """국토교통부 표준 시계열이 지원되는 주요 랜드마크 대단지 목록 조회"""
+    try:
+        return real_estate_complex_service.get_complex_list()
+    except Exception as e:
+        logger.error(f"Error fetching major complexes: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/complex-history")
+async def get_complex_history(
+    complex_name: str = Query(..., description="조회할 아파트 단지명 (예: 잠실엘스, 마포래미안푸르지오)")
+):
+    """지정 아파트 단지의 최근 2개년(2024.11~2026.10) 월별 실거래가·전세가·거래량 시계열 조회"""
+    try:
+        return real_estate_complex_service.get_complex_history(complex_name)
+    except Exception as e:
+        logger.error(f"Error fetching complex history for {complex_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/evaluate-apartment")
+async def evaluate_apartment(req: EvaluateApartmentRequest):
+    """사용자 등록 아파트 자산 가치 평가 및 LTV / 스트레스 DSR 건전성 정밀 진단"""
+    try:
+        result = real_estate_complex_service.evaluate_user_apartment(
+            complex_name=req.complex_name,
+            area_sqm=req.area_sqm,
+            purchase_price_won=req.purchase_price_won,
+            loan_balance_won=req.loan_balance_won,
+            jeonse_deposit_won=req.jeonse_deposit_won,
+            annual_income_won=req.annual_income_won,
+            mortgage_rate_pct=req.mortgage_rate_pct
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error evaluating user apartment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
