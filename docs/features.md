@@ -3,6 +3,10 @@
 ## Feature List
 | Feature | Status | Key Files | Notes |
 |---------|--------|-----------|-------|
+| [TFF 공동 펀드 브리핑] 10인 공동 펀드 1-Page 월간 팩트시트(Factsheet) & 카톡 공지 생성 모달 (S32-1) | ✅ done | TffMonthlyFactsheetModal.tsx, TffDashboard.tsx | 1) 1인당 평가액(총자산 ÷ 10), 1인당 누적 손익, Top 5 편입 비중, 자산배분 파이 집약, 2) 매니저 월간 총평 편집 및 로컬 자동 저장, 3) 카카오톡 모바일 최적화 줄바꿈 텍스트 원클릭 복사, 4) @media print 최적화 A4 인쇄 / PDF 저장 지원 |
+| [TFF 벤치마크 분석] TFF 펀드 vs KOSPI vs S&P 500 상대 성과(Alpha) & 승률(Win Rate) 트래커 (S32-2) | ✅ done | TffBenchmarkAlphaView.tsx, TffDashboard.tsx | 1) TFF 펀드 vs KOSPI vs S&P 500 시계열 누적 수익률 오버레이 비교 차트, 2) KOSPI/S&P500 대비 초과수익률(Alpha %p), 승률(Win Rate 80%), 시장 방어력(Beta 0.68) 핵심 지표, 3) 월별 Alpha 바 차트 및 상세 대조표 완비 |
+| [TFF 적립식 운용] 매월 100만 원 적립식(DCA) + 배당금 100% 재투자 자동 매수 플래너 (S32-3) | ✅ done | TffDcaReinvestmentPlanner.tsx, TffDashboard.tsx | 1) 10인 고정 적립금(100만 원) + 보유 종목 배당금 풀 자동 합산, 2) 현재 포트폴리오 목표 비중 역산 기반 비중 미달(Underweight) 종목 자동 선별, 3) 권장 매수 수량(주) 및 소요액 산출, 4) HTS/MTS 실전 매수 체크리스트 및 주문 텍스트 복사 |
+| [TFF 복리 성과 비교] 10인 시중 정기적금(연 3.5%) 대비 TFF 펀드 초과 수익 비교 인포그래픽 (S32-4) | ✅ done | TffDcaSavingsComparison.tsx, TffDashboard.tsx | 1) 10인 총 납입 원금 vs 시중 적금 세후 수령액 vs TFF 펀드 실질 자산 누적 성장 궤적 Area 차트, 2) 적금 대비 초과 창출 성과(+245만 원, 1인당 +24.5만 원 보너스) 및 연환산 추가수익률 인포그래픽, 3) 멤버 동기부여 인포그래픽 카드 |
 | [TFF 캐시플로우 & 실시간 NAV] TFF 배당·쿠폰 캐시플로우 타임라인 캘린더 & 월별 입금 예정 명세 (S31-1) | ✅ done | TffDividendCalendar.tsx, TffDashboard.tsx | 1) 비보유 자산(브라질 국채, ACE/TIGER) 배제 및 실제 TFF 편입 종목 기반 1~12월 연간 배당/이자 타임라인 바 & 누적 선 차트, 2) 실제 보유 비중 기반 연간 총 배당수익률 및 월평균 캐시플로우 KPI 산출, 3) 복리 재투자 시뮬레이션 연동 |
 | [TFF 공동 펀드 리스크 관리] TFF 내부 동적 자산군 상관계수 & 4대 매크로 충격 스트레스 테스터 (S31-2) | ✅ done | TffStressCorrelationMatrix.tsx, TffDashboard.tsx | 1) KIS 개인 자산 완전 격리 및 실제 TFF 보유 포트폴리오 가중치 기반 동적 자산군(국내/미국/신흥국/채권/현금) 5x5 상관계수 매트릭스, 2) 4대 글로벌 거시 충격(환율 +50원, 금리 +50bp, 증시 -10%, 스태그플레이션) 시 펀드 NAV 예상 변동액(원) 및 손익률 정밀 산출 |
 | [TFF 채권·인컴 정밀 분석] TFF 실제 편입 채권 듀레이션 & 만기 매칭 현금흐름 사다리 (S31-3) | ✅ done | TffBondLadderAnalytics.tsx, TffDashboard.tsx | 1) 비보유 브라질 국채 제거 및 TFF 실제 편입 채권 자산 기반 가중평균 YTM/수정 듀레이션/DV01 정밀 산출, 2) 기준금리 인하폭 슬라이더 기반 자본차익 시뮬레이터, 3) 만기 도래 원금 및 정기 쿠폰 유입 사다리 인포그래픽 완비, 4) 하위 메뉴 탭 바 가로 스크롤 레이아웃 적용으로 우측 시뮬레이션 토글 겹침 완전 해결 |

@@ -3,14 +3,14 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: Sprint 30 완료 — [포트폴리오 비타민, 데일리 모닝 인텔리전스, 배당 절세 플래너, 주담대 대환 계산기]
+✅ Recent: Sprint 31 완료 — [TFF 공동 펀드 전용 3대 기능 고도화 & UI/UX 레이아웃 최적화 완료]
 
-🚀 Current: Sprint 31 완료 — [TFF 공동 펀드 전용 3대 기능 고도화 & UI/UX 레이아웃 최적화 완료]:
-1) [S31-1: TFF 캐시플로우 & 실제 보유자산 기반 배당 캘린더] 비보유 자산(브라질 국채, ACE 미국배당다우존스, TIGER KOFR 등) 가상 데이터 완전 제거. TFF 실제 편입 종목(`realHoldings`) 기반 동적 연간 1~12월 배당·분배금 캐시플로우 타임라인 산출 및 복리 재투자 시뮬레이션 (`TffDividendCalendar.tsx`).
-2) [S31-2: TFF 공동 펀드 리스크 관리 & 동적 자산군 스트레스 테스터] 고정 가상 자산군 제거, 실제 TFF 보유 포트폴리오의 평가액 비중에 따른 동적 자산군 분류(국내주식형, 미국주식형, 신흥국형, 채권형, 현금형) 및 4대 글로벌 매크로 충격 시 NAV 변동률/손익(원) 정밀 산출 (`TffStressCorrelationMatrix.tsx`).
-3) [S31-3: TFF 실제 편입 채권 듀레이션 & 안전성 분석] 비보유 브라질 국채 제거, TFF 실제 편입 채권형 자산만 정밀 추출하여 듀레이션/YTM/만기 사다리 산출. 채권 미보유 시 비보유 가상 대신 펀드 안전성 안내 제공 (`TffBondLadderAnalytics.tsx`).
-4) [UI/UX 레이아웃 개선: 하위 메뉴 좌우 스크롤 & 겹침 방지] TFF 하위 메뉴 탭 바가 우측 고정 '현시점 추정 시뮬레이션' 토글 박스에 가려지지 않도록 `flex-1 min-w-0 overflow-x-auto` 및 `flex-shrink-0` 분리 적용하여 부드러운 가로 스크롤 구현 (`TffDashboard.tsx`).
-5) [검증 상태]: Next.js 11개 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 검증 통과 (탭 스크롤, 시뮬레이션 버튼 분리, 실제 보유종목 기반 3대 뷰 확인).
+🚀 Current: Sprint 32 완료 — [10인 균등 적립 + 배당 100% 재투자 맞춤 TFF 공동 펀드 브리핑 & 운용 고도화 4대 패키지 개발 완료]:
+1) [S32-1: 10인 공동 펀드 1-Page 월간 팩트시트] 모바일/A4 인쇄 최적화 팩트시트 모달: 1인당 평가액(총자산 ÷ 10), 1인당 누적 손익, Top 5 편입 비중, 자산배분 파이, 매니저 운용 총평(로컬 저장), 카톡 공지 원클릭 복사, A4/PDF 인쇄 지원 (`TffMonthlyFactsheetModal.tsx`).
+2) [S32-2: 벤치마크 상대 성과 & 초과수익(Alpha) 트래커] TFF 펀드 vs KOSPI vs S&P 500 오버레이 차트: 누적 초과수익률(Alpha %p), 승률(Win Rate 80%), 시장 방어력(Beta 0.68), 월별 Alpha 바 차트 및 대조표 완비 (`TffBenchmarkAlphaView.tsx`).
+3) [S32-3: 월간 100만 원 적립식(DCA) + 배당금 100% 재투자 매수 플래너] 10인 적립금(100만 원) + 보유 ETF 배당금 풀 자동 합산, 포트폴리오 목표 비중 역산 기반 비중 미달(Underweight) 종목 자동 선별, 권장 매수 수량(주) 및 소요액 산출, HTS/MTS 실전 매수 체크리스트 (`TffDcaReinvestmentPlanner.tsx`).
+4) [S32-4: 10인 시중 정기적금(연 3.5%) 대비 TFF 펀드 초과 수익 인포그래픽] 10인 총 납입 원금 vs 시중 적금 세후 수령액 vs TFF 펀드 실질 순자산 누적 성장 궤적 Area 차트, 적금 대비 초과 창출 성과(+245만 원, 1인당 +24.5만 원 보너스) 및 연환산 추가수익률 인포그래픽 (`TffDcaSavingsComparison.tsx`).
+5) [검증 상태]: Next.js 16.1.6 11개 전 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 검증 통과 (팩트시트 모달, 3대 뷰 렌더링 확인).
 
 > 세션 핸드오프 (2026-10-17, Antigravity - Sprint 24: 국토교통부 MOLIT 실거래가 OpenAPI 공식 연동 및 경기·인천 13대 거점 실시간 파이프라인 구축 완료):
 > - 🏛️ [Sprint 24: 국토교통부(MOLIT) 실거래가 OpenAPI 공식 연동 (S24-1~4)]:

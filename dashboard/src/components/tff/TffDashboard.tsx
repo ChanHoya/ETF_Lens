@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { UploadCloud, Loader2, FileSpreadsheet, Trash2, History, ArrowLeftRight, X, Lock, Unlock, LogOut, Key, Sparkles } from 'lucide-react';
+import { UploadCloud, Loader2, FileSpreadsheet, Trash2, History, ArrowLeftRight, X, Lock, Unlock, LogOut, Key, Sparkles, FileText } from 'lucide-react';
 import { TffFundData } from '../../lib/tff/types';
 import { parseTffExcel } from '../../lib/tff/excelParser';
 import { API_BASE } from '../../lib/apiConfig';
@@ -16,6 +16,10 @@ import BrazilBondCompoundSimulator from './views/BrazilBondCompoundSimulator';
 import TffDividendCalendar from './views/TffDividendCalendar';
 import TffStressCorrelationMatrix from './views/TffStressCorrelationMatrix';
 import TffBondLadderAnalytics from './views/TffBondLadderAnalytics';
+import TffMonthlyFactsheetModal from './views/TffMonthlyFactsheetModal';
+import TffBenchmarkAlphaView from './views/TffBenchmarkAlphaView';
+import TffDcaReinvestmentPlanner from './views/TffDcaReinvestmentPlanner';
+import TffDcaSavingsComparison from './views/TffDcaSavingsComparison';
 import SlidingTabs from '../common/SlidingTabs';
 
 const LOCAL_STORAGE_KEY = 'tff_fund_data';
@@ -37,10 +41,11 @@ export default function TffDashboard({ onOpenDetail }: Props) {
     const [rawLog, setRawLog] = useState<any>(null); // 디버깅용 엑셀 원본 JSON
     const [isDragging, setIsDragging] = useState(false);
     const [isParsing, setIsParsing] = useState(false);
-    const [activeSubTab, setActiveSubTab] = useState<'overview'|'cumulative'|'assets'|'ytm'|'monthly'|'calendar'|'stress'|'ladder'>('overview');
+    const [activeSubTab, setActiveSubTab] = useState<'overview'|'cumulative'|'assets'|'ytm'|'monthly'|'alpha'|'dca'|'savings'|'calendar'|'stress'|'ladder'>('overview');
     const [selectedMonth, setSelectedMonth] = useState<string>(''); // For monthly view filter
     const [showUploadModal, setShowUploadModal] = useState(false);
-    const [standaloneView, setStandaloneView] = useState<'none'|'calendar'|'stress'|'ladder'>('none');
+    const [showFactsheetModal, setShowFactsheetModal] = useState(false);
+    const [standaloneView, setStandaloneView] = useState<'none'|'calendar'|'stress'|'ladder'|'alpha'|'dca'|'savings'>('none');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // 현 시점 추정 시뮬레이션 상태
@@ -612,6 +617,15 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                         </button>
                     )}
 
+                    {/* 1-Page 월간 팩트시트 모달 버튼 */}
+                    <button
+                        onClick={() => setShowFactsheetModal(true)}
+                        className="flex flex-row items-center gap-1.5 px-3 py-2 text-xs font-bold text-amber-300 hover:text-amber-200 bg-amber-950/30 hover:bg-amber-900/40 rounded-xl transition-colors border border-amber-900/50 backdrop-blur-md shadow-sm"
+                        title="10인 멤버 브리핑용 1-Page 월간 팩트시트 및 카톡 공지 생성"
+                    >
+                        <FileText className="w-4 h-4 text-amber-400" /> 1-Page 팩트시트
+                    </button>
+
                     {/* 히스토리 버튼 */}
                     {(historyRecords.length > 0 || fundData) && (
                         <button
@@ -659,6 +673,9 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                 { id: 'assets', label: '종목별 수익율' },
                                 { id: 'ytm', label: 'YTM 현황' },
                                 { id: 'monthly', label: '월별 분석' },
+                                { id: 'alpha', label: '📈 벤치마크 (Alpha)' },
+                                { id: 'dca', label: '💡 적립·재투자 플래너' },
+                                { id: 'savings', label: '📊 적금 대비 성과' },
                                 { id: 'calendar', label: '📅 배당·분배금 캘린더' },
                                 { id: 'stress', label: '⚡ 펀드 리스크 & 스트레스' },
                                 { id: 'ladder', label: '🪜 보유 채권 듀레이션' },
@@ -790,6 +807,36 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                         <Key className="w-3.5 h-3.5 text-amber-950" /> 마스터 권한으로 로그인
                                     </button>
                                     <button
+                                        onClick={() => setStandaloneView(v => v === 'alpha' ? 'none' : 'alpha')}
+                                        className={`px-3.5 py-2 font-bold text-xs rounded-xl border transition-all flex items-center gap-1.5 ${
+                                            standaloneView === 'alpha'
+                                                ? 'bg-sky-600 text-white border-sky-500 shadow-md'
+                                                : 'bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border-sky-500/30'
+                                        }`}
+                                    >
+                                        📈 벤치마크 (Alpha)
+                                    </button>
+                                    <button
+                                        onClick={() => setStandaloneView(v => v === 'dca' ? 'none' : 'dca')}
+                                        className={`px-3.5 py-2 font-bold text-xs rounded-xl border transition-all flex items-center gap-1.5 ${
+                                            standaloneView === 'dca'
+                                                ? 'bg-amber-600 text-white border-amber-500 shadow-md'
+                                                : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                        }`}
+                                    >
+                                        💡 적립·재투자 플래너
+                                    </button>
+                                    <button
+                                        onClick={() => setStandaloneView(v => v === 'savings' ? 'none' : 'savings')}
+                                        className={`px-3.5 py-2 font-bold text-xs rounded-xl border transition-all flex items-center gap-1.5 ${
+                                            standaloneView === 'savings'
+                                                ? 'bg-emerald-600 text-white border-emerald-500 shadow-md'
+                                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                                        }`}
+                                    >
+                                        📊 적금 대비 성과
+                                    </button>
+                                    <button
                                         onClick={() => setStandaloneView(v => v === 'calendar' ? 'none' : 'calendar')}
                                         className={`px-3.5 py-2 font-bold text-xs rounded-xl border transition-all flex items-center gap-1.5 ${
                                             standaloneView === 'calendar'
@@ -833,19 +880,34 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                         )}
 
                         {/* 독립 시뮬레이터 뷰 */}
+                        {standaloneView === 'alpha' && (
+                            <div className="w-full mt-6 pt-6 border-t border-white/10">
+                                <TffBenchmarkAlphaView data={fundData} />
+                            </div>
+                        )}
+                        {standaloneView === 'dca' && (
+                            <div className="w-full mt-6 pt-6 border-t border-white/10">
+                                <TffDcaReinvestmentPlanner data={fundData} />
+                            </div>
+                        )}
+                        {standaloneView === 'savings' && (
+                            <div className="w-full mt-6 pt-6 border-t border-white/10">
+                                <TffDcaSavingsComparison data={fundData} />
+                            </div>
+                        )}
                         {standaloneView === 'calendar' && (
                             <div className="w-full mt-6 pt-6 border-t border-white/10">
-                                <TffDividendCalendar />
+                                <TffDividendCalendar data={fundData} />
                             </div>
                         )}
                         {standaloneView === 'stress' && (
                             <div className="w-full mt-6 pt-6 border-t border-white/10">
-                                <TffStressCorrelationMatrix />
+                                <TffStressCorrelationMatrix data={fundData} />
                             </div>
                         )}
                         {standaloneView === 'ladder' && (
                             <div className="w-full mt-6 pt-6 border-t border-white/10">
-                                <TffBondLadderAnalytics />
+                                <TffBondLadderAnalytics data={fundData} />
                             </div>
                         )}
                     </div>
@@ -918,6 +980,18 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                         <div className="text-gray-400 py-10 text-center">월 데이터를 선택해주세요.</div>
                                     )}
                                 </div>
+                            )}
+
+                            {activeSubTab === 'alpha' && (
+                                <TffBenchmarkAlphaView data={displayData} />
+                            )}
+
+                            {activeSubTab === 'dca' && (
+                                <TffDcaReinvestmentPlanner data={displayData} />
+                            )}
+
+                            {activeSubTab === 'savings' && (
+                                <TffDcaSavingsComparison data={displayData} />
                             )}
 
                             {activeSubTab === 'calendar' && (
@@ -1311,6 +1385,13 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                 ref={fileInputRef} 
                 className="hidden" 
                 onChange={handleFileChange}
+            />
+
+            {/* S32-1: 10인 공동 펀드 1-Page 월간 팩트시트 모달 */}
+            <TffMonthlyFactsheetModal
+                isOpen={showFactsheetModal}
+                onClose={() => setShowFactsheetModal(false)}
+                data={displayData}
             />
         </div>
     );
