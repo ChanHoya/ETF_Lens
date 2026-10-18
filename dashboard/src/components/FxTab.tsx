@@ -582,13 +582,13 @@ function ValueSection({ an, rows, range, setRange }: { an: Analysis; rows: (Row 
 export default function FxTab() {
     // 재진입 시 캐시를 즉시 그리고, 서버 기준 시각이 1시간 넘었거나 신규 통화 데이터가 없으면 백그라운드 갱신
     const { data, refreshing, error, refresh } = useCachedOverview<Overview>(
-        'iprism-fx-v7',
+        'iprism-fx-v8',
         `${API_BASE}/api/v1/fx/overview`,
         {
             isStale: (d) => {
                 if (!d?.weekly || d.weekly.length === 0) return true;
                 const last = d.weekly[d.weekly.length - 1];
-                return last.eurusd == null || last.gbpusd == null || last.usdcad == null;
+                return last.eurkrw == null || last.jpy100 == null || last.cny10 == null || last.usdtwd == null;
             }
         }
     );
@@ -613,21 +613,31 @@ export default function FxTab() {
         switch (modalKey) {
             case 'krw':
                 return {
-                    title: '원/달러 환율 (KRW/USD) 20년 실제 시계열 추이',
-                    subtitle: 'FRED DEXKOUS 뉴욕 정오 고시환율 및 실시간 야후 파이낸스 연동 실제 데이터',
+                    title: '원/달러 환율 (KRW/USD) 및 주요 통화(유로·10위안·100엔) 20년 실제 시계열 추이',
+                    subtitle: 'FRED DEXKOUS(원/달러) · DEXUSEU(원/유로) · DEXCHUS(원/10위안) · DEXJPUS(원/100엔) 실제 고시환율 데이터',
                     badge: '외환 실거래',
                     badgeColor: 'bg-indigo-500/15 text-indigo-300 border-indigo-400/30',
+                    maxWidthClassName: 'max-w-5xl',
                     series: [
-                        { key: 'krw', name: '원/달러 환율 (원)', color: '#6366f1', unit: '원', strokeWidth: 2.2 }
+                        { key: 'krw', name: '원/달러 (원)', color: '#6366f1', unit: '원', strokeWidth: 2.2 },
+                        { key: 'eurkrw', name: '원/유로 (원)', color: '#3b82f6', unit: '원', strokeWidth: 2 },
+                        { key: 'cny10', name: '원/10위안 (원)', color: '#ef4444', unit: '원', strokeWidth: 1.8 },
+                        { key: 'jpy100', name: '원/100엔 (원)', color: '#f59e0b', unit: '원', strokeWidth: 1.8 },
                     ],
-                    data: weekly.map(w => ({ date: w.date, krw: w.krw })),
+                    data: weekly.map(w => ({
+                        date: w.date,
+                        krw: w.krw,
+                        eurkrw: w.eurkrw ?? (w.krw && w.eurusd ? +(w.krw * w.eurusd).toFixed(1) : null),
+                        cny10: w.cny10 ?? (w.krw && w.usdcny ? +((w.krw / w.usdcny) * 10).toFixed(1) : null),
+                        jpy100: w.jpy100 ?? (w.krw && w.usdjpy ? +((w.krw / w.usdjpy) * 100).toFixed(1) : null),
+                    })),
                     currentStats: [
-                        { label: '현재가', value: `${data.snapshot.krw?.value ?? 1329.6}원` },
-                        { label: '1주 변화', value: `${data.snapshot.krw?.chg_1w ?? -0.93}%`, isPositive: (data.snapshot.krw?.chg_1w ?? 0) > 0 },
-                        { label: '1년 변화', value: `${data.snapshot.krw?.chg_1y ?? -6.49}%`, isPositive: (data.snapshot.krw?.chg_1y ?? 0) > 0 },
-                        { label: '10년 위치', value: `${data.snapshot.krw?.pct10y ?? 69}%` }
+                        { label: '원/달러', value: `${data.snapshot.krw?.value ?? 1329.6}원`, change: `${data.snapshot.krw?.chg_1y ?? -6.49}% (1년)` },
+                        { label: '원/유로', value: `${data.snapshot.eurkrw?.value ?? 1488.2}원`, change: `${data.snapshot.eurkrw?.chg_1y ?? -2.8}% (1년)` },
+                        { label: '원/10위안', value: `${data.snapshot.cny10?.value ?? 1986.8}원`, change: `${data.snapshot.cny10?.chg_1y ?? -1.4}% (1년)` },
+                        { label: '원/100엔', value: `${data.snapshot.jpy100?.value ?? 839.7}원`, change: `${data.snapshot.jpy100?.chg_1y ?? -4.2}% (1년)` }
                     ],
-                    notice: '💡 20년치 실제 주간 환율 데이터입니다. 원/달러 환율은 수출입 펀더멘털 및 한미 금리차, 외국인 증시 수급에 의해 결정됩니다.'
+                    notice: '💡 20년치 실제 주간 환율 데이터입니다. 원/달러, 원/유로, 원/10위안, 원/100엔 모두 대한민국 원화(KRW) 기준 시세로 동일 선상에서 직관적으로 비교할 수 있습니다. 상단 지표 필터를 눌러 원하는 통화만 켜고 끌 수 있습니다.'
                 };
             case 'dxy': {
                 const dxyData = weekly.map(w => ({
@@ -679,22 +689,32 @@ export default function FxTab() {
             }
             case 'asia':
                 return {
-                    title: '아시아 주요 통화 (엔/달러 · 위안/달러 · 대만달러) 실제 환율 추이',
-                    subtitle: 'FRED 공식 DEXJPUS(엔화), DEXCHUS(위안화), DEXTAUS(대만달러) 실제 데이터 비교',
+                    title: '아시아 4대 주요 통화 (원·엔·위안·대만달러) 달러 대비 실제 환율 추이',
+                    subtitle: 'FRED 공식 DEXKOUS(원화) · DEXJPUS(엔화) · DEXCHUS(위안화) · DEXTAUS(대만달러) 뉴욕 정오 고시 실제 환율',
                     badge: '아시아 외환',
                     badgeColor: 'bg-amber-500/15 text-amber-300 border-amber-400/30',
+                    maxWidthClassName: 'max-w-5xl',
+                    rebaseOnPeriod: true,
                     series: [
-                        { key: 'usdjpy', name: '엔/달러 (엔)', color: '#f59e0b', unit: '엔', yAxisId: 'left' as const, strokeWidth: 2 },
-                        { key: 'usdcny', name: '위안/달러 (위안)', color: '#ef4444', unit: '위안', yAxisId: 'right' as const, strokeWidth: 1.8 },
-                        { key: 'usdtwd', name: '대만달러/달러', color: '#10b981', unit: 'TWD', yAxisId: 'right' as const, strokeWidth: 1.5, strokeDasharray: '3 3' }
+                        { key: 'krw', name: '원/달러 (KRW)', color: '#6366f1', unit: 'pt', strokeWidth: 2.4, rawKey: 'krw', rawUnit: '원' },
+                        { key: 'usdjpy', name: '엔/달러 (JPY)', color: '#f59e0b', unit: 'pt', strokeWidth: 2, rawKey: 'usdjpy', rawUnit: '엔' },
+                        { key: 'usdcny', name: '위안/달러 (CNY)', color: '#ef4444', unit: 'pt', strokeWidth: 1.8, rawKey: 'usdcny', rawUnit: '위안' },
+                        { key: 'usdtwd', name: '대만달러/달러 (TWD)', color: '#10b981', unit: 'pt', strokeWidth: 1.8, strokeDasharray: '4 2', rawKey: 'usdtwd', rawUnit: 'TWD' }
                     ],
-                    data: weekly.map(w => ({ date: w.date, usdjpy: w.usdjpy, usdcny: w.usdcny, usdtwd: w.usdtwd })),
+                    data: weekly.map(w => ({
+                        date: w.date,
+                        krw: w.krw,
+                        usdjpy: w.usdjpy,
+                        usdcny: w.usdcny,
+                        usdtwd: w.usdtwd,
+                    })),
                     currentStats: [
-                        { label: '엔/달러', value: `${data.snapshot.asia?.find(c => c.key === 'usdjpy')?.value ?? 158.34}엔` },
-                        { label: '위안/달러', value: `${data.snapshot.asia?.find(c => c.key === 'usdcny')?.value ?? 6.692}위안` },
-                        { label: '원/100엔', value: `${data.snapshot.jpy100?.value ?? 847.63}원` }
+                        { label: '원/달러', value: `${data.snapshot.krw?.value ?? 1329.6}원`, change: `${data.snapshot.krw?.chg_1y ?? -6.49}%` },
+                        { label: '엔/달러', value: `${data.snapshot.asia?.find(c => c.key === 'usdjpy')?.value ?? 158.34}엔`, change: `${data.snapshot.asia?.find(c => c.key === 'usdjpy')?.chg_1y ?? 3.46}%` },
+                        { label: '위안/달러', value: `${data.snapshot.asia?.find(c => c.key === 'usdcny')?.value ?? 6.692}위안`, change: `${data.snapshot.asia?.find(c => c.key === 'usdcny')?.chg_1y ?? -6.11}%` },
+                        { label: '대만달러', value: `${data.snapshot.asia?.find(c => c.key === 'usdtwd')?.value ?? 31.94}TWD`, change: `${data.snapshot.asia?.find(c => c.key === 'usdtwd')?.chg_1y ?? 4.65}%` }
                     ],
-                    notice: '💡 엔/달러는 좌측 Y축(엔), 위안화 및 대만달러는 우측 Y축에 각각 최적 스케일로 표시됩니다.'
+                    notice: '💡 모든 통화는 미국 달러 대비 환율이며, 선택 기간 시작점(Base=100)을 기준으로 정규화하여 4대 아시아 통화의 달러 대비 상대 약세·강세 흐름을 왜곡 없이 동일 선상에서 비교합니다. 툴팁에서 실제 환율 수치(원, 엔, 위안, TWD)를 함께 확인하실 수 있습니다.'
                 };
             case 'spread10':
                 return {

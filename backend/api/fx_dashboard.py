@@ -219,7 +219,10 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
         {"date": idx.strftime("%Y-%m-%d"), "krw": _r(r.krw, 1), "dxy": _r(r.dxy), "us10": _r(r.us10),
          "kr10": _r(r.kr10), "spread10": _r(r.spread10), "usdjpy": _r(r.usdjpy, 2), "eurusd": _r(r.eurusd, 4),
          "gbpusd": _r(r.gbpusd, 4), "usdcad": _r(r.usdcad, 4), "usdsek": _r(r.usdsek, 4), "usdchf": _r(r.usdchf, 4),
-         "usdcny": _r(r.usdcny, 3), "usdtwd": _r(r.usdtwd, 2), "vix": _r(r.vix), "kospi": _r(r.kospi, 0)}
+         "usdcny": _r(r.usdcny, 3), "usdtwd": _r(r.usdtwd, 2), "vix": _r(r.vix), "kospi": _r(r.kospi, 0),
+         "jpy100": _r((r.krw / r.usdjpy * 100), 1) if not pd.isna(r.krw) and not pd.isna(r.usdjpy) and r.usdjpy > 0 else None,
+         "cny10": _r((r.krw / r.usdcny * 10), 1) if not pd.isna(r.krw) and not pd.isna(r.usdcny) and r.usdcny > 0 else None,
+         "eurkrw": _r((r.krw * r.eurusd), 1) if not pd.isna(r.krw) and not pd.isna(r.eurusd) and r.eurusd > 0 else None}
         for idx, r in wk.iterrows() if not pd.isna(r.krw)
     ]
 
@@ -265,6 +268,12 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
         snapshot["asia"] = asia
     if not cross_jpy.empty:  # 엔화 자산·여행용 참고 숫자
         snapshot["jpy100"] = {"value": _r(cross_jpy.iloc[-1]), "chg_1y": _change(cross_jpy, 365)}
+    cross_cny10 = (fred_krw / cny * 10).dropna() if not fred_krw.empty and not cny.empty else pd.Series(dtype=float)
+    cross_eur = (fred_krw * eur).dropna() if not fred_krw.empty and not eur.empty else pd.Series(dtype=float)
+    if not cross_cny10.empty:
+        snapshot["cny10"] = {"value": _r(cross_cny10.iloc[-1], 1), "chg_1y": _change(cross_cny10, 365)}
+    if not cross_eur.empty:
+        snapshot["eurkrw"] = {"value": _r(cross_eur.iloc[-1], 1), "chg_1y": _change(cross_eur, 365)}
     if not us10.empty and not kr10.empty:
         hist = wk["spread10"].dropna()
         ago = hist[hist.index <= hist.index[-1] - timedelta(days=365)] if not hist.empty else hist
