@@ -19,7 +19,8 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-MOLIT_TRADE_API_BASE = "http://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev"
+MOLIT_TRADE_API_BASE = "http://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade"
+MOLIT_TRADE_API_DEV_BASE = "http://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev"
 MOLIT_RENT_API_BASE = "http://apis.data.go.kr/1613000/RTMSDataSvcAptRent/getRTMSDataSvcAptRent"
 
 # 수도권(경기/인천) 13대 거점 법정동 시군구코드 (LAWD_CD) 매핑
@@ -301,20 +302,24 @@ class MolitRealEstateCollector:
             "numOfRows": "100"
         }
 
+        endpoints = [MOLIT_TRADE_API_BASE, MOLIT_TRADE_API_DEV_BASE]
+
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                res = await client.get(MOLIT_TRADE_API_BASE, params=params)
-                if res.status_code == 200:
-                    items = self.parse_molit_xml(res.text)
-                    if items:
-                        self._has_successful_live_fetch = True
-                    return items
-                elif res.status_code == 403:
-                    self._last_error = "SERVICE_KEY_IS_NOT_REGISTERED_ERROR (403)"
-                    logger.warning(f"MOLIT Trade API 403: {self._last_error}")
-                else:
-                    self._last_error = f"HTTP_{res.status_code}"
-                    logger.warning(f"MOLIT Trade API HTTP {res.status_code} for LAWD_CD {lawd_cd}")
+                for ep in endpoints:
+                    res = await client.get(ep, params=params)
+                    if res.status_code == 200:
+                        items = self.parse_molit_xml(res.text)
+                        if items:
+                            self._has_successful_live_fetch = True
+                            self._last_error = None
+                            return items
+                    elif res.status_code == 403:
+                        self._last_error = "SERVICE_KEY_IS_NOT_REGISTERED_ERROR (403)"
+                        logger.warning(f"MOLIT Trade API 403 on {ep}: {self._last_error}")
+                    else:
+                        self._last_error = f"HTTP_{res.status_code}"
+                        logger.warning(f"MOLIT Trade API HTTP {res.status_code} on {ep} for LAWD_CD {lawd_cd}")
         except Exception as e:
             self._last_error = str(e)
             logger.error(f"Error calling MOLIT Trade API for {lawd_cd}: {e}")
