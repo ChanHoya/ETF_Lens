@@ -33,6 +33,7 @@ from api.midterm_election import router as midterm_election_router
 from api.oil_dashboard import router as oil_dashboard_router
 from api.real_estate import router as real_estate_router
 from api.telegram_bot import router as telegram_bot_router
+from api.portfolio_vitamin import router as portfolio_vitamin_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -365,6 +366,7 @@ app.include_router(midterm_election_router, prefix="/api/v1/midterm")
 app.include_router(oil_dashboard_router, prefix="/api/v1/oil")
 app.include_router(real_estate_router, prefix="/api/v1")
 app.include_router(telegram_bot_router, prefix="/api/v1")
+app.include_router(portfolio_vitamin_router)
 
 
 @app.get("/health")

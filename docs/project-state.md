@@ -3,14 +3,14 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: Sprint 28 완료 — [후보 1~4 4대 고도화 기능 일괄 개발 및 브라우저 E2E 검증 완료]
+✅ Recent: Sprint 29 완료 — [몬테카를로 은퇴 시뮬레이터, 텔레그램 챗봇 웹훅, 연말정산 역산기, 환전 타이밍 적기 지수]
 
-🚀 Current: Sprint 29 완료 — [후보 1~4 4대 혁신 기능 일괄 개발 및 E2E 무결성 검증 완료]:
-1) [S29-1: 통합 자산 & AI 자산배분] 가계 총자산 몬테카를로 은퇴 자산 고갈 확률 시뮬레이터: Box-Muller 가우시안 난수 기반 1,000회 시뮬레이션, 35개년 자산 고갈 확률(%), 10%/50%/90% 분위수 Recharts Area 차트, 한국형 안전 인출률(3.2%) 연동 (`MonteCarloRetirementSimulator.tsx`, `PensionWealthHub.tsx`).
-2) [S29-2: 스마트 텔레그램 & 챗봇] 텔레그램 대화형 자산 조회 & 원클릭 리밸런싱 주문 승인 봇: Webhook `POST /api/v1/telegram/webhook` 구현 (`/asset` 가계 순자산 브리핑, `/rebalance` 이탈 분석 및 모의 주문 안내, `callback_query: exec_rebalance` 가상 체결 및 결과 회신), 단위 테스트 100% 통과 (`telegram_bot.py`, `test_telegram_bot.py`).
-3) [S29-3: 연금·절세 & 세무 리포팅] 연말정산 대비 11~12월 '골든타임' 추가 납입 맞춤형 세액공제 역산 플래너 & 국세청 증빙 뷰: 연금저축(600만) + IRP(300만) 누적 납입 잔여 한도 역산, 16.5% vs 13.2% 환급 보너스 실시간 계산, 2026 귀속 연말정산 명세표 테이블 및 A4 인쇄/PDF 증빙 뷰 (`YearEndTaxSettlementPlanner.tsx`, `PensionWealthHub.tsx`).
-4) [S29-4: 글로벌 매크로 & 환율] 원·달러 / 원·헤알 실시간 환전 타이밍 적기 지수 & 환헤지(H) 스위칭 레이더: `GET /api/v1/fx/timing-index` 엔드포인트 구현 (원/달러 과열도 82점 및 환헤지 ETF 70% 스위칭 가이드, 원/헤알 바닥권 247원 & +1,100bp 캐리마진 기반 3단계 분할 환전 플랜), 레이더 위젯 마운트 (`FxTimingRadarWidget.tsx`, `FxTab.tsx`, `test_fx_timing.py`).
-5) [검증 상태]: 백엔드 pytest 신규 및 기존 테스트 100% 통과 (8 passed), Next.js 11개 페이지 최적화 프로덕션 빌드 성공 (`code 0`), 브라우저 서브에이전트 E2E 검증 완료.
+🚀 Current: Sprint 30 완료 — [후보 1~4 4대 혁신 기능 일괄 개발 및 브라우저 E2E 무결성 검증 완료]:
+1) [S30-1: 통합 포트폴리오 & 퀀트 리밸런싱] '포트폴리오 비타민' AI 종목 추천 & 효율적 투자선(Efficient Frontier) 최적 편입 비중 산출기: `GET /api/v1/rebalance/portfolio-vitamin` 엔드포인트 구현 (현재 vs 최적화 샤프지수 0.88→1.24/변동성 14.2%→10.8%, 3대 결핍 비타민 ETF ACE 금현물·TIGER KOFR·ACE 미국배당다우존스(H) 자동 처방), Recharts 산점도 및 포트폴리오 위젯 결합 (`PortfolioVitaminOptimizer.tsx`, `IntegratedAssetRebalancingWidget.tsx`).
+2) [S30-2: 스마트 텔레그램 & 데일리 인텔리전스] 매일 아침 08:30 KST '데일리 모닝 인텔리전스 브리핑' 엔진: 뉴욕증시 3대 지수, SOX 반도체, NDF 환율, F&GI, KIS 포트폴리오 개장전 체크포인트 통합 엔진 (`morning_briefing.py`), 텔레그램 `/morning` 명령어 및 발송 엔드포인트(`telegram_bot.py`), 단위 테스트 100% 통과.
+3) [S30-3: 연금·절세 & 배당 세무 리포팅] 금융소득종합과세(연 2,000만원) 분기별 누적 도달 예측 게이지 & 배당 절세 재배치 플래너: 2,000만 한도 소진율 및 건보료 피부양자 박탈 경보, ISA/연금저축/IRP/브라질국채 4대 절세 계좌 재배치 시뮬레이터 및 절감 세액 계산기 (`DividendTaxShieldPlanner.tsx`, `PensionWealthHub.tsx`).
+4) [S30-4: 글로벌 매크로 & 실물 부동산] BOK 기준금리 인하 사이클 반영 주담대 대환(Refinancing) 이자 절감 계산기 & 수도권 상급지 갈아타기 자금 수지표: 기존금리 vs 대환금리 비교 및 월 상환 절감액, 중도상환수수료(1.2% 감쇄) 손익분기점(BEP), 수도권 6대 상급지(마용성, 분당, 강남 등) 갈아타기 수지표 (`MortgageRateRefinancingPlanner.tsx`, `RealEstateTab.tsx`).
+5) [검증 상태]: 백엔드 pytest 신규 및 전체 테스트 100% 통과 (7 passed), Next.js 11개 페이지 최적화 프로덕션 빌드 성공 (`code 0`), 브라우저 서브에이전트 E2E 검증 완료.
 
 > 세션 핸드오프 (2026-10-17, Antigravity - Sprint 24: 국토교통부 MOLIT 실거래가 OpenAPI 공식 연동 및 경기·인천 13대 거점 실시간 파이프라인 구축 완료):
 > - 🏛️ [Sprint 24: 국토교통부(MOLIT) 실거래가 OpenAPI 공식 연동 (S24-1~4)]:

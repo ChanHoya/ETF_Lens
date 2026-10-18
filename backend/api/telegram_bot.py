@@ -16,6 +16,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException
 from pydantic import BaseModel
 
 from core.notifier import send_telegram_message
+from core.morning_briefing import generate_morning_briefing_data, format_morning_briefing_message
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,7 @@ async def handle_telegram_webhook(req: Request):
             if chat_id:
                 await send_telegram_message(
                     text=feedback_msg,
-                    chat_id=str(chat_id),
+                    test_chat_id=str(chat_id),
                     reply_markup=reply_markup
                 )
             return {"ok": True, "action": "rebalance_executed"}
@@ -108,7 +109,7 @@ async def handle_telegram_webhook(req: Request):
                 ]
             ]
         }
-        await send_telegram_message(text=asset_msg, chat_id=chat_id_str, reply_markup=reply_markup)
+        await send_telegram_message(text=asset_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
         return {"ok": True, "command": "asset"}
 
     # 2-2. /rebalance 또는 /리밸런싱: 포트폴리오 정렬 진단 및 가상 체결 승인 버튼
@@ -130,14 +131,28 @@ async def handle_telegram_webhook(req: Request):
                 [{"text": "📊 대시보드에서 세부 조정", "url": "http://localhost:3005/my?tab=rebalance"}]
             ]
         }
-        await send_telegram_message(text=rebalance_msg, chat_id=chat_id_str, reply_markup=reply_markup)
+        await send_telegram_message(text=rebalance_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
         return {"ok": True, "command": "rebalance"}
 
-    # 2-3. 기본 도움말
+    # 2-3. /morning 또는 /모닝: 데일리 모닝 인텔리전스 브리핑
+    elif text.startswith("/morning") or text.startswith("/모닝"):
+        b_data = generate_morning_briefing_data()
+        morning_msg = format_morning_briefing_message(b_data)
+        reply_markup = {
+            "inline_keyboard": [
+                [{"text": "📊 대시보드 바로가기", "url": "http://localhost:3005"}],
+                [{"text": "⚡ 1-Click 포트폴리오 진단", "callback_data": "exec_rebalance"}]
+            ]
+        }
+        await send_telegram_message(text=morning_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
+        return {"ok": True, "command": "morning", "data": b_data}
+
+    # 2-4. 기본 도움말
     else:
         help_msg = (
             f"🤖 <b>[i-Prism] 스마트 자산관리 텔레그램 봇</b>\n\n"
             f"사용 가능한 명령어:\n"
+            f"• <code>/morning</code>: 아침 08:30 뉴욕 마감 & 개장전 체크포인트 브리핑\n"
             f"• <code>/asset</code>: 가계 총 순자산 및 사분면 진단 브리핑\n"
             f"• <code>/rebalance</code>: 목표 비중 이탈 분석 및 원클릭 모의 주문\n\n"
             f"문의나 상세 대시보드는 아래 버튼을 이용하세요."
@@ -147,5 +162,27 @@ async def handle_telegram_webhook(req: Request):
                 [{"text": "🌐 i-Prism 웹 대시보드 바로가기", "url": "http://localhost:3005"}]
             ]
         }
-        await send_telegram_message(text=help_msg, chat_id=chat_id_str, reply_markup=reply_markup)
+        await send_telegram_message(text=help_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
         return {"ok": True, "command": "help"}
+
+
+@router.post("/send-morning-briefing")
+async def send_morning_briefing_endpoint():
+    """
+    아침 08:30 KST 데일리 모닝 인텔리전스 브리핑 트리거 (스케줄러 또는 수동 실행)
+    """
+    b_data = generate_morning_briefing_data()
+    msg = format_morning_briefing_message(b_data)
+    reply_markup = {
+        "inline_keyboard": [
+            [{"text": "📊 i-Prism 대시보드 바로가기", "url": "http://localhost:3005"}],
+            [{"text": "⚡ 포트폴리오 리밸런싱 확인", "callback_data": "exec_rebalance"}]
+        ]
+    }
+    sent = await send_telegram_message(text=msg, reply_markup=reply_markup)
+    return {
+        "status": "success",
+        "sent": sent,
+        "briefing": b_data,
+        "formatted_message": msg
+    }

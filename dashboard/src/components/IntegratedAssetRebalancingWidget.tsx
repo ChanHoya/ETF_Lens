@@ -9,6 +9,7 @@ import {
 import { getApiBase } from '@/lib/apiConfig';
 import { NumberPopIn } from './common/NumberPopIn';
 import IntegratedAssetReportModal from './IntegratedAssetReportModal';
+import PortfolioVitaminOptimizer from './portfolio/PortfolioVitaminOptimizer';
 
 interface IntegratedAssetProps {
   financialNetWorth: number;     // 주식/ETF + 현금 예수금 (원)
@@ -500,6 +501,11 @@ export default function IntegratedAssetRebalancingWidget({
               <span className="font-semibold text-gray-200">{diagnosis.desc} </span>
               <span className="text-indigo-300 font-medium">{diagnosis.advice}</span>
             </div>
+          </div>
+
+          {/* S30-1: 포트폴리오 비타민 AI 종목 추천 & 효율적 투자선 최적화 */}
+          <div className="mt-4">
+            <PortfolioVitaminOptimizer />
           </div>
         </div>
       </div>

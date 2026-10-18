@@ -5,7 +5,7 @@ import {
   ShieldCheck, TrendingUp, Calculator, PiggyBank,
   AlertTriangle, Calendar, DollarSign, Layers, Sparkles,
   ArrowUpRight, ArrowRight, CheckCircle2, Info, ChevronRight,
-  Flame, HeartHandshake, Zap, Scale, ShieldAlert
+  Flame, HeartHandshake, Zap, Scale, ShieldAlert, Coins
 } from 'lucide-react';
 import {
   ResponsiveContainer, AreaChart, Area, LineChart, Line,
@@ -23,9 +23,10 @@ import IsaPensionConversionSimulator from '@/components/pension/IsaPensionConver
 import PensionWaterfallShieldPlanner from '@/components/pension/PensionWaterfallShieldPlanner';
 import MonteCarloRetirementSimulator from '@/components/pension/MonteCarloRetirementSimulator';
 import YearEndTaxSettlementPlanner from '@/components/pension/YearEndTaxSettlementPlanner';
+import DividendTaxShieldPlanner from '@/components/pension/DividendTaxShieldPlanner';
 
 function PensionWealthHubInner() {
-  const [activeSubTab, setActiveSubTab] = useState<'tax' | 'nps' | 'withdrawal' | 'shield' | 'isa_withdrawal' | 'monte_carlo'>('tax');
+  const [activeSubTab, setActiveSubTab] = useState<'tax' | 'nps' | 'withdrawal' | 'shield' | 'isa_withdrawal' | 'monte_carlo' | 'dividend_shield'>('tax');
 
   // ── 서브탭 1 상태: 연금 3총사 절세 ─────────────────────────────────────
   const [incomeLevel, setIncomeLevel] = useState<'under55' | 'over55'>('under55');
@@ -215,6 +216,18 @@ function PensionWealthHubInner() {
           >
             <TrendingUp className="w-4 h-4 text-emerald-400" />
             <span>6. 몬테카를로 은퇴 자산 고갈 확률 (1,000회)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('dividend_shield')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
+              activeSubTab === 'dividend_shield'
+                ? 'bg-gradient-to-r from-emerald-500 via-teal-600 to-indigo-600 text-white shadow-lg shadow-emerald-500/25 ring-1 ring-emerald-400/50'
+                : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+            }`}
+          >
+            <Coins className="w-4 h-4 text-amber-400" />
+            <span>7. 금융소득종합과세(2천만) 누적 & 배당 절세 플래너</span>
           </button>
         </div>
       </div>
@@ -965,6 +978,13 @@ function PensionWealthHubInner() {
       {activeSubTab === 'monte_carlo' && (
         <div className="flex flex-col gap-5">
           <MonteCarloRetirementSimulator />
+        </div>
+      )}
+
+      {/* ── [서브탭 7] 금융소득종합과세(2천만) 누적 & 배당 절세 플래너 ─────────── */}
+      {activeSubTab === 'dividend_shield' && (
+        <div className="flex flex-col gap-5">
+          <DividendTaxShieldPlanner />
         </div>
       )}
 
