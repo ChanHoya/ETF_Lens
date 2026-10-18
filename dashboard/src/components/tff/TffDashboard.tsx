@@ -591,8 +591,101 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                     </p>
                 </div>
 
-                {/* 제어 컨트롤 버튼들 — 항상 오른쪽 상단에 고정 */}
+                {/* 제어 컨트롤 버튼들 — 오른쪽 상단에 적절하게 재배치 */}
                 <div className="flex flex-row items-center gap-2 flex-wrap">
+                    {/* 현 시점 추정 시뮬레이션 스무스 토글 스위치 */}
+                    {fundData && (
+                        <div className="relative group">
+                            <button
+                                onClick={() => estimateBuilt && setUseEstimate(v => !v)}
+                                disabled={!estimateBuilt}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border whitespace-nowrap select-none ${
+                                    !estimateBuilt
+                                        ? 'bg-white/5 text-gray-500 border-white/5 cursor-wait'
+                                        : useEstimate
+                                            ? 'bg-gradient-to-r from-amber-500/20 to-orange-600/20 text-amber-200 border-amber-400/50 shadow-[0_0_14px_rgba(245,158,11,0.2)]'
+                                            : 'bg-white/[0.03] text-gray-400 border-white/10 hover:bg-white/[0.06] hover:text-gray-200'
+                                }`}
+                            >
+                                {!estimateBuilt ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-500" />
+                                ) : (
+                                    <Sparkles className={`w-3.5 h-3.5 transition-colors ${useEstimate ? 'text-amber-400 animate-pulse' : 'text-gray-400'}`} />
+                                )}
+                                <span>
+                                    {estimateBuilt
+                                        ? (() => {
+                                            const parts = (estimateBuilt.asOf || '').split('-');
+                                            const label = parts.length === 3 ? `${parseInt(parts[1],10)}월 ${parseInt(parts[2],10)}일` : '현재';
+                                            return `현시점(${label}) 추정 시뮬레이션`;
+                                        })()
+                                        : '추정 시뮬레이션 준비중...'}
+                                </span>
+                                {estimateBuilt && (
+                                    <span className={`w-8 h-4.5 rounded-full p-0.5 transition-colors flex items-center ${useEstimate ? 'bg-amber-500' : 'bg-gray-700/80'}`}>
+                                        <span
+                                            className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform duration-300 ${useEstimate ? 'translate-x-3.5' : 'translate-x-0'}`}
+                                            style={{ transitionTimingFunction: 'var(--t-ease-spring)' }}
+                                        />
+                                    </span>
+                                )}
+                            </button>
+
+                            {/* 마우스 오버 설명 팝업 */}
+                            <div className="absolute right-0 top-full mt-2 w-72 p-3 rounded-xl bg-[#0f0f17] border border-amber-500/30 shadow-2xl text-[11px] leading-relaxed text-gray-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                                <div className="flex items-center gap-1.5 mb-1.5 text-amber-300 font-bold">
+                                    <Sparkles className="w-3 h-3" />
+                                    현 시점 추정 시뮬레이션
+                                </div>
+                                전일 종가(분배금 등은 제외) 기준으로 시뮬레이션한 정보를 반영해서 보여줍니다.
+                            </div>
+                        </div>
+                    )}
+
+                    {fundData && <div className="h-4 w-[1px] bg-white/10 hidden sm:block" />}
+
+                    {/* 1-Page 월간 팩트시트 모달 버튼 */}
+                    <button
+                        onClick={() => setShowFactsheetModal(true)}
+                        className="flex flex-row items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-300 hover:text-amber-200 bg-amber-950/30 hover:bg-amber-900/40 rounded-xl transition-colors border border-amber-900/50 backdrop-blur-md shadow-sm"
+                        title="10인 멤버 브리핑용 1-Page 월간 팩트시트 및 카톡 공지 생성"
+                    >
+                        <FileText className="w-3.5 h-3.5 text-amber-400" /> 1-Page 팩트시트
+                    </button>
+
+                    {/* 히스토리 버튼 */}
+                    {(historyRecords.length > 0 || fundData) && (
+                        <button
+                            onClick={() => setShowHistory(true)}
+                            className="flex flex-row items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-sky-300 hover:text-sky-200 bg-sky-950/30 hover:bg-sky-900/40 rounded-xl transition-colors border border-sky-900/50 backdrop-blur-md shadow-sm"
+                            title="업로드 히스토리 관리 및 비교"
+                        >
+                            <History className="w-3.5 h-3.5" /> 히스토리 ({historyRecords.length})
+                        </button>
+                    )}
+
+                    {/* 마스터 권한용 업로드 및 비우기 버튼 */}
+                    {isAdmin && (
+                        <>
+                            <button
+                                onClick={() => setShowUploadModal(true)}
+                                className="flex flex-row items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:text-emerald-200 bg-emerald-950/30 hover:bg-emerald-900/40 rounded-xl transition-colors border border-emerald-900/50 backdrop-blur-md shadow-sm"
+                                title="새 엑셀 파일 업로드 화면 열기"
+                            >
+                                <UploadCloud className="w-3.5 h-3.5" /> 업로드
+                            </button>
+                            {fundData && (
+                                <button
+                                    onClick={handleClearData}
+                                    className="flex flex-row items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-300 hover:text-red-200 bg-red-950/30 hover:bg-red-900/40 rounded-xl transition-colors border border-red-900/50 backdrop-blur-md shadow-sm"
+                                    title="화면 일시적 비우기"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" /> 비우기
+                                </button>
+                            )}
+                        </>
+                    )}
+
                     {/* 마스터 권한 배지 / 버튼 */}
                     {isAdmin ? (
                         <div className="flex items-center gap-1">
@@ -604,68 +697,25 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                 className="p-1.5 text-gray-400 hover:text-red-400 bg-white/5 hover:bg-red-950/20 rounded-xl border border-white/10 hover:border-red-900 transition-colors"
                                 title="마스터 로그아웃"
                             >
-                                <LogOut className="w-4 h-4" />
+                                <LogOut className="w-3.5 h-3.5" />
                             </button>
                         </div>
                     ) : (
                         <button
                             onClick={openPasscodeModal}
-                            className="flex flex-row items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors border border-white/5 backdrop-blur-md shadow-sm"
+                            className="flex flex-row items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors border border-white/5 backdrop-blur-md shadow-sm"
                             title="마스터 패스코드 인증"
                         >
                             <Lock className="w-3.5 h-3.5 text-amber-400" /> 마스터 로그인
                         </button>
                     )}
-
-                    {/* 1-Page 월간 팩트시트 모달 버튼 */}
-                    <button
-                        onClick={() => setShowFactsheetModal(true)}
-                        className="flex flex-row items-center gap-1.5 px-3 py-2 text-xs font-bold text-amber-300 hover:text-amber-200 bg-amber-950/30 hover:bg-amber-900/40 rounded-xl transition-colors border border-amber-900/50 backdrop-blur-md shadow-sm"
-                        title="10인 멤버 브리핑용 1-Page 월간 팩트시트 및 카톡 공지 생성"
-                    >
-                        <FileText className="w-4 h-4 text-amber-400" /> 1-Page 팩트시트
-                    </button>
-
-                    {/* 히스토리 버튼 */}
-                    {(historyRecords.length > 0 || fundData) && (
-                        <button
-                            onClick={() => setShowHistory(true)}
-                            className="flex flex-row items-center gap-1.5 px-3 py-2 text-xs font-bold text-sky-300 hover:text-sky-200 bg-sky-950/30 hover:bg-sky-900/40 rounded-xl transition-colors border border-sky-900/50 backdrop-blur-md shadow-sm"
-                            title="업로드 히스토리 관리 및 비교"
-                        >
-                            <History className="w-4 h-4" /> 히스토리 ({historyRecords.length})
-                        </button>
-                    )}
-
-                    {/* 마스터 권한용 업로드 및 비우기 버튼 */}
-                    {isAdmin && (
-                        <>
-                            <button
-                                onClick={() => setShowUploadModal(true)}
-                                className="flex flex-row items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-300 hover:text-emerald-200 bg-emerald-950/30 hover:bg-emerald-900/40 rounded-xl transition-colors border border-emerald-900/50 backdrop-blur-md shadow-sm"
-                                title="새 엑셀 파일 업로드 화면 열기"
-                            >
-                                <UploadCloud className="w-4 h-4" /> 업로드
-                            </button>
-                            {fundData && (
-                                <button
-                                    onClick={handleClearData}
-                                    className="flex flex-row items-center gap-1.5 px-3 py-2 text-xs font-bold text-red-300 hover:text-red-200 bg-red-950/30 hover:bg-red-900/40 rounded-xl transition-colors border border-red-900/50 backdrop-blur-md shadow-sm"
-                                    title="화면 일시적 비우기"
-                                >
-                                    <Trash2 className="w-4 h-4" /> 비우기
-                                </button>
-                            )}
-                        </>
-                    )}
                 </div>
             </div>
 
-            {/* 헤더 2행: 탭 내비게이션 (데이터 있을 때만) */}
+            {/* 헤더 2행: 탭 내비게이션 (종목분석/시장동향과 동일한 캡슐형 스타일 및 크기) */}
             {fundData && (
-                <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 relative z-20 px-0 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                    {/* 좌우 스크롤 가능한 탭 컨테이너 (오른쪽 선택 박스에 가려지지 않도록 min-w-0 및 overflow-x-auto, whitespace-nowrap 적용) */}
-                    <div className="flex-1 min-w-0 overflow-x-auto custom-scrollbar scrollbar-thin scrollbar-thumb-slate-700/60 pb-1.5 touch-pan-x">
+                <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-4 relative z-20">
+                    <div className="bg-transparent px-3 py-1 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide max-w-full">
                         <SlidingTabs
                             items={[
                                 { id: 'overview', label: '포트폴리오 현황' },
@@ -682,58 +732,11 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                             ]}
                             activeId={activeSubTab}
                             onChange={(id) => setActiveSubTab(id as any)}
-                            containerClassName="inline-flex flex-nowrap min-w-max gap-1 select-none"
-                            tabClassName="px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap shrink-0"
-                            pillClassName="bg-sky-500/20 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.2)] border border-sky-500/40"
-                            inactiveTabClassName="text-gray-400 hover:text-gray-200"
+                            pillClassName="bg-white/20 shadow-inner border border-white/20"
+                            tabClassName="text-sm md:text-[15px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
+                            activeTabClassName="text-white"
+                            inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
                         />
-                    </div>
-
-                    {/* 현 시점 추정 시뮬레이션 스무스 토글 스위치 (오른쪽 독립 유지) */}
-                    <div className="relative group flex-shrink-0 self-end md:self-center">
-                        <button
-                            onClick={() => estimateBuilt && setUseEstimate(v => !v)}
-                            disabled={!estimateBuilt}
-                            className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border whitespace-nowrap select-none ${
-                                !estimateBuilt
-                                    ? 'bg-white/5 text-gray-500 border-white/5 cursor-wait'
-                                    : useEstimate
-                                        ? 'bg-gradient-to-r from-amber-500/20 to-orange-600/20 text-amber-200 border-amber-400/50 shadow-[0_0_14px_rgba(245,158,11,0.2)]'
-                                        : 'bg-white/[0.03] text-gray-400 border-white/10 hover:bg-white/[0.06] hover:text-gray-200'
-                            }`}
-                        >
-                            {!estimateBuilt ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-500" />
-                            ) : (
-                                <Sparkles className={`w-3.5 h-3.5 transition-colors ${useEstimate ? 'text-amber-400 animate-pulse' : 'text-gray-400'}`} />
-                            )}
-                            <span>
-                                {estimateBuilt
-                                    ? (() => {
-                                        const parts = (estimateBuilt.asOf || '').split('-');
-                                        const label = parts.length === 3 ? `${parseInt(parts[1],10)}월 ${parseInt(parts[2],10)}일` : '현재';
-                                        return `현시점(${label}) 추정 시뮬레이션`;
-                                    })()
-                                    : '추정 시뮬레이션 준비중 (최대 수분 소요) ...'}
-                            </span>
-                            {estimateBuilt && (
-                                <span className={`w-9 h-5 rounded-full p-0.5 transition-colors flex items-center ${useEstimate ? 'bg-amber-500' : 'bg-gray-700/80'}`}>
-                                    <span
-                                        className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${useEstimate ? 'translate-x-4' : 'translate-x-0'}`}
-                                        style={{ transitionTimingFunction: 'var(--t-ease-spring)' }}
-                                    />
-                                </span>
-                            )}
-                        </button>
-
-                        {/* 마우스 오버 설명 팝업 */}
-                        <div className="absolute right-0 top-full mt-2 w-72 p-3 rounded-xl bg-[#0f0f17] border border-amber-500/30 shadow-2xl text-[11px] leading-relaxed text-gray-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
-                            <div className="flex items-center gap-1.5 mb-1.5 text-amber-300 font-bold">
-                                <Sparkles className="w-3 h-3" />
-                                현 시점 추정 시뮬레이션
-                            </div>
-                            전일 종가(분배금 등은 제외) 기준으로 시뮬레이션한 정보를 반영해서 보여줍니다.
-                        </div>
                     </div>
                 </div>
             )}

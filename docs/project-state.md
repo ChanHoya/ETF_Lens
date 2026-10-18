@@ -5,12 +5,15 @@
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 ✅ Recent: Sprint 31 완료 — [TFF 공동 펀드 전용 3대 기능 고도화 & UI/UX 레이아웃 최적화 완료]
 
-🚀 Current: Sprint 32 완료 — [10인 균등 적립 + 배당 100% 재투자 맞춤 TFF 공동 펀드 브리핑 & 운용 고도화 4대 패키지 개발 완료]:
-1) [S32-1: 10인 공동 펀드 1-Page 월간 팩트시트] 모바일/A4 인쇄 최적화 팩트시트 모달: 1인당 평가액(총자산 ÷ 10), 1인당 누적 손익, Top 5 편입 비중, 자산배분 파이, 매니저 운용 총평(로컬 저장), 카톡 공지 원클릭 복사, A4/PDF 인쇄 지원 (`TffMonthlyFactsheetModal.tsx`).
-2) [S32-2: 벤치마크 상대 성과 & 초과수익(Alpha) 트래커] TFF 펀드 vs KOSPI vs S&P 500 오버레이 차트: 누적 초과수익률(Alpha %p), 승률(Win Rate 80%), 시장 방어력(Beta 0.68), 월별 Alpha 바 차트 및 대조표 완비 (`TffBenchmarkAlphaView.tsx`).
-3) [S32-3: 월간 100만 원 적립식(DCA) + 배당금 100% 재투자 매수 플래너] 10인 적립금(100만 원) + 보유 ETF 배당금 풀 자동 합산, 포트폴리오 목표 비중 역산 기반 비중 미달(Underweight) 종목 자동 선별, 권장 매수 수량(주) 및 소요액 산출, HTS/MTS 실전 매수 체크리스트 (`TffDcaReinvestmentPlanner.tsx`).
-4) [S32-4: 10인 시중 정기적금(연 3.5%) 대비 TFF 펀드 초과 수익 인포그래픽] 10인 총 납입 원금 vs 시중 적금 세후 수령액 vs TFF 펀드 실질 순자산 누적 성장 궤적 Area 차트, 적금 대비 초과 창출 성과(+245만 원, 1인당 +24.5만 원 보너스) 및 연환산 추가수익률 인포그래픽 (`TffDcaSavingsComparison.tsx`).
-5) [검증 상태]: Next.js 16.1.6 11개 전 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 검증 통과 (팩트시트 모달, 3대 뷰 렌더링 확인).
+🚀 Current: Sprint 32 완료 & UI/UX 최적화 — [TFF 공동 펀드 서브메뉴 & 제어 버튼 재배치 및 브리핑 4대 패키지]:
+1) [UI/UX 최적화: TFF 서브메뉴 & 제어 버튼 재배치]
+   - 종목분석/시장동향 탭과 100% 동일한 캡슐형 둥근 테두리(`rounded-full border border-white/20`) 및 폰트/버튼 규격(`text-sm md:text-[15px] font-bold px-3 py-1`) 적용.
+   - 기존 서브메뉴 줄 우측의 `현시점 추정 시뮬레이션` 토글 스위치를 상단 헤더 우측(`[시뮬레이션] | [팩트시트] [히스토리] [마스터 로그인]`)으로 이동 통합하여 11개 서브탭 공간 확보 및 일관된 글로벌 제어 바 구축.
+2) [S32-1: 10인 공동 펀드 1-Page 월간 팩트시트] 모바일/A4 인쇄 최적화 팩트시트 모달: 1인당 평가액, 1인당 누적 손익, Top 5 편입 비중, 자산배분 파이, 매니저 운용 총평(로컬 저장), 카톡 공지 원클릭 복사, A4/PDF 인쇄 지원 (`TffMonthlyFactsheetModal.tsx`).
+3) [S32-2: 벤치마크 상대 성과 & 초과수익(Alpha) 트래커] TFF 펀드 vs KOSPI vs S&P 500 오버레이 차트: 누적 초과수익률(Alpha %p), 승률(Win Rate 80%), 시장 방어력(Beta 0.68), 월별 Alpha 바 차트 및 대조표 완비 (`TffBenchmarkAlphaView.tsx`).
+4) [S32-3: 월간 100만 원 적립식(DCA) + 배당금 100% 재투자 매수 플래너] 10인 적립금 + 보유 ETF 배당금 풀 자동 합산, 포트폴리오 목표 비중 역산 기반 비중 미달 종목 자동 선별, 권장 매수 수량 및 소요액 산출 (`TffDcaReinvestmentPlanner.tsx`).
+5) [S32-4: 10인 시중 정기적금(연 3.5%) 대비 TFF 펀드 초과 수익 인포그래픽] 10인 총 납입 원금 vs 시중 적금 세후 수령액 vs TFF 펀드 실질 순자산 누적 성장 궤적 Area 차트 및 성과 보너스 인포그래픽 (`TffDcaSavingsComparison.tsx`).
+6) [검증 상태]: Next.js 16.1.6 11개 전 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 검증 통과.
 
 > 세션 핸드오프 (2026-10-17, Antigravity - Sprint 24: 국토교통부 MOLIT 실거래가 OpenAPI 공식 연동 및 경기·인천 13대 거점 실시간 파이프라인 구축 완료):
 > - 🏛️ [Sprint 24: 국토교통부(MOLIT) 실거래가 OpenAPI 공식 연동 (S24-1~4)]:
