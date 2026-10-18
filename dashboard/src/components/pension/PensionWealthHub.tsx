@@ -19,9 +19,10 @@ import {
   formatAgeWithMonths
 } from '@/lib/pensionRules';
 import TaxShieldRadar from '@/components/TaxShieldRadar';
+import IsaPensionConversionSimulator from '@/components/pension/IsaPensionConversionSimulator';
 
 function PensionWealthHubInner() {
-  const [activeSubTab, setActiveSubTab] = useState<'tax' | 'nps' | 'withdrawal' | 'shield'>('tax');
+  const [activeSubTab, setActiveSubTab] = useState<'tax' | 'nps' | 'withdrawal' | 'shield' | 'isa_withdrawal'>('tax');
 
   // ── 서브탭 1 상태: 연금 3총사 절세 ─────────────────────────────────────
   const [incomeLevel, setIncomeLevel] = useState<'under55' | 'over55'>('under55');
@@ -186,7 +187,19 @@ function PensionWealthHubInner() {
             }`}
           >
             <ShieldAlert className="w-4 h-4 text-rose-300" />
-            <span>4. 금융소득 2,000만 & 건보료 방어 (Shield)</span>
+            <span>4. 금융소득 2,000만 & 건보료 방어</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('isa_withdrawal')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
+              activeSubTab === 'isa_withdrawal'
+                ? 'bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 text-white shadow-lg shadow-indigo-500/25 ring-1 ring-purple-400/50'
+                : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>5. ISA 전환 & 20개년 인출 시뮬레이터</span>
           </button>
         </div>
       </div>
@@ -908,6 +921,13 @@ function PensionWealthHubInner() {
       {activeSubTab === 'shield' && (
         <div className="flex flex-col gap-5">
           <TaxShieldRadar />
+        </div>
+      )}
+
+      {/* ── [서브탭 5] ISA 만기 전환 & 20개년 인출 시뮬레이터 ─────────────────── */}
+      {activeSubTab === 'isa_withdrawal' && (
+        <div className="flex flex-col gap-5">
+          <IsaPensionConversionSimulator />
         </div>
       )}
 

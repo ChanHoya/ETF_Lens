@@ -3,14 +3,14 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: Sprint 25 완료 — [매크로 거시경제 4대 탭(환율·금리·주식) 팝업 모달 전면 점검 및 고도화]
+✅ Recent: Sprint 26 완료 — [옵션 1~4 통합 기능 일괄 개발 및 브라우저 E2E 검증 완료]
 
-🚀 Current: Sprint 26 완료 — [옵션 1~4 통합 기능 일괄 개발 및 브라우저 E2E 검증 완료]:
-1) [S26-1: 매크로 ↔ 내 포트폴리오 연계 거시지표 실시간 민감도(Beta) & 환율·금리 스트레스 진단]: 내 보유 포트폴리오 달러 환노출도(USD %) 및 채권 듀레이션 자동 추정, 환율(1,250~1,500원) 및 금리(-100~+100bp) 인터랙티브 슬라이더 및 3대 프리셋 버튼, 예상 평가손익액(원), 수혜 TOP 3 종목 및 충격 취약 종목 카드 렌더링 완성 (`MacroPortfolioSensitivityWidget.tsx`, `MacroTab.tsx`).
-2) [S26-2: 부동산 탭 연계 국토부 실거래가 기반 대단지 2개년 실거래 시계열 모달 & 내 아파트 등록 위젯]: 랜드마크 12대 대단지 최근 24개월(2024.11~2026.10) 매매·전세 시계열, 최고가 낙폭 및 갭투자액 모달 (`MajorComplexTimeseriesModal.tsx`), 내 아파트 등록(`localStorage` 영속화) 및 실시간 평가손익, LTV, 스트레스 DSR 건전성 등급(SAFE/MODERATE/RISK) 진단 위젯 (`MyApartmentPortfolioWidget.tsx`, `RealEstateTab.tsx`).
-3) [S26-3: 포트폴리오 X-Ray 보유 ETF 간 종목 중복도(Overlap) 및 숨은 실질비용(TER+기타비용) 정밀 진단]: 상위 기초 종목(엔비디아, 마소, 애플 등) 가중 분해를 통한 포트폴리오 실질 종목 노출도(Top 10) 및 중복 편입 경보 레이더, 공시 총보수(Stated TER) vs 실질 총비용(기타비용+매매중개수수료) 정밀 분석, 연간 실질 숨은 비용 손실액(원) 산출 및 포트폴리오 가중평균 실질 총비용 절감 최적화 가이드 탑재 (`HoldingsDetailDashboard.tsx`, `portfolio_xray.py`).
-4) [S26-4: TFF/브라질 국채 2026 하반기 헤알화 환율 및 비과세 이자 재투자 복리 시뮬레이터]: 한-브라질 조세조약 100% 비과세 & 금융소득종합과세(최대 49.5%) 완전 제외 절세 혜택 정밀 산출, 2026년 하반기 헤알화(BRL) 환율 변동 시나리오(급락 -20%, 현상유지, 강세 +15%) 슬라이더 및 프리셋, 10년 누적 비과세 복리 재투자 vs 단리 수령 vs 일반과세 채권 누적 자산 곡선 비교 Recharts 차트 및 수치 요약 표 완비 (`BrazilBondCompoundSimulator.tsx`, `TffDashboard.tsx`).
-5) [검증 상태]: 백엔드 pytest 신규 3개 테스트 스위트 전원 100% 통과 (총 7 passed), Next.js 11개 페이지 최적화 빌드 성공 (`code 0`), 브라우저 E2E 4대 화면 캡처 및 인터랙션 검증 완료.
+🚀 Current: Sprint 27 완료 — [후보 1~4 통합 기능 일괄 개발 및 브라우저 E2E 검증 완료]:
+1) [S27-1: 통합 자산 대시보드 연계 실물 부동산 순자산 + KIS 포트폴리오 + TFF 통합 Net Worth & 사분면 리밸런싱 대시보드]: `localStorage` 기반 아파트 실물 순자산(시세 - 주담대/보증금)과 KIS 주식/예수금 및 TFF 대체 펀드를 결합한 원클릭 가계 총 순자산(Grand Total Net Worth) 카드 구현, 실물 부동산 포함 여부 인터랙티브 토글, 멀티 프로그레스 바(부동산 vs 주식 vs 현금/대체) 및 사분면 건전성 자동 진단(황금 밸런스형, 부동산 집중형 등)과 AI 리밸런싱 조언 탑재 (`IntegratedAssetRebalancingWidget.tsx`, `TotalAssetBoard.tsx`).
+2) [S27-2: 텔레그램 스마트 브리핑 연계 거시지표 급변 시 내 포트폴리오 실시간 손익 영향도(Beta 감응도) 스마트 알림]: 야간 리스크 다이제스트에 매크로 포트폴리오 민감도(Beta) 브릿지 연동, 달러 환노출도(USD %) 및 포트폴리오 듀레이션 기반 원·달러 +10원 상승 시 및 국채 금리 +25bp 인상 시 예상 손익액(원) 자동 추정 문구 메시지 포함 및 단위 테스트 통과 (`risk_digest.py`, `test_nightly_risk_digest.py`).
+3) [S27-3: 연금·절세 탭 정밀 고도화 ISA 만기 자금 연금 전환 세액공제 & 55세 이후 연금수령 한도/연금소득세 20개년 인출 시뮬레이터]: ISA 3년 만기 전환 10%(최대 300만원) 추가 세액공제 계산기 및 소득세법 제40조의2 연금수령 한도 공식【(계좌평가액 ÷ (11 - 수령연차)) × 120%】적용 20개년 인출 스케줄 표, 저율 연금소득세(3.3~5.5%) vs 한도 초과 16.5% 기타소득세 분리 산출 및 차트 탑재 (`IsaPensionConversionSimulator.tsx`, `PensionWealthHub.tsx`, `pensionRules.ts`).
+4) [S27-4: 브라질 국채 실시간 데이터 파이프라인 국채 금리(NTN-F) & 원/헤알(BRL/KRW) 실시간 수집 엔진 및 복리 시뮬레이터 자동 바인딩]: Naver/Yahoo/BCB 크로스 실시간 BRL/KRW 환율 및 10년물 금리 프록시 파이프라인 구축, 브라질 국채 복리 시뮬레이터에 실시간 시장 시세 자동 바인딩 및 ⚡ 실시간 환율 적용 / 📈 10년물 YTM 반영 원클릭 프리셋 버튼 완비 (`brazil_fetcher.py`, `brazil_bond.py`, `BrazilBondCompoundSimulator.tsx`).
+5) [검증 상태]: 백엔드 pytest 신규 및 기존 테스트 100% 통과 (총 9 passed), Next.js 11개 페이지 최적화 프로덕션 빌드 성공 (`code 0`), 브라우저 서브에이전트 E2E 검증(통합 순자산 24.16억 원, 4분면 분석 렌더링 확인) 완료.
 
 > 세션 핸드오프 (2026-10-17, Antigravity - Sprint 24: 국토교통부 MOLIT 실거래가 OpenAPI 공식 연동 및 경기·인천 13대 거점 실시간 파이프라인 구축 완료):
 > - 🏛️ [Sprint 24: 국토교통부(MOLIT) 실거래가 OpenAPI 공식 연동 (S24-1~4)]:

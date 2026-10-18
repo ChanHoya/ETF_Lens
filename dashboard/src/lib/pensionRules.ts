@@ -511,3 +511,176 @@ export function calculateWithdrawalTax(monthlyWithdrawalManwon: number): Withdra
     advice,
   };
 }
+
+
+// ── 4. 55세 이후 연금수령 한도(120% 룰) & 20개년 인출 시뮬레이터 ─────────────
+
+export interface WithdrawalYearSchedule {
+  year: number;                 // 수령 연차 (1~20년차)
+  age: number;                  // 해당 연도 나이 (만 세)
+  beginningAsset: number;       // 기초 평가액 (만원)
+  legalLimit: number;           // 소득세법상 연금수령한도 (만원, 11년차부터 무제한)
+  isUnlimited: boolean;         // 11년차 이후 무제한 한도 여부
+  requestedAnnual: number;      // 희망 인출액 (만원)
+  actualWithdrawal: number;     // 실제 인출액 (만원)
+  isOverLimit: boolean;         // 법정 한도 초과 여부
+  withinLimitAmount: number;    // 한도 내 인출액 (저율과세 대상)
+  overLimitAmount: number;      // 한도 초과 인출액 (16.5% 기타소득세 페널티 대상)
+  appliedTaxRatePct: number;    // 실효 세율 (%)
+  pensionTaxRatePct: number;    // 한도 내 연금소득세율 (3.3~5.5%)
+  taxAmount: number;            // 납부 세금 (만원)
+  netIncome: number;            // 세후 실수령액 (만원)
+  endingAsset: number;          // 기말 평가액 (운용수익 반영 후, 만원)
+}
+
+export interface TwentyYearWithdrawalPlanResult {
+  initialPensionAsset: number;  // 초기 자산 (만원)
+  startAge: number;             // 개시 나이
+  monthlyWithdrawal: number;    // 월 인출 희망액 (만원)
+  annualGrowthRatePct: number;  // 운용 수익률 (%)
+  
+  totalWithdrawal20Y: number;   // 20년간 총 인출액 (만원)
+  totalTaxPaid20Y: number;      // 20년간 총 납부 세금 (만원)
+  totalNetIncome20Y: number;    // 20년간 총 실수령액 (만원)
+  effectiveTaxRate20Y: number;  // 20년 누적 실효세율 (%)
+  finalAssetAt20Y: number;      // 20년차 기말 잔여 자산 (만원)
+  depletionAge: number | null;  // 자산 고갈 나이 (없으면 null)
+
+  schedules: WithdrawalYearSchedule[];
+  keyInsights: string[];
+}
+
+export function calculate20YearWithdrawalPlan(params: {
+  initialPensionAssetManwon: number;
+  startAge?: number;
+  monthlyWithdrawalManwon: number;
+  annualGrowthRatePct?: number;
+}): TwentyYearWithdrawalPlanResult {
+  const {
+    initialPensionAssetManwon,
+    startAge = 55,
+    monthlyWithdrawalManwon,
+    annualGrowthRatePct = 4.5,
+  } = params;
+
+  const schedules: WithdrawalYearSchedule[] = [];
+  let currentAsset = initialPensionAssetManwon;
+  let totalWithdrawal = 0;
+  let totalTax = 0;
+  let totalNet = 0;
+  let depletionAge: number | null = null;
+  const growthFactor = 1 + annualGrowthRatePct / 100;
+
+  for (let y = 1; y <= 20; y++) {
+    const age = startAge + y - 1;
+    const beginningAsset = Math.round(currentAsset);
+
+    if (beginningAsset <= 0) {
+      if (depletionAge === null) depletionAge = age;
+      schedules.push({
+        year: y,
+        age,
+        beginningAsset: 0,
+        legalLimit: 0,
+        isUnlimited: y >= 11,
+        requestedAnnual: monthlyWithdrawalManwon * 12,
+        actualWithdrawal: 0,
+        isOverLimit: false,
+        withinLimitAmount: 0,
+        overLimitAmount: 0,
+        appliedTaxRatePct: 0,
+        pensionTaxRatePct: 0,
+        taxAmount: 0,
+        netIncome: 0,
+        endingAsset: 0,
+      });
+      continue;
+    }
+
+    // 법정 연금수령한도: (연금계좌 평가액 / (11 - 수령연차)) * 120%
+    let legalLimit: number;
+    let isUnlimited = false;
+    if (y <= 10) {
+      legalLimit = Math.round((beginningAsset / (11 - y)) * 1.2);
+    } else {
+      legalLimit = beginningAsset;
+      isUnlimited = true;
+    }
+
+    const requestedAnnual = monthlyWithdrawalManwon * 12;
+    const actualWithdrawal = Math.min(requestedAnnual, beginningAsset);
+
+    const isOverLimit = !isUnlimited && actualWithdrawal > legalLimit;
+    const withinLimitAmount = isOverLimit ? legalLimit : actualWithdrawal;
+    const overLimitAmount = isOverLimit ? actualWithdrawal - legalLimit : 0;
+
+    // 연령별 연금소득세율
+    let pensionTaxRatePct = 5.5;
+    if (age >= 80) {
+      pensionTaxRatePct = 3.3;
+    } else if (age >= 70) {
+      pensionTaxRatePct = 4.4;
+    }
+
+    const withinTax = withinLimitAmount * (pensionTaxRatePct / 100);
+    const overTax = overLimitAmount * 0.165; // 한도 초과 시 16.5% 기타소득세
+    const taxAmount = Math.round((withinTax + overTax) * 10) / 10;
+    const netIncome = Math.round((actualWithdrawal - taxAmount) * 10) / 10;
+
+    const appliedTaxRatePct = actualWithdrawal > 0
+      ? Math.round((taxAmount / actualWithdrawal) * 1000) / 10
+      : 0;
+
+    const remainAfterWithdrawal = Math.max(0, beginningAsset - actualWithdrawal);
+    const endingAsset = Math.round(remainAfterWithdrawal * growthFactor);
+    currentAsset = endingAsset;
+
+    totalWithdrawal += actualWithdrawal;
+    totalTax += taxAmount;
+    totalNet += netIncome;
+
+    schedules.push({
+      year: y,
+      age,
+      beginningAsset,
+      legalLimit,
+      isUnlimited,
+      requestedAnnual,
+      actualWithdrawal,
+      isOverLimit,
+      withinLimitAmount,
+      overLimitAmount,
+      appliedTaxRatePct,
+      pensionTaxRatePct,
+      taxAmount,
+      netIncome,
+      endingAsset,
+    });
+  }
+
+  const effectiveTaxRate20Y = totalWithdrawal > 0
+    ? Math.round((totalTax / totalWithdrawal) * 1000) / 10
+    : 0;
+
+  const keyInsights: string[] = [
+    `🎯 [소득세법 제40조의2 연금수령 한도] 1~10년차는 공식【(계좌평가액 ÷ (11 - 수령연차)) × 120%】이내로 인출 시에만 3.3~5.5%의 저율 연금소득세가 적용됩니다.`,
+    `⚠️ [16.5% 페널티 경고] 한도를 단 1원이라도 초과하여 일시 인출하면 초과분에 16.5% 기타소득세가 원천징수됩니다.`,
+    `🔓 [11년차 골든 프리덤] 11년차(만 ${startAge + 10}세)부터는 법정 한도가 완전히 소멸되어 원하는 금액을 전액 저율 연금소득세(3.3~4.4%)로 자유 인출할 수 있습니다.`,
+    `🛡️ [사적연금 연 1,500만원 기준] 2024년 세법개정으로 사적연금 분리과세 한도가 1,200만원에서 1,500만원으로 상향되어, 월 125만원까지 종합과세 걱정 없이 3.3~5.5% 단일세율로 수령 가능합니다.`,
+  ];
+
+  return {
+    initialPensionAsset: initialPensionAssetManwon,
+    startAge,
+    monthlyWithdrawal: monthlyWithdrawalManwon,
+    annualGrowthRatePct,
+    totalWithdrawal20Y: Math.round(totalWithdrawal),
+    totalTaxPaid20Y: Math.round(totalTax),
+    totalNetIncome20Y: Math.round(totalNet),
+    effectiveTaxRate20Y,
+    finalAssetAt20Y: schedules[schedules.length - 1]?.endingAsset || 0,
+    depletionAge,
+    schedules,
+    keyInsights,
+  };
+}

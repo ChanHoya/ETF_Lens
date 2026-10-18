@@ -28,6 +28,7 @@ import ManualCashModal from "./ManualCashModal";
 import KisAccountMappingModal from "./KisAccountMappingModal";
 import AccountSummaryDashboard from "./AccountSummaryDashboard";
 import HoldingsDetailDashboard from "./HoldingsDetailDashboard";
+import IntegratedAssetRebalancingWidget from "./IntegratedAssetRebalancingWidget";
 import { SECTOR_OPTIONS, CLASSIFICATION_OPTIONS, UNSET_LABEL } from "@/lib/sectorOptions";
 import { filterHoldingsBySource } from "@/lib/holdingFilters";
 import { NumberPopIn } from "./common/NumberPopIn";
@@ -660,6 +661,13 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                     </div>
                 </div>
             </div>
+
+            {/* 2.5 Integrated Net Worth & Asset Rebalancing Quadrant (실물 부동산 + 금융자산 + TFF 펀드 통합) */}
+            <IntegratedAssetRebalancingWidget
+                financialNetWorth={summary.total_net_worth || 0}
+                financialInvestAmount={summary.total_eval_amount || 0}
+                financialCashAmount={summary.total_cash_converted || 0}
+            />
 
             {/* 3. Account Board (계좌별 요약판 - 구글 시트 상단 테이블 구조) */}
             <div className="w-full rounded-2xl bg-[#161922] border border-white/10 overflow-hidden shadow-xl">

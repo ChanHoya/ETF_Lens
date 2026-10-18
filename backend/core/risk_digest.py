@@ -61,6 +61,61 @@ async def send_nightly_risk_digest(sync_stats: Dict[str, Any] = None) -> bool:
         b_cnt = sync_stats.get("benchmarks", 4) if sync_stats else 4
         h_cnt = sync_stats.get("holdings", 0) if sync_stats else 0
 
+        # 4. 포트폴리오 거시지표 감응도 (Beta) 산출
+        macro_sensitivity_str = ""
+        try:
+            from core.macro_portfolio_bridge import calculate_portfolio_macro_sensitivity
+            from db.models import ManualAsset
+
+            holdings_for_sens = []
+            q_manual = select(ManualAsset)
+            res_manual = await db.execute(q_manual)
+            manual_items = res_manual.scalars().all()
+            for m in manual_items:
+                holdings_for_sens.append({
+                    "name": m.asset_name,
+                    "code": m.ticker or "MANUAL",
+                    "eval_amount": float(m.eval_amount or 0.0),
+                    "purchase_amount": float(m.eval_amount or 0.0),
+                })
+
+            # 기본 샘플 fallback (DB에 자산이 없을 경우 대표 자산군으로 시뮬레이션)
+            if not holdings_for_sens:
+                holdings_for_sens = [
+                    {"name": "TIGER 미국S&P500", "code": "360750", "eval_amount": 50_000_000},
+                    {"name": "KODEX 200", "code": "069500", "eval_amount": 30_000_000},
+                    {"name": "ACE 미국30년국채액티브(H)", "code": "453850", "eval_amount": 20_000_000},
+                ]
+
+            current_krw = float(macro_row.krw) if (macro_row and macro_row.krw) else 1380.0
+            sens = calculate_portfolio_macro_sensitivity(
+                holdings=holdings_for_sens,
+                current_fx=current_krw
+            )
+            
+            usd_ratio = sens.get("usd_exposure_ratio", 0.0)
+            avg_dur = sens.get("average_duration", 0.0)
+            total_eval = sens.get("total_eval", 0.0)
+
+            # 환율 +10원 상승 시 영향액 (원)
+            # 환노출 자산액 * (10 / current_fx)
+            fx_impact_won = round((total_eval * (usd_ratio / 100.0)) * (10.0 / current_krw))
+            # 금리 +25bp (+0.25%) 상승 시 영향액 (원) = total_eval * (-avg_dur * 0.0025)
+            rate_impact_won = round(total_eval * (-avg_dur * 0.0025))
+
+            fx_impact_sign = "+" if fx_impact_won >= 0 else ""
+            rate_impact_sign = "+" if rate_impact_won >= 0 else ""
+
+            macro_sensitivity_str = (
+                f"\n<b>🌐 포트폴리오 매크로 민감도 (Beta)</b>\n"
+                f"• 달러 노출 비중: <b>{usd_ratio:.1f}%</b> (환노출 자산)\n"
+                f"• 포트폴리오 평균 듀레이션: <b>{avg_dur:.2f}년</b>\n"
+                f"• 원·달러 <b>+10원 상승 시</b>: <b>{fx_impact_sign}{fx_impact_won:,.0f}원</b> 예상\n"
+                f"• 국채금리 <b>+25bp 상승 시</b>: <b>{rate_impact_sign}{rate_impact_won:,.0f}원</b> 예상\n"
+            )
+        except Exception as sens_err:
+            logger.warning(f"[Nightly Risk Digest] 매크로 감응도 산출 생략: {sens_err}")
+
         # 브리핑 메시지 구성 (HTML)
         message = (
             f"<b>📊 [i-Prism] 야간 시계열 시딩 & 포트폴리오 리스크 브리핑</b>\n"
@@ -73,7 +128,8 @@ async def send_nightly_risk_digest(sync_stats: Dict[str, Any] = None) -> bool:
             f"• 변동성: VKOSPI <b>{vkospi_str}</b> / VIX <b>{vix_str}</b>\n"
             f"• 심리: 하이브리드 FGI <b>{fgi_str}</b>\n"
             f"• 환율: 달러인덱스 <b>{dollar_str}</b> / 원·달러 <b>{krw_str}</b>\n"
-            f"• 신용/금리: 장단기차 <b>{t10y2y_str}</b> / 하이일드 <b>{hy_str}</b>\n\n"
+            f"• 신용/금리: 장단기차 <b>{t10y2y_str}</b> / 하이일드 <b>{hy_str}</b>\n"
+            f"{macro_sensitivity_str}\n"
             f"💡 <i>내일 접속 시 모든 포트폴리오 백테스터 및 최적화 차트가 0ms 즉시 로딩됩니다.</i>"
         )
 

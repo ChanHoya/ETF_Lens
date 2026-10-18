@@ -1,24 +1,97 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   DollarSign, TrendingUp, ShieldCheck, AlertCircle, 
-  RefreshCw, Percent, ArrowRight, Sparkles, Scale, Info, Landmark
+  RefreshCw, Percent, ArrowRight, Sparkles, Scale, Info, Landmark,
+  Loader2, CheckCircle2, Zap
 } from 'lucide-react';
 import { 
   ResponsiveContainer, ComposedChart, Line, Bar, 
   XAxis, YAxis, Tooltip, CartesianGrid, Legend 
 } from 'recharts';
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE } from '@/lib/chartTheme';
+import { getApiBase } from '@/lib/apiConfig';
+
+interface BrazilMarketRates {
+  liveBrlKrw: number | null;
+  selicRate: number | null;
+  y5Rate: number | null;
+  y10RateProxy: number | null;
+  signalZone: string | null;
+  asOfDate: string | null;
+}
 
 export default function BrazilBondCompoundSimulator() {
   // 투자 조건 상태
   const [initialInvestmentManwon, setInitialInvestmentManwon] = useState<number>(10000); // 1억 원 (10,000만 원)
   const [couponRatePct, setCouponRatePct] = useState<number>(10.0); // 연 10.0% 표면금리
-  const [reinvestYieldPct, setReinvestYieldPct] = useState<number>(10.0); // 재투자 수익률 %
-  const [currentFxRate, setCurrentFxRate] = useState<number>(245.0); // 현재 원/헤알 환율 (245원)
-  const [targetFxRate, setTargetFxRate] = useState<number>(245.0); // 만기/예상 원/헤알 환율 (원)
+  const [reinvestYieldPct, setReinvestYieldPct] = useState<number>(13.5); // 재투자 수익률 % (실시간 10년물 수준)
+  const [currentFxRate, setCurrentFxRate] = useState<number>(264.0); // 현재 원/헤알 환율 (원)
+  const [targetFxRate, setTargetFxRate] = useState<number>(264.0); // 만기/예상 원/헤알 환율 (원)
   const [taxBracketPct, setTaxBracketPct] = useState<number>(15.4); // 비교군(일반채권) 적용 세율 (기본 15.4%, 종소세 시 38.5%~49.5%)
+
+  // 실시간 파이프라인 상태
+  const [marketRates, setMarketRates] = useState<BrazilMarketRates>({
+    liveBrlKrw: null,
+    selicRate: null,
+    y5Rate: null,
+    y10RateProxy: null,
+    signalZone: null,
+    asOfDate: null
+  });
+  const [isLoadingMarket, setIsLoadingMarket] = useState<boolean>(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState<string>('');
+
+  // 1. 실시간 데이터 파이프라인 페치
+  const fetchLiveMarketRates = async (showLoading = true) => {
+    try {
+      if (showLoading) setIsLoadingMarket(true);
+      const apiBase = getApiBase();
+      const res = await fetch(`${apiBase}/api/v1/brazil-bond/summary`);
+      if (res.ok) {
+        const data = await res.json();
+        const indicators = data?.indicators || [];
+        
+        let brlKrw = 264.0;
+        let selic = 13.75;
+        let y5 = 13.05;
+
+        indicators.forEach((ind: any) => {
+          if (ind.key === 'brl_krw' && ind.value) brlKrw = Number(ind.value);
+          if (ind.key === 'selic_target' && ind.value) selic = Number(ind.value);
+          if (ind.key === 'y5' && ind.value) y5 = Number(ind.value);
+        });
+
+        // 10년물 NTN-F 프록시: 5년물 대비 약 +85bp 가산 (약 13.8~14.2%)
+        const y10Proxy = Number((y5 + 0.85).toFixed(2));
+        const zone = data?.signal?.zone_label || '관망/분할진입';
+
+        setMarketRates({
+          liveBrlKrw: brlKrw,
+          selicRate: selic,
+          y5Rate: y5,
+          y10RateProxy: y10Proxy,
+          signalZone: zone,
+          asOfDate: new Date().toLocaleDateString('ko-KR')
+        });
+
+        // 초기 로딩 시 실시간 시세를 기본값으로 자동 바인딩
+        setCurrentFxRate(brlKrw);
+        setTargetFxRate(brlKrw);
+        setReinvestYieldPct(y10Proxy);
+        setLastSyncedTime(new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }));
+      }
+    } catch (err) {
+      console.warn('Failed to fetch live Brazil rates', err);
+    } finally {
+      if (showLoading) setIsLoadingMarket(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveMarketRates();
+  }, []);
 
   const fxChangePct = useMemo(() => {
     return ((targetFxRate - currentFxRate) / currentFxRate) * 100;
@@ -30,7 +103,7 @@ export default function BrazilBondCompoundSimulator() {
     const initialWon = initialInvestmentManwon * 10000;
     
     // 환율 보정 계수
-    const fxMultiplier = targetFxRate / currentFxRate;
+    const fxMultiplier = currentFxRate > 0 ? targetFxRate / currentFxRate : 1.0;
 
     let compoundBalance = initialWon;
     let simpleTotalCash = initialWon;
@@ -63,7 +136,7 @@ export default function BrazilBondCompoundSimulator() {
 
       // 만기 환율 변동을 원금 및 재투자 자산에 반영 (헤알화 노출 자산)
       const compoundFinalWon = compoundBalance * fxMultiplier;
-      const simpleFinalWon = (initialWon * fxMultiplier) + (simpleTotalCash - initialWon); // 이자는 수령 시점 환전 가정
+      const simpleFinalWon = (initialWon * fxMultiplier) + (simpleTotalCash - initialWon);
       const taxableFinalWon = taxableCompoundBalance * fxMultiplier;
 
       const taxSavedWon = (compoundBalance - taxableCompoundBalance) * fxMultiplier;
@@ -107,31 +180,52 @@ export default function BrazilBondCompoundSimulator() {
 
   return (
     <div className="w-full flex flex-col gap-5 text-gray-200 animate-in fade-in duration-300">
-      {/* 상단 안내 배너 */}
+      {/* 상단 안내 & 실시간 데이터 파이프라인 배너 */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-emerald-950/40 via-sky-950/30 to-[#121422] border border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-lg">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+          <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
             <Landmark className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-base font-black text-white">
-                🇧🇷 브라질 국채(10% 쿠폰) 2026 하반기 헤알화 & 비과세 이자 재투자 복리 시뮬레이터
+                🇧🇷 브라질 국채(10% 쿠폰) 비과세 이자 재투자 복리 시뮬레이터
               </h3>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 조세조약 100% 비과세
               </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+                <Zap className="w-3 h-3 text-amber-400" />
+                실시간 파이프라인 바인딩
+              </span>
             </div>
             <p className="text-xs text-gray-400 mt-1">
-              한-브라질 조세조약에 따른 <strong>이자소득세 0% & 금융소득종합과세 완전 제외</strong> 혜택과 반기 10% 이자 재투자 복리 효과를 정밀 시뮬레이션합니다.
+              한-브라질 조세조약 <strong>이자소득세 0% & 종합과세 제외</strong> 혜택과 실시간 원/헤알(BRL/KRW) 환율·10년물 금리를 연동한 정밀 복리 계산기입니다.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <span className="text-xs text-emerald-400 font-mono font-bold bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20">
-            실시간 헤알 환율: {currentFxRate}원/BRL
-          </span>
+        {/* 실시간 시장 지표 카드 & 새로고침 */}
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
+          <div className="flex flex-col text-right">
+            <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-mono font-bold bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20">
+              <span>BRL/KRW: {marketRates.liveBrlKrw ? `${marketRates.liveBrlKrw.toFixed(1)}원` : `${currentFxRate}원`}</span>
+              <span className="text-gray-500">|</span>
+              <span className="text-sky-300">10년물: {marketRates.y10RateProxy ? `${marketRates.y10RateProxy}%` : '13.9%'}</span>
+            </div>
+            {lastSyncedTime && (
+              <span className="text-[10px] text-gray-500 mt-0.5 pr-1">동기화: {lastSyncedTime} KST</span>
+            )}
+          </div>
+
+          <button
+            onClick={() => fetchLiveMarketRates(true)}
+            disabled={isLoadingMarket}
+            title="실시간 브라질 시장 시세 갱신"
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoadingMarket ? 'animate-spin text-emerald-400' : ''}`} />
+          </button>
         </div>
       </div>
 
@@ -169,11 +263,11 @@ export default function BrazilBondCompoundSimulator() {
               +{formatWon(last10Y?.taxSavedWon || 0)}
             </div>
             <div className="text-[11px] text-gray-300 mt-0.5">
-              과세율 {taxBracketPct}% 기준 세금 아낀 금액
+              비과세 덕분에 불어난 순수 초과 수익
             </div>
           </div>
           <div className="text-[10px] text-gray-500">
-            금융소득종합과세(최대 49.5%) 누진세율 배제 효과
+            적용 비교 세율: {taxBracketPct}% (이자소득세 및 종소세 절감)
           </div>
         </div>
 
@@ -206,8 +300,27 @@ export default function BrazilBondCompoundSimulator() {
             <span className="text-xs font-bold text-white">시뮬레이션 조건 및 환율 시나리오 설정</span>
           </div>
           {/* 환율 퀵 프리셋 버튼 */}
-          <div className="flex items-center gap-1.5 self-end sm:self-auto">
-            <span className="text-[10px] text-gray-400 mr-1">환율 시나리오:</span>
+          <div className="flex items-center gap-1.5 self-end sm:self-auto flex-wrap">
+            {marketRates.liveBrlKrw && (
+              <button
+                onClick={() => {
+                  setCurrentFxRate(marketRates.liveBrlKrw!);
+                  setTargetFxRate(marketRates.liveBrlKrw!);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold transition flex items-center gap-1"
+              >
+                <Zap className="w-3 h-3 text-amber-400" />
+                실시간 환율({marketRates.liveBrlKrw.toFixed(1)}원) 적용
+              </button>
+            )}
+            {marketRates.y10RateProxy && (
+              <button
+                onClick={() => setReinvestYieldPct(marketRates.y10RateProxy!)}
+                className="px-2.5 py-1 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-[10px] font-bold transition"
+              >
+                10년물 YTM({marketRates.y10RateProxy}%) 반영
+              </button>
+            )}
             <button
               onClick={() => applyPreset('drop20')}
               className="px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 text-[10px] font-bold transition"
@@ -252,160 +365,165 @@ export default function BrazilBondCompoundSimulator() {
 
           <div>
             <div className="flex justify-between text-[11px] mb-1">
-              <span className="text-gray-400">국채 표면금리(쿠폰)</span>
-              <span className="text-emerald-400 font-mono font-bold">연 {couponRatePct.toFixed(1)}%</span>
+              <span className="text-gray-400">재투자 기대수익률 (YTM)</span>
+              <span className="text-emerald-400 font-mono font-bold">{reinvestYieldPct.toFixed(1)}%</span>
             </div>
             <input
               type="range"
-              min={8.0}
-              max={13.0}
+              min={5.0}
+              max={16.0}
               step={0.5}
-              value={couponRatePct}
-              onChange={(e) => setCouponRatePct(Number(e.target.value))}
+              value={reinvestYieldPct}
+              onChange={(e) => setReinvestYieldPct(Number(e.target.value))}
               className="w-full accent-emerald-500 cursor-pointer"
             />
             <div className="flex justify-between text-[10px] text-gray-500 font-mono mt-0.5">
-              <span>8.0%</span>
-              <span>13.0%</span>
+              <span>5.0%</span>
+              <span>16.0% (고금리)</span>
             </div>
           </div>
 
           <div>
             <div className="flex justify-between text-[11px] mb-1">
-              <span className="text-gray-400">예상 헤알화 환율</span>
-              <span className="text-amber-300 font-mono font-bold">{targetFxRate}원/BRL</span>
+              <span className="text-gray-400">만기 목표 환율</span>
+              <span className="text-sky-400 font-mono font-bold">{targetFxRate}원/BRL</span>
             </div>
             <input
               type="range"
-              min={170}
-              max={320}
+              min={150}
+              max={350}
               step={5}
               value={targetFxRate}
               onChange={(e) => setTargetFxRate(Number(e.target.value))}
-              className="w-full accent-amber-500 cursor-pointer"
+              className="w-full accent-sky-500 cursor-pointer"
             />
             <div className="flex justify-between text-[10px] text-gray-500 font-mono mt-0.5">
-              <span>170원</span>
-              <span>320원</span>
+              <span>150원 (급락)</span>
+              <span>350원 (초강세)</span>
             </div>
           </div>
 
           <div>
             <div className="flex justify-between text-[11px] mb-1">
               <span className="text-gray-400">비교군 과세율</span>
-              <span className="text-indigo-300 font-mono font-bold">{taxBracketPct}%</span>
+              <span className="text-indigo-400 font-mono font-bold">{taxBracketPct}%</span>
             </div>
             <select
               value={taxBracketPct}
               onChange={(e) => setTaxBracketPct(Number(e.target.value))}
-              className="w-full px-2.5 py-1.5 rounded-lg bg-[#1a1d2e] border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+              className="w-full bg-[#181a29] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
             >
-              <option value={15.4}>일반 배당/이자소득세 (15.4%)</option>
-              <option value={26.4}>금융소득종합과세 1구간 (26.4%)</option>
-              <option value={38.5}>금융소득종합과세 2구간 (38.5%)</option>
-              <option value={49.5}>금융소득종합과세 최고구간 (49.5%)</option>
+              <option value={15.4}>기본 배당/이자소득세 (15.4%)</option>
+              <option value={26.4}>종합과세 1구간 (26.4%)</option>
+              <option value={38.5}>종합과세 2구간 (38.5%)</option>
+              <option value={49.5}>최고세율 구간 (49.5%)</option>
             </select>
             <div className="text-[10px] text-gray-500 mt-1">
-              브라질 국채는 위 세율 전액 면제 (0%)
+              금융소득 2,000만 초과 시 절세효과 급증
             </div>
           </div>
         </div>
       </div>
 
-      {/* 10개년 복리 자산 증식 차트 (Recharts) */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[#121422] border border-white/10 shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h4 className="text-sm font-bold text-white flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-400" />
-              10개년 비과세 복리 재투자 vs 단리 수령 vs 일반과세 채권 누적 자산 곡선
+      {/* 10개년 복리 추이 시각화 차트 */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-[#141624] border border-white/10 shadow-md">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-emerald-400" />
+            <h4 className="text-xs sm:text-sm font-bold text-white">
+              10개년 비과세 복리 재투자 vs 단리 수령 vs 일반과세 채권 누적 자산 비교
             </h4>
-            <p className="text-[11px] text-gray-400 mt-0.5">
-              반기별 비과세 쿠폰 이자를 100% 재투자했을 때 시간의 복리 승수 효과를 확인하세요. (단위: 만 원)
-            </p>
           </div>
+          <span className="text-[11px] text-gray-400">단위: 만 원</span>
         </div>
 
-        <div className="h-[320px] w-full">
+        <div className="w-full h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={simulationData} margin={{ top: 10, right: 15, left: 10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#252736" vertical={false} />
-              <XAxis dataKey="year" tick={{ fill: '#9ca3af', fontSize: 11 }} stroke="#374151" />
+            <ComposedChart data={simulationData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#232738" vertical={false} />
+              <XAxis dataKey="year" stroke="#717a8c" fontSize={11} tickLine={false} />
               <YAxis 
-                tick={{ fill: '#9ca3af', fontSize: 11 }} 
-                stroke="#374151"
-                tickFormatter={(v) => `${Math.round(v / 10000)}억`}
+                stroke="#717a8c" 
+                fontSize={11} 
+                tickLine={false} 
+                tickFormatter={(v) => `${(v / 10000).toFixed(1)}억`}
               />
               <Tooltip 
                 contentStyle={STANDARD_TOOLTIP_STYLE}
-                formatter={(val: any, name: any) => [`${formatWon(val)}`, name]}
+                formatter={(val: any) => [`${formatWon(Number(val))}`, '']}
               />
               <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} />
+              
+              <Bar 
+                dataKey="taxSavedWon" 
+                name="비과세 절세 이득" 
+                fill="#818cf8" 
+                opacity={0.3} 
+                radius={[4, 4, 0, 0]}
+              />
               <Line 
                 type="monotone" 
                 dataKey="compoundWon" 
-                name="🇧🇷 브라질 국채 (비과세 100% 복리 재투자)" 
+                name="브라질 국채 (비과세 100% 복리 재투자)" 
                 stroke="#10b981" 
-                strokeWidth={3} 
-                dot={{ r: 4 }} 
+                strokeWidth={3}
+                dot={{ r: 3, fill: '#10b981' }}
               />
               <Line 
                 type="monotone" 
                 dataKey="taxableWon" 
-                name={`일반 과세 채권 (세율 ${taxBracketPct}% 차감 후 재투자)`} 
-                stroke="#6366f1" 
-                strokeWidth={2} 
-                strokeDasharray="4 4" 
-                dot={false} 
+                name={`일반채권 (${taxBracketPct}% 과세 후 재투자)`} 
+                stroke="#f43f5e" 
+                strokeWidth={2}
+                strokeDasharray="4 4"
+                dot={{ r: 2 }}
               />
               <Line 
                 type="monotone" 
                 dataKey="simpleWon" 
-                name="브라질 국채 (단리 단순 현금 수령)" 
+                name="단리 단순 현금 수령 (미재투자)" 
                 stroke="#94a3b8" 
-                strokeWidth={1.5} 
-                dot={false} 
+                strokeWidth={1.5}
+                dot={false}
               />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
+      </div>
 
-        {/* 10개년 수치 요약 표 */}
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-xs border-collapse">
+      {/* 10개년 연차별 세부 수치 테이블 */}
+      <div className="rounded-2xl bg-[#141624] border border-white/10 overflow-hidden shadow-md">
+        <div className="px-5 py-3 border-b border-white/10 flex justify-between items-center bg-white/[0.02]">
+          <span className="text-xs font-bold text-gray-300">연차별 누적 자산 및 절세 효과 상세표</span>
+          <span className="text-[11px] text-gray-500">원/헤알 만기 {targetFxRate}원 기준</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-white/10 text-gray-400 font-semibold bg-black/20">
-                <th className="py-2.5 px-3 text-left">투자 기간</th>
-                <th className="py-2.5 px-3 text-right text-emerald-300 font-bold">비과세 복리 자산</th>
-                <th className="py-2.5 px-3 text-right text-indigo-300">일반과세 복리 자산</th>
-                <th className="py-2.5 px-3 text-right text-gray-400">단리 현금수령 자산</th>
-                <th className="py-2.5 px-3 text-right text-amber-300 font-bold">비과세 세금 절감액</th>
+              <tr className="border-b border-white/10 bg-white/[0.03] text-gray-400 font-semibold whitespace-nowrap">
+                <th className="py-2.5 px-4">연차</th>
+                <th className="py-2.5 px-4 text-right">비과세 복리 자산</th>
+                <th className="py-2.5 px-4 text-right">단리 수령 자산</th>
+                <th className="py-2.5 px-4 text-right">과세 채권 자산</th>
+                <th className="py-2.5 px-4 text-right">비과세 초과 절세액</th>
+                <th className="py-2.5 px-4 text-right">수익률 (원금 대비)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 font-mono">
-              {simulationData.filter((_, idx) => [0, 2, 4, 6, 9].includes(idx)).map((row) => (
-                <tr key={row.year} className="hover:bg-white/[0.03]">
-                  <td className="py-2.5 px-3 text-white font-sans font-bold">{row.year}</td>
-                  <td className="py-2.5 px-3 text-right font-black text-emerald-400">{formatWon(row.compoundWon)}</td>
-                  <td className="py-2.5 px-3 text-right text-gray-300">{formatWon(row.taxableWon)}</td>
-                  <td className="py-2.5 px-3 text-right text-gray-400">{formatWon(row.simpleWon)}</td>
-                  <td className="py-2.5 px-3 text-right font-bold text-amber-300">+{formatWon(row.taxSavedWon)}</td>
+            <tbody className="divide-y divide-white/5 font-mono text-[11px]">
+              {simulationData.map((row) => (
+                <tr key={row.year} className="hover:bg-white/[0.02]">
+                  <td className="py-2 px-4 font-sans text-gray-300 font-semibold">{row.year}</td>
+                  <td className="py-2 px-4 text-right font-bold text-emerald-400">{formatWon(row.compoundWon)}</td>
+                  <td className="py-2 px-4 text-right text-gray-400">{formatWon(row.simpleWon)}</td>
+                  <td className="py-2 px-4 text-right text-rose-300">{formatWon(row.taxableWon)}</td>
+                  <td className="py-2 px-4 text-right font-bold text-indigo-300">+{formatWon(row.taxSavedWon)}</td>
+                  <td className="py-2 px-4 text-right font-bold text-emerald-300">
+                    +{((row.compoundWon - initialInvestmentManwon) / initialInvestmentManwon * 100).toFixed(1)}%
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* 투자 유의사항 및 리스크 가이드 */}
-      <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/20 text-xs text-indigo-200/90 leading-relaxed flex items-start gap-3">
-        <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-        <div>
-          <span className="font-bold text-white">브라질 국채 2026 하반기 투자 전략 가이드:</span>
-          <p className="mt-1 text-gray-300 text-[11px]">
-            브라질 국채는 금융소득종합과세(2,000만원 이상 시 누진세율 적용) 대상에서 제외되는 가장 강력한 비과세 고쿠폰(10%) 자산입니다. 
-            다만 원화/헤알화 환율 변동성이 존재하므로, 환율이 230~250원대 안정 구간일 때 반기 이자를 꾸준히 분할 재투자하여 평균 단가를 낮추는 복리 적립 전략이 가장 안전합니다.
-          </p>
         </div>
       </div>
     </div>
