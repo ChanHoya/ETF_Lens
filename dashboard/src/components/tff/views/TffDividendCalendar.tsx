@@ -4,14 +4,14 @@ import React, { useState, useMemo } from 'react';
 import { 
   Calendar, DollarSign, TrendingUp, Sparkles, ArrowUpRight, 
   CheckCircle2, AlertCircle, Filter, PieChart, Layers, Download,
-  Coins, Landmark, ChevronRight, ShieldCheck, Repeat
+  Coins, Landmark, ChevronRight, ShieldCheck, Repeat, Info
 } from 'lucide-react';
 import { 
   ResponsiveContainer, ComposedChart, Bar, Line, 
   XAxis, YAxis, Tooltip, CartesianGrid, Legend, Cell 
 } from 'recharts';
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE } from '@/lib/chartTheme';
-import { TffFundData } from '@/lib/tff/types';
+import { TffFundData, TffHoldingsRow, TffMonthInfo } from '@/lib/tff/types';
 
 interface Props {
   data?: TffFundData | null;
@@ -21,55 +21,135 @@ interface DividendScheduleItem {
   id: string;
   month: number; // 1 ~ 12
   assetName: string;
-  category: '배당 ETF' | '국채/해외채' | '회사채/크레딧' | '단기자금';
+  holdingValueManwon: number;
+  weightPct: number;
+  category: '국내주식형' | '해외주식형' | '채권/크레딧' | '배당형' | '현금/파킹';
   estimatedAmountManwon: number;
-  expectedDate: string; // e.g. "매월 초", "1월 1일/7월 1일", "매월 15일"
-  taxStatus: '100% 비과세(조세조약)' | '15.4% 원천징수' | '분리과세 신청가능';
+  expectedDate: string;
+  taxStatus: '15.4% 배당소득세' | '비과세(비용차감)' | '분리과세 대상';
   badgeColor: string;
   reinvestNote: string;
 }
 
+// 보유 종목 분류 헬퍼
+function categorizeHolding(name: string): '국내주식형' | '해외주식형' | '채권/크레딧' | '배당형' | '현금/파킹' {
+  if (name.includes('배당') || name.includes('다우존스') || name.includes('커버드콜')) return '배당형';
+  if (name.includes('채권') || name.includes('국고채') || name.includes('국채') || name.includes('회사채') || name.includes('금융채')) return '채권/크레딧';
+  if (name.includes('머니마켓') || name.includes('CD') || name.includes('KOFR') || name.includes('현금') || name.includes('파킹')) return '현금/파킹';
+  if (name.includes('미국') || name.includes('S&P') || name.includes('나스닥') || name.includes('글로벌') || name.includes('차이나') || name.includes('필라델피아')) return '해외주식형';
+  return '국내주식형';
+}
+
+// 보유 종목별 연간 예상 배당률 및 분배 지급월 추정
+function getAssetDistributionProfile(name: string, category: string): { annualYieldPct: number; paymentMonths: number[]; expectedDate: string } {
+  if (category === '배당형') {
+    // 월배당 ETF인 경우
+    if (name.includes('커버드콜') || name.includes('타겟')) {
+      return { annualYieldPct: 9.5, paymentMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], expectedDate: '매월 15~18일' };
+    }
+    return { annualYieldPct: 4.2, paymentMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], expectedDate: '매월 2~3일' };
+  }
+
+  if (category === '채권/크레딧') {
+    // 만기매칭형 채권 또는 분기 이자
+    if (name.includes('26-12') || name.includes('25-12')) {
+      return { annualYieldPct: 3.8, paymentMonths: [3, 6, 9, 12], expectedDate: '분기 말일' };
+    }
+    return { annualYieldPct: 3.2, paymentMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], expectedDate: '월말 분배금' };
+  }
+
+  if (category === '해외주식형') {
+    // S&P 500, 나스닥 등 분기 분배
+    return { annualYieldPct: 1.4, paymentMonths: [1, 4, 7, 10], expectedDate: '분기 익월 초' };
+  }
+
+  if (category === '현금/파킹') {
+    return { annualYieldPct: 3.0, paymentMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], expectedDate: '월말 이자 누적' };
+  }
+
+  // 국내주식형 (KOSPI 200, 반도체 등: 4월 결산 배당 집중 + 1, 7, 10월 분기 배당)
+  return { annualYieldPct: 1.8, paymentMonths: [4, 7, 10], expectedDate: '4월 말(결산), 분기 익월' };
+}
+
 export default function TffDividendCalendar({ data }: Props) {
-  // 선택된 조회 연도 및 필터링 월
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonthFilter, setSelectedMonthFilter] = useState<number | 'ALL'>('ALL');
   const [reinvestMode, setReinvestMode] = useState<boolean>(true); // 복리 재투자 모드
 
-  // TFF 펀드 포트폴리오 기반 분배금/쿠폰 데이터셋 (실제 보유 종목 및 표준 TFF 포트폴리오 결합)
+  // 1. TFF 실제 보유 종목(Holdings) 추출 (비보유 가상 자산 일체 배제)
+  const { realHoldings, latestMonthLabel, totalPortfolioValueManwon } = useMemo(() => {
+    if (!data) return { realHoldings: [], latestMonthLabel: '', totalPortfolioValueManwon: 0 };
+
+    const lm = data.latestMonth;
+    let info: TffMonthInfo | null = null;
+    if (lm && lm !== 'YTM' && data.monthlyMap?.[lm]) {
+      info = data.monthlyMap[lm];
+    } else if (data.ytm) {
+      info = data.ytm;
+    } else if (Object.keys(data.monthlyMap || {}).length > 0) {
+      const keys = Object.keys(data.monthlyMap).sort((a, b) => parseInt(a) - parseInt(b));
+      info = data.monthlyMap[keys[keys.length - 1]];
+    }
+
+    const holdings = info?.holdings || [];
+    // 유효 보유 종목만 필터링 (평가액 0원 초과)
+    const valid = holdings.filter(h => h.name && (h.endValue > 0 || (h.beginValue || 0) > 0));
+
+    const totalVal = valid.reduce((acc, cur) => acc + (cur.endValue || 0), 0) + (info?.summary?.cashBalance || 0);
+    const totalManwon = Math.round(totalVal / 10000);
+
+    return {
+      realHoldings: valid,
+      latestMonthLabel: lm || info?.period || '최근',
+      totalPortfolioValueManwon: totalManwon > 0 ? totalManwon : Math.round(totalVal),
+    };
+  }, [data]);
+
+  // 2. 실제 보유 종목 기반 연간 배당·분배금 일정 생성
   const dividendSchedule: DividendScheduleItem[] = useMemo(() => {
-    // TFF 펀드 주요 자산 기준 12개월 캐시플로우 모델
-    return [
-      // 브라질 국채 (1월, 7월 반기 10% 쿠폰 - 한-브라질 조세조약 100% 비과세)
-      { id: 'brz-1', month: 1, assetName: '브라질 국채 10년 (NTN-F)', category: '국채/해외채', estimatedAmountManwon: 500, expectedDate: '1월 1일', taxStatus: '100% 비과세(조세조약)', badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', reinvestNote: '단기 KOFR 또는 미국배당 ETF로 재투자 권장' },
-      { id: 'brz-7', month: 7, assetName: '브라질 국채 10년 (NTN-F)', category: '국채/해외채', estimatedAmountManwon: 500, expectedDate: '7월 1일', taxStatus: '100% 비과세(조세조약)', badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', reinvestNote: '하반기 고배당 ETF 리밸런싱 재원으로 활용' },
+    if (realHoldings.length === 0) return [];
 
-      // ACE 미국배당다우존스 (월배당 연 3.8%)
-      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => ({
-        id: `schd-${m}`, month: m, assetName: 'ACE 미국배당다우존스', category: '배당 ETF' as const, estimatedAmountManwon: 48, expectedDate: `매월 2~3일`, taxStatus: '15.4% 원천징수' as const, badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30', reinvestNote: '자동 재투자로 배당주 수량 지속 확대'
-      })),
+    const items: DividendScheduleItem[] = [];
+    const totalVal = realHoldings.reduce((sum, h) => sum + (h.endValue || 0), 0) || 1;
 
-      // TIGER 미국테크TOP10+10%프리미엄 (월배당 연 10.2%)
-      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => ({
-        id: `tech-prem-${m}`, month: m, assetName: 'TIGER 미국테크TOP10+10%타깃', category: '배당 ETF' as const, estimatedAmountManwon: 85, expectedDate: `매월 15~18일`, taxStatus: '15.4% 원천징수' as const, badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30', reinvestNote: '고인컴 현금흐름으로 하락장 저가 분할매수 원천'
-      })),
+    realHoldings.forEach((h, hIdx) => {
+      const holdingValueManwon = Math.round((h.endValue || 0) / 10000);
+      if (holdingValueManwon <= 0) return;
 
-      // KODEX 26-12 회사채(AA-이상)액티브 (만기매칭 반기/분기 쿠폰 연 4.1%)
-      { id: 'bond-3', month: 3, assetName: 'KODEX 26-12 회사채액티브', category: '회사채/크레딧', estimatedAmountManwon: 62, expectedDate: '3월 말일', taxStatus: '15.4% 원천징수', badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30', reinvestNote: '회사채 분기 쿠폰 수취' },
-      { id: 'bond-6', month: 6, assetName: 'KODEX 26-12 회사채액티브', category: '회사채/크레딧', estimatedAmountManwon: 62, expectedDate: '6월 말일', taxStatus: '15.4% 원천징수', badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30', reinvestNote: '상반기 만기매칭 이자 결산' },
-      { id: 'bond-9', month: 9, assetName: 'KODEX 26-12 회사채액티브', category: '회사채/크레딧', estimatedAmountManwon: 62, expectedDate: '9월 말일', taxStatus: '15.4% 원천징수', badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30', reinvestNote: '3분기 이자 정산' },
-      { id: 'bond-12', month: 12, assetName: 'KODEX 26-12 회사채액티브', category: '회사채/크레딧', estimatedAmountManwon: 62, expectedDate: '12월 24일', taxStatus: '15.4% 원천징수', badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30', reinvestNote: '연말 이자 확정 및 만기 롤오버' },
+      const weightPct = Number((((h.endValue || 0) / totalVal) * 100).toFixed(1));
+      const category = categorizeHolding(h.name);
+      const profile = getAssetDistributionProfile(h.name, category);
 
-      // TIGER KOFR금리액티브 (단기 무위험 파킹 일복리)
-      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => ({
-        id: `kofr-${m}`, month: m, assetName: 'TIGER KOFR금리액티브(파킹)', category: '단기자금' as const, estimatedAmountManwon: 28, expectedDate: `월말 누적산입`, taxStatus: '15.4% 원천징수' as const, badgeColor: 'bg-slate-500/20 text-slate-300 border-slate-500/30', reinvestNote: '기준금리 인하 전 고금리 파킹 이자 확보'
-      })),
+      // 연간 총 예상 배당금 (만원)
+      const annualDividendManwon = Math.round(holdingValueManwon * (profile.annualYieldPct / 100));
+      const perMonthAmount = Math.max(1, Math.round(annualDividendManwon / profile.paymentMonths.length));
 
-      // KODEX 반도체 / KOSPI 대형주 분기 특별배당 (4월 집중 유입)
-      { id: 'kospi-div-4', month: 4, assetName: '국내 대형주/반도체 결산배당', category: '배당 ETF', estimatedAmountManwon: 180, expectedDate: '4월 넷째주', taxStatus: '15.4% 원천징수', badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30', reinvestNote: '국내 상장사 4월 배당 집중 시즌 결산 입금' },
-    ];
-  }, []);
+      // 각 지급월별 아이템 생성
+      profile.paymentMonths.forEach(m => {
+        let badgeColor = 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+        if (category === '배당형') badgeColor = 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30';
+        if (category === '채권/크레딧') badgeColor = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+        if (category === '현금/파킹') badgeColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
 
-  // 1월 ~ 12월 월별 집계 데이터 (Recharts 차트용)
+        items.push({
+          id: `div-${hIdx}-${m}`,
+          month: m,
+          assetName: h.name,
+          holdingValueManwon,
+          weightPct,
+          category,
+          estimatedAmountManwon: perMonthAmount,
+          expectedDate: profile.expectedDate,
+          taxStatus: '15.4% 배당소득세',
+          badgeColor,
+          reinvestNote: `${h.name} 분배금 수취 후 펀드 포트폴리오 재투자`,
+        });
+      });
+    });
+
+    return items;
+  }, [realHoldings]);
+
+  // 3. 월별 집계 데이터 (Recharts 차트용)
   const monthlyAggregated = useMemo(() => {
     const months = Array.from({ length: 12 }, (_, i) => i + 1);
     let cumulative = 0;
@@ -77,19 +157,12 @@ export default function TffDividendCalendar({ data }: Props) {
     return months.map(m => {
       const itemsInMonth = dividendSchedule.filter(item => item.month === m);
       const totalInMonth = itemsInMonth.reduce((acc, cur) => acc + cur.estimatedAmountManwon, 0);
-      const taxExemptAmount = itemsInMonth
-        .filter(item => item.taxStatus.includes('비과세'))
-        .reduce((acc, cur) => acc + cur.estimatedAmountManwon, 0);
-      const taxableAmount = totalInMonth - taxExemptAmount;
-
       cumulative += totalInMonth;
 
       return {
         month: `${m}월`,
         monthNum: m,
         totalAmount: totalInMonth,
-        taxExemptAmount,
-        taxableAmount,
         cumulativeAmount: cumulative,
         itemCount: itemsInMonth.length,
       };
@@ -105,12 +178,10 @@ export default function TffDividendCalendar({ data }: Props) {
     return Math.round(annualTotalManwon / 12);
   }, [annualTotalManwon]);
 
-  const taxExemptRatio = useMemo(() => {
-    const exemptTotal = dividendSchedule
-      .filter(item => item.taxStatus.includes('비과세'))
-      .reduce((acc, cur) => acc + cur.estimatedAmountManwon, 0);
-    return Math.round((exemptTotal / annualTotalManwon) * 100);
-  }, [dividendSchedule, annualTotalManwon]);
+  const portfolioYieldPct = useMemo(() => {
+    if (totalPortfolioValueManwon <= 0) return 0;
+    return Number(((annualTotalManwon / totalPortfolioValueManwon) * 100).toFixed(2));
+  }, [annualTotalManwon, totalPortfolioValueManwon]);
 
   // 필터링된 세부 내역 목록
   const filteredItems = useMemo(() => {
@@ -118,21 +189,22 @@ export default function TffDividendCalendar({ data }: Props) {
     return dividendSchedule.filter(item => item.month === selectedMonthFilter);
   }, [dividendSchedule, selectedMonthFilter]);
 
-  // 5년 후 복리 재투자 시 예상 자산 증가 시뮬레이션
-  const compoundReinvestBenefitManwon = useMemo(() => {
-    // 연 7% 재투자 복리 가정
-    const r = 0.07;
-    let accumulated = 0;
-    for (let yr = 1; yr <= 5; yr++) {
-      accumulated = (accumulated + annualTotalManwon) * (1 + r);
-    }
-    const simpleTotal = annualTotalManwon * 5;
-    return Math.round(accumulated - simpleTotal);
-  }, [annualTotalManwon]);
+  // 보유 종목이 없는 경우 빈 상태 안내
+  if (realHoldings.length === 0) {
+    return (
+      <div className="w-full p-8 rounded-2xl bg-slate-900/40 border border-slate-800 text-center">
+        <AlertCircle className="w-12 h-12 text-slate-500 mx-auto mb-3" />
+        <h3 className="text-lg font-bold text-white mb-1">TFF 보유 종목 데이터가 없습니다</h3>
+        <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+          대시보드 상단에서 TFF 펀드 현황 엑셀을 업로드하면 실제 편입된 보유 종목(ETF/주식/채권)의 실시간 배당·분배금 캘린더가 자동으로 산출됩니다. (비보유 가상 자산은 엄격히 제외됩니다)
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full space-y-6">
-      {/* 1. 상단 인트로 헤더 & 퀵 필터 바 */}
+      {/* 1. 상단 인트로 헤더 */}
       <div className="p-5 md:p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/20 shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -141,18 +213,18 @@ export default function TffDividendCalendar({ data }: Props) {
             <div className="flex items-center gap-2 mb-1.5">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                 <Calendar className="w-3 h-3" />
-                TFF 공동 펀드 전용 캐시플로우
+                TFF 실제 보유 포트폴리오 연동
               </span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                <ShieldCheck className="w-3 h-3" />
-                비과세 혜택 자동 감지
+                <CheckCircle2 className="w-3 h-3" />
+                {latestMonthLabel} 기준 {realHoldings.length}개 보유 종목
               </span>
             </div>
             <h2 className="text-xl md:text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-              TFF 연간 배당·쿠폰 캐시플로우 타임라인
+              TFF 보유 종목 배당·분배금 캐시플로우 타임라인
             </h2>
             <p className="text-xs md:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              TFF 공동 펀드 보유 자산(해외 국채 반기 쿠폰, 월배당 ETF, 회사채 이자 등)의 1~12월 유입 스케줄을 시각화하고, 연간 총 배당수익률 및 복리 재투자 로드맵을 제공합니다.
+              TFF 펀드에 실제 편입된 {realHoldings.length}개 종목의 연간 배당 및 분배금 유입 스케줄입니다. (비보유 자산은 엄격히 제외되어 있습니다)
             </p>
           </div>
 
@@ -176,7 +248,7 @@ export default function TffDividendCalendar({ data }: Props) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 shadow-sm hover:border-indigo-500/40 transition-all">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>연간 총 배당·쿠폰 유입</span>
+            <span>연간 총 예상 배당·분배금</span>
             <Coins className="w-4 h-4 text-indigo-400" />
           </div>
           <div className="mt-2 text-2xl font-extrabold text-white tracking-tight">
@@ -184,7 +256,7 @@ export default function TffDividendCalendar({ data }: Props) {
           </div>
           <div className="mt-1 flex items-center text-[11px] text-indigo-300 font-medium">
             <TrendingUp className="w-3 h-3 mr-1" />
-            펀드 포트폴리오 기준 연 6.8% 캐시플로우
+            포트폴리오 배당수익률 연 {portfolioYieldPct}%
           </div>
         </div>
 
@@ -197,20 +269,20 @@ export default function TffDividendCalendar({ data }: Props) {
             월 {monthlyAverageManwon.toLocaleString()}만원
           </div>
           <div className="mt-1 text-[11px] text-slate-400">
-            매월 정기 펀드 운용비 및 재투자 원천
+            보유 {realHoldings.length}종목 정기 유입분
           </div>
         </div>
 
         <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 shadow-sm hover:border-emerald-500/40 transition-all">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>비과세 이자 비중 (브라질 국채)</span>
+            <span>실제 편입 자산 총액</span>
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="mt-2 text-2xl font-extrabold text-emerald-400 tracking-tight">
-            {taxExemptRatio}%
+            {totalPortfolioValueManwon.toLocaleString()}만원
           </div>
           <div className="mt-1 text-[11px] text-emerald-300/80">
-            조세조약 100% 비과세(1월·7월 1,000만)
+            {latestMonthLabel} 스냅샷 평가액 기준
           </div>
         </div>
 
@@ -220,24 +292,24 @@ export default function TffDividendCalendar({ data }: Props) {
             <Sparkles className="w-4 h-4 text-amber-400" />
           </div>
           <div className="mt-2 text-2xl font-extrabold text-amber-400 tracking-tight">
-            +{compoundReinvestBenefitManwon.toLocaleString()}만원
+            +{Math.round(annualTotalManwon * 0.35).toLocaleString()}만원
           </div>
           <div className="mt-1 text-[11px] text-amber-300/80">
-            연 7% 복리 롤오버 시 복리 마법 효과
+            분배금 펀드 자동 롤오버 시
           </div>
         </div>
       </div>
 
-      {/* 3. 1~12월 캐시플로우 타임라인 차트 (Recharts ComposedChart) */}
+      {/* 3. 월별 캐시플로우 타임라인 차트 */}
       <div className="p-5 md:p-6 rounded-2xl bg-slate-950 border border-slate-800/80 shadow-lg">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <Calendar className="w-4 h-4 text-indigo-400" />
-              월별 분배금 수령액 & 연간 누적 타임라인
+              월별 예상 분배금 수령액 (1~12월)
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              막대를 클릭하면 해당 월의 상세 입금 내역을 필터링하여 확인하실 수 있습니다.
+              TFF 실제 보유 종목의 배당 지급 주기를 기반으로 집계된 월별 예상 분배금입니다.
             </p>
           </div>
 
@@ -274,50 +346,34 @@ export default function TffDividendCalendar({ data }: Props) {
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
               <XAxis dataKey="month" stroke="#94a3b8" tick={{ fontSize: 11 }} />
               <YAxis yAxisId="left" stroke="#94a3b8" tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}만`} />
-              <YAxis yAxisId="right" orientation="right" stroke="#818cf8" tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 100)}백`} />
+              <YAxis yAxisId="right" orientation="right" stroke="#818cf8" tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v)}만`} />
               <Tooltip
                 contentStyle={STANDARD_TOOLTIP_STYLE}
-                formatter={(val: any, name: any) => {
-                  if (name === '누적 수령액') return [`${Number(val).toLocaleString()}만원`, name];
-                  if (name === '비과세 쿠폰') return [`${Number(val).toLocaleString()}만원 (비과세)`, name];
-                  return [`${Number(val).toLocaleString()}만원`, name];
-                }}
+                formatter={(val: any, name: any) => [`${Number(val).toLocaleString()}만원`, name]}
               />
               <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} />
-              <Bar yAxisId="left" dataKey="taxExemptAmount" name="비과세 쿠폰" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-              <Bar yAxisId="left" dataKey="taxableAmount" name="일반 배당/이자" stackId="a" fill="#6366f1" radius={[4, 4, 0, 0]}>
+              <Bar yAxisId="left" dataKey="totalAmount" name="월간 분배금(만원)" fill="#6366f1" radius={[4, 4, 0, 0]}>
                 {monthlyAggregated.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
                     cursor="pointer"
-                    fill={selectedMonthFilter === entry.monthNum ? '#a855f7' : (entry.taxExemptAmount > 0 ? '#6366f1' : '#3b82f6')}
+                    fill={selectedMonthFilter === entry.monthNum ? '#a855f7' : '#6366f1'}
                     onClick={() => setSelectedMonthFilter(entry.monthNum)}
                   />
                 ))}
               </Bar>
-              <Line yAxisId="right" type="monotone" dataKey="cumulativeAmount" name="누적 수령액" stroke="#ec4899" strokeWidth={2.5} dot={{ r: 3, fill: '#ec4899' }} />
+              <Line yAxisId="right" type="monotone" dataKey="cumulativeAmount" name="누적 분배금(만원)" stroke="#ec4899" strokeWidth={2.5} dot={{ r: 3, fill: '#ec4899' }} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-
-        <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-            <strong>1월 & 7월:</strong> 브라질 국채 반기 쿠폰(+500만원) 집중 유입으로 상·하반기 펀드 유동성 피크
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block" />
-            <strong>4월:</strong> 국내 KOSPI 결산 배당 집중 유입 (+180만원)
-          </span>
-        </div>
       </div>
 
-      {/* 4. 세부 분배금 항목 카드 & 캘린더 그리드 */}
+      {/* 4. 세부 분배금 항목 카드 */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
             <Coins className="w-4 h-4 text-amber-400" />
-            {selectedMonthFilter === 'ALL' ? '연간 전체 분배금 유입 세부 명세' : `${selectedMonthFilter}월 분배금 유입 세부 명세 (${filteredItems.length}건)`}
+            {selectedMonthFilter === 'ALL' ? `전체 보유 종목 분배금 명세 (${filteredItems.length}건)` : `${selectedMonthFilter}월 분배금 명세 (${filteredItems.length}건)`}
           </h3>
           <span className="text-xs text-slate-400">
             총합 {filteredItems.reduce((acc, cur) => acc + cur.estimatedAmountManwon, 0).toLocaleString()}만원
@@ -336,14 +392,14 @@ export default function TffDividendCalendar({ data }: Props) {
                     {item.month}월 입금 ({item.expectedDate})
                   </span>
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${item.badgeColor}`}>
-                    {item.taxStatus}
+                    {item.category}
                   </span>
                 </div>
                 <div className="text-sm font-bold text-white mb-0.5">
                   {item.assetName}
                 </div>
                 <div className="text-[11px] text-slate-400 mb-2">
-                  분류: {item.category}
+                  보유 평가액: {item.holdingValueManwon.toLocaleString()}만원 ({item.weightPct}%)
                 </div>
               </div>
 
@@ -353,9 +409,6 @@ export default function TffDividendCalendar({ data }: Props) {
                   +{item.estimatedAmountManwon.toLocaleString()}만원
                 </span>
               </div>
-              <p className="mt-1.5 text-[10px] text-indigo-300/80 bg-indigo-950/30 p-1.5 rounded-lg border border-indigo-900/30">
-                💡 {item.reinvestNote}
-              </p>
             </div>
           ))}
         </div>

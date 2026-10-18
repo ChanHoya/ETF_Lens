@@ -37,10 +37,10 @@ export default function TffDashboard({ onOpenDetail }: Props) {
     const [rawLog, setRawLog] = useState<any>(null); // 디버깅용 엑셀 원본 JSON
     const [isDragging, setIsDragging] = useState(false);
     const [isParsing, setIsParsing] = useState(false);
-    const [activeSubTab, setActiveSubTab] = useState<'overview'|'cumulative'|'assets'|'ytm'|'monthly'|'calendar'|'stress'|'ladder'|'brazil'>('overview');
+    const [activeSubTab, setActiveSubTab] = useState<'overview'|'cumulative'|'assets'|'ytm'|'monthly'|'calendar'|'stress'|'ladder'>('overview');
     const [selectedMonth, setSelectedMonth] = useState<string>(''); // For monthly view filter
     const [showUploadModal, setShowUploadModal] = useState(false);
-    const [standaloneView, setStandaloneView] = useState<'none'|'brazil'|'calendar'|'stress'|'ladder'>('none');
+    const [standaloneView, setStandaloneView] = useState<'none'|'calendar'|'stress'|'ladder'>('none');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // 현 시점 추정 시뮬레이션 상태
@@ -649,8 +649,9 @@ export default function TffDashboard({ onOpenDetail }: Props) {
 
             {/* 헤더 2행: 탭 내비게이션 (데이터 있을 때만) */}
             {fundData && (
-                <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 relative z-20 px-0 flex flex-col lg:flex-row lg:items-center gap-2">
-                    <div className="flex-1 overflow-x-auto custom-scrollbar">
+                <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-4 relative z-20 px-0 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    {/* 좌우 스크롤 가능한 탭 컨테이너 (오른쪽 선택 박스에 가려지지 않도록 min-w-0 및 overflow-x-auto, whitespace-nowrap 적용) */}
+                    <div className="flex-1 min-w-0 overflow-x-auto custom-scrollbar scrollbar-thin scrollbar-thumb-slate-700/60 pb-1.5 touch-pan-x">
                         <SlidingTabs
                             items={[
                                 { id: 'overview', label: '포트폴리오 현황' },
@@ -658,20 +659,21 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                 { id: 'assets', label: '종목별 수익율' },
                                 { id: 'ytm', label: 'YTM 현황' },
                                 { id: 'monthly', label: '월별 분석' },
-                                { id: 'calendar', label: '📅 배당·쿠폰 캘린더' },
+                                { id: 'calendar', label: '📅 배당·분배금 캘린더' },
                                 { id: 'stress', label: '⚡ 펀드 리스크 & 스트레스' },
-                                { id: 'ladder', label: '🪜 채권 듀레이션 & 만기 사다리' },
-                                { id: 'brazil', label: '🇧🇷 브라질 국채 복리' },
+                                { id: 'ladder', label: '🪜 보유 채권 듀레이션' },
                             ]}
                             activeId={activeSubTab}
                             onChange={(id) => setActiveSubTab(id as any)}
+                            containerClassName="inline-flex flex-nowrap min-w-max gap-1 select-none"
+                            tabClassName="px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap shrink-0"
                             pillClassName="bg-sky-500/20 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.2)] border border-sky-500/40"
                             inactiveTabClassName="text-gray-400 hover:text-gray-200"
                         />
                     </div>
 
-                    {/* 현 시점 추정 시뮬레이션 스무스 토글 스위치 */}
-                    <div className="relative group flex-shrink-0">
+                    {/* 현 시점 추정 시뮬레이션 스무스 토글 스위치 (오른쪽 독립 유지) */}
+                    <div className="relative group flex-shrink-0 self-end md:self-center">
                         <button
                             onClick={() => estimateBuilt && setUseEstimate(v => !v)}
                             disabled={!estimateBuilt}
@@ -795,7 +797,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                                 : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
                                         }`}
                                     >
-                                        📅 배당·쿠폰 캘린더
+                                        📅 배당·분배금 캘린더
                                     </button>
                                     <button
                                         onClick={() => setStandaloneView(v => v === 'stress' ? 'none' : 'stress')}
@@ -815,17 +817,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                                 : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                                         }`}
                                     >
-                                        🪜 채권 듀레이션 & 만기 사다리
-                                    </button>
-                                    <button
-                                        onClick={() => setStandaloneView(v => v === 'brazil' ? 'none' : 'brazil')}
-                                        className={`px-3.5 py-2 font-bold text-xs rounded-xl border transition-all flex items-center gap-1.5 ${
-                                            standaloneView === 'brazil'
-                                                ? 'bg-emerald-600 text-white border-emerald-500 shadow-md'
-                                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                                        }`}
-                                    >
-                                        🇧🇷 브라질 국채 복리
+                                        🪜 보유 채권 듀레이션
                                     </button>
                                 </div>
                             </div>
@@ -854,11 +846,6 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                         {standaloneView === 'ladder' && (
                             <div className="w-full mt-6 pt-6 border-t border-white/10">
                                 <TffBondLadderAnalytics />
-                            </div>
-                        )}
-                        {standaloneView === 'brazil' && (
-                            <div className="w-full mt-6 pt-6 border-t border-white/10">
-                                <BrazilBondCompoundSimulator />
                             </div>
                         )}
                     </div>
@@ -943,10 +930,6 @@ export default function TffDashboard({ onOpenDetail }: Props) {
 
                             {activeSubTab === 'ladder' && (
                                 <TffBondLadderAnalytics data={displayData} />
-                            )}
-
-                            {activeSubTab === 'brazil' && (
-                                <BrazilBondCompoundSimulator />
                             )}
                         </div>
                         
