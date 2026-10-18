@@ -3,14 +3,13 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: Sprint 29 완료 — [몬테카를로 은퇴 시뮬레이터, 텔레그램 챗봇 웹훅, 연말정산 역산기, 환전 타이밍 적기 지수]
+✅ Recent: Sprint 30 완료 — [포트폴리오 비타민, 데일리 모닝 인텔리전스, 배당 절세 플래너, 주담대 대환 계산기]
 
-🚀 Current: Sprint 30 완료 — [후보 1~4 4대 혁신 기능 일괄 개발 및 브라우저 E2E 무결성 검증 완료]:
-1) [S30-1: 통합 포트폴리오 & 퀀트 리밸런싱] '포트폴리오 비타민' AI 종목 추천 & 효율적 투자선(Efficient Frontier) 최적 편입 비중 산출기: `GET /api/v1/rebalance/portfolio-vitamin` 엔드포인트 구현 (현재 vs 최적화 샤프지수 0.88→1.24/변동성 14.2%→10.8%, 3대 결핍 비타민 ETF ACE 금현물·TIGER KOFR·ACE 미국배당다우존스(H) 자동 처방), Recharts 산점도 및 포트폴리오 위젯 결합 (`PortfolioVitaminOptimizer.tsx`, `IntegratedAssetRebalancingWidget.tsx`).
-2) [S30-2: 스마트 텔레그램 & 데일리 인텔리전스] 매일 아침 08:30 KST '데일리 모닝 인텔리전스 브리핑' 엔진: 뉴욕증시 3대 지수, SOX 반도체, NDF 환율, F&GI, KIS 포트폴리오 개장전 체크포인트 통합 엔진 (`morning_briefing.py`), 텔레그램 `/morning` 명령어 및 발송 엔드포인트(`telegram_bot.py`), 단위 테스트 100% 통과.
-3) [S30-3: 연금·절세 & 배당 세무 리포팅] 금융소득종합과세(연 2,000만원) 분기별 누적 도달 예측 게이지 & 배당 절세 재배치 플래너: 2,000만 한도 소진율 및 건보료 피부양자 박탈 경보, ISA/연금저축/IRP/브라질국채 4대 절세 계좌 재배치 시뮬레이터 및 절감 세액 계산기 (`DividendTaxShieldPlanner.tsx`, `PensionWealthHub.tsx`).
-4) [S30-4: 글로벌 매크로 & 실물 부동산] BOK 기준금리 인하 사이클 반영 주담대 대환(Refinancing) 이자 절감 계산기 & 수도권 상급지 갈아타기 자금 수지표: 기존금리 vs 대환금리 비교 및 월 상환 절감액, 중도상환수수료(1.2% 감쇄) 손익분기점(BEP), 수도권 6대 상급지(마용성, 분당, 강남 등) 갈아타기 수지표 (`MortgageRateRefinancingPlanner.tsx`, `RealEstateTab.tsx`).
-5) [검증 상태]: 백엔드 pytest 신규 및 전체 테스트 100% 통과 (7 passed), Next.js 11개 페이지 최적화 프로덕션 빌드 성공 (`code 0`), 브라우저 서브에이전트 E2E 검증 완료.
+🚀 Current: Sprint 31 완료 — [TFF 공동 펀드 전용 3대 혁신 기능 일괄 개발 및 브라우저 E2E 무결성 검증 완료]:
+1) [S31-1: TFF 캐시플로우 & 실시간 NAV] TFF 배당·쿠폰 캐시플로우 타임라인 캘린더: 연간 1~12월 배당/이자 Recharts 바 & 누적 선 차트, 연간 총 배당수익률(6.8%) 및 월평균 350만원 패시브 인컴 KPI, 브라질 국채 반기 쿠폰(1/7월) 100% 비과세 자동 분리, 복리 재투자 시뮬레이션 (`TffDividendCalendar.tsx`, `TffDashboard.tsx`).
+2) [S31-2: TFF 공동 펀드 리스크 관리] TFF 내부 5대 자산군 상관계수 & 4대 매크로 충격 스트레스 테스터: KIS 개인 자산 완전 격리 원칙 준수, TFF 펀드 자체 5대 자산군(테크성장, 배당가치, 브라질국채, 크레딧, KOFR) 5x5 상관계수 히트맵, 4대 글로벌 충격(환율 +50원, 금리 +50bp, 증시 -10%, 스태그플레이션) 펀드 NAV 예상 변동액(원) 및 쿠션 자산 분석 (`TffStressCorrelationMatrix.tsx`, `TffDashboard.tsx`).
+3) [S31-3: TFF 채권·인컴 정밀 분석] TFF 채권 듀레이션·DV01 & 10개년(2026~2035) 만기 매칭 현금흐름 사다리(Bond Ladder): 가중평균 YTM(9.85%), 수정 듀레이션(4.25년), DV01(2.55만원/bp) 정밀 산출, 기준금리 인하폭(-25~-150bp) 슬라이더 기반 자본차익 시뮬레이터, 10개년 만기 도래 원금 및 정기 쿠폰 스케줄 인포그래픽 (`TffBondLadderAnalytics.tsx`, `TffDashboard.tsx`).
+4) [검증 상태]: Next.js 11개 페이지 최적화 프로덕션 빌드 무결성 통과 (`code 0`), 브라우저 서브에이전트 E2E 검증 통과 (캘린더, 스트레스, 사다리 3대 뷰 실화면 렌더링 확인).
 
 > 세션 핸드오프 (2026-10-17, Antigravity - Sprint 24: 국토교통부 MOLIT 실거래가 OpenAPI 공식 연동 및 경기·인천 13대 거점 실시간 파이프라인 구축 완료):
 > - 🏛️ [Sprint 24: 국토교통부(MOLIT) 실거래가 OpenAPI 공식 연동 (S24-1~4)]:

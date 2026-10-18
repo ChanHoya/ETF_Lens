@@ -13,6 +13,9 @@ import OverviewView from './views/OverviewView';
 import YtmView from './views/YtmView';
 import MonthlyView from './views/MonthlyView';
 import BrazilBondCompoundSimulator from './views/BrazilBondCompoundSimulator';
+import TffDividendCalendar from './views/TffDividendCalendar';
+import TffStressCorrelationMatrix from './views/TffStressCorrelationMatrix';
+import TffBondLadderAnalytics from './views/TffBondLadderAnalytics';
 import SlidingTabs from '../common/SlidingTabs';
 
 const LOCAL_STORAGE_KEY = 'tff_fund_data';
@@ -34,10 +37,10 @@ export default function TffDashboard({ onOpenDetail }: Props) {
     const [rawLog, setRawLog] = useState<any>(null); // 디버깅용 엑셀 원본 JSON
     const [isDragging, setIsDragging] = useState(false);
     const [isParsing, setIsParsing] = useState(false);
-    const [activeSubTab, setActiveSubTab] = useState<'overview'|'cumulative'|'assets'|'ytm'|'monthly'|'brazil'>('overview');
+    const [activeSubTab, setActiveSubTab] = useState<'overview'|'cumulative'|'assets'|'ytm'|'monthly'|'calendar'|'stress'|'ladder'|'brazil'>('overview');
     const [selectedMonth, setSelectedMonth] = useState<string>(''); // For monthly view filter
     const [showUploadModal, setShowUploadModal] = useState(false);
-    const [showStandaloneSimulator, setShowStandaloneSimulator] = useState(false);
+    const [standaloneView, setStandaloneView] = useState<'none'|'brazil'|'calendar'|'stress'|'ladder'>('none');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // 현 시점 추정 시뮬레이션 상태
@@ -655,6 +658,9 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                 { id: 'assets', label: '종목별 수익율' },
                                 { id: 'ytm', label: 'YTM 현황' },
                                 { id: 'monthly', label: '월별 분석' },
+                                { id: 'calendar', label: '📅 배당·쿠폰 캘린더' },
+                                { id: 'stress', label: '⚡ 펀드 리스크 & 스트레스' },
+                                { id: 'ladder', label: '🪜 채권 듀레이션 & 만기 사다리' },
                                 { id: 'brazil', label: '🇧🇷 브라질 국채 복리' },
                             ]}
                             activeId={activeSubTab}
@@ -774,18 +780,52 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                     대시보드에 표시할 공유 데이터가 아직 업로드되지 않았습니다. <br />
                                     마스터 관리자가 첫 번째 엑셀 파일을 업로드하면 이곳에서 전체 투자참여자가 실시간으로 조회가 가능합니다.
                                 </p>
-                                <div className="flex flex-col sm:flex-row items-center gap-3">
+                                <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
                                     <button
                                         onClick={openPasscodeModal}
-                                        className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-sm rounded-xl transition-all shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center gap-2"
+                                        className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(245,158,11,0.2)] flex items-center gap-1.5"
                                     >
-                                        <Key className="w-4 h-4 text-amber-400" /> 마스터 권한으로 로그인
+                                        <Key className="w-3.5 h-3.5 text-amber-950" /> 마스터 권한으로 로그인
                                     </button>
                                     <button
-                                        onClick={() => setShowStandaloneSimulator(!showStandaloneSimulator)}
-                                        className="px-5 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold text-sm rounded-xl border border-emerald-500/30 transition-all flex items-center gap-2"
+                                        onClick={() => setStandaloneView(v => v === 'calendar' ? 'none' : 'calendar')}
+                                        className={`px-3.5 py-2 font-bold text-xs rounded-xl border transition-all flex items-center gap-1.5 ${
+                                            standaloneView === 'calendar'
+                                                ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
+                                                : 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                                        }`}
                                     >
-                                        🇧🇷 브라질 국채 복리 시뮬레이터
+                                        📅 배당·쿠폰 캘린더
+                                    </button>
+                                    <button
+                                        onClick={() => setStandaloneView(v => v === 'stress' ? 'none' : 'stress')}
+                                        className={`px-3.5 py-2 font-bold text-xs rounded-xl border transition-all flex items-center gap-1.5 ${
+                                            standaloneView === 'stress'
+                                                ? 'bg-purple-600 text-white border-purple-500 shadow-md'
+                                                : 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border-purple-500/30'
+                                        }`}
+                                    >
+                                        ⚡ 펀드 리스크 & 스트레스
+                                    </button>
+                                    <button
+                                        onClick={() => setStandaloneView(v => v === 'ladder' ? 'none' : 'ladder')}
+                                        className={`px-3.5 py-2 font-bold text-xs rounded-xl border transition-all flex items-center gap-1.5 ${
+                                            standaloneView === 'ladder'
+                                                ? 'bg-emerald-600 text-white border-emerald-500 shadow-md'
+                                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                                        }`}
+                                    >
+                                        🪜 채권 듀레이션 & 만기 사다리
+                                    </button>
+                                    <button
+                                        onClick={() => setStandaloneView(v => v === 'brazil' ? 'none' : 'brazil')}
+                                        className={`px-3.5 py-2 font-bold text-xs rounded-xl border transition-all flex items-center gap-1.5 ${
+                                            standaloneView === 'brazil'
+                                                ? 'bg-emerald-600 text-white border-emerald-500 shadow-md'
+                                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                                        }`}
+                                    >
+                                        🇧🇷 브라질 국채 복리
                                     </button>
                                 </div>
                             </div>
@@ -800,8 +840,23 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                             </button>
                         )}
 
-                        {/* 독립 브라질 국채 시뮬레이터 뷰 */}
-                        {showStandaloneSimulator && (
+                        {/* 독립 시뮬레이터 뷰 */}
+                        {standaloneView === 'calendar' && (
+                            <div className="w-full mt-6 pt-6 border-t border-white/10">
+                                <TffDividendCalendar />
+                            </div>
+                        )}
+                        {standaloneView === 'stress' && (
+                            <div className="w-full mt-6 pt-6 border-t border-white/10">
+                                <TffStressCorrelationMatrix />
+                            </div>
+                        )}
+                        {standaloneView === 'ladder' && (
+                            <div className="w-full mt-6 pt-6 border-t border-white/10">
+                                <TffBondLadderAnalytics />
+                            </div>
+                        )}
+                        {standaloneView === 'brazil' && (
                             <div className="w-full mt-6 pt-6 border-t border-white/10">
                                 <BrazilBondCompoundSimulator />
                             </div>
@@ -876,6 +931,18 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                         <div className="text-gray-400 py-10 text-center">월 데이터를 선택해주세요.</div>
                                     )}
                                 </div>
+                            )}
+
+                            {activeSubTab === 'calendar' && (
+                                <TffDividendCalendar data={displayData} />
+                            )}
+
+                            {activeSubTab === 'stress' && (
+                                <TffStressCorrelationMatrix data={displayData} />
+                            )}
+
+                            {activeSubTab === 'ladder' && (
+                                <TffBondLadderAnalytics data={displayData} />
                             )}
 
                             {activeSubTab === 'brazil' && (
