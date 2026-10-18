@@ -8,50 +8,50 @@ import { DollarModalContent, PerModalContent, CliModalContent, SentimentModalCon
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import RiskGaugeChart from './RiskGaugeChart';
 
-// Mock Data for the 1-year Historical Trends (12 Months)
+// Fallback Data for the 1-year Historical Trends (12 Months, 2025.11~2026.10)
 const mockDollarData = [
-    { month: '03월', val: 104.2, krw: 1350 },
-    { month: '04월', val: 103.8, krw: 1345 },
-    { month: '05월', val: 105.1, krw: 1370 }, // Peak danger
-    { month: '06월', val: 104.5, krw: 1362 },
-    { month: '07월', val: 102.3, krw: 1330 },
-    { month: '08월', val: 101.8, krw: 1325 },
-    { month: '09월', val: 100.9, krw: 1310 },
-    { month: '10월', val: 99.5, krw: 1290 },
-    { month: '11월', val: 98.2, krw: 1285 },
-    { month: '12월', val: 97.4, krw: 1270 },
-    { month: '01월', val: 96.8, krw: 1265 },
-    { month: '02월', val: 97.77, krw: 1280 },
+    { month: '11월', val: 105.5, krw: 1395 },
+    { month: '12월', val: 104.8, krw: 1388 },
+    { month: '01월', val: 104.2, krw: 1378 },
+    { month: '02월', val: 103.9, krw: 1372 },
+    { month: '03월', val: 103.5, krw: 1365 },
+    { month: '04월', val: 104.1, krw: 1375 },
+    { month: '05월', val: 104.6, krw: 1382 },
+    { month: '06월', val: 104.3, krw: 1379 },
+    { month: '07월', val: 103.8, krw: 1368 },
+    { month: '08월', val: 103.2, krw: 1360 },
+    { month: '09월', val: 103.5, krw: 1370 },
+    { month: '10월', val: 103.8, krw: 1385 },
 ];
 
 const mockPerData = [
-    { month: '03월', val: 9.8, kospi: 2750, price: 2750 },
-    { month: '04월', val: 9.5, kospi: 2680, price: 2680 },
-    { month: '05월', val: 9.1, kospi: 2600, price: 2600 },
-    { month: '06월', val: 9.9, kospi: 2700, price: 2700 },
-    { month: '07월', val: 10.4, kospi: 2780, price: 2780 },
-    { month: '08월', val: 10.9, kospi: 2850, price: 2850 },
-    { month: '09월', val: 11.2, kospi: 2900, price: 2900 },
-    { month: '10월', val: 11.5, kospi: 2930, price: 2930 },
-    { month: '11월', val: 11.8, kospi: 2880, price: 2880 },
-    { month: '12월', val: 12.1, kospi: 2800, price: 2800 },
-    { month: '01월', val: 12.6, kospi: 2500, price: 2500 }, // Touch danger line
-    { month: '02월', val: 12.4, kospi: 2450, price: 2450 }, // Trend reversal dropping
+    { month: '11월', val: 10.1, kospi: 2580, price: 2580 },
+    { month: '12월', val: 10.3, kospi: 2610, price: 2610 },
+    { month: '01월', val: 10.5, kospi: 2650, price: 2650 },
+    { month: '02월', val: 10.4, kospi: 2630, price: 2630 },
+    { month: '03월', val: 10.2, kospi: 2590, price: 2590 },
+    { month: '04월', val: 10.6, kospi: 2680, price: 2680 },
+    { month: '05월', val: 10.8, kospi: 2720, price: 2720 },
+    { month: '06월', val: 11.0, kospi: 2750, price: 2750 },
+    { month: '07월', val: 10.9, kospi: 2740, price: 2740 },
+    { month: '08월', val: 10.7, kospi: 2700, price: 2700 },
+    { month: '09월', val: 10.8, kospi: 2715, price: 2715 },
+    { month: '10월', val: 10.8, kospi: 2710, price: 2710 },
 ];
 
 const mockCliData = [
-    { month: '03월', val: 99.1 },
-    { month: '04월', val: 99.5 },
-    { month: '05월', val: 99.8 },
-    { month: '06월', val: 99.9 },
-    { month: '07월', val: 100.1 },
-    { month: '08월', val: 100.3 },
-    { month: '09월', val: 100.5 },
-    { month: '10월', val: 100.7 },
-    { month: '11월', val: 100.9 },
-    { month: '12월', val: 101.1 }, // Peak
-    { month: '01월', val: 100.8 }, // Drop 1
-    { month: '02월', val: 100.4 }, // Drop 2 (Danger)
+    { month: '11월', val: 100.2 },
+    { month: '12월', val: 100.3 },
+    { month: '01월', val: 100.4 },
+    { month: '02월', val: 100.5 },
+    { month: '03월', val: 100.5 },
+    { month: '04월', val: 100.6 },
+    { month: '05월', val: 100.7 },
+    { month: '06월', val: 100.7 },
+    { month: '07월', val: 100.8 },
+    { month: '08월', val: 100.8 },
+    { month: '09월', val: 100.7 },
+    { month: '10월', val: 100.6 },
 ];
 
 const useVisualSort = (data: any[], keys: string[]) => {
@@ -74,33 +74,33 @@ const useVisualSort = (data: any[], keys: string[]) => {
 export default function KospiExitAnalyzer() {
     // Sensible fallbacks for t10y2y and hy_spread
     const mockT10y2yData = [
-        { month: '03월', val: -0.22 },
-        { month: '04월', val: -0.25 },
-        { month: '05월', val: -0.28 },
-        { month: '06월', val: -0.32 },
-        { month: '07월', val: -0.18 },
-        { month: '08월', val: -0.15 },
-        { month: '09월', val: -0.12 },
-        { month: '10월', val: -0.08 },
-        { month: '11월', val: -0.03 },
-        { month: '12월', val: 0.05 },
-        { month: '01월', val: 0.12 },
-        { month: '02월', val: 0.15 },
+        { month: '11월', val: -0.05 },
+        { month: '12월', val: 0.02 },
+        { month: '01월', val: 0.08 },
+        { month: '02월', val: 0.12 },
+        { month: '03월', val: 0.15 },
+        { month: '04월', val: 0.14 },
+        { month: '05월', val: 0.16 },
+        { month: '06월', val: 0.18 },
+        { month: '07월', val: 0.19 },
+        { month: '08월', val: 0.17 },
+        { month: '09월', val: 0.18 },
+        { month: '10월', val: 0.18 },
     ];
 
     const mockHySpreadData = [
-        { month: '03월', val: 3.12 },
-        { month: '04월', val: 3.25 },
-        { month: '05월', val: 3.42 },
-        { month: '06월', val: 3.55 },
-        { month: '07월', val: 3.32 },
-        { month: '08월', val: 3.21 },
-        { month: '09월', val: 3.15 },
-        { month: '10월', val: 3.08 },
-        { month: '11월', val: 2.98 },
-        { month: '12월', val: 3.02 },
-        { month: '01월', val: 3.10 },
-        { month: '02월', val: 3.15 },
+        { month: '11월', val: 3.25 },
+        { month: '12월', val: 3.20 },
+        { month: '01월', val: 3.15 },
+        { month: '02월', val: 3.12 },
+        { month: '03월', val: 3.10 },
+        { month: '04월', val: 3.18 },
+        { month: '05월', val: 3.22 },
+        { month: '06월', val: 3.15 },
+        { month: '07월', val: 3.08 },
+        { month: '08월', val: 3.05 },
+        { month: '09월', val: 3.08 },
+        { month: '10월', val: 3.10 },
     ];
 
     // Current Active Status
@@ -109,7 +109,7 @@ export default function KospiExitAnalyzer() {
     const [dollarKrw, setDollarKrw] = useState(mockDollarData[11].krw);
     const [forwardPer, setForwardPer] = useState(mockPerData[11].val);
     const [oecdCliValue, setOecdCliValue] = useState(mockCliData[11].val);
-    const [oecdCliDownMonths, setOecdCliDownMonths] = useState(2); // Based on recent mock drops
+    const [oecdCliDownMonths, setOecdCliDownMonths] = useState(0);
     const [vixValue, setVixValue] = useState(18.5);
     const [vkospiValue, setVkospiValue] = useState(15.0);
     const [fgiValue, setFgiValue] = useState(50.0);
