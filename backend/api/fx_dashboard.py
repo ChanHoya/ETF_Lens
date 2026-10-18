@@ -30,7 +30,12 @@ FRED_IDS = {
     "us10": "DGS10",            # 미 10년물
     "kr10": "IRLTLT01KRM156N",  # 한 10년물 (월간, OECD)
     "reer": "RBKRBIS",          # 원화 실질실효환율 (월간, BIS)
-    "jpy": "DEXJPUS",           # 엔/달러
+    "jpy": "DEXJPUS",           # 엔/달러 (DXY 13.6%)
+    "eur": "DEXUSEU",           # 유로/달러 (DXY 57.6%)
+    "gbp": "DEXUSUK",           # 파운드/달러 (DXY 11.9%)
+    "cad": "DEXCAUS",           # 캐나다달러/달러 (DXY 9.1%)
+    "sek": "DEXSDUS",           # 스웨덴크로나/달러 (DXY 4.2%)
+    "chf": "DEXSZUS",           # 스위스프랑/달러 (DXY 3.6%)
     "cny": "DEXCHUS",           # 위안/달러
     "twd": "DEXTAUS",           # 대만달러/달러 — 반도체 수출국끼리 비교
     "vix": "VIXCLS",            # 미국 변동성지수 — 위험 선호와 원화의 동조 확인용
@@ -186,6 +191,11 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
     us10, kr10 = _series(raw.get("us10", {})), _series(raw.get("kr10", {}))
     reer = _series(raw.get("reer", {}))
     jpy, cny, twd = _series(raw.get("jpy", {})), _series(raw.get("cny", {})), _series(raw.get("twd", {}))
+    eur = _series(raw.get("eur", {}))
+    gbp = _series(raw.get("gbp", {}))
+    cad = _series(raw.get("cad", {}))
+    sek = _series(raw.get("sek", {}))
+    chf = _series(raw.get("chf", {}))
 
     start = pd.Timestamp(today) - pd.DateOffset(years=YEARS)
     ten_years_ago = pd.Timestamp(today) - pd.DateOffset(years=10)
@@ -193,20 +203,23 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
     # 주간(금요일) 축 — 월간 지표는 앞채움. 아시아 통화는 모두 달러 대비(같은 잣대)로 본다.
     cross_jpy = (fred_krw / jpy * 100).dropna() if not fred_krw.empty and not jpy.empty else pd.Series(dtype=float)
     wk = pd.DataFrame({"krw": _weekly(krw), "dxy": _weekly(dxy), "us10": _weekly(us10), "kr10": _weekly(kr10),
-                       "usdjpy": _weekly(jpy), "usdcny": _weekly(cny), "usdtwd": _weekly(twd),
+                       "usdjpy": _weekly(jpy), "eurusd": _weekly(eur), "gbpusd": _weekly(gbp),
+                       "usdcad": _weekly(cad), "usdsek": _weekly(sek), "usdchf": _weekly(chf),
+                       "usdcny": _weekly(cny), "usdtwd": _weekly(twd),
                        "vix": _weekly(_series(raw.get("vix", {}))), "kospi": _weekly(_series(raw.get("kospi", {})))})
     wk = wk[wk.index >= start]
     if not krw.empty:  # 진행 중인 주는 다가올 금요일이 아니라 마지막 관측일로 표시
         last = krw.index[-1]
         wk.index = wk.index.where(wk.index <= last, last)
     wk["kr10"] = wk["kr10"].ffill(limit=10)
-    daily_cols = ["krw", "dxy", "us10", "usdjpy", "usdcny", "usdtwd", "vix", "kospi"]
+    daily_cols = ["krw", "dxy", "us10", "usdjpy", "eurusd", "gbpusd", "usdcad", "usdsek", "usdchf", "usdcny", "usdtwd", "vix", "kospi"]
     wk[daily_cols] = wk[daily_cols].ffill(limit=2)
     wk["spread10"] = wk["us10"] - wk["kr10"]
     rows = [
         {"date": idx.strftime("%Y-%m-%d"), "krw": _r(r.krw, 1), "dxy": _r(r.dxy), "us10": _r(r.us10),
-         "kr10": _r(r.kr10), "spread10": _r(r.spread10), "usdjpy": _r(r.usdjpy), "usdcny": _r(r.usdcny, 3),
-         "usdtwd": _r(r.usdtwd), "vix": _r(r.vix), "kospi": _r(r.kospi, 0)}
+         "kr10": _r(r.kr10), "spread10": _r(r.spread10), "usdjpy": _r(r.usdjpy, 2), "eurusd": _r(r.eurusd, 4),
+         "gbpusd": _r(r.gbpusd, 4), "usdcad": _r(r.usdcad, 4), "usdsek": _r(r.usdsek, 4), "usdchf": _r(r.usdchf, 4),
+         "usdcny": _r(r.usdcny, 3), "usdtwd": _r(r.usdtwd, 2), "vix": _r(r.vix), "kospi": _r(r.kospi, 0)}
         for idx, r in wk.iterrows() if not pd.isna(r.krw)
     ]
 
@@ -228,6 +241,22 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
             "value": _r(dxy.iloc[-1]), "date": dxy.index[-1].strftime("%Y-%m-%d"),
             "chg_1m": _change(dxy, 30), "chg_1y": _change(dxy, 365), "pct10y": _pct_rank(dxy10, dxy.iloc[-1]),
         }
+    # DXY 6대 통화 바스켓 스냅샷 (비중, 공식 지수승, 최신 환율, 1년 변동률)
+    dxy_basket = [
+        {"key": "eurusd", "currency": "유로", "symbol": "EUR/USD", "weight": 57.6, "power": -0.576,
+         "value": _r(eur.iloc[-1], 4) if not eur.empty else None, "chg_1y": _change(eur, 365)},
+        {"key": "usdjpy", "currency": "일본 엔", "symbol": "USD/JPY", "weight": 13.6, "power": 0.136,
+         "value": _r(jpy.iloc[-1], 2) if not jpy.empty else None, "chg_1y": _change(jpy, 365)},
+        {"key": "gbpusd", "currency": "영국 파운드", "symbol": "GBP/USD", "weight": 11.9, "power": -0.119,
+         "value": _r(gbp.iloc[-1], 4) if not gbp.empty else None, "chg_1y": _change(gbp, 365)},
+        {"key": "usdcad", "currency": "캐나다 달러", "symbol": "USD/CAD", "weight": 9.1, "power": 0.091,
+         "value": _r(cad.iloc[-1], 4) if not cad.empty else None, "chg_1y": _change(cad, 365)},
+        {"key": "usdsek", "currency": "스웨덴 크로나", "symbol": "USD/SEK", "weight": 4.2, "power": 0.042,
+         "value": _r(sek.iloc[-1], 4) if not sek.empty else None, "chg_1y": _change(sek, 365)},
+        {"key": "usdchf", "currency": "스위스 프랑", "symbol": "USD/CHF", "weight": 3.6, "power": 0.036,
+         "value": _r(chf.iloc[-1], 4) if not chf.empty else None, "chg_1y": _change(chf, 365)},
+    ]
+    snapshot["dxy_basket"] = dxy_basket
     asia = [{"key": k, "label": label, "value": _r(ser.iloc[-1], 3 if k == "usdcny" else 2),
              "date": ser.index[-1].strftime("%Y-%m-%d"), "chg_1y": _change(ser, 365)}
             for k, ser, label in (("usdkrw", fred_krw, "원/달러"), ("usdjpy", jpy, "엔/달러"),

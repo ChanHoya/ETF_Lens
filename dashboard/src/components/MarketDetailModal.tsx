@@ -16,6 +16,8 @@ export type SeriesConfig = {
     strokeWidth?: number;
     strokeDasharray?: string;
     dot?: boolean;
+    rawKey?: string;
+    rawUnit?: string;
 };
 
 export type DetailDataPoint = {
@@ -38,6 +40,9 @@ export interface MarketDetailModalProps {
     kpiCards?: { label: string; value: string | number; change?: string; subValue?: string; isPositive?: boolean; isAccent?: boolean }[];
     notice?: string;
     defaultPeriod?: '6M' | '1Y' | '5Y' | '10Y';
+    children?: React.ReactNode;
+    headerActions?: React.ReactNode;
+    maxWidthClassName?: string;
 }
 
 const PERIODS = ['6M', '1Y', '5Y', '10Y'] as const;
@@ -62,6 +67,9 @@ export default function MarketDetailModal({
     kpiCards,
     notice,
     defaultPeriod = '1Y',
+    children,
+    headerActions,
+    maxWidthClassName = 'max-w-4xl',
 }: MarketDetailModalProps) {
     const [period, setPeriod] = useState<Period>(defaultPeriod);
     const displayBadge = badge || category;
@@ -156,7 +164,7 @@ export default function MarketDetailModal({
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
             <div
-                className="relative w-full max-w-4xl bg-[#13151f] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden"
+                className={`relative w-full ${maxWidthClassName} bg-[#13151f] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden`}
                 onClick={e => e.stopPropagation()}
             >
                 {/* 1. Header (컴팩트 디자인) */}
@@ -227,6 +235,13 @@ export default function MarketDetailModal({
                             ))}
                         </div>
                     )}
+
+                    {/* 추가 헤더 액션 (예: 지수화 토글 등) */}
+                    {headerActions && (
+                        <div className="flex items-center gap-2">
+                            {headerActions}
+                        </div>
+                    )}
                 </div>
 
                 {/* 2-1. Indicator Filter Chips (사용자가 원하는 라인만 켜고 끌 수 있는 인터랙티브 필터) */}
@@ -290,7 +305,7 @@ export default function MarketDetailModal({
                         </p>
                     )}
 
-                    <div className="w-full h-[320px] sm:h-[360px] relative">
+                    <div className="w-full h-[320px] sm:h-[360px] min-h-[320px] sm:min-h-[360px] shrink-0 relative">
                         {filteredData.length === 0 ? (
                             <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
                                 시계열 데이터를 불러오는 중이거나 데이터가 없습니다.
@@ -338,13 +353,26 @@ export default function MarketDetailModal({
                                     <RechartsTooltip
                                         contentStyle={STANDARD_TOOLTIP_STYLE}
                                         labelFormatter={(label) => `일자: ${label}`}
-                                        formatter={(val: any, name: any) => {
+                                        formatter={(val: any, name: any, item: any) => {
                                             const cfg = series.find(s => s.name === name || s.key === name);
                                             const unit = cfg?.unit || '';
                                             const formattedVal = typeof val === 'number'
                                                 ? (Math.abs(val) < 10 && val % 1 !== 0 ? val.toFixed(2) : val.toLocaleString())
                                                 : val;
-                                            return [`${formattedVal} ${unit}`, name];
+                                            
+                                            // 원본 환율 수치가 제공된 경우 함께 병기
+                                            let rawNote = '';
+                                            if (cfg?.rawKey && item?.payload) {
+                                                const rawVal = item.payload[cfg.rawKey];
+                                                if (rawVal != null) {
+                                                    const rawFormatted = typeof rawVal === 'number'
+                                                        ? (rawVal > 10 ? rawVal.toFixed(2) : rawVal.toFixed(4))
+                                                        : rawVal;
+                                                    rawNote = ` (실제 환율: ${rawFormatted}${cfg.rawUnit ? ` ${cfg.rawUnit}` : ''})`;
+                                                }
+                                            }
+
+                                            return [`${formattedVal} ${unit}${rawNote}`, name];
                                         }}
                                     />
                                     <Legend
@@ -385,6 +413,9 @@ export default function MarketDetailModal({
                             <div className="leading-snug">{notice}</div>
                         </div>
                     )}
+
+                    {/* 4-1. Custom Children Slot (공식 안내, 상세 표 등) */}
+                    {children}
                 </div>
 
                 {/* 5. Footer */}

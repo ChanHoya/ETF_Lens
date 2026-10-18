@@ -14,10 +14,12 @@ import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import FxFinder from './FxFinder';
 import RegimeMilestones, { type Milestone } from './RegimeMilestones';
 import MarketDetailModal, { SeriesConfig, DetailDataPoint } from './MarketDetailModal';
+import DxyFormulaSection from './DxyFormulaSection';
 
 type Row = {
     date: string; krw: number | null; dxy: number | null; us10: number | null; kr10: number | null; spread10: number | null;
-    usdjpy: number | null; usdcny: number | null; usdtwd: number | null; vix: number | null; kospi: number | null;
+    usdjpy: number | null; eurusd?: number | null; gbpusd?: number | null; usdcad?: number | null; usdsek?: number | null; usdchf?: number | null;
+    usdcny: number | null; usdtwd: number | null; vix: number | null; kospi: number | null;
 };
 type Regime = {
     start: string; end: string | null; title: string; drivers: string[]; source: string | null;
@@ -29,6 +31,10 @@ type Snapshot = {
         min10y: number; max10y: number; ma26: number | null; ma26_gap: number | null;
     };
     dxy?: { value: number; date: string; chg_1m: number | null; chg_1y: number | null; pct10y: number };
+    dxy_basket?: {
+        key: string; currency: string; symbol: string; weight: number; power: number;
+        value: number | null; chg_1y: number | null;
+    }[];
     asia?: { key: 'usdkrw' | 'usdjpy' | 'usdcny' | 'usdtwd'; label: string; value: number; date: string; chg_1y: number | null }[];
     jpy100?: { value: number; chg_1y: number | null };
     spread10?: { value: number; us10: number; kr10: number; kr10_date: string; year_ago: number | null };
@@ -613,24 +619,66 @@ export default function FxTab() {
                     ],
                     notice: '💡 20년치 실제 주간 환율 데이터입니다. 원/달러 환율은 수출입 펀더멘털 및 한미 금리차, 외국인 증시 수급에 의해 결정됩니다.'
                 };
-            case 'dxy':
+            case 'dxy': {
+                // 6대 통화 기준값 (전체 시계열의 첫 유효 관측치를 100으로 정규화)
+                const validFirst = (key: keyof Row) => {
+                    const row = weekly.find(w => w[key] != null && (w[key] as number) > 0);
+                    return row ? (row[key] as number) : 1;
+                };
+                const baseEur = validFirst('eurusd');
+                const baseJpy = validFirst('usdjpy');
+                const baseGbp = validFirst('gbpusd');
+                const baseCad = validFirst('usdcad');
+                const baseSek = validFirst('usdsek');
+                const baseChf = validFirst('usdchf');
+
+                const dxyData = weekly.map(w => ({
+                    date: w.date,
+                    dxy: w.dxy,
+                    // 100 기준 통화 지수 (Base = 100)
+                    eurusd_idx: w.eurusd != null ? +((w.eurusd / baseEur) * 100).toFixed(2) : null,
+                    usdjpy_idx: w.usdjpy != null ? +((w.usdjpy / baseJpy) * 100).toFixed(2) : null,
+                    gbpusd_idx: w.gbpusd != null ? +((w.gbpusd / baseGbp) * 100).toFixed(2) : null,
+                    usdcad_idx: w.usdcad != null ? +((w.usdcad / baseCad) * 100).toFixed(2) : null,
+                    usdsek_idx: w.usdsek != null ? +((w.usdsek / baseSek) * 100).toFixed(2) : null,
+                    usdchf_idx: w.usdchf != null ? +((w.usdchf / baseChf) * 100).toFixed(2) : null,
+                    // 툴팁용 실제 환율 원본 수치
+                    eurusd: w.eurusd,
+                    usdjpy: w.usdjpy,
+                    gbpusd: w.gbpusd,
+                    usdcad: w.usdcad,
+                    usdsek: w.usdsek,
+                    usdchf: w.usdchf,
+                }));
+
+                const basket = data.snapshot.dxy_basket || [];
+
                 return {
-                    title: '달러 인덱스 (DXY) 공식 실제 시계열 추이',
-                    subtitle: 'Yahoo Finance DX-Y.NYB 공식 주간 실제 데이터 (주요 6개국 통화 바스켓 가치)',
+                    title: '달러 인덱스 (DXY) 및 6대 바스켓 구성 통화 지수',
+                    subtitle: 'DXY 및 유로(57.6%), 엔(13.6%), 파운드(11.9%), 캐나다달러(9.1%), 크로나(4.2%), 프랑(3.6%) 공식 지수 비교',
                     badge: '글로벌 통화지수',
                     badgeColor: 'bg-sky-500/15 text-sky-300 border-sky-400/30',
+                    maxWidthClassName: 'max-w-5xl',
                     series: [
-                        { key: 'dxy', name: '달러 인덱스 (DXY)', color: '#0ea5e9', unit: 'pt', strokeWidth: 2.2 }
+                        { key: 'dxy', name: '달러 인덱스 (DXY)', color: '#38bdf8', unit: 'pt', strokeWidth: 2.8 },
+                        { key: 'eurusd_idx', name: '유로 지수 (57.6%)', color: '#3b82f6', unit: 'pt', strokeWidth: 2, rawKey: 'eurusd', rawUnit: 'EUR/USD' },
+                        { key: 'usdjpy_idx', name: '엔화 지수 (13.6%)', color: '#f59e0b', unit: 'pt', strokeWidth: 1.8, rawKey: 'usdjpy', rawUnit: '엔' },
+                        { key: 'gbpusd_idx', name: '파운드 지수 (11.9%)', color: '#a855f7', unit: 'pt', strokeWidth: 1.8, rawKey: 'gbpusd', rawUnit: 'GBP/USD' },
+                        { key: 'usdcad_idx', name: '캐나다달러 지수 (9.1%)', color: '#10b981', unit: 'pt', strokeWidth: 1.6, rawKey: 'usdcad', rawUnit: 'CAD' },
+                        { key: 'usdsek_idx', name: '스웨덴크로나 지수 (4.2%)', color: '#ec4899', unit: 'pt', strokeWidth: 1.5, strokeDasharray: '4 2', rawKey: 'usdsek', rawUnit: 'SEK' },
+                        { key: 'usdchf_idx', name: '스위스프랑 지수 (3.6%)', color: '#14b8a6', unit: 'pt', strokeWidth: 1.5, strokeDasharray: '3 3', rawKey: 'usdchf', rawUnit: 'CHF' },
                     ],
-                    data: weekly.map(w => ({ date: w.date, dxy: w.dxy })),
+                    data: dxyData,
                     currentStats: [
                         { label: '현재 지수', value: `${data.snapshot.dxy?.value ?? 101.78} pt` },
                         { label: '1개월', value: `${data.snapshot.dxy?.chg_1m ?? 1.56}%`, isPositive: true },
                         { label: '1년', value: `${data.snapshot.dxy?.chg_1y ?? 3.4}%`, isPositive: true },
                         { label: '10년 위치', value: `${data.snapshot.dxy?.pct10y ?? 72}% (강달러)` }
                     ],
-                    notice: '💡 달러 인덱스는 유로(57.6%), 엔(13.6%), 파운드(11.9%), 캐나다달러(9.1%), 크로네(4.2%), 프랑(3.6%) 6대 통화 대비 미 달러의 실제 가치입니다.'
+                    notice: '💡 6대 통화 지수는 기준 시점(Base=100) 상대 지수로 정규화하여 달러 인덱스와의 동조 및 역방향 등락률을 왜곡 없이 동일 선상에서 비교합니다. 상단 지표 필터를 눌러 특정 통화만 켜고 끌 수 있습니다.',
+                    children: <DxyFormulaSection basketData={basket} />
                 };
+            }
             case 'asia':
                 return {
                     title: '아시아 주요 통화 (엔/달러 · 위안/달러 · 대만달러) 실제 환율 추이',
@@ -758,7 +806,10 @@ export default function FxTab() {
                     data={modalConfig.data}
                     currentStats={modalConfig.currentStats}
                     notice={modalConfig.notice}
-                />
+                    maxWidthClassName={(modalConfig as any).maxWidthClassName}
+                >
+                    {(modalConfig as any).children}
+                </MarketDetailModal>
             )}
         </div>
     );
