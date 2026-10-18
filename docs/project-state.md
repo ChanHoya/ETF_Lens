@@ -3,13 +3,12 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: Sprint 23 완료 — [수도권 38개 거점 실거래가 히트맵 & 6계층 양극화 사다리 & 주담대 ICR 배당 방어율 위젯 & 34평 국평 환산 토글]
+✅ Recent: Sprint 24 완료 — [국토교통부(MOLIT) 실거래가 OpenAPI 공식 연동 & 수도권 실시간 수집 파이프라인]
 
-🚀 Current: Sprint 24 완료 — [국토교통부(MOLIT) 실거래가 OpenAPI 공식 연동 & 수도권(경기 10개 핵심지·인천 3대 거점) 실시간 수집 파이프라인 구축 (S24-1~4)]:
-1) [S24-1: 국토부 실거래가 OpenAPI 클라이언트 & 13대 거점 LAWD_CD 매핑]: `molit_collector.py` 신설. 아파트 매매 실거래 상세자료(`RTMSDataSvcAptTradeDev`) 및 전월세(`RTMSDataSvcAptRent`) API 비동기 수집 클라이언트 구축, 경기 10개 핵심지(분당, 과천, 광명, 동탄 등) 및 인천 3대 거점(송도, 청라, 부평) 법정동 시군구코드 매핑.
-2) [S24-2: 국토부 XML 파서 & 평당가/전세가율 정규화 & Fallback 안전망]: `xml.etree.ElementTree` 기반 거래금액/전용면적 추출, 평당가 및 전세가율 연산, `MOLIT_API_KEY` 부재/쿼터 초과 시 검증된 캐시 데이터셋으로 무중단 자동 전환.
-3) [S24-3: FastAPI 엔드포인트 & 주간 자동 롤링 스케줄러 통합]: `/districts` 및 `/sync`에 서울(서울열린데이터) + 수도권(국토부) 2대 공공 API 동시 병렬 수집 결합, `/status`에 `seoul_status`와 `molit_status` 듀얼 핑 노출, 매주 월요일 04:30 KST 자동 롤링 동기화.
-4) [S24-4: 프론트엔드 듀얼 연동 배지 & E2E 브라우저 및 단위 테스트 검증]: `SeoulDistrictHeatmap.tsx` 상단에 `[서울: OpenAPI 라이브 | 수도권: 국토부 MOLIT 실시간]` 듀얼 연동 상태 칩 반영, pytest 11개 100% Pass, Next.js 11개 페이지 최적화 빌드 완료 및 브라우저 E2E 검증 완료.
+🚀 Current: Sprint 25 완료 — [매크로 거시경제 4대 탭(환율·금리·주식) 팝업 모달 전면 점검 및 고도화]:
+1) [S25-1: DXY 팝업 6대 통화 복합 비교 & 산출 공식 상세 인포그래픽]: FRED 20년치 실데이터 기반 6대 주요 통화(EUR, JPY, GBP, CAD, SEK, CHF) Base=100 시계열 동시 렌더링, 툴팁에 상대 지수 및 실제 환율(raw value) 동시 표기, 가중기하평균 공식 및 가중치 표 인포그래픽 탑재.
+2) [S25-2: 원/달러 팝업 주요 통화 연동 & 아시아 통화 Base=100 정규화]: 원/달러 팝업에 원/유로, 원/10위안, 원/100엔 시계열 추가. 아시아 주요 통화 팝업에 원/달러 추가 및 시작점 Base=100 동적 정규화로 수평선 왜곡 완치.
+3) [S25-3: 금리 탭 8대 지표 팝업 완비 & 주식 탭 듀얼 Y축 낙폭 Area 반투명 음영 렌더링]: 금리 탭 모달 props 누락 완치로 배지·부제목·실시간 KPI 칩(기준금리, 국채 3Y/10Y, D-Day 카운트다운) 표시 무결성 확보. 한국 국고채(1Y·3Y·10Y·30Y), 미국 국채(3M·2Y·10Y·30Y), 장단기 금리차(10-3Y, 10-2Y), 실질 기준금리까지 상단 8대 카드 전체 팝업 지원 확장. 주식 탭 `MarketDetailModal`에 `Area` 렌더링 기능을 추가하여 KOSPI, S&P 500, Nasdaq 100 고점 대비 낙폭(%)을 세련된 반투명 Area 음영으로 렌더링하고 좌측 지수(pt)와 우측 낙폭(%)의 듀얼 Y축 및 KOSPI 달러 환산 지수 비교 완성. Next.js 빌드 성공 및 브라우저 E2E 검증 완료.
 
 > 세션 핸드오프 (2026-10-17, Antigravity - Sprint 24: 국토교통부 MOLIT 실거래가 OpenAPI 공식 연동 및 경기·인천 13대 거점 실시간 파이프라인 구축 완료):
 > - 🏛️ [Sprint 24: 국토교통부(MOLIT) 실거래가 OpenAPI 공식 연동 (S24-1~4)]:

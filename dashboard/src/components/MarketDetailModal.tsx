@@ -2,7 +2,7 @@
 // 공통 매크로 지표 상세 팝업 모달 — 6M, 1Y, 5Y, 10Y 기간 스위처 및 실제 데이터 멀티 라인 추이 차트
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-    ResponsiveContainer, ComposedChart, Line, XAxis, YAxis, CartesianGrid,
+    ResponsiveContainer, ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid,
     Tooltip as RechartsTooltip, Legend
 } from 'recharts';
 import { X, Calendar, TrendingUp, Info, Activity, ExternalLink } from 'lucide-react';
@@ -18,6 +18,7 @@ export type SeriesConfig = {
     dot?: boolean;
     rawKey?: string;
     rawUnit?: string;
+    type?: 'line' | 'area';
 };
 
 export type DetailDataPoint = {
@@ -411,6 +412,24 @@ export default function MarketDetailModal({
                                     {activeSeries.map(s => {
                                         const opacity = getOpacity(s.key, 1, 0.2);
                                         const width = getStrokeWidth(s.key, s.strokeWidth || 2, (s.strokeWidth || 2) + 1.5);
+                                        if (s.type === 'area') {
+                                            return (
+                                                <Area
+                                                    key={s.key}
+                                                    type="monotone"
+                                                    dataKey={s.key}
+                                                    name={s.name}
+                                                    stroke={s.color}
+                                                    fill={s.color}
+                                                    fillOpacity={0.15}
+                                                    yAxisId={s.yAxisId || 'left'}
+                                                    strokeWidth={width}
+                                                    strokeOpacity={opacity}
+                                                    connectNulls
+                                                    isAnimationActive={false}
+                                                />
+                                            );
+                                        }
                                         return (
                                             <Line
                                                 key={s.key}

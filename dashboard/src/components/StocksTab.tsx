@@ -326,6 +326,7 @@ export default function StocksTab() {
                 return {
                     title: 'KOSPI 지수 추이 및 고점 대비 낙폭 (Drawdown)',
                     category: '국내 대표 주가지수',
+                    badgeColor: 'bg-indigo-500/15 text-indigo-300 border-indigo-400/30',
                     description: '한국거래소(KRX) 유가증권시장 KOSPI 지수 20년치 실제 주간 시계열과 최고점 대비 낙폭 추이',
                     notice: '💡 6M, 1Y, 5Y, 10Y 기간 버튼을 통해 한국 증시의 장기 사이클과 낙폭 회복 기간을 점검할 수 있습니다.',
                     data: (data.weekly ?? []).map(r => ({
@@ -334,7 +335,7 @@ export default function StocksTab() {
                         dd_kospi: r.dd_kospi != null ? Number(r.dd_kospi.toFixed(2)) : null,
                     })),
                     series: [
-                        { key: 'kospi', name: 'KOSPI 지수', color: '#6366f1', unit: 'pt', yAxisId: 'left', strokeWidth: 2 },
+                        { key: 'kospi', name: 'KOSPI 지수', color: '#6366f1', unit: 'pt', yAxisId: 'left', strokeWidth: 2.2 },
                         { key: 'dd_kospi', name: '고점 대비 낙폭', color: '#3b82f6', unit: '%', yAxisId: 'right', strokeWidth: 1.5, type: 'area' as const },
                     ],
                     kpiCards: [
@@ -348,6 +349,7 @@ export default function StocksTab() {
                 return {
                     title: 'S&P 500 지수 추이 및 고점 대비 낙폭 (Drawdown)',
                     category: '미국 대형주 500',
+                    badgeColor: 'bg-rose-500/15 text-rose-300 border-rose-400/30',
                     description: '미국 대형주 500대 종목 기준 S&P 500 실제 주간 지수와 전고점 대비 낙폭 추이',
                     notice: '💡 글로벌 자산 배분의 핵심 벤치마크인 S&P 500의 장기 강세장 흐름과 조정폭을 분석합니다.',
                     data: (data.weekly ?? []).map(r => ({
@@ -356,7 +358,7 @@ export default function StocksTab() {
                         dd_spx: r.dd_spx != null ? Number(r.dd_spx.toFixed(2)) : null,
                     })),
                     series: [
-                        { key: 'spx', name: 'S&P 500 지수', color: '#f43f5e', unit: 'pt', yAxisId: 'left', strokeWidth: 2 },
+                        { key: 'spx', name: 'S&P 500 지수', color: '#f43f5e', unit: 'pt', yAxisId: 'left', strokeWidth: 2.2 },
                         { key: 'dd_spx', name: '고점 대비 낙폭', color: '#3b82f6', unit: '%', yAxisId: 'right', strokeWidth: 1.5, type: 'area' as const },
                     ],
                     kpiCards: [
@@ -370,6 +372,7 @@ export default function StocksTab() {
                 return {
                     title: '나스닥 100 (Nasdaq 100) 지수 추이 및 고점 대비 낙폭',
                     category: '글로벌 기술 성장주',
+                    badgeColor: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
                     description: '미국 기술 혁신 성장주를 대변하는 나스닥 100 지수 주간 시계열 및 낙폭 분석',
                     notice: '💡 빅테크 및 반도체·AI 사이클에 따른 변동성과 고점 대비 조정 구간을 점검합니다.',
                     data: (data.weekly ?? []).map(r => ({
@@ -378,7 +381,7 @@ export default function StocksTab() {
                         dd_ndx: r.dd_ndx != null ? Number(r.dd_ndx.toFixed(2)) : null,
                     })),
                     series: [
-                        { key: 'ndx', name: '나스닥 100', color: '#10b981', unit: 'pt', yAxisId: 'left', strokeWidth: 2 },
+                        { key: 'ndx', name: '나스닥 100', color: '#10b981', unit: 'pt', yAxisId: 'left', strokeWidth: 2.2 },
                         { key: 'dd_ndx', name: '고점 대비 낙폭', color: '#3b82f6', unit: '%', yAxisId: 'right', strokeWidth: 1.5, type: 'area' as const },
                     ],
                     kpiCards: [
@@ -392,6 +395,7 @@ export default function StocksTab() {
                 return {
                     title: 'KOSPI 달러 환산 지수 (외국인 체감 성과)',
                     category: '외국인 수급 체감 지표',
+                    badgeColor: 'bg-purple-500/15 text-purple-300 border-purple-400/30',
                     description: 'KOSPI ÷ 원/달러 × 1,000 · 글로벌 외국인 투자자 시선에서의 한국 증시 실질 수익률',
                     notice: '💡 환율 변동 효과를 제거하고 글로벌 달러 자본이 실제 체감하는 한국 시장의 매력도와 저평가 여부를 확인합니다.',
                     data: (data.weekly ?? []).map(r => ({
@@ -400,8 +404,8 @@ export default function StocksTab() {
                         kospi: r.kospi != null ? Number(r.kospi.toFixed(2)) : null,
                     })),
                     series: [
-                        { key: 'kospi_usd', name: 'KOSPI (달러 환산)', color: '#6366f1', unit: 'pt', yAxisId: 'left', strokeWidth: 2 },
-                        { key: 'kospi', name: 'KOSPI (원화 기준)', color: '#94a3b8', unit: 'pt', yAxisId: 'right', strokeWidth: 1.5 },
+                        { key: 'kospi_usd', name: 'KOSPI (달러 환산)', color: '#6366f1', unit: 'pt', yAxisId: 'left', strokeWidth: 2.2 },
+                        { key: 'kospi', name: 'KOSPI (원화 기준)', color: '#94a3b8', unit: 'pt', yAxisId: 'right', strokeWidth: 1.6 },
                     ],
                     kpiCards: [
                         { label: '달러 환산 현재가', value: `${num(ku?.value, 0)} pt`, subValue: '외국인 체감 지수', isAccent: true },
@@ -493,11 +497,13 @@ export default function StocksTab() {
                             onClose={() => setModalKey(null)}
                             title={modalConfig.title}
                             category={modalConfig.category}
+                            badgeColor={modalConfig.badgeColor}
                             description={modalConfig.description}
                             notice={modalConfig.notice}
                             data={modalConfig.data}
                             series={modalConfig.series}
                             kpiCards={modalConfig.kpiCards}
+                            maxWidthClassName="max-w-5xl"
                             defaultPeriod="1Y"
                         />
                     )}
