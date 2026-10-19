@@ -17,7 +17,7 @@ import {
 } from "recharts";
 import { computeDivergingScale } from "@/lib/divergingBar";
 import { UNSET_LABEL } from "@/lib/sectorOptions";
-import { useChartHighlight, STANDARD_LEGEND_WRAPPER_STYLE } from "@/lib/chartTheme";
+import { useChartHighlight, STANDARD_LEGEND_WRAPPER_STYLE, STANDARD_TOOLTIP_STYLE } from "@/lib/chartTheme";
 import { getApiBase } from "@/lib/apiConfig";
 
 interface HoldingsDetailDashboardProps {
@@ -68,17 +68,17 @@ const PieTooltipContent = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
     const d = payload[0].payload;
     return (
-        <div className="bg-[#1e2030] border border-white/10 rounded-xl px-4 py-3 shadow-2xl text-[11px]">
-            <p className="font-bold text-white mb-1">{d.name}</p>
-            <p className="text-gray-300">
-                평가금액: <span className="font-mono font-semibold text-white">{fmtKRW(d.value)}원</span>
+        <div style={STANDARD_TOOLTIP_STYLE} className="rounded-xl px-4 py-3 shadow-2xl text-[11px] min-w-[180px]">
+            <p className="font-bold mb-1" style={{ color: 'var(--chart-tooltip-text, #ffffff)' }}>{d.name}</p>
+            <p style={{ color: 'var(--chart-tooltip-text-muted, #94a3b8)' }}>
+                평가금액: <span className="font-mono font-semibold" style={{ color: 'var(--chart-tooltip-text, #ffffff)' }}>{fmtKRW(d.value)}원</span>
             </p>
-            <p className="text-gray-300">
-                비중: <span className="font-mono font-semibold text-indigo-300">{d.pct?.toFixed(1)}%</span>
+            <p style={{ color: 'var(--chart-tooltip-text-muted, #94a3b8)' }}>
+                비중: <span className="font-mono font-semibold text-indigo-400">{d.pct?.toFixed(1)}%</span>
             </p>
             {d.count !== undefined && (
-                <p className="text-gray-300">
-                    종목 수: <span className="font-semibold text-white">{d.count}개</span>
+                <p style={{ color: 'var(--chart-tooltip-text-muted, #94a3b8)' }}>
+                    종목 수: <span className="font-semibold" style={{ color: 'var(--chart-tooltip-text, #ffffff)' }}>{d.count}개</span>
                 </p>
             )}
         </div>
@@ -89,12 +89,12 @@ const BarTooltipContent = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
     const d = payload[0].payload;
     return (
-        <div className="bg-[#1e2030] border border-white/10 rounded-xl px-4 py-3 shadow-2xl text-[11px]">
-            <p className="font-bold text-white mb-1">{d.name}</p>
+        <div style={STANDARD_TOOLTIP_STYLE} className="rounded-xl px-4 py-3 shadow-2xl text-[11px] min-w-[180px]">
+            <p className="font-bold mb-1" style={{ color: 'var(--chart-tooltip-text, #ffffff)' }}>{d.name}</p>
             {payload.map((p: any, i: number) => (
-                <p key={i} className="text-gray-300">
-                    <span style={{ color: p.color }}>{p.name}:</span>{" "}
-                    <span className="font-mono font-semibold">{fmtKRW(p.value)}원</span>
+                <p key={i} style={{ color: 'var(--chart-tooltip-text-muted, #94a3b8)' }}>
+                    <span style={{ color: p.color, fontWeight: 600 }}>{p.name}:</span>{" "}
+                    <span className="font-mono font-semibold" style={{ color: 'var(--chart-tooltip-text, #ffffff)' }}>{fmtKRW(p.value)}원</span>
                 </p>
             ))}
         </div>

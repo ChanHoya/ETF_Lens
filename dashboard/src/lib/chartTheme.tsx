@@ -7,25 +7,25 @@ import React, { useState, useCallback, CSSProperties } from 'react';
  * 범례(Legend) 클릭 시 해당 차트 데이터 라인/막대 하이라이트 기능 제공.
  */
 
-// 1. 표준 툴팁 스타일 (11px 일원화 & 다크 글래스모피즘)
+// 1. 표준 툴팁 스타일 (11px 일원화 & 다크 글래스모피즘 / 라이트 클린 카드)
 export const STANDARD_TOOLTIP_STYLE: CSSProperties = {
-  backgroundColor: '#151722f0',
+  backgroundColor: 'var(--chart-tooltip-bg, rgba(21, 23, 34, 0.96))',
   backdropFilter: 'blur(8px)',
   WebkitBackdropFilter: 'blur(8px)',
-  border: '1px solid rgba(255, 255, 255, 0.15)',
+  border: '1px solid var(--chart-tooltip-border, rgba(255, 255, 255, 0.16))',
   borderRadius: '10px',
   fontSize: '11px',
-  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+  boxShadow: 'var(--chart-tooltip-shadow, 0 8px 24px rgba(0, 0, 0, 0.5))',
   padding: '8px 12px',
-  color: '#ffffff',
+  color: 'var(--chart-tooltip-text, #ffffff)',
   lineHeight: 1.4,
 };
 
 // 2. Recharts Tooltip 공통 Props
 export const STANDARD_TOOLTIP_PROPS = {
   contentStyle: STANDARD_TOOLTIP_STYLE,
-  itemStyle: { fontSize: '11px', color: '#e2e8f0', padding: '2px 0' },
-  labelStyle: { fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '4px' },
+  itemStyle: { fontSize: '11px', color: 'var(--chart-tooltip-text, #e2e8f0)', padding: '2px 0' },
+  labelStyle: { fontSize: '11px', color: 'var(--chart-tooltip-label, #94a3b8)', fontWeight: 600, marginBottom: '4px' },
 };
 
 // 3. 표준 범례 wrapper 스타일 (11px, pointer 커서)
@@ -85,7 +85,7 @@ export function useChartHighlight(initialKey: string | null = null) {
       <span
         style={{
           fontSize: '11px',
-          color: dimmed ? 'rgba(255, 255, 255, 0.35)' : '#cbd5e1',
+          color: dimmed ? 'var(--legend-dimmed, rgba(255, 255, 255, 0.35))' : 'var(--legend-text, #cbd5e1)',
           fontWeight: selected ? 700 : 400,
           textDecoration: selected ? 'underline' : 'none',
           cursor: 'pointer',

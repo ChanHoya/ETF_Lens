@@ -116,18 +116,95 @@ def readability_css(colors):
         boosted = round(min(float(v) * FILL_OPACITY_BOOST, 0.6), 3)
         rules.append(f'html.light svg [fill-opacity="{v}"] {{ fill-opacity: {boosted}; }}')
         rules.append(f'html.light svg stop[stop-opacity="{v}"] {{ stop-opacity: {boosted}; }}')
-    # 차트 툴팁: 인라인 어두운 배경 → 흰 카드
+    # 차트 툴팁 (마우스 호버 시 나오는 범례/툴팁 박스): 라이트 모드 고대비 가독성 전수 보장
+    tooltip_selectors = [
+        "html.light .recharts-default-tooltip",
+        "html.light .recharts-tooltip-wrapper > div",
+        "html.light .recharts-tooltip-wrapper [class*=\"bg-[#\"]",
+        "html.light .recharts-tooltip-wrapper [class*=\"bg-slate-\"]",
+        "html.light .recharts-tooltip-wrapper [class*=\"bg-black\"]",
+        "html.light .recharts-tooltip-wrapper [class*=\"bg-gray-\"]",
+        "html.light .recharts-tooltip-wrapper [class*=\"bg-zinc-\"]",
+    ]
     rules.append(
-        "html.light .recharts-default-tooltip,\nhtml.light .recharts-tooltip-wrapper > div {\n"
+        ",\n".join(tooltip_selectors) + " {\n"
         f"  background: {PAPER} !important;\n"
+        f"  background-color: {PAPER} !important;\n"
         f"  border: 1px solid rgb({INK_RGB} / 0.14) !important;\n"
-        f"  box-shadow: 0 8px 24px rgb({INK_RGB} / 0.14) !important;\n"
-        f"  color: {INK} !important;\n}}")
+        f"  box-shadow: 0 10px 25px -5px rgb({INK_RGB} / 0.12), 0 8px 24px rgb({INK_RGB} / 0.08) !important;\n"
+        f"  color: {INK} !important;\n}}"
+    )
+
+    # 툴팁 내부 흰색/밝은 회색 계열 인라인 컬러 및 Tailwind 텍스트 클래스 전수 오버라이드 -> 잉크 컬러
+    light_text_patterns = [
+        '[style*="color: rgb(255, 255, 255)"]',
+        '[style*="color: rgb(248, 250, 252)"]',
+        '[style*="color: rgb(241, 245, 249)"]',
+        '[style*="color: rgb(243, 244, 246)"]',
+        '[style*="color: rgb(226, 232, 240)"]',
+        '[style*="color: rgb(203, 213, 225)"]',
+        '[style*="color: rgb(148, 163, 184)"]',
+        '[style*="color: rgb(156, 163, 175)"]',
+        '[style*="rgba(255, 255, 255"]',
+        '[style*="rgba(255,255,255"]',
+        '[style*="#fff" i]',
+        '[style*="#f8fafc" i]',
+        '[style*="#f1f5f9" i]',
+        '[style*="#e2e8f0" i]',
+        '[style*="#cbd5e1" i]',
+        '.text-white',
+        '[class*="text-white"]',
+        '.text-slate-100',
+        '.text-slate-200',
+        '.text-slate-300',
+        '.text-gray-100',
+        '.text-gray-200',
+        '.text-gray-300',
+        '.text-zinc-100',
+        '.text-zinc-200',
+        '.text-zinc-300',
+        '.recharts-tooltip-item',
+        '.recharts-tooltip-item-name',
+        '.recharts-tooltip-item-separator',
+        '.recharts-tooltip-item-value',
+        '.recharts-tooltip-item-unit',
+    ]
     rules.append(
-        "html.light .recharts-tooltip-wrapper [style^=\"color: rgb(255, 255, 255)\"],\n"
-        "html.light .recharts-tooltip-wrapper [style*=\" color: rgb(255, 255, 255)\"],\n"
-        "html.light .recharts-tooltip-wrapper [style^=\"color:#fff\" i] {\n"
-        f"  color: {INK} !important;\n}}")
+        ",\n".join(f"html.light .recharts-tooltip-wrapper {p}" for p in light_text_patterns) + " {\n"
+        f"  color: {INK} !important;\n}}"
+    )
+
+    # 툴팁 라벨 및 보조 텍스트 (명도 대비 확보: 잉크 72%)
+    label_patterns = [
+        '.recharts-tooltip-label',
+        '[class*="text-gray-400"]',
+        '[class*="text-slate-400"]',
+        '[class*="text-gray-500"]',
+        '[class*="text-slate-500"]',
+        '[style*="color: #94a3b8" i]',
+        '[style*="color:#94a3b8" i]',
+        '[style*="color: #9ca3af" i]',
+        '[style*="color:#9ca3af" i]',
+    ]
+    rules.append(
+        ",\n".join(f"html.light .recharts-tooltip-wrapper {p}" for p in label_patterns) + " {\n"
+        f"  color: rgb({INK_RGB} / 0.72) !important;\n"
+        f"  font-weight: 600;\n}}"
+    )
+
+    # 툴팁 내부 구분선
+    rules.append(
+        "html.light .recharts-tooltip-wrapper [class*=\"border-white\"],\n"
+        "html.light .recharts-tooltip-wrapper [class*=\"border-slate-\"] {\n"
+        f"  border-color: rgb({INK_RGB} / 0.12) !important;\n}}"
+    )
+
+    # 툴팁 커서 바
+    rules.append(
+        "html.light .recharts-tooltip-cursor {\n"
+        f"  fill: rgb({INK_RGB} / 0.05) !important;\n"
+        f"  stroke: rgb({INK_RGB} / 0.15) !important;\n}}"
+    )
     return rules, util
 
 

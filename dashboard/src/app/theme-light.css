@@ -709,15 +709,72 @@ html.light svg [fill-opacity="0.4"] { fill-opacity: 0.6; }
 html.light svg stop[stop-opacity="0.4"] { stop-opacity: 0.6; }
 
 html.light .recharts-default-tooltip,
-html.light .recharts-tooltip-wrapper > div {
+html.light .recharts-tooltip-wrapper > div,
+html.light .recharts-tooltip-wrapper [class*="bg-[#"],
+html.light .recharts-tooltip-wrapper [class*="bg-slate-"],
+html.light .recharts-tooltip-wrapper [class*="bg-black"],
+html.light .recharts-tooltip-wrapper [class*="bg-gray-"],
+html.light .recharts-tooltip-wrapper [class*="bg-zinc-"] {
   background: #ffffff !important;
+  background-color: #ffffff !important;
   border: 1px solid rgb(16 19 26 / 0.14) !important;
-  box-shadow: 0 8px 24px rgb(16 19 26 / 0.14) !important;
+  box-shadow: 0 10px 25px -5px rgb(16 19 26 / 0.12), 0 8px 24px rgb(16 19 26 / 0.08) !important;
   color: #10131a !important;
 }
 
-html.light .recharts-tooltip-wrapper [style^="color: rgb(255, 255, 255)"],
-html.light .recharts-tooltip-wrapper [style*=" color: rgb(255, 255, 255)"],
-html.light .recharts-tooltip-wrapper [style^="color:#fff" i] {
+html.light .recharts-tooltip-wrapper [style*="color: rgb(255, 255, 255)"],
+html.light .recharts-tooltip-wrapper [style*="color: rgb(248, 250, 252)"],
+html.light .recharts-tooltip-wrapper [style*="color: rgb(241, 245, 249)"],
+html.light .recharts-tooltip-wrapper [style*="color: rgb(243, 244, 246)"],
+html.light .recharts-tooltip-wrapper [style*="color: rgb(226, 232, 240)"],
+html.light .recharts-tooltip-wrapper [style*="color: rgb(203, 213, 225)"],
+html.light .recharts-tooltip-wrapper [style*="color: rgb(148, 163, 184)"],
+html.light .recharts-tooltip-wrapper [style*="color: rgb(156, 163, 175)"],
+html.light .recharts-tooltip-wrapper [style*="rgba(255, 255, 255"],
+html.light .recharts-tooltip-wrapper [style*="rgba(255,255,255"],
+html.light .recharts-tooltip-wrapper [style*="#fff" i],
+html.light .recharts-tooltip-wrapper [style*="#f8fafc" i],
+html.light .recharts-tooltip-wrapper [style*="#f1f5f9" i],
+html.light .recharts-tooltip-wrapper [style*="#e2e8f0" i],
+html.light .recharts-tooltip-wrapper [style*="#cbd5e1" i],
+html.light .recharts-tooltip-wrapper .text-white,
+html.light .recharts-tooltip-wrapper [class*="text-white"],
+html.light .recharts-tooltip-wrapper .text-slate-100,
+html.light .recharts-tooltip-wrapper .text-slate-200,
+html.light .recharts-tooltip-wrapper .text-slate-300,
+html.light .recharts-tooltip-wrapper .text-gray-100,
+html.light .recharts-tooltip-wrapper .text-gray-200,
+html.light .recharts-tooltip-wrapper .text-gray-300,
+html.light .recharts-tooltip-wrapper .text-zinc-100,
+html.light .recharts-tooltip-wrapper .text-zinc-200,
+html.light .recharts-tooltip-wrapper .text-zinc-300,
+html.light .recharts-tooltip-wrapper .recharts-tooltip-item,
+html.light .recharts-tooltip-wrapper .recharts-tooltip-item-name,
+html.light .recharts-tooltip-wrapper .recharts-tooltip-item-separator,
+html.light .recharts-tooltip-wrapper .recharts-tooltip-item-value,
+html.light .recharts-tooltip-wrapper .recharts-tooltip-item-unit {
   color: #10131a !important;
+}
+
+html.light .recharts-tooltip-wrapper .recharts-tooltip-label,
+html.light .recharts-tooltip-wrapper [class*="text-gray-400"],
+html.light .recharts-tooltip-wrapper [class*="text-slate-400"],
+html.light .recharts-tooltip-wrapper [class*="text-gray-500"],
+html.light .recharts-tooltip-wrapper [class*="text-slate-500"],
+html.light .recharts-tooltip-wrapper [style*="color: #94a3b8" i],
+html.light .recharts-tooltip-wrapper [style*="color:#94a3b8" i],
+html.light .recharts-tooltip-wrapper [style*="color: #9ca3af" i],
+html.light .recharts-tooltip-wrapper [style*="color:#9ca3af" i] {
+  color: rgb(16 19 26 / 0.72) !important;
+  font-weight: 600;
+}
+
+html.light .recharts-tooltip-wrapper [class*="border-white"],
+html.light .recharts-tooltip-wrapper [class*="border-slate-"] {
+  border-color: rgb(16 19 26 / 0.12) !important;
+}
+
+html.light .recharts-tooltip-cursor {
+  fill: rgb(16 19 26 / 0.05) !important;
+  stroke: rgb(16 19 26 / 0.15) !important;
 }

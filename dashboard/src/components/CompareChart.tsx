@@ -7,13 +7,13 @@ import { Loader2 } from "lucide-react";
 const findIdx = (chartData: any[], label: string) =>
     chartData.findIndex((d: any) => d.date === label);
 
-// 가격입력 커스텀 툴팅
+// 가격입력 커스텀 툴팁
 const PriceTooltip = ({ active, payload, label, chartData, etfColors }: any) => {
     if (!active || !payload || payload.length === 0) return null;
     const idx = findIdx(chartData, label);
     return (
-        <div style={{ backgroundColor: 'rgba(3,7,18,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '8px 12px', minWidth: 190 }}>
-            <p style={{ color: '#94a3b8', fontWeight: 600, fontSize: 11, marginBottom: 4 }}>{label}</p>
+        <div style={{ ...STANDARD_TOOLTIP_STYLE, minWidth: 190 }}>
+            <p style={{ color: 'var(--chart-tooltip-label, #94a3b8)', fontWeight: 600, fontSize: 11, marginBottom: 4 }}>{label}</p>
             {payload.map((item: any) => {
                 const price = item.value;
                 let chg: number | null = null;
@@ -31,7 +31,7 @@ const PriceTooltip = ({ active, payload, label, chartData, etfColors }: any) => 
                 return (
                     <div key={item.dataKey} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0', fontSize: 11 }}>
                         <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
-                        <span style={{ color: '#e2e8f0' }}>{item.name}&thinsp;:&thinsp;<b>{Number(price).toLocaleString()}</b></span>
+                        <span style={{ color: 'var(--chart-tooltip-text, #e2e8f0)' }}>{item.name}&thinsp;:&thinsp;<b>{Number(price).toLocaleString()}</b></span>
                         {chg !== null && (
                             <span style={{ color: isUp ? '#34d399' : '#f87171', fontWeight: 'bold', marginLeft: 2 }}>
                                 ({isUp ? '+' : ''}{chg.toFixed(2)}%)
@@ -44,13 +44,13 @@ const PriceTooltip = ({ active, payload, label, chartData, etfColors }: any) => 
     );
 };
 
-// 수익률 커스텀 툴팀
+// 수익률 커스텀 툴팁
 const ReturnTooltip = ({ active, payload, label, chartData }: any) => {
     if (!active || !payload || payload.length === 0) return null;
     const idx = findIdx(chartData, label);
     return (
-        <div style={{ backgroundColor: 'rgba(3,7,18,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '8px 12px', minWidth: 200 }}>
-            <p style={{ color: '#94a3b8', fontWeight: 600, fontSize: 11, marginBottom: 4 }}>{label}</p>
+        <div style={{ ...STANDARD_TOOLTIP_STYLE, minWidth: 200 }}>
+            <p style={{ color: 'var(--chart-tooltip-label, #94a3b8)', fontWeight: 600, fontSize: 11, marginBottom: 4 }}>{label}</p>
             {payload.map((item: any) => {
                 const val = Number(item.value);
                 let chg: number | null = null;
@@ -68,7 +68,7 @@ const ReturnTooltip = ({ active, payload, label, chartData }: any) => {
                 return (
                     <div key={item.dataKey} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0', fontSize: 11 }}>
                         <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
-                        <span style={{ color: '#e2e8f0' }}>{item.name}&thinsp;:&thinsp;<b style={{ color: isUp ? '#34d399' : '#f87171' }}>{val >= 0 ? '+' : ''}{val.toFixed(2)}%</b></span>
+                        <span style={{ color: 'var(--chart-tooltip-text, #e2e8f0)' }}>{item.name}&thinsp;:&thinsp;<b style={{ color: isUp ? '#34d399' : '#f87171' }}>{val >= 0 ? '+' : ''}{val.toFixed(2)}%</b></span>
                         {chg !== null && (
                             <span style={{ color: isChgUp ? '#34d399' : '#f87171', fontWeight: 'bold', marginLeft: 2 }}>
                                 ({isChgUp ? '+' : ''}{chg.toFixed(2)}%p)

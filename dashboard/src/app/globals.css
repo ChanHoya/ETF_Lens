@@ -3,6 +3,28 @@
 @import "./theme-light.css"; /* 라이트 모드 팔레트(html.light) */
 @import "./transitions.css"; /* transitions.dev 모션 토큰 및 마이크로 인터랙션 */
 
+:root {
+  --chart-tooltip-bg: rgba(21, 23, 34, 0.96);
+  --chart-tooltip-border: rgba(255, 255, 255, 0.16);
+  --chart-tooltip-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.65);
+  --chart-tooltip-text: #f8fafc;
+  --chart-tooltip-text-muted: #94a3b8;
+  --chart-tooltip-label: #cbd5e1;
+  --legend-text: #cbd5e1;
+  --legend-dimmed: rgba(255, 255, 255, 0.35);
+}
+
+html.light {
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: rgba(16, 19, 26, 0.14);
+  --chart-tooltip-shadow: 0 10px 25px -5px rgba(16, 19, 26, 0.12), 0 8px 24px rgba(16, 19, 26, 0.08);
+  --chart-tooltip-text: #10131a;
+  --chart-tooltip-text-muted: #475569;
+  --chart-tooltip-label: #1e293b;
+  --legend-text: #334155;
+  --legend-dimmed: rgba(16, 19, 26, 0.35);
+}
+
 html {
   font-size: 17.5px; /* 기본 16px(12pt) 대비 +1.5px(+1.1pt) 전체 스케일업 (가독성 향상) */
 }
@@ -47,6 +69,39 @@ textarea {
 }
 .recharts-legend-item-text {
   font-size: 12.5px !important;
+}
+
+/* 차트 툴팁 기본 스타일 및 다크/라이트 모드 고대비 가독성 보장 */
+.recharts-default-tooltip {
+  background-color: var(--chart-tooltip-bg) !important;
+  border: 1px solid var(--chart-tooltip-border) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--chart-tooltip-shadow) !important;
+  color: var(--chart-tooltip-text) !important;
+  font-size: 11px !important;
+  padding: 8px 12px !important;
+  line-height: 1.4 !important;
+}
+.recharts-tooltip-label {
+  color: var(--chart-tooltip-label) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  margin-bottom: 4px !important;
+}
+.recharts-tooltip-item {
+  font-size: 11px !important;
+}
+
+/* 다크모드에서 검은색/어두운 텍스트가 다크 툴팁 배경에 얹혀 안 보이는 결함 방지 */
+html:not(.light) .recharts-tooltip-wrapper .text-black,
+html:not(.light) .recharts-tooltip-wrapper .text-slate-900,
+html:not(.light) .recharts-tooltip-wrapper .text-gray-900,
+html:not(.light) .recharts-tooltip-wrapper .text-gray-800,
+html:not(.light) .recharts-tooltip-wrapper [style*="color: rgb(0, 0, 0)"],
+html:not(.light) .recharts-tooltip-wrapper [style*="color: #000" i],
+html:not(.light) .recharts-tooltip-wrapper [style*="color:#000" i],
+html:not(.light) .recharts-tooltip-wrapper [style*="color: #10131a" i] {
+  color: #f8fafc !important;
 }
 
 /* iOS Safari: 버튼/링크 터치 시 파란 하이라이트 제거 */

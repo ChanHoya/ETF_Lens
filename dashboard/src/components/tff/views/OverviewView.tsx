@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { TffFundData, TffHoldingsRow, TffMonthInfo } from '../../../lib/tff/types';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine, LabelList } from 'recharts';
-import { STANDARD_TOOLTIP_STYLE } from '@/lib/chartTheme';
+import { STANDARD_TOOLTIP_STYLE, STANDARD_TOOLTIP_PROPS } from '@/lib/chartTheme';
 import { PiggyBank, TrendingUp, TrendingDown, Layers, Wallet, BarChart2 } from 'lucide-react';
 
 interface Props {
@@ -309,8 +309,7 @@ export default function OverviewView({ data, contributionHoldings }: Props) {
                                     </Pie>
                                     <Tooltip
                                         formatter={(val: number, name: string) => [`${formatMoney(val)} 원`, name]}
-                                        contentStyle={STANDARD_TOOLTIP_STYLE}
-                                        itemStyle={{ color: '#f8fafc', fontWeight: 600, fontSize: '11px' }}
+                                        {...STANDARD_TOOLTIP_PROPS}
                                     />
                                 </PieChart>
                             </ResponsiveContainer>
@@ -397,8 +396,7 @@ export default function OverviewView({ data, contributionHoldings }: Props) {
                                         const text = `${val > 0 ? '+' : ''}${formatMoney(val)} 원`;
                                         return [text, val > 0 ? '수익금' : '손실금'];
                                     }}
-                                    contentStyle={STANDARD_TOOLTIP_STYLE}
-                                    itemStyle={{ color: '#f8fafc', fontWeight: 600, fontSize: '11px' }}
+                                    {...STANDARD_TOOLTIP_PROPS}
                                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                 />
                                 <ReferenceLine x={0} stroke="rgba(255,255,255,0.3)" strokeWidth={2} />

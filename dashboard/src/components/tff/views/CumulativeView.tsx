@@ -36,19 +36,19 @@ export default function CumulativeView({ data, estimatePeriod }: Props) {
     return (
       <div style={{
         transform: placeLeft ? 'translateX(calc(-100% - 20px))' : 'translateX(20px)',
-        backgroundColor: 'rgba(30,30,45,0.97)',
-        border: '1px solid #ffffff20',
+        backgroundColor: 'var(--chart-tooltip-bg, rgba(30,30,45,0.97))',
+        border: '1px solid var(--chart-tooltip-border, rgba(255, 255, 255, 0.15))',
         borderRadius: '12px',
         padding: '10px 13px',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+        boxShadow: 'var(--chart-tooltip-shadow, 0 10px 25px rgba(0,0,0,0.5))',
         pointerEvents: 'none',
         minWidth: '180px',
       }}>
-        <p style={{ color: '#9ca3af', marginBottom: '8px', fontSize: '11px' }}>{label}</p>
+        <p style={{ color: 'var(--chart-tooltip-label, #9ca3af)', marginBottom: '8px', fontSize: '11px', fontWeight: 600 }}>{label}</p>
         {payload.map((entry: any, i: number) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '14px', fontSize: '11px', marginBottom: '3px' }}>
-            <span style={{ color: entry.color || entry.stroke || '#cbd5e1', fontWeight: 600 }}>{entry.name}</span>
-            <span style={{ color: '#f8fafc', fontWeight: 700 }}>{valueFormatter(entry.value)}</span>
+            <span style={{ color: entry.color || entry.stroke || 'var(--chart-tooltip-text, #cbd5e1)', fontWeight: 600 }}>{entry.name}</span>
+            <span style={{ color: 'var(--chart-tooltip-text, #f8fafc)', fontWeight: 700 }}>{valueFormatter(entry.value)}</span>
           </div>
         ))}
       </div>

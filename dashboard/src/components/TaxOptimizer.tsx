@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { STANDARD_TOOLTIP_PROPS } from '@/lib/chartTheme';
 import { PiggyBank, Sparkles, Percent, HelpCircle, ArrowRight, Calculator } from 'lucide-react';
 
 export default function TaxOptimizer() {
@@ -259,8 +260,7 @@ export default function TaxOptimizer() {
                                     <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 9 }} axisLine={false} tickLine={false} />
                                     <Tooltip
                                         formatter={(value: any) => [`${value.toLocaleString()} 만원`, '']}
-                                        contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '11px' }}
-                                        itemStyle={{ color: '#fff' }}
+                                        {...STANDARD_TOOLTIP_PROPS}
                                     />
                                     <Area type="monotone" dataKey="pension" name="연금저축/IRP" stroke="#10b981" fill="rgba(16,185,129,0.05)" strokeWidth={1.5} />
                                     <Area type="monotone" dataKey="isa" name="ISA 계좌" stroke="#6366f1" fill="rgba(99,102,241,0.05)" strokeWidth={1.5} />

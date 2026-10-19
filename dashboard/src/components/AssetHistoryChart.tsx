@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, ReferenceLine } from "recharts";
+import { STANDARD_TOOLTIP_STYLE } from "@/lib/chartTheme";
 import { API_BASE } from "@/lib/apiConfig";
 import { Loader2, TrendingUp, HelpCircle } from "lucide-react";
 
@@ -145,29 +146,29 @@ export default function AssetHistoryChart({ accounts }: Props) {
             const isPrPos = pr >= 0;
             const isArPos = ar >= 0;
             return (
-                <div className="bg-[#0f111a]/95 border border-white/10 p-4 rounded-2xl shadow-2xl backdrop-blur-xl text-xs space-y-2">
-                    <p className="text-gray-400 font-bold border-b border-white/5 pb-1">{data.date}</p>
+                <div style={STANDARD_TOOLTIP_STYLE} className="p-4 rounded-2xl shadow-2xl backdrop-blur-xl text-xs space-y-2 min-w-[220px]">
+                    <p className="font-bold pb-1" style={{ color: 'var(--chart-tooltip-label, #94a3b8)', borderBottom: '1px solid var(--chart-tooltip-border, rgba(255,255,255,0.1))' }}>{data.date}</p>
                     <div className="flex justify-between gap-6">
-                        <span className="text-gray-400">총 자산액:</span>
-                        <span className="text-white font-extrabold">{fmtKRW(data.total_asset)}원</span>
+                        <span style={{ color: 'var(--chart-tooltip-text-muted, #94a3b8)' }}>총 자산액:</span>
+                        <span className="font-extrabold" style={{ color: 'var(--chart-tooltip-text, #ffffff)' }}>{fmtKRW(data.total_asset)}원</span>
                     </div>
                     <div className="flex justify-between gap-6">
-                        <span className="text-gray-400">주식 평가금:</span>
-                        <span className="text-indigo-200 font-bold">{fmtKRW(data.eval_amount)}원</span>
+                        <span style={{ color: 'var(--chart-tooltip-text-muted, #94a3b8)' }}>주식 평가금:</span>
+                        <span className="font-bold text-indigo-400">{fmtKRW(data.eval_amount)}원</span>
                     </div>
                     <div className="flex justify-between gap-6">
-                        <span className="text-gray-400">현금 잔고:</span>
-                        <span className="text-emerald-300 font-bold">{fmtKRW(data.cash_balance)}원</span>
+                        <span style={{ color: 'var(--chart-tooltip-text-muted, #94a3b8)' }}>현금 잔고:</span>
+                        <span className="font-bold text-emerald-400">{fmtKRW(data.cash_balance)}원</span>
                     </div>
-                    <div className="flex justify-between gap-6 border-t border-white/5 pt-1.5">
-                        <span className="text-gray-400">기간 수익률:</span>
+                    <div className="flex justify-between gap-6 pt-1.5" style={{ borderTop: '1px solid var(--chart-tooltip-border, rgba(255,255,255,0.1))' }}>
+                        <span style={{ color: 'var(--chart-tooltip-text-muted, #94a3b8)' }}>기간 수익률:</span>
                         <span className={`font-black ${isPrPos ? "text-rose-400" : "text-blue-400"}`}>
                             {isPrPos ? "+" : ""}{pr.toFixed(2)}%
                         </span>
                     </div>
                     <div className="flex justify-between gap-6">
-                        <span className="text-gray-500 text-[10px]">누적 수익률 (참고):</span>
-                        <span className={`text-[10px] font-bold ${isArPos ? "text-rose-300/70" : "text-blue-300/70"}`}>
+                        <span className="text-[10px]" style={{ color: 'var(--chart-tooltip-text-muted, #94a3b8)' }}>누적 수익률 (참고):</span>
+                        <span className={`text-[10px] font-bold ${isArPos ? "text-rose-400" : "text-blue-400"}`}>
                             {isArPos ? "+" : ""}{ar.toFixed(2)}% ({isArPos ? "+" : ""}{fmtShort(data.accumulated_profit)}원)
                         </span>
                     </div>
@@ -181,8 +182,8 @@ export default function AssetHistoryChart({ accounts }: Props) {
         if (active && payload && payload.length) {
             const date = payload[0].payload.date;
             return (
-                <div className="bg-[#0f111a]/95 border border-white/10 p-3.5 rounded-2xl shadow-2xl backdrop-blur-xl text-xs space-y-2 min-w-[260px]">
-                    <p className="text-gray-400 font-bold border-b border-white/5 pb-1">{date}</p>
+                <div style={STANDARD_TOOLTIP_STYLE} className="p-3.5 rounded-2xl shadow-2xl backdrop-blur-xl text-xs space-y-2 min-w-[260px]">
+                    <p className="font-bold pb-1" style={{ color: 'var(--chart-tooltip-label, #94a3b8)', borderBottom: '1px solid var(--chart-tooltip-border, rgba(255,255,255,0.1))' }}>{date}</p>
                     {compareData.map((acc, idx) => {
                         const color = ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length].stroke;
                         const val = payload[0].payload[compareMetric === "asset" ? `asset_${acc.account_no}` : `return_${acc.account_no}`];
@@ -191,7 +192,7 @@ export default function AssetHistoryChart({ accounts }: Props) {
                             <div key={acc.account_no} className="flex justify-between items-center gap-4">
                                 <div className="flex items-center gap-1.5">
                                     <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: color }} />
-                                    <span className="text-gray-300 font-semibold">{acc.name}</span>
+                                    <span className="font-semibold" style={{ color: 'var(--chart-tooltip-text, #ffffff)' }}>{acc.name}</span>
                                 </div>
                                 <span className="font-extrabold whitespace-nowrap" style={{ color }}>
                                     {compareMetric === "asset" ? `${fmtKRW(val)}원` : `${val >= 0 ? "+" : ""}${val.toFixed(2)}%`}
