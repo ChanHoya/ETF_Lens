@@ -5,6 +5,7 @@ import React, { useMemo } from 'react';
 import {
     ResponsiveContainer, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ReferenceArea, ReferenceLine,
 } from 'recharts';
+import { STANDARD_TOOLTIP_STYLE } from '@/lib/chartTheme';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export type Milestone = {
@@ -80,7 +81,7 @@ export default function RegimeMilestones({ rows, milestones, selected, onSelect,
                     ))}
                     <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} ticks={yearTicks} tickFormatter={yearTick} tick={{ fill: '#9ca3af', fontSize: 11 }} />
                     <YAxis width={Y_W} tick={{ fill: '#9ca3af', fontSize: 11 }} domain={['auto', 'auto']} tickFormatter={yFormat} />
-                    <RechartsTooltip contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12 }}
+                    <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE}
                         labelFormatter={(t) => fmtDate(Number(t))} formatter={(v) => [typeof v === 'number' ? yFormat(v) : v, seriesName]} />
                     <Line type={step ? 'stepAfter' : 'monotone'} dataKey="v" name={seriesName} stroke={seriesColor} dot={false} strokeWidth={2} connectNulls isAnimationActive={false} />
                 </ComposedChart>

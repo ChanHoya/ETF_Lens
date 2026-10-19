@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from "recharts";
+import { STANDARD_TOOLTIP_PROPS } from '@/lib/chartTheme';
 import { API_BASE } from "@/lib/apiConfig";
 import { Loader2, ShieldAlert, Sparkles, TrendingUp, AlertTriangle, ArrowRight, RefreshCw, Layers } from "lucide-react";
 
@@ -309,9 +310,8 @@ export default function AIRebalanceSimulator({ holdings }: AIRebalanceSimulatorP
                                     <XAxis dataKey="date" stroke="none" tick={{ fill: '#71717a', fontSize: 11 }} minTickGap={40} />
                                     <YAxis stroke="none" tick={{ fill: '#71717a', fontSize: 11 }} domain={['auto', 'auto']} tickFormatter={(val) => `${(val/100 - 100).toFixed(0)}%`} />
                                     <RechartsTooltip 
-                                        contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', backdropFilter: 'blur(8px)' }}
+                                        {...STANDARD_TOOLTIP_PROPS}
                                         formatter={(val: number) => [`${(val/100 - 100).toFixed(2)}%`]}
-                                        labelStyle={{ color: '#a1a1aa', fontSize: '12px', marginBottom: '6px' }}
                                     />
                                     <Line 
                                         type="monotone" 

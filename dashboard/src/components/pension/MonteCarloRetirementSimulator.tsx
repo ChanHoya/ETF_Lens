@@ -9,6 +9,7 @@ import {
   ResponsiveContainer, AreaChart, Area, LineChart, Line,
   XAxis, YAxis, Tooltip, CartesianGrid, Legend, ReferenceLine
 } from 'recharts';
+import { STANDARD_TOOLTIP_PROPS } from '@/lib/chartTheme';
 
 interface MonteCarloTrajectoryPoint {
   age: number;
@@ -275,7 +276,7 @@ export default function MonteCarloRetirementSimulator() {
                 tickFormatter={(v) => `${(v / 10000).toFixed(0)}억`}
               />
               <Tooltip
-                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                {...STANDARD_TOOLTIP_PROPS}
                 formatter={(val: any, name: any) => [
                   `${Number(val).toLocaleString()} 만 원 (${(Number(val) / 10000).toFixed(1)}억)`,
                   name === 'p90' ? '상위 10% (낙관)' : name === 'p50' ? '중위 50% (표준)' : '하위 10% (비관)'

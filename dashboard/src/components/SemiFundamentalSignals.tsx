@@ -748,6 +748,8 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                                                                 borderRadius: 10,
                                                                 fontSize: 11,
                                                             }}
+                                                            itemStyle={{ color: '#e2e8f0', fontSize: '11px' }}
+                                                            labelStyle={{ color: '#94a3b8', fontSize: '11px' }}
                                                             formatter={(val: any) => [`${val} ${activeUnit}`, sig.name]}
                                                         />
                                                         <Area

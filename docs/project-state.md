@@ -13,7 +13,10 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
 3) [S32-2: 벤치마크 상대 성과 & 초과수익(Alpha) 트래커] TFF 펀드 vs KOSPI vs S&P 500 오버레이 차트: 누적 초과수익률(Alpha %p), 승률(Win Rate 80%), 시장 방어력(Beta 0.68), 월별 Alpha 바 차트 및 대조표 완비 (`TffBenchmarkAlphaView.tsx`).
 4) [S32-3: 월간 100만 원 적립식(DCA) + 배당금 100% 재투자 매수 플래너] 10인 적립금 + 보유 ETF 배당금 풀 자동 합산, 포트폴리오 목표 비중 역산 기반 비중 미달 종목 자동 선별, 권장 매수 수량 및 소요액 산출 (`TffDcaReinvestmentPlanner.tsx`).
 5) [S32-4: 10인 시중 정기적금(연 3.5%) 대비 TFF 펀드 초과 수익 인포그래픽] 10인 총 납입 원금 vs 시중 적금 세후 수령액 vs TFF 펀드 실질 순자산 누적 성장 궤적 Area 차트 및 성과 보너스 인포그래픽 (`TffDcaSavingsComparison.tsx`).
-6) [검증 상태]: Next.js 16.1.6 11개 전 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 검증 통과.
+6) [UI/UX 최적화: 서비스 전반 Recharts 툴팁 11px 표준화 전수 완료]
+   - 연금절세 탭(과세이연 자산 격차 차트, 조기/정상/연기 국민연금 누적 수령 차트, 몬테카를로 은퇴 시뮬레이터, ISA 20개년 인출 차트)의 툴팁 폰트가 14~16px 브라우저 기본값 또는 12~13px로 크게 노출되던 문제 해결.
+   - `STANDARD_TOOLTIP_PROPS` 및 `STANDARD_TOOLTIP_STYLE`(`fontSize: 11px`, `backgroundColor: #151722f0`, 블러 8px, 패딩 8px 12px)을 서비스 전역(연금절세, AI리밸런싱, 절세레이더, 스트레스터, 브라질 채권, TFF 펀드 뷰, 종목 비교 차트/테이블 등 20개 컴포넌트)에 전수 일괄 적용하여 컴팩트하고 세련된 글래스모피즘 툴팁 스타일 통일.
+7) [검증 상태]: Next.js 16.1.6 11개 전 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 검증 통과.
 
 > 세션 핸드오프 (2026-10-17, Antigravity - Sprint 24: 국토교통부 MOLIT 실거래가 OpenAPI 공식 연동 및 경기·인천 13대 거점 실시간 파이프라인 구축 완료):
 > - 🏛️ [Sprint 24: 국토교통부(MOLIT) 실거래가 OpenAPI 공식 연동 (S24-1~4)]:

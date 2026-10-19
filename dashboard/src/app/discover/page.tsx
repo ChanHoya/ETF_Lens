@@ -132,8 +132,8 @@ export default function DiscoverPage() {
                                                 fillOpacity={0.4}
                                             />
                                             <RechartsTooltip
-                                                contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '13px' }}
-                                                itemStyle={{ color: '#fff' }}
+                                                contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '11px', padding: '8px 12px' }}
+                                                itemStyle={{ color: '#fff', fontSize: '11px' }}
                                             />
                                         </RadarChart>
                                     </ResponsiveContainer>

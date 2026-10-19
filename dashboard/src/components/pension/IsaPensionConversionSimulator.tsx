@@ -10,6 +10,7 @@ import {
   ResponsiveContainer, AreaChart, Area, 
   XAxis, YAxis, Tooltip, CartesianGrid, Legend 
 } from 'recharts';
+import { STANDARD_TOOLTIP_PROPS, STANDARD_LEGEND_WRAPPER_STYLE } from '@/lib/chartTheme';
 import { calculate20YearWithdrawalPlan } from '@/lib/pensionRules';
 
 export default function IsaPensionConversionSimulator() {
@@ -307,10 +308,10 @@ export default function IsaPensionConversionSimulator() {
               <XAxis dataKey="name" stroke="#9ca3af" fontSize={10} />
               <YAxis stroke="#9ca3af" fontSize={10} tickFormatter={(v) => `${(v/10000).toFixed(1)}억`} />
               <Tooltip
-                contentStyle={{ backgroundColor: '#181b24', borderColor: '#ffffff20', borderRadius: '8px', fontSize: '11px' }}
+                {...STANDARD_TOOLTIP_PROPS}
                 formatter={(val: any) => [`${Number(val).toLocaleString()}만원`, '']}
               />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
+              <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} />
               <Area type="monotone" dataKey="기말잔여평가액" stroke="#818cf8" fillOpacity={1} fill="url(#colorAsset)" name="기말 잔여 자산" />
               <Area type="monotone" dataKey="연간실수령액" stroke="#34d399" fillOpacity={1} fill="url(#colorIncome)" name="연간 세후 실수령액" />
             </AreaChart>

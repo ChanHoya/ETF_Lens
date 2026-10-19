@@ -14,6 +14,7 @@ import {
     Legend,
     ReferenceLine
 } from 'recharts';
+import { STANDARD_TOOLTIP_PROPS } from '@/lib/chartTheme';
 import { TrendingUp, Award, ShieldAlert, BarChart3, CheckCircle2, Percent, ArrowUpRight, Zap } from 'lucide-react';
 
 interface Props {
@@ -288,7 +289,7 @@ export default function TffBenchmarkAlphaView({ data }: Props) {
                                 tickFormatter={(v) => `${v}%`}
                             />
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                                {...STANDARD_TOOLTIP_PROPS}
                                 formatter={(val: any) => [`${Number(val).toFixed(1)}%`, '']}
                             />
                             <ReferenceLine y={0} stroke="#475569" strokeDasharray="2 2" />
@@ -350,7 +351,7 @@ export default function TffBenchmarkAlphaView({ data }: Props) {
                                 tickFormatter={(v) => `${v}%p`}
                             />
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                                {...STANDARD_TOOLTIP_PROPS}
                                 formatter={(val: any) => [`${Number(val).toFixed(2)}%p`, '초과수익 (Alpha)']}
                             />
                             <ReferenceLine y={0} stroke="#64748b" />

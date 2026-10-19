@@ -1113,7 +1113,7 @@ export default function Modals({
                                                                         return <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />;
                                                                     })}
                                                                 </Pie>
-                                                                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} itemStyle={{ color: '#e2e8f0' }} />
+                                                                <Tooltip contentStyle={STANDARD_TOOLTIP_STYLE} itemStyle={{ color: '#e2e8f0', fontSize: '11px' }} />
                                                             </PieChart>
                                                         </ResponsiveContainer>
                                                     ) : (

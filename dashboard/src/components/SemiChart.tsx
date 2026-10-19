@@ -664,8 +664,8 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
         if (!active || !payload?.length) return null;
         const d = payload[0]?.payload;
         return (
-            <div style={{ backgroundColor: 'rgba(18,18,35,0.97)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 14px', fontSize: '12px' }}>
-                <div style={{ fontWeight: 'bold', color: '#fff', marginBottom: '6px' }}>{d?.name} <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 'normal' }}>({d?.ticker})</span></div>
+            <div style={{ backgroundColor: 'rgba(18,18,35,0.97)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '8px 12px', fontSize: '11px' }}>
+                <div style={{ fontWeight: 600, color: '#fff', marginBottom: '4px' }}>{d?.name} <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 'normal' }}>({d?.ticker})</span></div>
                 <div style={{ color: '#94a3b8' }}>OPM (TTM): <span style={{ color: '#34d399', fontWeight: 'bold' }}>{d?.opm != null ? `${d.opm}%` : 'N/A'}</span></div>
                 <div style={{ color: '#94a3b8' }}>Trailing PER: <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{d?.per != null ? `${d.per}x` : 'N/A'}</span></div>
                 <div style={{ color: '#6b7280', marginTop: '4px', fontSize: '10px' }}>{d?.group}</div>

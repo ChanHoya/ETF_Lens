@@ -141,8 +141,8 @@ export default function FxFinder() {
                                     <XAxis dataKey="date" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 9 }} axisLine={false} tickLine={false} />
                                     <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 9 }} axisLine={false} tickLine={false} />
                                     <Tooltip
-                                        contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '11px' }}
-                                        itemStyle={{ color: '#fff' }}
+                                        contentStyle={STANDARD_TOOLTIP_STYLE}
+                                        itemStyle={{ color: '#fff', fontSize: '11px' }}
                                     />
                                     <Line type="monotone" dataKey="unhedged_return" name="환노출 수익률 %" stroke="#10b981" strokeWidth={1.8} dot={false} />
                                     <Line type="monotone" dataKey="hedged_return" name="환헤지 수익률 %" stroke="#6366f1" strokeWidth={1.8} dot={false} />

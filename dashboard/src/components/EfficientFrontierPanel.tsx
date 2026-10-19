@@ -6,7 +6,7 @@ import {
     BarChart, Bar, Legend
 } from 'recharts';
 import { Loader2, TrendingUp, AlertTriangle, Play, RefreshCw, Star, Shield, Target, Info } from 'lucide-react';
-import { useChartHighlight, STANDARD_LEGEND_WRAPPER_STYLE } from '@/lib/chartTheme';
+import { useChartHighlight, STANDARD_LEGEND_WRAPPER_STYLE, STANDARD_TOOLTIP_PROPS } from '@/lib/chartTheme';
 
 /* ─── Types ─── */
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -584,13 +584,8 @@ export default function EfficientFrontierPanel({ holdings }: Props) {
                                         tick={{ fill: '#d1d5db', fontSize: 10 }}
                                     />
                                     <Tooltip
+                                        {...STANDARD_TOOLTIP_PROPS}
                                         formatter={(value: number, name: string) => [`${value.toFixed(1)}%`, name]}
-                                        contentStyle={{
-                                            background: '#0f0f1a',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            borderRadius: '12px',
-                                            fontSize: '11px'
-                                        }}
                                     />
                                     <Legend
                                         wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE}

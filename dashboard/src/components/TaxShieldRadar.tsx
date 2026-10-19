@@ -28,6 +28,7 @@ import {
     ReferenceLine,
     Cell
 } from 'recharts';
+import { STANDARD_TOOLTIP_PROPS } from '@/lib/chartTheme';
 import { API_BASE } from '@/lib/apiConfig';
 
 interface TaxShieldRadarProps {
@@ -513,12 +514,7 @@ export default function TaxShieldRadar({
                                 tickFormatter={(val) => `${Math.round(val / 10000)}만`} 
                             />
                             <Tooltip
-                                contentStyle={{
-                                    backgroundColor: '#0f172a',
-                                    borderColor: '#334155',
-                                    borderRadius: '0.75rem',
-                                    fontSize: '12px'
-                                }}
+                                {...STANDARD_TOOLTIP_PROPS}
                                 formatter={(val: any, name: string) => {
                                     if (name === '월별 금융소득') return [formatWon(Number(val)), name];
                                     if (name === '연간 누적액') return [formatWon(Number(val)), name];

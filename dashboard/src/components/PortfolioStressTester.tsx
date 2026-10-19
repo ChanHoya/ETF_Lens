@@ -10,6 +10,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
   CartesianGrid, Cell, ReferenceLine
 } from 'recharts';
+import { STANDARD_TOOLTIP_PROPS } from '@/lib/chartTheme';
 import { API_BASE } from '@/lib/apiConfig';
 
 interface HoldingItem {
@@ -454,12 +455,7 @@ export default function PortfolioStressTester({ holdings }: PortfolioStressTeste
                     tickFormatter={(v) => `${v}%`}
                   />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                      borderColor: 'rgba(255,255,255,0.1)',
-                      borderRadius: '0.75rem',
-                      fontSize: '12px',
-                    }}
+                    {...STANDARD_TOOLTIP_PROPS}
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     formatter={(val: any) => [`${val}%`, '예상 수익률']}
                   />

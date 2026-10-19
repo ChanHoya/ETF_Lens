@@ -1177,9 +1177,9 @@ function ActivationZoneChart({ summary, history }: { summary: Summary; history?:
                     <ZAxis range={[400, 400]} />
                     <RechartsTooltip
                         cursor={{ strokeDasharray: '3 3' }}
-                        contentStyle={{ background: '#1a1a23', border: '1px solid #ffffff20', borderRadius: 8, fontSize: 12, color: '#fff' }}
-                        itemStyle={{ color: '#fff' }}
-                        labelStyle={{ color: '#9ca3af' }}
+                        contentStyle={STANDARD_TOOLTIP_STYLE}
+                        itemStyle={{ color: '#fff', fontSize: '11px' }}
+                        labelStyle={{ color: '#9ca3af', fontSize: '11px' }}
                         formatter={(v: any, n: any) => [fmt(v, 2), n === 'x' ? '환율' : '금리']} />
 
                     {/* 1주간 로그 모드일 때만 실시간 보간 점선 연결 */}

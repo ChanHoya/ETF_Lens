@@ -13,6 +13,7 @@ import {
     Tooltip,
     Legend
 } from 'recharts';
+import { STANDARD_TOOLTIP_PROPS } from '@/lib/chartTheme';
 import { PiggyBank, TrendingUp, Users, Award, ShieldCheck, Sparkles, CheckCircle2, ArrowUpRight } from 'lucide-react';
 
 interface Props {
@@ -246,7 +247,7 @@ export default function TffDcaSavingsComparison({ data }: Props) {
                                 tickFormatter={(v) => `${Math.round(v / 10000)}만`}
                             />
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                                {...STANDARD_TOOLTIP_PROPS}
                                 formatter={(val: any) => [`${formatMoney(Number(val))}원`, '']}
                             />
                             <Area

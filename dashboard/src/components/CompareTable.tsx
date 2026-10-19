@@ -529,7 +529,7 @@ export default function CompareTable({
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.03)" />
                                         <XAxis type="number" tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(val) => Math.floor(val / 10000) > 0 ? `${Math.floor(val / 10000)}조` : val} stroke="rgba(255,255,255,0.05)" axisLine={false} />
                                         <YAxis dataKey="name" type="category" hide={true} axisLine={false} />
-                                        <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', borderColor: 'rgba(79, 70, 229, 0.2)', borderRadius: '12px', fontSize: '12px' }} itemStyle={{ color: '#818cf8', fontWeight: 'bold' }} />
+                                        <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', borderColor: 'rgba(79, 70, 229, 0.2)', borderRadius: '10px', fontSize: '11px', padding: '8px 12px' }} itemStyle={{ color: '#818cf8', fontWeight: 600, fontSize: '11px' }} />
                                         <Bar dataKey="aum" name="순자산(억)" radius={[0, 4, 4, 0]}>
                                             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                             {additionalStatsData.map((d: any, idx: number) => {
@@ -567,7 +567,7 @@ export default function CompareTable({
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.03)" />
                                         <XAxis type="number" tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" axisLine={false} />
                                         <YAxis dataKey="name" type="category" hide={true} axisLine={false} />
-                                        <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', borderColor: 'rgba(52, 211, 153, 0.2)', borderRadius: '12px', fontSize: '12px' }} itemStyle={{ color: '#34d399', fontWeight: 'bold' }} />
+                                        <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', borderColor: 'rgba(52, 211, 153, 0.2)', borderRadius: '10px', fontSize: '11px', padding: '8px 12px' }} itemStyle={{ color: '#34d399', fontWeight: 600, fontSize: '11px' }} />
                                         <Bar dataKey="dividend" name="배당률(%)" radius={[0, 4, 4, 0]}>
                                             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                             {additionalStatsData.map((d: any, idx: number) => {
@@ -605,7 +605,7 @@ export default function CompareTable({
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.03)" />
                                         <XAxis type="number" tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" axisLine={false} />
                                         <YAxis dataKey="name" type="category" hide={true} axisLine={false} />
-                                        <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', borderColor: 'rgba(244, 63, 94, 0.2)', borderRadius: '12px', fontSize: '12px' }} itemStyle={{ color: '#f43f5e', fontWeight: 'bold' }} />
+                                        <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', borderColor: 'rgba(244, 63, 94, 0.2)', borderRadius: '10px', fontSize: '11px', padding: '8px 12px' }} itemStyle={{ color: '#f43f5e', fontWeight: 600, fontSize: '11px' }} />
                                         <Bar dataKey="fee" name="수수료(%)" radius={[0, 4, 4, 0]}>
                                             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                             {additionalStatsData.map((d: any, idx: number) => {

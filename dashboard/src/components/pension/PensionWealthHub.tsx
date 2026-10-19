@@ -24,6 +24,7 @@ import PensionWaterfallShieldPlanner from '@/components/pension/PensionWaterfall
 import MonteCarloRetirementSimulator from '@/components/pension/MonteCarloRetirementSimulator';
 import YearEndTaxSettlementPlanner from '@/components/pension/YearEndTaxSettlementPlanner';
 import DividendTaxShieldPlanner from '@/components/pension/DividendTaxShieldPlanner';
+import { STANDARD_TOOLTIP_PROPS, STANDARD_TOOLTIP_STYLE } from '@/lib/chartTheme';
 
 function PensionWealthHubInner() {
   const [activeSubTab, setActiveSubTab] = useState<'tax' | 'nps' | 'withdrawal' | 'shield' | 'isa_withdrawal' | 'monte_carlo' | 'dividend_shield'>('tax');
@@ -477,7 +478,7 @@ function PensionWealthHubInner() {
                       tickFormatter={(val) => `${(val / 10000).toFixed(0)}억`}
                     />
                     <Tooltip
-                      contentStyle={{ backgroundColor: 'rgba(10, 10, 15, 0.95)', borderColor: '#ffffff20', borderRadius: '12px' }}
+                      {...STANDARD_TOOLTIP_PROPS}
                       formatter={(value: any, name: any) => [
                         `${Number(value).toLocaleString()} 만 원`,
                         name === 'pensionTaxDeferredBalance' ? '연금계좌 (과세이연)' : '일반계좌 (배당세 15.4% 매년 차감)'
@@ -702,7 +703,7 @@ function PensionWealthHubInner() {
                       tickFormatter={(val) => `${(val / 10000).toFixed(0)}억`}
                     />
                     <Tooltip
-                      contentStyle={{ backgroundColor: 'rgba(10, 10, 15, 0.95)', borderColor: '#ffffff20', borderRadius: '12px' }}
+                      {...STANDARD_TOOLTIP_PROPS}
                       formatter={(val: any, name: any) => [
                         `${Number(val).toLocaleString()} 만 원`,
                         name === 'earlyCumulative' ? '조기 수령' : name === 'normalCumulative' ? '정상 수령' : '연기 수령'

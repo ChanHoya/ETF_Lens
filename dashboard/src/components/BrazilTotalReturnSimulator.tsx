@@ -9,6 +9,7 @@ import {
 import {
     ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip
 } from 'recharts';
+import { STANDARD_TOOLTIP_PROPS } from '@/lib/chartTheme';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const FACE = 1000.0;
@@ -746,7 +747,7 @@ export default function BrazilTotalReturnSimulator({ initialFx = 260.0, initialY
                                 domain={['auto', 'auto']}
                             />
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                                {...STANDARD_TOOLTIP_PROPS}
                                 formatter={(value: any, name: any) => [
                                     `${Number(value).toLocaleString()}원`,
                                     name === 'krwValue' ? '평가액' : '원금'

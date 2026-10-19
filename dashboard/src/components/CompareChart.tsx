@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell } from "recharts";
+import { STANDARD_TOOLTIP_STYLE, STANDARD_TOOLTIP_PROPS } from '@/lib/chartTheme';
 import { Loader2 } from "lucide-react";
 
 // 제 돌 1법: 데이터 배열에서 activeLabel로 적절한 index 입수
@@ -11,8 +12,8 @@ const PriceTooltip = ({ active, payload, label, chartData, etfColors }: any) => 
     if (!active || !payload || payload.length === 0) return null;
     const idx = findIdx(chartData, label);
     return (
-        <div style={{ backgroundColor: 'rgba(3,7,18,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '12px 14px', minWidth: 200 }}>
-            <p style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>{label}</p>
+        <div style={{ backgroundColor: 'rgba(3,7,18,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '8px 12px', minWidth: 190 }}>
+            <p style={{ color: '#94a3b8', fontWeight: 600, fontSize: 11, marginBottom: 4 }}>{label}</p>
             {payload.map((item: any) => {
                 const price = item.value;
                 let chg: number | null = null;
@@ -28,8 +29,8 @@ const PriceTooltip = ({ active, payload, label, chartData, etfColors }: any) => 
                 const color = item.color || etfColors?.[item.dataKey];
                 const isUp = chg !== null && chg >= 0;
                 return (
-                    <div key={item.dataKey} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0', fontSize: 12 }}>
-                        <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
+                    <div key={item.dataKey} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0', fontSize: 11 }}>
+                        <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
                         <span style={{ color: '#e2e8f0' }}>{item.name}&thinsp;:&thinsp;<b>{Number(price).toLocaleString()}</b></span>
                         {chg !== null && (
                             <span style={{ color: isUp ? '#34d399' : '#f87171', fontWeight: 'bold', marginLeft: 2 }}>
@@ -48,8 +49,8 @@ const ReturnTooltip = ({ active, payload, label, chartData }: any) => {
     if (!active || !payload || payload.length === 0) return null;
     const idx = findIdx(chartData, label);
     return (
-        <div style={{ backgroundColor: 'rgba(3,7,18,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '12px 14px', minWidth: 210 }}>
-            <p style={{ color: '#94a3b8', fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>{label}</p>
+        <div style={{ backgroundColor: 'rgba(3,7,18,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)', padding: '8px 12px', minWidth: 200 }}>
+            <p style={{ color: '#94a3b8', fontWeight: 600, fontSize: 11, marginBottom: 4 }}>{label}</p>
             {payload.map((item: any) => {
                 const val = Number(item.value);
                 let chg: number | null = null;
@@ -65,8 +66,8 @@ const ReturnTooltip = ({ active, payload, label, chartData }: any) => {
                 const isUp = val >= 0;
                 const isChgUp = chg !== null && chg >= 0;
                 return (
-                    <div key={item.dataKey} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0', fontSize: 12 }}>
-                        <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
+                    <div key={item.dataKey} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0', fontSize: 11 }}>
+                        <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
                         <span style={{ color: '#e2e8f0' }}>{item.name}&thinsp;:&thinsp;<b style={{ color: isUp ? '#34d399' : '#f87171' }}>{val >= 0 ? '+' : ''}{val.toFixed(2)}%</b></span>
                         {chg !== null && (
                             <span style={{ color: isChgUp ? '#34d399' : '#f87171', fontWeight: 'bold', marginLeft: 2 }}>
@@ -457,8 +458,7 @@ export default function CompareChart({
                                             <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={(val) => `${val}%`} stroke="rgba(255,255,255,0.05)" tickMargin={15} axisLine={false} />
                                             <Tooltip
                                                 cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1, strokeDasharray: '4 4' }}
-                                                contentStyle={{ backgroundColor: 'rgba(3, 7, 18, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px' }}
-                                                labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontSize: '13px' }}
+                                                {...STANDARD_TOOLTIP_PROPS}
                                                 formatter={(value: any, name: string) => [`${Number(value).toFixed(2)}%`, name]}
                                             />
                                             {data.visual_data.etf_keys.map((key: string, idx: number) => {
