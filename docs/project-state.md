@@ -20,6 +20,13 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
    - 다크 모드(`var(--chart-tooltip-bg)`, 텍스트 `#f8fafc`, 라벨 `#cbd5e1`)와 라이트 모드(배경 `#ffffff`, 텍스트 `#10131a`, 라벨 `#1e293b`) 완벽 대비 보장.
 7) [검증 상태]: Next.js 16.1.6 11개 전 페이지 최적화 빌드 완료 (`exit code 0`).
 
+🐛 [Bugfix 완료 - 시장동향 종합분석 업데이트 결함 및 결측치 방어 (FP-044)]:
+- 백엔드 `weekly_frame` 생성 시 `pd.to_numeric` 강제 변환으로 결측치(`None`) 연산 시 `TypeError` 원천 차단.
+- `correlation_map` 유효 데이터(120개 이상) 필터링 및 `find_analogs`의 `f.dropna(how="all", axis=1)` 적용으로 지표 누락 시에도 안전 계산 보장.
+- 수동 새로고침(`refresh=True`) 시 DB 스냅샷 자동 영속화(`_save_to_db`) 탑재.
+- 프론트엔드 `MacroTab.tsx` 업데이트 버튼 옆에 에러 피드백 배지 추가.
+- 회귀 테스트: `test_build_overview_handles_none_and_missing_series` 작성 및 18/18 pytest 100% Pass.
+
 > 세션 핸드오프 (2026-10-17, Antigravity - Sprint 24: 국토교통부 MOLIT 실거래가 OpenAPI 공식 연동 및 경기·인천 13대 거점 실시간 파이프라인 구축 완료):
 > - 🏛️ [Sprint 24: 국토교통부(MOLIT) 실거래가 OpenAPI 공식 연동 (S24-1~4)]:
 >   - `backend/core/molit_collector.py`: 수도권 13대 거점 법정동 매핑, 아파트 매매/전월세 실거래 상세자료 수집, XML 파싱 및 평당가 연산, Fallback 안전망.

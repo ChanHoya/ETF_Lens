@@ -391,3 +391,15 @@
 - **원인**: 선행 테스트나 기존 로컬 DB에 특정 코드(예: `396500`, `069500`)가 잔존한 상태에서 `setup_db` 픽스처가 `db.add_all()`을 무조건 실행하여 고유키 충돌 유발.
 - **해결**: 테스트 픽스처 내 삽입 전 `await db.execute(delete(ETFMaster).where(ETFMaster.code.in_(target_codes)))`로 사전 정리(cleanup-before-insert)를 수행하여 테스트 실행 순서에 영향을 받지 않는 멱등성(Idempotency) 보장.
 
+### [FP-044] 매크로 지표 결측치(None)로 인한 DataFrame 연산 TypeError 및 에러 피드백 은폐
+- **증상**: 시장동향 종합분석 탭에서 [업데이트] 버튼을 눌러도 최신 기준 시각으로 갱신되지 않고 이전 캐시에 머무르며 백엔드 500 에러 발생.
+- **원인**:
+  1. 외부 원천(ECOS 등) 지표가 결측(`None`)될 때 pandas DataFrame 컬럼이 `object` 타입으로 생성되어, `correlation_map`의 `w[c].diff()` 호출 시 `TypeError: unsupported operand type(s) for -: 'NoneType' and 'NoneType'` 발생.
+  2. 결측 컬럼이 포함된 상태에서 `find_analogs`의 `f.dropna()`가 실행되어 전체 행이 소멸됨.
+  3. 프론트엔드 `MacroTab.tsx`에서 기존 캐시가 존재할 경우 `{error && !data}` 조건으로 인해 API 실패 메시지가 사용자에게 은폐됨.
+- **해결**:
+  1. `weekly_frame` 생성 시 모든 컬럼에 `pd.to_numeric(..., errors="coerce")`를 적용하여 `None`을 표준 부동소수점 `NaN`으로 변환.
+  2. `correlation_map`에서 유효 수치 데이터가 120개 이상인 컬럼만 선별하고, `find_analogs`에서 `f.dropna(how="all", axis=1).dropna()`로 결측 컬럼을 안전하게 분리.
+  3. 프론트엔드 업데이트 버튼 우측에 에러 상태 태그를 즉시 렌더링하여 사용자 피드백 확보.
+
+

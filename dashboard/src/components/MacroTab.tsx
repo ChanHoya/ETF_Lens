@@ -898,6 +898,7 @@ export default function MacroTab() {
                     </div>
                     {data && <span className="text-sm font-extrabold px-3 py-1 rounded-full border border-indigo-400/40 bg-indigo-500/15 text-indigo-200">{data.diagnosis.headline}</span>}
                     <div className="ml-auto flex items-center gap-2 text-[11px] text-gray-500">
+                        {error && <span className="text-rose-400 font-medium">업데이트 실패 ({error})</span>}
                         {data && <span>{new Date(data.updated_at).toLocaleString('ko-KR')} 기준{refreshing ? ' · 최신 데이터 확인 중…' : ''}</span>}
                         <button onClick={refresh} disabled={refreshing}
                             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 disabled:opacity-50">

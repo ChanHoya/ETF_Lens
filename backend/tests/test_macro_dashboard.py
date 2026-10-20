@@ -201,3 +201,22 @@ def test_analogs_ensemble_similarity_and_regime_tag():
         # historical_regime은 매칭 시 문자열이거나 None
         assert item["historical_regime"] is None or isinstance(item["historical_regime"], str)
 
+
+def test_build_overview_handles_none_and_missing_series():
+    # kr_base, kr10y가 전부 None인 실제 프로덕션 결측 상황 모사 (TypeError 방어 검증)
+    rates = _rates()
+    for row in rates["weekly"]:
+        row["kr_base"] = None
+        row["kr10y"] = None
+    out = build_overview(_fx(), rates, _stocks(), TODAY)
+    assert out is not None
+    assert "updated_at" in out
+    assert out["correlation"] is not None
+    # kr10y는 유효 데이터가 부족하므로 상관계수 대상에서 안전하게 제외됨
+    corr_keys = [a["key"] for a in out["correlation"]["assets"]]
+    assert "kr10y" not in corr_keys
+    assert "us10y" in corr_keys
+    # analogs도 특정 컬럼 결측 시 정상 산출됨
+    assert out["analogs"] is not None
+
+

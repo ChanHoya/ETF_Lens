@@ -54,10 +54,15 @@ def weekly_frame(fx: dict | None, rates: dict | None, stocks: dict | None) -> pd
         df = pd.DataFrame(rows)
         df.index = pd.to_datetime(df["date"]).dt.to_period("W-FRI").dt.end_time.dt.normalize()
         df = df[[c for c in cols if c in df.columns]]
+        for c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
         parts.append(df[~df.index.duplicated(keep="last")])
     if not parts:
         return pd.DataFrame()
-    return pd.concat(parts, axis=1).sort_index().ffill(limit=3)
+    w = pd.concat(parts, axis=1).sort_index().ffill(limit=3)
+    for c in w.columns:
+        w[c] = pd.to_numeric(w[c], errors="coerce")
+    return w
 
 
 def features(w: pd.DataFrame) -> pd.DataFrame:
@@ -123,12 +128,16 @@ def find_analogs(w: pd.DataFrame, f: pd.DataFrame, regimes: dict, top: int = 3) 
     """현재 특징과 가장 비슷한 과거 주(최근 2년 제외, 서로 26주 이상 떨어짐)와 이후 26·52주 결과.
     코사인 유사도(방향성) + 가중 유클리드 거리(진폭) 앙상블 퀀트 매칭 적용.
     """
-    f = f.dropna()
+    f = f.dropna(how="all", axis=1).dropna()
     if len(f) < EXCLUDE_RECENT + 60:
         return None
     z = ((f - f.mean()) / f.std(ddof=0).replace(0, np.nan)).dropna(axis=1)
+    if z.empty or len(z.columns) < 2:
+        return None
     now = z.iloc[-1]
     cand = z[z.index <= z.index[-1] - pd.Timedelta(weeks=EXCLUDE_RECENT)]
+    if cand.empty:
+        return None
 
     # 가중치 벡터 생성
     w_vec = np.array([FEATURE_WEIGHTS.get(col, 1.0) for col in cand.columns])
@@ -184,18 +193,18 @@ def find_analogs(w: pd.DataFrame, f: pd.DataFrame, regimes: dict, top: int = 3) 
     for h in ("after_6m", "after_12m"):
         keys = sorted(set().union(*(i[h].keys() for i in items))) if items else []
         avg[h] = {k: _r(np.mean([i[h][k] for i in items if k in i[h]]), 1) for k in keys}
-    return {"now": {k: _r(f.iloc[-1][k], 1) for k in f.columns}, "labels": {k: FEATURES[k] for k in f.columns},
+    return {"now": {k: _r(f.iloc[-1][k], 1) for k in f.columns}, "labels": {k: FEATURES[k] for k in f.columns if k in FEATURES},
             "analogs": items, "average": avg}
 
 
 def correlation_map(w: pd.DataFrame) -> dict | None:
     """주간 변화 상관 — 최근 52주 vs 10년, 평소와 가장 달라진 쌍."""
-    cols = [c for c in CORR_ASSETS if c in w]
+    cols = [c for c in CORR_ASSETS if c in w and w[c].dropna().count() >= 120]
     if len(cols) < 3 or len(w) < 120:
         return None
     ch = pd.DataFrame(index=w.index)
     for c in cols:
-        ch[c] = w[c].diff() if c in ("us10y", "kr10y") else np.log(w[c]).diff()
+        ch[c] = w[c].diff() if c in ("us10y", "kr10y") else np.log(w[c].where(w[c] > 0)).diff()
     now, long = ch.tail(52).corr(), ch.tail(520).corr()
     pairs = []
     for i, a in enumerate(cols):
@@ -775,6 +784,7 @@ async def macro_overview(refresh: bool = Query(False)):
         data = await _build(force_sources=True)
         if data:
             overview_cache.data, overview_cache.ts = data, time.time()
+            await overview_cache._save_to_db(data)
     else:
         data = await overview_cache.get()
     if data is None:
@@ -800,6 +810,7 @@ async def refresh_events():
     if data is None:
         raise HTTPException(status_code=503, detail="종합분석 데이터를 다시 계산하지 못했습니다.")
     overview_cache.data, overview_cache.ts = data, time.time()
+    await overview_cache._save_to_db(data)
     return data
 
 
