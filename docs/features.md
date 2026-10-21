@@ -3,6 +3,7 @@
 ## Feature List
 | Feature | Status | Key Files | Notes |
 |---------|--------|-----------|-------|
+| [5대 UI/UX 기준 통합 구현] 1순위 거시 나침반 Hero 배너 & 시맨틱 토큰 & 스프링 모션 & 모바일 세로 뷰포트 요약 (S33-1~5) | ✅ done | MacroHeroCompass.tsx, MacroTab.tsx, PortraitLockScreen.tsx, globals.css, theme-light.css | 1) 1순위 거시 나침반 Hero 배너(위험자산·물가에너지·외환금리 3대 기둥 및 10Y 차트 연동), 2) 다크/라이트 모드 고대비 시맨틱 토큰 및 카드 명암비 최적화, 3) AI 클리셰 이모지 제거 및 Lucide 시맨틱 SVG 아이콘 통일, 4) .btn-tactile 스프링 모션 및 스켈레톤 유틸리티, 5) 모바일 세로 뷰포트 요약 화면 열람 옵션(44px 터치 규격) 및 고대비 포커스 링 전역 보강 |
 | [TFF 공동 펀드 브리핑] 10인 공동 펀드 1-Page 월간 팩트시트(Factsheet) & 카톡 공지 생성 모달 (S32-1) | ✅ done | TffMonthlyFactsheetModal.tsx, TffDashboard.tsx | 1) 1인당 평가액(총자산 ÷ 10), 1인당 누적 손익, Top 5 편입 비중, 자산배분 파이 집약, 2) 매니저 월간 총평 편집 및 로컬 자동 저장, 3) 카카오톡 모바일 최적화 줄바꿈 텍스트 원클릭 복사, 4) @media print 최적화 A4 인쇄 / PDF 저장 지원 |
 | [TFF 벤치마크 분석] TFF 펀드 vs KOSPI vs S&P 500 상대 성과(Alpha) & 승률(Win Rate) 트래커 (S32-2) | ✅ done | TffBenchmarkAlphaView.tsx, TffDashboard.tsx | 1) TFF 펀드 vs KOSPI vs S&P 500 시계열 누적 수익률 오버레이 비교 차트, 2) KOSPI/S&P500 대비 초과수익률(Alpha %p), 승률(Win Rate 80%), 시장 방어력(Beta 0.68) 핵심 지표, 3) 월별 Alpha 바 차트 및 상세 대조표 완비 |
 | [TFF 적립식 운용] 매월 100만 원 적립식(DCA) + 배당금 100% 재투자 자동 매수 플래너 (S32-3) | ✅ done | TffDcaReinvestmentPlanner.tsx, TffDashboard.tsx | 1) 10인 고정 적립금(100만 원) + 보유 종목 배당금 풀 자동 합산, 2) 현재 포트폴리오 목표 비중 역산 기반 비중 미달(Underweight) 종목 자동 선별, 3) 권장 매수 수량(주) 및 소요액 산출, 4) HTS/MTS 실전 매수 체크리스트 및 주문 텍스트 복사 |
