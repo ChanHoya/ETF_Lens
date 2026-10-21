@@ -19,12 +19,12 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
    - `PortraitLockScreen.tsx`에 '세로 모드로 요약 화면 보기' 옵션 및 44px 최소 터치 타깃 제공으로 모바일 세로 뷰포트 진입 차단 완화.
    - 키보드 탐색을 위한 고대비 포커스 링(`focus-visible:ring-2 focus-visible:ring-indigo-500`) 전역 적용.
 6) [검증 완료]: Next.js 16.1.6 11개 페이지 최적화 프로덕션 빌드 100% 성공 (`code 0`), 백엔드 pytest 18/18 100% Pass, 브라우저 E2E 인터랙션 검증 완료.
-6) [UI/UX 최적화: 차트 툴팁 11px 표준화 및 라이트/다크 모드 고대비 가독성 전수 해결]
+7) [UI/UX 최적화: 차트 툴팁 11px 표준화 및 라이트/다크 모드 고대비 가독성 전수 해결]
    - 연금절세 탭(과세이연 자산 격차 차트 등) 포함 서비스 전반 툴팁 폰트 11px 표준화.
    - 라이트 모드 전환 시 툴팁 카드가 흰색(#fff)으로 전환됨에도 인라인 색상(`rgb(248, 250, 252)`, `rgb(226, 232, 240)`, `text-white` 등)으로 인해 글자가 백색/초연회색으로 표시되어 보이지 않던 결함 전수 해결.
    - `generate-light-theme.py`, `theme-light.css`, `globals.css`, `chartTheme.tsx`에 걸쳐 CSS 변수 기반 적응형 토큰 및 강력한 속성 선택자 오버라이드 구축.
    - 다크 모드(`var(--chart-tooltip-bg)`, 텍스트 `#f8fafc`, 라벨 `#cbd5e1`)와 라이트 모드(배경 `#ffffff`, 텍스트 `#10131a`, 라벨 `#1e293b`) 완벽 대비 보장.
-7) [검증 상태]: Next.js 16.1.6 11개 전 페이지 최적화 빌드 완료 (`exit code 0`).
+8) [검증 상태]: Next.js 16.1.6 11개 전 페이지 최적화 빌드 완료 (`exit code 0`).
 
 🐛 [Bugfix 완료 - 시장동향 종합분석 업데이트 결함 및 결측치 방어 (FP-044)]:
 - 백엔드 `weekly_frame` 생성 시 `pd.to_numeric` 강제 변환으로 결측치(`None`) 연산 시 `TypeError` 원천 차단.
