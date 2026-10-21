@@ -13,6 +13,7 @@ A living document of module relationships. Update whenever modules are added or 
 | database   | infrastructure| Data persistence       | -              | services      | Carol |
 -->
 | Deploy Configs | Infrastructure | Render & Vercel serverless IAC configuration & verification | api, dashboard | - | Antigravity |
+| Macro Hero Compass (S33) | Presentation | 1순위 매크로 나침반 종합 진단, 3대 기둥 지표 카드, 10년 정밀 차트 연동 | MacroTab, MarketDetailModal | MacroTab | Antigravity |
 | DB Sync | Infrastructure | SQLite-to-PostgreSQL replication core & management | db/models, db/database | scheduler, MyDashboard | Antigravity |
 | AI Rebalancing | Presentation | AI-driven ETF portfolio rebalancing recommendations | my_assets, peer_analysis | MyDashboard | Antigravity |
 | ETF Overlap Analysis | Presentation | Pairwise holding overlaps, underlying stock exposure, and diversification efficiency score | my_assets, core/overlap_analyzer | MyDashboard | Antigravity |
