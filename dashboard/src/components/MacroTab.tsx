@@ -10,6 +10,7 @@ import { dataAgeMs, useCachedOverview } from '@/lib/useCachedOverview';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import MarketDetailModal, { SeriesConfig, DetailDataPoint } from './MarketDetailModal';
 import MacroPortfolioSensitivityWidget from './MacroPortfolioSensitivityWidget';
+import MacroHeroCompass from './MacroHeroCompass';
 
 type EventItem = {
     kind: 'bok' | 'fomc' | 'event'; date: string; d_day: number; title: string; status: 'upcoming' | 'pending' | 'done';
@@ -271,6 +272,16 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
 
     return (
         <div className="w-full flex flex-col gap-4 mb-4">
+            {/* 1순위 핵심 거시 나침반 Hero 배너 (frontend-design & hallmark) */}
+            <MacroHeroCompass
+                vix={vix.value}
+                fgi={vix.fgi?.value ?? 58}
+                wti={oil.wti?.value ?? oil.value ?? 101.41}
+                krw={fx.krw ?? 1329.6}
+                policyGap={rates.policy_gap ?? -1.0}
+                onExploreDetail={(grp) => setModalGroup(grp)}
+            />
+
             {/* 거시지표 실시간 민감도(Beta) & 환율·금리 스트레스 진단 위젯 */}
             <MacroPortfolioSensitivityWidget />
 
@@ -299,7 +310,7 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                 {/* 1. 원유 3대 벤치마크 */}
                 <div
                     onClick={() => setModalGroup('oil')}
-                    className="group bg-[#161826] hover:bg-[#1c1f30] border border-amber-500/30 hover:border-amber-400/60 rounded-2xl p-4 cursor-pointer transition-all duration-200 shadow-lg flex flex-col justify-between"
+                    className="group bg-[#161826] hover:bg-[#1c1f30] border border-amber-500/30 hover:border-amber-400/60 rounded-2xl p-4 cursor-pointer transition-all duration-200 shadow-lg flex flex-col justify-between active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
                 >
                     <div>
                         <div className="flex items-center justify-between mb-2">
@@ -308,7 +319,8 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                                 원유 3대 벤치마크 & 스프레드
                             </span>
                             <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 group-hover:bg-amber-500 group-hover:text-black transition">
-                                🔍 6M~10Y 차트
+                                <TrendingUp className="w-3 h-3" />
+                                10Y 차트
                             </span>
                         </div>
                         <div className="grid grid-cols-3 gap-2 my-2 py-2 border-y border-white/5 bg-black/20 rounded-xl px-2">
@@ -338,7 +350,7 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                 {/* 2. 공포 & 변동성 & 심리지수 */}
                 <div
                     onClick={() => setModalGroup('sentiment')}
-                    className="group bg-[#161826] hover:bg-[#1c1f30] border border-purple-500/30 hover:border-purple-400/60 rounded-2xl p-4 cursor-pointer transition-all duration-200 shadow-lg flex flex-col justify-between"
+                    className="group bg-[#161826] hover:bg-[#1c1f30] border border-purple-500/30 hover:border-purple-400/60 rounded-2xl p-4 cursor-pointer transition-all duration-200 shadow-lg flex flex-col justify-between active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
                 >
                     <div>
                         <div className="flex items-center justify-between mb-2">
@@ -347,7 +359,8 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                                 공포 & 변동성 & 심리지수
                             </span>
                             <span className="text-[10px] font-semibold text-purple-400 bg-purple-500/10 border border-purple-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 group-hover:bg-purple-500 group-hover:text-black transition">
-                                🔍 6M~10Y 차트
+                                <TrendingUp className="w-3 h-3" />
+                                10Y 차트
                             </span>
                         </div>
                         <div className="grid grid-cols-3 gap-2 my-2 py-2 border-y border-white/5 bg-black/20 rounded-xl px-2">
@@ -377,7 +390,7 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                 {/* 3. 미국 3대 인플레이션 지표 */}
                 <div
                     onClick={() => setModalGroup('inflation')}
-                    className="group bg-[#161826] hover:bg-[#1c1f30] border border-rose-500/30 hover:border-rose-400/60 rounded-2xl p-4 cursor-pointer transition-all duration-200 shadow-lg flex flex-col justify-between"
+                    className="group bg-[#161826] hover:bg-[#1c1f30] border border-rose-500/30 hover:border-rose-400/60 rounded-2xl p-4 cursor-pointer transition-all duration-200 shadow-lg flex flex-col justify-between active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
                 >
                     <div>
                         <div className="flex items-center justify-between mb-2">
@@ -386,7 +399,8 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                                 미국 3대 물가지표 (CPI·PPI·PCE)
                             </span>
                             <span className="text-[10px] font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 group-hover:bg-rose-500 group-hover:text-black transition">
-                                🔍 6M~10Y 차트
+                                <TrendingUp className="w-3 h-3" />
+                                10Y 차트
                             </span>
                         </div>
                         <div className="grid grid-cols-3 gap-2 my-2 py-2 border-y border-white/5 bg-black/20 rounded-xl px-2">
@@ -419,7 +433,7 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                 {/* 4. 한·미 정책금리 & 국채 (기존 한국금리, 미국금리 박스 내용 완전 통합 흡수) */}
                 <div
                     onClick={() => setModalGroup('rates')}
-                    className="group bg-[#161826] hover:bg-[#1c1f30] border border-sky-500/30 hover:border-sky-400/60 rounded-2xl p-4 cursor-pointer transition-all duration-200 shadow-lg flex flex-col justify-between"
+                    className="group bg-[#161826] hover:bg-[#1c1f30] border border-sky-500/30 hover:border-sky-400/60 rounded-2xl p-4 cursor-pointer transition-all duration-200 shadow-lg flex flex-col justify-between active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:outline-none"
                 >
                     <div>
                         <div className="flex items-center justify-between mb-2">
@@ -428,7 +442,8 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                                 한·미 정책금리 & 국채 (장단기)
                             </span>
                             <span className="text-[10px] font-semibold text-sky-400 bg-sky-500/10 border border-sky-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 group-hover:bg-sky-500 group-hover:text-black transition">
-                                🔍 6M~10Y 차트
+                                <TrendingUp className="w-3 h-3" />
+                                10Y 차트
                             </span>
                         </div>
                         <div className="grid grid-cols-3 gap-2 my-2 py-2 border-y border-white/5 bg-black/20 rounded-xl px-2">
@@ -465,7 +480,7 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                 {/* 5. 환율 인덱스 & 주요 통화 (기존 원화, 달러 박스 내용 완전 통합 흡수) */}
                 <div
                     onClick={() => setModalGroup('fx')}
-                    className="group bg-[#161826] hover:bg-[#1c1f30] border border-emerald-500/30 hover:border-emerald-400/60 rounded-2xl p-4 cursor-pointer transition-all duration-200 shadow-lg flex flex-col justify-between"
+                    className="group bg-[#161826] hover:bg-[#1c1f30] border border-emerald-500/30 hover:border-emerald-400/60 rounded-2xl p-4 cursor-pointer transition-all duration-200 shadow-lg flex flex-col justify-between active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
                 >
                     <div>
                         <div className="flex items-center justify-between mb-2">
@@ -474,7 +489,8 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                                 환율 인덱스 & 주요 통화
                             </span>
                             <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 group-hover:bg-emerald-500 group-hover:text-black transition">
-                                🔍 6M~10Y 차트
+                                <TrendingUp className="w-3 h-3" />
+                                10Y 차트
                             </span>
                         </div>
                         <div className="grid grid-cols-3 gap-2 my-2 py-2 border-y border-white/5 bg-black/20 rounded-xl px-2">
@@ -511,7 +527,7 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                 {/* 6. 주식 인덱스 & 밸류에이션 (기존 KOSPI, S&P500 박스 내용 완전 통합 흡수) */}
                 <div
                     onClick={() => setModalGroup('stocks')}
-                    className="group bg-[#161826] hover:bg-[#1c1f30] border border-indigo-500/30 hover:border-indigo-400/60 rounded-2xl p-4 cursor-pointer transition-all duration-200 shadow-lg flex flex-col justify-between"
+                    className="group bg-[#161826] hover:bg-[#1c1f30] border border-indigo-500/30 hover:border-indigo-400/60 rounded-2xl p-4 cursor-pointer transition-all duration-200 shadow-lg flex flex-col justify-between active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none"
                 >
                     <div>
                         <div className="flex items-center justify-between mb-2">
@@ -520,7 +536,8 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                                 주식 인덱스 & 밸류에이션
                             </span>
                             <span className="text-[10px] font-semibold text-indigo-400 bg-indigo-500/10 border border-indigo-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 group-hover:bg-indigo-500 group-hover:text-black transition">
-                                🔍 6M~10Y 차트
+                                <TrendingUp className="w-3 h-3" />
+                                10Y 차트
                             </span>
                         </div>
                         <div className="grid grid-cols-3 gap-2 my-2 py-2 border-y border-white/5 bg-black/20 rounded-xl px-2">

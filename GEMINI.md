@@ -114,3 +114,20 @@ These laws are enforced across all skills and agents. Violations should be flagg
 8. **Session Handoff**: At session end, update project-state.md Quick Summary so the next session has context.
 9. **Common First**: All features must work at Common level (🟢🔵🔴) without crew dependency. Crew-specific logic must be inside crew marker blocks only. Never add crew-only code to Common paths.
 10. **Context Caching on Large-Scale Tasks**: When executing full codebase analysis, massive refactoring, or long agent trajectories, freeze static context & tool schemas with `gemini-context-caching` to cut token costs by 80~95% and enforce `AgentGuardrail` loop protection.
+
+## Code & Communication Rules
+
+1. **한국어 문장에 콜론(:) 종결 금지**:
+   - 한국어 문장 종결부는 콜론(`:`)이 아닌 마침표(`.`), 물음표(`?`), 느낌표(`!`) 중 하나여야 한다.
+   - 다음 줄이 목록이나 예시여도 문장을 `:`로 끝내지 않는다. (단, 코드 내부, 라벨, 키-값 쌍의 콜론은 허용)
+2. **새 소스 파일 첫 줄에 한국어 헤더 주석**:
+   - 새 소스 파일 생성 시 첫 줄(또는 지시자 바로 아래)에 해당 파일의 역할을 명확한 한 줄 한국어 주석으로 기재한다.
+   - 예: `// ETF 다중 지표 비교 및 분배금 시뮬레이션 차트 컴포넌트`
+3. **플랜 + 체크리스트 + 컨텍스트 노트**:
+   - 중대 기능 구현이나 아키텍처 개편 시 작업 시작 전 목표 플랜, 구체적 체크리스트(`checklist.md`), 의사결정 기록(`context-notes.md`) 산출물을 정의하여 세션 간 연속성을 유지한다.
+4. **시맨틱 커밋 (Semantic Commit)**:
+   - 하나의 논리적 변경 단위가 완료되면 지체 없이 커밋한다. "이 커밋을 한 문장으로 명확히 설명할 수 있는가?"를 기준으로 삼는다.
+5. **에러를 읽어라, 추측하지 마라**:
+   - 오류 발생 시 기억이나 어설픈 추측으로 수정을 시도하지 않고, 실제 터미널 출력/브라우저 콘솔의 전체 스택 트레이스를 정밀 확인한 후 근본 원인을 교정한다.
+6. **기본 UI/UX 5대 스킬 파이프라인 준수**:
+   - 프론트엔드 UI/UX 작업 시 `frontend-design`(사전 방향성) → `ui-ux-pro-max`(토큰 시스템) → `hallmark`(AI 클리셰 제거) → `emil-design-eng`(스프링 모션) → `web-design-guidelines`(접근성/사용성 검증)의 5대 스킬 기준을 필수 적용한다.

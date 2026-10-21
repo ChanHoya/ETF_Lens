@@ -1,76 +1,41 @@
 ---
 name: frontend-design
-description: Design thinking and decision-making for web UI.
-category: design
-version: 4.1.0-fractal
-layer: master-skill
+description: |
+  Create thoughtful, user-centric frontend designs and layout directions before writing code.
+  Use this skill whenever you are planning, designing, or scaffolding a new UI, component, or screen.
+  It establishes visual hierarchy, mood, structure, spacing rhythms, and domain-specific UX goals before diving into code.
+license: MIT
+metadata:
+  version: v1
+  category: design
 ---
 
-# Frontend Design System
+# Frontend Design: Pre-Coding Design Direction
 
-> **Philosophy:** Every pixel has purpose. Restraint is luxury. User psychology drives decisions.
-> **Core Principle:** THINK, don't memorize. ASK, don't assume.
+코드나 컴포넌트를 구현하기 전에 사용자 경험(UX)과 시각적 방향성(Design Direction)을 선행 설계하는 기본 지침서입니다.
 
----
+## 1. 선행 설계 4단계 프로세스
 
-## 🎯 Selective Reading Rule (MANDATORY)
+1. **도메인 맥락 및 사용자 목표 정의**
+   - 이 화면이 해결해야 하는 가장 핵심적인 사용자 과업(Task)을 한 문장으로 규정합니다.
+   - 사용자가 화면에 진입했을 때 3초 이내에 인지해야 하는 1순위 정보(Primary Anchor)를 선정합니다.
 
-**Read REQUIRED files always, OPTIONAL only when needed:**
+2. **정보 계층 구조 (Visual Hierarchy)**
+   - **Primary**: 화면에서 가장 먼저 시선을 사로잡는 핵심 데이터 또는 주요 액션(CTA).
+   - **Secondary**: 결정을 뒷받침하는 세부 지표, 필터, 보조 조작계.
+   - **Tertiary**: 메타데이터, 부가 설명, 타임스탬프, 부차적 도움말 링크.
 
-| File | Status | When to Read |
-|------|--------|--------------|
-| [ux-psychology.md](ux-psychology.md) | 🔴 **REQUIRED** | Always read first! |
-| [color-system.md](color-system.md) | ⚪ Optional | Color/palette decisions |
-| [typography-system.md](typography-system.md) | ⚪ Optional | Font selection/pairing |
-| [visual-effects.md](visual-effects.md) | ⚪ Optional | Glassmorphism, shadows, gradients |
-| [animation-guide.md](animation-guide.md) | ⚪ Optional | Animation needed |
-| [motion-graphics.md](motion-graphics.md) | ⚪ Optional | Lottie, GSAP, 3D |
-| [decision-trees.md](decision-trees.md) | ⚪ Optional | Context templates |
+3. **레이아웃 골격 및 시선 흐름(Eye-tracking)**
+   - 대시보드나 생산성 도구에서는 Z-패턴 또는 F-패턴을 기반으로 상단 요약 → 중단 비교/분석 → 하단 세부 내역으로 자연스럽게 흐르도록 배치합니다.
+   - 무작위적인 카드 배치를 지양하고, 논리적인 작업 순서(Workflow)에 따라 영역을 구획합니다.
 
-> 🔴 **ux-psychology.md = ALWAYS READ. Others = only if relevant.**
+4. **밀도(Density)와 호흡(Whitespace)**
+   - 금융/분석 대시보드는 정보 가독성이 훼손되지 않는 선에서 컴팩트한 고밀도 설계를 적용합니다.
+   - 랜딩이나 온보딩은 넉넉한 패딩과 섹션 구분을 두어 시각적 피로도를 낮춥니다.
 
----
+## 2. 디자인 방향 수립 체크리스트
 
-## 🔧 Runtime Scripts
-
-**Execute these for audits (don't read, just run):**
-
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| `scripts/ux_audit.py` | UX Psychology & Accessibility Audit | `python scripts/ux_audit.py <project_path>` |
-
----
-
-## ⚠️ CRITICAL: ASK BEFORE ASSUMING (MANDATORY)
-
-> **STOP! If the user's request is open-ended, DO NOT default to your favorites.**
-
-## 🧠 Knowledge Modules (Fractal Skills)
-
-### 1. [When User Prompt is Vague, ASK:](./sub-skills/when-user-prompt-is-vague-ask.md)
-### 2. [⛔ DEFAULT TENDENCIES TO AVOID (ANTI-SAFE HARBOR):](./sub-skills/default-tendencies-to-avoid-anti-safe-harbor.md)
-### 3. [Audience → Design Approach](./sub-skills/audience-design-approach.md)
-### 4. [Core Laws (Internalize These)](./sub-skills/core-laws-internalize-these.md)
-### 5. [Emotional Design Levels](./sub-skills/emotional-design-levels.md)
-### 6. [Trust Building](./sub-skills/trust-building.md)
-### 7. [Golden Ratio (φ = 1.618)](./sub-skills/golden-ratio-1618.md)
-### 8. [8-Point Grid Concept](./sub-skills/8-point-grid-concept.md)
-### 9. [Key Sizing Principles](./sub-skills/key-sizing-principles.md)
-### 10. [60-30-10 Rule](./sub-skills/60-30-10-rule.md)
-### 11. [Color Psychology (For Decision Making)](./sub-skills/color-psychology-for-decision-making.md)
-### 12. [Selection Process](./sub-skills/selection-process.md)
-### 13. [Scale Selection](./sub-skills/scale-selection.md)
-### 14. [Pairing Concept](./sub-skills/pairing-concept.md)
-### 15. [Readability Rules](./sub-skills/readability-rules.md)
-### 16. [Glassmorphism (When Appropriate)](./sub-skills/glassmorphism-when-appropriate.md)
-### 17. [Shadow Hierarchy](./sub-skills/shadow-hierarchy.md)
-### 18. [Gradient Usage](./sub-skills/gradient-usage.md)
-### 19. [Timing Concept](./sub-skills/timing-concept.md)
-### 20. [Easing Selection](./sub-skills/easing-selection.md)
-### 21. [Performance](./sub-skills/performance.md)
-### 22. [Premium Indicators](./sub-skills/premium-indicators.md)
-### 23. [Trust Builders](./sub-skills/trust-builders.md)
-### 24. [Emotional Triggers](./sub-skills/emotional-triggers.md)
-### 25. [❌ Lazy Design Indicators](./sub-skills/lazy-design-indicators.md)
-### 26. [❌ AI Tendency Patterns (AVOID!)](./sub-skills/ai-tendency-patterns-avoid.md)
-### 27. [❌ Dark Patterns (Unethical)](./sub-skills/dark-patterns-unethical.md)
+- [ ] 구현할 뷰의 주요 사용자 페르소나와 작업 목표가 명확한가?
+- [ ] 1순위 핵심 지표와 2순위 보조 컨트롤이 시각적으로 명확히 차별화되어 있는가?
+- [ ] 화면 폭에 따른 유연한 그리드(Grid) 및 유연한 래핑 전략이 수립되었는가?
+- [ ] 데이터가 없거나(Empty), 불러오는 중(Loading), 오류가 발생한(Error) 상태의 레이아웃이 고려되었는가?

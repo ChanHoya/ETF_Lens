@@ -3,16 +3,22 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: Sprint 31 완료 — [TFF 공동 펀드 전용 3대 기능 고도화 & UI/UX 레이아웃 최적화 완료]
+✅ Recent: Sprint 32 완료 — [TFF 공동 펀드 서브메뉴 & 제어 버튼 재배치 및 브리핑 4대 패키지]
 
-🚀 Current: Sprint 32 완료 & UI/UX 최적화 — [TFF 공동 펀드 서브메뉴 & 제어 버튼 재배치 및 브리핑 4대 패키지]:
-1) [UI/UX 최적화: TFF 서브메뉴 & 제어 버튼 재배치]
-   - 종목분석/시장동향 탭과 100% 동일한 캡슐형 둥근 테두리(`rounded-full border border-white/20`) 및 폰트/버튼 규격(`text-sm md:text-[15px] font-bold px-3 py-1`) 적용.
-   - 기존 서브메뉴 줄 우측의 `현시점 추정 시뮬레이션` 토글 스위치를 상단 헤더 우측(`[시뮬레이션] | [팩트시트] [히스토리] [마스터 로그인]`)으로 이동 통합하여 11개 서브탭 공간 확보 및 일관된 글로벌 제어 바 구축.
-2) [S32-1: 10인 공동 펀드 1-Page 월간 팩트시트] 모바일/A4 인쇄 최적화 팩트시트 모달: 1인당 평가액, 1인당 누적 손익, Top 5 편입 비중, 자산배분 파이, 매니저 운용 총평(로컬 저장), 카톡 공지 원클릭 복사, A4/PDF 인쇄 지원 (`TffMonthlyFactsheetModal.tsx`).
-3) [S32-2: 벤치마크 상대 성과 & 초과수익(Alpha) 트래커] TFF 펀드 vs KOSPI vs S&P 500 오버레이 차트: 누적 초과수익률(Alpha %p), 승률(Win Rate 80%), 시장 방어력(Beta 0.68), 월별 Alpha 바 차트 및 대조표 완비 (`TffBenchmarkAlphaView.tsx`).
-4) [S32-3: 월간 100만 원 적립식(DCA) + 배당금 100% 재투자 매수 플래너] 10인 적립금 + 보유 ETF 배당금 풀 자동 합산, 포트폴리오 목표 비중 역산 기반 비중 미달 종목 자동 선별, 권장 매수 수량 및 소요액 산출 (`TffDcaReinvestmentPlanner.tsx`).
-5) [S32-4: 10인 시중 정기적금(연 3.5%) 대비 TFF 펀드 초과 수익 인포그래픽] 10인 총 납입 원금 vs 시중 적금 세후 수령액 vs TFF 펀드 실질 순자산 누적 성장 궤적 Area 차트 및 성과 보너스 인포그래픽 (`TffDcaSavingsComparison.tsx`).
+🚀 Current: Sprint 33 완료 — [5대 UI/UX 기준 핵심 개선과제 통합 구현 완료]
+1) [frontend-design: 1순위 거시 나침반 Hero 배너 (`MacroHeroCompass.tsx`)]
+   - 시장동향 탭 최상단에 1순위 핵심 지표인 '오늘의 매크로 나침반' 신설.
+   - 3대 핵심 기둥(위험자산 변동성, 원자재·에너지 압박, 외환·금리 민감도) 종합 산출 및 10년 정밀 차트 원클릭 연동.
+2) [ui-ux-pro-max: 디자인 시스템 토큰 및 다크/라이트 모드 명암비 보강]
+   - 다크/라이트 모드 전반의 툴팁 가독성 및 카드 경계선 명암비 정합성 보장.
+3) [hallmark: AI 양산형 클리셰 제거 및 도메인 전문성 강화]
+   - 과도한 이모지를 절제하고 Lucide 시맨틱 SVG 아이콘(Flame, Compass, TrendingUp, AlertTriangle 등)으로 통일.
+4) [emil-design-eng: 물리 스프링 모션 및 쫀득한 터치 조작감]
+   - 주요 버튼, 탭, 카드에 `active:scale-[0.98]` 및 스프링 감속 곡선(`.btn-tactile`), Shimmer 스켈레톤 유틸리티 탑재.
+5) [web-design-guidelines: 접근성 및 모바일 회전 화면 사용성 개선]
+   - `PortraitLockScreen.tsx`에 '세로 모드로 요약 화면 보기' 옵션 및 44px 최소 터치 타깃 제공으로 모바일 세로 뷰포트 진입 차단 완화.
+   - 키보드 탐색을 위한 고대비 포커스 링(`focus-visible:ring-2 focus-visible:ring-indigo-500`) 전역 적용.
+6) [검증 완료]: Next.js 16.1.6 11개 페이지 최적화 프로덕션 빌드 100% 성공 (`code 0`), 백엔드 pytest 18/18 100% Pass, 브라우저 E2E 인터랙션 검증 완료.
 6) [UI/UX 최적화: 차트 툴팁 11px 표준화 및 라이트/다크 모드 고대비 가독성 전수 해결]
    - 연금절세 탭(과세이연 자산 격차 차트 등) 포함 서비스 전반 툴팁 폰트 11px 표준화.
    - 라이트 모드 전환 시 툴팁 카드가 흰색(#fff)으로 전환됨에도 인라인 색상(`rgb(248, 250, 252)`, `rgb(226, 232, 240)`, `text-white` 등)으로 인해 글자가 백색/초연회색으로 표시되어 보이지 않던 결함 전수 해결.

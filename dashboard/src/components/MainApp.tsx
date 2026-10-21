@@ -1386,7 +1386,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                         setNaverEtfCode(null);
                         setSelectedDetailEtf(null);
                       }}
-                      className={`relative z-10 text-xs sm:text-sm md:text-[14px] lg:text-[15px] tracking-wide font-bold transition-colors px-2.5 sm:px-3 md:px-3.5 py-1 sm:py-1 rounded-full whitespace-nowrap shrink-0 cursor-pointer ${
+                      className={`relative z-10 text-xs sm:text-sm md:text-[14px] lg:text-[15px] tracking-wide font-bold transition-all px-2.5 sm:px-3 md:px-3.5 py-1 sm:py-1 rounded-full whitespace-nowrap shrink-0 cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none ${
                         isActive
                           ? 'text-white'
                           : tab.isExternal
