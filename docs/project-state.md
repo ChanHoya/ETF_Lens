@@ -26,6 +26,12 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
    - 다크 모드(`var(--chart-tooltip-bg)`, 텍스트 `#f8fafc`, 라벨 `#cbd5e1`)와 라이트 모드(배경 `#ffffff`, 텍스트 `#10131a`, 라벨 `#1e293b`) 완벽 대비 보장.
 8) [검증 상태]: Next.js 16.1.6 11개 전 페이지 최적화 빌드 완료 (`exit code 0`).
 
+🐛 [Bugfix 완료 - 금통위/FOMC 정책금리 결정 알림 1시간 간격 중복 발송 차단 (FP-045)]:
+- 한국은행 금통위 / 미국 FOMC 결과 확정 시 매시 5분 스케줄러에서 중복 검사 없이 텔레그램 속보를 반복 전송하던 결함 해결.
+- `backend/scheduler/meeting_poll.py`에 DB(`SectorInsight`) 영속 저장소 및 인메모리 복합 키(`{date}:{title}`) 기반 Deduplication 메커니즘 구축.
+- 이미 동일한 결과(판정 case 및 내용)로 발송된 회의 결과는 1회 발송 후 스킵 처리 보장.
+- 2026-10-22 한국은행 금통위 당일 기발송분 즉시 방어 등록 및 단위 테스트(`test_meeting_poll_dedup.py`) 2/2 100% 통과.
+
 🐛 [Bugfix 완료 - 시장동향 종합분석 업데이트 결함 및 결측치 방어 (FP-044)]:
 - 백엔드 `weekly_frame` 생성 시 `pd.to_numeric` 강제 변환으로 결측치(`None`) 연산 시 `TypeError` 원천 차단.
 - `correlation_map` 유효 데이터(120개 이상) 필터링 및 `find_analogs`의 `f.dropna(how="all", axis=1)` 적용으로 지표 누락 시에도 안전 계산 보장.
