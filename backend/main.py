@@ -328,6 +328,7 @@ app.add_middleware(
     allow_origins=[
         "https://etf-lens.vercel.app",
         "https://i-prism.vercel.app",
+        "https://iprism.vercel.app",
         *_CORS_EXTRA_ORIGINS,
         "http://localhost:3000",
         "http://localhost:3001",
