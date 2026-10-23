@@ -26,6 +26,12 @@ Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
    - 다크 모드(`var(--chart-tooltip-bg)`, 텍스트 `#f8fafc`, 라벨 `#cbd5e1`)와 라이트 모드(배경 `#ffffff`, 텍스트 `#10131a`, 라벨 `#1e293b`) 완벽 대비 보장.
 8) [검증 상태]: Next.js 16.1.6 11개 전 페이지 최적화 빌드 완료 (`exit code 0`).
 
+🐛 [Bugfix 완료 - Vercel alias 도메인 CORS 차단으로 인한 Failed to fetch (FP-046, 2026-10-23)]:
+- `i-prism.vercel.app`, `iprism.vercel.app` alias에서 API 호출 시 Render 백엔드 preflight가 400으로 거부되던 결함 해결.
+- `backend/main.py` `allow_origins`에 두 alias 추가, 향후 alias는 Render 환경변수 `CORS_EXTRA_ORIGINS`(쉼표 구분)로 추가.
+- `allow_credentials=True` + KIS 계좌/주문 경로 때문에 `*.vercel.app` 와일드카드는 의도적으로 배제.
+- 라이브 검증: i-prism/iprism 200, 미등록 도메인 400 확인 (커밋 `114a64e2`, `2f8cc81b`).
+
 🐛 [Bugfix 완료 - 금통위/FOMC 정책금리 결정 알림 1시간 간격 중복 발송 차단 (FP-045)]:
 - 한국은행 금통위 / 미국 FOMC 결과 확정 시 매시 5분 스케줄러에서 중복 검사 없이 텔레그램 속보를 반복 전송하던 결함 해결.
 - `backend/scheduler/meeting_poll.py`에 DB(`SectorInsight`) 영속 저장소 및 인메모리 복합 키(`{date}:{title}`) 기반 Deduplication 메커니즘 구축.

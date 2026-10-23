@@ -403,3 +403,11 @@
   3. 프론트엔드 업데이트 버튼 우측에 에러 상태 태그를 즉시 렌더링하여 사용자 피드백 확보.
 
 
+
+### [FP-046] 프런트 alias 도메인 추가 시 백엔드 CORS 화이트리스트 미동기화로 Failed to fetch
+- **증상**: `i-prism.vercel.app` 등 Vercel alias로 접속하면 첫 화면은 뜨지만 API 연동 기능이 `Failed to fetch` / "서버 통신 오류"로 실패.
+- **원인**: `apiConfig.ts`는 `vercel.app` 호스트면 Render 주소로 요청하지만, `backend/main.py` `allow_origins`에는 `etf-lens.vercel.app`만 있어 preflight(OPTIONS)가 400으로 거부됨.
+- **해결/예방**:
+  1. 새 프런트 도메인/alias를 붙이면 `allow_origins`에 추가하거나 Render 환경변수 `CORS_EXTRA_ORIGINS`(쉼표 구분)에 등록한다.
+  2. `allow_credentials=True` 환경이므로 `*.vercel.app` 와일드카드/정규식 허용은 금지한다.
+  3. 배포 후 `curl -X OPTIONS https://etf-lens.onrender.com/api/v1/health -H "Origin: <도메인>" -H "Access-Control-Request-Method: GET"`로 200 + allow-origin 헤더를 확인한다.
