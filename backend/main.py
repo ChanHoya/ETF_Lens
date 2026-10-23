@@ -1,4 +1,5 @@
 import asyncio
+import os
 from fastapi import FastAPI
 
 from core.scheduler import setup_scheduler
@@ -314,10 +315,20 @@ app = FastAPI(
 )
 
 # CORS 설정
+# alias 도메인 추가는 Render 환경변수 CORS_EXTRA_ORIGINS(쉼표 구분)로 관리한다.
+# allow_credentials=True 이므로 *.vercel.app 와일드카드는 사용하지 않는다.
+_CORS_EXTRA_ORIGINS = [
+    o.strip().rstrip("/")
+    for o in os.getenv("CORS_EXTRA_ORIGINS", "").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://etf-lens.vercel.app",
+        "https://i-prism.vercel.app",
+        *_CORS_EXTRA_ORIGINS,
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:3002",
