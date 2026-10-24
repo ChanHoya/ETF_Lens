@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, 
   X, Calendar, BarChart3, HelpCircle, Layers, Sparkles, RefreshCw
@@ -220,10 +221,30 @@ export default function MacroConsensusSurpriseModal({
   const [period, setPeriod] = useState<'6M' | '1Y'>('1Y');
   const [data, setData] = useState<any>(DEFAULT_FALLBACK_DATA);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [mounted, setMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
     fetchData();
+
+    // 모달 오픈 시 배경 스크롤 차단 (현재 뷰포트 위치 유지)
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    // ESC 키 입력 시 모달 닫기
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen, period]);
 
   useEffect(() => {
@@ -244,15 +265,23 @@ export default function MacroConsensusSurpriseModal({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const currentScore = data?.scoreboard?.find((s: any) => s.key === selectedKey) || DEFAULT_FALLBACK_DATA.scoreboard.find(s => s.key === selectedKey);
   const currentSeries = data?.series?.[selectedKey] || DEFAULT_FALLBACK_DATA.series[selectedKey as keyof typeof DEFAULT_FALLBACK_DATA.series] || [];
   const currentMeta = data?.indicators_meta?.[selectedKey] || DEFAULT_FALLBACK_DATA.indicators_meta[selectedKey as keyof typeof DEFAULT_FALLBACK_DATA.indicators_meta];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-4 sm:pt-8 pb-8 px-3 sm:px-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-fade-in">
-      <div className="bg-[#12141f] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto sm:my-0">
+  return createPortal(
+    <div 
+      className="fixed inset-0 z-[9999] flex items-start justify-center pt-3 sm:pt-6 pb-6 px-3 sm:px-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div 
+        className="bg-[#12141f] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-0"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* 헤더 */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-black/30">
@@ -545,6 +574,7 @@ export default function MacroConsensusSurpriseModal({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
