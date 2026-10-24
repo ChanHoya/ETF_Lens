@@ -13,6 +13,9 @@ A living document of module relationships. Update whenever modules are added or 
 | database   | infrastructure| Data persistence       | -              | services      | Carol |
 -->
 | Deploy Configs | Infrastructure | Render & Vercel serverless IAC configuration & verification | api, dashboard | - | Antigravity |
+| Korea Macro & Export Playbook (S36) | Presentation / Core | 한국 6대 수출 주력군 ETF 플레이북, 텔레그램 매크로 속보 및 자체 DB 실시간 동기화 | exit_signal, kr_macro_notifier, scheduler | KrMacroIndicatorSection | Antigravity |
+| Korea Macro Export Industry (S35) | Presentation / Application | 한국 수출 실적 6대 산업별(반도체·자동차·화학 등) 누적 스택 및 개별 테마 차트 | exit_signal, db/models | KrMacroIndicatorSection | Antigravity |
+| Korea Economic Indicators (S34) | Presentation / Core | 통계청 선행지수 순환변동치, OECD CLI, 수출 실적 시계열 및 3단계 금리 비교 | exit_signal, db/models | KrMacroIndicatorSection, RatesTab | Antigravity |
 | Macro Hero Compass (S33) | Presentation | 1순위 매크로 나침반 종합 진단, 3대 기둥 지표 카드, 10년 정밀 차트 연동 | MacroTab, MarketDetailModal | MacroTab | Antigravity |
 | DB Sync | Infrastructure | SQLite-to-PostgreSQL replication core & management | db/models, db/database | scheduler, MyDashboard | Antigravity |
 | AI Rebalancing | Presentation | AI-driven ETF portfolio rebalancing recommendations | my_assets, peer_analysis | MyDashboard | Antigravity |
