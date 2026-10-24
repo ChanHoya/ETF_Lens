@@ -1,6 +1,6 @@
 // 코스피 출구 전략 종합 위험지수 시계열 추이 및 지표별 위험 기여도 대시보드 컴포넌트
 import React, { useEffect, useState, useMemo } from 'react';
-import { AlertTriangle, ShieldCheck, ShieldAlert, TrendingUp, Sparkles } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, ShieldAlert, TrendingUp, Sparkles, RotateCcw, ChevronRight, Sliders } from 'lucide-react';
 import { 
     AreaChart, 
     Area, 
@@ -30,6 +30,8 @@ interface RiskGaugeChartProps {
     analysisText?: string;
     selectedDate?: string;
     onDateChange?: (date: string) => void;
+    onOpenMetricModal?: (key: string) => void;
+    onOpenSimulator?: () => void;
 }
 
 // 1Y 기간 기본 폴백 시계열 데이터 (2025.11 ~ 2026.10)
@@ -57,14 +59,24 @@ export default function RiskGaugeChart({
     breakdown,
     analysisText,
     selectedDate,
-    onDateChange
+    onDateChange,
+    onOpenMetricModal,
+    onOpenSimulator
 }: RiskGaugeChartProps) {
     const [period, setPeriod] = useState<'6M' | '1Y' | '3Y'>('1Y');
     const [history, setHistory] = useState<any[]>(FALLBACK_HISTORY_1Y);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [selectedSnapshot, setSelectedSnapshot] = useState<any | null>(null);
+
+    // 활성 상태 (과거 특정 날짜를 클릭했으면 해당 시점 스냅샷 표시, 아니면 최신 실시간 표시)
+    const activeScore = selectedSnapshot ? selectedSnapshot.score : score;
+    const activeLevel = (selectedSnapshot ? selectedSnapshot.level : level) as 'safe' | 'caution' | 'warning' | 'danger';
+    const activeLabel = selectedSnapshot ? selectedSnapshot.label : label;
+    const activeBreakdown = selectedSnapshot?.breakdown || breakdown;
+    const activeAnalysisText = selectedSnapshot?.diagnosis || analysisText;
 
     // Color definitions
-    const config = {
+    const configMapping: Record<string, any> = {
         safe: {
             color: '#10b981', // Emerald
             glow: 'rgba(16, 185, 129, 0.4)',
@@ -105,16 +117,9 @@ export default function RiskGaugeChart({
             badge: 'bg-rose-500/15 border-rose-500/30 text-rose-300',
             action: '출구 전략 즉시 실행 및 리스크 관리 극대화'
         }
-    }[level] || {
-        color: '#10b981',
-        glow: 'rgba(16, 185, 129, 0.4)',
-        bgGradient: 'from-emerald-500/10 to-teal-500/5',
-        borderGlow: 'border-emerald-500/30',
-        text: 'text-emerald-400',
-        icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />,
-        badge: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300',
-        action: '포트폴리오 비중 유지'
     };
+    const config = configMapping[activeLevel] || configMapping.safe;
+    const activeAction = selectedSnapshot?.action || config.action;
 
     // 기간별 시계열 데이터 비동기 호출
     useEffect(() => {
@@ -172,7 +177,7 @@ export default function RiskGaugeChart({
             />
 
             {/* 헤더: 종합 위험지수 타이틀 및 기간(6M, 1Y, 3Y) 선택 버튼 */}
-            <div className="flex justify-between items-center mb-2 relative z-10">
+            <div className="flex justify-between items-center mb-1.5 relative z-10">
                 <div className="flex items-center gap-2">
                     <span className="p-1.5 rounded-xl bg-white/5 border border-white/10 shrink-0">
                         {config.icon}
@@ -193,7 +198,7 @@ export default function RiskGaugeChart({
                     {(['6M', '1Y', '3Y'] as const).map((p) => (
                         <button
                             key={p}
-                            onClick={() => setPeriod(p)}
+                            onClick={() => { setPeriod(p); setSelectedSnapshot(null); }}
                             className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all ${
                                 period === p
                                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold'
@@ -206,6 +211,24 @@ export default function RiskGaugeChart({
                 </div>
             </div>
 
+            {/* 타임머신 스냅샷 복기 알림 배너 */}
+            {selectedSnapshot && (
+                <div className="mb-2 px-2.5 py-1.5 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-between text-xs text-indigo-200 animate-in fade-in relative z-10">
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                        <span className="text-[11px]">
+                            <strong>{selectedSnapshot.date}</strong> 과거 시점 복기 모드 (종합위험 <strong>{activeScore}점</strong>, {activeLabel})
+                        </span>
+                    </div>
+                    <button
+                        onClick={() => setSelectedSnapshot(null)}
+                        className="px-2 py-0.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px] transition-all flex items-center gap-1 shadow-sm"
+                    >
+                        <RotateCcw className="w-3 h-3" /> 최신 시점으로 복귀
+                    </button>
+                </div>
+            )}
+
             {/* 본문: 왼쪽 [위험지수 시계열 추이 그래프] vs 오른쪽 [지표별 위험 기여도 (컴팩트)] */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 relative z-10 items-stretch">
                 
@@ -215,13 +238,13 @@ export default function RiskGaugeChart({
                     <div className="flex items-center justify-between mb-1 px-1">
                         <div className="flex items-baseline gap-1.5">
                             <span className="text-2xl font-black text-white font-mono leading-none tracking-tight">
-                                {score}
+                                {activeScore}
                             </span>
                             <span className="text-[11px] font-medium text-gray-400 font-mono">
                                 /{maxScore}점
                             </span>
                             <span className={`text-[10px] font-bold ${config.text} px-2 py-0.5 rounded-full bg-white/5 border border-white/10 ml-1`}>
-                                {label}
+                                {activeLabel}
                             </span>
                         </div>
                         <div className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
@@ -232,9 +255,18 @@ export default function RiskGaugeChart({
                     </div>
 
                     {/* Recharts Area 차트 */}
-                    <div className="h-[135px] w-full pt-1">
+                    <div className="h-[135px] w-full pt-1 cursor-pointer" title="차트 클릭 시 해당 과거 시점 지표 스냅샷 복기">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={history} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
+                            <AreaChart 
+                                data={history} 
+                                margin={{ top: 8, right: 8, left: -24, bottom: 0 }}
+                                onClick={(e) => {
+                                    if (e && e.activePayload && e.activePayload.length) {
+                                        const p = e.activePayload[0].payload;
+                                        setSelectedSnapshot(p);
+                                    }
+                                }}
+                            >
                                 <defs>
                                     <linearGradient id="riskAreaGrad" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor={config.color} stopOpacity={0.45} />
@@ -284,7 +316,7 @@ export default function RiskGaugeChart({
                                         const lvl = item.payload.label || (val >= 15 ? '위험' : val >= 9 ? '경계' : val >= 5 ? '주의' : '안전');
                                         return [`${val}점 (${lvl})`, '종합 위험지수'];
                                     }}
-                                    labelFormatter={(d) => `일자: ${d}`}
+                                    labelFormatter={(d) => `${d} (클릭 시 당시 지표 복기)`}
                                 />
                                 <Area 
                                     type="monotone" 
@@ -293,7 +325,7 @@ export default function RiskGaugeChart({
                                     strokeWidth={2} 
                                     fill="url(#riskAreaGrad)" 
                                     isAnimationActive={false}
-                                    activeDot={{ r: 4, fill: config.color, stroke: '#fff', strokeWidth: 1.5 }}
+                                    activeDot={{ r: 5, fill: config.color, stroke: '#fff', strokeWidth: 2 }}
                                 />
                             </AreaChart>
                         </ResponsiveContainer>
@@ -326,17 +358,25 @@ export default function RiskGaugeChart({
                         <span className="text-[10px] text-gray-400 font-bold tracking-wider uppercase">
                             지표별 위험 기여도
                         </span>
-                        <span className="text-[9px] text-gray-500 font-mono">가중치 (0~3점)</span>
+                        <span className="text-[9px] text-gray-500 font-mono">클릭 시 10Y 모달</span>
                     </div>
                     
-                    {breakdown ? (
+                    {activeBreakdown ? (
                         <div className="flex flex-col justify-between flex-1 gap-1 text-[10px] font-mono">
-                            {Object.entries(breakdown).map(([key, item]: [string, any]) => {
+                            {Object.entries(activeBreakdown).map(([key, item]: [string, any]) => {
                                 const barColor = item.score >= 3 ? '#ef4444' : (item.score >= 2 ? '#f97316' : (item.score >= 1 ? '#eab308' : '#10b981'));
                                 return (
-                                    <div key={key} className="flex flex-col gap-0.5 bg-white/[0.02] px-1.5 py-0.5 rounded border border-white/5">
+                                    <div 
+                                        key={key} 
+                                        onClick={() => onOpenMetricModal && onOpenMetricModal(key)}
+                                        className="flex flex-col gap-0.5 bg-white/[0.02] hover:bg-white/[0.08] hover:border-indigo-500/40 px-1.5 py-0.5 rounded border border-white/5 cursor-pointer transition-all group/row"
+                                        title="클릭 시 10년 상세 시계열 모달 열기"
+                                    >
                                         <div className="flex justify-between items-center text-gray-400 leading-tight">
-                                            <span className="text-[9.5px] font-semibold text-gray-200 truncate">{item.label}</span>
+                                            <span className="text-[9.5px] font-semibold text-gray-200 truncate group-hover/row:text-indigo-300 transition-colors flex items-center gap-1">
+                                                {item.label}
+                                                <ChevronRight className="w-2.5 h-2.5 opacity-0 group-hover/row:opacity-100 text-indigo-400 transition-opacity" />
+                                            </span>
                                             <span className="text-[9.5px] shrink-0">
                                                 {key === 'cli' ? `${item.value.toFixed(2)}` : 
                                                  (key === 'vkospi_proxy' ? `${item.value.toFixed(1)}%` : 
@@ -370,24 +410,35 @@ export default function RiskGaugeChart({
 
             {/* 하단 인사이트 / 권장 액션 바 (슬림 & 간결) */}
             <div className="mt-2 pt-1.5 border-t border-white/5 relative z-10 text-[11px]">
-                {(analysisText || config.action) && (
+                {(activeAnalysisText || activeAction) && (
                     <div className="bg-white/[0.02] border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-gray-300 font-medium relative overflow-hidden flex flex-col gap-1">
                         <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/50" />
-                        {analysisText && (
+                        {activeAnalysisText && (
                             <div className="flex items-baseline flex-wrap gap-x-1.5">
                                 <span className="text-white font-extrabold shrink-0 flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
                                     시장 진단
                                 </span>
-                                <span className="text-gray-300 text-[11px] leading-snug">{analysisText}</span>
+                                <span className="text-gray-300 text-[11px] leading-snug">{activeAnalysisText}</span>
                             </div>
                         )}
-                        <div className="flex items-center gap-1.5 border-t border-white/5 pt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0" style={{ backgroundColor: config.color }} />
-                            <p className="text-gray-300 font-medium text-[11px] leading-snug">
-                                <span className="text-white font-extrabold mr-1">권장 액션</span> 
-                                <span className="text-indigo-200 font-bold">{config.action}</span>
-                            </p>
+                        <div className="flex items-center justify-between gap-1.5 border-t border-white/5 pt-0.5">
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0" style={{ backgroundColor: config.color }} />
+                                <p className="text-gray-300 font-medium text-[11px] leading-snug">
+                                    <span className="text-white font-extrabold mr-1">권장 액션</span> 
+                                    <span className="text-indigo-200 font-bold">{activeAction}</span>
+                                </p>
+                            </div>
+                            {onOpenSimulator && (
+                                <button
+                                    onClick={onOpenSimulator}
+                                    className="px-2 py-0.5 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold text-[10px] flex items-center gap-1 shadow-sm transition-all shrink-0 hover:scale-[1.02] border border-indigo-400/30"
+                                >
+                                    <ShieldAlert className="w-3 h-3 text-rose-300" />
+                                    내 자산 출구 시뮬레이션
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}

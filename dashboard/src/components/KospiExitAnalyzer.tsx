@@ -7,6 +7,7 @@ import { useChartHighlight } from '../lib/chartTheme';
 import { DollarModalContent, PerModalContent, CliModalContent, SentimentModalContent, T10y2yModalContent, HySpreadModalContent } from './ExitSignalModals';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import RiskGaugeChart from './RiskGaugeChart';
+import ExitPortfolioSimulatorModal from './ExitPortfolioSimulatorModal';
 
 // Fallback Data for the 1-year Historical Trends (12 Months, 2025.11~2026.10)
 const mockDollarData = [
@@ -149,6 +150,7 @@ export default function KospiExitAnalyzer() {
     const [activePopup, setActivePopup] = useState<'dollar' | 'per' | 'cli' | 'vix' | 'fgi' | 't10y2y' | 'hy_spread' | null>(null);
     const [popupTop, setPopupTop] = useState(140);
     const [isMounted, setIsMounted] = useState(false); // Portal SSR 가드
+    const [showSimulator, setShowSimulator] = useState(false); // 출구 포트폴리오 시뮬레이터 모달
 
     // Header section ref to dynamically align modals
     const headerRef = React.useRef<HTMLDivElement>(null);
@@ -157,13 +159,29 @@ export default function KospiExitAnalyzer() {
     useEffect(() => { setIsMounted(true); }, []);
 
     // 카드 클릭 시 헤더 위치 기준 팝업 위치 결정
-    const openPopup = (type: 'dollar' | 'per' | 'cli' | 'vix' | 'fgi' | 't10y2y' | 'hy_spread', e: React.MouseEvent<HTMLDivElement>) => {
+    const openPopup = (type: 'dollar' | 'per' | 'cli' | 'vix' | 'fgi' | 't10y2y' | 'hy_spread', e?: React.MouseEvent<HTMLDivElement>) => {
         // sticky 헤더는 항상 viewport 상단에 고정되어 있으므로 getBoundingClientRect().bottom이 스크롤 상태와 무관하게 정확함
         const headerBottom = headerRef.current
             ? Math.max(headerRef.current.getBoundingClientRect().bottom, 56)
             : 100;
         setPopupTop(Math.round(headerBottom + 8));
         setActivePopup(type);
+    };
+
+    // 종합위험지수 기여도 행 클릭 시 해당 모달 바로 열기
+    const handleOpenMetricFromGauge = (metricKey: string) => {
+        const headerBottom = headerRef.current
+            ? Math.max(headerRef.current.getBoundingClientRect().bottom, 56)
+            : 100;
+        setPopupTop(Math.round(headerBottom + 8));
+
+        if (metricKey === 'vix' || metricKey === 'vkospi_proxy') setActivePopup('vix');
+        else if (metricKey === 'fgi') setActivePopup('fgi');
+        else if (metricKey === 'cli') setActivePopup('cli');
+        else if (metricKey === 'per') setActivePopup('per');
+        else if (metricKey === 't10y2y') setActivePopup('t10y2y');
+        else if (metricKey === 'hy_spread') setActivePopup('hy_spread');
+        else setActivePopup('dollar');
     };
 
     // 팝업이 열린 상태에서 스크롤 시 popupTop 동기화 (이미 팝업 열려있을 때 스크롤하지 않도록)
@@ -194,16 +212,23 @@ export default function KospiExitAnalyzer() {
 
             if (cachedMain) {
                 const data = JSON.parse(cachedMain);
-                setBaseDollar(data.indicators.dollar);
-                setBasePer(data.indicators.per);
-                setBaseCli(data.indicators.cli);
-                setDollarIndex(data.current_status.dollar);
-                setDollarKrw(data.current_status.krw);
-                setForwardPer(data.current_status.per);
-                setOecdCliValue(data.current_status.cli);
-                setOecdCliDownMonths(data.current_status.cli_down_months);
-                setExitScore(data.risk?.score || data.current_score || 0);
-                if (data.risk) setRiskData(data.risk);
+                // 구 광의달러지수(115 초과) 캐시가 남아있는 경우 무효화 후 API 수신
+                if (data.current_status?.dollar > 115) {
+                    localStorage.removeItem('kospi_exit_main_data');
+                    localStorage.removeItem('kospi_exit_macro_data');
+                } else {
+                    setBaseDollar(data.indicators.dollar);
+                    setBasePer(data.indicators.per);
+                    setBaseCli(data.indicators.cli);
+                    setDollarIndex(data.current_status.dollar);
+                    setDollarKrw(data.current_status.krw);
+                    setForwardPer(data.current_status.per);
+                    setOecdCliValue(data.current_status.cli);
+                    setOecdCliDownMonths(data.current_status.cli_down_months);
+                    setExitScore(data.risk?.score || data.current_score || 0);
+                    if (data.risk) setRiskData(data.risk);
+                    hasCache = true;
+                }
                 if (data.indicators.sentiment) {
                     setBaseSentiment(data.indicators.sentiment);
                     setVixValue(data.current_status.vix);
@@ -513,6 +538,8 @@ export default function KospiExitAnalyzer() {
                         analysisText={getExitAnalysisText()}
                         selectedDate={selectedDate}
                         onDateChange={setSelectedDate}
+                        onOpenMetricModal={handleOpenMetricFromGauge}
+                        onOpenSimulator={() => setShowSimulator(true)}
                     />
                 </div>
 
@@ -1096,8 +1123,16 @@ export default function KospiExitAnalyzer() {
                         </div>
                     </div>
                 </div>,
-                document.body
             )}
+
+            {/* Feature 3: 내 자산/펀드 연계 출구 시뮬레이터 모달 */}
+            <ExitPortfolioSimulatorModal
+                isOpen={showSimulator}
+                onClose={() => setShowSimulator(false)}
+                currentScore={exitScore}
+                currentLevel={riskData.level}
+                currentLabel={riskData.label}
+            />
 
         </div>
     );

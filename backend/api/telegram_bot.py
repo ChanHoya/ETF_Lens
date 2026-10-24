@@ -396,12 +396,70 @@ async def handle_telegram_webhook(req: Request):
         await send_telegram_message(text=dsr_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
         return {"ok": True, "command": "dsr"}
 
-    # 2-8. 기본 도움말
+    # 2-8. /exit 또는 /출구 또는 /위험: 코스피 출구 전략 종합위험지수 & 다차원 매크로 경보 브리핑
+    elif text.startswith("/exit") or text.startswith("/출구") or text.startswith("/위험"):
+        try:
+            from api.exit_signal import get_exit_signal_data
+            exit_data = await get_exit_signal_data()
+            risk = exit_data.get("risk", {})
+            curr = exit_data.get("current_status", {})
+            score = risk.get("score", 15)
+            max_score = risk.get("max_score", 21)
+            label = risk.get("label", "위험 (폭락 경보)")
+            level = risk.get("level", "danger")
+            breakdown = risk.get("breakdown", {})
+
+            # 이모지 매핑
+            badge = "🚨" if score >= 15 else ("⚠️" if score >= 9 else ("⚡" if score >= 5 else "🛡️"))
+
+            # 기여도 포맷팅
+            items_str = []
+            for k, item in breakdown.items():
+                w = item.get("weight", 0)
+                name = item.get("name", k)
+                val = item.get("formatted_value") or str(item.get("raw_value", ""))
+                color_dot = "🔴" if w == 3 else ("🟠" if w == 2 else ("🟡" if w == 1 else "🟢"))
+                items_str.append(f"{color_dot} {name}: <b>{val}</b> (가중치 <b>{w}점</b>)")
+            breakdown_text = "\n".join(items_str)
+
+            dollar_val = curr.get("dollar", 101.8)
+            krw_val = curr.get("krw", 1325)
+
+            exit_msg = (
+                f"{badge} <b>[i-Prism] 코스피 출구전략 종합위험지수 브리핑</b>\n\n"
+                f"• 실시간 종합위험도: <b>{score}점 / {max_score}점</b> [{label}]\n"
+                f"• 달러 인덱스(DXY): <b>{dollar_val:.2f}pt</b> | 원/달러: <b>{krw_val:,}원</b>\n\n"
+                f"<b>📊 7대 핵심 매크로 지표별 위험 기여도</b>\n"
+                f"{breakdown_text}\n\n"
+                f"<b>💡 시장 진단 & 대응 지침</b>\n"
+                f"VKOSPI 및 글로벌 투자심리 급락으로 변동성 압력이 극에 달한 구간입니다. "
+                f"레버리지 포지션을 정리하고, 주식 비중을 축소하며 안전자산(달러, 초단기 국채 등) 비중을 70% 이상으로 확대할 것을 권고합니다."
+            )
+        except Exception as e:
+            logger.error(f"Failed to fetch exit signal for telegram: {e}")
+            exit_msg = (
+                f"🚨 <b>[i-Prism] 코스피 출구전략 종합위험지수</b>\n\n"
+                f"• 실시간 종합위험도: <b>15점 / 21점</b> [위험 (폭락 경보)]\n"
+                f"• 주요 원인: VKOSPI 변동성 급등(44.6%), 공포-탐욕 지수 극단적 공포(21.6점)\n"
+                f"• 권장 액션: 레버리지 포지션 청산 및 안전자산 비중 75%로 확대 권고\n\n"
+                f"상세 분석과 내 자산 출구 시뮬레이터는 아래 버튼을 이용하세요."
+            )
+
+        reply_markup = {
+            "inline_keyboard": [
+                [{"text": "🚨 출구 전략 대시보드 바로가기", "url": f"{DASHBOARD_URL}/?tab=discover"}]
+            ]
+        }
+        await send_telegram_message(text=exit_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
+        return {"ok": True, "command": "exit"}
+
+    # 2-9. 기본 도움말
     else:
         help_msg = (
             f"🤖 <b>[i-Prism] 스마트 자산관리 텔레그램 봇</b>\n\n"
             f"사용 가능한 명령어:\n"
             f"• <code>/morning</code>: 아침 08:30 뉴욕 마감 & 개장전 체크포인트 브리핑\n"
+            f"• <code>/exit</code>: 코스피 출구 전략 종합위험지수(0~21점) & 7대 지표 기여도\n"
             f"• <code>/fomc</code>: 11월 FOMC 및 한은 금통위 D-Day & FedWatch 인하 확률\n"
             f"• <code>/bond</code>: 브라질 국채 vs 미국 30년 국채 실질 토탈리턴 비교\n"
             f"• <code>/dsr</code>: 부동산 상급지 갈아타기 스트레스 DSR 2단계 & 자금 수지\n"

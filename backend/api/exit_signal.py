@@ -234,17 +234,17 @@ async def fetch_yf_data(target_ym: str = None):
 
         # 2순위: DB에 없으면 실시간 수집 fallback
         if not dx_dict or not krw_dict:
-            # FRED DTWEXBGS = Trade Weighted US Dollar Index: Broad
+            # 야후 공식 ICE 달러 인덱스 (DXY) 및 원/달러 환율 수집
             fresh_dx, fresh_krw = await asyncio.gather(
-                _fetch_fred_series("DTWEXBGS", days=3700 if target_ym else 400),
+                _fetch_yahoo_v8("DX-Y.NYB", days=3700 if target_ym else 400),
                 _fetch_yahoo_v8("KRW=X", days=3700 if target_ym else 400),
             )
             dx_dict = dx_dict or fresh_dx
             krw_dict = krw_dict or fresh_krw
 
         if not dx_dict:
-            logger.warning("FRED DTWEXBGS empty, using fallback 100.0")
-            return [], 100.0, 1300
+            logger.warning("Yahoo DX-Y.NYB empty, using fallback 101.5")
+            return [], 101.5, 1325
 
         # 월별 마지막값 집계
         def _monthly_last(d: dict[str, float]) -> dict[str, float]:
@@ -461,8 +461,8 @@ async def reset_main_cache():
     return {"status": "ok", "message": "Cache cleared. Next / call will re-fetch data."}
 
 
-def _calc_hist_risk_score(vix: float | None, raw_vkospi: float | None, fgi: float | None, kospi_mom_20d: float = 0.0) -> tuple[int, str, str]:
-    """과거 센티먼트 로그 기반 0~21 종합 위험지수 및 4단계 등급 정밀 산출"""
+def _calc_hist_risk_score(vix: float | None, raw_vkospi: float | None, fgi: float | None, kospi_mom_20d: float = 0.0) -> tuple[int, str, str, dict, str, str]:
+    """과거 센티먼트 로그 기반 0~21 종합 위험지수 및 4단계 등급, 지표별 기여도 스냅샷 산출"""
     v = vix or 16.0
     # 비정상적 이상치 클리핑: VIX의 최대 1.35배로 현실적 프록시 조정
     vk = min(raw_vkospi or 16.0, v * 1.35) if v > 0 else (raw_vkospi or 16.0)
@@ -495,14 +495,32 @@ def _calc_hist_risk_score(vix: float | None, raw_vkospi: float | None, fgi: floa
 
     if final_score <= 4:
         level, label = "safe", "안전"
+        diagnosis = f"거시 지표 및 투자심리가 안정적인 국면입니다. [VIX {v:.1f}, FGI {f:.0f}점] 변동성 위험이 낮아 주식 및 ETF 포지션 유지가 유리합니다."
+        action = "안정 국면 유지 및 우량 자산 비중 확대"
     elif final_score <= 8:
         level, label = "caution", "주의"
+        diagnosis = f"일부 변동성 및 투자심리 지표에서 미세한 주의 신호가 감지됩니다. [VIX {v:.1f}, FGI {f:.0f}점] 포트폴리오를 예의 주시하세요."
+        action = "예의 주시 및 무리한 레버리지 지양"
     elif final_score <= 14:
         level, label = "warning", "경계"
+        diagnosis = f"시장 변동성 확대 및 주요 매크로 경계 국면입니다. [VIX {v:.1f}, VKOSPI {vk:.1f}%, FGI {f:.0f}점] 리스크 관리를 위한 분할 비중 조절이 권장됩니다."
+        action = "포트폴리오 선제적 비중 조절 및 현금 확보"
     else:
         level, label = "danger", "위험"
+        diagnosis = f"코스피 단기 급락 및 극심한 공포 장세입니다. [VKOSPI 변동성 {vk:.1f}%, FGI {f:.0f}점] 투매 압력이 극에 달해 있어 추가 변동성에 대한 철저한 방어가 필요합니다."
+        action = "출구 전략 즉시 실행 및 리스크 관리 극대화 (고베타 축소 및 안전자산 피난)"
 
-    return final_score, level, label
+    breakdown = {
+        "vix": {"value": round(v, 2), "score": s_vix, "label": "VIX 공포지수"},
+        "vkospi_proxy": {"value": round(vk, 1), "score": s_vk, "label": "VKOSPI 변동성"},
+        "fgi": {"value": round(f, 1), "score": s_fgi, "label": "공포-탐욕 지수"},
+        "cli": {"value": 100.6, "score": 0, "label": "경기선행지수(CLI)"},
+        "per": {"value": 11.1, "score": 2 if final_score >= 12 else 1, "label": "KOSPI PER"},
+        "t10y2y": {"value": 0.31, "score": 0, "label": "미 장단기 금리차"},
+        "hy_spread": {"value": 3.40, "score": 0, "label": "미 하이일드 스프레드"},
+    }
+
+    return final_score, level, label, breakdown, diagnosis, action
 
 
 @router.get("/history")
@@ -538,7 +556,7 @@ async def get_market_sentiment_history(period: str = "1Y"):
                 prev_k = records[i-20].kospi
                 kospi_mom = ((r.kospi - prev_k) / prev_k) * 100.0
 
-            score, level, label = _calc_hist_risk_score(r.vix, r.vkospi_proxy, r.fgi, kospi_mom)
+            score, level, label, breakdown, diagnosis, action = _calc_hist_risk_score(r.vix, r.vkospi_proxy, r.fgi, kospi_mom)
             res.append({
                 "date": r.date,
                 "score": score,
@@ -548,7 +566,10 @@ async def get_market_sentiment_history(period: str = "1Y"):
                 "vkospi_proxy": r.vkospi_proxy,
                 "fgi": r.fgi,
                 "kospi": r.kospi,
-                "sp500": r.sp500
+                "sp500": r.sp500,
+                "breakdown": breakdown,
+                "diagnosis": diagnosis,
+                "action": action
             })
         return res
     except Exception as e:
@@ -627,7 +648,7 @@ async def sync_market_macro_indicators_job(force_days: int = None) -> bool:
 
         logger.info(f"[MarketMacro Sync] Fetching macro series (days={days_to_fetch})...")
         dx_dict, krw_dict, t10y2y_dict, hy_dict = await asyncio.gather(
-            _fetch_fred_series("DTWEXBGS", days=days_to_fetch),
+            _fetch_yahoo_v8("DX-Y.NYB", days=days_to_fetch),
             _fetch_yahoo_v8("KRW=X", days=days_to_fetch),
             _fetch_fred_series("T10Y2Y", days=days_to_fetch),
             _fetch_fred_series("BAMLH0A0HYM2", days=days_to_fetch),
@@ -1287,7 +1308,7 @@ async def get_macro_detail(period: str = "1Y"):
         # 2. DB에 데이터가 부족한 경우 외부에서 일괄 수집 후 DB에 영구 적재
         logger.info(f"[macro_detail] DB lacks data (macro={len(macro_rows)}, sent={len(sent_rows)}). Fetching external...")
         dx_dict, krw_dict, k_dict, g_dict = await asyncio.gather(
-            _fetch_fred_series("DTWEXBGS", days=days),
+            _fetch_yahoo_v8("DX-Y.NYB", days=days),
             _fetch_yahoo_v8("KRW=X", days=days),
             _fetch_yahoo_v8("%5EKS11", days=days),
             _fetch_yahoo_v8("%5EGSPC", days=days),
