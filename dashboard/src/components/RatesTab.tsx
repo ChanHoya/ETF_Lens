@@ -14,6 +14,7 @@ import SpreadBasisInfo from './SpreadBasisInfo';
 import RegimeMilestones, { type Milestone } from './RegimeMilestones';
 import { useCachedOverview } from '@/lib/useCachedOverview';
 import MarketDetailModal, { SeriesConfig, DetailDataPoint } from './MarketDetailModal';
+import FedWatchRateProbabilityWidget from './rates/FedWatchRateProbabilityWidget';
 
 type Change = { date: string; from: number; to: number; bp: number } | null;
 type Meeting = { date: string; d_day: number } | null;
@@ -784,6 +785,9 @@ export default function RatesTab() {
     const dd = data?.data_dates ?? {};
     return (
         <div className="w-full max-w-[95vw] xl:max-w-[1400px] mx-auto space-y-4 pb-10">
+            {/* 11월 FOMC 및 한은 금통위 D-Day & CME FedWatch 실시간 금리 인하 확률 게이지 위젯 */}
+            <FedWatchRateProbabilityWidget />
+
             <section className="bg-black/20 rounded-2xl border border-white/5 p-4 md:p-5">
                 <div className="flex flex-wrap items-center gap-3 mb-4">
                     <TrendingUp className="w-6 h-6 text-indigo-400" />

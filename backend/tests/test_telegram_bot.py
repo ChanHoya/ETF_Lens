@@ -150,3 +150,43 @@ async def test_telegram_webhook_tax_command():
             assert "inline_keyboard" in call_kwargs["reply_markup"]
 
 
+@pytest.mark.asyncio
+async def test_telegram_webhook_fomc_command():
+    mock_send = AsyncMock(return_value=True)
+    with patch("api.telegram_bot.send_telegram_message", mock_send):
+        payload = {
+            "update_id": 1007,
+            "message": {
+                "message_id": 5,
+                "chat": {"id": 12345678},
+                "text": "/fomc"
+            }
+        }
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            res = await ac.post("/api/v1/telegram/webhook", json=payload)
+            assert res.status_code == 200
+            data = res.json()
+            assert data.get("ok") is True
+            assert data.get("command") == "fomc"
+            assert mock_send.called
+            call_kwargs = mock_send.call_args.kwargs
+            assert "11월 FOMC" in call_kwargs["text"]
+            assert "CME FedWatch" in call_kwargs["text"]
+            assert "ACE 미국30년국채액티브" in call_kwargs["text"]
+            assert "inline_keyboard" in call_kwargs["reply_markup"]
+
+
+@pytest.mark.asyncio
+async def test_rates_fedwatch_probabilities_endpoint():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        res = await ac.get("/api/v1/rates/fedwatch-probabilities")
+        assert res.status_code == 200
+        data = res.json()
+        assert "fomc" in data
+        assert "bok" in data
+        assert "beneficiary_etfs" in data
+        assert data["fomc"]["probabilities"]["cut_25bp"] > 50
+        assert len(data["beneficiary_etfs"]) >= 3
+
+
+

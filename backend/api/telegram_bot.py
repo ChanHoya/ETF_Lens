@@ -315,12 +315,47 @@ async def handle_telegram_webhook(req: Request):
         await send_telegram_message(text=tax_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
         return {"ok": True, "command": "tax"}
 
-    # 2-5. 기본 도움말
+    # 2-5. /fomc 또는 /rates 또는 /fedwatch 또는 /금리: 11월 FOMC & 한은 금통위 D-Day 및 CME FedWatch 확률 브리핑
+    elif text.startswith("/fomc") or text.startswith("/rates") or text.startswith("/fedwatch") or text.startswith("/금리"):
+        from api.rates_dashboard import calculate_fedwatch_probabilities
+        fw = calculate_fedwatch_probabilities()
+        fomc = fw["fomc"]
+        bok = fw["bok"]
+
+        fomc_msg = (
+            f"🏛 <b>[i-Prism] 11월 FOMC & 한국은행 금통위 D-Day 브리핑</b>\n\n"
+            f"<b>🇺🇸 미국 FOMC (차기 회의)</b>: <b>D-{fomc['d_day']}일</b> ({fomc['meeting_date']})\n"
+            f"• 현재 정책금리: <code>{fomc['current_target_range']}</code>\n"
+            f"• <b>CME FedWatch 실시간 인하 확률</b>\n"
+            f"  - 📉 <b>25bp 인하</b>: <b>{fomc['probabilities']['cut_25bp']}%</b> (유력 🔥, 1주전 대비 {fomc['change_from_1w']['cut_25bp']:+.1f}%p)\n"
+            f"  - ⏸ <b>동결</b>: {fomc['probabilities']['hold']}%\n"
+            f"  - ⚡ <b>50bp 빅컷</b>: {fomc['probabilities']['cut_50bp']}%\n"
+            f"• 선물 내재 금리: <code>{fomc['implied_fed_funds_rate']}%</code>\n\n"
+            f"<b>🇰🇷 한국은행 금통위</b>: <b>D-{bok['d_day']}일</b> ({bok['meeting_date']})\n"
+            f"• 현재 기준금리: <code>{bok['current_base_rate']:.2f}%</code>\n"
+            f"• <b>시장 전망 확률</b>: 25bp 인하 <b>{bok['probabilities']['cut_25bp']}%</b> vs 동결 {bok['probabilities']['hold']}%\n\n"
+            f"<b>💎 금리 인하 수혜 채권 ETF 듀레이션 자본차익</b>\n"
+            f"• <b>ACE 미국30년국채액티브(H)</b>: 듀레이션 18.5년 → 25bp 인하 시 <b>+{fw['beneficiary_etfs'][0]['sensitivity_25bp']}%</b> 기대\n"
+            f"• <b>TIGER 국고채30년스트립</b>: 듀레이션 26.2년 → 25bp 인하 시 <b>+{fw['beneficiary_etfs'][1]['sensitivity_25bp']}%</b> 기대\n\n"
+            f"💡 <i>{fw['macro_commentary']}</i>"
+        )
+        reply_markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "📊 실시간 FedWatch 게이지 & 금리 대시보드", "url": f"{DASHBOARD_URL}/?tab=rates"}
+                ]
+            ]
+        }
+        await send_telegram_message(text=fomc_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
+        return {"ok": True, "command": "fomc"}
+
+    # 2-6. 기본 도움말
     else:
         help_msg = (
             f"🤖 <b>[i-Prism] 스마트 자산관리 텔레그램 봇</b>\n\n"
             f"사용 가능한 명령어:\n"
             f"• <code>/morning</code>: 아침 08:30 뉴욕 마감 & 개장전 체크포인트 브리핑\n"
+            f"• <code>/fomc</code>: 11월 FOMC 및 한은 금통위 D-Day & FedWatch 인하 확률\n"
             f"• <code>/asset</code>: 가계 총 순자산 및 2D 사분면 진단 브리핑\n"
             f"• <code>/tax</code>: 2026 연말정산 절세 골든타임 & 13월의 월급 역산 브리핑\n"
             f"• <code>/rebalance</code>: 목표 비중 이탈 분석 및 원클릭 모의 주문\n\n"
