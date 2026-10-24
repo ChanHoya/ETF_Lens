@@ -641,8 +641,9 @@ def setup_scheduler():
         gc.collect()
 
     async def _job_macro():
-        from api.exit_signal import sync_us_macro_indicators_job
+        from api.exit_signal import sync_us_macro_indicators_job, sync_kr_macro_indicators_job
         await sync_us_macro_indicators_job()
+        await sync_kr_macro_indicators_job()
         await update_app_version("[macro]")
         trigger_replication_background()
         gc.collect()

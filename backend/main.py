@@ -228,9 +228,10 @@ async def lifespan(app: FastAPI):
 
         # ── 5. 미국 매크로 및 시장 심리 지표 시딩 ───────────────────────────────
         try:
-            from api.exit_signal import seed_us_macro_db_if_empty, seed_market_sentiment_db_if_empty
+            from api.exit_signal import seed_us_macro_db_if_empty, seed_kr_macro_db_if_empty, seed_market_sentiment_db_if_empty
             await seed_market_sentiment_db_if_empty()
             await seed_us_macro_db_if_empty()
+            await seed_kr_macro_db_if_empty()
         except Exception as _e:
             print(f"[Startup] Seeding skipped: {_e}")
 
@@ -248,12 +249,13 @@ async def lifespan(app: FastAPI):
             except Exception as _e:
                 print(f"[Startup] Brazil seeding skipped: {_e}")
 
-            # 1.5. 미국 거시경제 지표(CPI, PPI, PCE) 자동 점검 및 시딩
+            # 1.5. 미국 및 한국 거시경제 지표 자동 점검 및 시딩
             try:
-                from api.exit_signal import seed_us_macro_db_if_empty
+                from api.exit_signal import seed_us_macro_db_if_empty, seed_kr_macro_db_if_empty
                 await seed_us_macro_db_if_empty(force=True)
+                await seed_kr_macro_db_if_empty(force=False)
                 gc.collect()
-                print("[Startup] US Macro indicators check and seed completed.")
+                print("[Startup] US & KR Macro indicators check and seed completed.")
             except Exception as _e:
                 print(f"[Startup] US Macro seeding skipped: {_e}")
 

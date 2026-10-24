@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Activity, Calendar, TrendingUp, TrendingDown, RefreshCw, Info, Sparkles, X, ChevronRight } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import KospiExitAnalyzer from '@/components/KospiExitAnalyzer';
+import KrMacroIndicatorSection from '@/components/KrMacroIndicatorSection';
 import MacroCompass from '@/components/MacroCompass';
 import MacroRegimeQuadrant from '@/components/MacroRegimeQuadrant';
 import AIInsight from '@/components/AIInsight';
@@ -170,6 +171,9 @@ export default function DiscoverTab() {
 
                 {/* Top: KOSPI Exit Analyzer */}
                 <KospiExitAnalyzer />
+
+                {/* Section: Korea Economic Indicators (선행지수 순환변동치, OECD CLI, 수출 추이) */}
+                <KrMacroIndicatorSection />
 
                 {/* Section Title: US Economic Indicators */}
                 <div className="relative z-50">

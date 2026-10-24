@@ -271,6 +271,20 @@ class USMacroIndicatorLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class KRMacroIndicatorLog(Base):
+    """한국 주요 거시경제 지표 로그 (선행지수 순환변동치, OECD CLI, 수출액 및 증감률)"""
+    __tablename__ = "kr_macro_indicator_log"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    date = Column(String, index=True, nullable=False)   # YYYY-MM
+    leading_cycle = Column(Float, nullable=True)        # 통계청 선행종합지수 순환변동치 (100 기준)
+    oecd_cli = Column(Float, nullable=True)             # OECD 한국 복합선행지수 (100 기준)
+    export_amt = Column(Float, nullable=True)           # 월간 수출액 (억 달러)
+    export_yoy = Column(Float, nullable=True)           # 수출액 전년동월대비 증감률 (%)
+    daily_avg_export = Column(Float, nullable=True)     # 조업일수 감안 일평균 수출액 (억 달러)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class MarketMacroLog(Base):
     """월별/일별 거시경제 주요 지표 통합 로그 (DX, KRW, KOSPI PER, CLI, T10Y2Y, HY Spread)"""
     __tablename__ = "market_macro_log"
