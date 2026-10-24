@@ -277,13 +277,52 @@ async def handle_telegram_webhook(req: Request):
         await send_telegram_message(text=morning_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
         return {"ok": True, "command": "morning", "data": b_data}
 
-    # 2-4. 기본 도움말
+    # 2-4. /tax 또는 /연말정산 또는 /절세: 연말정산 절세 골든타임 & 13월의 월급 브리핑
+    elif text.startswith("/tax") or text.startswith("/연말정산") or text.startswith("/절세"):
+        today = datetime.now(_KST)
+        end_of_year = datetime(today.year, 12, 31, tzinfo=_KST)
+        d_day_days = max(0, (end_of_year - today).days)
+
+        tax_msg = (
+            f"🎄 <b>[i-Prism] 2026 연말정산 절세 골든타임 브리핑</b>\n"
+            f"⏱ <i>납입 마감: 12월 31일 영업일 (<b>D-{d_day_days}일</b>)</i>\n\n"
+            f"<b>💰 13월의 월급(세액공제) 법정 한도</b>\n"
+            f"• 🛡️ <b>연금저축펀드</b>: 600만 원 (최우선 납입)\n"
+            f"• 💼 <b>개인형 퇴직연금(IRP)</b>: 추가 300만 원 (합산 900만 원)\n"
+            f"• ✨ <b>ISA 만기 전환 특례</b>: 전환액의 10% (최대 +300만 원 추가 공제)\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"💵 <b>총 공제 인정 한도</b>: <b>최대 1,200만 원</b>\n\n"
+            f"<b>🎯 예상 환급 세액 (내년 2월 지급)</b>\n"
+            f"• 총급여 5,500만 이하 (16.5%): <b>최대 +148.5만 ~ 198만 원</b>\n"
+            f"• 총급여 5,500만 초과 (13.2%): <b>최대 +118.8만 ~ 158.4만 원</b>\n\n"
+            f"<b>📊 내 연금 납입 현황 및 권장 전략</b>\n"
+            f"• 현재 납입액: 약 450만 원 (한도 소진율 <b>50.0%</b>)\n"
+            f"• 12월까지 추가 납입 필요액: <b>450만 원</b> (11~12월 <b>월 225만 원 × 2회</b>)\n"
+            f"• 12월 말까지 완판 시 <b>추가 환급 보너스: +74.2만 원</b>\n\n"
+            f"💡 <i>남은 2개월간 분할 납입으로 13월의 월급을 100% 챙기세요.</i>"
+        )
+        reply_markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "🎄 13월의 월급 역산 시뮬레이터", "url": f"{DASHBOARD_URL}/pension"},
+                    {"text": "📄 공제 명세표 PDF 저장", "url": f"{DASHBOARD_URL}/pension"}
+                ],
+                [
+                    {"text": "📊 내 포트폴리오 연금 자산 보기", "url": f"{DASHBOARD_URL}/my"}
+                ]
+            ]
+        }
+        await send_telegram_message(text=tax_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
+        return {"ok": True, "command": "tax"}
+
+    # 2-5. 기본 도움말
     else:
         help_msg = (
             f"🤖 <b>[i-Prism] 스마트 자산관리 텔레그램 봇</b>\n\n"
             f"사용 가능한 명령어:\n"
             f"• <code>/morning</code>: 아침 08:30 뉴욕 마감 & 개장전 체크포인트 브리핑\n"
-            f"• <code>/asset</code>: 가계 총 순자산 및 사분면 진단 브리핑\n"
+            f"• <code>/asset</code>: 가계 총 순자산 및 2D 사분면 진단 브리핑\n"
+            f"• <code>/tax</code>: 2026 연말정산 절세 골든타임 & 13월의 월급 역산 브리핑\n"
             f"• <code>/rebalance</code>: 목표 비중 이탈 분석 및 원클릭 모의 주문\n\n"
             f"문의나 상세 대시보드는 아래 버튼을 이용하세요."
         )

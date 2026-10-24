@@ -3,21 +3,20 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: Sprint 38 완료 — [지인 전문가 추천 8대 경제지표 월가 예상치 대조 & 사분면 리밸런싱 & 중간선거 계절성 & 배당 상계 캐시플로우 & 텔레그램 사분면 브리핑]
-1. [후보 0: 8대 주요 경제 지표 월가 예상치(Consensus) vs 실제치(Actual) 서프라이즈 분석 (`macro_consensus.py`, `MacroConsensusSurpriseModal.tsx`, `MacroTab.tsx`, `DiscoverTab.tsx`)]:
-   - 실업률, 비농업고용, CPI, Core CPI, PPI, Core PPI, PCE, Core PCE 8대 지표 데이터 파이프라인 및 엔드포인트(`GET /api/v1/macro/economic-indicators/consensus`) 구축.
-   - 대시보드 8개 카드 미니차트에 월가 예상치(주황 점선) 듀얼 라인 반영, 모달 상단 배치 및 Recharts 시계열 그래프·서프라이즈 테이블 렌더링 정상화.
-2. [후보 1: 가계 자산배분 사분면 기반 원클릭 리밸런싱 시뮬레이터 (`QuadrantRebalancingModal.tsx`, `IntegratedAssetRebalancingWidget.tsx`)]:
-   - 사분면 목표(황금 밸런스형 55:45) 도달 필요 금융자산(+8.24억 원) 역산 슬라이더(30~60%) 및 3대 결핍 비타민 ETF(배당, 금, KOFR) 맞춤형 매수 플랜 시뮬레이터 연동.
-3. [후보 2: 2026 미국 중간선거 D-Day 카운트다운 & 선거 전후 ETF 계절성 전략 (`MidtermSeasonalityStrategySection.tsx`, `MidtermElectionTab.tsx`)]:
-   - 2026.11.03 D-Day 네온 카운트다운 및 역대 19회 중간선거 Q4 계절성 랠리(승률 85%, 평균 +6.8%, 선거 후 1년 승률 95%) 통계 및 4대 수혜 섹터(반도체, 방산, 에너지, 헬스케어) ETF 스윙 전략 탑재.
-4. [후보 3: 가계 고정지출·대출 원리금 캘린더 & 월 ETF 배당금 자동 상계 순 캐시플로우 (`CashflowOffsetCalendarWidget.tsx`, `MyAssetsView.tsx`)]:
-   - 주담대 원리금·신용대출 이자·관리비·보험료 고정지출 슬라이더 vs 1~12월 KIS 배당금 1:1 자동 상계 및 월 순 잉여금 타임라인(자본소득 상계율 100%+) 렌더링.
-5. [후보 4: 텔레그램 봇 자산배분 사분면 인포그래픽 브리핑 연동 (`telegram_bot.py`, `test_telegram_bot.py`)]:
-   - `/asset` 명령어 호출 시 2D 사분면 텍스트 매트릭스([📍내 위치] vs [🎯 권장]) 및 한국 가계 평균(72:28) 대조 진단 카드, 인라인 키보드(비타민 3종 리밸런싱 플랜, 월 고정지출 상계 현황 콜백) 연동.
-6. [무결성 검증 완료]: 백엔드 pytest 13/13 100% Pass, Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 실측 스크린샷 렌더링 검증 완료.
+✅ Recent: Sprint 39 완료 — [2026 연말정산 절세 골든타임 한도 소진율 & 13월의 월급 환급 시뮬레이터 & 텔레그램 /tax 브리핑]
+1. [연말정산 13월의 월급 세액공제 역산 플래너 고도화 (`YearEndTaxSettlementPlanner.tsx`)]:
+   - 12월 31일 납입 마감 D-Day 실시간 펄스 뱃지 및 연금저축(600만)+IRP(300만)+ISA전환(300만) 총 1,200만 원 한도 소진율(%) 비주얼 프로그레스 바 구축.
+   - 11~12월 2개월 잔여 자금 월 권장 분할 납입액 계산기 및 KIS 실계좌 자동 감지 `[내 KIS 연금 납입액 불러오기]` 원클릭 연동 탑재.
+   - 총급여 5,500만 이하(16.5%, 최대 198만 원)/초과(13.2%, 최대 158.4만 원) 환급액 및 A4 인쇄/PDF 저장용 국세청 영수증 스타일 명세표 완비.
+2. [연금·절세 허브 서브탭 1번 하이라이트 (`PensionWealthHub.tsx`)]:
+   - 서브탭 1번 버튼에 `13월의 월급 D-Day` 실시간 펄스 뱃지 장착 및 시인성 극대화.
+3. [텔레그램 봇 /tax 명령어 & 13월의 월급 브리핑 연동 (`telegram_bot.py`, `test_telegram_bot.py`)]:
+   - `/tax`, `/연말정산`, `/절세` 호출 시 D-Day, 소진율(50.0%), 12월 말 완판 시 추가 환급 보너스(+74.2만 원) 브리핑 및 웹 시뮬레이터 인라인 키보드 회신.
+4. [무결성 검증 완료]: 백엔드 pytest 29/29 100% Pass, Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 실측 스크린샷 렌더링 검증 완료.
 
-🚀 Current: Sprint 38 완료 / Sprint 39 신규 백로그 선정 및 개발 대기 단계
+🚀 Current: Sprint 39 완료 / Sprint 40 차기 과제 선정 및 개발 대기 단계
+
+✅ Previous: Sprint 38 완료 — [지인 전문가 추천 8대 경제지표 월가 예상치 대조 & 사분면 리밸런싱 & 중간선거 계절성 & 배당 상계 캐시플로우 & 텔레그램 사분면 브리핑]
 
 ✅ Previous: [My 서비스 컨텐츠 박스 버튼 컴팩트화 & 통합 순자산 2D 자산배분 사분면 매트릭스 맵 구축]
 1. [My 서비스 컨텐츠 박스 선택 버튼 및 탭 일괄 컴팩트화 (`TotalAssetBoard.tsx`, `IntegratedAssetRebalancingWidget.tsx`)]:

@@ -125,3 +125,28 @@ async def test_telegram_webhook_callback_cashflow_offset():
             assert "고정지출" in call_kwargs["text"]
             assert "상계율" in call_kwargs["text"]
 
+@pytest.mark.asyncio
+async def test_telegram_webhook_tax_command():
+    mock_send = AsyncMock(return_value=True)
+    with patch("api.telegram_bot.send_telegram_message", mock_send):
+        payload = {
+            "update_id": 1006,
+            "message": {
+                "message_id": 4,
+                "chat": {"id": 12345678},
+                "text": "/tax"
+            }
+        }
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            res = await ac.post("/api/v1/telegram/webhook", json=payload)
+            assert res.status_code == 200
+            data = res.json()
+            assert data.get("ok") is True
+            assert data.get("command") == "tax"
+            assert mock_send.called
+            call_kwargs = mock_send.call_args.kwargs
+            assert "연말정산 절세 골든타임" in call_kwargs["text"]
+            assert "13월의 월급" in call_kwargs["text"]
+            assert "inline_keyboard" in call_kwargs["reply_markup"]
+
+

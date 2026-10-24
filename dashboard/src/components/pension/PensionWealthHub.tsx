@@ -151,12 +151,15 @@ function PensionWealthHubInner() {
             onClick={() => setActiveSubTab('tax')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
               activeSubTab === 'tax'
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-400/40'
                 : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
             }`}
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span>1. 연금 3총사 절세 (연금저축·IRP·ISA)</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>1. 연금 3총사 절세 & 연말정산 골든타임</span>
+            <span className="px-1.5 py-0.5 rounded-full bg-rose-500/25 border border-rose-500/40 text-rose-300 text-[10px] font-extrabold animate-pulse">
+              13월의 월급 D-Day
+            </span>
           </button>
 
           <button
