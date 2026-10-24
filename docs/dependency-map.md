@@ -13,6 +13,7 @@ A living document of module relationships. Update whenever modules are added or 
 | database   | infrastructure| Data persistence       | -              | services      | Carol |
 -->
 | Deploy Configs | Infrastructure | Render & Vercel serverless IAC configuration & verification | api, dashboard | - | Antigravity |
+| Korea Macro Portfolio Export Exposure & Trade Balance (S37) | Core / Presentation | 포트폴리오 6대 수출 노출도·경기 적합도(My & TFF), 텔레그램 인라인 인터랙션, 무역수지 및 교역조건 차트 | core/export_exposure, api/macro_dashboard, core/kr_macro_notifier, api/telegram_bot, api/exit_signal | ExportExposureWidget, MyDashboard, TffDashboard, KrMacroIndicatorSection | Antigravity |
 | Korea Macro & Export Playbook (S36) | Presentation / Core | 한국 6대 수출 주력군 ETF 플레이북, 텔레그램 매크로 속보 및 자체 DB 실시간 동기화 | exit_signal, kr_macro_notifier, scheduler | KrMacroIndicatorSection | Antigravity |
 | Korea Macro Export Industry (S35) | Presentation / Application | 한국 수출 실적 6대 산업별(반도체·자동차·화학 등) 누적 스택 및 개별 테마 차트 | exit_signal, db/models | KrMacroIndicatorSection | Antigravity |
 | Korea Economic Indicators (S34) | Presentation / Core | 통계청 선행지수 순환변동치, OECD CLI, 수출 실적 시계열 및 3단계 금리 비교 | exit_signal, db/models | KrMacroIndicatorSection, RatesTab | Antigravity |

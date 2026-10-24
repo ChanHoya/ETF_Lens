@@ -15,6 +15,7 @@ import PortfolioStressTester from './PortfolioStressTester';
 import PortfolioRebalancer from './PortfolioRebalancer';
 import MultiAssetBacktester from './MultiAssetBacktester';
 import SlidingTabs from './common/SlidingTabs';
+import ExportExposureWidget from './ExportExposureWidget';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type MyDashboardProps = {
@@ -454,6 +455,9 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                     </table>
                 </div>
             </section>
+
+            {/* 실질 수출 수혜 노출도 & 경기 적합도 분석 위젯 */}
+            <ExportExposureWidget source="my" holdings={holdings} />
 
             {/* 포트폴리오 백테스터 & AI 리밸런싱 시뮬레이터 통합 탭 */}
             <div className="flex flex-col gap-4 mt-2">

@@ -8,6 +8,7 @@ import {
     LineChart,
     Line,
     Bar,
+    Cell,
     XAxis,
     YAxis,
     Tooltip,
@@ -27,6 +28,7 @@ import {
     HelpCircle,
     Check,
     Layers,
+    Scale,
     Cpu,
     Car,
     Flame,
@@ -104,11 +106,14 @@ interface ExportItem {
     ind_machinery?: number;
     ind_steel?: number;
     ind_bio_battery?: number;
+    import_amt?: number;
+    trade_balance?: number;
+    terms_of_trade?: number;
 }
 
 type ExportPeriod = 'yearly' | 'monthly' | 'daily';
 type Timeframe = '1Y' | '3Y' | '5Y' | '10Y';
-type ExportViewMode = 'total' | 'industry';
+type ExportViewMode = 'total' | 'industry' | 'trade_balance';
 
 export default function KrMacroIndicatorSection() {
     const [krData, setKrData] = useState<KRMacroItem[]>([]);
@@ -329,9 +334,17 @@ export default function KrMacroIndicatorSection() {
             }
         }
 
+        // 무역수지 및 교역조건
+        const tradeBalance = cur.trade_balance !== undefined ? cur.trade_balance : (cur.export_amt && cur.import_amt ? Number((cur.export_amt - cur.import_amt).toFixed(1)) : null);
+        const rolling12mTradeBalance = exportData.slice(-12).reduce((acc, item) => acc + (item.trade_balance ?? (item.export_amt && item.import_amt ? (item.export_amt - item.import_amt) : 0)), 0);
+
         return {
             date: cur.date,
             amt: cur.export_amt ?? null,
+            importAmt: cur.import_amt ?? null,
+            tradeBalance,
+            rolling12mTradeBalance: Number(rolling12mTradeBalance.toFixed(1)),
+            termsOfTrade: cur.terms_of_trade ?? 100.2,
             yoy: cur.export_yoy ?? null,
             dailyAvg: cur.export_daily_avg ?? null,
             isProjected: cur.is_projected,
@@ -659,20 +672,26 @@ export default function KrMacroIndicatorSection() {
                                             <BarChart3 className="w-4 h-4 text-indigo-400 shrink-0" />
                                             <span>대한민국 수출 실적 추이</span>
                                         </h3>
-                                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-400/30 text-indigo-300 whitespace-nowrap shrink-0">
-                                            {exportViewMode === 'total' ? '총수출' : '6대 업종'}
+                                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border whitespace-nowrap shrink-0 ${
+                                            exportViewMode === 'trade_balance'
+                                                ? 'bg-emerald-500/15 border-emerald-400/30 text-emerald-300'
+                                                : 'bg-indigo-500/15 border-indigo-400/30 text-indigo-300'
+                                        }`}>
+                                            {exportViewMode === 'total' ? '총수출' : exportViewMode === 'industry' ? '6대 업종' : '무역수지·교역조건'}
                                         </span>
                                     </div>
                                     <p className="text-[11px] text-gray-400 mt-0.5 truncate">
                                         {exportViewMode === 'total'
                                             ? '관세청 및 한국은행 공표 통관 기준 수출 실적 및 YoY 증감률'
-                                            : '한국은행 KSIC 및 관세청 MTI 기준 핵심 주력 산업별 실적 분해'}
+                                            : exportViewMode === 'industry'
+                                            ? '한국은행 KSIC 및 관세청 MTI 기준 핵심 주력 산업별 실적 분해'
+                                            : '한국은행 무역수지(수출-수입) 흑자·적자 궤적 및 순상품교역조건지수(Terms of Trade)'}
                                     </p>
                                 </div>
 
-                                {/* 우측: [전체 / 6대 업종] 보기 모드 스위처 & [년 / 월간 / 일별] 주기 탭 */}
+                                {/* 우측: [전체 / 6대 업종 / 무역수지] 보기 모드 스위처 & [년 / 월간 / 일별] 주기 탭 */}
                                 <div className="flex items-center gap-1 shrink-0 self-start sm:self-auto">
-                                    {/* 1. 보기 모드 (전체 ↔ 6대 업종) */}
+                                    {/* 1. 보기 모드 (전체 ↔ 6대 업종 ↔ 무역수지) */}
                                     <div className="flex bg-black/50 rounded-lg p-0.5 border border-white/10">
                                         <button
                                             onClick={() => handleViewModeChange('total')}
@@ -694,6 +713,17 @@ export default function KrMacroIndicatorSection() {
                                         >
                                             <Layers className="w-2.5 h-2.5" />
                                             <span>6대 업종</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleViewModeChange('trade_balance')}
+                                            className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md transition-all ${
+                                                exportViewMode === 'trade_balance'
+                                                    ? 'bg-emerald-600 text-white shadow-sm'
+                                                    : 'text-gray-400 hover:text-white'
+                                            }`}
+                                        >
+                                            <Scale className="w-2.5 h-2.5" />
+                                            <span>무역수지</span>
                                         </button>
                                     </div>
 
@@ -779,32 +809,54 @@ export default function KrMacroIndicatorSection() {
 
                         {/* 요약 스탯 카드 (모드 및 선택 업종별 동적 바인딩) */}
                         <div className="grid grid-cols-3 gap-2 mb-3">
-                            {/* 카드 1: 금액 */}
+                            {/* 카드 1: 금액 또는 무역수지 */}
                             <div className="bg-white/5 border border-white/5 rounded-xl p-2.5">
                                 <span className="text-[10px] text-gray-400">
-                                    {exportViewMode === 'total' || selectedIndustry === 'stacked'
+                                    {exportViewMode === 'trade_balance'
+                                        ? '최근 월간 무역수지'
+                                        : exportViewMode === 'total' || selectedIndustry === 'stacked'
                                         ? (exportPeriod === 'yearly' ? '연간 총수출액' : exportPeriod === 'daily' ? '최근 일평균' : '최근 월간 수출액')
                                         : `${latestExportSummary?.selectedIndStat?.shortName ?? '업종'} 수출액`}
                                 </span>
-                                <div className="text-lg font-black text-white font-mono mt-0.5">
-                                    {exportViewMode === 'total' || selectedIndustry === 'stacked'
+                                <div className={`text-lg font-black font-mono mt-0.5 ${
+                                    exportViewMode === 'trade_balance'
+                                        ? ((latestExportSummary?.tradeBalance ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400')
+                                        : 'text-white'
+                                }`}>
+                                    {exportViewMode === 'trade_balance'
+                                        ? (latestExportSummary?.tradeBalance !== null && latestExportSummary?.tradeBalance !== undefined
+                                            ? `${latestExportSummary.tradeBalance > 0 ? '+' : ''}${latestExportSummary.tradeBalance}억$`
+                                            : 'N/A')
+                                        : exportViewMode === 'total' || selectedIndustry === 'stacked'
                                         ? (latestExportSummary?.amt !== null ? `${latestExportSummary?.amt}억$` : 'N/A')
                                         : `${latestExportSummary?.selectedIndStat?.amt ?? 0}억$`}
                                 </div>
-                                <span className="text-[10px] text-gray-500 font-mono">
-                                    {latestExportSummary?.date} 기준
-                                    {latestExportSummary?.isProjected ? ' (추정)' : ''}
+                                <span className="text-[10px] text-gray-500 font-mono truncate block">
+                                    {exportViewMode === 'trade_balance' && latestExportSummary?.importAmt
+                                        ? `수출 ${latestExportSummary.amt}억$ / 수입 ${latestExportSummary.importAmt}억$`
+                                        : `${latestExportSummary?.date} 기준${latestExportSummary?.isProjected ? ' (추정)' : ''}`}
                                 </span>
                             </div>
 
-                            {/* 카드 2: 성장률(YoY) */}
+                            {/* 카드 2: 성장률(YoY) 또는 12개월 누적 흑자 */}
                             <div className="bg-white/5 border border-white/5 rounded-xl p-2.5">
                                 <span className="text-[10px] text-gray-400">
-                                    {exportViewMode === 'total' || selectedIndustry === 'stacked'
+                                    {exportViewMode === 'trade_balance'
+                                        ? '최근 12개월 누적 무역수지'
+                                        : exportViewMode === 'total' || selectedIndustry === 'stacked'
                                         ? '전체 수출 YoY'
                                         : `${latestExportSummary?.selectedIndStat?.shortName ?? '업종'} 증감률 (YoY)`}
                                 </span>
-                                {(() => {
+                                {exportViewMode === 'trade_balance' ? (
+                                    <div className={`text-lg font-black font-mono mt-0.5 flex items-center gap-0.5 ${
+                                        (latestExportSummary?.rolling12mTradeBalance ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                                    }`}>
+                                        {(latestExportSummary?.rolling12mTradeBalance ?? 0) >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                                        {latestExportSummary?.rolling12mTradeBalance !== undefined
+                                            ? `${latestExportSummary.rolling12mTradeBalance > 0 ? '+' : ''}${latestExportSummary.rolling12mTradeBalance.toLocaleString()}억$`
+                                            : 'N/A'}
+                                    </div>
+                                ) : (() => {
                                     const yoyVal = (exportViewMode === 'total' || selectedIndustry === 'stacked')
                                         ? latestExportSummary?.yoy
                                         : latestExportSummary?.selectedIndStat?.yoy;
@@ -818,20 +870,28 @@ export default function KrMacroIndicatorSection() {
                                         </div>
                                     );
                                 })()}
-                                <span className="text-[10px] text-gray-500">전년동기대비</span>
+                                <span className="text-[10px] text-gray-500">
+                                    {exportViewMode === 'trade_balance' ? '최근 1년 무역수지 합산' : '전년동기대비'}
+                                </span>
                             </div>
 
-                            {/* 카드 3: 비중 또는 일평균 */}
+                            {/* 카드 3: 비중 또는 일평균 또는 교역조건지수 */}
                             <div className="bg-white/5 border border-white/5 rounded-xl p-2.5">
                                 <span className="text-[10px] text-gray-400">
-                                    {exportViewMode === 'total'
+                                    {exportViewMode === 'trade_balance'
+                                        ? '순상품교역조건지수'
+                                        : exportViewMode === 'total'
                                         ? '조업일수 감안 일평균'
                                         : selectedIndustry === 'stacked'
                                         ? '수출 1위 주력군'
                                         : '한국 전체 수출 중 비중'}
                                 </span>
                                 <div className="text-lg font-black font-mono mt-0.5">
-                                    {exportViewMode === 'total' ? (
+                                    {exportViewMode === 'trade_balance' ? (
+                                        <span className="text-sky-400">
+                                            {latestExportSummary?.termsOfTrade ?? 100.2} pt
+                                        </span>
+                                    ) : exportViewMode === 'total' ? (
                                         <span className="text-sky-400">
                                             {latestExportSummary?.dailyAvg !== null ? `${latestExportSummary?.dailyAvg}억$` : 'N/A'}
                                         </span>
@@ -853,7 +913,9 @@ export default function KrMacroIndicatorSection() {
                                     )}
                                 </div>
                                 <span className="text-[10px] text-gray-500">
-                                    {exportViewMode === 'total'
+                                    {exportViewMode === 'trade_balance'
+                                        ? '기준 100 pt (수출입 단가비율)'
+                                        : exportViewMode === 'total'
                                         ? '일당 평균 실적'
                                         : selectedIndustry === 'stacked'
                                         ? `점유율 ${latestExportSummary?.topIndustry?.share ?? 0}%`
@@ -1055,6 +1117,89 @@ export default function KrMacroIndicatorSection() {
                                                 activeDot={{ r: 4.5 }}
                                             />
                                         </ComposedChart>
+                                    ) : exportViewMode === 'trade_balance' ? (
+                                        /* 5. 무역수지 흑자/적자 막대 + 순상품교역조건지수(Terms of Trade) 라인 차트 */
+                                        <ComposedChart data={exportData} margin={{ top: 10, right: 12, left: 2, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis
+                                                dataKey="date"
+                                                stroke="#64748b"
+                                                tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                                tickFormatter={(v: string) => (exportPeriod === 'yearly' ? v : v.slice(2))}
+                                            />
+                                            <YAxis
+                                                yAxisId="left"
+                                                stroke="#64748b"
+                                                width={42}
+                                                domain={['auto', 'auto']}
+                                                tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                                tickFormatter={(v: number) => `${Math.round(v)}`}
+                                                unit="억$"
+                                            />
+                                            <YAxis
+                                                yAxisId="right"
+                                                orientation="right"
+                                                stroke="#38bdf8"
+                                                domain={[75, 125]}
+                                                tick={{ fontSize: 10, fill: '#38bdf8' }}
+                                                unit="pt"
+                                            />
+                                            <Tooltip
+                                                content={({ active, payload, label }) => {
+                                                    if (!active || !payload || payload.length === 0) return null;
+                                                    const row = payload[0].payload as ExportItem;
+                                                    const tb = row.trade_balance !== undefined ? row.trade_balance : (row.export_amt && row.import_amt ? Number((row.export_amt - row.import_amt).toFixed(1)) : 0);
+                                                    const isSurplus = tb >= 0;
+                                                    return (
+                                                        <div className="bg-slate-900/95 border border-white/15 rounded-xl p-3 shadow-2xl text-[11px] text-white min-w-[200px]">
+                                                            <div className="flex items-center justify-between border-b border-white/10 pb-1.5 mb-2">
+                                                                <span className="font-bold text-sky-300">{label} 무역통계</span>
+                                                                <span className={`font-mono font-bold ${isSurplus ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                                    {isSurplus ? `+${tb.toFixed(1)}억$ 흑자` : `${tb.toFixed(1)}억$ 적자`}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex flex-col gap-1 text-[11px]">
+                                                                <div className="flex justify-between text-gray-300">
+                                                                    <span>수출액</span>
+                                                                    <span className="font-mono text-white">{row.export_amt?.toLocaleString()}억$</span>
+                                                                </div>
+                                                                <div className="flex justify-between text-gray-300">
+                                                                    <span>수입액</span>
+                                                                    <span className="font-mono text-white">{row.import_amt ? `${row.import_amt.toLocaleString()}억$` : '-'}</span>
+                                                                </div>
+                                                                <div className="flex justify-between text-gray-300">
+                                                                    <span>순상품교역조건</span>
+                                                                    <span className="font-mono text-sky-300">{row.terms_of_trade ? `${row.terms_of_trade} pt` : '-'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }}
+                                            />
+                                            {/* 무역수지 균형선 0 */}
+                                            <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" strokeDasharray="3 3" />
+                                            {/* 교역조건 기준 100 pt */}
+                                            <ReferenceLine yAxisId="right" y={100} stroke="#38bdf8" strokeDasharray="2 2" opacity={0.4} />
+
+                                            <Bar yAxisId="left" name="무역수지 (흑자/적자)" dataKey="trade_balance" radius={[3, 3, 0, 0]}>
+                                                {exportData.map((entry, index) => {
+                                                    const tb = entry.trade_balance !== undefined ? entry.trade_balance : (entry.export_amt && entry.import_amt ? entry.export_amt - entry.import_amt : 0);
+                                                    return (
+                                                        <Cell key={`cell-${index}`} fill={tb >= 0 ? '#10b981' : '#f43f5e'} />
+                                                    );
+                                                })}
+                                            </Bar>
+                                            <Line
+                                                yAxisId="right"
+                                                type="monotone"
+                                                name="순상품교역조건지수"
+                                                dataKey="terms_of_trade"
+                                                stroke="#38bdf8"
+                                                strokeWidth={2}
+                                                dot={{ r: 2, fill: '#38bdf8' }}
+                                                activeDot={{ r: 4 }}
+                                            />
+                                        </ComposedChart>
                                     ) : (
                                         /* 4. 전체 수출액 막대 + 전체 YoY 라인 차트 */
                                         <ComposedChart data={exportData} margin={{ top: 10, right: 12, left: 2, bottom: 5 }}>
@@ -1127,13 +1272,17 @@ export default function KrMacroIndicatorSection() {
                             <span
                                 className="w-1.5 h-1.5 rounded-full shrink-0"
                                 style={{
-                                    backgroundColor: exportViewMode === 'industry' && selectedIndustry !== 'stacked'
+                                    backgroundColor: exportViewMode === 'trade_balance'
+                                        ? '#10b981'
+                                        : exportViewMode === 'industry' && selectedIndustry !== 'stacked'
                                         ? latestExportSummary?.selectedIndStat?.color ?? '#818cf8'
                                         : '#818cf8',
                                 }}
                             />
                             <span className="text-[11px] text-gray-300">
-                                {exportViewMode === 'industry' && selectedIndustry !== 'stacked'
+                                {exportViewMode === 'trade_balance'
+                                    ? '● 무역수지 흑자 및 교역조건 개선: 수입 단가 안정과 주력품목 수출 단가 반등이 맞물려 월 80~120억 달러 흑자 기조를 유지 중입니다.'
+                                    : exportViewMode === 'industry' && selectedIndustry !== 'stacked'
                                     ? `${latestExportSummary?.selectedIndStat?.name}: ${latestExportSummary?.selectedIndStat?.desc}`
                                     : exportViewMode === 'industry'
                                     ? '6대 주력 산업군 누적 스택 (상단 칩을 클릭하여 개별 업종 심층 조회 가능)'

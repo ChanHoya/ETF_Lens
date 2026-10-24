@@ -72,6 +72,68 @@ async def handle_telegram_webhook(req: Request):
                 )
             return {"ok": True, "action": "rebalance_executed"}
 
+        elif cb_data.startswith("macro_playbook:"):
+            ind_id = cb_data.split(":", 1)[1] if ":" in cb_data else "semiconductor"
+            from api.exit_signal import INDUSTRY_ETF_PLAYBOOK, KR_EXPORT_INDUSTRIES
+            etfs = INDUSTRY_ETF_PLAYBOOK.get(ind_id, [])
+            matched_ind = next((ind for ind in KR_EXPORT_INDUSTRIES if ind["id"] == ind_id), None)
+            ind_name = matched_ind["name"] if matched_ind else ind_id
+
+            etf_lines = "\n\n".join([
+                f"• <b>{e['name']}</b> (<code>{e['ticker']}</code>) | {e['category']}\n"
+                f"  <i>💡 {e['points']}</i>"
+                for e in etfs
+            ])
+            feedback_msg = (
+                f"🏆 <b>[i-Prism 플레이북] {ind_name} 핵심 수혜 ETF 라인업</b>\n\n"
+                f"{etf_lines}\n\n"
+                f"🔗 <a href=\"https://i-prism.vercel.app/discover\">i-Prism 대시보드에서 차트 보기</a>"
+            )
+            if chat_id:
+                await send_telegram_message(
+                    text=feedback_msg,
+                    test_chat_id=str(chat_id)
+                )
+            return {"ok": True, "action": f"playbook_{ind_id}"}
+
+        elif cb_data.startswith("macro_exposure:"):
+            from core.export_exposure import analyze_portfolio_export_exposure
+            from api.my_assets import _PORTFOLIO_CACHE
+
+            target_holdings = []
+            if _PORTFOLIO_CACHE and "kis_raw" in _PORTFOLIO_CACHE:
+                target_holdings = _PORTFOLIO_CACHE["kis_raw"].get("holdings", [])
+
+            if not target_holdings:
+                target_holdings = [
+                    {"code": "379800", "name": "KODEX 미국S&P500TR", "eval_amt": 38500000},
+                    {"code": "091160", "name": "KODEX 반도체", "eval_amt": 25000000},
+                    {"code": "402970", "name": "TIGER 미국배당다우존스", "eval_amt": 27000000},
+                    {"code": "069500", "name": "KODEX 200", "eval_amt": 20000000},
+                    {"code": "138540", "name": "TIGER 현대차그룹+펀더멘털", "eval_amt": 15000000},
+                ]
+
+            analysis = analyze_portfolio_export_exposure(target_holdings)
+            top_name = analysis.get("top_industry_name", "반도체·IT")
+            top_w = analysis.get("top_industry_exposure", 0.0)
+            total_exp = analysis.get("total_export_exposure", 0.0)
+            score = analysis.get("fit_score", 80)
+
+            feedback_msg = (
+                f"📊 <b>[i-Prism 포트폴리오] 수출 주력군 실질 노출도 진단</b>\n\n"
+                f"🥇 <b>1위 주력군({top_name}) 노출도</b>: <b>{top_w:.1f}%</b>\n"
+                f"🚢 <b>6대 주력군 총 수출 노출도</b>: <b>{total_exp:.1f}%</b>\n"
+                f"🛡️ <b>경기 국면 적합도 점수</b>: <b>{score}점</b> ({analysis.get('status_title', '정상')})\n\n"
+                f"💡 <i>{analysis.get('comment', '')}</i>\n\n"
+                f"🔗 <a href=\"https://i-prism.vercel.app/my\">내 계좌 상세 진단 바로가기</a>"
+            )
+            if chat_id:
+                await send_telegram_message(
+                    text=feedback_msg,
+                    test_chat_id=str(chat_id)
+                )
+            return {"ok": True, "action": "exposure_checked"}
+
     # 2. 일반 텍스트 메시지 및 명령어 처리
     msg = data.get("message")
     if not msg:

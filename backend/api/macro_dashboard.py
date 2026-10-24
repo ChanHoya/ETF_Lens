@@ -1099,4 +1099,96 @@ async def get_macro_portfolio_sensitivity(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class ExportExposurePayload(BaseModel):
+    holdings: Optional[List[Dict[str, Any]]] = None
+    source: Optional[str] = "my"
+
+
+@router.post("/portfolio-export-exposure")
+async def calculate_portfolio_export_exposure_post(payload: ExportExposurePayload):
+    """보유 포트폴리오(My 또는 TFF)의 6대 수출 주력 산업군 실질 노출도 및 경기 적합도 분석을 반환합니다."""
+    return await _resolve_and_analyze_export_exposure(payload.holdings, payload.source or "my")
+
+
+@router.get("/portfolio-export-exposure")
+async def calculate_portfolio_export_exposure_get(source: str = "my"):
+    """보유 포트폴리오(My 또는 TFF)의 6대 수출 주력 산업군 실질 노출도 및 경기 적합도 분석을 반환합니다."""
+    return await _resolve_and_analyze_export_exposure(None, source)
+
+
+async def _resolve_and_analyze_export_exposure(holdings: Optional[List[Dict[str, Any]]], source: str):
+    from core.export_exposure import analyze_portfolio_export_exposure
+    from api.exit_signal import _calculate_industry_shares
+    from db.database import AsyncSessionLocal
+    from db.models import KRMacroIndicatorLog
+    from sqlalchemy import select
+
+    # 1. 최신 매크로 지표 조회
+    top_ind_id = "semiconductor"
+    top_ind_share = 33.5
+    cycle_phase = "둔화 국면(Slowdown)"
+
+    try:
+        async with AsyncSessionLocal() as db:
+            stmt = select(KRMacroIndicatorLog).order_by(KRMacroIndicatorLog.date.desc()).limit(2)
+            res = await db.execute(stmt)
+            records = res.scalars().all()
+            if records:
+                latest = records[0]
+                prev = records[1] if len(records) > 1 else None
+                cycle_val = latest.leading_cycle or 100.0
+                cycle_diff = round(cycle_val - (prev.leading_cycle or 100.0), 2) if prev and prev.leading_cycle else 0.0
+                if cycle_val >= 100.0:
+                    cycle_phase = "확장 국면(Expansion)" if cycle_diff >= 0 else "둔화 국면(Slowdown)"
+                else:
+                    cycle_phase = "회복 국면(Recovery)" if cycle_diff >= 0 else "수축 국면(Contraction)"
+
+                shares = _calculate_industry_shares(latest.date)
+                sorted_shares = sorted(shares.items(), key=lambda x: x[1], reverse=True)
+                if sorted_shares:
+                    top_ind_id, top_ind_share = sorted_shares[0]
+    except Exception as e:
+        logger.warning(f"Error fetching latest KR macro indicators for export exposure: {e}")
+
+    # 2. 보유 종목 리스트 결정
+    target_holdings = holdings
+    is_fallback = False
+
+    if not target_holdings:
+        if source == "tff":
+            # TFF 포트폴리오 대표 자산
+            target_holdings = [
+                {"code": "069500", "name": "KODEX 200", "eval_amt": 45000000},
+                {"code": "091160", "name": "KODEX 반도체", "eval_amt": 38000000},
+                {"code": "138540", "name": "TIGER 현대차그룹+펀더멘털", "eval_amt": 22000000},
+                {"code": "453850", "name": "ACE 미국30년국채액티브(H)", "eval_amt": 25000000},
+                {"code": "244580", "name": "KODEX 바이오", "eval_amt": 15000000},
+            ]
+            is_fallback = True
+        else:
+            from api.my_assets import _PORTFOLIO_CACHE
+            if _PORTFOLIO_CACHE and "kis_raw" in _PORTFOLIO_CACHE:
+                target_holdings = _PORTFOLIO_CACHE["kis_raw"].get("holdings", [])
+
+            if not target_holdings:
+                target_holdings = [
+                    {"code": "379800", "name": "KODEX 미국S&P500TR", "eval_amt": 38500000},
+                    {"code": "091160", "name": "KODEX 반도체", "eval_amt": 25000000},
+                    {"code": "402970", "name": "TIGER 미국배당다우존스", "eval_amt": 27000000},
+                    {"code": "069500", "name": "KODEX 200", "eval_amt": 20000000},
+                    {"code": "138540", "name": "TIGER 현대차그룹+펀더멘털", "eval_amt": 15000000},
+                ]
+                is_fallback = True
+
+    analysis = analyze_portfolio_export_exposure(
+        holdings=target_holdings,
+        top_industry_id=top_ind_id,
+        top_industry_share=top_ind_share,
+        cycle_phase=cycle_phase
+    )
+    analysis["source"] = source
+    analysis["is_demo_fallback"] = is_fallback
+    return analysis
+
+
 

@@ -1,4 +1,5 @@
 'use client';
+// TFF 펀드 월간 운용 결산 팩트시트 리포트 및 출력/복사 모달 컴포넌트
 
 import React, { useState, useEffect } from 'react';
 import { TffFundData, TffHoldingsRow } from '../../../lib/tff/types';

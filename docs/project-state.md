@@ -3,21 +3,25 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: Sprint 36 완료 — [수출 1위 주력군 수혜 ETF 플레이북 & 텔레그램 속보 자동 알림 + 서비스 DB 실시간 동기화 파이프라인 구축]
-1. [백엔드 6대 수출 주력 산업별 수혜 ETF 플레이북 (`INDUSTRY_ETF_PLAYBOOK`)]:
-   - 반도체(KODEX 반도체, TIGER Fn반도체TOP10, ACE AI반도체포커스), 자동차(TIGER 현대차그룹, KODEX 자동차, TIGER 200중공업), 화학, 기계, 철강, 바이오 6대 업종별 대표 상장 ETF 매핑.
-   - `GET /api/v1/exit-signal/macro/kr/sector-playbook` 엔드포인트 지원.
-2. [백엔드 텔레그램 속보 알림 및 서비스 DB 동기화 파이프라인 (`kr_macro_notifier.py`)]:
-   - 한국 수출 실적(총액, 일평균, YoY) 및 통계청 경기선행지수 순환변동치(확장/둔화/회복/수축 판정) 공표 감지 시 자체 DB 최신 동기화(`sync_kr_macro_indicators_job`) 선행 수행.
-   - 텔레그램 속보 HTML 발송 및 `ExitSignalCache` 기반 중복 발송 방지(Deduplication) 구축.
-   - `POST /api/v1/exit-signal/macro/kr/trigger-flash-alert` 및 `core/scheduler.py` 정기 크론(매월 1·11·21일 및 평일 09:20) 등록.
-3. [프론트엔드 UI/UX 플레이북 벤토 위젯 & 원클릭 동기화 (`KrMacroIndicatorSection.tsx`)]:
-   - 하단 '수출 주력군 수혜 ETF 플레이북' 벤토 위젯 렌더링 (업종 칩 연동 및 현재 경기 국면 배지).
-   - ETF 카드 3종(티커, 테마, 투자 포인트, 주도 드라이버) 및 클릭 시 `open_etf_detail` 모달 연동.
-   - '텔레그램 속보 발송 & 데이터 갱신' 원클릭 트리거 및 서비스 DB 최신 데이터 동기화 피드백 배지 연동.
-4. [무결성 검증 완료]: 백엔드 pytest 5/5 100% Pass, Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 실시간 인터랙션 및 스크린샷 렌더링 검증 완료.
+✅ Recent: Sprint 37 완료 — [포트폴리오 실질 수출 수혜 노출도(My & TFF 공용) 및 텔레그램 인라인 인터랙션·무역수지 시계열 차트 구축]
+1. [과제 A: 보유 포트폴리오 실질 수출 수혜 노출도 & 경기 적합도 진단 엔진 (`export_exposure.py`)]:
+   - 한국 6대 수출 주력 산업군(반도체, 자동차, 석유화학, 기계, 철강, 바이오/배터리) 기반 포트폴리오 가중치 분해 및 KOSPI 200 투시(Look-through) 모델 탑재.
+   - 통계청 경기선행지수 순환변동치(확장/둔화/회복/수축) 국면과 1위 수출 주력군 편입 비중을 연동한 경기 적합도 점수(Fit Score, 0~100) 및 진단 피드백 산출.
+   - `POST/GET /api/v1/macro/portfolio-export-exposure` 엔드포인트 지원 (`source=my|tff|custom`).
+   - 공용 위젯 `ExportExposureWidget.tsx` 신설 및 `MyDashboard.tsx` 및 `TffDashboard.tsx`('수출 수혜 노출도' 전용 탭 및 개요 하단) 양측 완벽 마운트.
+2. [과제 B: 텔레그램 속보 알림 인라인 키보드 인터랙션 (`kr_macro_notifier.py`, `telegram_bot.py`)]:
+   - 텔레그램 속보 메시지에 `[수혜 ETF 라인업]`, `[내 포트폴리오 노출도]`, `[i-Prism 대시보드]` 인라인 버튼(`reply_markup`) 부착.
+   - `callback_query` 핸들러(`macro_playbook:*`, `macro_exposure:*`) 구현 및 챗봇 원클릭 상세 응답 완성.
+3. [과제 C: 한국은행 무역수지(흑자/적자) 및 순상품교역조건지수 시계열 차트 연동 (`exit_signal.py`, `KrMacroIndicatorSection.tsx`)]:
+   - `GET /api/v1/exit-signal/macro/kr/trade-balance` 및 월별 시계열 데이터에 수입액, 무역수지, 12개월 누적 흑자, 교역조건지수 연동.
+   - 프론트엔드 모드 스위처에 `[무역수지]` 추가 및 흑자(초록)/적자(빨강) 바 차트와 순상품교역조건(라인) 듀얼 Y축 시각화 완성.
+4. [과제 D: TFF 10월 결산 리프레시 및 4분기 연말정산 절세 체크리스트 점검 완료]:
+   - TFF 펀드 팩트시트 모달 및 연말정산 역산 플래너 13월의 월급 시뮬레이터 검증 완료.
+5. [무결성 검증 완료]: 백엔드 pytest 11/11 100% Pass, Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 실시간 인터랙션 및 스크린샷 렌더링 검증 완료.
 
-🚀 Current: Sprint 36 완료 / Session Handoff 준비 단계 (다음 스프린트 대기)
+🚀 Current: Sprint 37 완료 / Session Handoff 준비 단계 (다음 스프린트 대기)
+
+✅ Previous: Sprint 36 완료 — [수출 1위 주력군 수혜 ETF 플레이북 & 텔레그램 속보 자동 알림 + 서비스 DB 실시간 동기화 파이프라인 구축]
 
 ✅ Previous: Sprint 35 완료 — [한국 수출 실적 추이 6대 핵심 업종별(반도체·자동차·화학 등) 누적 스택 및 개별 조회 기능 구축]
 

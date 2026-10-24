@@ -21,6 +21,7 @@ import TffBenchmarkAlphaView from './views/TffBenchmarkAlphaView';
 import TffDcaReinvestmentPlanner from './views/TffDcaReinvestmentPlanner';
 import TffDcaSavingsComparison from './views/TffDcaSavingsComparison';
 import SlidingTabs from '../common/SlidingTabs';
+import ExportExposureWidget from '../ExportExposureWidget';
 
 const LOCAL_STORAGE_KEY = 'tff_fund_data';
 const ESTIMATE_STORAGE_KEY = 'tff_estimate_data';
@@ -41,7 +42,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
     const [rawLog, setRawLog] = useState<any>(null); // 디버깅용 엑셀 원본 JSON
     const [isDragging, setIsDragging] = useState(false);
     const [isParsing, setIsParsing] = useState(false);
-    const [activeSubTab, setActiveSubTab] = useState<'overview'|'cumulative'|'assets'|'ytm'|'monthly'|'alpha'|'dca'|'savings'|'calendar'|'stress'|'ladder'>('overview');
+    const [activeSubTab, setActiveSubTab] = useState<'overview'|'cumulative'|'assets'|'ytm'|'monthly'|'alpha'|'dca'|'savings'|'calendar'|'stress'|'ladder'|'exposure'>('overview');
     const [selectedMonth, setSelectedMonth] = useState<string>(''); // For monthly view filter
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [showFactsheetModal, setShowFactsheetModal] = useState(false);
@@ -729,6 +730,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                 { id: 'calendar', label: '📅 배당·분배금 캘린더' },
                                 { id: 'stress', label: '⚡ 펀드 리스크 & 스트레스' },
                                 { id: 'ladder', label: '🪜 보유 채권 듀레이션' },
+                                { id: 'exposure', label: '🚢 수출 수혜 노출도' },
                             ]}
                             activeId={activeSubTab}
                             onChange={(id) => setActiveSubTab(id as any)}
@@ -923,14 +925,22 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                         {/* Content Area Rendering */}
                         <div className="bg-black/30 rounded-2xl p-2 md:p-3 border border-white/5 min-h-[400px]">
                             {activeSubTab === 'overview' && displayData && (
-                                <OverviewView
-                                    data={displayData}
-                                    contributionHoldings={
-                                        estimateBuilt
-                                            ? (useEstimate ? estimateBuilt.contributionEst : estimateBuilt.contributionBase)
-                                            : undefined
-                                    }
-                                />
+                                <div className="flex flex-col gap-4">
+                                    <OverviewView
+                                        data={displayData}
+                                        contributionHoldings={
+                                            estimateBuilt
+                                                ? (useEstimate ? estimateBuilt.contributionEst : estimateBuilt.contributionBase)
+                                                : undefined
+                                        }
+                                    />
+                                    <ExportExposureWidget
+                                        source="tff"
+                                        holdings={displayData?.monthly?.find((m: any) => m.period === selectedMonth)?.holdings || []}
+                                        title="TFF 펀드 실질 수출 수혜 노출도 & 경기 적합도"
+                                        subtitle="TFF 공동 펀드 편입 자산의 6대 수출 주력 산업군 투시 비중 및 통계청 경기 국면 연동 진단"
+                                    />
+                                </div>
                             )}
 
                             {activeSubTab === 'cumulative' && displayData?.cumulative && (
@@ -1007,6 +1017,15 @@ export default function TffDashboard({ onOpenDetail }: Props) {
 
                             {activeSubTab === 'ladder' && (
                                 <TffBondLadderAnalytics data={displayData} />
+                            )}
+
+                            {activeSubTab === 'exposure' && (
+                                <ExportExposureWidget
+                                    source="tff"
+                                    holdings={displayData?.monthly?.find((m: any) => m.period === selectedMonth)?.holdings || []}
+                                    title="TFF 펀드 실질 수출 수혜 노출도 & 경기 적합도"
+                                    subtitle="TFF 공동 펀드 편입 자산의 6대 수출 주력 산업군 투시 비중 및 통계청 경기 국면 연동 진단"
+                                />
                             )}
                         </div>
                         

@@ -138,14 +138,28 @@ async def sync_and_notify_kr_macro(
         f"🔗 <a href=\"https://i-prism.vercel.app/discover\">i-Prism 실시간 대시보드 바로가기</a>"
     )
 
-    # 6. 텔레그램 발송
+    # 6. 텔레그램 인라인 키보드 조립
+    reply_markup = {
+        "inline_keyboard": [
+            [
+                {"text": f"📈 {top_ind_name} 수혜 ETF 라인업", "callback_data": f"macro_playbook:{top_ind_id}"},
+                {"text": "📊 내 포트폴리오 노출도", "callback_data": "macro_exposure:my"}
+            ],
+            [
+                {"text": "🌐 i-Prism 실시간 대시보드 바로가기", "url": "https://i-prism.vercel.app/discover"}
+            ]
+        ]
+    }
+
+    # 7. 텔레그램 발송
     logger.info(f"[KR Macro Notifier] Sending flash alert for {date_key} (force={force})...")
     ok, err_msg = await send_telegram_message(
         text=html_msg,
         force=True if is_test else force,
         category="exit_signal",
         test_token=test_token,
-        test_chat_id=test_chat_id
+        test_chat_id=test_chat_id,
+        reply_markup=reply_markup
     )
 
     if ok:

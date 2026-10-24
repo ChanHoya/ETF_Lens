@@ -1,4 +1,5 @@
 'use client';
+// 연말정산 절세 혜택 역산 및 잔여 공제 한도 시뮬레이션 플래너 컴포넌트
 
 import React, { useState, useMemo } from 'react';
 import {
