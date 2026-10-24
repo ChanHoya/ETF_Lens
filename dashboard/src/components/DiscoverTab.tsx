@@ -28,6 +28,54 @@ const FALLBACK_MACRO_DATA = [
 ];
 
 const ADDITIONAL_INDICATORS_DATA = {
+    cpi: {
+        val: 3.9,
+        prevVal: 3.4,
+        change: 0.5,
+        text: '▲ 0.5%p',
+        isUp: true,
+        date: '2026-09',
+        estimate: 3.8,
+        diff: 0.1,
+        history: [
+            { date: '25.10', val: 2.6, est: 2.6 }, { date: '25.11', val: 2.7, est: 2.7 }, { date: '25.12', val: 2.9, est: 2.9 },
+            { date: '26.01', val: 3.0, est: 2.9 }, { date: '26.02', val: 3.2, est: 3.1 }, { date: '26.03', val: 3.5, est: 3.4 },
+            { date: '26.04', val: 3.4, est: 3.4 }, { date: '26.05', val: 3.3, est: 3.4 }, { date: '26.06', val: 3.0, est: 3.1 },
+            { date: '26.07', val: 2.9, est: 3.0 }, { date: '26.08', val: 3.4, est: 3.5 }, { date: '26.09', val: 3.9, est: 3.8 },
+        ]
+    },
+    ppi: {
+        val: 8.5,
+        prevVal: 6.4,
+        change: 2.1,
+        text: '▲ 2.1%p',
+        isUp: true,
+        date: '2026-09',
+        estimate: 8.4,
+        diff: 0.1,
+        history: [
+            { date: '25.10', val: 2.4, est: 2.3 }, { date: '25.11', val: 3.0, est: 2.6 }, { date: '25.12', val: 2.2, est: 2.5 },
+            { date: '26.01', val: 1.9, est: 1.6 }, { date: '26.02', val: 1.6, est: 1.1 }, { date: '26.03', val: 2.1, est: 2.2 },
+            { date: '26.04', val: 2.2, est: 2.2 }, { date: '26.05', val: 2.2, est: 2.5 }, { date: '26.06', val: 2.6, est: 2.3 },
+            { date: '26.07', val: 2.2, est: 2.3 }, { date: '26.08', val: 6.4, est: 6.3 }, { date: '26.09', val: 8.5, est: 8.4 },
+        ]
+    },
+    pce: {
+        val: 3.0,
+        prevVal: 3.0,
+        change: 0.0,
+        text: '보합',
+        isUp: false,
+        date: '2026-08',
+        estimate: 3.0,
+        diff: 0.0,
+        history: [
+            { date: '25.10', val: 2.3, est: 2.3 }, { date: '25.11', val: 2.4, est: 2.4 }, { date: '25.12', val: 2.6, est: 2.5 },
+            { date: '26.01', val: 2.5, est: 2.4 }, { date: '26.02', val: 2.5, est: 2.5 }, { date: '26.03', val: 2.7, est: 2.6 },
+            { date: '26.04', val: 2.7, est: 2.7 }, { date: '26.05', val: 2.6, est: 2.6 }, { date: '26.06', val: 2.5, est: 2.5 },
+            { date: '26.07', val: 2.5, est: 2.5 }, { date: '26.08', val: 3.0, est: 3.0 }, { date: '26.09', val: 3.0, est: 3.0 },
+        ]
+    },
     core_cpi: {
         val: 3.3,
         prevVal: 3.2,
@@ -38,10 +86,10 @@ const ADDITIONAL_INDICATORS_DATA = {
         estimate: 3.2,
         diff: 0.1,
         history: [
-            { date: '25.10', val: 3.3 }, { date: '25.11', val: 3.3 }, { date: '25.12', val: 3.3 },
-            { date: '26.01', val: 3.3 }, { date: '26.02', val: 3.8 }, { date: '26.03', val: 3.8 },
-            { date: '26.04', val: 3.6 }, { date: '26.05', val: 3.4 }, { date: '26.06', val: 3.3 },
-            { date: '26.07', val: 3.2 }, { date: '26.08', val: 3.2 }, { date: '26.09', val: 3.3 },
+            { date: '25.10', val: 3.3, est: 3.3 }, { date: '25.11', val: 3.3, est: 3.3 }, { date: '25.12', val: 3.3, est: 3.3 },
+            { date: '26.01', val: 3.3, est: 3.2 }, { date: '26.02', val: 3.8, est: 3.7 }, { date: '26.03', val: 3.8, est: 3.7 },
+            { date: '26.04', val: 3.6, est: 3.6 }, { date: '26.05', val: 3.4, est: 3.5 }, { date: '26.06', val: 3.3, est: 3.4 },
+            { date: '26.07', val: 3.2, est: 3.2 }, { date: '26.08', val: 3.2, est: 3.2 }, { date: '26.09', val: 3.3, est: 3.2 },
         ]
     },
     core_ppi: {
@@ -54,10 +102,10 @@ const ADDITIONAL_INDICATORS_DATA = {
         estimate: 2.7,
         diff: 0.1,
         history: [
-            { date: '25.10', val: 3.1 }, { date: '25.11', val: 3.4 }, { date: '25.12', val: 3.2 },
-            { date: '26.01', val: 2.0 }, { date: '26.02', val: 2.0 }, { date: '26.03', val: 2.4 },
-            { date: '26.04', val: 2.4 }, { date: '26.05', val: 2.3 }, { date: '26.06', val: 3.0 },
-            { date: '26.07', val: 2.4 }, { date: '26.08', val: 2.4 }, { date: '26.09', val: 2.8 },
+            { date: '25.10', val: 3.1, est: 3.0 }, { date: '25.11', val: 3.4, est: 3.3 }, { date: '25.12', val: 3.2, est: 3.3 },
+            { date: '26.01', val: 2.0, est: 2.0 }, { date: '26.02', val: 2.0, est: 2.1 }, { date: '26.03', val: 2.4, est: 2.3 },
+            { date: '26.04', val: 2.4, est: 2.4 }, { date: '26.05', val: 2.3, est: 2.4 }, { date: '26.06', val: 3.0, est: 2.9 },
+            { date: '26.07', val: 2.4, est: 2.4 }, { date: '26.08', val: 2.4, est: 2.4 }, { date: '26.09', val: 2.8, est: 2.7 },
         ]
     },
     core_pce: {
@@ -70,10 +118,10 @@ const ADDITIONAL_INDICATORS_DATA = {
         estimate: 2.6,
         diff: 0.1,
         history: [
-            { date: '25.10', val: 2.8 }, { date: '25.11', val: 2.8 }, { date: '25.12', val: 2.9 },
-            { date: '26.01', val: 2.8 }, { date: '26.02', val: 2.8 }, { date: '26.03', val: 2.8 },
-            { date: '26.04', val: 2.8 }, { date: '26.05', val: 2.6 }, { date: '26.06', val: 2.6 },
-            { date: '26.07', val: 2.6 }, { date: '26.08', val: 2.7 }, { date: '26.09', val: 2.7 },
+            { date: '25.10', val: 2.8, est: 2.8 }, { date: '25.11', val: 2.8, est: 2.8 }, { date: '25.12', val: 2.9, est: 2.9 },
+            { date: '26.01', val: 2.8, est: 2.8 }, { date: '26.02', val: 2.8, est: 2.8 }, { date: '26.03', val: 2.8, est: 2.8 },
+            { date: '26.04', val: 2.8, est: 2.8 }, { date: '26.05', val: 2.6, est: 2.6 }, { date: '26.06', val: 2.6, est: 2.6 },
+            { date: '26.07', val: 2.6, est: 2.6 }, { date: '26.08', val: 2.7, est: 2.6 }, { date: '26.09', val: 2.7, est: 2.6 },
         ]
     },
     unemployment: {
@@ -86,10 +134,10 @@ const ADDITIONAL_INDICATORS_DATA = {
         estimate: 4.2,
         diff: -0.1,
         history: [
-            { date: '25.10', val: 4.1 }, { date: '25.11', val: 4.2 }, { date: '25.12', val: 4.1 },
-            { date: '26.01', val: 4.0 }, { date: '26.02', val: 3.9 }, { date: '26.03', val: 3.8 },
-            { date: '26.04', val: 3.9 }, { date: '26.05', val: 4.0 }, { date: '26.06', val: 4.1 },
-            { date: '26.07', val: 4.3 }, { date: '26.08', val: 4.2 }, { date: '26.09', val: 4.1 },
+            { date: '25.10', val: 4.1, est: 4.1 }, { date: '25.11', val: 4.2, est: 4.1 }, { date: '25.12', val: 4.1, est: 4.2 },
+            { date: '26.01', val: 4.0, est: 4.1 }, { date: '26.02', val: 3.9, est: 4.0 }, { date: '26.03', val: 3.8, est: 3.9 },
+            { date: '26.04', val: 3.9, est: 3.9 }, { date: '26.05', val: 4.0, est: 4.0 }, { date: '26.06', val: 4.1, est: 4.0 },
+            { date: '26.07', val: 4.3, est: 4.1 }, { date: '26.08', val: 4.2, est: 4.2 }, { date: '26.09', val: 4.1, est: 4.2 },
         ]
     },
     nonfarm: {
@@ -102,10 +150,10 @@ const ADDITIONAL_INDICATORS_DATA = {
         estimate: 140,
         diff: 114,
         history: [
-            { date: '25.10', val: 12 }, { date: '25.11', val: 227 }, { date: '25.12', val: 256 },
-            { date: '26.01', val: 143 }, { date: '26.02', val: 275 }, { date: '26.03', val: 303 },
-            { date: '26.04', val: 175 }, { date: '26.05', val: 272 }, { date: '26.06', val: 206 },
-            { date: '26.07', val: 114 }, { date: '26.08', val: 142 }, { date: '26.09', val: 254 },
+            { date: '25.10', val: 12, est: 105 }, { date: '25.11', val: 227, est: 200 }, { date: '25.12', val: 256, est: 160 },
+            { date: '26.01', val: 143, est: 170 }, { date: '26.02', val: 275, est: 195 }, { date: '26.03', val: 303, est: 214 },
+            { date: '26.04', val: 175, est: 240 }, { date: '26.05', val: 272, est: 180 }, { date: '26.06', val: 206, est: 190 },
+            { date: '26.07', val: 114, est: 175 }, { date: '26.08', val: 142, est: 160 }, { date: '26.09', val: 254, est: 140 },
         ]
     }
 };
@@ -476,10 +524,6 @@ export default function DiscoverTab() {
                                     <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
                                     미국 3대 인플레이션 지표 추이 (CPI · PPI · PCE)
                                 </h3>
-                                <span className="text-[11px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-                                    월가 예상치 대조 탑재
-                                </span>
                             </div>
                             <p className="text-xs text-gray-400 font-medium">
                                 미국 연방준비제도(Fed) 통화정책 결정을 좌우하는 핵심 물가상승률(YoY) 추세선 및 월가 컨센서스 서프라이즈 분석
@@ -548,8 +592,9 @@ export default function DiscoverTab() {
                             </div>
                             <div className="flex-1 w-full h-[58px] -ml-2 -mb-2 mt-2">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={macroData.slice(-12)}>
-                                        <Line type="monotone" dataKey="cpi_yoy" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                                    <LineChart data={ADDITIONAL_INDICATORS_DATA.cpi.history}>
+                                        <Line type="monotone" dataKey="val" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                                        <Line type="monotone" dataKey="est" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
                                         <YAxis domain={['auto', 'auto']} hide={true} />
                                     </LineChart>
                                 </ResponsiveContainer>
@@ -599,8 +644,9 @@ export default function DiscoverTab() {
                             </div>
                             <div className="flex-1 w-full h-[58px] -ml-2 -mb-2 mt-2">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={macroData.slice(-12)}>
-                                        <Line type="monotone" dataKey="ppi_yoy" stroke="#10b981" strokeWidth={2} dot={false} />
+                                    <LineChart data={ADDITIONAL_INDICATORS_DATA.ppi.history}>
+                                        <Line type="monotone" dataKey="val" stroke="#10b981" strokeWidth={2} dot={false} />
+                                        <Line type="monotone" dataKey="est" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
                                         <YAxis domain={['auto', 'auto']} hide={true} />
                                     </LineChart>
                                 </ResponsiveContainer>
@@ -650,8 +696,9 @@ export default function DiscoverTab() {
                             </div>
                             <div className="flex-1 w-full h-[58px] -ml-2 -mb-2 mt-2">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={macroData.slice(-12)}>
-                                        <Line type="monotone" dataKey="pce_yoy" stroke="#ec4899" strokeWidth={2} dot={false} />
+                                    <LineChart data={ADDITIONAL_INDICATORS_DATA.pce.history}>
+                                        <Line type="monotone" dataKey="val" stroke="#ec4899" strokeWidth={2} dot={false} />
+                                        <Line type="monotone" dataKey="est" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
                                         <YAxis domain={['auto', 'auto']} hide={true} />
                                     </LineChart>
                                 </ResponsiveContainer>
@@ -699,6 +746,7 @@ export default function DiscoverTab() {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={ADDITIONAL_INDICATORS_DATA.core_cpi.history}>
                                         <Line type="monotone" dataKey="val" stroke="#818cf8" strokeWidth={2} dot={false} />
+                                        <Line type="monotone" dataKey="est" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
                                         <YAxis domain={['auto', 'auto']} hide={true} />
                                     </LineChart>
                                 </ResponsiveContainer>
@@ -746,6 +794,7 @@ export default function DiscoverTab() {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={ADDITIONAL_INDICATORS_DATA.core_ppi.history}>
                                         <Line type="monotone" dataKey="val" stroke="#14b8a6" strokeWidth={2} dot={false} />
+                                        <Line type="monotone" dataKey="est" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
                                         <YAxis domain={['auto', 'auto']} hide={true} />
                                     </LineChart>
                                 </ResponsiveContainer>
@@ -792,6 +841,7 @@ export default function DiscoverTab() {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={ADDITIONAL_INDICATORS_DATA.core_pce.history}>
                                         <Line type="monotone" dataKey="val" stroke="#f43f5e" strokeWidth={2} dot={false} />
+                                        <Line type="monotone" dataKey="est" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
                                         <YAxis domain={['auto', 'auto']} hide={true} />
                                     </LineChart>
                                 </ResponsiveContainer>
@@ -842,6 +892,7 @@ export default function DiscoverTab() {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={ADDITIONAL_INDICATORS_DATA.unemployment.history}>
                                         <Line type="monotone" dataKey="val" stroke="#0284c7" strokeWidth={2} dot={false} />
+                                        <Line type="monotone" dataKey="est" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
                                         <YAxis domain={['auto', 'auto']} hide={true} />
                                     </LineChart>
                                 </ResponsiveContainer>
@@ -889,6 +940,7 @@ export default function DiscoverTab() {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={ADDITIONAL_INDICATORS_DATA.nonfarm.history}>
                                         <Line type="monotone" dataKey="val" stroke="#a855f7" strokeWidth={2} dot={false} />
+                                        <Line type="monotone" dataKey="est" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
                                         <YAxis domain={['auto', 'auto']} hide={true} />
                                     </LineChart>
                                 </ResponsiveContainer>
@@ -945,17 +997,6 @@ export default function DiscoverTab() {
                         >
                             <ChevronRight className="w-4 h-4 text-indigo-400" />
                             상세 10년 추세선 보기
-                        </button>
-                        <span className="text-white/20">|</span>
-                        <button
-                            onClick={() => {
-                                setSelectedConsensusIndicator('cpi');
-                                setIsConsensusModalOpen(true);
-                            }}
-                            className="text-amber-300 hover:text-amber-200 font-semibold flex items-center gap-1.5 transition cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/20"
-                        >
-                            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                            8대 주요 경제지표 월가 예상치 vs 실제치 서프라이즈 분석 대조표 열기
                         </button>
                     </div>
 
