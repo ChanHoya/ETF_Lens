@@ -497,42 +497,42 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                         onClick={() => {
                             setSelectedManualAsset(null);
                             setIsAssetModalOpen(true);
                         }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 hover:scale-105 active:scale-95"
+                        className="flex items-center gap-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-semibold transition-all shadow-md shadow-indigo-600/20 active:scale-95"
                     >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="w-3 h-3" />
                         <span>+ 타 증권사 다중 자산 추가</span>
                     </button>
 
                     <button
                         onClick={() => setIsCashModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-emerald-400 rounded-xl text-xs font-medium transition-all hover:border-emerald-500/30"
+                        className="flex items-center gap-1 px-2.5 py-1 bg-white/5 hover:bg-white/10 border border-white/10 text-emerald-400 rounded-lg text-[11px] font-semibold transition-all hover:border-emerald-500/30"
                     >
-                        <DollarSign className="w-3.5 h-3.5" />
+                        <DollarSign className="w-3 h-3" />
                         <span>예수금 관리</span>
                     </button>
 
                     <button
                         onClick={() => setIsMappingModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 rounded-xl text-xs font-medium transition-all"
+                        className="flex items-center gap-1 px-2.5 py-1 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 rounded-lg text-[11px] font-semibold transition-all"
                         title="KIS 연동 계좌 카테고리 매핑"
                     >
-                        <Settings2 className="w-3.5 h-3.5" />
+                        <Settings2 className="w-3 h-3" />
                         <span className="hidden md:inline">KIS 매핑</span>
                     </button>
 
                     <button
                         onClick={() => fetchIntegratedData(true)}
                         disabled={isRefreshing}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-xl text-xs font-medium text-indigo-300 transition-all disabled:opacity-50"
+                        className="flex items-center gap-1 px-2.5 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-lg text-[11px] font-semibold text-indigo-300 transition-all disabled:opacity-50"
                         title="실시간 시세 새로고침"
                     >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+                        <RefreshCw className={`w-3 h-3 ${isRefreshing ? "animate-spin" : ""}`} />
                         <span className="hidden sm:inline">{isRefreshing ? "갱신중..." : "시세 갱신"}</span>
                     </button>
                 </div>
@@ -686,9 +686,9 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setIsAccountDashboardOpen(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95"
+                            className="flex items-center gap-1 px-2.5 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-lg text-[11px] font-semibold transition-all active:scale-95"
                         >
-                            <PieChart className="w-3.5 h-3.5" />
+                            <PieChart className="w-3 h-3" />
                             <span className="hidden sm:inline">대시보드 보기</span>
                         </button>
                         <span className="text-[11px] text-gray-400 hidden sm:inline">
@@ -874,12 +874,12 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-2 w-full md:w-auto">
+                    <div className="flex items-center gap-1.5 w-full md:w-auto">
                         <button
                             onClick={() => setIsHoldingsDashboardOpen(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95"
+                            className="flex items-center gap-1 px-2.5 py-1 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-lg text-[11px] font-semibold transition-all active:scale-95"
                         >
-                            <PieChart className="w-3.5 h-3.5" />
+                            <PieChart className="w-3 h-3" />
                             <span className="hidden sm:inline">대시보드 보기</span>
                         </button>
 
@@ -889,18 +889,18 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="종목명, 티커, 금융사 검색..."
-                            className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 w-full md:w-48"
+                            className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 w-full md:w-44"
                         />
                     </div>
                 </div>
 
                 {/* Filter Tabs */}
-                <div className="px-5 py-2.5 border-b border-white/5 flex gap-1.5 overflow-x-auto bg-black/20">
+                <div className="px-4 py-2 border-b border-white/5 flex gap-1 overflow-x-auto bg-black/20">
                     <button
                         onClick={() => setActiveTab("ALL")}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all ${
                             activeTab === "ALL"
-                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+                                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-semibold"
                                 : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
                         }`}
                     >
@@ -914,13 +914,13 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
                             <button
                                 key={b.category_name}
                                 onClick={() => setActiveTab(b.category_name)}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all ${
                                     activeTab === b.category_name
-                                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+                                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-semibold"
                                         : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
                                 }`}
                             >
-                                <span>{icon}</span>
+                                <span className="text-xs">{icon}</span>
                                 <span>{b.category_name}</span>
                                 <span className="text-[10px] opacity-70">({count})</span>
                             </button>
