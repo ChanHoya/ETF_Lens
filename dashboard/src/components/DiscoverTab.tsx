@@ -27,6 +27,89 @@ const FALLBACK_MACRO_DATA = [
     { "date": "2025-02", "cpi_yoy": 2.3, "ppi_yoy": 1.5, "pce_yoy": 2.0 }
 ];
 
+const ADDITIONAL_INDICATORS_DATA = {
+    core_cpi: {
+        val: 3.3,
+        prevVal: 3.2,
+        change: 0.1,
+        text: '▲ 0.1%p',
+        isUp: true,
+        date: '2026-09',
+        estimate: 3.2,
+        diff: 0.1,
+        history: [
+            { date: '25.10', val: 3.3 }, { date: '25.11', val: 3.3 }, { date: '25.12', val: 3.3 },
+            { date: '26.01', val: 3.3 }, { date: '26.02', val: 3.8 }, { date: '26.03', val: 3.8 },
+            { date: '26.04', val: 3.6 }, { date: '26.05', val: 3.4 }, { date: '26.06', val: 3.3 },
+            { date: '26.07', val: 3.2 }, { date: '26.08', val: 3.2 }, { date: '26.09', val: 3.3 },
+        ]
+    },
+    core_ppi: {
+        val: 2.8,
+        prevVal: 2.4,
+        change: 0.4,
+        text: '▲ 0.4%p',
+        isUp: true,
+        date: '2026-09',
+        estimate: 2.7,
+        diff: 0.1,
+        history: [
+            { date: '25.10', val: 3.1 }, { date: '25.11', val: 3.4 }, { date: '25.12', val: 3.2 },
+            { date: '26.01', val: 2.0 }, { date: '26.02', val: 2.0 }, { date: '26.03', val: 2.4 },
+            { date: '26.04', val: 2.4 }, { date: '26.05', val: 2.3 }, { date: '26.06', val: 3.0 },
+            { date: '26.07', val: 2.4 }, { date: '26.08', val: 2.4 }, { date: '26.09', val: 2.8 },
+        ]
+    },
+    core_pce: {
+        val: 2.7,
+        prevVal: 2.7,
+        change: 0.0,
+        text: '보합',
+        isUp: false,
+        date: '2026-09',
+        estimate: 2.6,
+        diff: 0.1,
+        history: [
+            { date: '25.10', val: 2.8 }, { date: '25.11', val: 2.8 }, { date: '25.12', val: 2.9 },
+            { date: '26.01', val: 2.8 }, { date: '26.02', val: 2.8 }, { date: '26.03', val: 2.8 },
+            { date: '26.04', val: 2.8 }, { date: '26.05', val: 2.6 }, { date: '26.06', val: 2.6 },
+            { date: '26.07', val: 2.6 }, { date: '26.08', val: 2.7 }, { date: '26.09', val: 2.7 },
+        ]
+    },
+    unemployment: {
+        val: 4.1,
+        prevVal: 4.2,
+        change: -0.1,
+        text: '▼ 0.1%p',
+        isUp: false,
+        date: '2026-09',
+        estimate: 4.2,
+        diff: -0.1,
+        history: [
+            { date: '25.10', val: 4.1 }, { date: '25.11', val: 4.2 }, { date: '25.12', val: 4.1 },
+            { date: '26.01', val: 4.0 }, { date: '26.02', val: 3.9 }, { date: '26.03', val: 3.8 },
+            { date: '26.04', val: 3.9 }, { date: '26.05', val: 4.0 }, { date: '26.06', val: 4.1 },
+            { date: '26.07', val: 4.3 }, { date: '26.08', val: 4.2 }, { date: '26.09', val: 4.1 },
+        ]
+    },
+    nonfarm: {
+        val: 254,
+        prevVal: 142,
+        change: 112,
+        text: '▲ 112k',
+        isUp: true,
+        date: '2026-09',
+        estimate: 140,
+        diff: 114,
+        history: [
+            { date: '25.10', val: 12 }, { date: '25.11', val: 227 }, { date: '25.12', val: 256 },
+            { date: '26.01', val: 143 }, { date: '26.02', val: 275 }, { date: '26.03', val: 303 },
+            { date: '26.04', val: 175 }, { date: '26.05', val: 272 }, { date: '26.06', val: 206 },
+            { date: '26.07', val: 114 }, { date: '26.08', val: 142 }, { date: '26.09', val: 254 },
+        ]
+    }
+};
+
 export default function DiscoverTab() {
     const [macroData, setMacroData] = useState<any[]>(FALLBACK_MACRO_DATA);
     const [loading, setLoading] = useState<boolean>(true);
@@ -424,9 +507,9 @@ export default function DiscoverTab() {
                         </div>
                     </div>
 
-                    {/* Stats Dashboard Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
-                        {/* CPI Card */}
+                    {/* Stats Dashboard Grid: 물가 & 생산자 & 개인소비 (상단 헤드라인 vs 하단 근원 Core 상하 배치) */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        {/* 1열 상단: CPI Card */}
                         <div 
                             onClick={() => {
                                 setSelectedConsensusIndicator('cpi');
@@ -437,7 +520,10 @@ export default function DiscoverTab() {
                             <div className="absolute top-0 left-0 w-1 h-full bg-[#3b82f6]" />
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <span className="text-xs font-semibold text-gray-400">소비자물가지수 (CPI YoY)</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-semibold text-gray-400">소비자물가지수 (CPI YoY)</span>
+                                        <span className="text-[9px] font-semibold text-blue-400 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20">헤드라인</span>
+                                    </div>
                                     <h4 className="text-2xl font-black text-white mt-1 font-mono tracking-tight group-hover:text-[#3b82f6] transition-colors duration-300">
                                         {cpiInfo.val !== null ? `${cpiInfo.val.toFixed(1)}%` : 'N/A'}
                                     </h4>
@@ -460,7 +546,7 @@ export default function DiscoverTab() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex-1 w-full h-[60px] -ml-2 -mb-2 mt-2">
+                            <div className="flex-1 w-full h-[58px] -ml-2 -mb-2 mt-2">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={macroData.slice(-12)}>
                                         <Line type="monotone" dataKey="cpi_yoy" stroke="#3b82f6" strokeWidth={2} dot={false} />
@@ -474,7 +560,7 @@ export default function DiscoverTab() {
                             </div>
                         </div>
 
-                        {/* PPI Card */}
+                        {/* 2열 상단: PPI Card */}
                         <div 
                             onClick={() => {
                                 setSelectedConsensusIndicator('ppi');
@@ -485,7 +571,10 @@ export default function DiscoverTab() {
                             <div className="absolute top-0 left-0 w-1 h-full bg-[#10b981]" />
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <span className="text-xs font-semibold text-gray-400">생산자물가지수 (PPI YoY)</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-semibold text-gray-400">생산자물가지수 (PPI YoY)</span>
+                                        <span className="text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">헤드라인</span>
+                                    </div>
                                     <h4 className="text-2xl font-black text-white mt-1 font-mono tracking-tight group-hover:text-[#10b981] transition-colors duration-300">
                                         {ppiInfo.val !== null ? `${ppiInfo.val.toFixed(1)}%` : 'N/A'}
                                     </h4>
@@ -508,7 +597,7 @@ export default function DiscoverTab() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex-1 w-full h-[60px] -ml-2 -mb-2 mt-2">
+                            <div className="flex-1 w-full h-[58px] -ml-2 -mb-2 mt-2">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={macroData.slice(-12)}>
                                         <Line type="monotone" dataKey="ppi_yoy" stroke="#10b981" strokeWidth={2} dot={false} />
@@ -522,7 +611,7 @@ export default function DiscoverTab() {
                             </div>
                         </div>
 
-                        {/* PCE Card */}
+                        {/* 3열 상단: PCE Card */}
                         <div 
                             onClick={() => {
                                 setSelectedConsensusIndicator('pce');
@@ -533,7 +622,10 @@ export default function DiscoverTab() {
                             <div className="absolute top-0 left-0 w-1 h-full bg-[#ec4899]" />
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <span className="text-xs font-semibold text-gray-400">개인소비지출 (PCE YoY)</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-semibold text-gray-400">개인소비지출 (PCE YoY)</span>
+                                        <span className="text-[9px] font-semibold text-pink-400 bg-pink-500/10 px-1.5 py-0.2 rounded border border-pink-500/20">연준기준</span>
+                                    </div>
                                     <h4 className="text-2xl font-black text-white mt-1 font-mono tracking-tight group-hover:text-[#ec4899] transition-colors duration-300">
                                         {pceInfo.val !== null ? `${pceInfo.val.toFixed(1)}%` : 'N/A'}
                                     </h4>
@@ -556,7 +648,7 @@ export default function DiscoverTab() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex-1 w-full h-[60px] -ml-2 -mb-2 mt-2">
+                            <div className="flex-1 w-full h-[58px] -ml-2 -mb-2 mt-2">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={macroData.slice(-12)}>
                                         <Line type="monotone" dataKey="pce_yoy" stroke="#ec4899" strokeWidth={2} dot={false} />
@@ -567,6 +659,276 @@ export default function DiscoverTab() {
                             <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2">
                                 <span className="text-[10px] text-gray-500">이전 달: {pceInfo.prevVal !== null ? `${pceInfo.prevVal.toFixed(1)}%` : 'N/A'}</span>
                                 <span className="text-[10px] text-gray-500 font-mono">{pceInfo.date || ''} 기준</span>
+                            </div>
+                        </div>
+
+                        {/* 1열 하단: Core CPI Card (CPI 바로 아래에 배치) */}
+                        <div 
+                            onClick={() => {
+                                setSelectedConsensusIndicator('core_cpi');
+                                setIsConsensusModalOpen(true);
+                            }} 
+                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/50 to-[#121217]/70 border border-indigo-500/20 hover:border-indigo-500/50 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:shadow-indigo-500/10 transition-all duration-300"
+                        >
+                            <div className="absolute top-0 left-0 w-1 h-full bg-[#818cf8]" />
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-semibold text-gray-300">근원 소비자물가지수 (Core CPI)</span>
+                                        <span className="text-[9px] font-semibold text-indigo-300 bg-indigo-500/20 px-1.5 py-0.2 rounded border border-indigo-500/30">식품·에너지 제외</span>
+                                    </div>
+                                    <h4 className="text-2xl font-black text-white mt-1 font-mono tracking-tight group-hover:text-[#818cf8] transition-colors duration-300">
+                                        {ADDITIONAL_INDICATORS_DATA.core_cpi.val.toFixed(1)}%
+                                    </h4>
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5">
+                                    <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/20">
+                                        <TrendingUp className="w-3 h-3" />
+                                        <span>{ADDITIONAL_INDICATORS_DATA.core_cpi.text}</span>
+                                    </div>
+                                    <div 
+                                        className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 transition"
+                                        title="월가 예상치 3.2% 대비 +0.1%p 상회"
+                                    >
+                                        <span>예상 {ADDITIONAL_INDICATORS_DATA.core_cpi.estimate}%</span>
+                                        <span className="text-rose-400 font-bold">(+{ADDITIONAL_INDICATORS_DATA.core_cpi.diff}%p)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex-1 w-full h-[58px] -ml-2 -mb-2 mt-2">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={ADDITIONAL_INDICATORS_DATA.core_cpi.history}>
+                                        <Line type="monotone" dataKey="val" stroke="#818cf8" strokeWidth={2} dot={false} />
+                                        <YAxis domain={['auto', 'auto']} hide={true} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2">
+                                <span className="text-[10px] text-gray-500">이전 달: {ADDITIONAL_INDICATORS_DATA.core_cpi.prevVal.toFixed(1)}%</span>
+                                <span className="text-[10px] text-gray-500 font-mono">{ADDITIONAL_INDICATORS_DATA.core_cpi.date} 기준</span>
+                            </div>
+                        </div>
+
+                        {/* 2열 하단: Core PPI Card (PPI 바로 아래에 배치) */}
+                        <div 
+                            onClick={() => {
+                                setSelectedConsensusIndicator('core_ppi');
+                                setIsConsensusModalOpen(true);
+                            }} 
+                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/50 to-[#121217]/70 border border-teal-500/20 hover:border-teal-500/50 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:shadow-teal-500/10 transition-all duration-300"
+                        >
+                            <div className="absolute top-0 left-0 w-1 h-full bg-[#14b8a6]" />
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-semibold text-gray-300">근원 생산자물가지수 (Core PPI)</span>
+                                        <span className="text-[9px] font-semibold text-teal-300 bg-teal-500/20 px-1.5 py-0.2 rounded border border-teal-500/30">식품·에너지 제외</span>
+                                    </div>
+                                    <h4 className="text-2xl font-black text-white mt-1 font-mono tracking-tight group-hover:text-[#14b8a6] transition-colors duration-300">
+                                        {ADDITIONAL_INDICATORS_DATA.core_ppi.val.toFixed(1)}%
+                                    </h4>
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5">
+                                    <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/20">
+                                        <TrendingUp className="w-3 h-3" />
+                                        <span>{ADDITIONAL_INDICATORS_DATA.core_ppi.text}</span>
+                                    </div>
+                                    <div 
+                                        className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 transition"
+                                        title="월가 예상치 2.7% 대비 +0.1%p 상회"
+                                    >
+                                        <span>예상 {ADDITIONAL_INDICATORS_DATA.core_ppi.estimate}%</span>
+                                        <span className="text-rose-400 font-bold">(+{ADDITIONAL_INDICATORS_DATA.core_ppi.diff}%p)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex-1 w-full h-[58px] -ml-2 -mb-2 mt-2">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={ADDITIONAL_INDICATORS_DATA.core_ppi.history}>
+                                        <Line type="monotone" dataKey="val" stroke="#14b8a6" strokeWidth={2} dot={false} />
+                                        <YAxis domain={['auto', 'auto']} hide={true} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2">
+                                <span className="text-[10px] text-gray-500">이전 달: {ADDITIONAL_INDICATORS_DATA.core_ppi.prevVal.toFixed(1)}%</span>
+                                <span className="text-[10px] text-gray-500 font-mono">{ADDITIONAL_INDICATORS_DATA.core_ppi.date} 기준</span>
+                            </div>
+                        </div>
+
+                        {/* 3열 하단: Core PCE Card (PCE 바로 아래에 배치) */}
+                        <div 
+                            onClick={() => {
+                                setSelectedConsensusIndicator('core_pce');
+                                setIsConsensusModalOpen(true);
+                            }} 
+                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/50 to-[#121217]/70 border border-rose-500/20 hover:border-rose-500/50 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:shadow-rose-500/10 transition-all duration-300"
+                        >
+                            <div className="absolute top-0 left-0 w-1 h-full bg-[#f43f5e]" />
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-semibold text-gray-300">근원 개인소비지출 (Core PCE)</span>
+                                        <span className="text-[9px] font-semibold text-rose-300 bg-rose-500/20 px-1.5 py-0.2 rounded border border-rose-500/30">연준 최우선</span>
+                                    </div>
+                                    <h4 className="text-2xl font-black text-white mt-1 font-mono tracking-tight group-hover:text-[#f43f5e] transition-colors duration-300">
+                                        {ADDITIONAL_INDICATORS_DATA.core_pce.val.toFixed(1)}%
+                                    </h4>
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5">
+                                    <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/5 text-gray-400 border border-white/5">
+                                        <span>{ADDITIONAL_INDICATORS_DATA.core_pce.text}</span>
+                                    </div>
+                                    <div 
+                                        className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 transition"
+                                        title="월가 예상치 2.6% 대비 +0.1%p 상회"
+                                    >
+                                        <span>예상 {ADDITIONAL_INDICATORS_DATA.core_pce.estimate}%</span>
+                                        <span className="text-rose-400 font-bold">(+{ADDITIONAL_INDICATORS_DATA.core_pce.diff}%p)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex-1 w-full h-[58px] -ml-2 -mb-2 mt-2">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={ADDITIONAL_INDICATORS_DATA.core_pce.history}>
+                                        <Line type="monotone" dataKey="val" stroke="#f43f5e" strokeWidth={2} dot={false} />
+                                        <YAxis domain={['auto', 'auto']} hide={true} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2">
+                                <span className="text-[10px] text-gray-500">이전 달: {ADDITIONAL_INDICATORS_DATA.core_pce.prevVal.toFixed(1)}%</span>
+                                <span className="text-[10px] text-gray-500 font-mono">{ADDITIONAL_INDICATORS_DATA.core_pce.date} 기준</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 추가 지표: 미국 핵심 고용 지표 (실업률 & 민간고용) 및 Fed 정책 영향 종합 */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2 pt-3 border-t border-white/10">
+                        {/* 1열: 실업률 (Unemployment Rate) */}
+                        <div 
+                            onClick={() => {
+                                setSelectedConsensusIndicator('unemployment');
+                                setIsConsensusModalOpen(true);
+                            }} 
+                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-sky-500/20 hover:border-sky-500/50 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:shadow-sky-500/10 transition-all duration-300"
+                        >
+                            <div className="absolute top-0 left-0 w-1 h-full bg-[#0284c7]" />
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-semibold text-gray-400">실업률 (Unemployment)</span>
+                                        <span className="text-[9px] font-semibold text-sky-400 bg-sky-500/10 px-1.5 py-0.2 rounded border border-sky-500/20">노동부</span>
+                                    </div>
+                                    <h4 className="text-2xl font-black text-white mt-1 font-mono tracking-tight group-hover:text-[#0284c7] transition-colors duration-300">
+                                        {ADDITIONAL_INDICATORS_DATA.unemployment.val.toFixed(1)}%
+                                    </h4>
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5">
+                                    <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                                        <TrendingDown className="w-3 h-3" />
+                                        <span>{ADDITIONAL_INDICATORS_DATA.unemployment.text}</span>
+                                    </div>
+                                    <div 
+                                        className="text-[10px] font-semibold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 transition"
+                                        title="월가 예상치 4.2% 대비 -0.1%p 하회 (고용 호조)"
+                                    >
+                                        <span>예상 {ADDITIONAL_INDICATORS_DATA.unemployment.estimate}%</span>
+                                        <span className="text-emerald-400 font-bold">({ADDITIONAL_INDICATORS_DATA.unemployment.diff}%p)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex-1 w-full h-[58px] -ml-2 -mb-2 mt-2">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={ADDITIONAL_INDICATORS_DATA.unemployment.history}>
+                                        <Line type="monotone" dataKey="val" stroke="#0284c7" strokeWidth={2} dot={false} />
+                                        <YAxis domain={['auto', 'auto']} hide={true} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2">
+                                <span className="text-[10px] text-gray-500">이전 달: {ADDITIONAL_INDICATORS_DATA.unemployment.prevVal.toFixed(1)}%</span>
+                                <span className="text-[10px] text-gray-500 font-mono">{ADDITIONAL_INDICATORS_DATA.unemployment.date} 기준</span>
+                            </div>
+                        </div>
+
+                        {/* 2열: 비농업 민간고용 (Nonfarm Payrolls) */}
+                        <div 
+                            onClick={() => {
+                                setSelectedConsensusIndicator('nonfarm_payrolls');
+                                setIsConsensusModalOpen(true);
+                            }} 
+                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-purple-500/20 hover:border-purple-500/50 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:shadow-purple-500/10 transition-all duration-300"
+                        >
+                            <div className="absolute top-0 left-0 w-1 h-full bg-[#a855f7]" />
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-semibold text-gray-400">비농업 신규고용 (Nonfarm)</span>
+                                        <span className="text-[9px] font-semibold text-purple-400 bg-purple-500/10 px-1.5 py-0.2 rounded border border-purple-500/20">신규일자리</span>
+                                    </div>
+                                    <h4 className="text-2xl font-black text-white mt-1 font-mono tracking-tight group-hover:text-[#a855f7] transition-colors duration-300">
+                                        +{ADDITIONAL_INDICATORS_DATA.nonfarm.val}k
+                                    </h4>
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5">
+                                    <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                                        <TrendingUp className="w-3 h-3" />
+                                        <span>{ADDITIONAL_INDICATORS_DATA.nonfarm.text}</span>
+                                    </div>
+                                    <div 
+                                        className="text-[10px] font-semibold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 transition"
+                                        title="월가 예상치 140k 대비 +114k 대폭 상회"
+                                    >
+                                        <span>예상 {ADDITIONAL_INDICATORS_DATA.nonfarm.estimate}k</span>
+                                        <span className="text-emerald-400 font-bold">(+{ADDITIONAL_INDICATORS_DATA.nonfarm.diff}k)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex-1 w-full h-[58px] -ml-2 -mb-2 mt-2">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={ADDITIONAL_INDICATORS_DATA.nonfarm.history}>
+                                        <Line type="monotone" dataKey="val" stroke="#a855f7" strokeWidth={2} dot={false} />
+                                        <YAxis domain={['auto', 'auto']} hide={true} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2">
+                                <span className="text-[10px] text-gray-500">이전 달: +{ADDITIONAL_INDICATORS_DATA.nonfarm.prevVal}k</span>
+                                <span className="text-[10px] text-gray-500 font-mono">{ADDITIONAL_INDICATORS_DATA.nonfarm.date} 기준</span>
+                            </div>
+                        </div>
+
+                        {/* 3열: 8대 지표 서프라이즈 종합 분석 요약 배너 */}
+                        <div 
+                            onClick={() => {
+                                setSelectedConsensusIndicator('cpi');
+                                setIsConsensusModalOpen(true);
+                            }}
+                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-amber-500/10 via-indigo-500/10 to-purple-500/10 border border-amber-500/30 hover:border-amber-400/60 rounded-2xl p-4 shadow-lg backdrop-blur-sm group transition-all duration-300 flex flex-col justify-between"
+                        >
+                            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-400 to-indigo-500" />
+                            <div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                                        <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" style={{ animationDuration: '6s' }} />
+                                        8대 경제지표 서프라이즈 종합
+                                    </span>
+                                    <span className="text-[10px] font-bold text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
+                                        매파적(Hawkish)
+                                    </span>
+                                </div>
+                                <h4 className="text-sm font-bold text-white mt-2 group-hover:text-amber-300 transition-colors">
+                                    물가 지표 상방 압력 vs 견조한 고용 서프라이즈
+                                </h4>
+                                <p className="text-[11px] text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                                    근원 CPI(3.3%) 및 고용(+254k)이 예상치를 상회하여 연준의 조기 빅컷(50bp) 가능성을 제약 중입니다.
+                                </p>
+                            </div>
+
+                            <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-xs font-semibold text-amber-300 group-hover:text-amber-200">
+                                <span>8대 지표 월가 대조 분석표 열기</span>
+                                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                             </div>
                         </div>
                     </div>

@@ -151,8 +151,8 @@ export default function MacroConsensusSurpriseModal({
         </div>
 
         {/* 8대 지표 선택 탭 바 */}
-        <div className="px-6 py-2.5 border-b border-white/5 bg-black/20 flex items-center justify-between gap-2 overflow-x-auto">
-          <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+        <div className="px-4 sm:px-6 py-2 border-b border-white/5 bg-black/20 flex items-center justify-between gap-1.5 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-0.5 scrollbar-none shrink-0 min-w-0">
             {data?.scoreboard.map((item) => {
               const isSelected = item.key === selectedKey;
               const isInflation = item.category === '물가';
@@ -160,15 +160,15 @@ export default function MacroConsensusSurpriseModal({
                 <button
                   key={item.key}
                   onClick={() => setSelectedKey(item.key)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1 ${
                     isSelected 
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-semibold' 
                       : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${isInflation ? 'bg-rose-400' : 'bg-sky-400'}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isInflation ? 'bg-rose-400' : 'bg-sky-400'}`} />
                   <span>{item.short_name}</span>
-                  <span className={`text-[10px] font-mono px-1 py-0.2 rounded ${
+                  <span className={`text-[9px] font-mono px-1 py-0 rounded ${
                     item.diff > 0 
                       ? (isInflation ? 'text-rose-300 bg-rose-500/20' : 'text-emerald-300 bg-emerald-500/20')
                       : item.diff < 0
@@ -182,12 +182,12 @@ export default function MacroConsensusSurpriseModal({
             })}
           </div>
 
-          <div className="flex items-center gap-1 shrink-0 ml-2">
+          <div className="flex items-center gap-1 shrink-0 ml-1">
             {(['6M', '1Y'] as const).map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition ${
+                className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition ${
                   period === p ? 'bg-white/15 text-white' : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
