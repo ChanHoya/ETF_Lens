@@ -221,7 +221,7 @@ export default function PortfolioStressTester({ holdings }: PortfolioStressTeste
           )}
 
           <button
-            onClick={fetchStressTest}
+            onClick={() => fetchStressTest(true)}
             disabled={loading}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-600/80 hover:bg-rose-600 text-white font-bold rounded-xl text-xs transition-colors shadow-lg shadow-rose-900/30 disabled:opacity-50"
           >

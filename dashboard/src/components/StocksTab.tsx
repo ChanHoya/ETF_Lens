@@ -336,8 +336,8 @@ export default function StocksTab() {
                     })),
                     series: [
                         { key: 'kospi', name: 'KOSPI 지수', color: '#6366f1', unit: 'pt', yAxisId: 'left', strokeWidth: 2.2 },
-                        { key: 'dd_kospi', name: '고점 대비 낙폭', color: '#3b82f6', unit: '%', yAxisId: 'right', strokeWidth: 1.5, type: 'area' as const },
-                    ],
+                        { key: 'dd_kospi', name: '고점 대비 낙폭', color: '#3b82f6', unit: '%', yAxisId: 'right', strokeWidth: 1.5, type: 'area' },
+                    ] as SeriesConfig[],
                     kpiCards: [
                         { label: 'KOSPI 현재가', value: `${num(c?.value, 2)} pt`, subValue: `${c?.date ?? ''} 기준`, isAccent: true },
                         { label: '1년 수익률', value: signed(c?.chg_1y ?? 0), isAccent: (c?.chg_1y ?? 0) > 0 },
@@ -359,8 +359,8 @@ export default function StocksTab() {
                     })),
                     series: [
                         { key: 'spx', name: 'S&P 500 지수', color: '#f43f5e', unit: 'pt', yAxisId: 'left', strokeWidth: 2.2 },
-                        { key: 'dd_spx', name: '고점 대비 낙폭', color: '#3b82f6', unit: '%', yAxisId: 'right', strokeWidth: 1.5, type: 'area' as const },
-                    ],
+                        { key: 'dd_spx', name: '고점 대비 낙폭', color: '#3b82f6', unit: '%', yAxisId: 'right', strokeWidth: 1.5, type: 'area' },
+                    ] as SeriesConfig[],
                     kpiCards: [
                         { label: 'S&P 500 현재가', value: `${num(c?.value, 2)} pt`, subValue: `${c?.date ?? ''} 기준`, isAccent: true },
                         { label: '1년 수익률', value: signed(c?.chg_1y ?? 0), isAccent: (c?.chg_1y ?? 0) > 0 },
@@ -382,8 +382,8 @@ export default function StocksTab() {
                     })),
                     series: [
                         { key: 'ndx', name: '나스닥 100', color: '#10b981', unit: 'pt', yAxisId: 'left', strokeWidth: 2.2 },
-                        { key: 'dd_ndx', name: '고점 대비 낙폭', color: '#3b82f6', unit: '%', yAxisId: 'right', strokeWidth: 1.5, type: 'area' as const },
-                    ],
+                        { key: 'dd_ndx', name: '고점 대비 낙폭', color: '#3b82f6', unit: '%', yAxisId: 'right', strokeWidth: 1.5, type: 'area' },
+                    ] as SeriesConfig[],
                     kpiCards: [
                         { label: 'Nasdaq 현재가', value: `${num(c?.value, 2)} pt`, subValue: `${c?.date ?? ''} 기준`, isAccent: true },
                         { label: '1년 수익률', value: signed(c?.chg_1y ?? 0), isAccent: (c?.chg_1y ?? 0) > 0 },
@@ -406,7 +406,7 @@ export default function StocksTab() {
                     series: [
                         { key: 'kospi_usd', name: 'KOSPI (달러 환산)', color: '#6366f1', unit: 'pt', yAxisId: 'left', strokeWidth: 2.2 },
                         { key: 'kospi', name: 'KOSPI (원화 기준)', color: '#94a3b8', unit: 'pt', yAxisId: 'right', strokeWidth: 1.6 },
-                    ],
+                    ] as SeriesConfig[],
                     kpiCards: [
                         { label: '달러 환산 현재가', value: `${num(ku?.value, 0)} pt`, subValue: '외국인 체감 지수', isAccent: true },
                         { label: '연초 이후 수익률', value: signed(ku?.ytd ?? 0), isAccent: (ku?.ytd ?? 0) > 0 },

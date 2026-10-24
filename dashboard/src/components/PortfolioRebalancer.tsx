@@ -96,20 +96,29 @@ export default function PortfolioRebalancer({
   const [result, setResult] = useState<RebalanceResponse | null>(null);
 
   // 3. 프리셋 정의
-  const PRESETS = [
+  interface PresetItem {
+    id: string;
+    label: string;
+    desc: string;
+    apply: (hList: HoldingItem[]) => Record<string, number>;
+  }
+
+  const applyEqual = (hList: HoldingItem[]): Record<string, number> => {
+    const count = hList.length || 1;
+    const equalVal = Math.round((100 / count) * 10) / 10;
+    const res: Record<string, number> = {};
+    hList.forEach((h, idx) => {
+      res[h.code] = idx === count - 1 ? Math.round((100 - equalVal * (count - 1)) * 10) / 10 : equalVal;
+    });
+    return res;
+  };
+
+  const PRESETS: PresetItem[] = [
     {
       id: 'equal',
       label: '⚖️ 균등 분배 (1/N)',
       desc: '모든 종목을 동일한 비중으로 균등 할당',
-      apply: (hList: HoldingItem[]) => {
-        const count = hList.length || 1;
-        const equalVal = Math.round((100 / count) * 10) / 10;
-        const res: Record<string, number> = {};
-        hList.forEach((h, idx) => {
-          res[h.code] = idx === count - 1 ? Math.round((100 - equalVal * (count - 1)) * 10) / 10 : equalVal;
-        });
-        return res;
-      }
+      apply: applyEqual
     },
     {
       id: 'balanced',
@@ -128,7 +137,7 @@ export default function PortfolioRebalancer({
         bondItems.forEach(h => res[h.code] = Math.round(bondWeight * 10) / 10);
 
         // 만약 채권이 하나도 없으면 균등 분배
-        if (bondItems.length === 0) return PRESETS[0].apply(hList);
+        if (bondItems.length === 0) return applyEqual(hList);
         return res;
       }
     },
@@ -147,7 +156,7 @@ export default function PortfolioRebalancer({
         usTech.forEach(h => res[h.code] = Math.round(techW * 10) / 10);
         others.forEach(h => res[h.code] = Math.round(otherW * 10) / 10);
 
-        if (usTech.length === 0) return PRESETS[0].apply(hList);
+        if (usTech.length === 0) return applyEqual(hList);
         return res;
       }
     }
