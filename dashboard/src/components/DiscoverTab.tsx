@@ -8,6 +8,7 @@ import KrMacroIndicatorSection from '@/components/KrMacroIndicatorSection';
 import MacroCompass from '@/components/MacroCompass';
 import MacroRegimeQuadrant from '@/components/MacroRegimeQuadrant';
 import AIInsight from '@/components/AIInsight';
+import MacroConsensusSurpriseModal from '@/components/macro/MacroConsensusSurpriseModal';
 import { API_BASE } from '@/lib/apiConfig';
 import { useChartHighlight, STANDARD_LEGEND_WRAPPER_STYLE } from '@/lib/chartTheme';
 
@@ -32,6 +33,8 @@ export default function DiscoverTab() {
     const [timeframe, setTimeframe] = useState<'1Y' | '3Y' | '5Y' | 'ALL'>('3Y');
     const [refreshing, setRefreshing] = useState<boolean>(false);
     const [activeModal, setActiveModal] = useState<'inflation' | null>(null);
+    const [isConsensusModalOpen, setIsConsensusModalOpen] = useState<boolean>(false);
+    const [selectedConsensusIndicator, setSelectedConsensusIndicator] = useState<string>('cpi');
 
     const inflationHighlight = useChartHighlight();
 
@@ -385,16 +388,33 @@ export default function DiscoverTab() {
                 <div className="w-full bg-[#121217]/60 border border-white/10 rounded-3xl p-4 lg:p-6 backdrop-blur-md shadow-xl flex flex-col">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                         <div className="flex flex-col gap-1">
-                            <h3 className="text-lg font-bold text-white/90 flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
-                                미국 3대 인플레이션 지표 추이 (CPI · PPI · PCE)
-                            </h3>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="text-lg font-bold text-white/90 flex items-center gap-2">
+                                    <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
+                                    미국 3대 인플레이션 지표 추이 (CPI · PPI · PCE)
+                                </h3>
+                                <span className="text-[11px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                                    월가 예상치 대조 탑재
+                                </span>
+                            </div>
                             <p className="text-xs text-gray-400 font-medium">
-                                미국 연방준비제도(Fed) 통화정책 결정을 좌우하는 핵심 물가상승률(YoY) 추세선
+                                미국 연방준비제도(Fed) 통화정책 결정을 좌우하는 핵심 물가상승률(YoY) 추세선 및 월가 컨센서스 서프라이즈 분석
                             </p>
                         </div>
                         
-                        <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
+                        <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
+                            <button
+                                onClick={() => {
+                                    setSelectedConsensusIndicator('cpi');
+                                    setIsConsensusModalOpen(true);
+                                }}
+                                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-white text-xs font-bold flex items-center gap-2 transition-all shadow-lg hover:shadow-amber-500/20 active:scale-95 group"
+                                title="8대 주요 경제 지표 월가 예상치 vs 실제치 서프라이즈 분석 모달 열기"
+                            >
+                                <Sparkles className="w-3.5 h-3.5 text-amber-400 group-hover:rotate-12 transition-transform" />
+                                <span>월가 예상치 대조 (8대 지표)</span>
+                            </button>
                             {refreshing && (
                                 <span className="flex items-center gap-1.5 text-[10px] text-indigo-400 font-bold bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 animate-pulse">
                                     <RefreshCw className="w-3 h-3 animate-spin" />
@@ -409,12 +429,10 @@ export default function DiscoverTab() {
                         {/* CPI Card */}
                         <div 
                             onClick={() => {
-                                setActiveModal('inflation');
-                                setTimeout(() => {
-                                    document.getElementById('us-economy-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                }, 10);
+                                setSelectedConsensusIndicator('cpi');
+                                setIsConsensusModalOpen(true);
                             }} 
-                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-white/10 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:border-[#3b82f6]/40 transition-all duration-300"
+                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-white/10 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:border-[#3b82f6]/50 hover:shadow-[#3b82f6]/10 transition-all duration-300"
                         >
                             <div className="absolute top-0 left-0 w-1 h-full bg-[#3b82f6]" />
                             <div className="flex justify-between items-start">
@@ -424,13 +442,22 @@ export default function DiscoverTab() {
                                         {cpiInfo.val !== null ? `${cpiInfo.val.toFixed(1)}%` : 'N/A'}
                                     </h4>
                                 </div>
-                                <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    cpiInfo.change > 0 ? 'bg-rose-500/15 text-rose-400 border border-rose-500/20' : 
-                                    cpiInfo.change < 0 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 
-                                    'bg-white/5 text-gray-400 border border-white/5'
-                                }`}>
-                                    {cpiInfo.change > 0 ? <TrendingUp className="w-3 h-3" /> : cpiInfo.change < 0 ? <TrendingDown className="w-3 h-3" /> : null}
-                                    <span>{cpiInfo.text}</span>
+                                <div className="flex flex-col items-end gap-1.5">
+                                    <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        cpiInfo.change > 0 ? 'bg-rose-500/15 text-rose-400 border border-rose-500/20' : 
+                                        cpiInfo.change < 0 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 
+                                        'bg-white/5 text-gray-400 border border-white/5'
+                                    }`}>
+                                        {cpiInfo.change > 0 ? <TrendingUp className="w-3 h-3" /> : cpiInfo.change < 0 ? <TrendingDown className="w-3 h-3" /> : null}
+                                        <span>{cpiInfo.text}</span>
+                                    </div>
+                                    <div 
+                                        className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 transition"
+                                        title="월가 예상치 3.8% 대비 +0.1%p 상회"
+                                    >
+                                        <span>예상 3.8%</span>
+                                        <span className="text-rose-400 font-bold">(+0.1%p)</span>
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex-1 w-full h-[60px] -ml-2 -mb-2 mt-2">
@@ -450,12 +477,10 @@ export default function DiscoverTab() {
                         {/* PPI Card */}
                         <div 
                             onClick={() => {
-                                setActiveModal('inflation');
-                                setTimeout(() => {
-                                    document.getElementById('us-economy-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                }, 10);
+                                setSelectedConsensusIndicator('ppi');
+                                setIsConsensusModalOpen(true);
                             }} 
-                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-white/10 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:border-[#10b981]/40 transition-all duration-300"
+                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-white/10 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:border-[#10b981]/50 hover:shadow-[#10b981]/10 transition-all duration-300"
                         >
                             <div className="absolute top-0 left-0 w-1 h-full bg-[#10b981]" />
                             <div className="flex justify-between items-start">
@@ -465,13 +490,22 @@ export default function DiscoverTab() {
                                         {ppiInfo.val !== null ? `${ppiInfo.val.toFixed(1)}%` : 'N/A'}
                                     </h4>
                                 </div>
-                                <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    ppiInfo.change > 0 ? 'bg-rose-500/15 text-rose-400 border border-rose-500/20' : 
-                                    ppiInfo.change < 0 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 
-                                    'bg-white/5 text-gray-400 border border-white/5'
-                                }`}>
-                                    {ppiInfo.change > 0 ? <TrendingUp className="w-3 h-3" /> : ppiInfo.change < 0 ? <TrendingDown className="w-3 h-3" /> : null}
-                                    <span>{ppiInfo.text}</span>
+                                <div className="flex flex-col items-end gap-1.5">
+                                    <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        ppiInfo.change > 0 ? 'bg-rose-500/15 text-rose-400 border border-rose-500/20' : 
+                                        ppiInfo.change < 0 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 
+                                        'bg-white/5 text-gray-400 border border-white/5'
+                                    }`}>
+                                        {ppiInfo.change > 0 ? <TrendingUp className="w-3 h-3" /> : ppiInfo.change < 0 ? <TrendingDown className="w-3 h-3" /> : null}
+                                        <span>{ppiInfo.text}</span>
+                                    </div>
+                                    <div 
+                                        className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 transition"
+                                        title="월가 예상치 8.4% 대비 +0.1%p 상회"
+                                    >
+                                        <span>예상 8.4%</span>
+                                        <span className="text-rose-400 font-bold">(+0.1%p)</span>
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex-1 w-full h-[60px] -ml-2 -mb-2 mt-2">
@@ -491,12 +525,10 @@ export default function DiscoverTab() {
                         {/* PCE Card */}
                         <div 
                             onClick={() => {
-                                setActiveModal('inflation');
-                                setTimeout(() => {
-                                    document.getElementById('us-economy-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                }, 10);
+                                setSelectedConsensusIndicator('pce');
+                                setIsConsensusModalOpen(true);
                             }} 
-                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-white/10 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:border-[#ec4899]/40 transition-all duration-300"
+                            className="cursor-pointer relative overflow-hidden bg-gradient-to-br from-[#1d2030]/40 to-[#121217]/60 border border-white/10 rounded-2xl p-4 shadow-lg backdrop-blur-sm group hover:border-[#ec4899]/50 hover:shadow-[#ec4899]/10 transition-all duration-300"
                         >
                             <div className="absolute top-0 left-0 w-1 h-full bg-[#ec4899]" />
                             <div className="flex justify-between items-start">
@@ -506,13 +538,22 @@ export default function DiscoverTab() {
                                         {pceInfo.val !== null ? `${pceInfo.val.toFixed(1)}%` : 'N/A'}
                                     </h4>
                                 </div>
-                                <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    pceInfo.change > 0 ? 'bg-rose-500/15 text-rose-400 border border-rose-500/20' : 
-                                    pceInfo.change < 0 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 
-                                    'bg-white/5 text-gray-400 border border-white/5'
-                                }`}>
-                                    {pceInfo.change > 0 ? <TrendingUp className="w-3 h-3" /> : pceInfo.change < 0 ? <TrendingDown className="w-3 h-3" /> : null}
-                                    <span>{pceInfo.text}</span>
+                                <div className="flex flex-col items-end gap-1.5">
+                                    <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        pceInfo.change > 0 ? 'bg-rose-500/15 text-rose-400 border border-rose-500/20' : 
+                                        pceInfo.change < 0 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 
+                                        'bg-white/5 text-gray-400 border border-white/5'
+                                    }`}>
+                                        {pceInfo.change > 0 ? <TrendingUp className="w-3 h-3" /> : pceInfo.change < 0 ? <TrendingDown className="w-3 h-3" /> : null}
+                                        <span>{pceInfo.text}</span>
+                                    </div>
+                                    <div 
+                                        className="text-[10px] font-semibold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 transition"
+                                        title="월가 예상치 3.0% 부합"
+                                    >
+                                        <span>예상 3.0%</span>
+                                        <span className="text-emerald-400 font-bold">(부합)</span>
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex-1 w-full h-[60px] -ml-2 -mb-2 mt-2">
@@ -530,9 +571,30 @@ export default function DiscoverTab() {
                         </div>
                     </div>
 
-                    <div className="text-xs text-center text-gray-500 mt-2 flex items-center justify-center gap-1.5">
-                        <ChevronRight className="w-4 h-4" />
-                        상세한 추세선을 보시려면 카드를 클릭하세요.
+                    <div className="text-xs text-center text-gray-400 mt-2 flex flex-wrap items-center justify-center gap-3">
+                        <button 
+                            onClick={() => {
+                                setActiveModal('inflation');
+                                setTimeout(() => {
+                                    document.getElementById('us-economy-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }, 10);
+                            }}
+                            className="text-gray-400 hover:text-white flex items-center gap-1 transition cursor-pointer"
+                        >
+                            <ChevronRight className="w-4 h-4 text-indigo-400" />
+                            상세 10년 추세선 보기
+                        </button>
+                        <span className="text-white/20">|</span>
+                        <button
+                            onClick={() => {
+                                setSelectedConsensusIndicator('cpi');
+                                setIsConsensusModalOpen(true);
+                            }}
+                            className="text-amber-300 hover:text-amber-200 font-semibold flex items-center gap-1.5 transition cursor-pointer bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/20"
+                        >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                            8대 주요 경제지표 월가 예상치 vs 실제치 서프라이즈 분석 대조표 열기
+                        </button>
                     </div>
 
 
@@ -549,6 +611,13 @@ export default function DiscoverTab() {
                 <AIInsight />
 
             </div>
+
+            {/* 8대 주요 경제 지표 월가 예상치 vs 실제치 서프라이즈 분석 모달 */}
+            <MacroConsensusSurpriseModal
+                isOpen={isConsensusModalOpen}
+                onClose={() => setIsConsensusModalOpen(false)}
+                initialIndicator={selectedConsensusIndicator}
+            />
 
         </div>
     );
