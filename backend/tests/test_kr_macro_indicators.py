@@ -93,3 +93,45 @@ async def test_get_kr_export_by_industry():
         assert "selected_industry_share" in latest_semi
         assert latest_semi["selected_industry"] == "semiconductor"
 
+
+@pytest.mark.asyncio
+async def test_get_kr_sector_playbook():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. 단일 업종(semiconductor) 플레이북 조회
+        res = await client.get("/api/v1/exit-signal/macro/kr/sector-playbook?industry=semiconductor")
+        assert res.status_code == 200
+        json_data = res.json()
+        assert json_data["industry"] == "semiconductor"
+        assert "etfs" in json_data
+        assert len(json_data["etfs"]) >= 2
+        tickers = [e["ticker"] for e in json_data["etfs"]]
+        assert "091160" in tickers  # KODEX 반도체
+
+        # 2. 전체(all) 플레이북 조회
+        res_all = await client.get("/api/v1/exit-signal/macro/kr/sector-playbook?industry=all")
+        assert res_all.status_code == 200
+        json_all = res_all.json()
+        assert "playbook" in json_all
+        expected_keys = {"semiconductor", "auto", "petrochem", "machinery", "steel", "bio_battery"}
+        assert set(json_all["playbook"].keys()) == expected_keys
+
+
+@pytest.mark.asyncio
+async def test_trigger_kr_macro_flash_alert():
+    from unittest.mock import patch
+    transport = ASGITransport(app=app)
+    with patch("core.kr_macro_notifier.send_telegram_message", return_value=(True, "성공")):
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            # 속보 발송 & DB 동기화 파이프라인 트리거 (force=True)
+            res = await client.post("/api/v1/exit-signal/macro/kr/trigger-flash-alert?force=true")
+            assert res.status_code == 200
+            json_data = res.json()
+            assert "status" in json_data
+            assert json_data["status"] == "success"
+            assert "export_amt" in json_data
+            assert "leading_cycle" in json_data
+            assert "top_industry" in json_data
+
+
+

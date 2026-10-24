@@ -32,9 +32,23 @@ import {
     Flame,
     Cog,
     Layers3,
-    Zap
+    Zap,
+    Send,
+    Bell,
+    ExternalLink,
+    ShieldCheck
 } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
+
+export interface PlaybookETF {
+    ticker: string;
+    name: string;
+    category: string;
+    sub_theme: string;
+    points: string;
+    driver: string;
+    weight?: number;
+}
 
 interface KRMacroItem {
     date: string;              // YYYY-MM
@@ -107,12 +121,17 @@ export default function KrMacroIndicatorSection() {
     const [loading, setLoading] = useState<boolean>(true);
     const [refreshing, setRefreshing] = useState<boolean>(false);
     const [exportLoading, setExportLoading] = useState<boolean>(false);
+    const [playbookEtfs, setPlaybookEtfs] = useState<PlaybookETF[]>([]);
+    const [playbookLoading, setPlaybookLoading] = useState<boolean>(false);
+    const [flashAlertLoading, setFlashAlertLoading] = useState<boolean>(false);
+    const [flashAlertFeedback, setFlashAlertFeedback] = useState<string | null>(null);
 
     // 지표 표시 토글 (한국 선행지수, OECD CLI)
     const [visibleSeries, setVisibleSeries] = useState<{ cycle: boolean; oecd: boolean }>({
         cycle: true,
         oecd: true,
     });
+
 
 
     // 1. 한국 경기선행지수 데이터 로드
@@ -320,6 +339,80 @@ export default function KrMacroIndicatorSection() {
             topIndustry,
         };
     }, [exportData, selectedIndustry, industriesMeta]);
+
+    // 3. 현재 타겟 업종 (스택 모드 시 최신 1위 주력군, 개별 업종 선택 시 해당 업종)
+    const activePlaybookIndustry = useMemo(() => {
+        if (selectedIndustry !== 'stacked') return selectedIndustry;
+        return latestExportSummary?.topIndustry?.id || 'semiconductor';
+    }, [selectedIndustry, latestExportSummary]);
+
+    const activePlaybookMeta = useMemo(() => {
+        return industriesMeta.find(m => m.id === activePlaybookIndustry) || industriesMeta[0];
+    }, [industriesMeta, activePlaybookIndustry]);
+
+    // 4. 수혜 ETF 플레이북 데이터 로드
+    const fetchPlaybook = useCallback(async (ind: string) => {
+        try {
+            setPlaybookLoading(true);
+            const res = await fetch(`${API_BASE}/api/v1/exit-signal/macro/kr/sector-playbook?industry=${ind}`, {
+                cache: 'no-store',
+                headers: { 'Cache-Control': 'no-cache' }
+            });
+            if (res.ok) {
+                const json = await res.json();
+                if (Array.isArray(json.etfs)) {
+                    setPlaybookEtfs(json.etfs);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to fetch sector playbook:', err);
+        } finally {
+            setPlaybookLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchPlaybook(activePlaybookIndustry);
+    }, [activePlaybookIndustry, fetchPlaybook]);
+
+    // ETF 상세 모달 열기 커스텀 이벤트
+    const handleOpenEtfDetail = (code: string) => {
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('open_etf_detail', { detail: { code } }));
+        }
+    };
+
+    // 텔레그램 속보 발송 및 실제 서비스 데이터 실시간 갱신
+    const triggerFlashAlert = async () => {
+        try {
+            setFlashAlertLoading(true);
+            setFlashAlertFeedback(null);
+            const res = await fetch(`${API_BASE}/api/v1/exit-signal/macro/kr/trigger-flash-alert?force=true`, {
+                method: 'POST',
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.status === 'success') {
+                    setFlashAlertFeedback('✅ 텔레그램 속보 발송 및 서비스 DB 실시간 갱신 완료!');
+                } else if (data.status === 'partial') {
+                    setFlashAlertFeedback('✅ 서비스 DB 최신 데이터 동기화 완료! (텔레그램 설정 필요)');
+                } else {
+                    setFlashAlertFeedback(data.message ? `ℹ️ ${data.message}` : '✅ 데이터 갱신 완료!');
+                }
+                fetchKrMacroData(true);
+                fetchExportData(exportPeriod, selectedIndustry);
+                fetchPlaybook(activePlaybookIndustry);
+            } else {
+                setFlashAlertFeedback('⚠️ 알림 발송 중 오류가 발생했습니다.');
+            }
+        } catch (err) {
+            setFlashAlertFeedback('⚠️ 네트워크 오류가 발생했습니다.');
+        } finally {
+            setFlashAlertLoading(false);
+            setTimeout(() => setFlashAlertFeedback(null), 5000);
+        }
+    };
+
 
 
     return (
@@ -1052,6 +1145,111 @@ export default function KrMacroIndicatorSection() {
                             </span>
                         </div>
                         <span className="text-[10px] text-gray-500 font-mono">출처: 관세청 · 한국은행 ECOS</span>
+                    </div>
+                </div>
+
+                {/* 3. 한국 수출 주력군 수혜 ETF 플레이북 (Sector Playbook) & 텔레그램 속보 */}
+                <div className="bg-[#121217]/80 border border-white/10 rounded-2xl p-4 lg:p-5 backdrop-blur-md shadow-xl lg:col-span-2 flex flex-col gap-3.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5">
+                        <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="text-base font-bold text-white flex items-center gap-2 whitespace-nowrap">
+                                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                                    <span>수출 주력군 수혜 ETF 플레이북</span>
+                                </h3>
+                                <span
+                                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap flex items-center gap-1"
+                                    style={{
+                                        color: activePlaybookMeta.color,
+                                        backgroundColor: `${activePlaybookMeta.color}15`,
+                                        borderColor: `${activePlaybookMeta.color}35`,
+                                    }}
+                                >
+                                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: activePlaybookMeta.color }} />
+                                    {activePlaybookMeta.name} {selectedIndustry === 'stacked' ? '(수출 1위 주력군)' : '(선택 업종)'}
+                                </span>
+                                {cyclePhase && (
+                                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-gray-300 whitespace-nowrap">
+                                        현재 경기 {cyclePhase.name.split(' ')[1]}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-[11px] text-gray-400 mt-1">
+                                {activePlaybookMeta.desc} · 관세청 수출 모멘텀 및 경기 국면 연동 국내 상장 대표 ETF
+                            </p>
+                        </div>
+
+                        {/* 우측: 텔레그램 속보 발송 & 데이터 실시간 갱신 수동 컨트롤러 */}
+                        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                            {flashAlertFeedback && (
+                                <span className="text-[11px] text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg animate-pulse">
+                                    {flashAlertFeedback}
+                                </span>
+                            )}
+                            <button
+                                onClick={triggerFlashAlert}
+                                disabled={flashAlertLoading}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 active:scale-95 border border-sky-400/30 text-xs font-semibold text-sky-200 hover:text-white transition-all disabled:opacity-50"
+                                title="관세청 최신 수출 통계 및 통계청 순환변동치를 즉시 재동기화하고 텔레그램 채널로 속보를 발송합니다"
+                            >
+                                <Send className={`w-3.5 h-3.5 text-sky-400 ${flashAlertLoading ? 'animate-bounce' : ''}`} />
+                                <span>{flashAlertLoading ? '속보 발송 & 갱신 중...' : '텔레그램 속보 발송 & 데이터 갱신'}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* 수혜 ETF 카드 그리드 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {playbookLoading ? (
+                            <div className="col-span-full py-8 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+                                <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" />
+                                수혜 ETF 플레이북 로드 중...
+                            </div>
+                        ) : playbookEtfs.length === 0 ? (
+                            <div className="col-span-full py-6 text-center text-xs text-gray-500">
+                                해당 업종에 등록된 플레이북 ETF가 없습니다.
+                            </div>
+                        ) : (
+                            playbookEtfs.map(etf => (
+                                <div
+                                    key={etf.ticker}
+                                    onClick={() => handleOpenEtfDetail(etf.ticker)}
+                                    className="group relative p-3.5 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-indigo-400/40 transition-all cursor-pointer flex flex-col justify-between"
+                                >
+                                    <div>
+                                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-gray-300 font-semibold">
+                                                {etf.ticker}
+                                            </span>
+                                            <span className="text-[10px] font-medium text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-400/20">
+                                                {etf.category}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-1">
+                                            <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors line-clamp-1">
+                                                {etf.name}
+                                            </h4>
+                                            <ExternalLink className="w-3.5 h-3.5 text-gray-500 group-hover:text-indigo-400 shrink-0 transition-colors" />
+                                        </div>
+                                        <p className="text-[11px] text-gray-300 font-medium mt-1">
+                                            {etf.sub_theme}
+                                        </p>
+                                        <p className="text-[11px] text-gray-400 mt-2 leading-relaxed line-clamp-2">
+                                            {etf.points}
+                                        </p>
+                                    </div>
+
+                                    <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[10px]">
+                                        <span className="text-gray-400 line-clamp-1 max-w-[70%]">
+                                            💡 {etf.driver}
+                                        </span>
+                                        <span className="text-indigo-400 font-semibold group-hover:underline shrink-0">
+                                            실시간 시세 보기 →
+                                        </span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
 

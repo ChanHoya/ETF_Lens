@@ -3,19 +3,23 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: Sprint 35 완료 — [한국 수출 실적 추이 6대 핵심 업종별(반도체·자동차·화학 등) 누적 스택 및 개별 조회 기능 구축]
-1. [백엔드 6대 업종 분석 엔진 & DB 연동]:
-   - 한국은행 KSIC 중분류, KITA EBSI 4대 산업군, 관세청 15대 주력 품목을 아우르는 6대 핵심 업종(반도체·IT, 자동차·운송, 석유화학·정유, 일반기계, 철강·금속, 바이오·배터리) 모델 구축.
-   - 2017~2026 역사적 사이클(2018 슈퍼사이클, 2023 자동차 1위, 2024~2026 AI HBM 주도 33.5%) 기반 가중치 연산 및 100% 정규화.
-   - 자체 DB(`KRMacroIndicatorLog`) 우선 조회로 5ms 내 초고속 서빙 (반복 크롤링 원천 차단).
-2. [프론트엔드 UI/UX 시각화 (`KrMacroIndicatorSection.tsx`)]:
-   - `[전체 수출]` ↔ `[6대 업종별]` 상단 뷰 모드 세그먼트 스위처 + `[년 | 월간 | 일별]` 주기 탭 결합.
-   - 7개 업종 칩(`[전체 누적(Stack)]`, `[반도체·IT]`, `[자동차·운송]`, `[석유화학·정유]`, `[일반기계]`, `[철강·금속]`, `[바이오·배터리]`).
-   - Recharts 6단 누적 막대(Stacked Bar) + YoY 꺾은선 차트 및 단일 업종 고유 테마 바+라인 차트 구현.
-   - 3 Bento 스탯 카드 동적 바인딩(수출액, 1위 업종 배지, YoY 및 비중) 및 좌측 Y축 눈금 라벨 잘림 버그 완벽 수정.
-3. [무결성 검증 완료]: 백엔드 pytest 3/3 100% Pass, Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 렌더링 검증 완료.
+✅ Recent: Sprint 36 완료 — [수출 1위 주력군 수혜 ETF 플레이북 & 텔레그램 속보 자동 알림 + 서비스 DB 실시간 동기화 파이프라인 구축]
+1. [백엔드 6대 수출 주력 산업별 수혜 ETF 플레이북 (`INDUSTRY_ETF_PLAYBOOK`)]:
+   - 반도체(KODEX 반도체, TIGER Fn반도체TOP10, ACE AI반도체포커스), 자동차(TIGER 현대차그룹, KODEX 자동차, TIGER 200중공업), 화학, 기계, 철강, 바이오 6대 업종별 대표 상장 ETF 매핑.
+   - `GET /api/v1/exit-signal/macro/kr/sector-playbook` 엔드포인트 지원.
+2. [백엔드 텔레그램 속보 알림 및 서비스 DB 동기화 파이프라인 (`kr_macro_notifier.py`)]:
+   - 한국 수출 실적(총액, 일평균, YoY) 및 통계청 경기선행지수 순환변동치(확장/둔화/회복/수축 판정) 공표 감지 시 자체 DB 최신 동기화(`sync_kr_macro_indicators_job`) 선행 수행.
+   - 텔레그램 속보 HTML 발송 및 `ExitSignalCache` 기반 중복 발송 방지(Deduplication) 구축.
+   - `POST /api/v1/exit-signal/macro/kr/trigger-flash-alert` 및 `core/scheduler.py` 정기 크론(매월 1·11·21일 및 평일 09:20) 등록.
+3. [프론트엔드 UI/UX 플레이북 벤토 위젯 & 원클릭 동기화 (`KrMacroIndicatorSection.tsx`)]:
+   - 하단 '수출 주력군 수혜 ETF 플레이북' 벤토 위젯 렌더링 (업종 칩 연동 및 현재 경기 국면 배지).
+   - ETF 카드 3종(티커, 테마, 투자 포인트, 주도 드라이버) 및 클릭 시 `open_etf_detail` 모달 연동.
+   - '텔레그램 속보 발송 & 데이터 갱신' 원클릭 트리거 및 서비스 DB 최신 데이터 동기화 피드백 배지 연동.
+4. [무결성 검증 완료]: 백엔드 pytest 5/5 100% Pass, Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 실시간 인터랙션 및 스크린샷 렌더링 검증 완료.
 
-🚀 Current: Sprint 35 완료 / Session Handoff 준비 단계 (다음 스프린트 대기)
+🚀 Current: Sprint 36 완료 / Session Handoff 준비 단계 (다음 스프린트 대기)
+
+✅ Previous: Sprint 35 완료 — [한국 수출 실적 추이 6대 핵심 업종별(반도체·자동차·화학 등) 누적 스택 및 개별 조회 기능 구축]
 
 ✅ Previous: Sprint 34 완료 — [한·미 금리 비교 3단계 체계 & 한국 경기 지표(선행지수 순환변동치·OECD CLI·수출 추이) 신설 및 프론트/테스트 안정화]
 

@@ -2569,3 +2569,200 @@ async def force_sync_kr_macro_indicators():
     else:
         return {"status": "error", "message": "Failed to synchronize KR Macro Indicators."}
 
+
+# ── 6대 주력 수출 업종별 대표 수혜 ETF 플레이북 ──────────────────────────────────────
+INDUSTRY_ETF_PLAYBOOK: dict[str, list[dict[str, Any]]] = {
+    "semiconductor": [
+        {
+            "ticker": "091160",
+            "name": "KODEX 반도체",
+            "category": "반도체·IT 대표",
+            "sub_theme": "삼성전자·SK하이닉스 종합",
+            "points": "국내 메모리 양대 산맥 및 소부장 대표 기업 전반에 고루 분산 투자.",
+            "driver": "AI HBM(고대역폭메모리) 수출 급증 및 글로벌 서버향 수요 회복 수혜.",
+            "weight": 33.5,
+        },
+        {
+            "ticker": "396500",
+            "name": "TIGER Fn반도체TOP10",
+            "category": "대형주 집중",
+            "sub_theme": "Top 10 대형주 압축",
+            "points": "국내 반도체 시가총액 최상위 10개 핵심 주도주 집중 편입.",
+            "driver": "반도체 단가(ASP) 반등 및 수출 실적 개선 시 가장 빠른 베타 반응.",
+            "weight": 25.0,
+        },
+        {
+            "ticker": "466950",
+            "name": "ACE AI반도체포커스",
+            "category": "첨단 후공정",
+            "sub_theme": "HBM 패키징 & 장비",
+            "points": "한미반도체, HPSP 등 글로벌 HBM 공정 필수 독점 장비주 포커스.",
+            "driver": "글로벌 빅테크 AI 가속기 증설에 따른 장비 수출 폭증 수혜.",
+            "weight": 18.0,
+        },
+    ],
+    "auto": [
+        {
+            "ticker": "138540",
+            "name": "TIGER 현대차그룹+펀더멘털",
+            "category": "완성차·물류",
+            "sub_theme": "현대차·기아·모비스",
+            "points": "글로벌 하이브리드 및 북미 SUV 수출 호조를 주도하는 현대차그룹 핵심주.",
+            "driver": "환율 수혜 및 고마진 친환경차 수출 비중 확대로 사상 최대 실적 견인.",
+            "weight": 19.5,
+        },
+        {
+            "ticker": "091180",
+            "name": "KODEX 자동차",
+            "category": "자동차 종합",
+            "sub_theme": "완성차 + 1차 부품사",
+            "points": "국내 완성차 제조사와 함께 핵심 전장·샤시 부품사 밸류체인 전반 커버.",
+            "driver": "인도 등 신흥국 공장 증설 및 글로벌 현지 생산 거점 수출 확대.",
+            "weight": 15.0,
+        },
+        {
+            "ticker": "139260",
+            "name": "TIGER 200 중공업",
+            "category": "운송장비·조선",
+            "sub_theme": "조선 3사 및 방산",
+            "points": "HD한국조선해양, 삼성중공업, 한화오션 등 글로벌 선박 수출 선도주 편입.",
+            "driver": "고부가가치 LNG선 수주잔고 본격 인도 및 선가 상승기 실적 급증 수혜.",
+            "weight": 12.0,
+        },
+    ],
+    "petrochem": [
+        {
+            "ticker": "117460",
+            "name": "KODEX 에너지화학",
+            "category": "정유·석유화학",
+            "sub_theme": "정유 4사 및 화학 대형주",
+            "points": "SK이노베이션, S-Oil, LG화학 등 석유 정제 및 석유화학 기초유분 대표주.",
+            "driver": "정제마진 반등 및 고유가 시기 제품 수출 단가 상승 수혜.",
+            "weight": 12.0,
+        },
+        {
+            "ticker": "139250",
+            "name": "TIGER 200 에너지화학",
+            "category": "코스피 200 화학",
+            "sub_theme": "에너지 인프라 & 화학",
+            "points": "화학물질, 플라스틱, 특수 화학소재 수출 기업을 포괄하는 지수 추종 ETF.",
+            "driver": "중국 및 글로벌 경기 부양 시 석유화학 스프레드 개선 턴어라운드.",
+            "weight": 10.0,
+        },
+    ],
+    "machinery": [
+        {
+            "ticker": "139240",
+            "name": "TIGER 기계",
+            "category": "일반기계·전력설비",
+            "sub_theme": "원전·전력인프라·기계",
+            "points": "두산에너빌리티, HD현대일렉트릭 등 글로벌 AI 전력망 인프라 수출 선도주.",
+            "driver": "미국 변압기 공급 부족 및 글로벌 원자력 발전소 르네상스 수주 호조.",
+            "weight": 9.0,
+        },
+        {
+            "ticker": "446210",
+            "name": "KODEX K-로봇&기계",
+            "category": "첨단 제조·로봇",
+            "sub_theme": "공작기계 & 산업용 로봇",
+            "points": "정밀 공작기계, 스마트팩토리 공정 제어 및 로봇 자동화 장비 전문 ETF.",
+            "driver": "글로벌 리쇼어링 공장 증설에 따른 한국산 산업용 기계 수주 지속.",
+            "weight": 8.0,
+        },
+    ],
+    "steel": [
+        {
+            "ticker": "117680",
+            "name": "KODEX 철강",
+            "category": "철강 대형주",
+            "sub_theme": "POSCO홀딩스·현대제철",
+            "points": "고로 및 전기로 핵심 철강사와 강관·특수강 수출 전문 기업 집중 편입.",
+            "driver": "자동차용 고장력 강판, 조선용 후판 수출 견조 및 철강 단가 정상화 기대.",
+            "weight": 6.0,
+        },
+        {
+            "ticker": "139270",
+            "name": "TIGER 200 철강바이오",
+            "category": "기초소재 융합",
+            "sub_theme": "철강 및 비철금속",
+            "points": "철강제조 및 고려아연 등 산업 필수 비철금속 원자재 수출 기업 포괄.",
+            "driver": "신재생 및 전력망용 구리·아연 글로벌 수요 회복 수혜.",
+            "weight": 5.0,
+        },
+    ],
+    "bio_battery": [
+        {
+            "ticker": "244580",
+            "name": "KODEX 바이오",
+            "category": "바이오의약품",
+            "sub_theme": "CDMO & 바이오시밀러",
+            "points": "삼성바이오로직스, 셀트리온 등 글로벌 바이오의약품 수출 독점 기업.",
+            "driver": "미국 생물보안법(Biosecure Act) 반사이익 및 유럽 바이오시밀러 점유율 확대.",
+            "weight": 20.0,
+        },
+        {
+            "ticker": "305540",
+            "name": "TIGER 2차전지테마",
+            "category": "배터리 완성셀",
+            "sub_theme": "LG엔솔·삼성SDI·양극재",
+            "points": "국내 배터리 3사 및 에코프로비엠, POSCO퓨처엠 등 핵심 밸류체인 총망라.",
+            "driver": "글로벌 완성차 메이커향 차세대 원통형/각형 배터리 수출 납품 개시.",
+            "weight": 16.0,
+        },
+        {
+            "ticker": "462010",
+            "name": "KODEX 2차전지핵심소재10",
+            "category": "배터리 필수 소재",
+            "sub_theme": "소재 10대 기업 압축",
+            "points": "양극재, 음극재, 전해액, 분리막 등 수출 단가가 높은 핵심 소재주 집중.",
+            "driver": "미국 IRA 규격 충족 고부가 배터리 소재 직수출 확대 수혜.",
+            "weight": 14.0,
+        },
+    ],
+}
+
+
+@router.get("/macro/kr/sector-playbook")
+async def get_kr_sector_playbook(industry: str = "semiconductor", response: Response = None):
+    """한국 6대 수출 주력 산업별 수혜 국내 상장 ETF 플레이북 목록을 반환합니다.
+    - industry: all, semiconductor, auto, petrochem, machinery, steel, bio_battery
+    """
+    if response is not None:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+
+    ind_key = industry.lower().strip()
+    if ind_key == "all":
+        return {
+            "industry": "all",
+            "playbook": INDUSTRY_ETF_PLAYBOOK,
+            "industries_meta": KR_EXPORT_INDUSTRIES,
+        }
+
+    # 기본값 semiconductor
+    target_ind = ind_key if ind_key in INDUSTRY_ETF_PLAYBOOK else "semiconductor"
+    matched_meta = next((item for item in KR_EXPORT_INDUSTRIES if item["id"] == target_ind), None)
+
+    return {
+        "industry": target_ind,
+        "industry_meta": matched_meta,
+        "etfs": INDUSTRY_ETF_PLAYBOOK.get(target_ind, []),
+    }
+
+
+@router.post("/macro/kr/trigger-flash-alert")
+async def trigger_kr_macro_flash_alert(
+    force: bool = False,
+    test_token: Optional[str] = None,
+    test_chat_id: Optional[str] = None
+):
+    """한국 수출 실적 및 경기선행지수 데이터를 최신 동기화하고 텔레그램 속보 알림을 전송합니다.
+    - force: True일 경우 이미 발송된 달이라도 강제 재발송.
+    - test_token / test_chat_id: 특정 테스트 계정으로만 단건 발송 가능.
+    """
+    from core.kr_macro_notifier import sync_and_notify_kr_macro
+    result = await sync_and_notify_kr_macro(force=force, test_token=test_token, test_chat_id=test_chat_id)
+    return result
+
+
+

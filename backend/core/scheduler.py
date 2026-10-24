@@ -803,6 +803,16 @@ def setup_scheduler():
         except Exception as e:
             print(f"[keep-alive] ping 실패: {e}")
 
+    async def _job_kr_macro_flash():
+        """한국 수출 실적(관세청) 및 경기선행지수 순환변동치(통계청) 발표 감지 시 DB 동기화 & 텔레그램 속보 발송."""
+        print(f"[{datetime.now()}] [KR Macro Sync & Alert] Checking for new export & leading indicators...")
+        try:
+            from core.kr_macro_notifier import sync_and_notify_kr_macro
+            res = await sync_and_notify_kr_macro(force=False)
+            print(f"[KR Macro Sync & Alert] Result: {res}")
+        except Exception as e:
+            print(f"[KR Macro Sync & Alert] Failed: {e}")
+
     # 07:00 - 경량 ETF 마스터 목록 upsert
     scheduler.add_job(_job_master, "cron", hour=7, minute=0, id="daily_etf_master_sync")
 
@@ -859,6 +869,10 @@ def setup_scheduler():
 
     # 매주 월요일 04:30 (KST) - 서울 아파트 실거래가 및 매물 적체량 통계 롤링 동기화 (S20)
     scheduler.add_job(_job_real_estate_sync, "cron", day_of_week="mon", hour=4, minute=30, id="weekly_real_estate_sync")
+
+    # 매월 1일·11일·21일(09:15, 11:15, 14:15) 및 평일 09:20 - 관세청 통관 수출 및 통계청 순환변동치 발표 감지 & 속보 (S36)
+    scheduler.add_job(_job_kr_macro_flash, "cron", day="1,11,21", hour="9,11,14", minute=15, id="kr_macro_monthly_flash_check")
+    scheduler.add_job(_job_kr_macro_flash, "cron", day_of_week="mon-fri", hour=9, minute=20, id="kr_macro_daily_flash_check")
 
     scheduler.start()
     print("DB and Email Scheduler started.")
