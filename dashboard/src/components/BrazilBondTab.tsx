@@ -15,6 +15,7 @@ import {
     ChevronDown, ChevronUp, X, Edit3, Plus,
 } from 'lucide-react';
 import BrazilTotalReturnSimulator from './BrazilTotalReturnSimulator';
+import BrazilVsUsBondSimulator from './brazil/BrazilVsUsBondSimulator';
 import BrazilElectionCopomTracker from './brazil/BrazilElectionCopomTracker';
 import { API_BASE } from '@/lib/apiConfig';
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
@@ -693,6 +694,9 @@ export default function BrazilBondTab() {
                 initialFx={s.indicators.find(i => i.key === 'brl_krw')?.value ?? 260.0}
                 initialYield={s.indicators.find(i => i.key === 'y5')?.value ?? 14.0}
             />
+
+            {/* ── 브라질 국채 vs 미국 30년 국채 실질 토탈리턴(Total Return) 비교 시뮬레이터 ── */}
+            <BrazilVsUsBondSimulator />
 
             {/* ── 3단계 분할 매수 로드맵 ───────────────────────────── */}
             <section>

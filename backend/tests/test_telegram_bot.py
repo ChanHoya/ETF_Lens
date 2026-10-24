@@ -189,4 +189,55 @@ async def test_rates_fedwatch_probabilities_endpoint():
         assert len(data["beneficiary_etfs"]) >= 3
 
 
+@pytest.mark.asyncio
+async def test_telegram_webhook_bond_command():
+    mock_send = AsyncMock(return_value=True)
+    with patch("api.telegram_bot.send_telegram_message", mock_send):
+        payload = {
+            "update_id": 1008,
+            "message": {
+                "message_id": 6,
+                "chat": {"id": 12345678},
+                "text": "/bond"
+            }
+        }
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            res = await ac.post("/api/v1/telegram/webhook", json=payload)
+            assert res.status_code == 200
+            data = res.json()
+            assert data.get("ok") is True
+            assert data.get("command") == "bond"
+            assert mock_send.called
+            call_kwargs = mock_send.call_args.kwargs
+            assert "브라질 국채 vs 미국 30년 국채" in call_kwargs["text"]
+            assert "한-브 조세조약 100% 비과세" in call_kwargs["text"]
+            assert "inline_keyboard" in call_kwargs["reply_markup"]
+
+
+@pytest.mark.asyncio
+async def test_telegram_webhook_dsr_command():
+    mock_send = AsyncMock(return_value=True)
+    with patch("api.telegram_bot.send_telegram_message", mock_send):
+        payload = {
+            "update_id": 1009,
+            "message": {
+                "message_id": 7,
+                "chat": {"id": 12345678},
+                "text": "/dsr"
+            }
+        }
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            res = await ac.post("/api/v1/telegram/webhook", json=payload)
+            assert res.status_code == 200
+            data = res.json()
+            assert data.get("ok") is True
+            assert data.get("command") == "dsr"
+            assert mock_send.called
+            call_kwargs = mock_send.call_args.kwargs
+            assert "스트레스 DSR 2단계" in call_kwargs["text"]
+            assert "취득세" in call_kwargs["text"]
+            assert "inline_keyboard" in call_kwargs["reply_markup"]
+
+
+
 

@@ -349,13 +349,62 @@ async def handle_telegram_webhook(req: Request):
         await send_telegram_message(text=fomc_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
         return {"ok": True, "command": "fomc"}
 
-    # 2-6. 기본 도움말
+    # 2-6. /bond 또는 /채권 또는 /brazil: 브라질 국채 vs 미국 30년 국채 실질 토탈리턴 비교 브리핑
+    elif text.startswith("/bond") or text.startswith("/채권") or text.startswith("/brazil"):
+        bond_msg = (
+            f"⚖️ <b>[i-Prism] 브라질 국채 vs 미국 30년 국채 토탈리턴 브리핑</b>\n\n"
+            f"<b>🇧🇷 브라질 10년물 국채 (NTN-F)</b>\n"
+            f"• 매수 YTM: <code>14.0%</code> | 표면금리: <code>연 10.0%</code> (반기 5% 지급)\n"
+            f"• 절세 혜택: <b>한-브 조세조약 100% 비과세</b> (이자소득세 0원, 금융소득종합과세 제외)\n"
+            f"• 7년 누적 기대 세후 수익률: <b>+97.2%</b> (헤알화 연 -2% 하락 가정 시)\n\n"
+            f"<b>🇺🇸 미국 30년 국채 (ACE 미국30년국채액티브)</b>\n"
+            f"• 매수 YTM: <code>4.45%</code> | 듀레이션: <code>18.5년</code>\n"
+            f"• 금리 인하 기대: 연준 50bp 인하 시 <b>듀레이션 자본차익 +9.25%</b>\n"
+            f"• 7년 누적 기대 세후 수익률: <b>+46.8%</b> (이자소득세 15.4% 차감 후)\n\n"
+            f"<b>💡 승자 판정 및 손익분기점 (BEP)</b>\n"
+            f"• 손익분기 헤알화 하락 한계: <b>연 -4.2%</b>\n"
+            f"• 헤알화가 연 -4% 이상 폭락하지 않는 한, <b>비과세 연 10% 쿠폰 복리 재투자</b>를 누리는 브라질 국채가 세후 총자산에서 크게 앞섭니다.\n"
+            f"• 반면 경기 침체 및 연준 빅컷 헤지에는 <b>미국 30년 국채</b>가 탁월하여 <b>6:4 분산 포지션</b>이 권장됩니다."
+        )
+        reply_markup = {
+            "inline_keyboard": [
+                [{"text": "🇧🇷 vs 🇺🇸 채권 토탈리턴 시뮬레이터", "url": f"{DASHBOARD_URL}/brazil"}]
+            ]
+        }
+        await send_telegram_message(text=bond_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
+        return {"ok": True, "command": "bond"}
+
+    # 2-7. /dsr 또는 /갈아타기 또는 /부동산: 상급지 갈아타기 스트레스 DSR 2단계 & 세금 수지 브리핑
+    elif text.startswith("/dsr") or text.startswith("/갈아타기") or text.startswith("/부동산"):
+        dsr_msg = (
+            f"🏠 <b>[i-Prism] 부동산 상급지 갈아타기 스트레스 DSR 2단계 브리핑</b>\n\n"
+            f"<b>📊 2026년 수도권 스트레스 DSR 규제 기준</b>\n"
+            f"• 은행권 DSR 규제 비율: <b>최대 40% 한도</b>\n"
+            f"• 수도권 주담대 스트레스 가산금리: <b>+1.20%p</b> (평가금리 약 4.95% 적용)\n"
+            f"• 연소득 8,500만 원 차주 30년 만기 기준 <b>최대 대출 가능 한도: 약 5.3억 원</b>\n\n"
+            f"<b>💰 마포·잠실·분당 갈아타기 실전자금 수지 팁</b>\n"
+            f"• 1주택 비과세(12억 이하) 매도 시 양도세 0원 (12억 초과분만 안분 과세)\n"
+            f"• 상급지 매수 시 <b>취득세 3.5% + 중개/등기 부대비용 0.8% = 약 4.3%</b> 현금 추가 확보 필수\n"
+            f"• 목표 매수가 18.5억(마래푸 34평) 기준 총 필요 조달 자금은 약 19.3억 원입니다.\n\n"
+            f"💡 <i>종잣돈과 DSR 한도를 합산한 실전 갭 분석은 아래 계산기를 이용하세요.</i>"
+        )
+        reply_markup = {
+            "inline_keyboard": [
+                [{"text": "🏠 상급지 갈아타기 DSR 계산기", "url": f"{DASHBOARD_URL}/realestate"}]
+            ]
+        }
+        await send_telegram_message(text=dsr_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
+        return {"ok": True, "command": "dsr"}
+
+    # 2-8. 기본 도움말
     else:
         help_msg = (
             f"🤖 <b>[i-Prism] 스마트 자산관리 텔레그램 봇</b>\n\n"
             f"사용 가능한 명령어:\n"
             f"• <code>/morning</code>: 아침 08:30 뉴욕 마감 & 개장전 체크포인트 브리핑\n"
             f"• <code>/fomc</code>: 11월 FOMC 및 한은 금통위 D-Day & FedWatch 인하 확률\n"
+            f"• <code>/bond</code>: 브라질 국채 vs 미국 30년 국채 실질 토탈리턴 비교\n"
+            f"• <code>/dsr</code>: 부동산 상급지 갈아타기 스트레스 DSR 2단계 & 자금 수지\n"
             f"• <code>/asset</code>: 가계 총 순자산 및 2D 사분면 진단 브리핑\n"
             f"• <code>/tax</code>: 2026 연말정산 절세 골든타임 & 13월의 월급 역산 브리핑\n"
             f"• <code>/rebalance</code>: 목표 비중 이탈 분석 및 원클릭 모의 주문\n\n"

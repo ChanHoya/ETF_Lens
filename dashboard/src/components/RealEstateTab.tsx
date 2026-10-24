@@ -41,6 +41,7 @@ import RealEstateMortgageShieldWidget from './RealEstateMortgageShieldWidget';
 import MajorComplexTimeseriesModal from './MajorComplexTimeseriesModal';
 import MyApartmentPortfolioWidget from './MyApartmentPortfolioWidget';
 import MortgageRateRefinancingPlanner from './realestate/MortgageRateRefinancingPlanner';
+import HomeUpgradeDsrCalculator from './realestate/HomeUpgradeDsrCalculator';
 
 
 
@@ -689,6 +690,11 @@ export default function RealEstateTab() {
 
       {/* S23: 내 부동산 자산 & 배당금 대출이자 방어율 (ICR) 위젯 */}
       <RealEstateMortgageShieldWidget />
+
+      {/* S41: 부동산 상급지 갈아타기 스트레스 DSR 2단계 & 세금(취득세·양도세) 포함 정밀 자금 수지 계산기 */}
+      <div className="mt-5">
+        <HomeUpgradeDsrCalculator />
+      </div>
 
       {/* S30-4: 금리 인하 사이클 주담대 대환 계산기 & 상급지 갈아타기 수지표 */}
       <div className="mt-5">

@@ -3,19 +3,23 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: Sprint 40 완료 — [11월 FOMC 및 한국은행 금통위 D-Day & CME FedWatch 실시간 금리 인하 확률 게이지 & 채권 ETF 시뮬레이터]
-1. [11월 FOMC & 한은 금통위 D-Day & CME FedWatch 실시간 금리 인하 확률 게이지 (`FedWatchRateProbabilityWidget.tsx`)]:
-   - 미국 FOMC(10.28 / 11월 회의, D-3일) 및 한국은행 금통위(11.26 회의, D-32일) 실시간 듀얼 D-Day 네온 펄스 뱃지 구축.
-   - CME FedWatch 선물 내재 인하 확률 반원형 SVG 스피도미터 게이지(82.5% 인하 유력) 및 3대 시나리오(25bp 인하, 동결, 50bp 빅컷)와 1주전 대비 변동폭 시각화.
-   - 한국은행 금통위 인하 확률 프로그레스 바(71.0% 인하 vs 29.0% 동결) 및 한·미 정책금리 스프레드(-2.00%p) 축소 시나리오 분석 연동.
-2. [채권 ETF 듀레이션 자본차익 인터랙티브 시뮬레이터]:
-   - 25bp 표준 인하 / 50bp 빅컷 / 동결 시나리오 선택에 따른 대표 채권 ETF(ACE 미국30년국채액티브, TIGER 국고채30년스트립 등)의 예상 자본차익(%) 및 1년 기대 총수익률 실시간 계산기 탑재.
-3. [백엔드 API 및 텔레그램 봇 연동 (`rates_dashboard.py`, `telegram_bot.py`)]:
-   - `GET /api/v1/rates/fedwatch-probabilities` 엔드포인트 신설.
-   - 텔레그램 봇 `/fomc`, `/rates`, `/fedwatch`, `/금리` 명령어 처리 및 D-Day·인하 확률 브리핑, 웹 대시보드 바로가기 인라인 키보드 탑재.
-4. [무결성 검증 완료]: 백엔드 pytest 30/30 100% Pass, Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 서브에이전트 실측 렌더링 및 인터랙션 검증 완료.
+✅ Recent: Sprint 41 완료 — [브라질 국채 vs 미국 30년 국채 실질 토탈리턴 비교 & 부동산 상급지 갈아타기 스트레스 DSR 2단계 계산기]
+1. [브라질 국채 vs 미국 30년 국채 실질 토탈리턴(Total Return) 비교 시뮬레이터 (`BrazilVsUsBondSimulator.tsx`, `BrazilBondTab.tsx`)]:
+   - 브라질 국채(YTM 14.0%, 비과세 연 10% 쿠폰) vs 미국 30년 국채(YTM 4.45%, 듀레이션 18.5년 자본차익) 10개년 세후 복리 자산 Recharts Area 성장 궤적 시각화.
+   - 헤알화 환율 변동(-8~+4%), 연준 금리 인하폭(0~150bp), 한-브 조세조약 비과세 혜택(15.4% 이자소득세 및 금소세 면제) 정밀 모델링.
+   - 승자 판정 뱃지(브라질 우세 vs 미국 우세), 손익분기 헤알화 하락폭(BEP 연 -4.2%), 비과세 세이브 효과 카드 탑재.
+2. [부동산 상급지 갈아타기 스트레스 DSR 2단계 & 세금 자금 수지 계산기 (`HomeUpgradeDsrCalculator.tsx`, `RealEstateTab.tsx`)]:
+   - 기존 주택 매도 순 정산금(1주택 비과세 12억 초과분 양도세 및 매도 복비 차감) + 가용 금융자산 총 종잣돈 산출.
+   - 목표 상급지(마포래미안푸르지오, 잠실엘스, 헬리오시티, 분당 파크뷰 등) 매수가 + 취득세(3.5%) 및 매수 부대비용(0.8%) 연산.
+   - 2026 수도권 스트레스 DSR 2단계(+1.20%p 가산, 40% 한도) 및 규제지역 LTV(50/70%) 적용 최종 대출 가능 한도 및 갈아타기 승인 판정, 월 원리금 상환 부담 실시간 도출.
+3. [텔레그램 봇 /bond 및 /dsr 브리핑 연동 (`telegram_bot.py`, `test_telegram_bot.py`)]:
+   - `/bond`, `/채권`, `/brazil`: 브라질 vs 미국 30년 국채 토탈리턴 및 BEP 브리핑.
+   - `/dsr`, `/갈아타기`, `/부동산`: 스트레스 DSR 2단계 기준 대출 한도 및 실전 자금 수지 브리핑.
+4. [무결성 검증 완료]: 백엔드 pytest 10/10 100% Pass, Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 실측 검증 완료.
 
-🚀 Current: Sprint 40 완료 / 차기 과제(과제 3: 브라질 국채 vs 미국 30년 국채 실질 토탈리턴 비교 등) 선정 대기 단계
+🚀 Current: Sprint 41 완료 / 차기 과제 선정 및 안정화 대기 단계
+
+✅ Previous: Sprint 40 완료 — [11월 FOMC 및 한국은행 금통위 D-Day & CME FedWatch 실시간 금리 인하 확률 게이지 & 채권 ETF 시뮬레이터]
 
 ✅ Previous: Sprint 39 완료 — [2026 연말정산 절세 골든타임 한도 소진율 & 13월의 월급 환급 시뮬레이터 & 텔레그램 /tax 브리핑]
 
