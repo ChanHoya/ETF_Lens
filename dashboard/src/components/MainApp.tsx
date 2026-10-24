@@ -1413,7 +1413,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
         </header>
 
         {/* 서브탭: 종목분석 탭 선택시만 헤더 아래에 표시 */}
-        {['select', 'info', 'chart', 'holdings', 'covered_call', ...(showMyTab ? ['dividend'] : []), 'brazil'].includes(activeTab) && !isEtfCheckModalOpen && (
+        {['select', 'info', 'chart', 'holdings', 'covered_call', 'brazil'].includes(activeTab) && !isEtfCheckModalOpen && (
           <div className="w-full flex justify-center mb-2 relative z-[180]">
             <div className="bg-transparent px-3 py-1 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
               <SlidingTabs
@@ -1423,16 +1423,15 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                   { id: 'chart', label: '차트' },
                   { id: 'holdings', label: '구성종목' },
                   { id: 'covered_call', label: '커버드콜' },
-                  ...(showMyTab ? [{ id: 'dividend', label: '💰 배당 캘린더' }] : []),
                   { id: 'brazil', label: '🇧🇷 브라질채권' },
                 ]}
                 activeId={activeTab}
                 onChange={(newId) => {
-                  if (newId !== 'select' && newId !== 'brazil' && newId !== 'dividend' && !data) {
+                  if (newId !== 'select' && newId !== 'brazil' && !data) {
                     alert('먼저 종목을 선택하고 비교를 실행해주세요.');
                     return;
                   }
-                  setActiveTab(newId as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'dividend' | 'brazil');
+                  setActiveTab(newId as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'brazil');
                   setNaverEtfCode(null);
                   setSelectedDetailEtf(null);
                 }}

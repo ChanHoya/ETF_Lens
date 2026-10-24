@@ -713,29 +713,29 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                 </div>
             </div>
 
-            {/* 헤더 2행: 탭 내비게이션 (종목분석/시장동향과 동일한 캡슐형 스타일 및 크기) */}
+            {/* 헤더 2행: 탭 내비게이션 (컴팩트 캡슐형 스타일로 12개 항목이 오른쪽 끝까지 잘림 없이 한눈에 표시) */}
             {fundData && (
-                <div className="w-full max-w-[95vw] xl:max-w-[1400px] flex justify-center mb-4 relative z-20">
-                    <div className="bg-transparent px-3 py-1 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide max-w-full">
+                <div className="w-full max-w-[98vw] 2xl:max-w-[1440px] px-1 sm:px-2 flex justify-center mb-3.5 relative z-20">
+                    <div className="bg-transparent px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide max-w-full">
                         <SlidingTabs
                             items={[
                                 { id: 'overview', label: '포트폴리오 현황' },
                                 { id: 'cumulative', label: '총누적손익' },
-                                { id: 'assets', label: '종목별 수익율' },
+                                { id: 'assets', label: '종목별 수익률' },
                                 { id: 'ytm', label: 'YTM 현황' },
                                 { id: 'monthly', label: '월별 분석' },
-                                { id: 'alpha', label: '📈 벤치마크 (Alpha)' },
-                                { id: 'dca', label: '💡 적립·재투자 플래너' },
-                                { id: 'savings', label: '📊 적금 대비 성과' },
+                                { id: 'alpha', label: '📈 벤치마크(Alpha)' },
+                                { id: 'dca', label: '💡 적립·재투자' },
+                                { id: 'savings', label: '📊 적금 대비' },
                                 { id: 'calendar', label: '📅 배당·분배금 캘린더' },
-                                { id: 'stress', label: '⚡ 펀드 리스크 & 스트레스' },
-                                { id: 'ladder', label: '🪜 보유 채권 듀레이션' },
-                                { id: 'exposure', label: '🚢 수출 수혜 노출도' },
+                                { id: 'stress', label: '⚡ 리스크·스트레스' },
+                                { id: 'ladder', label: '🪜 채권 듀레이션' },
+                                { id: 'exposure', label: '🚢 수출 노출도' },
                             ]}
                             activeId={activeSubTab}
                             onChange={(id) => setActiveSubTab(id as any)}
                             pillClassName="bg-white/20 shadow-inner border border-white/20"
-                            tabClassName="text-sm md:text-[15px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
+                            tabClassName="text-[11px] sm:text-xs xl:text-[13px] font-medium sm:font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full whitespace-nowrap transition-all tracking-tight"
                             activeTabClassName="text-white"
                             inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
                         />
