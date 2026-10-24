@@ -433,3 +433,12 @@
   1. 서비스 런타임에는 서울시 실시간 API 및 로컬 캐시 DB(`RealEstateLog`)의 다중 Fallback 안전망이 가동되어 전체 대시보드 중단 없이 정상 서빙됨.
   2. 공공데이터포털(data.go.kr)에서 해당 API의 재승인을 신청하고 환경변수(`MOLIT_API_KEY`)를 갱신하는 유지보수 가이드를 수립함.
 
+### [FP-050] 백엔드 신규 라우터 개발 시 uvicorn hot-reload 플래그 누락으로 인한 404 및 단위 테스트 PYTHONPATH 격리
+- **증상**: 백엔드 라우터에 신규 엔드포인트(`@router.post/get`)를 추가했음에도 브라우저나 curl에서 지속적으로 `404 Not Found`가 반환되거나, 단위 테스트 실행 시 `ModuleNotFoundError: No module named 'backend'`가 발생함.
+- **원인**:
+  1. 백그라운드로 실행된 uvicorn 서버 프로세스가 `--reload` 플래그 없이 구동되어 코드 수정 사항을 감지하지 못하고 이전 메모리 인스턴스를 유지함.
+  2. 루트 디렉토리 기준 `pytest` 실행 시 `sys.path`에 `backend` 경로가 포함되지 않아 `from main import app` 또는 `from core import ...` 임포트가 실패함.
+- **해결/예방**:
+  1. 로컬 개발 환경에서 백엔드 프로세스 구동 시 반드시 `uvicorn main:app --host 0.0.0.0 --port 8000 --reload` 형태로 실행하여 파일 저장 시 자동 리로드가 보장되도록 함.
+  2. 회귀 테스트 실행 시 `PYTHONPATH=backend pytest ...` 환경변수를 명시하거나, 신규 테스트 파일 상단에 `sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))`를 선제 선언하여 실행 위치와 무관하게 임포트 무결성을 유지함.
+
