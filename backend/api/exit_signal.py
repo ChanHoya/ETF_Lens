@@ -461,48 +461,37 @@ async def reset_main_cache():
     return {"status": "ok", "message": "Cache cleared. Next / call will re-fetch data."}
 
 
-def _calc_hist_risk_score(vix: float | None, vkospi: float | None, fgi: float | None, kospi_mom_20d: float = 0.0) -> tuple[int, str, str]:
-    """과거 센티먼트 로그 기반 0~21 종합 위험지수 및 등급 산출"""
-    sv = 0
-    if vix is not None:
-        if vix >= 30: sv = 3
-        elif vix >= 24: sv = 2
-        elif vix >= 18: sv = 1
+def _calc_hist_risk_score(vix: float | None, raw_vkospi: float | None, fgi: float | None, kospi_mom_20d: float = 0.0) -> tuple[int, str, str]:
+    """과거 센티먼트 로그 기반 0~21 종합 위험지수 및 4단계 등급 정밀 산출"""
+    v = vix or 16.0
+    # 비정상적 이상치 클리핑: VIX의 최대 1.35배로 현실적 프록시 조정
+    vk = min(raw_vkospi or 16.0, v * 1.35) if v > 0 else (raw_vkospi or 16.0)
+    f = fgi or 50.0
 
-    sk = 0
-    if vkospi is not None:
-        if vkospi >= 28: sk = 3
-        elif vkospi >= 22: sk = 2
-        elif vkospi >= 18: sk = 1
+    # 1) VIX 점수 (0~3점)
+    s_vix = 3 if v >= 25.0 else (2 if v >= 20.0 else (1 if v >= 16.0 else 0))
 
-    sf = 0
-    if fgi is not None:
-        if fgi <= 25: sf = 3
-        elif fgi <= 35: sf = 2
-        elif fgi <= 45: sf = 1
+    # 2) VKOSPI 프록시 점수 (0~3점)
+    s_vk = 3 if vk >= 28.0 else (2 if vk >= 22.0 else (1 if vk >= 18.0 else 0))
 
-    base_macro = 2  # 거시 지표 기본 기여도 (PER, CLI, 금리차)
-    raw_score = sv + sk + sf + base_macro
+    # 3) FGI 점수 (0~3점)
+    s_fgi = 3 if f <= 28.0 else (2 if f <= 40.0 else (1 if f <= 55.0 else 0))
 
-    is_danger = False
-    is_warning = False
-    if vkospi is not None and vkospi >= 28.0:
-        is_danger = True
-    elif vkospi is not None and vkospi >= 24.0:
-        is_warning = True
+    # 4) 거시 지표 베이스 점수 (PER, CLI, 금리차, 하이일드 기본 가중치 약 2점)
+    s_macro = 2
 
-    if kospi_mom_20d <= -8.0:
-        is_danger = True
-    elif kospi_mom_20d <= -5.0:
-        is_warning = True
+    base_score = s_vix + s_vk + s_fgi + s_macro
 
-    final_score = raw_score
-    if is_danger:
-        final_score = max(raw_score + 6, 15)
-    elif is_warning:
-        final_score = max(raw_score + 4, 9)
+    # 5) 서킷 브레이커 가드레일 (실제 폭락 장세 감지)
+    # 20영업일 -8% 이상 급락이거나 극단적 공포(FGI <= 22, VIX >= 19) 시 위험(15점) 발동
+    if kospi_mom_20d <= -8.0 or (f <= 22.0 and v >= 19.0):
+        final_score = max(base_score + 6, 15)
+    elif kospi_mom_20d <= -4.0 or f <= 35.0:
+        final_score = max(base_score + 3, 9)
+    else:
+        final_score = base_score
 
-    final_score = min(max(final_score, 0), 21)
+    final_score = min(max(final_score, 2), 21)
 
     if final_score <= 4:
         level, label = "safe", "안전"

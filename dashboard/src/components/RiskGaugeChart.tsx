@@ -153,10 +153,13 @@ export default function RiskGaugeChart({
     // 기간 내 최고 / 최저 위험점수 계산
     const stats = useMemo(() => {
         if (!history || history.length === 0) return { max: score, min: score };
-        const scores = history.map(h => typeof h.score === 'number' ? h.score : 0);
+        const validScores = history
+            .map(h => typeof h.score === 'number' ? h.score : null)
+            .filter((v): v is number => v !== null && v > 0);
+        if (validScores.length === 0) return { max: score, min: score };
         return {
-            max: Math.max(...scores, score),
-            min: Math.min(...scores, score)
+            max: Math.max(...validScores, score),
+            min: Math.min(...validScores, score)
         };
     }, [history, score]);
 
@@ -289,6 +292,8 @@ export default function RiskGaugeChart({
                                     stroke={config.color} 
                                     strokeWidth={2} 
                                     fill="url(#riskAreaGrad)" 
+                                    isAnimationActive={false}
+                                    activeDot={{ r: 4, fill: config.color, stroke: '#fff', strokeWidth: 1.5 }}
                                 />
                             </AreaChart>
                         </ResponsiveContainer>
