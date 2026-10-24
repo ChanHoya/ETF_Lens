@@ -335,6 +335,15 @@ export default function IntegratedAssetRebalancingWidget({
         {/* 기능 버튼 및 토글 스위치들 */}
         <div className="flex items-center gap-1.5 self-end sm:self-auto flex-wrap">
           <button
+            onClick={() => setIsQuadrantSimOpen(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-[11px] font-semibold shadow transition-all active:scale-95 cursor-pointer"
+            title="사분면 모범 밸런스(5:5) 달성 필요 금융자산 및 비타민 ETF 배분 시뮬레이터"
+          >
+            <Sparkles className="w-3 h-3 text-amber-300" />
+            <span>밸런스 시뮬레이터</span>
+          </button>
+
+          <button
             onClick={() => setIsReportModalOpen(true)}
             className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-indigo-600/80 hover:bg-indigo-600 text-white text-[11px] font-semibold shadow transition-all active:scale-95 cursor-pointer"
             title="A4 규격 가계 종합 자산 진단 보고서 출력/PDF 저장"

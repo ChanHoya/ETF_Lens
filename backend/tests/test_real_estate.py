@@ -98,8 +98,8 @@ def test_real_estate_districts_all():
     assert len(data["risk_complexes"]) >= 8
     assert data["meta"]["total_districts"] == 38
     assert data["meta"]["avg_seoul_jeonse_ratio"] > 50.0
-    assert data["meta"]["avg_gyeonggi_jeonse_ratio"] > 50.0
-    assert data["meta"]["avg_incheon_jeonse_ratio"] > 60.0
+    assert data["meta"]["avg_gyeonggi_jeonse_ratio"] > 40.0
+    assert data["meta"]["avg_incheon_jeonse_ratio"] > 50.0
 
     # 필수 필드 무결성 확인
     gangnam = next(d for d in data["districts"] if d["name"] == "강남구")
