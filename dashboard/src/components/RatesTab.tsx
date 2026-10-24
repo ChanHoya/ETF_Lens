@@ -23,7 +23,8 @@ type Snapshot = {
     kr_base?: { value: number; date: string; last_change: Change; next_meeting: Meeting };
     us_policy?: { upper: number; lower: number; effective: number | null; date: string; last_change: Change; next_meeting: Meeting };
     policy_gap?: number;
-    kr3y?: RateCard; kr10y?: RateCard; us2y?: RateCard; us10y?: RateCard;
+    kr1y?: RateCard; kr3y?: RateCard; kr10y?: RateCard;
+    us3m?: RateCard; us2y?: RateCard; us10y?: RateCard;
     implied: { kr: Implied; us: Implied };
     real: { kr?: { value: number; cpi: number; cpi_month: string }; us?: { value: number; cpi: number; cpi_month: string } };
     phase: { kr: string | null; us: string | null };
@@ -33,11 +34,13 @@ type Spread = { label: string; basis?: 'common' | 'reference'; value: number; da
 type Shape = { name: string; meaning: string; short_bp: number; long_bp: number; slope_bp: number; days: number } | null;
 type CurvePt = { tenor: string; value: number | null };
 type Row = {
-    date: string; kr_base: number | null; us_upper: number | null; ecb: number | null; kr3y: number | null; kr10y: number | null;
-    us2y: number | null; us10y: number | null; kr_10_3: number | null; us_10_3?: number | null; us_10_2: number | null; us_10_3m: number | null;
-    kr1y?: number | null; us1y?: number | null; kr30y?: number | null; us30y?: number | null; kr50y?: number | null;
+    date: string; kr_base: number | null; us_upper: number | null; ecb: number | null;
+    kr1y?: number | null; kr3y: number | null; kr10y: number | null; kr30y?: number | null; kr50y?: number | null;
+    us3m?: number | null; us1y?: number | null; us2y: number | null; us3y?: number | null; us10y: number | null; us30y?: number | null;
+    kr_10_1?: number | null; kr_10_3: number | null;
+    us_10_3m: number | null; us_10_2: number | null; us_10_3?: number | null;
 };
-type TermRow = { key: 'short' | 'long' | 'ultra'; label: string; kr: number; us: number; gap: number; gap_1y: number | null; kr_chg_1y: number | null; us_chg_1y: number | null };
+type TermRow = { key: 'ultra_short' | 'short' | 'long' | 'ultra'; label: string; kr: number; us: number; gap: number; gap_1y: number | null; kr_chg_1y: number | null; us_chg_1y: number | null };
 type Terms = {
     rows: TermRow[]; premium: Partial<Record<'kr' | 'us', { now: number; y1: number | null }>>; insights: string[];
     kr50y: { value: number; date: string } | null;
@@ -47,7 +50,7 @@ type Regime = {
     from: number; to: number; bp: number; changes: number; auto?: boolean;
 };
 type Overview = {
-    snapshot: Snapshot; spreads: Record<string, Spread>; shapes: { kr: Shape; us: Shape }; terms?: Terms;
+    snapshot: Snapshot; spreads: Record<string, Spread>; shapes: { kr: Shape; kr_ref?: Shape; us: Shape; us_ref?: Shape }; terms?: Terms;
     curves: Record<'kr' | 'us', { date: string; now: CurvePt[]; m1: CurvePt[]; y1: CurvePt[] }>;
     recessions: { start: string; end: string | null }[]; weekly: Row[]; regimes: Regime[];
     data_dates: Record<string, string>; updated_at: string; stale?: boolean; ecos_key?: boolean;
@@ -134,16 +137,24 @@ function Toggle<T extends string>({ options, value, onChange }: { options: reado
 const RANGE_OPTS = RANGES.map(r => ({ id: r, label: r }));
 const COUNTRY_OPTS = [{ id: 'kr', label: '한국' }, { id: 'us', label: '미국' }] as const;
 
-function TwoRates({ a, b, la, lb }: { a?: RateCard; b?: RateCard; la: string; lb: string }) {
+function ThreeRates({ items }: { items: { label: string; card?: RateCard; isMain?: boolean; isRef?: boolean }[] }) {
     return (
         <div className="space-y-1.5">
-            {([[la, a], [lb, b]] as [string, RateCard | undefined][]).map(([l, card]) => (
-                <div key={l}>
-                    <div className="flex items-baseline justify-between">
-                        <span className="text-xs text-gray-400">{l}</span>
-                        <span className="text-lg font-extrabold text-white">{pct(card?.value, 2)}</span>
+            {items.map(({ label, card, isMain, isRef }) => (
+                <div key={label} className={`flex items-baseline justify-between py-0.5 ${isRef ? 'opacity-85' : ''}`}>
+                    <div className="flex items-center gap-1.5">
+                        <span className={`text-xs ${isMain ? 'text-gray-200 font-semibold' : 'text-gray-400'}`}>{label}</span>
+                        {isRef && <span className="text-[9px] px-1 py-0.2 rounded bg-white/5 text-gray-400 border border-white/10">참고</span>}
                     </div>
-                    {card && <div className="flex flex-wrap justify-end gap-x-2 text-[11px] font-bold"><Bp v={card.chg_1m} label="1개월" /><Bp v={card.chg_1y} label="1년" /></div>}
+                    <div className="flex items-baseline gap-1.5">
+                        <span className={`text-base font-extrabold ${isMain ? 'text-white' : 'text-gray-300'}`}>{pct(card?.value, 2)}</span>
+                        {card && (
+                            <div className="flex gap-x-1.5 text-[10px] font-bold">
+                                <Bp v={card.chg_1m} label="1M" />
+                                <Bp v={card.chg_1y} label="1Y" />
+                            </div>
+                        )}
+                    </div>
                 </div>
             ))}
         </div>
@@ -215,31 +226,48 @@ function SnapshotGrid({ d, onSelectModal }: { d: Overview; onSelectModal?: (key:
             <Card
                 icon={<Percent className="w-3.5 h-3.5 text-sky-400" />}
                 title="한국 국고채"
-                foot={s.kr3y ? `${s.kr3y.date} 기준 · 3년물은 10년 중 ${s.kr3y.pct10y}% 위치` : undefined}
+                foot={s.kr10y ? `${s.kr10y.date} 기준 · 10년물 10년 중 ${s.kr10y.pct10y}% · 3년물(참고) ${s.kr3y?.pct10y ?? '-'}%` : undefined}
                 onClick={onSelectModal ? () => onSelectModal('kr_bonds') : undefined}
                 badge="🔍 6M~10Y 차트"
             >
-                <TwoRates a={s.kr3y} b={s.kr10y} la="3년" lb="10년" />
+                <ThreeRates
+                    items={[
+                        { label: '1년 (초단기)', card: s.kr1y, isMain: true },
+                        { label: '3년 (단기)', card: s.kr3y, isRef: true },
+                        { label: '10년 (장기)', card: s.kr10y, isMain: true },
+                    ]}
+                />
             </Card>
             <Card
                 icon={<Percent className="w-3.5 h-3.5 text-rose-400" />}
                 title="미국 국채"
-                foot={s.us10y ? `${s.us10y.date} 기준 · 10년물은 10년 중 ${s.us10y.pct10y}% 위치` : undefined}
+                foot={s.us10y ? `${s.us10y.date} 기준 · 10년물 10년 중 ${s.us10y.pct10y}% · 2년물(참고) ${s.us2y?.pct10y ?? '-'}%` : undefined}
                 onClick={onSelectModal ? () => onSelectModal('us_bonds') : undefined}
                 badge="🔍 6M~10Y 차트"
             >
-                <TwoRates a={s.us2y} b={s.us10y} la="2년" lb="10년" />
+                <ThreeRates
+                    items={[
+                        { label: '3개월 (초단기)', card: s.us3m, isMain: true },
+                        { label: '2년 (단기)', card: s.us2y, isRef: true },
+                        { label: '10년 (장기)', card: s.us10y, isMain: true },
+                    ]}
+                />
             </Card>
             <Card
                 icon={<Waves className="w-3.5 h-3.5 text-emerald-400" />}
-                title="장단기 금리차 (한·미 10년−3년)"
-                foot="마이너스(역전)는 경기 둔화 신호로 읽힙니다 · 10년−3개월은 침체 예측 참고"
+                title="장단기 금리차 (한 10Y−1Y · 미 10Y−3M)"
+                foot="마이너스(역전)는 경기 둔화 신호 · 한 10년-3년, 미 10년-2년은 참고"
                 onClick={onSelectModal ? () => onSelectModal('term_spread') : undefined}
                 badge="🔍 6M~10Y 차트"
             >
-                {(['kr_10_3', 'us_10_3', 'us_10_3m'] as const).map(k => sp[k] && (
-                    <div key={k} className={`flex items-baseline justify-between gap-2 py-0.5 ${sp[k].basis === 'reference' ? 'border-t border-white/5 mt-0.5 pt-1' : ''}`}>
-                        <span className={`text-xs ${sp[k].basis === 'reference' ? 'text-gray-500' : 'text-gray-400'}`}>{sp[k].label}</span>
+                {(['kr_10_1', 'kr_10_3', 'us_10_3m', 'us_10_2'] as const).map(k => sp[k] && (
+                    <div key={k} className={`flex items-baseline justify-between gap-2 py-0.5 ${sp[k].basis === 'reference' ? 'border-t border-white/5 mt-0.5 pt-0.5 opacity-85' : ''}`}>
+                        <div className="flex items-center gap-1.5">
+                            <span className={`text-xs ${sp[k].basis === 'reference' ? 'text-gray-400' : 'text-gray-300 font-semibold'}`}>{sp[k].label}</span>
+                            {sp[k].basis === 'reference' && (
+                                <span className="text-[9px] px-1 rounded bg-white/5 text-gray-400 border border-white/10">참고</span>
+                            )}
+                        </div>
                         <span className={`text-sm font-extrabold ${sp[k].inverted ? 'text-red-400' : 'text-white'}`}>
                             {signed(sp[k].value)}{sp[k].inverted && ' 역전'}
                         </span>
@@ -295,9 +323,21 @@ function PolicyChart({ rows, regimes, selected }: { rows: (Row & { t: number })[
 }
 
 function MarketChart({ rows, country }: { rows: (Row & { t: number })[]; country: 'kr' | 'us' }) {
+    // 한국: 블루 계열 / 미국: 웜톤(로즈/앰버) 계열
+    // 장기: 굵은 실선(2.2), 초단기: 실선(1.8), 단기(참고): 점선 '4 3'(1.5)
     const lines = country === 'kr'
-        ? [{ k: 'kr_base', n: '기준금리', c: '#6366f1', step: true }, { k: 'kr3y', n: '국고채 3년', c: '#38bdf8', step: false }, { k: 'kr10y', n: '국고채 10년', c: '#10b981', step: false }]
-        : [{ k: 'us_upper', n: '정책금리(상단)', c: '#f43f5e', step: true }, { k: 'us2y', n: '미국채 2년', c: '#f59e0b', step: false }, { k: 'us10y', n: '미국채 10년', c: '#a78bfa', step: false }];
+        ? [
+            { k: 'kr_base', n: '기준금리', c: '#6366f1', step: true, w: 2.2 },
+            { k: 'kr1y', n: '국고채 1년 (초단기)', c: '#38bdf8', step: false, w: 1.8 },
+            { k: 'kr3y', n: '국고채 3년 (참고)', c: '#818cf8', step: false, w: 1.5, dash: '4 3' },
+            { k: 'kr10y', n: '국고채 10년 (장기)', c: '#4f46e5', step: false, w: 2.2 },
+          ]
+        : [
+            { k: 'us_upper', n: '정책금리(상단)', c: '#f43f5e', step: true, w: 2.2 },
+            { k: 'us3m', n: '미국채 3개월 (초단기)', c: '#f59e0b', step: false, w: 1.8 },
+            { k: 'us2y', n: '미국채 2년 (참고)', c: '#fb7185', step: false, w: 1.5, dash: '4 3' },
+            { k: 'us10y', n: '미국채 10년 (장기)', c: '#e11d48', step: false, w: 2.2 },
+          ];
     const { handleLegendClick, getOpacity, getStrokeWidth, renderLegendText } = useChartHighlight();
     return (
         <ResponsiveContainer width="100%" height={300}>
@@ -309,7 +349,8 @@ function MarketChart({ rows, country }: { rows: (Row & { t: number })[]; country
                 <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
                 {lines.map(l => (
                     <Line key={l.k} type={l.step ? 'stepAfter' : 'monotone'} dataKey={l.k} name={l.n} stroke={l.c}
-                        dot={false} strokeWidth={getStrokeWidth(l.k, l.step ? 2.2 : 1.6, (l.step ? 2.2 : 1.6) + 1.5)} strokeOpacity={getOpacity(l.k)} connectNulls isAnimationActive={false} />
+                        strokeDasharray={l.dash}
+                        dot={false} strokeWidth={getStrokeWidth(l.k, l.w, l.w + 1.5)} strokeOpacity={getOpacity(l.k)} connectNulls isAnimationActive={false} />
                 ))}
             </LineChart>
         </ResponsiveContainer>
@@ -332,9 +373,12 @@ function SpreadChart({ rows, recessions }: { rows: (Row & { t: number })[]; rece
                 <YAxis tick={axisTick} width={44} tickFormatter={(v: number) => `${v}%p`} />
                 <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
                 <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
-                <Line dataKey="kr_10_3" name="한국 10년−3년" stroke="#6366f1" dot={false} strokeWidth={getStrokeWidth('kr_10_3', 2, 3.5)} strokeOpacity={getOpacity('kr_10_3')} connectNulls isAnimationActive={false} />
-                <Line dataKey="us_10_3" name="미국 10년−3년" stroke="#f43f5e" dot={false} strokeWidth={getStrokeWidth('us_10_3', 2, 3.5)} strokeOpacity={getOpacity('us_10_3')} connectNulls isAnimationActive={false} />
-                <Line dataKey="us_10_3m" name="미국 10년−3개월 (참고)" stroke="#9ca3af" strokeDasharray="4 3" dot={false} strokeWidth={getStrokeWidth('us_10_3m', 1.2, 2.5)} strokeOpacity={getOpacity('us_10_3m')} connectNulls isAnimationActive={false} />
+                {/* 한국 계열 (블루): 10년-1년 메인 실선, 10년-3년 참고 점선 */}
+                <Line dataKey="kr_10_1" name="한국 10년−1년 (메인)" stroke="#6366f1" dot={false} strokeWidth={getStrokeWidth('kr_10_1', 2.2, 3.5)} strokeOpacity={getOpacity('kr_10_1')} connectNulls isAnimationActive={false} />
+                <Line dataKey="kr_10_3" name="한국 10년−3년 (참고)" stroke="#38bdf8" strokeDasharray="4 3" dot={false} strokeWidth={getStrokeWidth('kr_10_3', 1.5, 2.8)} strokeOpacity={getOpacity('kr_10_3')} connectNulls isAnimationActive={false} />
+                {/* 미국 계열 (웜톤): 10년-3개월 메인 실선, 10년-2년 참고 점선 */}
+                <Line dataKey="us_10_3m" name="미국 10년−3개월 (메인)" stroke="#f43f5e" dot={false} strokeWidth={getStrokeWidth('us_10_3m', 2.2, 3.5)} strokeOpacity={getOpacity('us_10_3m')} connectNulls isAnimationActive={false} />
+                <Line dataKey="us_10_2" name="미국 10년−2년 (참고)" stroke="#f59e0b" strokeDasharray="4 3" dot={false} strokeWidth={getStrokeWidth('us_10_2', 1.5, 2.8)} strokeOpacity={getOpacity('us_10_2')} connectNulls isAnimationActive={false} />
             </LineChart>
         </ResponsiveContainer>
     );
@@ -359,10 +403,10 @@ function CurveChart({ curve }: { curve: Overview['curves']['kr'] }) {
     );
 }
 
-type SpreadKey = 'kr_10_3' | 'us_10_3' | 'us_10_3m';
+type SpreadKey = 'kr_10_1' | 'kr_10_3' | 'us_10_3m' | 'us_10_2' | 'us_10_3';
 function InversionTable({ spreads }: { spreads: Overview['spreads'] }) {
-    const keys = (['kr_10_3', 'us_10_3', 'us_10_3m'] as SpreadKey[]).filter(k => spreads[k]);
-    const [key, setKey] = useState<SpreadKey>(keys.includes('us_10_3') ? 'us_10_3' : keys[0] ?? 'kr_10_3');
+    const keys = (['kr_10_1', 'kr_10_3', 'us_10_3m', 'us_10_2'] as SpreadKey[]).filter(k => spreads[k]);
+    const [key, setKey] = useState<SpreadKey>(keys.includes('us_10_3m') ? 'us_10_3m' : keys[0] ?? 'kr_10_1');
     const sp = spreads[key];
     if (!sp) return null;
     const hits = sp.inversions.filter(e => e.status === 'recession');
@@ -417,39 +461,43 @@ function ShapeCard({ title, shape }: { title: string; shape: Shape }) {
     );
 }
 
-const TERM_LINES: Record<TermRow['key'], { kr: keyof Row; us: keyof Row; title: string }> = {
-    short: { kr: 'kr1y', us: 'us1y', title: '단기 · 1년물' },
+const TERM_LINES: Record<TermRow['key'], { kr: keyof Row; us: keyof Row; title: string; isRef?: boolean }> = {
+    ultra_short: { kr: 'kr1y', us: 'us3m', title: '초단기 · 한 1년 / 미 3개월' },
+    short: { kr: 'kr3y', us: 'us2y', title: '단기 (참고) · 한 3년 / 미 2년', isRef: true },
     long: { kr: 'kr10y', us: 'us10y', title: '장기 · 10년물' },
     ultra: { kr: 'kr30y', us: 'us30y', title: '초장기 · 30년물' },
 };
 
-// 단기·장기·초장기 한·미 비교 — 큰 흐름을 3분할 차트, 비교표, 자동 해석으로 보여준다
+// 초단기·단기·장기·초장기 한·미 비교 — 4분할 차트, 비교표, 자동 해석으로 보여준다
 function TermSection({ terms, rows, range, setRange }: { terms: NonNullable<Terms>; rows: (Row & { t: number })[]; range: Range; setRange: (r: Range) => void }) {
     return (
         <section className="bg-black/20 rounded-2xl border border-white/5 p-4 space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
-                <SectionTitle icon={<Activity className="w-5 h-5 text-sky-400" />} title="단기·장기·초장기 금리 — 한·미 비교"
-                    sub="국채 1년·10년·30년물 · 단기는 정책금리 기대, 장기는 성장·물가, 초장기는 재정·기간 프리미엄을 반영" />
+                <SectionTitle icon={<Activity className="w-5 h-5 text-sky-400" />} title="초단기·단기·장기·초장기 금리 — 한·미 비교"
+                    sub="국채 초단기(1Y/3M) · 단기(3Y/2Y) · 장기(10Y) · 초장기(30Y) 만기별 한·미 금리 비교" />
                 <Toggle options={RANGE_OPTS} value={range} onChange={setRange} />
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                 {terms.rows.map(r => {
                     const L = TERM_LINES[r.key];
+                    if (!L) return null;
                     return (
                         <div key={r.key} className="rounded-xl bg-white/[0.03] border border-white/5 p-3">
                             <div className="flex items-baseline justify-between mb-1">
-                                <p className="text-sm font-bold text-gray-200">{L.title}</p>
-                                <p className="text-xs text-gray-400">한 {r.kr.toFixed(2)}% · 미 {r.us.toFixed(2)}%
-                                    <span className={`font-bold ml-1.5 ${r.gap < 0 ? 'text-blue-400' : 'text-red-400'}`}>{signed(r.gap)}</span></p>
+                                <div className="flex items-center gap-1.5">
+                                    <p className="text-xs font-bold text-gray-200">{L.title}</p>
+                                </div>
+                                <p className="text-[11px] text-gray-400">한 {r.kr.toFixed(2)}% · 미 {r.us.toFixed(2)}%
+                                    <span className={`font-bold ml-1 ${r.gap < 0 ? 'text-blue-400' : 'text-red-400'}`}>{signed(r.gap)}</span></p>
                             </div>
-                            <ResponsiveContainer width="100%" height={170}>
+                            <ResponsiveContainer width="100%" height={160}>
                                 <LineChart data={rows} margin={{ top: 6, right: 6, bottom: 0, left: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                                     <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={yearTick} ticks={yearTicks(rows)} interval={0} tick={axisTick} />
                                     <YAxis tick={axisTick} width={36} domain={['auto', 'auto']} tickFormatter={(v: number) => `${v}%`} />
                                     <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} labelFormatter={(t) => fmtDate(Number(t))} />
-                                    <Line dataKey={L.kr as string} name="한국" stroke="#6366f1" dot={false} strokeWidth={1.8} connectNulls isAnimationActive={false} />
-                                    <Line dataKey={L.us as string} name="미국" stroke="#f43f5e" dot={false} strokeWidth={1.6} connectNulls isAnimationActive={false} />
+                                    <Line dataKey={L.kr as string} name="한국" stroke="#6366f1" strokeDasharray={L.isRef ? '4 3' : undefined} dot={false} strokeWidth={L.isRef ? 1.5 : 1.8} connectNulls isAnimationActive={false} />
+                                    <Line dataKey={L.us as string} name="미국" stroke="#f43f5e" strokeDasharray={L.isRef ? '4 3' : undefined} dot={false} strokeWidth={L.isRef ? 1.5 : 1.8} connectNulls isAnimationActive={false} />
                                     {r.key === 'ultra' && <Line dataKey="kr50y" name="한국 50년" stroke="#f59e0b" strokeDasharray="4 3" dot={false} strokeWidth={1.4} connectNulls isAnimationActive={false} />}
                                 </LineChart>
                             </ResponsiveContainer>
@@ -504,7 +552,7 @@ function TermSection({ terms, rows, range, setRange }: { terms: NonNullable<Term
 
 export default function RatesTab() {
     // 재진입 시 캐시를 즉시 그리고, 서버 기준 시각이 1시간 넘었을 때만 백그라운드 갱신
-    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-rates-v3', `${API_BASE}/api/v1/rates/overview`);
+    const { data, refreshing, error, refresh } = useCachedOverview<Overview>('iprism-rates-v4', `${API_BASE}/api/v1/rates/overview`);
     const [range, setRange] = useState<Range>('20Y');
     const [marketCountry, setMarketCountry] = useState<'kr' | 'us'>('kr');
     const [curveCountry, setCurveCountry] = useState<'kr' | 'us'>('kr');
@@ -529,43 +577,48 @@ export default function RatesTab() {
             case 'kr_base':
                 return {
                     title: '한국 기준금리 (한국은행 ECOS 공식 변경 이력) 20년 추이',
-                    subtitle: '한국은행 금융통화위원회 기준금리 결정 및 국채 3Y/10Y 연동 실제 시계열',
+                    subtitle: '한국은행 금융통화위원회 기준금리 결정 및 국채 1Y(초단기)/3Y(단기)/10Y(장기) 실제 시계열',
                     badge: '한은 기준금리',
                     badgeColor: 'bg-indigo-500/15 text-indigo-300 border-indigo-400/30',
                     series: [
                         { key: 'kr_base', name: '한국 기준금리 (%)', color: '#6366f1', unit: '%', strokeWidth: 2.2 },
-                        { key: 'kr3y', name: '국고채 3년 (%)', color: '#38bdf8', unit: '%', strokeWidth: 1.5, strokeDasharray: '3 3' },
-                        { key: 'kr10y', name: '국고채 10년 (%)', color: '#a855f7', unit: '%', strokeWidth: 1.5, strokeDasharray: '4 4' }
+                        { key: 'kr1y', name: '국고채 1년 (%) (초단기)', color: '#38bdf8', unit: '%', strokeWidth: 1.8 },
+                        { key: 'kr3y', name: '국고채 3년 (%) (참고)', color: '#818cf8', unit: '%', strokeWidth: 1.5, strokeDasharray: '4 3' },
+                        { key: 'kr10y', name: '국고채 10년 (%) (장기)', color: '#4f46e5', unit: '%', strokeWidth: 2.2 }
                     ],
-                    data: weekly.map(w => ({ date: w.date, kr_base: w.kr_base, kr3y: w.kr3y, kr10y: w.kr10y })),
+                    data: weekly.map(w => ({ date: w.date, kr_base: w.kr_base, kr1y: w.kr1y, kr3y: w.kr3y, kr10y: w.kr10y })),
                     currentStats: [
                         { label: '현재 기준금리', value: `${data.snapshot.kr_base?.value ?? 3.0}%`, isAccent: true },
-                        { label: '국고채 3년', value: `${data.snapshot.kr3y?.value ?? 3.85}%` },
-                        { label: '국고채 10년', value: `${data.snapshot.kr10y?.value ?? 4.18}%` },
+                        { label: '국고채 1년', value: `${data.snapshot.kr1y?.value ?? '-'}%` },
+                        { label: '국고채 3년 (참고)', value: `${data.snapshot.kr3y?.value ?? '-'}%` },
+                        { label: '국고채 10년', value: `${data.snapshot.kr10y?.value ?? '-'}%` },
                         { label: '다음 금통위', value: data.snapshot.kr_base?.next_meeting ? `${md(data.snapshot.kr_base.next_meeting.date)} (D-${data.snapshot.kr_base.next_meeting.d_day})` : '-' }
                     ],
-                    notice: '💡 한국은행 ECOS 공식 20년 기준금리 시계열입니다. 국채 3년물이 기준금리를 상회하면 시장은 추가 인상 가능성을 선반영하고 있는 것입니다.'
+                    notice: '💡 한국은행 ECOS 공식 20년 기준금리 시계열입니다. 1년물 및 3년물이 기준금리를 상회하면 시장은 추가 인상 가능성을 선반영하고 있는 것입니다.'
                 };
             case 'us_policy':
                 return {
                     title: '미국 연준 정책금리 (Federal Funds Target Range) 20년 추이',
-                    subtitle: '미국 연방준비제도(Fed) FOMC 목표금리 상단 및 실효금리(EFFR), ECB 예금금리 비교',
+                    subtitle: '미국 연방준비제도(Fed) FOMC 목표금리 상단 및 실효금리(EFFR), 미국채 3M(초단기)/2Y(단기)/10Y(장기) 비교',
                     badge: 'Fed 정책금리',
                     badgeColor: 'bg-rose-500/15 text-rose-300 border-rose-400/30',
                     series: [
                         { key: 'us_upper', name: '미국 정책금리 상단 (%)', color: '#f43f5e', unit: '%', strokeWidth: 2.2 },
-                        { key: 'ecb', name: 'ECB 예금금리 (%)', color: '#f59e0b', unit: '%', strokeWidth: 1.8 },
-                        { key: 'us2y', name: '미국채 2년 (%)', color: '#10b981', unit: '%', strokeWidth: 1.5, strokeDasharray: '3 3' },
-                        { key: 'us10y', name: '미국채 10년 (%)', color: '#38bdf8', unit: '%', strokeWidth: 1.5, strokeDasharray: '4 4' }
+                        { key: 'ecb', name: 'ECB 예금금리 (%)', color: '#94a3b8', unit: '%', strokeWidth: 1.6 },
+                        { key: 'us3m', name: '미국채 3개월 (%) (초단기)', color: '#f59e0b', unit: '%', strokeWidth: 1.8 },
+                        { key: 'us2y', name: '미국채 2년 (%) (참고)', color: '#fb7185', unit: '%', strokeWidth: 1.5, strokeDasharray: '4 3' },
+                        { key: 'us10y', name: '미국채 10년 (%) (장기)', color: '#e11d48', unit: '%', strokeWidth: 2.2 }
                     ],
-                    data: weekly.map(w => ({ date: w.date, us_upper: w.us_upper, ecb: w.ecb, us2y: w.us2y, us10y: w.us10y })),
+                    data: weekly.map(w => ({ date: w.date, us_upper: w.us_upper, ecb: w.ecb, us3m: w.us3m, us2y: w.us2y, us10y: w.us10y })),
                     currentStats: [
                         { label: '목표 범위', value: `${data.snapshot.us_policy?.lower.toFixed(2)}~${data.snapshot.us_policy?.upper.toFixed(2)}%`, isAccent: true },
                         { label: '실효 금리', value: `${data.snapshot.us_policy?.effective ?? 3.88}%` },
-                        { label: '미국 10년', value: `${data.snapshot.us10y?.value ?? 5.10}%` },
+                        { label: '미국채 3개월', value: `${data.snapshot.us3m?.value ?? '-'}%` },
+                        { label: '미국채 2년 (참고)', value: `${data.snapshot.us2y?.value ?? '-'}%` },
+                        { label: '미국 10년', value: `${data.snapshot.us10y?.value ?? '-'}%` },
                         { label: '다음 FOMC', value: data.snapshot.us_policy?.next_meeting ? `${md(data.snapshot.us_policy.next_meeting.date)} (D-${data.snapshot.us_policy.next_meeting.d_day})` : '-' }
                     ],
-                    notice: '💡 FRED 공식 20년치 미국 정책금리 시계열입니다. 2년물 국채금리는 연준 정책금리의 가장 충실한 선행지표입니다.'
+                    notice: '💡 FRED 공식 20년치 미국 정책금리 시계열입니다. 3개월물은 단기 유동성 및 침체 확률 모델의 기준이며, 2년물은 정책금리의 대표적인 시장 선행지표입니다.'
                 };
             case 'gap':
                 return {
@@ -575,8 +628,8 @@ export default function RatesTab() {
                     badgeColor: 'bg-amber-500/15 text-amber-300 border-amber-400/30',
                     series: [
                         { key: 'policy_gap', name: '한미 정책금리 차 (%p)', color: '#f59e0b', unit: '%p', strokeWidth: 2.2 },
-                        { key: 'kr_base', name: '한국 기준금리 (%)', color: '#6366f1', unit: '%', strokeWidth: 1.8, strokeDasharray: '3 3' },
-                        { key: 'us_upper', name: '미국 정책금리 (%)', color: '#f43f5e', unit: '%', strokeWidth: 1.8, strokeDasharray: '3 3' }
+                        { key: 'kr_base', name: '한국 기준금리 (%)', color: '#6366f1', unit: '%', strokeWidth: 1.8, strokeDasharray: '4 3' },
+                        { key: 'us_upper', name: '미국 정책금리 (%)', color: '#f43f5e', unit: '%', strokeWidth: 1.8, strokeDasharray: '4 3' }
                     ],
                     data: weekly.map(w => ({
                         date: w.date,
@@ -594,86 +647,97 @@ export default function RatesTab() {
             case 'path':
                 return {
                     title: '시장이 반영한 금리 경로 & 장단기 국채 금리 추이',
-                    subtitle: '한국 및 미국의 단기(1Y/2Y/3Y) 및 장기(10Y) 국채 금리 기간구조 추이',
+                    subtitle: '한국 및 미국의 초단기(1Y/3M), 단기(3Y/2Y), 장기(10Y) 국채 금리 기간구조 추이',
                     badge: '선행 금리 경로',
                     badgeColor: 'bg-purple-500/15 text-purple-300 border-purple-400/30',
                     series: [
-                        { key: 'us10y', name: '미 10년물 (%)', color: '#f43f5e', unit: '%', strokeWidth: 2 },
-                        { key: 'us2y', name: '미 2년물 (%)', color: '#f59e0b', unit: '%', strokeWidth: 1.8, strokeDasharray: '3 3' },
-                        { key: 'kr10y', name: '한 10년물 (%)', color: '#6366f1', unit: '%', strokeWidth: 2 },
-                        { key: 'kr3y', name: '한 3년물 (%)', color: '#38bdf8', unit: '%', strokeWidth: 1.8, strokeDasharray: '3 3' }
+                        { key: 'kr10y', name: '한 10년물 (%) (장기)', color: '#6366f1', unit: '%', strokeWidth: 2.2 },
+                        { key: 'kr1y', name: '한 1년물 (%) (초단기)', color: '#38bdf8', unit: '%', strokeWidth: 1.8 },
+                        { key: 'kr3y', name: '한 3년물 (%) (참고)', color: '#818cf8', unit: '%', strokeWidth: 1.5, strokeDasharray: '4 3' },
+                        { key: 'us10y', name: '미 10년물 (%) (장기)', color: '#f43f5e', unit: '%', strokeWidth: 2.2 },
+                        { key: 'us3m', name: '미 3개월물 (%) (초단기)', color: '#f59e0b', unit: '%', strokeWidth: 1.8 },
+                        { key: 'us2y', name: '미 2년물 (%) (참고)', color: '#fb7185', unit: '%', strokeWidth: 1.5, strokeDasharray: '4 3' }
                     ],
-                    data: weekly.map(w => ({ date: w.date, us10y: w.us10y, us2y: w.us2y, kr10y: w.kr10y, kr3y: w.kr3y })),
+                    data: weekly.map(w => ({
+                        date: w.date,
+                        kr10y: w.kr10y, kr1y: w.kr1y, kr3y: w.kr3y,
+                        us10y: w.us10y, us3m: w.us3m, us2y: w.us2y
+                    })),
                     currentStats: [
-                        { label: '한국 반영', value: data.snapshot.implied.kr?.label ?? '인상 약 2.8회', isAccent: true },
-                        { label: '미국 반영', value: data.snapshot.implied.us?.label ?? '인상 약 2.4회', isAccent: true },
-                        { label: '국고채 3년', value: `${data.snapshot.kr3y?.value ?? '-'}%` },
-                        { label: '미국채 2년', value: `${data.snapshot.us2y?.value ?? '-'}%` }
+                        { label: '한국 반영', value: data.snapshot.implied.kr?.label ?? '동결 예상', isAccent: true },
+                        { label: '미국 반영', value: data.snapshot.implied.us?.label ?? '동결 예상', isAccent: true },
+                        { label: '국고채 1Y / 3Y(참고)', value: `${data.snapshot.kr1y?.value ?? '-'}% / ${data.snapshot.kr3y?.value ?? '-'}%` },
+                        { label: '미국채 3M / 2Y(참고)', value: `${data.snapshot.us3m?.value ?? '-'}% / ${data.snapshot.us2y?.value ?? '-'}%` }
                     ],
-                    notice: '💡 1년물 국채와 기준금리의 스프레드로 시장 참가자들이 향후 1년 내 몇 번의 금리 변동을 예상하는지 계산한 내재 확률입니다.'
+                    notice: '💡 초단기(한 1Y / 미 3M) 및 단기(한 3Y / 미 2Y) 국채와 기준금리의 스프레드로 시장 참가자들의 금리 변동 기대를 도출합니다.'
                 };
             case 'kr_bonds':
                 return {
                     title: '한국 국고채 만기별 금리 추이 (1Y·3Y·10Y·30Y)',
-                    subtitle: '단기·중기·장기·초장기 국채 금리 및 수익률 곡선 장기 시계열',
+                    subtitle: '초단기(1Y) · 단기(3Y) · 장기(10Y) · 초장기(30Y) 국채 금리 시계열',
                     badge: '한국 국채',
                     badgeColor: 'bg-sky-500/15 text-sky-300 border-sky-400/30',
                     series: [
-                        { key: 'kr1y', name: '국고채 1년 (%)', color: '#38bdf8', unit: '%', strokeWidth: 1.6 },
-                        { key: 'kr3y', name: '국고채 3년 (%)', color: '#6366f1', unit: '%', strokeWidth: 2.2 },
-                        { key: 'kr10y', name: '국고채 10년 (%)', color: '#a855f7', unit: '%', strokeWidth: 2.2 },
-                        { key: 'kr30y', name: '국고채 30년 (%)', color: '#ec4899', unit: '%', strokeWidth: 1.6, strokeDasharray: '3 3' }
+                        { key: 'kr1y', name: '국고채 1년 (%) (초단기)', color: '#38bdf8', unit: '%', strokeWidth: 1.8 },
+                        { key: 'kr3y', name: '국고채 3년 (%) (참고)', color: '#818cf8', unit: '%', strokeWidth: 1.5, strokeDasharray: '4 3' },
+                        { key: 'kr10y', name: '국고채 10년 (%) (장기)', color: '#6366f1', unit: '%', strokeWidth: 2.2 },
+                        { key: 'kr30y', name: '국고채 30년 (%) (초장기)', color: '#a855f7', unit: '%', strokeWidth: 1.8 }
                     ],
                     data: weekly.map(w => ({ date: w.date, kr1y: w.kr1y, kr3y: w.kr3y, kr10y: w.kr10y, kr30y: w.kr30y })),
                     currentStats: [
-                        { label: '국고채 3년', value: `${data.snapshot.kr3y?.value ?? '-'}%`, isAccent: true },
+                        { label: '국고채 1년', value: `${data.snapshot.kr1y?.value ?? '-'}%`, isAccent: true },
+                        { label: '국고채 3년 (참고)', value: `${data.snapshot.kr3y?.value ?? '-'}%` },
                         { label: '국고채 10년', value: `${data.snapshot.kr10y?.value ?? '-'}%`, isAccent: true },
-                        { label: '3년 10년 백분위', value: `${data.snapshot.kr3y?.pct10y ?? '-'}%` },
                         { label: '초장기 30Y-10Y', value: data.terms?.premium.kr ? `${signed(data.terms.premium.kr.now)}` : '-' }
                     ],
-                    notice: '💡 만기별 국고채 금리 추이입니다. 장기채 금리가 단기채보다 낮아지는 현상은 경기 침체 우려를 의미합니다.'
+                    notice: '💡 만기별 국고채 금리 추이입니다. 초단기(1년물)는 유동성과 향후 1년 정책금리 전망, 장기(10년물)는 성장률과 물가 기대를 나타냅니다.'
                 };
             case 'us_bonds':
                 return {
                     title: '미국 국채 만기별 금리 추이 (3M·2Y·10Y·30Y)',
-                    subtitle: '글로벌 안전자산의 척도인 미국채 단기·중기·장기·초장기 금리 시계열',
+                    subtitle: '초단기(3M) · 단기(2Y) · 장기(10Y) · 초장기(30Y) 미국채 금리 시계열',
                     badge: '미국 국채',
                     badgeColor: 'bg-rose-500/15 text-rose-300 border-rose-400/30',
                     series: [
-                        { key: 'us3m', name: '미국채 3개월 (%)', color: '#f59e0b', unit: '%', strokeWidth: 1.6 },
-                        { key: 'us2y', name: '미국채 2년 (%)', color: '#10b981', unit: '%', strokeWidth: 2.2 },
-                        { key: 'us10y', name: '미국채 10년 (%)', color: '#f43f5e', unit: '%', strokeWidth: 2.2 },
-                        { key: 'us30y', name: '미국채 30년 (%)', color: '#a855f7', unit: '%', strokeWidth: 1.6, strokeDasharray: '3 3' }
+                        { key: 'us3m', name: '미국채 3개월 (%) (초단기)', color: '#f59e0b', unit: '%', strokeWidth: 1.8 },
+                        { key: 'us2y', name: '미국채 2년 (%) (참고)', color: '#fb7185', unit: '%', strokeWidth: 1.5, strokeDasharray: '4 3' },
+                        { key: 'us10y', name: '미국채 10년 (%) (장기)', color: '#f43f5e', unit: '%', strokeWidth: 2.2 },
+                        { key: 'us30y', name: '미국채 30년 (%) (초장기)', color: '#a855f7', unit: '%', strokeWidth: 1.8 }
                     ],
                     data: weekly.map(w => ({ date: w.date, us3m: w.us3m, us2y: w.us2y, us10y: w.us10y, us30y: w.us30y })),
                     currentStats: [
-                        { label: '미국채 2년', value: `${data.snapshot.us2y?.value ?? '-'}%`, isAccent: true },
+                        { label: '미국채 3개월', value: `${data.snapshot.us3m?.value ?? '-'}%`, isAccent: true },
+                        { label: '미국채 2년 (참고)', value: `${data.snapshot.us2y?.value ?? '-'}%` },
                         { label: '미국채 10년', value: `${data.snapshot.us10y?.value ?? '-'}%`, isAccent: true },
-                        { label: '10년 10년 백분위', value: `${data.snapshot.us10y?.pct10y ?? '-'}%` },
                         { label: '초장기 30Y-10Y', value: data.terms?.premium.us ? `${signed(data.terms.premium.us.now)}` : '-' }
                     ],
-                    notice: '💡 연준의 정책금리에 민감한 2년물과 글로벌 벤치마크 10년물의 관계가 자산 시장 전체의 밸류에이션을 좌우합니다.'
+                    notice: '💡 3개월물은 단기 유동성의 벤치마크이며, 2년물(단기 참고)과 글로벌 벤치마크 10년물의 관계가 전체 자산 시장 밸류에이션을 좌우합니다.'
                 };
             case 'term_spread':
                 return {
-                    title: '장단기 금리차 추이 (한·미 10년−3년 & 미 10년−2년)',
+                    title: '장단기 금리차 추이 (한 10Y−1Y · 미 10Y−3M & 참고 10Y−3Y · 10Y−2Y)',
                     subtitle: '경기 침체의 대표적 선행 지표인 장단기 스프레드 추이 (0 이하 = 수익률 곡선 역전)',
                     badge: '장단기 금리차',
                     badgeColor: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
                     series: [
-                        { key: 'kr_10_3', name: '한국 10Y−3Y (%p)', color: '#6366f1', unit: '%p', strokeWidth: 2.2 },
-                        { key: 'us_10_3', name: '미국 10Y−3Y (%p)', color: '#10b981', unit: '%p', strokeWidth: 2.2 },
-                        { key: 'us_10_2', name: '미국 10Y−2Y (%p)', color: '#f59e0b', unit: '%p', strokeWidth: 1.8, strokeDasharray: '3 3' },
-                        { key: 'us_10_3m', name: '미국 10Y−3M (%p)', color: '#f43f5e', unit: '%p', strokeWidth: 1.6, strokeDasharray: '4 4' }
+                        { key: 'kr_10_1', name: '한국 10Y−1Y (%p) (메인)', color: '#6366f1', unit: '%p', strokeWidth: 2.2 },
+                        { key: 'kr_10_3', name: '한국 10Y−3Y (%p) (참고)', color: '#38bdf8', unit: '%p', strokeWidth: 1.6, strokeDasharray: '4 3' },
+                        { key: 'us_10_3m', name: '미국 10Y−3M (%p) (메인)', color: '#f43f5e', unit: '%p', strokeWidth: 2.2 },
+                        { key: 'us_10_2', name: '미국 10Y−2Y (%p) (참고)', color: '#f59e0b', unit: '%p', strokeWidth: 1.6, strokeDasharray: '4 3' }
                     ],
-                    data: weekly.map(w => ({ date: w.date, kr_10_3: w.kr_10_3, us_10_3: w.us_10_3, us_10_2: w.us_10_2, us_10_3m: w.us_10_3m })),
+                    data: weekly.map(w => ({
+                        date: w.date,
+                        kr_10_1: w.kr_10_1, kr_10_3: w.kr_10_3,
+                        us_10_3m: w.us_10_3m, us_10_2: w.us_10_2
+                    })),
                     currentStats: [
-                        { label: '한국 10Y-3Y', value: `${data.spreads?.kr_10_3 ? signed(data.spreads.kr_10_3.value) : '-'}`, isAccent: true },
-                        { label: '미국 10Y-3Y', value: `${data.spreads?.us_10_3 ? signed(data.spreads.us_10_3.value) : '-'}`, isAccent: true },
-                        { label: '미국 10Y-3M', value: `${data.spreads?.us_10_3m ? signed(data.spreads.us_10_3m.value) : '-'}` },
-                        { label: '역전 상태', value: (data.spreads?.kr_10_3?.inverted || data.spreads?.us_10_3?.inverted) ? '일부 역전 경계' : '정상 우상향' }
+                        { label: '한국 10Y-1Y (메인)', value: `${data.spreads?.kr_10_1 ? signed(data.spreads.kr_10_1.value) : '-'}`, isAccent: true },
+                        { label: '한국 10Y-3Y (참고)', value: `${data.spreads?.kr_10_3 ? signed(data.spreads.kr_10_3.value) : '-'}` },
+                        { label: '미국 10Y-3M (메인)', value: `${data.spreads?.us_10_3m ? signed(data.spreads.us_10_3m.value) : '-'}`, isAccent: true },
+                        { label: '미국 10Y-2Y (참고)', value: `${data.spreads?.us_10_2 ? signed(data.spreads.us_10_2.value) : '-'}` },
+                        { label: '역전 상태', value: (data.spreads?.kr_10_1?.inverted || data.spreads?.us_10_3m?.inverted) ? '역전 경계 국면' : '정상 우상향' }
                     ],
-                    notice: '💡 장단기 금리차가 마이너스로 역전된 후 다시 플러스로 가파르게 정상화되는 국면에서 통상 경기 침체가 현실화되는 경향이 있습니다.'
+                    notice: '💡 미국 10년-3개월 및 한국 10년-1년은 장단기 침체 예측의 핵심 기준이며, 10년-2년 및 10년-3년은 시장 참고 지표로 병행 모니터링합니다. 역전 후 재역전(가파른 정상화) 시 침체가 현실화되는 경향이 있습니다.'
                 };
             case 'real_rate':
                 return {
@@ -683,11 +747,17 @@ export default function RatesTab() {
                     badgeColor: 'bg-orange-500/15 text-orange-300 border-orange-400/30',
                     series: [
                         { key: 'kr_base', name: '한국 기준금리 (%)', color: '#6366f1', unit: '%', strokeWidth: 2 },
+                        { key: 'kr1y', name: '한국 국채 1년 (%) (초단기)', color: '#38bdf8', unit: '%', strokeWidth: 1.6 },
+                        { key: 'kr3y', name: '한국 국채 3년 (%) (참고)', color: '#818cf8', unit: '%', strokeWidth: 1.5, strokeDasharray: '4 3' },
                         { key: 'us_upper', name: '미국 정책금리 (%)', color: '#f43f5e', unit: '%', strokeWidth: 2 },
-                        { key: 'kr3y', name: '한국 국채 3년 (%)', color: '#38bdf8', unit: '%', strokeWidth: 1.5, strokeDasharray: '3 3' },
-                        { key: 'us2y', name: '미국 국채 2년 (%)', color: '#10b981', unit: '%', strokeWidth: 1.5, strokeDasharray: '3 3' }
+                        { key: 'us3m', name: '미국 국채 3개월 (%) (초단기)', color: '#f59e0b', unit: '%', strokeWidth: 1.6 },
+                        { key: 'us2y', name: '미국 국채 2년 (%) (참고)', color: '#fb7185', unit: '%', strokeWidth: 1.5, strokeDasharray: '4 3' }
                     ],
-                    data: weekly.map(w => ({ date: w.date, kr_base: w.kr_base, us_upper: w.us_upper, kr3y: w.kr3y, us2y: w.us2y })),
+                    data: weekly.map(w => ({
+                        date: w.date,
+                        kr_base: w.kr_base, kr1y: w.kr1y, kr3y: w.kr3y,
+                        us_upper: w.us_upper, us3m: w.us3m, us2y: w.us2y
+                    })),
                     currentStats: [
                         { label: '한국 실질금리', value: `${data.snapshot.real?.kr ? signed(data.snapshot.real.kr.value) : '-'}`, isAccent: true },
                         { label: '미국 실질금리', value: `${data.snapshot.real?.us ? signed(data.snapshot.real.us.value) : '-'}`, isAccent: true },
@@ -767,7 +837,7 @@ export default function RatesTab() {
                     <section className="bg-black/20 rounded-2xl border border-white/5 p-4 space-y-4">
                         <div className="flex flex-wrap items-start justify-between gap-2">
                             <SectionTitle icon={<Waves className="w-5 h-5 text-emerald-400" />} title="장단기 금리차"
-                                sub="한·미 같은 기준 10년−3년 국채금리 · 0 아래(역전)는 경기 둔화 신호 · 점선 = 미국 10년−3개월(참고) · 회색 = 미국 경기침체" />
+                                sub="한국 10년−1년 & 미국 10년−3개월 (메인 실선) · 한국 10년−3년 & 미국 10년−2년 (참고 점선) · 0 아래(역전)는 경기 둔화 신호" />
                             <div className="flex items-center gap-2">
                                 <SpreadBasisInfo />
                                 <Toggle options={RANGE_OPTS} value={range} onChange={setRange} />
@@ -777,8 +847,14 @@ export default function RatesTab() {
                             <div>
                                 <SpreadChart rows={rows} recessions={data.recessions} />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                                    <ShapeCard title="한국 곡선 (3년·10년)" shape={data.shapes.kr} />
-                                    <ShapeCard title="미국 곡선 (3년·10년)" shape={data.shapes.us} />
+                                    <div className="space-y-2">
+                                        <ShapeCard title="한국 곡선 (1년·10년 메인)" shape={data.shapes.kr} />
+                                        {data.shapes.kr_ref && <ShapeCard title="한국 곡선 (3년·10년 참고)" shape={data.shapes.kr_ref} />}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <ShapeCard title="미국 곡선 (3개월·10년 메인)" shape={data.shapes.us} />
+                                        {data.shapes.us_ref && <ShapeCard title="미국 곡선 (2년·10년 참고)" shape={data.shapes.us_ref} />}
+                                    </div>
                                 </div>
                             </div>
                             <div className="space-y-4">

@@ -109,11 +109,14 @@ def test_overview_snapshot_spreads_and_regimes():
     assert snap["policy_gap"] == -1.0
     assert snap["implied"]["kr"]["moves"] == 2.9 and snap["implied"]["us"]["moves"] == 2.2
     assert snap["phase"]["kr"].startswith("한국 인상 국면")
+    assert snap["kr1y"]["value"] == 3.73
+    assert out["spreads"]["kr_10_1"]["value"] == 0.64 and not out["spreads"]["kr_10_1"]["inverted"]
     assert out["spreads"]["kr_10_3"]["value"] == 0.43 and not out["spreads"]["kr_10_3"]["inverted"]
-    # 한·미 같은 기준(10년−3년) + 미국 10년−3개월은 참고, 10년−2년은 화면 비교에서 제외
+    # 한국 10Y-1Y(메인), 10Y-3Y(참고) / 미국 10Y-3M(메인), 10Y-2Y(참고), 10Y-3Y(참고)
     sp = out["spreads"]
-    assert list(sp) == ["kr_10_3", "us_10_3", "us_10_3m"] and sp["us_10_3"]["value"] == 0.33
-    assert sp["us_10_3"]["basis"] == "common" and sp["us_10_3m"]["basis"] == "reference"
+    assert list(sp) == ["kr_10_1", "kr_10_3", "us_10_3m", "us_10_2", "us_10_3"]
+    assert sp["kr_10_1"]["basis"] == "common" and sp["kr_10_3"]["basis"] == "reference"
+    assert sp["us_10_3m"]["basis"] == "common" and sp["us_10_2"]["basis"] == "reference"
     assert out["weekly"][-1]["us_10_3"] == 0.33 and "3년" in [p["tenor"] for p in out["curves"]["us"]["now"]]
     assert out["weekly"][-1]["date"] <= TODAY.isoformat()
     last = out["regimes"][-1]
@@ -138,11 +141,11 @@ def test_term_compare_buckets_premium_and_insights():
     year_ago = date(2025, 10, 2)
     up = lambda now, before: (lambda d: now if d > year_ago else before)  # noqa: E731
     S = {k: _s(_daily(s, e, f)) for k, f in {
-        "kr1y": up(3.73, 2.31), "kr10y": up(4.37, 2.96), "kr30y": up(4.50, 2.82), "kr50y": up(4.49, 2.80),
-        "us1y": up(4.44, 3.62), "us10y": up(5.24, 4.12), "us30y": up(5.61, 4.72)}.items()}
+        "kr1y": up(3.73, 2.31), "kr3y": up(3.94, 2.50), "kr10y": up(4.37, 2.96), "kr30y": up(4.50, 2.82), "kr50y": up(4.49, 2.80),
+        "us3m": up(4.20, 3.50), "us2y": up(4.78, 3.90), "us10y": up(5.24, 4.12), "us30y": up(5.61, 4.72)}.items()}
     t = term_compare(lambda k: S.get(k, pd.Series(dtype=float, index=pd.DatetimeIndex([]))))
     by = {r["key"]: r for r in t["rows"]}
-    assert (by["short"]["gap"], by["long"]["gap"], by["ultra"]["gap"]) == (-0.71, -0.87, -1.11)
+    assert (by["ultra_short"]["gap"], by["short"]["gap"], by["long"]["gap"], by["ultra"]["gap"]) == (-0.47, -0.84, -0.87, -1.11)
     assert by["ultra"]["kr_chg_1y"] == 168.0
     assert t["premium"]["kr"] == {"now": 0.13, "y1": -0.14} and t["premium"]["us"]["now"] == 0.37
     assert t["kr50y"]["value"] == 4.49

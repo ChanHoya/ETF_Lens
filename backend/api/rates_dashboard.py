@@ -37,8 +37,8 @@ FRED_IDS = {
     "ecb": "ECBDFR",           # ECB 예금금리
     "us_cpi": "CPIAUCSL",
 }
-# 역전 이력은 1970년대부터 봐야 해서 길게 받는다(미국 10년−3년은 10년·3년물로 계산)
-LONG_FRED = {"us_10_3m", "us_10_2", "usrec", "us10y", "us3y"}
+# 역전 이력은 1970년대부터 봐야 해서 길게 받는다
+LONG_FRED = {"us_10_3m", "us_10_2", "usrec", "us10y", "us3y", "us2y", "us3m"}
 LONG_YEARS = 50
 
 ECOS_SERIES = {  # key: (통계표, 주기, 항목)
@@ -267,16 +267,17 @@ def _curve(points: list[tuple[str, pd.Series]], when: pd.Timestamp) -> list[dict
     return [{"tenor": t, "value": _r(_at(s, when))} for t, s in points if not s.empty]
 
 
-TERM_BUCKETS = [  # (키, 이름, 한국, 미국) — 단기는 양국 모두 국채 1년물로 같은 상품끼리 비교
-    ("short", "단기 (1년)", "kr1y", "us1y"),
+TERM_BUCKETS = [  # (키, 이름, 한국, 미국) — 초단기(한1Y/미3M), 단기(한3Y/미2Y), 장기(10Y), 초장기(30Y)
+    ("ultra_short", "초단기 (한 1년 / 미 3개월)", "kr1y", "us3m"),
+    ("short", "단기 (한 3년 / 미 2년)", "kr3y", "us2y"),
     ("long", "장기 (10년)", "kr10y", "us10y"),
     ("ultra", "초장기 (30년)", "kr30y", "us30y"),
 ]
-TENOR = {"short": "1년물", "long": "10년물", "ultra": "30년물"}  # 해석 문장용 (모두 받침 있어 조사 '이')
+TENOR = {"ultra_short": "초단기물", "short": "단기물", "long": "10년물", "ultra": "30년물"}  # 해석 문장용
 
 
 def term_compare(g) -> dict | None:
-    """단기·장기·초장기 한·미 비교 + 초장기 프리미엄(30년−10년) + 자동 해석 문장."""
+    """초단기·단기·장기·초장기 한·미 비교 + 초장기 프리미엄(30년−10년) + 자동 해석 문장."""
     rows = []
     for key, label, k, u in TERM_BUCKETS:
         ks, us_ = g(k), g(u)
@@ -326,7 +327,7 @@ def term_compare(g) -> dict | None:
             continue
         up = sum(m for m, _ in moves) > 0
         lead = max(moves, key=lambda x: x[0] if up else -x[0])
-        why = {"short": "정책금리 기대가 이끈", "long": "성장·물가 기대가 이끈", "ultra": "기간 프리미엄이 이끈"}[lead[1]]
+        why = {"ultra_short": "단기 유동성·정책 기대가 이끈", "short": "정책금리 기대가 이끈", "long": "성장·물가 기대가 이끈", "ultra": "기간 프리미엄이 이끈"}[lead[1]]
         insights.append(f"{names[c]} 최근 1년 금리는 {TENOR[lead[1]]}이 가장 크게 {'올라' if up else '내려'}({lead[0]:+.0f}bp) {why} "
                         f"{'상승' if up else '하락'}입니다.")
     if "long" in by and by["long"]["gap_1y"] is not None:
@@ -355,8 +356,15 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
     fed = pd.concat([g("fed_target")[g("fed_target").index < g("fed_upper").index.min()] if not g("fed_upper").empty
                      else g("fed_target"), g("fed_upper")]).sort_index()
     kr_cpi_yoy, us_cpi_yoy = _yoy(g("kr_cpi")), _yoy(g("us_cpi"))
+    
+    # 장단기 금리차 계산:
+    # 한국: 10년−1년 (메인), 10년−3년 (참고 유지)
+    # 미국: 10년−3개월 (메인), 10년−2년 (참고 유지), 10년−3년 (보조 참고)
+    kr_10_1 = (g("kr10y") - g("kr1y")).dropna()
     kr_10_3 = (g("kr10y") - g("kr3y")).dropna()
-    us_10_3 = (g("us10y") - g("us3y")).dropna()  # 한·미 같은 기준(10년−3년) — docs/spread-basis-context-notes.md
+    us_10_3m = g("us_10_3m") if not g("us_10_3m").empty else (g("us10y") - g("us3m")).dropna()
+    us_10_2 = g("us_10_2") if not g("us_10_2").empty else (g("us10y") - g("us2y")).dropna()
+    us_10_3 = (g("us10y") - g("us3y")).dropna()
 
     start = pd.Timestamp(today) - pd.DateOffset(years=YEARS)
     ten_years_ago = pd.Timestamp(today) - pd.DateOffset(years=10)
@@ -375,10 +383,13 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
                              "next_meeting": _next_meeting(FOMC_MEETINGS, today)}
     if "kr_base" in snap and "us_policy" in snap:
         snap["policy_gap"] = _r(snap["kr_base"]["value"] - snap["us_policy"]["upper"])
-    for key in ("kr3y", "kr10y", "us2y", "us10y"):
+
+    # 한국 국고채 (1년 초단기, 3년 단기, 10년 장기) & 미국 국채 (3개월 초단기, 2년 단기, 10년 장기)
+    for key in ("kr1y", "kr3y", "kr10y", "us3m", "us2y", "us10y"):
         card = _rate_card(g(key), ten_years_ago)
         if card:
             snap[key] = card
+
     snap["implied"] = {
         "kr": _implied(float(g("kr1y").iloc[-1]) if not g("kr1y").empty else None,
                        snap.get("kr_base", {}).get("value")),
@@ -404,11 +415,17 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
     snap["phase"] = {"kr": _phase(snap.get("kr_base"), snap["implied"]["kr"], "한국"),
                      "us": _phase(snap.get("us_policy"), snap["implied"]["us"], "미국")}
 
-    # 장단기 금리차
+    # 장단기 금리차 (한국: 10년−1년 메인, 10년−3년 참고 / 미국: 10년−3개월 메인, 10년−2년 참고, 10년−3년 보조)
     recessions = recession_periods(g("usrec"))
     spreads = {}
-    for key, s, label, basis in (("kr_10_3", kr_10_3, "한국 10년−3년", "common"), ("us_10_3", us_10_3, "미국 10년−3년", "common"),
-                                 ("us_10_3m", g("us_10_3m"), "미국 10년−3개월 (참고)", "reference")):
+    spread_defs = [
+        ("kr_10_1", kr_10_1, "한국 10년−1년", "common"),
+        ("kr_10_3", kr_10_3, "한국 10년−3년 (참고)", "reference"),
+        ("us_10_3m", us_10_3m, "미국 10년−3개월", "common"),
+        ("us_10_2", us_10_2, "미국 10년−2년 (참고)", "reference"),
+        ("us_10_3", us_10_3, "미국 10년−3년 (참고)", "reference"),
+    ]
+    for key, s, label, basis in spread_defs:
         if s.empty:
             continue
         s20 = s[s.index >= start]
@@ -416,7 +433,13 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
                         "inverted": bool(s.iloc[-1] < 0), "chg_1m": _bp_change(s, 30),
                         "pct20y": _pct_rank(s20, s.iloc[-1]),
                         "inversions": inversion_episodes(s, recessions, today)}
-    shapes = {"kr": curve_shape(g("kr3y"), g("kr10y")), "us": curve_shape(g("us3y"), g("us10y"))}
+
+    shapes = {
+        "kr": curve_shape(g("kr1y"), g("kr10y")),
+        "kr_ref": curve_shape(g("kr3y"), g("kr10y")),
+        "us": curve_shape(g("us3m"), g("us10y")),
+        "us_ref": curve_shape(g("us2y"), g("us10y")),
+    }
     curve_pts = {
         "kr": [("1년", g("kr1y")), ("3년", g("kr3y")), ("5년", g("kr5y")), ("10년", g("kr10y")),
                ("20년", g("kr20y")), ("30년", g("kr30y"))],
@@ -433,10 +456,13 @@ def build_overview(raw: dict[str, dict[str, float]], today: date) -> dict:
                      "y1": _curve(pts, anchor - timedelta(days=365))}
 
     # 주간 차트 데이터
-    cols = {"kr_base": g("kr_base"), "us_upper": fed, "ecb": g("ecb"), "kr3y": g("kr3y"), "kr10y": g("kr10y"),
-            "us2y": g("us2y"), "us10y": g("us10y"), "kr_10_3": kr_10_3, "us_10_3": us_10_3, "us_10_2": g("us_10_2"),
-            "us_10_3m": g("us_10_3m"), "kr1y": g("kr1y"), "us1y": g("us1y"), "kr30y": g("kr30y"),
-            "us30y": g("us30y"), "kr50y": g("kr50y")}
+    cols = {
+        "kr_base": g("kr_base"), "us_upper": fed, "ecb": g("ecb"),
+        "kr1y": g("kr1y"), "kr3y": g("kr3y"), "kr10y": g("kr10y"), "kr30y": g("kr30y"), "kr50y": g("kr50y"),
+        "us3m": g("us3m"), "us1y": g("us1y"), "us2y": g("us2y"), "us3y": g("us3y"), "us10y": g("us10y"), "us30y": g("us30y"),
+        "kr_10_1": kr_10_1, "kr_10_3": kr_10_3,
+        "us_10_3m": us_10_3m, "us_10_2": us_10_2, "us_10_3": us_10_3,
+    }
     wk = pd.DataFrame({k: _weekly(v) for k, v in cols.items()})
     wk = wk[wk.index >= start].ffill(limit=4)
     rows = [{"date": i.strftime("%Y-%m-%d"), **{k: _r(r[k], 3) for k in cols}} for i, r in wk.iterrows()]

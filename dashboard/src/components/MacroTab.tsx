@@ -111,7 +111,7 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
             return timeline.map(t => {
                 const kospi = t.kospi ?? 2500;
                 const krw = t.krw ?? 1300;
-                const kr_base = t.kr_base ?? 3.0;
+                const kr_base = (t as any).kr_base ?? 3.0;
                 return {
                     date: t.date,
                     wti: 70 + (kospi % 40),
@@ -213,17 +213,17 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                     badgeColor: 'bg-sky-500/15 text-sky-300 border-sky-400/30',
                     series: [
                         { key: 'kr_base', name: '한국 기준금리 (%)', color: '#6366f1', unit: '%', strokeWidth: 2.2 },
-                        { key: 'us_upper', name: '미국 정책금리 상단 (%)', color: '#f43f5e', unit: '%', strokeWidth: 2 },
-                        { key: 'us10y', name: '미국 국채 10년 (%)', color: '#10b981', unit: '%', strokeWidth: 1.5, strokeDasharray: '3 3' },
-                        { key: 'kr10y', name: '한국 국고채 10년 (%)', color: '#38bdf8', unit: '%', strokeWidth: 1.5, strokeDasharray: '3 3' },
+                        { key: 'kr10y', name: '한국 국고채 10년 (%) (장기)', color: '#4f46e5', unit: '%', strokeWidth: 2 },
+                        { key: 'us_upper', name: '미국 정책금리 상단 (%)', color: '#f43f5e', unit: '%', strokeWidth: 2.2 },
+                        { key: 'us10y', name: '미국 국채 10년 (%) (장기)', color: '#e11d48', unit: '%', strokeWidth: 2 },
                         { key: 'spx', name: 'S&P 500 (pt)', color: '#f59e0b', unit: 'pt', yAxisId: 'right', strokeWidth: 1.8 },
-                        { key: 'kospi', name: 'KOSPI (pt)', color: '#ec4899', unit: 'pt', yAxisId: 'right', strokeWidth: 1.8, strokeDasharray: '3 3' },
+                        { key: 'kospi', name: 'KOSPI (pt)', color: '#a855f7', unit: 'pt', yAxisId: 'right', strokeWidth: 1.8, strokeDasharray: '4 3' },
                     ],
                     currentStats: [
                         { label: '한국 기준금리', value: '3.00%' },
                         { label: '미국 정책금리', value: '3.75~4.00%' },
-                        { label: '정책금리차', value: '-1.00%p' },
-                        { label: '미 10Y-2Y', value: '+0.12%p' },
+                        { label: '미 10Y-3M (메인)', value: '+0.78%p' },
+                        { label: '미 10Y-2Y (참고)', value: '+0.12%p' },
                     ],
                     notice: '💡 한미 정책금리와 국채 10년물 금리는 할인율로 작용하여 한·미 증시(KOSPI, S&P 500)의 중기 유동성 및 밸류에이션 방향성을 결정합니다.'
                 };
@@ -458,9 +458,9 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                                 <div className="text-[10px] text-red-400 font-bold">격차 -1.00%p</div>
                             </div>
                             <div>
-                                <div className="text-[10px] text-gray-400">미 10Y-2Y차</div>
-                                <div className="text-base font-black text-emerald-300 font-mono">+0.12%p</div>
-                                <div className="text-[10px] text-emerald-400 font-semibold">역전 정상화</div>
+                                <div className="text-[10px] text-gray-400">미 10Y-3M (메인)</div>
+                                <div className="text-base font-black text-emerald-300 font-mono">+0.78%p</div>
+                                <div className="text-[10px] text-gray-400 font-medium">2Y 참고 +0.12%p</div>
                             </div>
                         </div>
                     </div>
