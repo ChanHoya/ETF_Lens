@@ -24,6 +24,8 @@ router = APIRouter(prefix="/telegram", tags=["telegram"])
 
 _KST = timezone(timedelta(hours=9))
 
+DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://localhost:3004")
+
 class TelegramWebhookPayload(BaseModel):
     update_id: Optional[int] = None
     message: Optional[Dict[str, Any]] = None
@@ -61,7 +63,7 @@ async def handle_telegram_webhook(req: Request):
             )
             reply_markup = {
                 "inline_keyboard": [
-                    [{"text": "📊 갱신된 포트폴리오 보기", "url": "http://localhost:3005/my"}]
+                    [{"text": "📊 갱신된 포트폴리오 보기", "url": f"{DASHBOARD_URL}/my"}]
                 ]
             }
             if chat_id:
@@ -71,6 +73,60 @@ async def handle_telegram_webhook(req: Request):
                     reply_markup=reply_markup
                 )
             return {"ok": True, "action": "rebalance_executed"}
+
+        elif cb_data == "quadrant_plan":
+            plan_msg = (
+                f"🎯 <b>[i-Prism] 2D 사분면 황금 밸런스(55:45) 도달 맞춤 플랜</b>\n\n"
+                f"현재 부동산 비중(73.9%)을 모범 밸런스(부동산 55% : 금융 45%)로 전환하기 위한 <b>필요 금융자금 확충액은 약 +8.24억 원</b>입니다.\n\n"
+                f"<b>💊 추천 3대 결핍 비타민 ETF 매수 플랜</b>\n"
+                f"1. <b>ACE 미국배당다우존스(H)</b> (<code>453850</code>) | <b>40% (3.30억 원)</b>\n"
+                f"   • 월배당 현금흐름 창출 및 환율 급변 방어\n"
+                f"2. <b>ACE KRX금현물</b> (<code>411060</code>) | <b>30% (2.47억 원)</b>\n"
+                f"   • 인플레이션 헤지 & 증시 급락 시 MDD 완충 안전자산\n"
+                f"3. <b>TIGER KOFR금리액티브</b> (<code>449170</code>) | <b>30% (2.47억 원)</b>\n"
+                f"   • 초단기 파킹형 일복리 이자 수익 및 유동성 대기자금\n\n"
+                f"🔗 <a href=\"{DASHBOARD_URL}/my\">대시보드에서 1-Click 시뮬레이터 실행하기</a>"
+            )
+            reply_markup = {
+                "inline_keyboard": [
+                    [{"text": "🎯 웹에서 슬라이더 조절하기", "url": f"{DASHBOARD_URL}/my"}]
+                ]
+            }
+            if chat_id:
+                await send_telegram_message(
+                    text=plan_msg,
+                    test_chat_id=str(chat_id),
+                    reply_markup=reply_markup
+                )
+            return {"ok": True, "action": "quadrant_plan_sent"}
+
+        elif cb_data == "cashflow_offset":
+            offset_msg = (
+                f"🛡️ <b>[i-Prism] 가계 고정지출 vs 월 배당금 상계 순 캐시플로우</b>\n\n"
+                f"<b>💳 월 필수 고정지출 총액: 약 220만 원</b>\n"
+                f"• 주담대 원리금: 145만 원\n"
+                f"• 신용대출 이자: 25만 원\n"
+                f"• 아파트 관리비: 30만 원\n"
+                f"• 보장성 보험료: 20만 원\n\n"
+                f"<b>💰 KIS 연간 배당금 총액: 약 2,670만 원 (월평균 222.5만 원)</b>\n"
+                f"• <b>자본소득 상계율: 101.1% (흑자 방어 성공 🛡️)</b>\n"
+                f"• <b>연간 순 잉여 현금: +230만 원 (월평균 +19.2만 원)</b>\n"
+                f"• 12개월 중 흑자 유지 개월: 8개월 (배당 집중월 4, 12월 최대 잉여)\n\n"
+                f"💡 <i>근로소득 없이 배당금만으로 주담대 원리금과 아파트 관리비가 100% 자동 상계되는 재정적 자립 상태입니다.</i>\n\n"
+                f"🔗 <a href=\"{DASHBOARD_URL}/my\">배당 캘린더 타임라인 보기</a>"
+            )
+            reply_markup = {
+                "inline_keyboard": [
+                    [{"text": "📅 1~12월 배당 타임라인 확인", "url": f"{DASHBOARD_URL}/my"}]
+                ]
+            }
+            if chat_id:
+                await send_telegram_message(
+                    text=offset_msg,
+                    test_chat_id=str(chat_id),
+                    reply_markup=reply_markup
+                )
+            return {"ok": True, "action": "cashflow_offset_sent"}
 
         elif cb_data.startswith("macro_playbook:"):
             ind_id = cb_data.split(":", 1)[1] if ":" in cb_data else "semiconductor"
@@ -174,11 +230,12 @@ async def handle_telegram_webhook(req: Request):
         reply_markup = {
             "inline_keyboard": [
                 [
-                    {"text": "🎯 밸런스 시뮬레이터", "url": "http://localhost:3004/my"},
-                    {"text": "📄 A4 종합 리포트", "url": "http://localhost:3004/my"}
+                    {"text": "🎯 비타민 3종 리밸런싱 플랜", "callback_data": "quadrant_plan"},
+                    {"text": "🛡️ 월 고정지출 상계 현황", "callback_data": "cashflow_offset"}
                 ],
                 [
-                    {"text": "📥 엑셀(CSV) 내보내기", "url": "http://localhost:3004/my"}
+                    {"text": "📊 웹 대시보드 바로가기", "url": f"{DASHBOARD_URL}/my"},
+                    {"text": "📄 A4 종합 리포트", "url": f"{DASHBOARD_URL}/my"}
                 ]
             ]
         }
@@ -201,7 +258,7 @@ async def handle_telegram_webhook(req: Request):
         reply_markup = {
             "inline_keyboard": [
                 [{"text": "✅ 1-Click 가상 체결 실행", "callback_data": "exec_rebalance"}],
-                [{"text": "📊 대시보드에서 세부 조정", "url": "http://localhost:3005/my?tab=rebalance"}]
+                [{"text": "📊 대시보드에서 세부 조정", "url": f"{DASHBOARD_URL}/my?tab=rebalance"}]
             ]
         }
         await send_telegram_message(text=rebalance_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
@@ -213,7 +270,7 @@ async def handle_telegram_webhook(req: Request):
         morning_msg = format_morning_briefing_message(b_data)
         reply_markup = {
             "inline_keyboard": [
-                [{"text": "📊 대시보드 바로가기", "url": "http://localhost:3005"}],
+                [{"text": "📊 대시보드 바로가기", "url": DASHBOARD_URL}],
                 [{"text": "⚡ 1-Click 포트폴리오 진단", "callback_data": "exec_rebalance"}]
             ]
         }
@@ -232,7 +289,7 @@ async def handle_telegram_webhook(req: Request):
         )
         reply_markup = {
             "inline_keyboard": [
-                [{"text": "🌐 i-Prism 웹 대시보드 바로가기", "url": "http://localhost:3005"}]
+                [{"text": "🌐 i-Prism 웹 대시보드 바로가기", "url": DASHBOARD_URL}]
             ]
         }
         await send_telegram_message(text=help_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
@@ -248,7 +305,7 @@ async def send_morning_briefing_endpoint():
     msg = format_morning_briefing_message(b_data)
     reply_markup = {
         "inline_keyboard": [
-            [{"text": "📊 i-Prism 대시보드 바로가기", "url": "http://localhost:3005"}],
+            [{"text": "📊 i-Prism 대시보드 바로가기", "url": DASHBOARD_URL}],
             [{"text": "⚡ 포트폴리오 리밸런싱 확인", "callback_data": "exec_rebalance"}]
         ]
     }

@@ -74,3 +74,54 @@ async def test_telegram_webhook_callback_exec_rebalance():
             assert mock_send.called
             call_kwargs = mock_send.call_args.kwargs
             assert "가상 리밸런싱 체결 완료" in call_kwargs["text"]
+
+@pytest.mark.asyncio
+async def test_telegram_webhook_callback_quadrant_plan():
+    mock_send = AsyncMock(return_value=True)
+    with patch("api.telegram_bot.send_telegram_message", mock_send):
+        payload = {
+            "update_id": 1004,
+            "callback_query": {
+                "id": "cb_1000",
+                "data": "quadrant_plan",
+                "message": {
+                    "chat": {"id": 12345678}
+                }
+            }
+        }
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            res = await ac.post("/api/v1/telegram/webhook", json=payload)
+            assert res.status_code == 200
+            data = res.json()
+            assert data.get("ok") is True
+            assert data.get("action") == "quadrant_plan_sent"
+            assert mock_send.called
+            call_kwargs = mock_send.call_args.kwargs
+            assert "황금 밸런스" in call_kwargs["text"]
+            assert "비타민 ETF" in call_kwargs["text"]
+
+@pytest.mark.asyncio
+async def test_telegram_webhook_callback_cashflow_offset():
+    mock_send = AsyncMock(return_value=True)
+    with patch("api.telegram_bot.send_telegram_message", mock_send):
+        payload = {
+            "update_id": 1005,
+            "callback_query": {
+                "id": "cb_1001",
+                "data": "cashflow_offset",
+                "message": {
+                    "chat": {"id": 12345678}
+                }
+            }
+        }
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            res = await ac.post("/api/v1/telegram/webhook", json=payload)
+            assert res.status_code == 200
+            data = res.json()
+            assert data.get("ok") is True
+            assert data.get("action") == "cashflow_offset_sent"
+            assert mock_send.called
+            call_kwargs = mock_send.call_args.kwargs
+            assert "고정지출" in call_kwargs["text"]
+            assert "상계율" in call_kwargs["text"]
+
