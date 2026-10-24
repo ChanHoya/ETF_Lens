@@ -83,3 +83,23 @@ def test_get_macro_consensus_indicators_single():
     assert len(data["scoreboard"]) == 1
     assert data["scoreboard"][0]["key"] == "cpi"
     assert len(data["series"]["cpi"]) == 6
+
+
+def test_pending_unreleased_indicator():
+    """아직 발표일이 도래하지 않아 actual이 None인 미발표(PENDING) 지표 검증"""
+    pending_item = {"date": "2026-10-31", "period": "2026-09", "actual": None, "estimate": 2.6, "previous": 2.7}
+    res = compute_surprise_attributes("core_pce", pending_item)
+    assert res["actual"] is None
+    assert res["diff"] is None
+    assert res["pct_diff"] is None
+    assert res["status"] == "PENDING"
+    assert res["status_label"] == "미발표 (N/A)"
+    assert res["badge_color"] == "gray"
+
+    # 전체 조회 시 core_pce 최신치가 PENDING인지 검증
+    data = get_macro_consensus_indicators(indicator_key="core_pce", period="1Y")
+    latest = data["scoreboard"][0]
+    assert latest["actual"] is None
+    assert latest["status"] == "PENDING"
+    assert latest["status_label"] == "미발표 (N/A)"
+

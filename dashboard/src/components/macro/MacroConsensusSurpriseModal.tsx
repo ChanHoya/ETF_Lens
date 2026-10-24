@@ -35,12 +35,12 @@ interface IndicatorMeta {
 interface SeriesItem {
   date: string;
   period: string;
-  actual: number;
+  actual: number | null;
   estimate: number;
   previous: number;
   unit: string;
-  diff: number;
-  pct_diff: number;
+  diff: number | null;
+  pct_diff: number | null;
   status: string;
   status_label: string;
   badge_color: string;
@@ -56,11 +56,11 @@ interface ScoreboardItem {
   fed_target: string;
   latest_period: string;
   release_date: string;
-  actual: number;
+  actual: number | null;
   estimate: number;
   previous: number;
-  diff: number;
-  pct_diff: number;
+  diff: number | null;
+  pct_diff: number | null;
   status: string;
   status_label: string;
   badge_color: string;
@@ -85,8 +85,8 @@ const DEFAULT_FALLBACK_DATA = {
     { key: "core_cpi", name: "근원 소비자물가지수 (Core CPI)", short_name: "근원 CPI", category: "물가", unit: "%", fed_target: "2.0%", latest_period: "2026-09", release_date: "2026-10-10", actual: 3.3, estimate: 3.2, previous: 3.2, diff: 0.1, pct_diff: 3.1, status: "SURPRISE_UP", status_label: "상회 (매파적)", badge_color: "rose", sentiment: "hawkish", description: "식품·에너지 제외 기조적 물가" },
     { key: "ppi", name: "생산자물가지수 (PPI YoY)", short_name: "PPI", category: "물가", unit: "%", fed_target: "2.0%", latest_period: "2026-09", release_date: "2026-10-11", actual: 8.5, estimate: 8.4, previous: 6.4, diff: 0.1, pct_diff: 1.2, status: "SURPRISE_UP", status_label: "상회 (매파적)", badge_color: "rose", sentiment: "hawkish", description: "도매물가 및 기업 원가 압력 지표" },
     { key: "core_ppi", name: "근원 생산자물가지수 (Core PPI)", short_name: "근원 PPI", category: "물가", unit: "%", fed_target: "2.0%", latest_period: "2026-09", release_date: "2026-10-11", actual: 2.8, estimate: 2.7, previous: 2.4, diff: 0.1, pct_diff: 3.7, status: "SURPRISE_UP", status_label: "상회 (매파적)", badge_color: "rose", sentiment: "hawkish", description: "식품·에너지 제외 도매물가" },
-    { key: "pce", name: "개인소비지출 물가지수 (PCE YoY)", short_name: "PCE", category: "물가", unit: "%", fed_target: "2.0%", latest_period: "2026-08", release_date: "2026-09-26", actual: 3.0, estimate: 3.0, previous: 3.0, diff: 0.0, pct_diff: 0.0, status: "IN_LINE", status_label: "부합 (중립)", badge_color: "emerald", sentiment: "neutral", description: "연준 공식 통화정책 목표치 지표" },
-    { key: "core_pce", name: "근원 개인소비지출 (Core PCE)", short_name: "근원 PCE", category: "물가", unit: "%", fed_target: "2.0%", latest_period: "2026-09", release_date: "2026-10-24", actual: 2.7, estimate: 2.6, previous: 2.7, diff: 0.1, pct_diff: 3.8, status: "SURPRISE_UP", status_label: "상회 (매파적)", badge_color: "rose", sentiment: "hawkish", description: "연준 FOMC 금리 결정 최우선 핵심 지표" },
+    { key: "pce", name: "개인소비지출 물가지수 (PCE YoY)", short_name: "PCE", category: "물가", unit: "%", fed_target: "2.0%", latest_period: "2026-09", release_date: "2026-10-31", actual: null, estimate: 2.1, previous: 2.2, diff: null, pct_diff: null, status: "PENDING", status_label: "미발표 (N/A)", badge_color: "gray", sentiment: "neutral", description: "연준 공식 통화정책 목표치 지표" },
+    { key: "core_pce", name: "근원 개인소비지출 (Core PCE)", short_name: "근원 PCE", category: "물가", unit: "%", fed_target: "2.0%", latest_period: "2026-09", release_date: "2026-10-31", actual: null, estimate: 2.6, previous: 2.7, diff: null, pct_diff: null, status: "PENDING", status_label: "미발표 (N/A)", badge_color: "gray", sentiment: "neutral", description: "연준 FOMC 금리 결정 최우선 핵심 지표" },
     { key: "unemployment", name: "실업률 (Unemployment Rate)", short_name: "실업률", category: "고용", unit: "%", fed_target: "4.0~4.2%", latest_period: "2026-09", release_date: "2026-10-02", actual: 4.1, estimate: 4.2, previous: 4.2, diff: -0.1, pct_diff: -2.4, status: "SURPRISE_DOWN", status_label: "하회 (매파적)", badge_color: "emerald", sentiment: "hawkish", description: "미 노동부 공식 경제활동인구 실업률" },
     { key: "nonfarm_payrolls", name: "비농업 신규고용 (Nonfarm Payrolls)", short_name: "비농업고용", category: "고용", unit: "k", fed_target: "150~180k", latest_period: "2026-09", release_date: "2026-10-02", actual: 254.0, estimate: 140.0, previous: 142.0, diff: 114.0, pct_diff: 81.4, status: "SURPRISE_UP", status_label: "대폭 상회 (강력)", badge_color: "emerald", sentiment: "hawkish", description: "미국 경기 펀더멘털의 바로미터 신규 일자리 수" }
   ],
@@ -159,7 +159,7 @@ const DEFAULT_FALLBACK_DATA = {
       { date: "2026-07-31", period: "2026-06", actual: 2.5, estimate: 2.5, previous: 2.6, unit: "%", diff: 0.0, pct_diff: 0.0, status: "IN_LINE", status_label: "부합", badge_color: "emerald", sentiment: "neutral" },
       { date: "2026-08-28", period: "2026-07", actual: 2.5, estimate: 2.5, previous: 2.5, unit: "%", diff: 0.0, pct_diff: 0.0, status: "IN_LINE", status_label: "부합", badge_color: "emerald", sentiment: "neutral" },
       { date: "2026-09-26", period: "2026-08", actual: 3.0, estimate: 3.0, previous: 2.5, unit: "%", diff: 0.0, pct_diff: 0.0, status: "IN_LINE", status_label: "부합", badge_color: "emerald", sentiment: "neutral" },
-      { date: "2026-10-31", period: "2026-09", actual: 3.0, estimate: 3.0, previous: 3.0, unit: "%", diff: 0.0, pct_diff: 0.0, status: "IN_LINE", status_label: "부합", badge_color: "emerald", sentiment: "neutral" }
+      { date: "2026-10-31", period: "2026-09", actual: null, estimate: 2.1, previous: 2.2, unit: "%", diff: null, pct_diff: null, status: "PENDING", status_label: "미발표 (N/A)", badge_color: "gray", sentiment: "neutral" }
     ],
     core_pce: [
       { date: "2025-11-28", period: "2025-10", actual: 2.8, estimate: 2.8, previous: 2.7, unit: "%", diff: 0.0, pct_diff: 0.0, status: "IN_LINE", status_label: "부합", badge_color: "emerald", sentiment: "neutral" },
@@ -173,7 +173,7 @@ const DEFAULT_FALLBACK_DATA = {
       { date: "2026-07-31", period: "2026-06", actual: 2.6, estimate: 2.6, previous: 2.6, unit: "%", diff: 0.0, pct_diff: 0.0, status: "IN_LINE", status_label: "부합", badge_color: "emerald", sentiment: "neutral" },
       { date: "2026-08-28", period: "2026-07", actual: 2.6, estimate: 2.6, previous: 2.6, unit: "%", diff: 0.0, pct_diff: 0.0, status: "IN_LINE", status_label: "부합", badge_color: "emerald", sentiment: "neutral" },
       { date: "2026-09-26", period: "2026-08", actual: 2.7, estimate: 2.6, previous: 2.6, unit: "%", diff: 0.1, pct_diff: 3.8, status: "SURPRISE_UP", status_label: "상회", badge_color: "rose", sentiment: "hawkish" },
-      { date: "2026-10-24", period: "2026-09", actual: 2.7, estimate: 2.6, previous: 2.7, unit: "%", diff: 0.1, pct_diff: 3.8, status: "SURPRISE_UP", status_label: "상회", badge_color: "rose", sentiment: "hawkish" }
+      { date: "2026-10-31", period: "2026-09", actual: null, estimate: 2.6, previous: 2.7, unit: "%", diff: null, pct_diff: null, status: "PENDING", status_label: "미발표 (N/A)", badge_color: "gray", sentiment: "neutral" }
     ],
     unemployment: [
       { date: "2025-11-07", period: "2025-10", actual: 4.1, estimate: 4.1, previous: 4.1, unit: "%", diff: 0.0, pct_diff: 0.0, status: "IN_LINE", status_label: "부합", badge_color: "emerald", sentiment: "neutral" },
@@ -221,6 +221,8 @@ export default function MacroConsensusSurpriseModal({
   const [period, setPeriod] = useState<'6M' | '1Y'>('1Y');
   const [data, setData] = useState<any>(DEFAULT_FALLBACK_DATA);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [lastFetchedAt, setLastFetchedAt] = useState<string>('');
   const [mounted, setMounted] = useState<boolean>(false);
 
   useEffect(() => {
@@ -253,15 +255,36 @@ export default function MacroConsensusSurpriseModal({
     }
   }, [initialIndicator]);
 
-  const fetchData = async () => {
+  const fetchData = async (isManual = false) => {
+    if (isManual) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+
     try {
-      const res = await fetch(`${API_BASE}/api/v1/macro/economic-indicators/consensus?period=${period}`);
+      const res = await fetch(`${API_BASE}/api/v1/macro/economic-indicators/consensus?period=${period}&_t=${Date.now()}`);
       if (res.ok) {
         const json = await res.json();
         setData(json);
+        if (json.timestamp) {
+          setLastFetchedAt(json.timestamp);
+        } else {
+          const now = new Date();
+          const pad = (n: number) => String(n).padStart(2, '0');
+          setLastFetchedAt(`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`);
+        }
       }
     } catch (e) {
       console.warn('Backend consensus API unavailable, using rich fallback data.', e);
+      if (!lastFetchedAt) {
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        setLastFetchedAt(`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`);
+      }
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -303,20 +326,38 @@ export default function MacroConsensusSurpriseModal({
               </p>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            {/* 데이터 조회 시점 명기 및 업데이트 버튼 */}
+            <div className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">
+              <span className="text-[11px] text-gray-400 font-mono">
+                조회 시점: <span className="text-gray-200 font-medium">{lastFetchedAt || '2026-10-25 07:35:00'}</span>
+              </span>
+              <button 
+                onClick={() => fetchData(true)}
+                disabled={isRefreshing || isLoading}
+                className="flex items-center gap-1 px-2 py-0.5 bg-indigo-500/20 hover:bg-indigo-500/30 active:bg-indigo-500/40 text-indigo-300 border border-indigo-500/30 rounded text-[11px] font-medium transition disabled:opacity-50"
+                title="최신 경제 지표 데이터 즉시 업데이트"
+              >
+                <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>업데이트</span>
+              </button>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* 8대 지표 선택 탭 바 */}
         <div className="px-4 sm:px-6 py-2 border-b border-white/5 bg-black/20 flex items-center justify-between gap-1.5 overflow-x-auto scrollbar-none">
           <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-0.5 scrollbar-none shrink-0 min-w-0">
-            {data?.scoreboard.map((item) => {
+            {data?.scoreboard?.map((item: any) => {
               const isSelected = item.key === selectedKey;
               const isInflation = item.category === '물가';
+              const isPending = item.status === 'PENDING' || item.actual === null || item.diff === null;
               return (
                 <button
                   key={item.key}
@@ -327,34 +368,51 @@ export default function MacroConsensusSurpriseModal({
                       : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isInflation ? 'bg-rose-400' : 'bg-sky-400'}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isPending ? 'bg-gray-400' : isInflation ? 'bg-rose-400' : 'bg-sky-400'}`} />
                   <span>{item.short_name}</span>
-                  <span className={`text-[9px] font-mono px-1 py-0 rounded ${
-                    item.diff > 0 
-                      ? (isInflation ? 'text-rose-300 bg-rose-500/20' : 'text-emerald-300 bg-emerald-500/20')
-                      : item.diff < 0
-                      ? (isInflation ? 'text-sky-300 bg-sky-500/20' : 'text-amber-300 bg-amber-500/20')
-                      : 'text-gray-400 bg-white/5'
-                  }`}>
-                    {item.diff > 0 ? `+${item.diff}` : item.diff}
-                  </span>
+                  {isPending ? (
+                    <span className="text-[9px] font-mono px-1 py-0 rounded text-gray-400 bg-white/10">
+                      미발표
+                    </span>
+                  ) : (
+                    <span className={`text-[9px] font-mono px-1 py-0 rounded ${
+                      item.diff > 0 
+                        ? (isInflation ? 'text-rose-300 bg-rose-500/20' : 'text-emerald-300 bg-emerald-500/20')
+                        : item.diff < 0
+                        ? (isInflation ? 'text-sky-300 bg-sky-500/20' : 'text-amber-300 bg-amber-500/20')
+                        : 'text-gray-400 bg-white/5'
+                    }`}>
+                      {item.diff > 0 ? `+${item.diff}` : item.diff}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
 
-          <div className="flex items-center gap-1 shrink-0 ml-1">
-            {(['6M', '1Y'] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition ${
-                  period === p ? 'bg-white/15 text-white' : 'text-gray-500 hover:text-gray-300'
-                }`}
-              >
-                {p}
-              </button>
-            ))}
+          <div className="flex items-center gap-2 shrink-0 ml-1">
+            {/* 모바일용 업데이트 버튼 */}
+            <button 
+              onClick={() => fetchData(true)}
+              disabled={isRefreshing || isLoading}
+              className="sm:hidden p-1 text-gray-400 hover:text-indigo-300 transition"
+              title="데이터 업데이트"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+            <div className="flex items-center gap-1">
+              {(['6M', '1Y'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition ${
+                    period === p ? 'bg-white/15 text-white' : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -381,11 +439,20 @@ export default function MacroConsensusSurpriseModal({
 
                   <div className="space-y-1">
                     <span className="text-[11px] text-gray-400">실제 발표치 (Actual)</span>
-                    <div className="text-xl font-black text-white font-mono flex items-baseline gap-1">
-                      <span>{currentScore.actual}</span>
-                      <span className="text-xs font-normal text-gray-400">{currentScore.unit}</span>
-                    </div>
-                    <div className="text-[10px] text-gray-400">이전치: {currentScore.previous}{currentScore.unit}</div>
+                    {currentScore.status === 'PENDING' || currentScore.actual === null ? (
+                      <div>
+                        <div className="text-xl font-bold text-gray-400 font-mono">미발표 (N/A)</div>
+                        <div className="text-[10px] text-gray-500">10월 31일 발표 대기 중</div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-xl font-black text-white font-mono flex items-baseline gap-1">
+                          <span>{currentScore.actual}</span>
+                          <span className="text-xs font-normal text-gray-400">{currentScore.unit}</span>
+                        </div>
+                        <div className="text-[10px] text-gray-400">이전치: {currentScore.previous}{currentScore.unit}</div>
+                      </>
+                    )}
                   </div>
 
                   <div className="space-y-1">
@@ -399,27 +466,36 @@ export default function MacroConsensusSurpriseModal({
 
                   <div className="space-y-1">
                     <span className="text-[11px] text-gray-400">서프라이즈 편차 (Spread)</span>
-                    <div className={`text-xl font-black font-mono flex items-center gap-1 ${
-                      currentScore.diff > 0 
-                        ? (currentScore.category === '물가' ? 'text-rose-400' : 'text-emerald-400')
-                        : currentScore.diff < 0 
-                        ? (currentScore.category === '물가' ? 'text-sky-400' : 'text-amber-400')
-                        : 'text-gray-300'
-                    }`}>
-                      {currentScore.diff > 0 ? `+${currentScore.diff}` : currentScore.diff}
-                      <span className="text-xs font-normal text-gray-400">{currentScore.unit}</span>
-                    </div>
-                    <div>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        currentScore.status === 'SURPRISE_UP' 
-                          ? (currentScore.category === '물가' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30')
-                          : currentScore.status === 'SURPRISE_DOWN'
-                          ? (currentScore.category === '물가' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30')
-                          : 'bg-white/10 text-gray-300'
-                      }`}>
-                        {currentScore.status_label}
-                      </span>
-                    </div>
+                    {currentScore.status === 'PENDING' || currentScore.diff === null ? (
+                      <div>
+                        <div className="text-xl font-bold font-mono text-gray-400">N/A</div>
+                        <div className="text-[10px] text-gray-400 font-medium pt-0.5">미발표 (N/A)</div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className={`text-xl font-black font-mono flex items-center gap-1 ${
+                          currentScore.diff > 0 
+                            ? (currentScore.category === '물가' ? 'text-rose-400' : 'text-emerald-400')
+                            : currentScore.diff < 0 
+                            ? (currentScore.category === '물가' ? 'text-sky-400' : 'text-amber-400')
+                            : 'text-gray-300'
+                        }`}>
+                          {currentScore.diff > 0 ? `+${currentScore.diff}` : currentScore.diff}
+                          <span className="text-xs font-normal text-gray-400">{currentScore.unit}</span>
+                        </div>
+                        <div>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                            currentScore.status === 'SURPRISE_UP' 
+                              ? (currentScore.category === '물가' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30')
+                              : currentScore.status === 'SURPRISE_DOWN'
+                              ? (currentScore.category === '물가' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30')
+                              : 'bg-white/10 text-gray-300'
+                          }`}>
+                            {currentScore.status_label}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -471,9 +547,15 @@ export default function MacroConsensusSurpriseModal({
                           color: '#fff'
                         }}
                         formatter={(val: any, name: any) => {
-                          if (name === 'actual') return [`${val} ${currentMeta?.unit}`, '실제 발표치'];
+                          if (name === 'actual') {
+                            if (val === null || val === undefined) return ['미발표 (N/A)', '실제 발표치'];
+                            return [`${val} ${currentMeta?.unit}`, '실제 발표치'];
+                          }
                           if (name === 'estimate') return [`${val} ${currentMeta?.unit}`, '월가 예상치'];
-                          if (name === 'diff') return [`${val > 0 ? '+' : ''}${val} ${currentMeta?.unit}`, '편차'];
+                          if (name === 'diff') {
+                            if (val === null || val === undefined) return ['N/A', '편차'];
+                            return [`${val > 0 ? '+' : ''}${val} ${currentMeta?.unit}`, '편차'];
+                          }
                           return [val, name];
                         }}
                       />
@@ -516,41 +598,60 @@ export default function MacroConsensusSurpriseModal({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                      {currentSeries.slice().reverse().map((row, idx) => (
-                        <tr key={idx} className="hover:bg-white/[0.02] transition">
-                          <td className="px-3 py-2 font-mono font-medium">{row.period}</td>
-                          <td className="px-3 py-2 text-gray-400 font-mono text-[11px]">{row.date}</td>
-                          <td className="px-3 py-2 text-right font-mono font-bold text-white">
-                            {row.actual} {row.unit}
-                          </td>
-                          <td className="px-3 py-2 text-right font-mono text-amber-400">
-                            {row.estimate} {row.unit}
-                          </td>
-                          <td className="px-3 py-2 text-right font-mono text-gray-500">
-                            {row.previous} {row.unit}
-                          </td>
-                          <td className={`px-3 py-2 text-right font-mono font-bold ${
-                            row.diff > 0 
-                              ? (currentMeta?.category === '물가' ? 'text-rose-400' : 'text-emerald-400')
-                              : row.diff < 0
-                              ? (currentMeta?.category === '물가' ? 'text-sky-400' : 'text-amber-400')
-                              : 'text-gray-400'
-                          }`}>
-                            {row.diff > 0 ? `+${row.diff}` : row.diff} {row.unit}
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                              row.status === 'SURPRISE_UP'
-                                ? (currentMeta?.category === '물가' ? 'bg-rose-500/15 text-rose-300' : 'bg-emerald-500/15 text-emerald-300')
-                                : row.status === 'SURPRISE_DOWN'
-                                ? (currentMeta?.category === '물가' ? 'bg-sky-500/15 text-sky-300' : 'bg-amber-500/15 text-amber-300')
-                                : 'bg-white/5 text-gray-400'
+                      {currentSeries.slice().reverse().map((row: any, idx: number) => {
+                        const isPendingRow = row.status === 'PENDING' || row.actual === null;
+                        return (
+                          <tr key={idx} className="hover:bg-white/[0.02] transition">
+                            <td className="px-3 py-2 font-mono font-medium">{row.period}</td>
+                            <td className="px-3 py-2 text-gray-400 font-mono text-[11px]">{row.date}</td>
+                            <td className="px-3 py-2 text-right font-mono font-bold text-white">
+                              {isPendingRow ? (
+                                <span className="text-gray-400 text-xs font-normal">미발표 (N/A)</span>
+                              ) : (
+                                `${row.actual} ${row.unit}`
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono text-amber-400">
+                              {row.estimate} {row.unit}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono text-gray-500">
+                              {row.previous} {row.unit}
+                            </td>
+                            <td className={`px-3 py-2 text-right font-mono font-bold ${
+                              isPendingRow || row.diff === null
+                                ? 'text-gray-500 font-normal'
+                                : row.diff > 0 
+                                ? (currentMeta?.category === '물가' ? 'text-rose-400' : 'text-emerald-400')
+                                : row.diff < 0
+                                ? (currentMeta?.category === '물가' ? 'text-sky-400' : 'text-amber-400')
+                                : 'text-gray-400'
                             }`}>
-                              {row.status_label}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                              {isPendingRow || row.diff === null ? (
+                                '-'
+                              ) : (
+                                `${row.diff > 0 ? `+${row.diff}` : row.diff} ${row.unit}`
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {isPendingRow ? (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-white/5 text-gray-400 border border-white/10">
+                                  미발표 (N/A)
+                                </span>
+                              ) : (
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                                  row.status === 'SURPRISE_UP'
+                                    ? (currentMeta?.category === '물가' ? 'bg-rose-500/15 text-rose-300' : 'bg-emerald-500/15 text-emerald-300')
+                                    : row.status === 'SURPRISE_DOWN'
+                                    ? (currentMeta?.category === '물가' ? 'bg-sky-500/15 text-sky-300' : 'bg-amber-500/15 text-amber-300')
+                                    : 'bg-white/5 text-gray-400'
+                                }`}>
+                                  {row.status_label}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

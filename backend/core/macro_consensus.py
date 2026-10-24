@@ -184,7 +184,7 @@ CONSENSUS_SERIES_DATABASE: Dict[str, List[Dict[str, Any]]] = {
         {"date": "2026-07-26", "period": "2026-06", "actual": 2.5, "estimate": 2.5, "previous": 2.6, "unit": "%"},
         {"date": "2026-08-30", "period": "2026-07", "actual": 2.5, "estimate": 2.6, "previous": 2.5, "unit": "%"},
         {"date": "2026-09-27", "period": "2026-08", "actual": 2.2, "estimate": 2.3, "previous": 2.5, "unit": "%"},
-        {"date": "2026-10-31", "period": "2026-09", "actual": 2.1, "estimate": 2.1, "previous": 2.2, "unit": "%"},
+        {"date": "2026-10-31", "period": "2026-09", "actual": None, "estimate": 2.1, "previous": 2.2, "unit": "%"},
     ],
     "core_pce": [
         {"date": "2025-11-27", "period": "2025-10", "actual": 2.8, "estimate": 2.8, "previous": 2.7, "unit": "%"},
@@ -198,23 +198,38 @@ CONSENSUS_SERIES_DATABASE: Dict[str, List[Dict[str, Any]]] = {
         {"date": "2026-07-26", "period": "2026-06", "actual": 2.6, "estimate": 2.5, "previous": 2.6, "unit": "%"},
         {"date": "2026-08-30", "period": "2026-07", "actual": 2.6, "estimate": 2.7, "previous": 2.6, "unit": "%"},
         {"date": "2026-09-27", "period": "2026-08", "actual": 2.7, "estimate": 2.7, "previous": 2.6, "unit": "%"},
-        {"date": "2026-10-31", "period": "2026-09", "actual": 2.7, "estimate": 2.6, "previous": 2.7, "unit": "%"},
+        {"date": "2026-10-31", "period": "2026-09", "actual": None, "estimate": 2.6, "previous": 2.7, "unit": "%"},
     ],
 }
 
 
 def compute_surprise_attributes(indicator_key: str, item: Dict[str, Any]) -> Dict[str, Any]:
     """
-    실제치 vs 월가 예상치 비교 및 시장 서프라이즈(Surprise), 편차, 센티먼트 판정 산출
+    실제치 vs 월가 예상치 비교 및 시장 서프라이즈(Surprise), 편차, 센티먼트 판정 산출.
+    미발표(발표일 이전이거나 actual이 None)인 경우 PENDING(미발표) 상태로 정상 변환.
     """
-    actual = item["actual"]
-    estimate = item["estimate"]
+    actual = item.get("actual")
+    estimate = item.get("estimate")
+
+    # 미발표 상태인 경우 (actual이 None이거나 아직 발표일 전인 경우)
+    if actual is None:
+        return {
+            **item,
+            "actual": None,
+            "diff": None,
+            "pct_diff": None,
+            "status": "PENDING",
+            "status_label": "미발표 (N/A)",
+            "badge_color": "gray",
+            "sentiment": "NEUTRAL",
+        }
+
     diff = round(actual - estimate, 2)
     meta = INDICATOR_METADATA.get(indicator_key, {})
     is_inflation = meta.get("category") == "물가"
     
     # 퍼센티지 편차 (단위가 %가 아닌 고용 건수의 경우 % 계산, % 단위인 경우 절대 편차 p)
-    if estimate != 0:
+    if estimate is not None and estimate != 0:
         pct_diff = round(((actual - estimate) / abs(estimate)) * 100, 1)
     else:
         pct_diff = 0.0
@@ -307,9 +322,9 @@ def get_macro_consensus_indicators(
             "description": meta.get("description"),
         })
 
-    # 2. 종합 시장 인텔리전스 총평
-    inflation_surprises = [s for s in scoreboard if s["category"] == "물가" and s["diff"] > 0]
-    labor_strength = [s for s in scoreboard if s["key"] == "nonfarm_payrolls" and s["diff"] > 0]
+    # 2. 종합 시장 인텔리전스 총평 (미발표 상태 지표는 서프라이즈 집계에서 안전하게 제외)
+    inflation_surprises = [s for s in scoreboard if s.get("category") == "물가" and s.get("diff") is not None and s["diff"] > 0]
+    labor_strength = [s for s in scoreboard if s.get("key") == "nonfarm_payrolls" and s.get("diff") is not None and s["diff"] > 0]
 
     if len(inflation_surprises) >= 3:
         market_summary = "물가 지표 다수가 월가 예상치를 상회하며 라스트 마일 인플레이션 경계감이 잔존합니다. 연준의 연속 금리인하 속도조절 가능성에 유의하세요."
@@ -332,8 +347,9 @@ def get_macro_consensus_indicators(
         "analysis": {
             "overall_stance": overall_stance,
             "market_summary": market_summary,
-            "inflation_above_count": len([s for s in scoreboard if s["category"] == "물가" and s["diff"] > 0]),
-            "inflation_below_count": len([s for s in scoreboard if s["category"] == "물가" and s["diff"] < 0]),
-            "labor_above_count": len([s for s in scoreboard if s["category"] == "고용" and s["diff"] > 0]),
+            "inflation_above_count": len([s for s in scoreboard if s.get("category") == "물가" and s.get("diff") is not None and s["diff"] > 0]),
+            "inflation_below_count": len([s for s in scoreboard if s.get("category") == "물가" and s.get("diff") is not None and s["diff"] < 0]),
+            "labor_above_count": len([s for s in scoreboard if s.get("category") == "고용" and s.get("diff") is not None and s["diff"] > 0]),
+            "pending_count": len([s for s in scoreboard if s.get("status") == "PENDING"]),
         }
     }
