@@ -558,49 +558,49 @@ export default function KrMacroIndicatorSection() {
                 <div className="bg-[#121217]/70 border border-white/10 rounded-2xl p-4 lg:p-5 backdrop-blur-md shadow-xl flex flex-col justify-between">
                     <div>
                         {/* 상단 제목 및 컨트롤 바 */}
-                        <div className="flex flex-col gap-2.5 mb-3">
+                        <div className="flex flex-col gap-2 mb-3">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-base font-bold text-white flex items-center gap-2">
-                                            <BarChart3 className="w-4 h-4 text-indigo-400" />
-                                            대한민국 수출 실적 추이
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <h3 className="text-base font-bold text-white flex items-center gap-1.5 whitespace-nowrap shrink-0">
+                                            <BarChart3 className="w-4 h-4 text-indigo-400 shrink-0" />
+                                            <span>대한민국 수출 실적 추이</span>
                                         </h3>
-                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-400/30 text-indigo-300">
-                                            {exportViewMode === 'total' ? '총수출 관점' : '6대 주력 산업군'}
+                                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-400/30 text-indigo-300 whitespace-nowrap shrink-0">
+                                            {exportViewMode === 'total' ? '총수출' : '6대 업종'}
                                         </span>
                                     </div>
-                                    <p className="text-[11px] text-gray-400 mt-0.5">
+                                    <p className="text-[11px] text-gray-400 mt-0.5 truncate">
                                         {exportViewMode === 'total'
                                             ? '관세청 및 한국은행 공표 통관 기준 수출 실적 및 YoY 증감률'
-                                            : '한국은행 KSIC 및 관세청 MTI 15대 주력 품목 기준 핵심 수출 산업별 실적 분해'}
+                                            : '한국은행 KSIC 및 관세청 MTI 기준 핵심 주력 산업별 실적 분해'}
                                     </p>
                                 </div>
 
-                                {/* 우측: [전체 / 6대 업종별] 보기 모드 스위처 & [년 / 월간 / 일별] 주기 탭 */}
-                                <div className="flex flex-wrap items-center gap-1.5 shrink-0 self-start sm:self-auto">
-                                    {/* 1. 보기 모드 (전체 ↔ 6대 업종별) */}
+                                {/* 우측: [전체 / 6대 업종] 보기 모드 스위처 & [년 / 월간 / 일별] 주기 탭 */}
+                                <div className="flex items-center gap-1 shrink-0 self-start sm:self-auto">
+                                    {/* 1. 보기 모드 (전체 ↔ 6대 업종) */}
                                     <div className="flex bg-black/50 rounded-lg p-0.5 border border-white/10">
                                         <button
                                             onClick={() => handleViewModeChange('total')}
-                                            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                                            className={`px-2 py-0.5 text-[11px] font-medium rounded-md transition-all ${
                                                 exportViewMode === 'total'
                                                     ? 'bg-indigo-600 text-white shadow-sm'
                                                     : 'text-gray-400 hover:text-white'
                                             }`}
                                         >
-                                            전체 수출
+                                            전체
                                         </button>
                                         <button
                                             onClick={() => handleViewModeChange('industry')}
-                                            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                                            className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md transition-all ${
                                                 exportViewMode === 'industry'
                                                     ? 'bg-indigo-600 text-white shadow-sm'
                                                     : 'text-gray-400 hover:text-white'
                                             }`}
                                         >
-                                            <Layers className="w-3 h-3" />
-                                            <span>6대 업종별</span>
+                                            <Layers className="w-2.5 h-2.5" />
+                                            <span>6대 업종</span>
                                         </button>
                                     </div>
 
@@ -608,7 +608,7 @@ export default function KrMacroIndicatorSection() {
                                     <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/10">
                                         <button
                                             onClick={() => handlePeriodChange('yearly')}
-                                            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                                            className={`px-2 py-0.5 text-[11px] font-medium rounded-md transition-all ${
                                                 exportPeriod === 'yearly'
                                                     ? 'bg-white/20 text-white'
                                                     : 'text-gray-400 hover:text-white'
@@ -618,7 +618,7 @@ export default function KrMacroIndicatorSection() {
                                         </button>
                                         <button
                                             onClick={() => handlePeriodChange('monthly')}
-                                            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                                            className={`px-2 py-0.5 text-[11px] font-medium rounded-md transition-all ${
                                                 exportPeriod === 'monthly'
                                                     ? 'bg-white/20 text-white'
                                                     : 'text-gray-400 hover:text-white'
@@ -628,7 +628,7 @@ export default function KrMacroIndicatorSection() {
                                         </button>
                                         <button
                                             onClick={() => handlePeriodChange('daily')}
-                                            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                                            className={`px-2 py-0.5 text-[11px] font-medium rounded-md transition-all ${
                                                 exportPeriod === 'daily'
                                                     ? 'bg-white/20 text-white'
                                                     : 'text-gray-400 hover:text-white'
@@ -640,19 +640,19 @@ export default function KrMacroIndicatorSection() {
                                 </div>
                             </div>
 
-                            {/* 6대 업종별 모드 시 가로 칩 스위처 */}
+                            {/* 6대 업종별 모드 시 가로 칩 스위처 (flex-wrap 및 콤팩트 칩으로 전원 노출) */}
                             {exportViewMode === 'industry' && (
-                                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-0.5 text-xs">
+                                <div className="flex items-center gap-1 flex-wrap pt-0.5">
                                     <button
                                         onClick={() => handleIndustrySelect('stacked')}
-                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold shrink-0 transition-all ${
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] font-medium shrink-0 transition-all ${
                                             selectedIndustry === 'stacked'
                                                 ? 'bg-indigo-500/25 border-indigo-400/50 text-white shadow-sm'
                                                 : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
                                         }`}
                                     >
-                                        <Layers className="w-3.5 h-3.5 text-indigo-400" />
-                                        <span>전체 누적(Stack)</span>
+                                        <Layers className="w-3 h-3 text-indigo-400" />
+                                        <span>누적(Stack)</span>
                                     </button>
 
                                     {industriesMeta.map(ind => {
@@ -661,7 +661,8 @@ export default function KrMacroIndicatorSection() {
                                             <button
                                                 key={ind.id}
                                                 onClick={() => handleIndustrySelect(ind.id)}
-                                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold shrink-0 transition-all ${
+                                                title={ind.name}
+                                                className={`flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] font-medium shrink-0 transition-all ${
                                                     isSelected
                                                         ? 'text-white shadow-sm'
                                                         : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
@@ -672,10 +673,10 @@ export default function KrMacroIndicatorSection() {
                                                 }}
                                             >
                                                 <span
-                                                    className="w-2 h-2 rounded-full shrink-0"
+                                                    className="w-1.5 h-1.5 rounded-full shrink-0"
                                                     style={{ backgroundColor: ind.color }}
                                                 />
-                                                <span>{ind.name}</span>
+                                                <span>{ind.short_name || ind.name}</span>
                                             </button>
                                         );
                                     })}
