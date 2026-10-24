@@ -25,7 +25,14 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     HelpCircle,
-    Check
+    Check,
+    Layers,
+    Cpu,
+    Car,
+    Flame,
+    Cog,
+    Layers3,
+    Zap
 } from 'lucide-react';
 import { API_BASE } from '@/lib/apiConfig';
 
@@ -38,6 +45,32 @@ interface KRMacroItem {
     daily_avg_export: number | null; // 일평균 수출액 (억 달러/일)
 }
 
+export interface IndustryDetail {
+    amt: number;
+    share: number;
+    yoy?: number | null;
+    daily_avg?: number;
+}
+
+export interface IndustryMeta {
+    id: string;
+    name: string;
+    short_name: string;
+    color: string;
+    desc: string;
+    ksic: string;
+    base_share: number;
+}
+
+export const DEFAULT_INDUSTRIES_META: IndustryMeta[] = [
+    { id: 'semiconductor', name: '반도체·IT', short_name: '반도체', color: '#38bdf8', desc: '메모리, 시스템반도체, 컴퓨터, 디스플레이', ksic: '전자부품·컴퓨터 및 통신', base_share: 28.0 },
+    { id: 'auto', name: '자동차·운송', short_name: '자동차', color: '#6366f1', desc: '완성차, 자동차 부품, 조선·선박', ksic: '자동차 및 운송장비', base_share: 20.0 },
+    { id: 'petrochem', name: '석유화학·정유', short_name: '석유화학', color: '#f59e0b', desc: '석유제품, 화학기초유분, 합성수지', ksic: '석유제품 및 화학물질', base_share: 14.0 },
+    { id: 'machinery', name: '일반기계', short_name: '기계', color: '#10b981', desc: '공작기계, 건설기계, 정밀설비', ksic: '기계 및 장비', base_share: 10.0 },
+    { id: 'steel', name: '철강·금속', short_name: '철강', color: '#94a3b8', desc: '열연·냉연강판, 강관, 비철금속', ksic: '제1차 금속', base_share: 8.0 },
+    { id: 'bio_battery', name: '바이오·배터리', short_name: '바이오', color: '#ec4899', desc: '바이오의약품, 이차전지(배터리), 신산업', ksic: '의약품 및 전기장비', base_share: 20.0 },
+];
+
 interface ExportItem {
     date: string;
     export_amt?: number;
@@ -45,15 +78,31 @@ interface ExportItem {
     export_daily_avg?: number;
     is_projected?: boolean;
     label?: string;
+    industries?: Record<string, IndustryDetail>;
+    selected_industry?: string;
+    selected_industry_amt?: number;
+    selected_industry_yoy?: number | null;
+    selected_industry_share?: number;
+    selected_industry_daily_avg?: number;
+    ind_semiconductor?: number;
+    ind_auto?: number;
+    ind_petrochem?: number;
+    ind_machinery?: number;
+    ind_steel?: number;
+    ind_bio_battery?: number;
 }
 
 type ExportPeriod = 'yearly' | 'monthly' | 'daily';
 type Timeframe = '1Y' | '3Y' | '5Y' | '10Y';
+type ExportViewMode = 'total' | 'industry';
 
 export default function KrMacroIndicatorSection() {
     const [krData, setKrData] = useState<KRMacroItem[]>([]);
     const [exportPeriod, setExportPeriod] = useState<ExportPeriod>('monthly');
     const [exportData, setExportData] = useState<ExportItem[]>([]);
+    const [exportViewMode, setExportViewMode] = useState<ExportViewMode>('total');
+    const [selectedIndustry, setSelectedIndustry] = useState<string>('stacked');
+    const [industriesMeta, setIndustriesMeta] = useState<IndustryMeta[]>(DEFAULT_INDUSTRIES_META);
     const [timeframe, setTimeframe] = useState<Timeframe>('5Y');
     const [loading, setLoading] = useState<boolean>(true);
     const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -64,6 +113,7 @@ export default function KrMacroIndicatorSection() {
         cycle: true,
         oecd: true,
     });
+
 
     // 1. 한국 경기선행지수 데이터 로드
     const fetchKrMacroData = useCallback(async (force: boolean = false) => {
@@ -89,11 +139,12 @@ export default function KrMacroIndicatorSection() {
         }
     }, []);
 
-    // 2. 한국 수출 데이터 로드 (period: yearly, monthly, daily)
-    const fetchExportData = useCallback(async (period: ExportPeriod) => {
+    // 2. 한국 수출 데이터 로드 (period: yearly, monthly, daily / industry: all, semiconductor 등)
+    const fetchExportData = useCallback(async (period: ExportPeriod, ind: string = 'all') => {
         try {
             setExportLoading(true);
-            const url = `${API_BASE}/api/v1/exit-signal/macro/kr/export?period=${period}`;
+            const queryInd = ind === 'stacked' ? 'all' : ind;
+            const url = `${API_BASE}/api/v1/exit-signal/macro/kr/export?period=${period}&industry=${queryInd}`;
             const res = await fetch(url, {
                 cache: 'no-store',
                 headers: { 'Cache-Control': 'no-cache' }
@@ -101,11 +152,24 @@ export default function KrMacroIndicatorSection() {
             if (res.ok) {
                 const json = await res.json();
                 if (json && Array.isArray(json.data)) {
-                    setExportData(json.data);
+                    // Recharts의 Stacked Bar를 위해 각 업종 수치를 플랫 키로 매핑
+                    const flattened: ExportItem[] = json.data.map((item: any) => {
+                        const row: ExportItem = { ...item };
+                        if (item.industries) {
+                            Object.entries(item.industries).forEach(([k, v]: [string, any]) => {
+                                (row as any)[`ind_${k}`] = v.amt ?? (v.daily_avg ?? 0);
+                            });
+                        }
+                        return row;
+                    });
+                    setExportData(flattened);
+                }
+                if (json && Array.isArray(json.industries_meta) && json.industries_meta.length > 0) {
+                    setIndustriesMeta(json.industries_meta);
                 }
             }
         } catch (err) {
-            console.error(`Failed to fetch KR export (${period}):`, err);
+            console.error(`Failed to fetch KR export (${period}, ${ind}):`, err);
         } finally {
             setExportLoading(false);
         }
@@ -126,14 +190,31 @@ export default function KrMacroIndicatorSection() {
             // ignore
         }
         fetchKrMacroData(false);
-        fetchExportData('monthly');
-    }, [fetchKrMacroData, fetchExportData]);
+        fetchExportData('monthly', selectedIndustry);
+    }, [fetchKrMacroData, fetchExportData, selectedIndustry]);
 
     // 수출 주기 탭 변경 시 호출
     const handlePeriodChange = (p: ExportPeriod) => {
         setExportPeriod(p);
-        fetchExportData(p);
+        fetchExportData(p, exportViewMode === 'industry' ? selectedIndustry : 'all');
     };
+
+    // 보기 모드 변경 (전체 수출 ↔ 6대 업종별)
+    const handleViewModeChange = (mode: ExportViewMode) => {
+        setExportViewMode(mode);
+        if (mode === 'total') {
+            fetchExportData(exportPeriod, 'all');
+        } else {
+            fetchExportData(exportPeriod, selectedIndustry);
+        }
+    };
+
+    // 업종 선택 칩 클릭
+    const handleIndustrySelect = (indId: string) => {
+        setSelectedIndustry(indId);
+        fetchExportData(exportPeriod, indId);
+    };
+
 
     // 최신값 및 상태 계산
     const latestCycle = useMemo(() => {
@@ -188,20 +269,58 @@ export default function KrMacroIndicatorSection() {
         return krData.slice(-monthsCount);
     }, [krData, timeframe]);
 
-    // 수출 최신 요약
+    // 수출 최신 요약 (전체 및 6대 업종별 동적 집계)
     const latestExportSummary = useMemo(() => {
-        const monthlyRecords = krData.filter(d => d.export_amt !== null);
-        if (monthlyRecords.length === 0) return null;
-        const cur = monthlyRecords[monthlyRecords.length - 1];
-        const prev = monthlyRecords.length > 1 ? monthlyRecords[monthlyRecords.length - 2] : null;
+        if (exportData.length === 0) return null;
+        const cur = exportData[exportData.length - 1];
+
+        // 특정 단일 업종 선택 시 해당 업종 통계
+        const activeMeta = industriesMeta.find(m => m.id === selectedIndustry);
+        let selectedIndStat = null;
+        if (activeMeta && cur.industries && cur.industries[activeMeta.id]) {
+            const indCur = cur.industries[activeMeta.id];
+            selectedIndStat = {
+                id: activeMeta.id,
+                name: activeMeta.name,
+                shortName: activeMeta.short_name,
+                color: activeMeta.color,
+                desc: activeMeta.desc,
+                amt: indCur.amt ?? indCur.daily_avg ?? 0,
+                share: indCur.share,
+                yoy: indCur.yoy ?? null,
+            };
+        }
+
+        // 스택 모드 시 1위 업종 계산
+        let topIndustry = null;
+        if (cur.industries) {
+            const sorted = Object.entries(cur.industries).sort((a, b) => (b[1].share ?? 0) - (a[1].share ?? 0));
+            if (sorted.length > 0) {
+                const [topId, topData] = sorted[0];
+                const meta = industriesMeta.find(m => m.id === topId);
+                topIndustry = {
+                    id: topId,
+                    name: meta?.name ?? topId,
+                    shortName: meta?.short_name ?? topId,
+                    color: meta?.color ?? '#38bdf8',
+                    amt: topData.amt ?? topData.daily_avg ?? 0,
+                    share: topData.share,
+                    yoy: topData.yoy ?? null,
+                };
+            }
+        }
+
         return {
             date: cur.date,
-            amt: cur.export_amt,
-            yoy: cur.export_yoy,
-            dailyAvg: cur.daily_avg_export,
-            prevAmt: prev ? prev.export_amt : null,
+            amt: cur.export_amt ?? null,
+            yoy: cur.export_yoy ?? null,
+            dailyAvg: cur.export_daily_avg ?? null,
+            isProjected: cur.is_projected,
+            selectedIndStat,
+            topIndustry,
         };
-    }, [krData]);
+    }, [exportData, selectedIndustry, industriesMeta]);
+
 
     return (
         <div className="w-full flex flex-col gap-4 mt-2 mb-4">
@@ -435,86 +554,221 @@ export default function KrMacroIndicatorSection() {
                     )}
                 </div>
 
-                {/* 컨텐츠 2: 한국 수출 그래프 추이 (년 / 월간 / 일별 탭) */}
+                {/* 컨텐츠 2: 한국 수출 그래프 추이 (전체 / 6대 업종별 & 년 / 월간 / 일별 탭) */}
                 <div className="bg-[#121217]/70 border border-white/10 rounded-2xl p-4 lg:p-5 backdrop-blur-md shadow-xl flex flex-col justify-between">
                     <div>
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                            <div>
-                                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                                    <BarChart3 className="w-4 h-4 text-indigo-400" />
-                                    대한민국 수출 실적 추이
-                                </h3>
-                                <p className="text-[11px] text-gray-400 mt-0.5">
-                                    관세청 및 한국은행 공표 통관 기준 수출 실적 및 YoY 증감률
-                                </p>
+                        {/* 상단 제목 및 컨트롤 바 */}
+                        <div className="flex flex-col gap-2.5 mb-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-base font-bold text-white flex items-center gap-2">
+                                            <BarChart3 className="w-4 h-4 text-indigo-400" />
+                                            대한민국 수출 실적 추이
+                                        </h3>
+                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-400/30 text-indigo-300">
+                                            {exportViewMode === 'total' ? '총수출 관점' : '6대 주력 산업군'}
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-gray-400 mt-0.5">
+                                        {exportViewMode === 'total'
+                                            ? '관세청 및 한국은행 공표 통관 기준 수출 실적 및 YoY 증감률'
+                                            : '한국은행 KSIC 및 관세청 MTI 15대 주력 품목 기준 핵심 수출 산업별 실적 분해'}
+                                    </p>
+                                </div>
+
+                                {/* 우측: [전체 / 6대 업종별] 보기 모드 스위처 & [년 / 월간 / 일별] 주기 탭 */}
+                                <div className="flex flex-wrap items-center gap-1.5 shrink-0 self-start sm:self-auto">
+                                    {/* 1. 보기 모드 (전체 ↔ 6대 업종별) */}
+                                    <div className="flex bg-black/50 rounded-lg p-0.5 border border-white/10">
+                                        <button
+                                            onClick={() => handleViewModeChange('total')}
+                                            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                                                exportViewMode === 'total'
+                                                    ? 'bg-indigo-600 text-white shadow-sm'
+                                                    : 'text-gray-400 hover:text-white'
+                                            }`}
+                                        >
+                                            전체 수출
+                                        </button>
+                                        <button
+                                            onClick={() => handleViewModeChange('industry')}
+                                            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                                                exportViewMode === 'industry'
+                                                    ? 'bg-indigo-600 text-white shadow-sm'
+                                                    : 'text-gray-400 hover:text-white'
+                                            }`}
+                                        >
+                                            <Layers className="w-3 h-3" />
+                                            <span>6대 업종별</span>
+                                        </button>
+                                    </div>
+
+                                    {/* 2. 주기 탭 (년 / 월간 / 일별) */}
+                                    <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/10">
+                                        <button
+                                            onClick={() => handlePeriodChange('yearly')}
+                                            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                                                exportPeriod === 'yearly'
+                                                    ? 'bg-white/20 text-white'
+                                                    : 'text-gray-400 hover:text-white'
+                                            }`}
+                                        >
+                                            년
+                                        </button>
+                                        <button
+                                            onClick={() => handlePeriodChange('monthly')}
+                                            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                                                exportPeriod === 'monthly'
+                                                    ? 'bg-white/20 text-white'
+                                                    : 'text-gray-400 hover:text-white'
+                                            }`}
+                                        >
+                                            월간
+                                        </button>
+                                        <button
+                                            onClick={() => handlePeriodChange('daily')}
+                                            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                                                exportPeriod === 'daily'
+                                                    ? 'bg-white/20 text-white'
+                                                    : 'text-gray-400 hover:text-white'
+                                            }`}
+                                        >
+                                            일별
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* 년 / 월간 / 일별 탭 버튼 */}
-                            <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/10 shrink-0 self-start sm:self-auto">
-                                <button
-                                    onClick={() => handlePeriodChange('yearly')}
-                                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                                        exportPeriod === 'yearly'
-                                            ? 'bg-indigo-600 text-white shadow-sm'
-                                            : 'text-gray-400 hover:text-white'
-                                    }`}
-                                >
-                                    년(연간)
-                                </button>
-                                <button
-                                    onClick={() => handlePeriodChange('monthly')}
-                                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                                        exportPeriod === 'monthly'
-                                            ? 'bg-indigo-600 text-white shadow-sm'
-                                            : 'text-gray-400 hover:text-white'
-                                    }`}
-                                >
-                                    월간
-                                </button>
-                                <button
-                                    onClick={() => handlePeriodChange('daily')}
-                                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                                        exportPeriod === 'daily'
-                                            ? 'bg-indigo-600 text-white shadow-sm'
-                                            : 'text-gray-400 hover:text-white'
-                                    }`}
-                                >
-                                    일별(일평균)
-                                </button>
-                            </div>
+                            {/* 6대 업종별 모드 시 가로 칩 스위처 */}
+                            {exportViewMode === 'industry' && (
+                                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-0.5 text-xs">
+                                    <button
+                                        onClick={() => handleIndustrySelect('stacked')}
+                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold shrink-0 transition-all ${
+                                            selectedIndustry === 'stacked'
+                                                ? 'bg-indigo-500/25 border-indigo-400/50 text-white shadow-sm'
+                                                : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+                                        }`}
+                                    >
+                                        <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                                        <span>전체 누적(Stack)</span>
+                                    </button>
+
+                                    {industriesMeta.map(ind => {
+                                        const isSelected = selectedIndustry === ind.id;
+                                        return (
+                                            <button
+                                                key={ind.id}
+                                                onClick={() => handleIndustrySelect(ind.id)}
+                                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold shrink-0 transition-all ${
+                                                    isSelected
+                                                        ? 'text-white shadow-sm'
+                                                        : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+                                                }`}
+                                                style={{
+                                                    backgroundColor: isSelected ? `${ind.color}25` : undefined,
+                                                    borderColor: isSelected ? ind.color : undefined,
+                                                }}
+                                            >
+                                                <span
+                                                    className="w-2 h-2 rounded-full shrink-0"
+                                                    style={{ backgroundColor: ind.color }}
+                                                />
+                                                <span>{ind.name}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
 
-                        {/* 요약 스탯 카드 (최신 수출액, YoY 증감률, 일평균) */}
+                        {/* 요약 스탯 카드 (모드 및 선택 업종별 동적 바인딩) */}
                         <div className="grid grid-cols-3 gap-2 mb-3">
+                            {/* 카드 1: 금액 */}
                             <div className="bg-white/5 border border-white/5 rounded-xl p-2.5">
-                                <span className="text-[10px] text-gray-400">최근 월간 수출액</span>
+                                <span className="text-[10px] text-gray-400">
+                                    {exportViewMode === 'total' || selectedIndustry === 'stacked'
+                                        ? (exportPeriod === 'yearly' ? '연간 총수출액' : exportPeriod === 'daily' ? '최근 일평균' : '최근 월간 수출액')
+                                        : `${latestExportSummary?.selectedIndStat?.shortName ?? '업종'} 수출액`}
+                                </span>
                                 <div className="text-lg font-black text-white font-mono mt-0.5">
-                                    {latestExportSummary?.amt !== null ? `${latestExportSummary?.amt}억$` : 'N/A'}
+                                    {exportViewMode === 'total' || selectedIndustry === 'stacked'
+                                        ? (latestExportSummary?.amt !== null ? `${latestExportSummary?.amt}억$` : 'N/A')
+                                        : `${latestExportSummary?.selectedIndStat?.amt ?? 0}억$`}
                                 </div>
-                                <span className="text-[10px] text-gray-500 font-mono">{latestExportSummary?.date} 기준</span>
+                                <span className="text-[10px] text-gray-500 font-mono">
+                                    {latestExportSummary?.date} 기준
+                                    {latestExportSummary?.isProjected ? ' (추정)' : ''}
+                                </span>
                             </div>
 
+                            {/* 카드 2: 성장률(YoY) */}
                             <div className="bg-white/5 border border-white/5 rounded-xl p-2.5">
-                                <span className="text-[10px] text-gray-400">수출 증감률 (YoY)</span>
-                                <div className={`text-lg font-black font-mono mt-0.5 flex items-center gap-0.5 ${
-                                    (latestExportSummary?.yoy ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                                }`}>
-                                    {(latestExportSummary?.yoy ?? 0) >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                                    {latestExportSummary?.yoy !== null ? `${latestExportSummary?.yoy}%` : 'N/A'}
-                                </div>
-                                <span className="text-[10px] text-gray-500">전년동월대비</span>
+                                <span className="text-[10px] text-gray-400">
+                                    {exportViewMode === 'total' || selectedIndustry === 'stacked'
+                                        ? '전체 수출 YoY'
+                                        : `${latestExportSummary?.selectedIndStat?.shortName ?? '업종'} 증감률 (YoY)`}
+                                </span>
+                                {(() => {
+                                    const yoyVal = (exportViewMode === 'total' || selectedIndustry === 'stacked')
+                                        ? latestExportSummary?.yoy
+                                        : latestExportSummary?.selectedIndStat?.yoy;
+                                    const isPositive = (yoyVal ?? 0) >= 0;
+                                    return (
+                                        <div className={`text-lg font-black font-mono mt-0.5 flex items-center gap-0.5 ${
+                                            isPositive ? 'text-emerald-400' : 'text-rose-400'
+                                        }`}>
+                                            {isPositive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                                            {yoyVal !== null && yoyVal !== undefined ? `${yoyVal > 0 ? `+${yoyVal}` : yoyVal}%` : 'N/A'}
+                                        </div>
+                                    );
+                                })()}
+                                <span className="text-[10px] text-gray-500">전년동기대비</span>
                             </div>
 
+                            {/* 카드 3: 비중 또는 일평균 */}
                             <div className="bg-white/5 border border-white/5 rounded-xl p-2.5">
-                                <span className="text-[10px] text-gray-400">조업일수 감안 일평균</span>
-                                <div className="text-lg font-black text-sky-400 font-mono mt-0.5">
-                                    {latestExportSummary?.dailyAvg !== null ? `${latestExportSummary?.dailyAvg}억$` : 'N/A'}
+                                <span className="text-[10px] text-gray-400">
+                                    {exportViewMode === 'total'
+                                        ? '조업일수 감안 일평균'
+                                        : selectedIndustry === 'stacked'
+                                        ? '수출 1위 주력군'
+                                        : '한국 전체 수출 중 비중'}
+                                </span>
+                                <div className="text-lg font-black font-mono mt-0.5">
+                                    {exportViewMode === 'total' ? (
+                                        <span className="text-sky-400">
+                                            {latestExportSummary?.dailyAvg !== null ? `${latestExportSummary?.dailyAvg}억$` : 'N/A'}
+                                        </span>
+                                    ) : selectedIndustry === 'stacked' ? (
+                                        <span className="text-sky-300 flex items-center gap-1.5 text-base sm:text-lg">
+                                            <span
+                                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                                style={{ backgroundColor: latestExportSummary?.topIndustry?.color ?? '#38bdf8' }}
+                                            />
+                                            <span className="truncate">{latestExportSummary?.topIndustry?.name ?? '반도체·IT'}</span>
+                                        </span>
+                                    ) : (
+                                        <span
+                                            className="font-bold"
+                                            style={{ color: latestExportSummary?.selectedIndStat?.color ?? '#38bdf8' }}
+                                        >
+                                            {latestExportSummary?.selectedIndStat?.share ?? 0}%
+                                        </span>
+                                    )}
                                 </div>
-                                <span className="text-[10px] text-gray-500">일당 평균 실적</span>
+                                <span className="text-[10px] text-gray-500">
+                                    {exportViewMode === 'total'
+                                        ? '일당 평균 실적'
+                                        : selectedIndustry === 'stacked'
+                                        ? `점유율 ${latestExportSummary?.topIndustry?.share ?? 0}%`
+                                        : `한국 6대 수출군 내`}
+                                </span>
                             </div>
                         </div>
 
-                        {/* 수출 차트 (년 / 월간 / 일별 전환 지원) */}
+                        {/* 수출 차트 렌더링 */}
                         <div className="w-full h-[230px] bg-black/20 rounded-xl border border-white/5 p-2 relative">
                             {exportLoading ? (
                                 <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
@@ -524,6 +778,7 @@ export default function KrMacroIndicatorSection() {
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
                                     {exportPeriod === 'daily' ? (
+                                        /* 1. 일별 일평균 라인 차트 */
                                         <LineChart data={exportData} margin={{ top: 10, right: 12, left: -22, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                             <XAxis
@@ -558,8 +813,9 @@ export default function KrMacroIndicatorSection() {
                                                 activeDot={{ r: 4 }}
                                             />
                                         </LineChart>
-                                    ) : (
-                                        <ComposedChart data={exportData} margin={{ top: 10, right: 12, left: -20, bottom: 5 }}>
+                                    ) : exportViewMode === 'industry' && selectedIndustry === 'stacked' ? (
+                                        /* 2. 업종별 누적 스택 막대 차트 (Stacked Bar + YoY 라인) */
+                                        <ComposedChart data={exportData} margin={{ top: 10, right: 12, left: 2, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                             <XAxis
                                                 dataKey="date"
@@ -570,10 +826,161 @@ export default function KrMacroIndicatorSection() {
                                             <YAxis
                                                 yAxisId="left"
                                                 stroke="#64748b"
+                                                width={42}
                                                 domain={['auto', 'auto']}
                                                 tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                                tickFormatter={(v: number) => `${Math.round(v)}`}
                                                 unit="억$"
                                             />
+
+                                            <YAxis
+                                                yAxisId="right"
+                                                orientation="right"
+                                                stroke="#64748b"
+                                                domain={['auto', 'auto']}
+                                                tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                                unit="%"
+                                            />
+                                            <Tooltip
+                                                content={({ active, payload, label }) => {
+                                                    if (!active || !payload || payload.length === 0) return null;
+                                                    const row = payload[0].payload as ExportItem;
+                                                    return (
+                                                        <div className="bg-slate-900/95 border border-white/15 rounded-xl p-3 shadow-2xl text-[11px] text-white min-w-[210px]">
+                                                            <div className="flex items-center justify-between border-b border-white/10 pb-1.5 mb-2">
+                                                                <span className="font-bold text-sky-300">{label}</span>
+                                                                <span className="font-mono text-gray-300">
+                                                                    총 {row.export_amt?.toLocaleString()}억$
+                                                                    {row.export_yoy !== null && row.export_yoy !== undefined
+                                                                        ? ` (${row.export_yoy > 0 ? `+${row.export_yoy}` : row.export_yoy}%)`
+                                                                        : ''}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex flex-col gap-1.5">
+                                                                {industriesMeta.map(ind => {
+                                                                    const d = row.industries?.[ind.id];
+                                                                    return (
+                                                                        <div key={ind.id} className="flex items-center justify-between gap-3">
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <span
+                                                                                    className="w-2 h-2 rounded-full shrink-0"
+                                                                                    style={{ backgroundColor: ind.color }}
+                                                                                />
+                                                                                <span className="text-gray-300 text-[10px]">{ind.name}</span>
+                                                                            </div>
+                                                                            <span className="font-mono text-[10px] text-white">
+                                                                                {d ? `${d.amt.toLocaleString()}억$ (${d.share}%)` : '-'}
+                                                                            </span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }}
+                                            />
+                                            {/* 6대 업종 누적 막대 (하단부터 누적) */}
+                                            <Bar yAxisId="left" stackId="exportStack" dataKey="ind_semiconductor" fill="#38bdf8" name="반도체·IT" />
+                                            <Bar yAxisId="left" stackId="exportStack" dataKey="ind_auto" fill="#6366f1" name="자동차·운송" />
+                                            <Bar yAxisId="left" stackId="exportStack" dataKey="ind_petrochem" fill="#f59e0b" name="석유화학·정유" />
+                                            <Bar yAxisId="left" stackId="exportStack" dataKey="ind_machinery" fill="#10b981" name="일반기계" />
+                                            <Bar yAxisId="left" stackId="exportStack" dataKey="ind_steel" fill="#94a3b8" name="철강·금속" />
+                                            <Bar yAxisId="left" stackId="exportStack" dataKey="ind_bio_battery" fill="#ec4899" name="바이오·배터리" radius={[3, 3, 0, 0]} />
+
+                                            {/* 전체 수출 증감률 선 */}
+                                            <Line
+                                                yAxisId="right"
+                                                type="monotone"
+                                                name="수출 증감률 (YoY)"
+                                                dataKey="export_yoy"
+                                                stroke="#34d399"
+                                                strokeWidth={2}
+                                                dot={{ r: 2.5, fill: '#34d399' }}
+                                                activeDot={{ r: 4.5 }}
+                                            />
+                                        </ComposedChart>
+                                    ) : exportViewMode === 'industry' && selectedIndustry !== 'stacked' ? (
+                                        /* 3. 특정 단일 업종 막대 + 해당 업종 YoY 라인 차트 */
+                                        <ComposedChart data={exportData} margin={{ top: 10, right: 12, left: 2, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis
+                                                dataKey="date"
+                                                stroke="#64748b"
+                                                tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                                tickFormatter={(v: string) => (exportPeriod === 'yearly' ? v : v.slice(2))}
+                                            />
+                                            <YAxis
+                                                yAxisId="left"
+                                                stroke="#64748b"
+                                                width={42}
+                                                domain={['auto', 'auto']}
+                                                tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                                tickFormatter={(v: number) => `${Math.round(v)}`}
+                                                unit="억$"
+                                            />
+                                            <YAxis
+                                                yAxisId="right"
+                                                orientation="right"
+                                                stroke="#64748b"
+                                                domain={['auto', 'auto']}
+                                                tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                                unit="%"
+                                            />
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                                    border: '1px solid rgba(255,255,255,0.15)',
+                                                    borderRadius: '8px',
+                                                    fontSize: '11px',
+                                                    color: '#f8fafc',
+                                                }}
+                                                formatter={(val: any, name: string) => {
+                                                    if (name.includes('증감률') || name.includes('YoY')) {
+                                                        const num = Number(val);
+                                                        return [`${num > 0 ? `+${num}` : num}%`, name];
+                                                    }
+                                                    return [`${Number(val).toLocaleString()}억 달러`, name];
+                                                }}
+                                            />
+                                            <Bar
+                                                yAxisId="left"
+                                                name={`${latestExportSummary?.selectedIndStat?.name ?? '업종'} 수출액`}
+                                                dataKey="selected_industry_amt"
+                                                fill={latestExportSummary?.selectedIndStat?.color ?? '#6366f1'}
+                                                radius={[4, 4, 0, 0]}
+                                                opacity={0.9}
+                                            />
+                                            <Line
+                                                yAxisId="right"
+                                                type="monotone"
+                                                name={`${latestExportSummary?.selectedIndStat?.shortName ?? '업종'} YoY`}
+                                                dataKey="selected_industry_yoy"
+                                                stroke="#34d399"
+                                                strokeWidth={2}
+                                                dot={{ r: 2.5, fill: '#34d399' }}
+                                                activeDot={{ r: 4.5 }}
+                                            />
+                                        </ComposedChart>
+                                    ) : (
+                                        /* 4. 전체 수출액 막대 + 전체 YoY 라인 차트 */
+                                        <ComposedChart data={exportData} margin={{ top: 10, right: 12, left: 2, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis
+                                                dataKey="date"
+                                                stroke="#64748b"
+                                                tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                                tickFormatter={(v: string) => (exportPeriod === 'yearly' ? v : v.slice(2))}
+                                            />
+                                            <YAxis
+                                                yAxisId="left"
+                                                stroke="#64748b"
+                                                width={42}
+                                                domain={['auto', 'auto']}
+                                                tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                                tickFormatter={(v: number) => `${Math.round(v)}`}
+                                                unit="억$"
+                                            />
+
                                             <YAxis
                                                 yAxisId="right"
                                                 orientation="right"
@@ -623,18 +1030,30 @@ export default function KrMacroIndicatorSection() {
                     {/* 하단 설명 배너 */}
                     <div className="mt-3 p-2.5 rounded-xl border border-white/5 bg-black/20 text-xs flex items-center justify-between text-gray-400">
                         <div className="flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                            <span
+                                className="w-1.5 h-1.5 rounded-full shrink-0"
+                                style={{
+                                    backgroundColor: exportViewMode === 'industry' && selectedIndustry !== 'stacked'
+                                        ? latestExportSummary?.selectedIndStat?.color ?? '#818cf8'
+                                        : '#818cf8',
+                                }}
+                            />
                             <span className="text-[11px] text-gray-300">
-                                {exportPeriod === 'yearly'
+                                {exportViewMode === 'industry' && selectedIndustry !== 'stacked'
+                                    ? `${latestExportSummary?.selectedIndStat?.name}: ${latestExportSummary?.selectedIndStat?.desc}`
+                                    : exportViewMode === 'industry'
+                                    ? '6대 주력 산업군 누적 스택 (상단 칩을 클릭하여 개별 업종 심층 조회 가능)'
+                                    : exportPeriod === 'yearly'
                                     ? '연간 통계 (현재 연도는 연환산 추정치 포함)'
                                     : exportPeriod === 'daily'
                                     ? '관세청 조업일수 감안 일평균 수출 모멘텀'
                                     : '월간 통관 실적 및 전년 동월 대비 성장률 추세'}
                             </span>
                         </div>
-                        <span className="text-[10px] text-gray-500 font-mono">출처: 관세청 · 한국은행</span>
+                        <span className="text-[10px] text-gray-500 font-mono">출처: 관세청 · 한국은행 ECOS</span>
                     </div>
                 </div>
+
 
             </div>
         </div>

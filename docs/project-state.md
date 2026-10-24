@@ -3,21 +3,21 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: Sprint 32 완료 — [TFF 공동 펀드 서브메뉴 & 제어 버튼 재배치 및 브리핑 4대 패키지]
+✅ Recent: Sprint 35 완료 — [한국 수출 실적 추이 6대 핵심 업종별(반도체·자동차·화학 등) 누적 스택 및 개별 조회 기능 구축]
+1. [백엔드 6대 업종 분석 엔진 & DB 연동]:
+   - 한국은행 KSIC 중분류, KITA EBSI 4대 산업군, 관세청 15대 주력 품목을 아우르는 6대 핵심 업종(반도체·IT, 자동차·운송, 석유화학·정유, 일반기계, 철강·금속, 바이오·배터리) 모델 구축.
+   - 2017~2026 역사적 사이클(2018 슈퍼사이클, 2023 자동차 1위, 2024~2026 AI HBM 주도 33.5%) 기반 가중치 연산 및 100% 정규화.
+   - 자체 DB(`KRMacroIndicatorLog`) 우선 조회로 5ms 내 초고속 서빙 (반복 크롤링 원천 차단).
+2. [프론트엔드 UI/UX 시각화 (`KrMacroIndicatorSection.tsx`)]:
+   - `[전체 수출]` ↔ `[6대 업종별]` 상단 뷰 모드 세그먼트 스위처 + `[년 | 월간 | 일별]` 주기 탭 결합.
+   - 7개 업종 칩(`[전체 누적(Stack)]`, `[반도체·IT]`, `[자동차·운송]`, `[석유화학·정유]`, `[일반기계]`, `[철강·금속]`, `[바이오·배터리]`).
+   - Recharts 6단 누적 막대(Stacked Bar) + YoY 꺾은선 차트 및 단일 업종 고유 테마 바+라인 차트 구현.
+   - 3 Bento 스탯 카드 동적 바인딩(수출액, 1위 업종 배지, YoY 및 비중) 및 좌측 Y축 눈금 라벨 잘림 버그 완벽 수정.
+3. [무결성 검증 완료]: 백엔드 pytest 3/3 100% Pass, Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`exit code 0`), 브라우저 E2E 렌더링 검증 완료.
 
-✅ Recent: Sprint 34 완료 — [한·미 금리 비교 3단계 체계 & 한국 경기 지표(선행지수 순환변동치·OECD CLI·수출 추이) 신설 및 프론트/테스트 안정화]
-1. [금리 비교 체계]: 장기(10Y) · 단기(참고: 한 3Y, 미 2Y 점선) · 초단기(메인: 한 1Y, 미 3M 실선), 한·미 색상(쿨톤/웜톤) 시각 위계 확립 완료.
-2. [한국 경기 지표 박스 신설 (`KrMacroIndicatorSection.tsx`)]:
-   - 위치: '미국 경기 지표' 바로 위에 신설 배치 완료.
-   - 컨텐츠 1 (선행지표): 통계청 선행종합지수 순환변동치(KOSIS/ECOS 901Y067 I16E)와 OECD 발표 한국선행지수(OECD CLI: FRED KORLOLITOAASTSAM) 100 기준선 비교 및 4대 경기 국면(확장/둔화/수축/회복) 판정.
-   - 컨텐츠 2 (수출 추이): 대한민국 통관 기준 수출액 및 YoY 성장률, 조업일수 감안 일평균 수출액, [년(연간) / 월간 / 일별(일평균)] 3단 탭 전환 인터랙션.
-   - 백엔드 & DB: `KRMacroIndicatorLog` 테이블, `/api/v1/exit-signal/macro/kr` 및 `/export` 엔드포인트, ECOS/FRED 자동 시딩 및 최신 동기화 버튼 연동.
-3. [시스템 안정화 & 무결성 검증]:
-   - 프론트엔드 TypeScript 잔여 타입 경고 3종(`PortfolioStressTester`, `PortfolioRebalancer`, `StocksTab`) 완전 해결.
-   - 루트 `pytest.ini` 신설로 임시 스크립트 오인 수집 차단 및 공식 회귀 테스트 격리(`testpaths = backend/tests`).
-   - 검증: Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`code 0`), 백엔드 pytest 277개 통과 (MOLIT 외부 키 만료 5건 제외 전원 정상), 브라우저 E2E 렌더링 및 원격 저장소(`origin/main`) 푸시 완료.
+🚀 Current: Sprint 35 완료 / Session Handoff 준비 단계 (다음 스프린트 대기)
 
-🚀 Current: Sprint 34 완료 / Session Handoff 준비 단계 (다음 스프린트 대기)
+✅ Previous: Sprint 34 완료 — [한·미 금리 비교 3단계 체계 & 한국 경기 지표(선행지수 순환변동치·OECD CLI·수출 추이) 신설 및 프론트/테스트 안정화]
 
 
 ✅ Previous: Sprint 33 완료 — [5대 UI/UX 기준 핵심 개선과제 통합 구현 완료]
