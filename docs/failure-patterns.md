@@ -411,3 +411,25 @@
   1. 새 프런트 도메인/alias를 붙이면 `allow_origins`에 추가하거나 Render 환경변수 `CORS_EXTRA_ORIGINS`(쉼표 구분)에 등록한다.
   2. `allow_credentials=True` 환경이므로 `*.vercel.app` 와일드카드/정규식 허용은 금지한다.
   3. 배포 후 `curl -X OPTIONS https://etf-lens.onrender.com/api/v1/health -H "Origin: <도메인>" -H "Access-Control-Request-Method: GET"`로 200 + allow-origin 헤더를 확인한다.
+
+### [FP-047] pytest 루트 실행 시 임시 스크립트 오인 수집 (pytest.ini testpaths 부재)
+- **증상**: 프로젝트 루트에서 `pytest`를 단독 실행했을 때 `scratch/test_rklb_data.py`, `backend/scratch/test_brazil_endpoints.py`, `backend/test_my_assets.py` 등 임시 검증 스크립트들이 테스트 모듈로 자동 수집되어 ImportError 및 4건의 테스트 오류 발생.
+- **원인**: 루트 디렉토리에 `pytest.ini` 구성 파일이 존재하지 않아 pytest 기본 디스커버리 엔진이 하위의 모든 `test_*.py` 파일을 테스트 모듈로 수집함.
+- **해결**: 루트에 `pytest.ini`를 신설하고 `testpaths = backend/tests`, `norecursedirs = scratch tmp backend/scratch .agent .gemini docs` 및 `asyncio_mode = auto`를 지정하여 공식 회귀 테스트만 격리 실행되도록 표준화함.
+
+### [FP-048] TypeScript 핸들러의 MouseEvent 암시적 전달 및 객체 초기화 순환 참조 방지
+- **증상**: 프론트엔드 빌드 시 `PortfolioRebalancer.tsx`에서 `TS7022: 'PRESETS' implicitly has type 'any'` 순환 참조 오류 및 `PortfolioStressTester.tsx`에서 `TS2322: Type '(force?: boolean) => Promise<void>' is not assignable to type 'MouseEventHandler<HTMLButtonElement>'` 불리언 캐스팅 오류 발생.
+- **원인**:
+  1. `PRESETS` 배열 선언 내부에서 자기 자신의 0번 인덱스(`PRESETS[0]`)를 조기 참조하여 타입 추론 루프가 발생함.
+  2. 버튼의 `onClick={fetchStressTest}` 속성에 불리언 인자를 받는 비동기 함수를 직접 전달할 경우 브라우저 MouseEvent 객체가 첫 번째 인자(`force`) 자리에 암시적으로 주입됨.
+- **해결**:
+  1. `PresetItem` 인터페이스를 독립적으로 정의하고, 공통 로직을 독립 함수(`applyEqual`)로 분리하여 배열 초기화 순환 참조를 제거함.
+  2. 불리언 플래그를 제어하는 핸들러는 `onClick={() => fetchStressTest(true)}` 형태로 명시적 화살표 함수를 감싸 이벤트 객체의 오염을 원천 차단함.
+
+### [FP-049] 국토교통부(MOLIT) 공공데이터포털 실거래가 API 서비스 만료 및 403 대응 Fallback
+- **증상**: 백엔드 테스트 `test_real_estate.py` 실행 시 국토교통부 아파트 실거래가 OpenAPI 응답에서 `SERVICE_KEY_IS_NOT_REGISTERED_ERROR (403)`가 반환되며 5개 단위 테스트가 실패함.
+- **원인**: 공공데이터포털에 등록된 국토교통부 OpenAPI 활용 기간이 만료되었거나 서비스 승인 상태가 갱신 대기 중임.
+- **해결/예방**:
+  1. 서비스 런타임에는 서울시 실시간 API 및 로컬 캐시 DB(`RealEstateLog`)의 다중 Fallback 안전망이 가동되어 전체 대시보드 중단 없이 정상 서빙됨.
+  2. 공공데이터포털(data.go.kr)에서 해당 API의 재승인을 신청하고 환경변수(`MOLIT_API_KEY`)를 갱신하는 유지보수 가이드를 수립함.
+
