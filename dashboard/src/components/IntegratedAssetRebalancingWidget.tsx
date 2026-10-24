@@ -12,6 +12,7 @@ import { getApiBase } from '@/lib/apiConfig';
 import { NumberPopIn } from './common/NumberPopIn';
 import IntegratedAssetReportModal from './IntegratedAssetReportModal';
 import PortfolioVitaminOptimizer from './portfolio/PortfolioVitaminOptimizer';
+import QuadrantRebalancingModal from './macro/QuadrantRebalancingModal';
 
 interface IntegratedAssetProps {
   financialNetWorth: number;     // 주식/ETF + 현금 예수금 (원)
@@ -54,6 +55,7 @@ export default function IntegratedAssetRebalancingWidget({
   const [includeTff, setIncludeTff] = useState<boolean>(true);
   const [isLoadingTff, setIsLoadingTff] = useState<boolean>(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
+  const [isQuadrantSimOpen, setIsQuadrantSimOpen] = useState<boolean>(false);
 
   // CSV/엑셀 다운로드 핸들러 (UTF-8 with BOM)
   const handleDownloadExcelCsv = () => {
@@ -536,13 +538,23 @@ export default function IntegratedAssetRebalancingWidget({
               })()}
             </div>
 
-            {/* 사분면 진단 요약 한 줄 */}
+            {/* 사분면 진단 요약 한 줄 & 시뮬레이터 트리거 */}
             <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[11px]">
-              <span className="text-gray-400">현재 사분면 판정:</span>
-              <span className="font-bold text-indigo-300 flex items-center gap-1">
-                <span>●</span>
-                <span>{diagnosis.badge}</span>
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-gray-400">사분면 판정:</span>
+                <span className="font-bold text-indigo-300 flex items-center gap-1">
+                  <span>●</span>
+                  <span>{diagnosis.badge}</span>
+                </span>
+              </div>
+              <button
+                onClick={() => setIsQuadrantSimOpen(true)}
+                className="px-2 py-0.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold flex items-center gap-1 transition active:scale-95 cursor-pointer"
+                title="사분면 모범 밸런스(5:5) 달성 필요 금융자산 및 비타민 ETF 배분 시뮬레이터"
+              >
+                <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                <span>밸런스 시뮬레이터</span>
+              </button>
             </div>
           </div>
         </div>
@@ -644,6 +656,18 @@ export default function IntegratedAssetRebalancingWidget({
         tffAmount={tffFundAmount}
         apartmentsCount={apartments.length}
         diagnosis={diagnosis}
+      />
+
+      {/* 가계 자산배분 사분면 목표 도달 리밸런싱 시뮬레이터 모달 */}
+      <QuadrantRebalancingModal
+        isOpen={isQuadrantSimOpen}
+        onClose={() => setIsQuadrantSimOpen(false)}
+        grandTotalNetWorth={grandTotalNetWorth}
+        financialNetWorth={financialNetWorth}
+        realEstateNetWorth={realEstateStats.netWorthWon}
+        financialRatio={financialRatio}
+        realEstateRatio={realEstateRatio}
+        includeRealEstate={includeRealEstate}
       />
     </div>
   );

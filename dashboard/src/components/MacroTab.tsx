@@ -11,6 +11,7 @@ import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import MarketDetailModal, { SeriesConfig, DetailDataPoint } from './MarketDetailModal';
 import MacroPortfolioSensitivityWidget from './MacroPortfolioSensitivityWidget';
 import MacroHeroCompass from './MacroHeroCompass';
+import MacroConsensusSurpriseModal from './macro/MacroConsensusSurpriseModal';
 
 type EventItem = {
     kind: 'bok' | 'fomc' | 'event'; date: string; d_day: number; title: string; status: 'upcoming' | 'pending' | 'done';
@@ -76,6 +77,8 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
     const [modalGroup, setModalGroup] = useState<'oil' | 'sentiment' | 'inflation' | 'rates' | 'fx' | 'stocks' | null>(null);
     const [seriesData, setSeriesData] = useState<DetailDataPoint[]>([]);
     const [loadingData, setLoadingData] = useState(false);
+    const [isConsensusModalOpen, setIsConsensusModalOpen] = useState(false);
+    const [selectedConsensusIndicator, setSelectedConsensusIndicator] = useState('cpi');
 
     const vi = (d as any).macro_vital_indicators || {};
     const oil = vi.oil || { value: 101.41, change_pct: 5.74, wti: { value: 101.41, change_pct: 6.0 }, brent: { value: 109.86, change_pct: 4.47 }, dubai: { value: 79.10, change_pct: -0.88 }, spread: { value: 8.45 } };
@@ -398,10 +401,24 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                                 <TrendingUp className="w-3.5 h-3.5 text-rose-400" />
                                 미국 3대 물가지표 (CPI·PPI·PCE)
                             </span>
-                            <span className="text-[10px] font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 group-hover:bg-rose-500 group-hover:text-black transition">
-                                <TrendingUp className="w-3 h-3" />
-                                10Y 차트
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedConsensusIndicator('cpi');
+                                        setIsConsensusModalOpen(true);
+                                    }}
+                                    className="text-[10px] font-semibold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 transition active:scale-95"
+                                    title="8대 주요 경제 지표 월가 예상치 vs 실제치 서프라이즈 분석"
+                                >
+                                    <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                                    월가 예상치 대조
+                                </button>
+                                <span className="text-[10px] font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 group-hover:bg-rose-500 group-hover:text-black transition">
+                                    <TrendingUp className="w-3 h-3" />
+                                    10Y 차트
+                                </span>
+                            </div>
                         </div>
                         <div className="grid grid-cols-3 gap-2 my-2 py-2 border-y border-white/5 bg-black/20 rounded-xl px-2">
                             <div>
@@ -609,6 +626,13 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                     notice={modalConfig.notice}
                 />
             )}
+
+            {/* 8대 주요 경제 지표 월가 예상치 vs 실제치 서프라이즈 분석 모달 */}
+            <MacroConsensusSurpriseModal
+                isOpen={isConsensusModalOpen}
+                onClose={() => setIsConsensusModalOpen(false)}
+                initialIndicator={selectedConsensusIndicator}
+            />
         </div>
     );
 }

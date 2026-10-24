@@ -10,6 +10,7 @@ import AssetHistoryChart from "@/components/AssetHistoryChart";
 import TotalAssetBoard from "@/components/TotalAssetBoard";
 import DividendDashboard from "@/components/DividendDashboard";
 import SlidingTabs from "./common/SlidingTabs";
+import CashflowOffsetCalendarWidget from "@/components/macro/CashflowOffsetCalendarWidget";
 
 // Render 콜드 스타트 대응: 첫 요청 시 백엔드가 잠들어 있으면 "Failed to fetch"(네트워크 실패)나
 // 502/503(기동 중)이 나므로, 서버가 깨어날 때까지 점진적 backoff로 재시도한다.
@@ -375,8 +376,9 @@ function MyAssetsViewInner({ onOpenDetail, onAnalyzePeers }: { onOpenDetail?: (c
 
                     {/* Tab 4: Dividend Calendar & Cashflow Dashboard */}
                     {mainTab === "dividend" && (
-                        <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             <DividendDashboard autoLoadMyAssets={true} />
+                            <CashflowOffsetCalendarWidget />
                         </div>
                     )}
                 </div>

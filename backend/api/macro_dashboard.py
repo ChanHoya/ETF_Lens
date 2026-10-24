@@ -1191,4 +1191,19 @@ async def _resolve_and_analyze_export_exposure(holdings: Optional[List[Dict[str,
     return analysis
 
 
+@router.get("/economic-indicators/consensus", summary="8대 주요 경제 지표 월가 예상치(Consensus) vs 실제치(Actual) 서프라이즈 데이터")
+async def get_economic_indicators_consensus(
+    indicator: Optional[str] = Query(None, description="선택적 단일 지표 키 (unemployment, nonfarm_payrolls, cpi, core_cpi, ppi, core_ppi, pce, core_pce)"),
+    period: str = Query("1Y", description="조회 기간 (6M, 1Y)")
+):
+    """
+    고용(실업률, 민간고용) 및 물가(CPI, Core CPI, PPI, Core PPI, PCE, Core PCE) 8대 지표의
+    월별 추세 및 월가 예상치 대비 서프라이즈 증감 현황 데이터 반환
+    """
+    from core.macro_consensus import get_macro_consensus_indicators
+    data = get_macro_consensus_indicators(indicator_key=indicator, period=period)
+    return data
+
+
+
 

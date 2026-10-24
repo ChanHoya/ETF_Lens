@@ -41,6 +41,7 @@ import {
     ReferenceArea
 } from "recharts";
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from "@/lib/chartTheme";
+import MidtermSeasonalityStrategySection from "./midterm/MidtermSeasonalityStrategySection";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -288,6 +289,13 @@ export default function MidtermElectionTab() {
                     </button>
                 </div>
             </div>
+
+            {/* 2026 중간선거 D-Day 카운트다운 & 선거 전후 계절성 랠리(Q4) 및 4대 수혜 섹터 ETF 전략 */}
+            <MidtermSeasonalityStrategySection
+                days={countdown.days}
+                hours={countdown.hours}
+                minutes={countdown.minutes}
+            />
 
             {/* Section 1: 1. 미국 대통령 중간선거 개요 & 3대 핵심 법칙 (첨부1 대체 완료) */}
             <div className="w-full bg-[#121217]/70 border border-white/10 rounded-3xl p-5 md:p-7 backdrop-blur-md shadow-xl flex flex-col gap-6">
