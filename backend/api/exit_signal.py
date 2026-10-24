@@ -461,9 +461,64 @@ async def reset_main_cache():
     return {"status": "ok", "message": "Cache cleared. Next / call will re-fetch data."}
 
 
+def _calc_hist_risk_score(vix: float | None, vkospi: float | None, fgi: float | None, kospi_mom_20d: float = 0.0) -> tuple[int, str, str]:
+    """과거 센티먼트 로그 기반 0~21 종합 위험지수 및 등급 산출"""
+    sv = 0
+    if vix is not None:
+        if vix >= 30: sv = 3
+        elif vix >= 24: sv = 2
+        elif vix >= 18: sv = 1
+
+    sk = 0
+    if vkospi is not None:
+        if vkospi >= 28: sk = 3
+        elif vkospi >= 22: sk = 2
+        elif vkospi >= 18: sk = 1
+
+    sf = 0
+    if fgi is not None:
+        if fgi <= 25: sf = 3
+        elif fgi <= 35: sf = 2
+        elif fgi <= 45: sf = 1
+
+    base_macro = 2  # 거시 지표 기본 기여도 (PER, CLI, 금리차)
+    raw_score = sv + sk + sf + base_macro
+
+    is_danger = False
+    is_warning = False
+    if vkospi is not None and vkospi >= 28.0:
+        is_danger = True
+    elif vkospi is not None and vkospi >= 24.0:
+        is_warning = True
+
+    if kospi_mom_20d <= -8.0:
+        is_danger = True
+    elif kospi_mom_20d <= -5.0:
+        is_warning = True
+
+    final_score = raw_score
+    if is_danger:
+        final_score = max(raw_score + 6, 15)
+    elif is_warning:
+        final_score = max(raw_score + 4, 9)
+
+    final_score = min(max(final_score, 0), 21)
+
+    if final_score <= 4:
+        level, label = "safe", "안전"
+    elif final_score <= 8:
+        level, label = "caution", "주의"
+    elif final_score <= 14:
+        level, label = "warning", "경계"
+    else:
+        level, label = "danger", "위험"
+
+    return final_score, level, label
+
+
 @router.get("/history")
 async def get_market_sentiment_history(period: str = "1Y"):
-    """DB에 적재된 마켓 센티먼트(VIX, VKOSPI Proxy, FGI 등) 시계열 로그 반환"""
+    """DB에 적재된 마켓 센티먼트(VIX, VKOSPI Proxy, FGI 등) 시계열 및 종합 위험점수 반환"""
     try:
         from db.database import AsyncSessionLocal
         from db.models import MarketSentimentLog
@@ -485,17 +540,28 @@ async def get_market_sentiment_history(period: str = "1Y"):
             
         # UI 차트 포맷에 맞춤 (오래된 순)
         records.reverse()
-        return [
-            {
+        
+        res = []
+        for i, r in enumerate(records):
+            # 코스피 20영업일 모멘텀 추산
+            kospi_mom = 0.0
+            if i >= 20 and records[i-20].kospi and r.kospi:
+                prev_k = records[i-20].kospi
+                kospi_mom = ((r.kospi - prev_k) / prev_k) * 100.0
+
+            score, level, label = _calc_hist_risk_score(r.vix, r.vkospi_proxy, r.fgi, kospi_mom)
+            res.append({
                 "date": r.date,
+                "score": score,
+                "level": level,
+                "label": label,
                 "vix": r.vix,
                 "vkospi_proxy": r.vkospi_proxy,
                 "fgi": r.fgi,
                 "kospi": r.kospi,
                 "sp500": r.sp500
-            }
-            for r in records
-        ]
+            })
+        return res
     except Exception as e:
         logger.error(f"Failed to fetch market sentiment history: {e}")
         return []
