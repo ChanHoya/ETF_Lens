@@ -327,12 +327,12 @@ function OverlayChart({ rows }: { rows: (Row & { t: number })[] }) {
             <div className="flex flex-wrap items-center gap-1 mb-2">
                 {OVERLAY.map(x => (
                     <button key={x.key} onClick={() => { setKey(x.key); setFlip(x.key === 'kospi'); }}
-                        className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full border transition ${key === x.key
+                        className={`text-[9.5px] font-medium px-1.5 py-0.5 rounded-md border transition ${key === x.key
                             ? 'bg-indigo-500/20 border-indigo-400/50 text-indigo-200' : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200'}`}>
                         {x.name}
                     </button>
                 ))}
-                <label className="flex items-center gap-1 text-[11px] text-gray-400 ml-auto cursor-pointer">
+                <label className="flex items-center gap-1 text-[10px] text-gray-400 ml-auto cursor-pointer">
                     <input type="checkbox" checked={flip} onChange={e => setFlip(e.target.checked)} className="accent-indigo-500" />
                     비교 축 뒤집기
                 </label>

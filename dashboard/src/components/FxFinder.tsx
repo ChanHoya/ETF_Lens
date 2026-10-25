@@ -83,10 +83,10 @@ export default function FxFinder() {
                             setSelectedPair(JSON.parse(e.target.value));
                         }
                     }}
-                    className="bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer font-sans"
+                    className="bg-black/50 border border-white/15 rounded-md px-2 py-0.5 text-[11px] text-gray-200 focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer font-sans shadow-sm"
                 >
                     {pairs.map((p, idx) => (
-                        <option key={idx} value={JSON.stringify(p)} className="bg-[#121217]">
+                        <option key={idx} value={JSON.stringify(p)} className="bg-[#121217] text-[11px]">
                             {p.base_name}
                         </option>
                     ))}

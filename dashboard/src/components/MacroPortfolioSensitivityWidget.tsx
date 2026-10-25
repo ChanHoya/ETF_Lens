@@ -147,10 +147,10 @@ export default function MacroPortfolioSensitivityWidget() {
 
                 <button
                     onClick={fetchData}
-                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors"
+                    className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-md border border-white/10 transition-colors shadow-sm"
                     title="Update"
                 >
-                    <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-2.5 h-2.5 ${loading ? 'animate-spin' : ''}`} />
                     Update
                 </button>
             </div>

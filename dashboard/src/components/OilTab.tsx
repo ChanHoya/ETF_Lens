@@ -327,10 +327,10 @@ export default function OilTab() {
                     <button
                         onClick={() => fetchAllOilData(true)}
                         disabled={refreshing}
-                        className="self-start md:self-center flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 border border-amber-500/30 text-xs font-semibold text-amber-300 transition-all shadow-sm disabled:opacity-50"
+                        className="self-start md:self-center flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 active:scale-95 border border-amber-500/30 text-[11px] font-medium text-amber-300 transition-all shadow-sm disabled:opacity-50"
                         title="Update"
                     >
-                        <RefreshCw className={`w-3.5 h-3.5 text-amber-400 ${refreshing ? "animate-spin" : ""}`} />
+                        <RefreshCw className={`w-2.5 h-2.5 text-amber-400 ${refreshing ? "animate-spin" : ""}`} />
                         <span>{refreshing ? "Updating..." : "Update"}</span>
                     </button>
                 </div>

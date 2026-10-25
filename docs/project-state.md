@@ -3,15 +3,15 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: UI/UX Standard Template & Sticky Navigation Minimization & Universal Modal Overlay & Recharts Date Formatting
-✅ Recent: [Sprint 42 보완 완료 — 메인메뉴 템플릿 전메뉴 단일 일원화 및 서브메뉴 동일 x축 수직 안착 슬라이드 완성]
-1. [메인메뉴 템플릿 전메뉴 단일 일원화 (`MainApp.tsx`)]:
-   - 종목분석/시장동향 캡슐 내부에 조건부로 포함되어 캡슐 너비와 위치를 왜곡시키던 `<>` 접기 버튼을 캡슐 바깥 `absolute right-0` 독립 버튼으로 분리.
-   - 메인메뉴 캡슐(`< 종목분석 섹터분석 시장동향 연금.절세 부동산 TFF_Fund My | ETF추적기 ETF Check >`)은 종목분석, 섹터분석, 시장동향, 연금·절세, 부동산, TFF, My 등 7대 메뉴 전체에서 크기, 패딩, 위치가 100% 동일한 단일 템플릿으로 완전 일원화.
-2. [서브메뉴 동일 x축 위치 수직 슬라이딩 안착 (`MainApp.tsx`)]:
-   - 기존에 2번째 줄(중앙 정렬)과 1번째 줄(우측 끝 `justify-end` 정렬)의 정렬 기준이 달라 minimize 시 서브메뉴가 상단 오른쪽 끝으로 휙 날아가던 결함 해결.
-   - 1번째 줄 서브메뉴를 화면 중앙(`absolute inset-x-0 mx-auto justify-center`)에 배치하여, 2번째 줄에 있을 때의 x축 중심과 1번째 줄로 올라갔을 때의 x축 중심이 0px 오차로 완벽 일치.
-   - 서브메뉴 클릭 및 minimize 시 수평(x축) 이동 없이 오직 수직 Y축(`translate-y-6` -> `translate-y-0`)으로만 똑바로 올라와 안착하는 부드러운 엘리베이터 모션 구현.
-3. [검증 완료]: Next.js 16.1.6 11개 페이지 빌드 성공 (`exit code 0`), 브라우저 실측 렌더링 및 7개 탭 스크린샷 검증 완료.
+✅ Recent: [Sprint 42 보완 완료 — 종합/환율/유가 서브메뉴 Update 버튼 및 선택창·버튼 컴팩트 표준 규격 일원화]
+1. [종합 서브메뉴 Update 버튼 컴팩트화 (`MacroPortfolioSensitivityWidget.tsx`, `MacroTab.tsx`)]:
+   - '매크로 ↔ 내 포트폴리오 실시간 스트레스 진단' 박스 및 '이벤트 시나리오 · 결과' 박스 우측의 Update 버튼을 표준 컴팩트 규격(`px-2 py-0.5 text-[11px] rounded-md gap-1 w-2.5 h-2.5`)으로 축소하여 상단 메인 Update 버튼과 일관성 확보.
+2. [환율 서브메뉴 지표 선택 버튼 및 선택창 폰트 컴팩트화 (`FxTab.tsx`, `FxFinder.tsx`)]:
+   - '원/달러는 무엇과 같이 움직이나' 박스 아래 지표 선택 버튼 7종을 `text-[9.5px] font-medium px-1.5 py-0.5 rounded-md`로 축소하여 단정하게 정렬.
+   - '환율 인텔리전스' 박스 우측 ETF 선택창 드롭다운 폰트와 패딩을 `px-2 py-0.5 text-[11px] rounded-md`로 컴팩트하게 일원화.
+3. [유가 서브메뉴 Update 버튼 컴팩트화 (`OilTab.tsx`)]:
+   - '글로벌 유가 동향 및 에너지 시장 분석' 헤더 배너 우측의 큰 Update 버튼을 `px-2 py-0.5 text-[11px] rounded-md gap-1 w-2.5 h-2.5`로 축소.
+4. [검증 완료]: Next.js 16.1.6 11개 페이지 빌드 성공 (`exit code 0`), 브라우저 실측 렌더링 및 3대 탭 스크린샷 검증 완료.
 
 🚀 Current: Sprint 42 완료 / 다음 작업 대기
 
