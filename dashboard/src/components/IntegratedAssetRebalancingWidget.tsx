@@ -455,62 +455,37 @@ export default function IntegratedAssetRebalancingWidget({
             </div>
 
             {/* 2D Quadrant Matrix Visualization */}
-            <div className="relative w-full h-[180px] bg-black/40 rounded-lg border border-white/5 overflow-hidden p-2">
-              {/* 4대 분면 배경 영역 & 텍스트 */}
+            <div className="relative w-full h-[220px] bg-black/40 rounded-lg border border-white/5 overflow-hidden p-2 select-none">
+              {/* 4대 분면 배경 영역 & 텍스트 (각 구석 워터마크 배치로 핀과 간섭 최소화) */}
               <div className="absolute inset-0 grid grid-cols-2 grid-rows-2">
                 {/* Q2 (좌상): 부동산 집중형 */}
-                <div className="border-r border-b border-dashed border-white/10 p-2 bg-amber-500/[0.03] flex flex-col justify-start">
-                  <span className="text-[9px] font-bold text-amber-400/70 tracking-tight">부동산 집중형</span>
-                  <span className="text-[8px] text-gray-500">부동산 50%↑ · 금융 50%↓</span>
+                <div className="border-r border-b border-dashed border-white/10 p-2.5 bg-amber-500/[0.03] flex flex-col justify-start">
+                  <span className="text-[9px] font-bold text-amber-400/80 tracking-tight">부동산 집중형</span>
+                  <span className="text-[7.5px] text-gray-500 mt-0.5">부동산 50%↑ · 금융 50%↓</span>
                 </div>
                 {/* Q1 (우상): 황금 밸런스형 */}
-                <div className="border-b border-dashed border-white/10 p-2 bg-emerald-500/[0.04] flex flex-col justify-start items-end text-right">
-                  <span className="text-[9px] font-bold text-emerald-400/80 tracking-tight flex items-center gap-0.5">
+                <div className="border-b border-dashed border-white/10 p-2.5 bg-emerald-500/[0.04] flex flex-col justify-start items-end text-right">
+                  <span className="text-[9px] font-bold text-emerald-400/90 tracking-tight flex items-center gap-1">
                     <span>황금 밸런스형</span>
                     <span>🎯</span>
                   </span>
-                  <span className="text-[8px] text-emerald-400/60 font-mono">권장 5:5 ~ 6:4</span>
+                  <span className="text-[7.5px] text-emerald-400/70 font-mono mt-0.5">권장 5:5 ~ 6:4</span>
                 </div>
                 {/* Q3 (좌하): 현금·안전 방어형 */}
-                <div className="border-r border-dashed border-white/10 p-2 bg-blue-500/[0.02] flex flex-col justify-end">
-                  <span className="text-[9px] font-bold text-gray-400/70 tracking-tight">현금·안전 방어형</span>
-                  <span className="text-[8px] text-gray-500">유동성·원금 보존</span>
+                <div className="border-r border-dashed border-white/10 p-2.5 bg-blue-500/[0.02] flex flex-col justify-end">
+                  <span className="text-[9px] font-bold text-gray-400/80 tracking-tight">현금·안전 방어형</span>
+                  <span className="text-[7.5px] text-gray-500 mt-0.5">유동성·원금 보존</span>
                 </div>
                 {/* Q4 (우하): 금융 고성장형 */}
-                <div className="p-2 bg-indigo-500/[0.04] flex flex-col justify-end items-end text-right">
+                <div className="p-2.5 bg-indigo-500/[0.04] flex flex-col justify-end items-end text-right">
                   <span className="text-[9px] font-bold text-indigo-400/80 tracking-tight">금융 고성장형</span>
-                  <span className="text-[8px] text-indigo-400/60 font-mono">금융 50%↑ · 부동산 50%↓</span>
+                  <span className="text-[7.5px] text-indigo-400/70 font-mono mt-0.5">금융 50%↑ · 부동산 50%↓</span>
                 </div>
-              </div>
-
-              {/* 축 라벨 (Axis Guides) */}
-              <div className="absolute bottom-1 left-2 text-[8px] text-gray-500 font-mono pointer-events-none">
-                ← 금융 0%
-              </div>
-              <div className="absolute bottom-1 right-2 text-[8px] text-gray-500 font-mono pointer-events-none">
-                금융 100% →
-              </div>
-              <div className="absolute top-1 left-2 text-[8px] text-gray-500 font-mono pointer-events-none">
-                ↑ 부동산 100%
-              </div>
-
-              {/* 벤치마크 1: 대한민국 가계 평균 핀 (금융 28% : 부동산 72%) */}
-              <div 
-                className="absolute z-10 -translate-x-1/2 -translate-y-1/2 flex items-center pointer-events-none"
-                style={{
-                  left: '28%',
-                  top: `${100 - 72}%`
-                }}
-              >
-                <div className="w-2 h-2 rounded-full bg-gray-400 border border-white shadow-sm shrink-0" />
-                <span className="ml-1 text-[8px] font-bold text-gray-300 bg-black/75 px-1 py-0.5 rounded whitespace-nowrap border border-white/10">
-                  🇰🇷 평균 (72:28)
-                </span>
               </div>
 
               {/* 벤치마크 2: 이상적 모범 밸런스 타깃 박스 (금융 40~50% : 부동산 50~60%) */}
               <div 
-                className="absolute border border-emerald-400/40 border-dashed rounded bg-emerald-500/10 pointer-events-none"
+                className="absolute border border-emerald-400/30 border-dashed rounded bg-emerald-500/10 pointer-events-none"
                 style={{
                   left: '40%',
                   width: '20%',
@@ -519,30 +494,53 @@ export default function IntegratedAssetRebalancingWidget({
                 }}
               />
 
-              {/* 내 포트폴리오 실시간 위치 핀 (Dynamic User Pin) */}
+              {/* 핀 좌표 계산 및 상호 간섭 방지 */}
               {(() => {
-                const clampedX = Math.max(8, Math.min(92, financialRatio));
-                const clampedY = Math.max(8, Math.min(92, 100 - realEstateRatio));
+                const clampedX = Math.max(14, Math.min(86, financialRatio));
+                const clampedY = Math.max(14, Math.min(86, 100 - realEstateRatio));
+                // 대한민국 평균 좌표: (28, 28)
+                const isVeryClose = Math.abs(clampedX - 28) < 16 && Math.abs(clampedY - 28) < 16;
 
                 return (
-                  <div 
-                    className="absolute z-20 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-700 ease-out group pointer-events-none"
-                    style={{
-                      left: `${clampedX}%`,
-                      top: `${clampedY}%`
-                    }}
-                  >
-                    <div className="relative flex items-center justify-center">
-                      <span className="absolute w-5 h-5 rounded-full bg-indigo-500/40 animate-ping" />
-                      <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 border-2 border-white shadow-[0_0_12px_rgba(99,102,241,0.8)] relative z-10" />
-                    </div>
-                    <div className="mt-1 px-1.5 py-0.5 rounded bg-indigo-950/90 border border-indigo-400/50 shadow-lg text-[9px] font-bold text-white whitespace-nowrap">
-                      📍 내 포트폴리오
-                      <span className="text-indigo-300 font-mono ml-1">
-                        ({financialRatio.toFixed(0)}% : {realEstateRatio.toFixed(0)}%)
+                  <>
+                    {/* 벤치마크 1: 대한민국 가계 평균 핀 (상단 좌측으로 뱃지 정렬) */}
+                    <div 
+                      className={`absolute z-10 flex flex-col pointer-events-none transition-all duration-500 ${
+                        isVeryClose ? '-translate-x-[75%] -translate-y-full mb-1 items-end' : '-translate-x-1/2 -translate-y-full mb-1 items-center'
+                      }`}
+                      style={{
+                        left: '28%',
+                        top: `${100 - 72}%`
+                      }}
+                    >
+                      <span className="mb-0.5 text-[8px] font-semibold text-gray-300 bg-gray-900/95 backdrop-blur-sm px-1.5 py-0.5 rounded shadow border border-white/20 whitespace-nowrap">
+                        🇰🇷 평균 (72:28)
                       </span>
+                      <div className="w-2 h-2 rounded-full bg-gray-300 border border-white shadow-sm shrink-0" />
                     </div>
-                  </div>
+
+                    {/* 내 포트폴리오 실시간 위치 핀 (상호 밀림 오프셋 적용) */}
+                    <div 
+                      className={`absolute z-20 flex flex-col pointer-events-none transition-all duration-700 ease-out group ${
+                        isVeryClose ? '-translate-x-[25%] top-0 items-start' : '-translate-x-1/2 top-0 items-center'
+                      }`}
+                      style={{
+                        left: `${clampedX}%`,
+                        top: `${clampedY}%`
+                      }}
+                    >
+                      <div className="relative flex items-center justify-center -translate-y-1/2">
+                        <span className="absolute w-5 h-5 rounded-full bg-indigo-500/40 animate-ping" />
+                        <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-indigo-500 via-indigo-400 to-sky-300 border-2 border-white shadow-[0_0_12px_rgba(99,102,241,0.8)] relative z-10" />
+                      </div>
+                      <div className="mt-1 px-2 py-0.5 rounded-md bg-indigo-950/95 backdrop-blur-md border border-indigo-400/80 shadow-xl text-[9px] font-bold text-white whitespace-nowrap">
+                        📍 내 포트폴리오
+                        <span className="text-indigo-300 font-mono ml-1 font-semibold">
+                          ({financialRatio.toFixed(0)}% : {realEstateRatio.toFixed(0)}%)
+                        </span>
+                      </div>
+                    </div>
+                  </>
                 );
               })()}
             </div>
@@ -566,88 +564,88 @@ export default function IntegratedAssetRebalancingWidget({
               </button>
             </div>
           </div>
+
+          {/* 3. 자산 배분 프로그레스 바 카드 (붙임4: 우측에서 좌측 사분면 매트릭스 아래로 이동) */}
+          <div className="p-4 rounded-xl bg-[#161a25]/90 border border-white/10 flex flex-col justify-between shadow-lg">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-bold text-gray-200">자산 배분 프로그레스 바</span>
+                <span className="text-[10px] text-gray-400">
+                  권장: 부동산 50~70% · 금융 30~50%
+                </span>
+              </div>
+
+              {/* 멀티 프로그레스 바 */}
+              <div className="w-full h-3.5 bg-gray-800 rounded-full overflow-hidden flex shadow-inner">
+                {includeRealEstate && realEstateRatio > 0 && (
+                  <div 
+                    style={{ width: `${realEstateRatio}%` }}
+                    className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500 relative group"
+                    title={`실물 부동산: ${realEstateRatio.toFixed(1)}%`}
+                  />
+                )}
+                <div 
+                  style={{ width: `${equityRatio}%` }}
+                  className="h-full bg-gradient-to-r from-indigo-500 to-blue-400 transition-all duration-500 relative group"
+                  title={`주식/ETF: ${equityRatio.toFixed(1)}%`}
+                />
+                <div 
+                  style={{ width: `${cashRatio}%` }}
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500 relative group"
+                  title={`예수금/현금: ${cashRatio.toFixed(1)}%`}
+                />
+                {includeTff && tffRatio > 0 && (
+                  <div 
+                    style={{ width: `${tffRatio}%` }}
+                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500 relative group"
+                    title={`TFF 펀드: ${tffRatio.toFixed(1)}%`}
+                  />
+                )}
+              </div>
+
+              {/* 범례 (Legend) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2.5 text-xs">
+                {includeRealEstate && (
+                  <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <div className="text-[9px] text-amber-300 font-semibold">실물 부동산</div>
+                    <div className="text-xs font-bold text-white mt-0.5">{realEstateRatio.toFixed(1)}%</div>
+                    <div className="text-[9px] text-gray-400 truncate">{apartments.length}채 등록</div>
+                  </div>
+                )}
+                <div className="p-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                  <div className="text-[9px] text-indigo-300 font-semibold">주식/ETF</div>
+                  <div className="text-xs font-bold text-white mt-0.5">{equityRatio.toFixed(1)}%</div>
+                  <div className="text-[9px] text-gray-400 truncate">{fmtEok(financialInvestAmount)}원</div>
+                </div>
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="text-[9px] text-emerald-300 font-semibold">현금/예수금</div>
+                  <div className="text-xs font-bold text-white mt-0.5">{cashRatio.toFixed(1)}%</div>
+                  <div className="text-[9px] text-gray-400 truncate">{fmtEok(financialCashAmount)}원</div>
+                </div>
+                {includeTff && tffFundAmount > 0 && (
+                  <div className="p-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                    <div className="text-[9px] text-purple-300 font-semibold">TFF 대체펀드</div>
+                    <div className="text-xs font-bold text-white mt-0.5">{tffRatio.toFixed(1)}%</div>
+                    <div className="text-[9px] text-gray-400 truncate">{fmtEok(tffFundAmount)}원</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* AI 리밸런싱 조언 박스 */}
+            <div className="mt-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/5 flex items-start gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="text-[11px] leading-relaxed">
+                <span className="font-semibold text-gray-200">{diagnosis.desc} </span>
+                <span className="text-indigo-300 font-medium">{diagnosis.advice}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* 우측: 3대 자산 비중 프로그레스 & 진단 권고 (7칸) */}
-        <div className="lg:col-span-7 flex flex-col justify-between p-4 rounded-xl bg-[#161a25]/80 border border-white/5">
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-bold text-gray-300">자산 배분 프로그레스 바</span>
-              <span className="text-[11px] text-gray-400">
-                권장 비율: 부동산 50~70% : 금융 30~50%
-              </span>
-            </div>
-
-            {/* 멀티 프로그레스 바 */}
-            <div className="w-full h-4 bg-gray-800 rounded-full overflow-hidden flex shadow-inner">
-              {includeRealEstate && realEstateRatio > 0 && (
-                <div 
-                  style={{ width: `${realEstateRatio}%` }}
-                  className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500 relative group"
-                  title={`실물 부동산: ${realEstateRatio.toFixed(1)}%`}
-                />
-              )}
-              <div 
-                style={{ width: `${equityRatio}%` }}
-                className="h-full bg-gradient-to-r from-indigo-500 to-blue-400 transition-all duration-500 relative group"
-                title={`주식/ETF: ${equityRatio.toFixed(1)}%`}
-              />
-              <div 
-                style={{ width: `${cashRatio}%` }}
-                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500 relative group"
-                title={`예수금/현금: ${cashRatio.toFixed(1)}%`}
-              />
-              {includeTff && tffRatio > 0 && (
-                <div 
-                  style={{ width: `${tffRatio}%` }}
-                  className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500 relative group"
-                  title={`TFF 펀드: ${tffRatio.toFixed(1)}%`}
-                />
-              )}
-            </div>
-
-            {/* 범례 (Legend) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 text-xs">
-              {includeRealEstate && (
-                <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <div className="text-[10px] text-amber-300 font-semibold">실물 부동산</div>
-                  <div className="text-sm font-bold text-white mt-0.5">{realEstateRatio.toFixed(1)}%</div>
-                  <div className="text-[10px] text-gray-400 truncate">{apartments.length}채 등록</div>
-                </div>
-              )}
-              <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
-                <div className="text-[10px] text-indigo-300 font-semibold">주식/ETF</div>
-                <div className="text-sm font-bold text-white mt-0.5">{equityRatio.toFixed(1)}%</div>
-                <div className="text-[10px] text-gray-400 truncate">{fmtEok(financialInvestAmount)}원</div>
-              </div>
-              <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                <div className="text-[10px] text-emerald-300 font-semibold">현금/예수금</div>
-                <div className="text-sm font-bold text-white mt-0.5">{cashRatio.toFixed(1)}%</div>
-                <div className="text-[10px] text-gray-400 truncate">{fmtEok(financialCashAmount)}원</div>
-              </div>
-              {includeTff && tffFundAmount > 0 && (
-                <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                  <div className="text-[10px] text-purple-300 font-semibold">TFF 대체펀드</div>
-                  <div className="text-sm font-bold text-white mt-0.5">{tffRatio.toFixed(1)}%</div>
-                  <div className="text-[10px] text-gray-400 truncate">{fmtEok(tffFundAmount)}원</div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* AI 리밸런싱 조언 박스 */}
-          <div className="mt-3 p-3 rounded-lg bg-white/[0.02] border border-white/5 flex items-start gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <div className="text-xs">
-              <span className="font-semibold text-gray-200">{diagnosis.desc} </span>
-              <span className="text-indigo-300 font-medium">{diagnosis.advice}</span>
-            </div>
-          </div>
-
-          {/* S30-1: 포트폴리오 비타민 AI 종목 추천 & 효율적 투자선 최적화 */}
-          <div className="mt-4">
-            <PortfolioVitaminOptimizer />
-          </div>
+        {/* 우측: 포트폴리오 비타민 AI 종목 추천 & 효율적 투자선 최적화 (7칸) */}
+        <div className="lg:col-span-7 flex flex-col justify-start">
+          <PortfolioVitaminOptimizer />
         </div>
       </div>
 

@@ -696,14 +696,12 @@ export default function SemiFundamentalSignals({
                                         onClick={() => toggleAccordion(sig.id)}
                                         className="flex justify-between items-center cursor-pointer p-1.5 px-2 rounded-xl hover:bg-white/[0.03] transition-all"
                                     >
-                                        <div className="flex flex-col">
-                                            <div className="flex items-center gap-2">
-                                                <span className={`text-xs md:text-sm font-bold ${nameColorClass}`}>{sig.name}</span>
-                                                <span className="text-[10px] text-gray-400 font-normal">{sig.sub_name}</span>
-                                            </div>
-                                            <span className="text-[9px] text-gray-500 flex items-center gap-1">
-                                                {isExpanded ? <ChevronUp className="w-3 h-3 text-indigo-400" /> : <ChevronDown className="w-3 h-3 text-gray-500" />}
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-gray-400 shrink-0">
+                                                {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-indigo-400" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
                                             </span>
+                                            <span className={`text-xs md:text-sm font-bold ${nameColorClass}`}>{sig.name}</span>
+                                            <span className="text-[10px] text-gray-400 font-normal">{sig.sub_name}</span>
                                         </div>
                                         <div className="flex items-center gap-2 shrink-0">
                                             <span className="text-xs md:text-sm font-mono font-black" style={{ color: valueColor }}>

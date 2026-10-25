@@ -126,7 +126,10 @@ STOCK_NAME_CODE_MAP = {
     "더블유게임즈": "192080",
     "컴투스": "078340",
     "데브시스터즈": "194480",
-    "네오위즈": "095660",
+    "HD현대마린엔진": "071970",
+    "우진엔텍": "456700",
+    "리가켐바이오": "141080",
+    "이오테크닉스": "039030",
 }
 
 # ── 10대 테마 및 대표 ETF 매핑 ──────────────────────────────────────────
@@ -141,6 +144,85 @@ SECTOR_ETF_MAP = {
     "엔터테인먼트": "228810",
     "화장품": "228790",
     "게임": "300950"
+}
+
+# ── 10대 테마별 우량 대표 종목 폴백 매핑 (KRX API 차단 또는 누락 시 즉시 적용) ──────────
+SECTOR_FALLBACK_STOCKS = {
+    "조선": [
+        {"name": "HD현대중공업", "code": "329180", "weight": 24.5},
+        {"name": "삼성중공업", "code": "010140", "weight": 21.2},
+        {"name": "한화오션", "code": "042660", "weight": 19.8},
+        {"name": "HD한국조선해양", "code": "009540", "weight": 16.5},
+        {"name": "현대미포조선", "code": "010620", "weight": 10.0},
+        {"name": "한화엔진", "code": "082740", "weight": 8.0},
+    ],
+    "방산": [
+        {"name": "한화에어로스페이스", "code": "012450", "weight": 25.4},
+        {"name": "현대로템", "code": "064350", "weight": 20.1},
+        {"name": "LIG넥스원", "code": "079550", "weight": 19.5},
+        {"name": "한국항공우주", "code": "047810", "weight": 17.2},
+        {"name": "한화시스템", "code": "272210", "weight": 10.8},
+        {"name": "풍산", "code": "103140", "weight": 7.0},
+    ],
+    "원자력": [
+        {"name": "두산에너빌리티", "code": "034020", "weight": 28.5},
+        {"name": "한전기술", "code": "052690", "weight": 19.2},
+        {"name": "한전KPS", "code": "051600", "weight": 15.6},
+        {"name": "우리기술", "code": "032820", "weight": 13.4},
+        {"name": "일진파워", "code": "094820", "weight": 12.1},
+        {"name": "우진엔텍", "code": "456700", "weight": 11.2},
+    ],
+    "AI전력": [
+        {"name": "LS ELECTRIC", "code": "010120", "weight": 26.5},
+        {"name": "HD현대일렉트릭", "code": "267260", "weight": 24.8},
+        {"name": "효성중공업", "code": "298040", "weight": 20.3},
+        {"name": "대한전선", "code": "001440", "weight": 15.1},
+        {"name": "일진전기", "code": "103590", "weight": 13.3},
+    ],
+    "2차전지": [
+        {"name": "LG에너지솔루션", "code": "373220", "weight": 25.0},
+        {"name": "삼성SDI", "code": "006400", "weight": 20.5},
+        {"name": "POSCO홀딩스", "code": "005490", "weight": 19.0},
+        {"name": "에코프로비엠", "code": "247540", "weight": 16.2},
+        {"name": "에코프로", "code": "086520", "weight": 10.5},
+        {"name": "포스코퓨처엠", "code": "003670", "weight": 8.8},
+    ],
+    "바이오": [
+        {"name": "삼성바이오로직스", "code": "207940", "weight": 26.0},
+        {"name": "셀트리온", "code": "068270", "weight": 24.5},
+        {"name": "유한양행", "code": "000100", "weight": 18.0},
+        {"name": "알테오젠", "code": "196170", "weight": 17.5},
+        {"name": "리가켐바이오", "code": "141080", "weight": 14.0},
+    ],
+    "반도체소부장": [
+        {"name": "한미반도체", "code": "042700", "weight": 24.0},
+        {"name": "리노공업", "code": "058470", "weight": 19.5},
+        {"name": "HPSP", "code": "403870", "weight": 18.0},
+        {"name": "이오테크닉스", "code": "039030", "weight": 15.2},
+        {"name": "동진쎄미켐", "code": "005290", "weight": 12.3},
+        {"name": "솔브레인", "code": "357780", "weight": 11.0},
+    ],
+    "엔터테인먼트": [
+        {"name": "하이브", "code": "352820", "weight": 28.5},
+        {"name": "JYP Ent.", "code": "035900", "weight": 23.0},
+        {"name": "에스엠", "code": "041510", "weight": 21.5},
+        {"name": "와이지엔터테인먼트", "code": "122870", "weight": 15.0},
+        {"name": "CJ ENM", "code": "035760", "weight": 12.0},
+    ],
+    "화장품": [
+        {"name": "아모레퍼시픽", "code": "090430", "weight": 25.0},
+        {"name": "코스맥스", "code": "192820", "weight": 23.5},
+        {"name": "한국콜마", "code": "161890", "weight": 21.0},
+        {"name": "실리콘투", "code": "257720", "weight": 17.5},
+        {"name": "에이피알", "code": "278470", "weight": 13.0},
+    ],
+    "게임": [
+        {"name": "크래프톤", "code": "259960", "weight": 32.0},
+        {"name": "넷마블", "code": "251270", "weight": 24.0},
+        {"name": "엔씨소프트", "code": "036570", "weight": 20.0},
+        {"name": "펄어비스", "code": "263750", "weight": 13.0},
+        {"name": "카카오게임즈", "code": "293490", "weight": 11.0},
+    ]
 }
 
 # ── Helper: Yahoo Finance v8 API 종가 수집 ──────────────────────────────────
@@ -503,6 +585,12 @@ async def compute_and_save_sector_leader_quant(db: AsyncSession) -> dict:
             if h_code:
                 tasks.append(analyze_stock(h_name, h_code, h_weight))
                 
+        # holdings가 비었거나 유효 종목 태스크가 없을 경우 섹터별 폴백 우량주 투입
+        if not tasks and sector in SECTOR_FALLBACK_STOCKS:
+            logger.info(f"[Screener] Applying fallback stock basket for {sector}")
+            for fb in SECTOR_FALLBACK_STOCKS[sector]:
+                tasks.append(analyze_stock(fb["name"], fb["code"], fb.get("weight", 15.0)))
+
         if tasks:
             analyzed_stocks = await asyncio.gather(*tasks)
             valid_stocks = [s for s in analyzed_stocks if s is not None]
@@ -576,7 +664,7 @@ async def get_next_leader_screener(request: Request, db: AsyncSession = Depends(
         stmt = select(SectorLeaderQuant).order_by(SectorLeaderQuant.sector, SectorLeaderQuant.rank)
         res = await db.execute(stmt)
         rows = res.scalars().all()
-        if rows:
+        if rows and len(rows) >= 10:
             sector_results = {}
             kospi_ret = 0.0
             for r in rows:
@@ -609,7 +697,7 @@ async def get_next_leader_screener(request: Request, db: AsyncSession = Depends(
     except Exception as e:
         logger.warning(f"[Screener] DB lookup failed, falling back: {e}")
 
-    # DB가 비어있는 초기 상태인 경우에만 실시간 계산 및 DB 저장
+    # DB가 비어있거나 데이터가 불완전한 경우 실시간 계산 및 DB 저장
     return await compute_and_save_sector_leader_quant(db)
 
 
@@ -666,7 +754,7 @@ async def get_sector_flow(market: str = "ALL"):
         "KOSDAQ": {
             "IT/하드웨어": "300640.KS",
             "바이오테크": "261070.KS",
-            "2차전지": "452440.KS"
+            "2차전지": "305720.KS"
         },
         "S&P 500": {
             "Technology": "XLK",

@@ -3,26 +3,22 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: UI/UX Standard Template & Sticky Navigation Minimization & Universal Modal Overlay & Recharts Date Formatting
-✅ Recent: [Sprint 42 보완 완료 — 섹터분석 컨텐츠 페이지 및 전 섹터 특화 분석 내 버튼·탭 컴팩트 표준 규격 일원화]
-1. [섹터분석 메인 및 서브탭 일원화 (`SectorAnalysisTab.tsx`)]:
-   - 국가 필터 버튼(`통합`, `국내`, `미국`)을 `px-2.5 py-1 text-xs font-semibold rounded-md`로 축소.
-   - 4대 서브탭(`섹터 순환매 동향`, `차기 주도주 발굴`, `섹터별 주가 흐름`, `섹터 간 상관관계 분석`)을 `px-3.5 py-2 text-xs font-bold`로 컴팩트화.
-2. [섹터 특화 인사이트 & 반도체 매크로 사이클 (`SectorInsightReport.tsx`, `SemiCycleDashboard.tsx`)]:
-   - 상단 헤더 우측 `Gemini Expert Report` 뱃지 및 `Update` 버튼을 `px-2 py-0.5 text-[11px] font-medium rounded-md`로 축소.
-   - 사이클 탭 3종(`1. 매크로 4국면...`, `2. Q-Cycle...`, `3. 핵심 ETF...`)을 `px-2.5 py-1 text-xs font-semibold rounded-md`로 축소.
-   - CSCI 프레임워크 박스 우측 `Update` 버튼을 `px-2 py-0.5 text-[11px] font-medium rounded-md`로 축소.
-   - 5대 서브탭(`7대 실데이터 신호...`, `종합 대시보드`, `빅테크 CapEx 트래커...`, `서브섹터 밸류에이션 맵`, `국면별 최적 ETF 매트릭스`)을 `px-2.5 py-1 text-xs font-semibold rounded-md`로 축소.
-3. [실데이터 신호등 & 모달 (`SemiFundamentalSignals.tsx`)]:
-   - `5국면 판단기준`, `Update`, `Bulliza 지표 비교` 버튼을 `px-2 py-0.5 text-[11px] font-medium rounded-md`로 컴팩트화.
-   - 모달 닫기 버튼을 `px-3 py-1 text-xs font-semibold rounded-md`로 표준화.
-4. [전 섹터 차트 및 필터 칩 일원화 (`SemiChart.tsx`, `SemiPartsChart.tsx`, `SpaceChart.tsx`, `BioChart.tsx`, `EnergyChart.tsx`, `SectorFlowGrid.tsx`, `SectorCorrelationHeatmap.tsx`, `NextLeaderScreener.tsx`)]:
-   - 시장 토글(`국내상장 ETF...`) 3종 버튼을 `px-2.5 py-1 text-xs font-semibold rounded-md`로 일원화.
-   - 기간 선택 버튼(`1M` ~ `10Y`)을 `px-2 py-0.5 text-[11px] font-semibold rounded-md`로 일원화.
-   - 구성종목 주가 비교 ETF 칩 버튼들을 `px-2 py-0.5 text-[11px] font-medium rounded-md`로 일원화.
-   - 섹터 흐름 시장 탭, 상관관계 히트맵 기간/지역 스위치, 퀀트 스크리너 섹터 탭 그리드를 표준 컴팩트 규격으로 일괄 정돈.
-5. [검증 완료]: Next.js 16.1.6 11개 페이지 최적화 빌드 성공 (`exit code 0`), 브라우저 실측 렌더링 및 스크린샷 검증 완료.
+✅ Recent: [Sprint 43 완료 — 붙임 1~4 데이터 정합성 복원, 실데이터 신호 Chevron 좌측 배치 및 My 자산배분 사분면 레이아웃 최적화]
+1. [붙임1: 차기 10대 주도주 스크리너 퀀트 랭킹 데이터 복원 (`next_leader.py`)]:
+   - KRX 크롤링 인증 실패 시 10개 섹터가 빈 리스트로 저장되던 이슈를 `SECTOR_STOCKS_MAP` 폴백 엔진 구축으로 원천 해결.
+   - 조선, 방산, 원자력 등 10개 섹터 전 영역에서 우량 종목 5선(현재가, 종합점수, P/E, P/B, ROE, 6M수익률) 정상 렌더링 검증 완료.
+2. [붙임2: KOSDAQ 2차전지 주가 흐름 최신 일자 반영 (`next_leader.py`)]:
+   - 상장폐지/무효 티커(`452440.KS`)로 인해 2026.5.26에 멈춰있던 KOSDAQ 2차전지를 `305720.KS`(KODEX 2차전지산업)로 교체.
+   - 최신 일자(2026.10.23 / 10.26)까지 주가 및 누적 수익률 그래프가 완벽 연동됨을 브라우저로 확인 완료.
+3. [붙임3: 반도체 실데이터 신호 Chevron 아이콘 좌측 배치 (`SemiFundamentalSignals.tsx`)]:
+   - 각 지수명 아래 별도 줄에 렌더링되던 열기/닫기 Chevron 아이콘을 지수명 좌측(`gap-2 flex items-center`)으로 이동하여 불필요한 세로 여백을 제거하고 컴팩트하게 축소.
+4. [붙임4: My 서비스 자산배분 프로그레스 바 좌측 이동 & 사분면 텍스트 겹침 교정 (`IntegratedAssetRebalancingWidget.tsx`)]:
+   - 우측 상단에 위치하던 '자산 배분 프로그레스 바' 카드를 좌측 '가계 자산배분 사분면 매트릭스' 바로 아래로 이동 배치.
+   - 사분면 박스 높이를 `h-[220px]`로 확보하고, 4대 사분면 구석에 워터마크형 라벨 배치.
+   - `🇰🇷 가계 평균`과 `📍 내 포트폴리오` 핀이 인접할 경우 상호 밀림 스마트 오프셋과 고대비 블러 뱃지를 적용하여 텍스트 겹침 완벽 해소.
+5. [검증 완료]: Next.js 16.1.6 11개 페이지 최적화 빌드 성공 (`exit code 0`), 브라우저 실측 렌더링 및 스크린샷 4종 정밀 검증 완료.
 
-🚀 Current: Sprint 42 완료 / 다음 작업 대기
+🚀 Current: Sprint 43 완료 / 다음 작업 대기
 
 ✅ Recent: [코스피 출구 전략 달러인덱스(DXY) 전역 정합성 통일 & 타임머신 복기 & 7대 지표 모달 & 출구 시뮬레이터 & 텔레그램 /exit 경보]
 
