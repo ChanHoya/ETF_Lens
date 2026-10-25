@@ -1,4 +1,6 @@
 "use client";
+// 수동 현금 및 계좌별 예수금 입력·관리 팝업 모달
+
 import React, { useState, useEffect } from "react";
 import { X, Wallet, Plus, Trash2, Save, Loader2 } from "lucide-react";
 import { API_BASE } from "@/lib/apiConfig";
@@ -143,8 +145,8 @@ export default function ManualCashModal({
     const fmtNum = (n: number) => new Intl.NumberFormat("ko-KR").format(Math.round(n));
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 t-modal-backdrop">
-            <div className="bg-[#12141a] border border-white/10 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] t-modal-panel">
+        <div className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-[#12141a] border border-white/10 rounded-3xl w-full max-w-xl my-auto sm:my-4 overflow-hidden shadow-2xl flex flex-col max-h-[90vh] t-modal-panel">
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/[0.02]">
                     <div className="flex items-center gap-2.5">

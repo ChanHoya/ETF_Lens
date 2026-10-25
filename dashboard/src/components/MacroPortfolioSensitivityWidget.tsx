@@ -1,4 +1,5 @@
 'use client';
+// 포트폴리오 매크로 민감도(환율·금리 충격 시뮬레이션) 진단 위젯
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { API_BASE } from '../lib/apiConfig';
@@ -146,10 +147,11 @@ export default function MacroPortfolioSensitivityWidget() {
 
                 <button
                     onClick={fetchData}
-                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors"
+                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors"
+                    title="Update"
                 >
                     <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-                    새로고침
+                    Update
                 </button>
             </div>
 

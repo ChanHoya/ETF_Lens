@@ -1,4 +1,5 @@
 "use client";
+// 미국 2026 중간선거 시나리오별 포트폴리오 맞춤 리밸런싱 제안 위젯
 
 import React, { useState, useEffect } from "react";
 import {
@@ -90,10 +91,10 @@ export default function MidtermPortfolioProposal({ onNavigateMidterm }: MidtermP
                     <button
                         onClick={() => fetchProposal(true)}
                         disabled={refreshing}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 text-xs font-semibold text-gray-300 transition-all"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 text-xs font-semibold text-gray-300 transition-all"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 text-indigo-400 ${refreshing ? "animate-spin" : ""}`} />
-                        <span>{refreshing ? "진단 중..." : "새로고침"}</span>
+                        <span>{refreshing ? "진단 중..." : "Update"}</span>
                     </button>
                     <button
                         onClick={handleGoToMidtermTab}

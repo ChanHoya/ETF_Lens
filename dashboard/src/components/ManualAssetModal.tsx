@@ -1,4 +1,6 @@
 "use client";
+// 수동 자산(비상장주식·부동산·기타투자) 등록 및 포트폴리오 편입 모달
+
 import React, { useState, useEffect } from "react";
 import { X, Plus, Save, Trash2, Loader2, Sparkles, Layers } from "lucide-react";
 import { API_BASE } from "@/lib/apiConfig";
@@ -371,8 +373,8 @@ export default function ManualAssetModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 t-modal-backdrop">
-            <div className={`bg-[#12141a] border border-white/10 rounded-2xl w-full ${
+        <div className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm overflow-y-auto">
+            <div className={`bg-[#12141a] border border-white/10 rounded-3xl w-full my-auto sm:my-4 ${
                 isEdit ? "max-w-xl" : "max-w-6xl"
             } overflow-hidden shadow-2xl flex flex-col max-h-[92vh] t-modal-panel`}>
                 {/* Header */}

@@ -19,6 +19,7 @@ import BrazilVsUsBondSimulator from './brazil/BrazilVsUsBondSimulator';
 import BrazilElectionCopomTracker from './brazil/BrazilElectionCopomTracker';
 import { API_BASE } from '@/lib/apiConfig';
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
+import { formatChartDate } from '@/lib/chartDateUtils';
 import DataSourceCaption from './common/DataSourceCaption';
 
 // ── 타입 ────────────────────────────────────────────────────────────────────
@@ -1524,7 +1525,7 @@ function RateCycleChart({ history, summary }: { history: Record<string, { date: 
             <ResponsiveContainer width="100%" height={260}>
                 <LineChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                    <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} />
+                    <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} tickFormatter={formatChartDate} />
                     <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} domain={['auto', 'auto']} />
                     <RechartsTooltip content={<RateCycleTooltip />} />
                     <Legend wrapperStyle={STANDARD_LEGEND_WRAPPER_STYLE} onClick={handleLegendClick} formatter={renderLegendText} />
@@ -1647,7 +1648,7 @@ function FxChart({ history, target }: { history: Record<string, { date: string; 
             <ResponsiveContainer width="100%" height={260}>
                 <LineChart data={data} margin={{ top: 5, right: 6, bottom: 5, left: -10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                    <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} />
+                    <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} minTickGap={40} tickFormatter={formatChartDate} />
                     <YAxis yAxisId="krw" tick={{ fill: '#fbbf24', fontSize: 11 }} domain={['auto', 'auto']} width={44} />
                     <YAxis yAxisId="brl" orientation="right" tick={{ fill: '#60a5fa', fontSize: 11 }} domain={['auto', 'auto']} width={40} />
                     <RechartsTooltip contentStyle={STANDARD_TOOLTIP_STYLE} />
@@ -1928,7 +1929,7 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+            className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200"
             onClick={onClose}
         >
             <div

@@ -1,4 +1,6 @@
 "use client";
+// My 자산 탭 통합 뷰(KIS 계좌 연동, 종합 자산보드, 배당 캘린더, 리스크 분석)
+
 import React, { useState, useEffect, useCallback } from "react";
 import MyAuthModal from "@/components/MyAuthModal";
 import MyDashboard from "@/components/MyDashboard";
@@ -283,10 +285,10 @@ function MyAssetsViewInner({ onOpenDetail, onAnalyzePeers }: { onOpenDetail?: (c
                         <button
                             onClick={() => fetchPortfolioData(true)}
                             disabled={isRefreshing}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-xl text-xs sm:text-sm font-medium text-indigo-300 transition-all disabled:opacity-50"
+                            className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-lg text-xs font-semibold text-indigo-300 transition-all disabled:opacity-50"
                         >
                             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-                            <span className="hidden sm:inline">{isRefreshing ? "조회중..." : "새로고침"}</span>
+                            <span className="hidden sm:inline">{isRefreshing ? "조회중..." : "Update"}</span>
                         </button>
                         <button
                             onClick={handleLogout}

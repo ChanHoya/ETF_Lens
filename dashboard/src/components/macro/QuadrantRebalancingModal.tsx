@@ -108,8 +108,8 @@ export default function QuadrantRebalancingModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-[#12141f] border border-white/10 rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+      <div className="bg-[#12141f] border border-white/10 rounded-3xl w-full max-w-3xl my-auto sm:my-4 flex flex-col shadow-2xl overflow-hidden">
         
         {/* 헤더 */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-black/30">

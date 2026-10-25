@@ -605,7 +605,7 @@ export default function SemiFundamentalSignals({
                                 title="최신 거시 실데이터(수출/단가/재고 등)를 즉시 동기화합니다."
                             >
                                 <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isRefreshing ? "animate-spin" : ""}`} />
-                                <span>{isRefreshing ? "동기화 중..." : "데이터 갱신"}</span>
+                                <span>{isRefreshing ? "동기화 중..." : "Update"}</span>
                             </button>
                             <button
                                 onClick={() => setShowCompareModal(true)}
@@ -865,7 +865,7 @@ export default function SemiFundamentalSignals({
             {/* ──────────────────────────────────────────────────────────── */}
             {showCriteriaModal && (
                 <div 
-                    className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm p-4 sm:p-6 flex items-start justify-center pt-8 sm:pt-14 pb-12 animate-in fade-in duration-200"
+                    className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] overflow-y-auto bg-black/75 backdrop-blur-sm p-3 sm:p-6 flex items-start justify-center pt-2 sm:pt-4 pb-12 animate-in fade-in duration-200"
                     onClick={(e) => {
                         if (e.target === e.currentTarget) setShowCriteriaModal(false);
                     }}
@@ -1028,7 +1028,7 @@ export default function SemiFundamentalSignals({
             {/* ──────────────────────────────────────────────────────────── */}
             {showCompareModal && (
                 <div 
-                    className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm p-4 sm:p-6 flex items-start justify-center pt-8 sm:pt-14 pb-12 animate-in fade-in duration-200"
+                    className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] overflow-y-auto bg-black/75 backdrop-blur-sm p-3 sm:p-6 flex items-start justify-center pt-2 sm:pt-4 pb-12 animate-in fade-in duration-200"
                     onClick={(e) => {
                         if (e.target === e.currentTarget) setShowCompareModal(false);
                     }}

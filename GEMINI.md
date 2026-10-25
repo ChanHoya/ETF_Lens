@@ -131,3 +131,9 @@ These laws are enforced across all skills and agents. Violations should be flagg
    - 오류 발생 시 기억이나 어설픈 추측으로 수정을 시도하지 않고, 실제 터미널 출력/브라우저 콘솔의 전체 스택 트레이스를 정밀 확인한 후 근본 원인을 교정한다.
 6. **기본 UI/UX 5대 스킬 파이프라인 준수**:
    - 프론트엔드 UI/UX 작업 시 `frontend-design`(사전 방향성) → `ui-ux-pro-max`(토큰 시스템) → `hallmark`(AI 클리셰 제거) → `emil-design-eng`(스프링 모션) → `web-design-guidelines`(접근성/사용성 검증)의 5대 스킬 기준을 필수 적용한다.
+7. **서비스 전역 UI/UX 표준 템플릿 5대 원칙**:
+   - 상단 네비게이션 고정(`sticky top-0`) 및 서브메뉴 선택 시 메인메뉴 우측 원형 `<>` minimize 후 서브메뉴 슬라이드업 1줄 통합.
+   - 단일 외곽 컨텐츠 박스(`rounded-3xl border`) 및 내부 모듈러 서브 컨텐츠 박스 계층 일원화.
+   - 상단 헤더 보존형 팝업 모달(오버레이가 상단 고정 헤더 아래에서 시작되며 모달이 최상단에 배치).
+   - 차트 X축 연도 `'26` 축약 표기 (`'26/01/10', '26`).
+   - 액션 버튼 `Update` 명칭 일원화 및 컴팩트 크기(`px-2.5 py-1 text-xs`).

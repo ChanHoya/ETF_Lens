@@ -173,22 +173,23 @@ export default function KospiExitAnalyzer() {
     // 클라이언트 마운트 확인
     useEffect(() => { setIsMounted(true); }, []);
 
-    // 카드 클릭 시 헤더 위치 기준 팝업 위치 결정
+    // 카드 클릭 시 메인/서브 메뉴바(#iprism-headline) 바로 아래 위치로 팝업 위치 결정
     const openPopup = (type: 'dollar' | 'per' | 'cli' | 'vix' | 'fgi' | 't10y2y' | 'hy_spread', e?: React.MouseEvent<HTMLDivElement>) => {
-        // sticky 헤더는 항상 viewport 상단에 고정되어 있으므로 getBoundingClientRect().bottom이 스크롤 상태와 무관하게 정확함
-        const headerBottom = headerRef.current
-            ? Math.max(headerRef.current.getBoundingClientRect().bottom, 56)
-            : 100;
-        setPopupTop(Math.round(headerBottom + 8));
+        const headlineEl = document.getElementById('iprism-headline');
+        const headerBottom = headlineEl
+            ? Math.max(headlineEl.getBoundingClientRect().bottom, 50)
+            : (headerRef.current ? Math.max(headerRef.current.getBoundingClientRect().bottom, 50) : 64);
+        setPopupTop(Math.round(headerBottom + 4));
         setActivePopup(type);
     };
 
     // 종합위험지수 기여도 행 클릭 시 해당 모달 바로 열기
     const handleOpenMetricFromGauge = (metricKey: string) => {
-        const headerBottom = headerRef.current
-            ? Math.max(headerRef.current.getBoundingClientRect().bottom, 56)
-            : 100;
-        setPopupTop(Math.round(headerBottom + 8));
+        const headlineEl = document.getElementById('iprism-headline');
+        const headerBottom = headlineEl
+            ? Math.max(headlineEl.getBoundingClientRect().bottom, 50)
+            : (headerRef.current ? Math.max(headerRef.current.getBoundingClientRect().bottom, 50) : 64);
+        setPopupTop(Math.round(headerBottom + 4));
 
         if (metricKey === 'vix' || metricKey === 'vkospi_proxy') setActivePopup('vix');
         else if (metricKey === 'fgi') setActivePopup('fgi');
@@ -199,17 +200,23 @@ export default function KospiExitAnalyzer() {
         else setActivePopup('dollar');
     };
 
-    // 팝업이 열린 상태에서 스크롤 시 popupTop 동기화 (이미 팝업 열려있을 때 스크롤하지 않도록)
+    // 팝업이 열린 상태에서 스크롤 및 리사이즈 시 popupTop 동기화
     useEffect(() => {
         if (!activePopup) return;
         const syncPopupTop = () => {
-            if (headerRef.current) {
-                const bottom = Math.max(headerRef.current.getBoundingClientRect().bottom, 56);
-                setPopupTop(Math.round(bottom + 8));
-            }
+            const headlineEl = document.getElementById('iprism-headline');
+            const bottom = headlineEl
+                ? Math.max(headlineEl.getBoundingClientRect().bottom, 50)
+                : (headerRef.current ? Math.max(headerRef.current.getBoundingClientRect().bottom, 50) : 64);
+            setPopupTop(Math.round(bottom + 4));
         };
+        syncPopupTop();
         window.addEventListener('scroll', syncPopupTop, { passive: true });
-        return () => window.removeEventListener('scroll', syncPopupTop);
+        window.addEventListener('resize', syncPopupTop, { passive: true });
+        return () => {
+            window.removeEventListener('scroll', syncPopupTop);
+            window.removeEventListener('resize', syncPopupTop);
+        };
     }, [activePopup]);
 
     // API State
@@ -1123,20 +1130,20 @@ export default function KospiExitAnalyzer() {
                 </p>
             </div>
 
-            {/* Portal: document.body에 직접 렌더링 → overflow 컨테이너 영향 없음 */}
+            {/* Portal: document.body에 직접 렌더링 → 상단 헤더 보존형 모달 */}
             {activePopup && isMounted && createPortal(
                 <div
-                    className="fixed left-0 right-0 bottom-0 z-[9999] flex items-start justify-center pt-2 px-4"
+                    className="fixed left-0 right-0 bottom-0 z-[200] flex items-start justify-center pt-2 px-3 sm:px-4 overflow-y-auto"
                     style={{ top: `${popupTop}px` }}
                     onClick={() => setActivePopup(null)}
                 >
-                    {/* 반투명 배경 */}
-                    <div className="absolute inset-0 bg-black/85 backdrop-blur-sm transition-all duration-300" />
+                    {/* 반투명 배경 (헤더 바로 아래부터 시작) */}
+                    <div className="fixed left-0 right-0 bottom-0 bg-black/80 backdrop-blur-sm transition-all duration-300" style={{ top: `${popupTop}px` }} />
 
-                    {/* 팝업 패널 — 컨텐츠 높이에 맞춤, floating card style */}
+                    {/* 팝업 패널 — floating card style */}
                     <div
-                        className="relative w-full max-w-4xl bg-[#11111f] border border-white/10 rounded-2xl flex flex-col shadow-[0_15px_50px_rgba(0,0,0,0.85)] animate-in fade-in zoom-in-95 duration-200 overflow-hidden"
-                        style={{ maxHeight: `calc(100vh - ${popupTop}px - 24px)` }}
+                        className="relative w-full max-w-4xl bg-[#11111f] border border-white/10 rounded-2xl flex flex-col shadow-[0_15px_50px_rgba(0,0,0,0.85)] animate-in fade-in zoom-in-95 duration-200 overflow-hidden mb-6 z-10"
+                        style={{ maxHeight: `calc(100vh - ${popupTop}px - 20px)` }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* 헤더 */}

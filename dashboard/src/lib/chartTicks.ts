@@ -1,5 +1,5 @@
 // 시간축(ms 타임스탬프) 차트의 연도 눈금을 해당 연도 1월 1일 위치에 고정하는 공용 helper
-export const yearTick = (t: number) => String(new Date(t).getUTCFullYear());
+export const yearTick = (t: number) => `'${String(new Date(t).getUTCFullYear()).slice(-2)}`;
 
 /** rows의 t 범위 안에서 1월 1일 눈금. 20년처럼 길면 2년 간격(첫 눈금은 범위 안의 첫 1월 1일). */
 export function yearTicks(rows: { t?: number | null }[]): number[] {

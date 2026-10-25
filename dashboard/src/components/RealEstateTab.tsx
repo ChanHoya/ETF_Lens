@@ -211,11 +211,11 @@ export default function RealEstateTab() {
               type="button"
               onClick={handleManualSync}
               disabled={isSyncing}
-              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs transition-all duration-200 shadow-sm disabled:opacity-50 cursor-pointer"
-              title="서울시 오픈데이터 및 실거래 통계 새로고침"
+              className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs transition-all duration-200 shadow-sm disabled:opacity-50 cursor-pointer"
+              title="서울시 오픈데이터 및 실거래 통계 Update"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-blue-400" : ""}`} />
-              <span>{isSyncing ? "동기화 중..." : "실데이터 갱신"}</span>
+              <span>{isSyncing ? "동기화 중..." : "Update"}</span>
             </button>
             <a
               href="https://www.youtube.com/watch?v=3jlTPFa706E"

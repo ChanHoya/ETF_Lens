@@ -120,9 +120,9 @@ export default function TffMonthlyFactsheetModal({ isOpen, onClose, data }: Prop
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+        <div className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
             {/* Modal Dialog Card */}
-            <div className="relative w-full max-w-3xl bg-[#0f111a] border border-white/15 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto text-white">
+            <div className="relative w-full max-w-3xl bg-[#0f111a] border border-white/15 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto sm:my-4 text-white">
                 
                 {/* Print and Screen Styles */}
                 <style jsx global>{`

@@ -1,7 +1,9 @@
+// ETF 포트폴리오 백테스팅(MDD·수익률·샤프비율) 및 시계열 성과 시뮬레이터 컴포넌트
 import React, { useState, useEffect, useMemo } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { API_BASE } from "@/lib/apiConfig";
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE } from "@/lib/chartTheme";
+import { formatChartDate } from "@/lib/chartDateUtils";
 import { Loader2, Sparkles, RefreshCw, Shield, Maximize2, Minimize2 } from "lucide-react";
 
 type HoldingProps = {
@@ -300,14 +302,14 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
                 <button
                     onClick={() => fetchBacktest(true)}
                     disabled={loading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition-all disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition-all disabled:opacity-50"
                     title="캐시를 비우고 최신 데이터로 다시 계산"
                 >
                     <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-                    <span>새로고침</span>
+                    <span>Update</span>
                 </button>
             </div>
-            <div className="bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-md overflow-hidden p-6">
+            <div className="bg-white/[0.02] border border-white/10 rounded-3xl backdrop-blur-md overflow-hidden p-6">
                 
                 {loading && !data ? (
                     <div className="flex flex-col items-center justify-center p-10 h-[300px]">
@@ -391,7 +393,7 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
                                     <button
                                         key={p}
                                         onClick={() => setPeriod(p as any)}
-                                        className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
                                             period === p 
                                             ? "bg-purple-500 text-white shadow-sm" 
                                             : "bg-white/5 text-gray-400 hover:bg-white/10"
@@ -446,7 +448,7 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={sampledChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                        <XAxis dataKey="date" stroke="none" tick={{ fill: '#71717a', fontSize: 12 }} minTickGap={isExpanded ? 20 : 30} />
+                                        <XAxis dataKey="date" stroke="none" tick={{ fill: '#71717a', fontSize: 12 }} minTickGap={isExpanded ? 20 : 30} tickFormatter={formatChartDate} />
                                         <YAxis stroke="none" tick={{ fill: '#71717a', fontSize: 12 }} domain={['auto', 'auto']} tickFormatter={(val) => `${val.toFixed(0)}%`} />
                                         <RechartsTooltip 
                                             contentStyle={STANDARD_TOOLTIP_STYLE}

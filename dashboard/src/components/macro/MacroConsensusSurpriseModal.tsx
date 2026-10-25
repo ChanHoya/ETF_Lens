@@ -21,6 +21,7 @@ import {
 } from 'recharts';
 
 import { API_BASE } from '@/lib/apiConfig';
+import { formatChartDate } from '@/lib/chartDateUtils';
 
 interface IndicatorMeta {
   key: string;
@@ -296,13 +297,13 @@ export default function MacroConsensusSurpriseModal({
 
   return createPortal(
     <div 
-      className="fixed inset-0 z-[9999] flex items-start justify-center pt-3 sm:pt-6 pb-6 px-3 sm:px-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-fade-in"
+      className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center pt-2 sm:pt-4 pb-6 px-3 sm:px-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div 
-        className="bg-[#12141f] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-0"
+        className="bg-[#12141f] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden my-auto sm:my-2"
         onClick={(e) => e.stopPropagation()}
       >
         
@@ -530,6 +531,7 @@ export default function MacroConsensusSurpriseModal({
                         stroke="#6b7280" 
                         fontSize={11} 
                         tickLine={false} 
+                        tickFormatter={formatChartDate}
                       />
                       <YAxis 
                         stroke="#6b7280" 

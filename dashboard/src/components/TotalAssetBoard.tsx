@@ -1203,8 +1203,8 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
 
             {/* Delete Confirmation Modal */}
             {assetToDelete && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-                    <div className="bg-[#161922] border border-rose-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-150">
+                <div className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
+                    <div className="bg-[#161922] border border-rose-500/30 rounded-3xl p-6 max-w-md w-full my-auto sm:my-4 shadow-2xl animate-in zoom-in-95 duration-150">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
                                 <Trash2 className="w-5 h-5" />

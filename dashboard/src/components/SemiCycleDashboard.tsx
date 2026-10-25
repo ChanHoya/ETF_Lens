@@ -54,6 +54,7 @@ import { API_BASE } from "../lib/apiConfig";
 import SemiFundamentalSignals from "./SemiFundamentalSignals";
 import DataSourceCaption from "./common/DataSourceCaption";
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from "../lib/chartTheme";
+import { formatChartDate } from "@/lib/chartDateUtils";
 
 interface SemiCycleDashboardProps {
     onOpenDetail?: (code: string) => void;
@@ -493,11 +494,11 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                     <button
                         onClick={() => fetchAllData(true)}
                         disabled={isRefreshing}
-                        className="px-3.5 py-1.5 rounded-xl bg-black/40 hover:bg-black/60 border border-white/20 text-gray-200 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-md active:scale-95 disabled:opacity-60 cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-black/40 hover:bg-black/60 border border-white/20 text-gray-200 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-60 cursor-pointer"
                         title="최신 거시 지표 및 사이클 모델을 즉시 재계산합니다"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 text-indigo-400 ${isRefreshing ? "animate-spin" : ""}`} />
-                        <span>{isRefreshing ? "동기화 중..." : "데이터 갱신"}</span>
+                        <span>{isRefreshing ? "동기화 중..." : "Update"}</span>
                     </button>
                 </div>
             </div>
@@ -1115,6 +1116,7 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                                     textAnchor="end"
                                     interval={1}
                                     height={40}
+                                    tickFormatter={formatChartDate}
                                 />
                                 <YAxis yAxisId="left" tick={{ fill: "#a855f7", fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                                 <YAxis yAxisId="right" orientation="right" tick={{ fill: "#10b981", fontSize: 10 }} tickFormatter={(v) => `${v}%`} />

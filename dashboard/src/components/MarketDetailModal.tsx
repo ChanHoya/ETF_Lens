@@ -7,6 +7,7 @@ import {
 } from 'recharts';
 import { X, Calendar, TrendingUp, Info, Activity, ExternalLink } from 'lucide-react';
 import DataSourceCaption from './common/DataSourceCaption';
+import { formatChartDate } from '../lib/chartDateUtils';
 
 export type SeriesConfig = {
     key: string;
@@ -183,21 +184,18 @@ export default function MarketDetailModal({
         return '';
     }, [activeSeries]);
 
-    // X축 눈금 레이블 포맷터
+    // X축 눈금 레이블 포맷터 (Sprint 42 표준: '26 연도 축약)
     const formatXAxis = (dateStr: string) => {
         if (!dateStr) return '';
-        if (period === '6M' || period === '1Y') {
-            return dateStr.slice(5); // MM-DD
-        }
-        return dateStr.slice(0, 7); // YYYY-MM
+        return formatChartDate(dateStr);
     };
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
             <div
-                className={`relative w-full ${maxWidthClassName} bg-[#13151f] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden`}
+                className={`relative w-full ${maxWidthClassName} bg-[#13151f] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[88vh] overflow-hidden my-auto sm:my-2`}
                 onClick={e => e.stopPropagation()}
             >
                 {/* 1. Header (컴팩트 디자인) */}

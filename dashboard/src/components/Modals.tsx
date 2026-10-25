@@ -1,3 +1,4 @@
+// 서비스 전역 공용 팝업 모달(관심종목 즐겨찾기, 포트폴리오 마켓 등) 컴포넌트
 import React from 'react';
 import { Star, Plus, Edit2, Trash2, Check, X, Share2, Store, Download, Lock, RefreshCw } from "lucide-react";
 import { ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Bar, PieChart, Pie, Cell } from "recharts";
@@ -375,8 +376,8 @@ export default function Modals({
         <>
             {/* ===== 1. 나의 관심종목 즐겨찾기 Modal ===== */}
             {isFavModalOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 t-modal-backdrop p-2 md:p-6">
-                    <div className="bg-[#0f111a] border border-white/10 rounded-2xl w-full max-w-[1400px] h-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl t-modal-panel">
+                <div className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center bg-black/60 backdrop-blur-sm p-2 md:p-6 overflow-y-auto">
+                    <div className="bg-[#0f111a] border border-white/10 rounded-3xl w-full max-w-[1400px] my-auto sm:my-4 h-full max-h-[88vh] overflow-hidden flex flex-col shadow-2xl t-modal-panel">
 
                         {/* 헤더 */}
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border-b border-white/10 relative gap-3 bg-black/20">
@@ -1255,8 +1256,8 @@ export default function Modals({
             )}
             {/* ===== 포트폴리오 마켓 팝업 ===== */}
             {isMarketOpen && (
-                <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/70 t-modal-backdrop p-2 md:p-6">
-                    <div className="bg-[#0f111a] border border-purple-500/20 rounded-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col shadow-2xl shadow-purple-900/30 t-modal-panel">
+                <div className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center bg-black/70 backdrop-blur-sm p-2 md:p-6 overflow-y-auto">
+                    <div className="bg-[#0f111a] border border-purple-500/20 rounded-3xl w-full max-w-5xl my-auto sm:my-4 max-h-[90vh] overflow-hidden flex flex-col shadow-2xl shadow-purple-900/30 t-modal-panel">
                         {/* 헤더 */}
                         <div className="flex justify-between items-center px-5 py-4 border-b border-white/10 bg-purple-500/5 flex-shrink-0">
                             <div>

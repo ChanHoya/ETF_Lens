@@ -4,6 +4,7 @@ import { Search } from 'lucide-react';
 import { API_BASE } from '../lib/apiConfig';
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '../lib/chartTheme';
 import DataSourceCaption from './common/DataSourceCaption';
+import { formatChartDate } from '../lib/chartDateUtils';
 
 const useVisualSort = (data: any[], keys: string[]) => {
     return React.useMemo(() => {
@@ -110,13 +111,13 @@ export function DollarModalContent() {
 
     return (
         <div className="flex flex-col w-full gap-3">
-            {/* 기간 선택 버튼 */}
-            <div className="flex gap-2 justify-end shrink-0">
+            {/* 기간 선택 버튼 (컴팩트 표준: text-xs, px-2.5 py-1) */}
+            <div className="flex gap-1.5 justify-end shrink-0">
                 {['6M', '1Y', '3Y', '10Y'].map(p => (
                     <button
                         key={p}
                         onClick={() => setPeriod(p)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${period === p ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${period === p ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
                     >
                         {p}
                     </button>
@@ -131,7 +132,7 @@ export function DollarModalContent() {
                         onMouseLeave={() => setHoverIndex(null)}
                     >
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                        <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickMargin={12} />
+                        <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickMargin={12} tickFormatter={formatChartDate} />
 
                         <YAxis yAxisId="left" domain={[leftMin, leftMax]} stroke="#a1a1aa" fontSize={10} width={42}
                             tickFormatter={(val) => Math.round(val).toString()} />
@@ -353,7 +354,7 @@ function PerMiniChart({ title, symbol = null, isKospi = false }: any) {
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={data} margin={{ top: 5, right: 0, left: -25, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                            <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} />
+                            <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} tickMargin={8} tickFormatter={formatChartDate} />
 
                             <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} tickLine={false} axisLine={false} width={45} />
                             <YAxis yAxisId="right" orientation="right" domain={['auto', 'auto']} tick={{ fontSize: 9, fill: '#666' }} tickLine={false} axisLine={false} width={50} tickFormatter={(val) => Math.round(val).toLocaleString()} />
@@ -466,7 +467,7 @@ export function CliModalContent() {
                     <div className="w-full" style={{ height: '220px' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={data} margin={{ top: 5, right: 3, left: 2, bottom: 0 }}>
-                                <XAxis dataKey="year" stroke="#71717a" fontSize={10} minTickGap={20} tickMargin={8} />
+                                <XAxis dataKey="year" stroke="#71717a" fontSize={10} minTickGap={20} tickMargin={8} tickFormatter={formatChartDate} />
                                 <YAxis yAxisId="cli" domain={['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
                                 <YAxis yAxisId="kospi" orientation="right" domain={['auto', 'auto']} width={45} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
                                 <RechartsTooltip
@@ -517,7 +518,7 @@ export function CliModalContent() {
                     <div className="w-full" style={{ height: '220px' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={data} margin={{ top: 5, right: 3, left: 2, bottom: 0 }}>
-                                <XAxis dataKey="year" stroke="#71717a" fontSize={10} minTickGap={20} tickMargin={8} />
+                                <XAxis dataKey="year" stroke="#71717a" fontSize={10} minTickGap={20} tickMargin={8} tickFormatter={formatChartDate} />
                                 <YAxis domain={['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
                                 <RechartsTooltip
                                     contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
@@ -656,13 +657,13 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                             출처: {isFgi ? 'CNN Business (Proxy by Proxy 계산)' : 'Yahoo Finance (^VIX) & KOSPI Realized Volatility'}
                         </span>
                     </div>
-                    <div className="flex gap-1 bg-black/40 p-1 rounded-xl shrink-0">
+                    <div className="flex gap-1 bg-black/40 p-0.5 rounded-lg shrink-0">
                         {periods.map(p => (
                             <button
                                 key={p.label}
                                 onClick={() => setPeriod(p.days)}
-                                className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${period === p.days
-                                    ? 'bg-indigo-500 text-white shadow-lg'
+                                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${period === p.days
+                                    ? 'bg-indigo-500 text-white shadow-sm'
                                     : 'text-gray-400 hover:text-white hover:bg-white/10'
                                     }`}
                             >
@@ -675,7 +676,7 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={displayData} margin={{ top: 5, right: 3, left: 2, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                            <XAxis dataKey="date" stroke="#71717a" fontSize={10} tickMargin={8} minTickGap={30} />
+                            <XAxis dataKey="date" stroke="#71717a" fontSize={10} tickMargin={8} minTickGap={30} tickFormatter={formatChartDate} />
                             <YAxis yAxisId="left" domain={isFgi ? [0, 100] : ['auto', 'auto']} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
                             <YAxis yAxisId="right" orientation="right" domain={[rightMin, rightMax]} width={45} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} tickFormatter={(val) => typeof val === 'number' ? Math.round(val).toLocaleString() : val} />
                             <RechartsTooltip
@@ -924,7 +925,7 @@ export function T10y2yModalContent() {
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                            <XAxis dataKey="month" stroke="#71717a" fontSize={10} tickMargin={8} />
+                            <XAxis dataKey="month" stroke="#71717a" fontSize={10} tickMargin={8} tickFormatter={formatChartDate} />
                             <YAxis domain={[(dataMin: number) => Math.min(dataMin, -0.6), (dataMax: number) => Math.max(dataMax, 0.6)]} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
                             <RechartsTooltip
                                 contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
@@ -1097,7 +1098,7 @@ export function HySpreadModalContent() {
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                            <XAxis dataKey="month" stroke="#71717a" fontSize={10} tickMargin={8} />
+                            <XAxis dataKey="month" stroke="#71717a" fontSize={10} tickMargin={8} tickFormatter={formatChartDate} />
                             <YAxis domain={[(dataMin: number) => Math.min(dataMin, 3.0), (dataMax: number) => Math.max(dataMax, 7.0)]} width={40} tick={{ fontSize: 10, fill: '#666' }} axisLine={false} tickLine={false} />
                             <RechartsTooltip
                                 contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}

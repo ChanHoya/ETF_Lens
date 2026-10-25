@@ -216,11 +216,11 @@ export default function ExportExposureWidget({
                     <button
                         onClick={() => fetchExposureData(true)}
                         disabled={refreshing}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 text-xs text-gray-300 transition-all disabled:opacity-50"
-                        title="수출 노출도 새로고침"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 text-xs font-semibold text-gray-300 transition-all disabled:opacity-50"
+                        title="수출 노출도 Update"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-indigo-400" : ""}`} />
-                        <span className="text-[11px]">{refreshing ? "계산 중..." : "새로고침"}</span>
+                        <span>{refreshing ? "계산 중..." : "Update"}</span>
                     </button>
                 </div>
             </div>

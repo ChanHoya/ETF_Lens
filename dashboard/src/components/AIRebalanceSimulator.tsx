@@ -1,6 +1,8 @@
+// AI 동적 리밸런싱 시뮬레이터 및 백테스팅 성과 비교 차트 컴포넌트
 import React, { useState, useEffect } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { STANDARD_TOOLTIP_PROPS } from '@/lib/chartTheme';
+import { formatChartDate } from '@/lib/chartDateUtils';
 import { API_BASE } from "@/lib/apiConfig";
 import { Loader2, ShieldAlert, Sparkles, TrendingUp, AlertTriangle, ArrowRight, RefreshCw, Layers } from "lucide-react";
 
@@ -167,11 +169,11 @@ export default function AIRebalanceSimulator({ holdings }: AIRebalanceSimulatorP
                     <button
                         onClick={() => fetchBacktest(true)}
                         disabled={loading}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition-all disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition-all disabled:opacity-50"
                         title="캐시를 비우고 최신 데이터로 다시 계산"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-                        <span>새로고침</span>
+                        <span>Update</span>
                     </button>
                 </div>
             </div>
@@ -307,7 +309,7 @@ export default function AIRebalanceSimulator({ holdings }: AIRebalanceSimulatorP
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={data.timeline} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                                    <XAxis dataKey="date" stroke="none" tick={{ fill: '#71717a', fontSize: 11 }} minTickGap={40} />
+                                    <XAxis dataKey="date" stroke="none" tick={{ fill: '#71717a', fontSize: 11 }} minTickGap={40} tickFormatter={formatChartDate} />
                                     <YAxis stroke="none" tick={{ fill: '#71717a', fontSize: 11 }} domain={['auto', 'auto']} tickFormatter={(val) => `${(val/100 - 100).toFixed(0)}%`} />
                                     <RechartsTooltip 
                                         {...STANDARD_TOOLTIP_PROPS}

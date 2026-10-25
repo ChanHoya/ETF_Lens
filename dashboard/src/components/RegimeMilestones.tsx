@@ -27,7 +27,7 @@ const MIN_GAP_PCT = 4.5; // 이보다 가까운 핀은 다음 줄로
 
 const ts = (d: string) => Date.parse(d);
 const fmtDate = (t: number) => new Date(t).toISOString().slice(0, 10);
-const yearTick = (t: number) => String(new Date(t).getUTCFullYear());
+const yearTick = (t: number) => `'${String(new Date(t).getUTCFullYear()).slice(-2)}`;
 const ym = (d: string) => `${d.slice(2, 4)}.${d.slice(5, 7)}`;
 const period = (m: Milestone) => `${m.start.slice(0, 7).replace('-', '.')} → ${m.end ? m.end.slice(0, 7).replace('-', '.') : '현재'}`;
 

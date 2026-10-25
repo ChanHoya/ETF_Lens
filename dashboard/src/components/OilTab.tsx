@@ -43,6 +43,7 @@ import {
     Legend
 } from "recharts";
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from "@/lib/chartTheme";
+import { formatChartDate } from "@/lib/chartDateUtils";
 import DataSourceCaption from "./common/DataSourceCaption";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -1050,8 +1051,8 @@ export default function OilTab() {
             {modalOpen && (() => {
                 const currentMeta = historyData?.indicator_meta || INDICATOR_META_MAP[selectedIndicator] || INDICATOR_META_MAP["wti"];
                 return (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="bg-[#13141f] border border-white/15 rounded-3xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+                <div className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center p-3 md:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+                    <div className="bg-[#13141f] border border-white/15 rounded-3xl w-full max-w-5xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden my-auto sm:my-2">
                         {/* Modal Header */}
                         <div className="p-5 md:p-6 border-b border-white/10 flex items-center justify-between bg-[#181a28]">
                             <div className="flex items-center gap-3">
@@ -1218,7 +1219,7 @@ export default function OilTab() {
                                                     margin={{ top: 15, right: 35, left: 5, bottom: 5 }}
                                                 >
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                                                    <XAxis dataKey="date" stroke="#71717a" tick={{ fontSize: 10 }} tickLine={false} />
+                                                    <XAxis dataKey="date" stroke="#71717a" tick={{ fontSize: 10 }} tickLine={false} tickFormatter={formatChartDate} />
                                                     
                                                     {/* Left Axis: Primary Indicator */}
                                                     <YAxis

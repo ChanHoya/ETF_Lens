@@ -1,4 +1,5 @@
 'use client';
+// 종합 가계 자산(부동산·금융·연금) 통합 진단 및 인쇄·보고서 팝업 모달
 
 import React, { useRef } from 'react';
 import { 
@@ -74,8 +75,8 @@ export default function IntegratedAssetReportModal({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:static">
-      <div className="relative w-full max-w-4xl rounded-3xl bg-[#131622] border border-white/10 shadow-2xl overflow-hidden print:border-none print:shadow-none print:w-full print:bg-white print:text-black">
+    <div className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:static">
+      <div className="relative w-full max-w-4xl my-auto sm:my-4 rounded-3xl bg-[#131622] border border-white/10 shadow-2xl overflow-hidden print:border-none print:shadow-none print:w-full print:bg-white print:text-black">
         
         {/* 상단 툴바 (인쇄 시 숨김) */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.02] print:hidden">

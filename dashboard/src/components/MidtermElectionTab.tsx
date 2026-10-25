@@ -1,6 +1,8 @@
 "use client";
+// 미국 2026 중간선거 및 대통령 4년 주기 사이클 분석·리밸런싱 탭 컴포넌트
 
 import React, { useState, useEffect, useMemo } from "react";
+import { formatChartDate } from "@/lib/chartDateUtils";
 import {
     Vote,
     Calendar,
@@ -1064,6 +1066,7 @@ export default function MidtermElectionTab() {
                                     stroke="#71717a"
                                     tick={{ fontSize: 10, fill: "#9ca3af" }}
                                     tickLine={false}
+                                    tickFormatter={formatChartDate}
                                     interval={cyclePeriod === "5Y" ? 0 : cyclePeriod === "10Y" ? 0 : cyclePeriod === "30Y" ? 2 : 4}
                                 />
                                 <YAxis
@@ -1592,8 +1595,8 @@ export default function MidtermElectionTab() {
 
             {/* AI 투자성향 & 자산배분 진단 인터뷰 팝업 모달 */}
             {isInterviewModalOpen && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="relative w-full max-w-xl bg-[#151726] border border-indigo-500/40 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col gap-5 text-gray-200">
+                <div className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+                    <div className="relative w-full max-w-xl my-auto sm:my-4 bg-[#151726] border border-indigo-500/40 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col gap-5 text-gray-200">
                         {/* Modal Header */}
                         <div className="flex items-center justify-between border-b border-white/10 pb-4">
                             <div className="flex items-center gap-3">

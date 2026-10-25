@@ -1,10 +1,12 @@
 'use client';
+// 부동산 주요 단지 매매·전세 시계열 및 거래량 상세 조회 팝업 모달
 
 import React, { useEffect, useState } from 'react';
 import { X, Building2, TrendingUp, TrendingDown, Calendar, Layers, ShieldCheck, Activity, BarChart3, ArrowUpRight, Scale } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { getApiBase } from '@/lib/apiConfig';
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
+import { formatChartDate } from '@/lib/chartDateUtils';
 
 export interface MajorComplexTimeseriesModalProps {
   complexName: string | null;
@@ -53,9 +55,9 @@ export default function MajorComplexTimeseriesModal({
   const history = data?.history || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
       <div 
-        className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto bg-[#12131e] border border-white/10 rounded-3xl shadow-2xl p-5 sm:p-7 flex flex-col gap-5 text-gray-200"
+        className="relative w-full max-w-4xl my-auto sm:my-4 overflow-y-auto bg-[#12131e] border border-white/10 rounded-3xl shadow-2xl p-5 sm:p-7 flex flex-col gap-5 text-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
@@ -166,6 +168,7 @@ export default function MajorComplexTimeseriesModal({
                       dataKey="month" 
                       tick={{ fill: '#9ca3af', fontSize: 10 }} 
                       stroke="#374151" 
+                      tickFormatter={formatChartDate}
                     />
                     <YAxis 
                       yAxisId="price" 

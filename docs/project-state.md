@@ -2,20 +2,22 @@
 
 > **Keep this file under 200 lines.**
 ## Quick Summary
-Base: Universal Micro Data Source Attribution & Multi-Industry DB Series & Telegram Alert
-✅ Recent: [추천 1~3 완료 — 전역 마이크로 데이터 출처 표기 표준화 & 2차전지·자동차 DB 시계열 확장 & 텔레그램 속보 연계]
-1. [전역 데이터 출처(Source Attribution) 마이크로 캡션 표준화]:
-   - 기존 폰트보다 더 작고 세련된 `text-[9.5px]` font-mono 기반 공통 마이크로 캡션 컴포넌트(`DataSourceCaption.tsx`)를 신설.
-   - 시장동향 5대 탭(종합/환율/금리/주식/유가), 섹터분석(특화분석 5개 탭, 소부장, 우주항공, 섹터 전역), 코스피 출구 전략(7대 지표 카드 및 6개 모달), 부동산 탭, 연금·절세 허브, 브라질 국채 탭, 공통 모달(`MarketDetailModal`) 등 모든 화면의 그래프 및 테이블 하단에 데이터 출처와 갱신 주기를 빈틈없이 명기 완료.
-2. [핵심 수출 업종(2차전지·자동차) 10개년 펀더멘털 DB 시계열 확장]:
-   - `industry_macro_series` DB 테이블에 2차전지(`battery`) 및 자동차(`automobile`) 10개년(2016.09~2026.10, 각 122개 월차, 총 244개 레코드) 공표 통계 시계열(수출액, 단가, 물량, 가동률, 재고) 영구 적재 완료.
-   - 백엔드 `get_combined_macro_series(industry)` 다중 산업 캐시 분리 및 신규 엔드포인트 `GET /api/v1/macro/industry-series` 신설.
-3. [신규 지표 갱신 감지 시 텔레그램 속보 자동 알림 및 명령어 연동]:
-   - `telegram_bot.py`에 `/semi` (반도체 7대 지표 및 5국면 브리핑) 및 `/macro` (반도체·2차전지·자동차 3대 주력산업 DB 펀더멘털 브리핑) 명령어 추가.
-   - `semi_stats_sync.py` 스케줄러에 신규 월차 공표치 감지 시 텔레그램 속보 자동 발송 로직 연계 완료.
-4. [전체 검증 완료]: 백엔드 신규 및 회귀 pytest 25건 100% 통과, Next.js 프로덕션 빌드 완료, 브라우저 실측 렌더링 검증 완료.
+Base: UI/UX Standard Template & Sticky Navigation Minimization & Universal Modal Overlay & Recharts Date Formatting
+✅ Recent: [Sprint 42 완료 — 서비스 전체 UI/UX 표준 템플릿 구축 및 전면 보수]
+1. [헤더 고정(Sticky) & 1줄 슬라이드 축소(Minimize)]:
+   - 상단 헤더 컨테이너를 `sticky top-0 z-[250] bg-[#050505]/95 backdrop-blur-md`로 고정하여 스크롤 중에도 항상 표시 유지.
+   - 시장동향/종목분석 등 서브메뉴 진입 시 메인 메뉴가 우측 원형 `<>` 버튼으로 minimize되고 서브메뉴가 윗줄로 슬라이드업되어 1줄로 통합. `<>` 클릭 시 펼침/접힘 토글 지원.
+2. [전역 팝업 모달 상단 헤더 보존형 배치]:
+   - 코스피 출구 전략(ExitSignalModals 5종), 시장 지표 상세(MarketDetailModal), 원유·컨센서스·부동산·중간선거·브라질 국채·TFF 팩트시트·My 자산 모달 전체의 오버레이를 `fixed top-[52px]~top-[64px] left-0 right-0 bottom-0 z-[200]`로 교정하여 상단 메뉴 보존.
+3. [단일 외곽 컨텐츠 박스 & 버튼 규격 통일]:
+   - 컨텐츠 박스 전체를 단일 외곽 박스로 감싸고 내부에 서브 박스를 배치하는 구조로 통일.
+   - 모든 기간/선택/Update 버튼을 컴팩트 규격(`px-2.5 py-1 text-xs rounded-lg font-semibold`)으로 통일.
+4. [Recharts X축 연도 `'26` 축약 & `Update` 명칭 일원화]:
+   - 전역 유틸 `chartDateUtils.ts` 및 `chartTicks.ts`를 신설/개편하여 X축 연도 라벨을 `2026-01-10` -> `'26/01/10'`, `2026` -> `'26'`으로 일괄 축약하여 라벨 겹침 방지.
+   - 전 서비스의 '새로고침', '데이터 갱신' 버튼을 `Update`로 일원화.
+5. [검증 완료]: Next.js 16.1.6 11개 페이지 최적화 빌드 성공 (`exit code 0`), 브라우저 실측 렌더링 검증 완료.
 
-🚀 Current: 추천 1~3 (전역 출처 표기, 2차전지/자동차 DB 확장, 텔레그램 속보 연동) 전체 완료 / 다음 작업 대기
+🚀 Current: Sprint 42 (서비스 전체 UI/UX 표준 템플릿 구축 및 전면 보수) 전체 완료 / 다음 작업 대기
 
 ✅ Recent: [코스피 출구 전략 달러인덱스(DXY) 전역 정합성 통일 & 타임머신 복기 & 7대 지표 모달 & 출구 시뮬레이터 & 텔레그램 /exit 경보]
 
