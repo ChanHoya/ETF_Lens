@@ -7,6 +7,7 @@ import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import SectorInsightReport, { InsightContent } from './SectorInsightReport';
 import SemiCycleDashboard from './SemiCycleDashboard';
+import DataSourceCaption from './common/DataSourceCaption';
 
 interface SemiChartProps {
     onOpenDetail?: (code: string) => void;
@@ -942,9 +943,13 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
                         )}
                         </div>
 
-                        <p className="text-[10px] text-gray-600 leading-relaxed">
-                            * TTM(최근 4분기 합산) 실제 기준 · 컨센서스/FnGuide 미사용 · 출처: Yahoo Finance · 투자 권유 아님. 음수 PER은 표시 제외.
+                        <p className="text-[9.5px] text-gray-500 leading-relaxed font-mono">
+                            * TTM(최근 4분기 합산) 실제 기준 · 컨센서스/FnGuide 미사용 · 음수 PER은 표시 제외.
                         </p>
+                        <DataSourceCaption
+                            sources={['Yahoo Finance API', '한국거래소(KRX)', '각 사 IR 실적공시']}
+                            updateFrequency="매 영업일 종가 기준"
+                        />
                     </div>
                 )}
                     </>
@@ -1408,6 +1413,10 @@ export default function SemiChart({ onOpenDetail }: SemiChartProps) {
                         </table>
                     </div>
                 )}
+                <DataSourceCaption
+                    sources={['한국거래소(KRX)', 'Yahoo Finance', '에프앤가이드(FnGuide)']}
+                    updateFrequency="실시간 시세 갱신"
+                />
             </div>
         </div>
     );

@@ -163,9 +163,9 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# DB 최신 시계열 메모리 캐시 (5분 TTL)
-_CACHED_DB_SERIES: List[Dict[str, Any]] = []
-_LAST_DB_FETCH_TIME: float = 0.0
+# DB 최신 시계열 메모리 캐시 (산업별, 5분 TTL)
+_CACHED_DB_SERIES: Dict[str, List[Dict[str, Any]]] = {}
+_LAST_DB_FETCH_TIME: Dict[str, float] = {}
 _DB_CACHE_TTL = 300.0
 
 
@@ -185,13 +185,16 @@ def get_combined_macro_series(industry: str = "semiconductor") -> List[Dict[str,
     """
     DB(industry_macro_series 테이블) 우선 조회 방식의 매크로 펀더멘털 시계열.
     1. 로컬/운영 DB에서 저장된 영구 시계열을 우선 로드.
-    2. DB 연결 실패 또는 데이터가 비어 있을 경우 기본 HISTORICAL_MACRO_SERIES 폴백.
+    2. DB 연결 실패 또는 데이터가 비어 있을 경우 기본 Fallback 시계열 반환.
     """
     global _CACHED_DB_SERIES, _LAST_DB_FETCH_TIME
     now = time.time()
 
-    if _CACHED_DB_SERIES and (now - _LAST_DB_FETCH_TIME < _DB_CACHE_TTL):
-        return _CACHED_DB_SERIES
+    cached = _CACHED_DB_SERIES.get(industry)
+    last_time = _LAST_DB_FETCH_TIME.get(industry, 0.0)
+
+    if cached and (now - last_time < _DB_CACHE_TTL):
+        return cached
 
     db_path = _get_sqlite_db_path()
     if db_path:
@@ -223,19 +226,21 @@ def get_combined_macro_series(industry: str = "semiconductor") -> List[Dict[str,
                     }
                     for r in rows
                 ]
-                _CACHED_DB_SERIES = result
-                _LAST_DB_FETCH_TIME = now
+                _CACHED_DB_SERIES[industry] = result
+                _LAST_DB_FETCH_TIME[industry] = now
                 return result
         except Exception as e:
-            logger.warning(f"Failed to read industry_macro_series from DB, falling back to static series: {e}")
+            logger.warning(f"Failed to read industry_macro_series for {industry} from DB: {e}")
 
     # Fallback
-    return HISTORICAL_MACRO_SERIES
+    if industry == "semiconductor":
+        return HISTORICAL_MACRO_SERIES
+    return []
 
 
 def append_macro_point(point: Dict[str, Any], industry: str = "semiconductor"):
     """
-    신규 월별 반도체 펀더멘털 지표를 DB(industry_macro_series)에 영구 저장(UPSERT).
+    신규 월별 펀더멘털 지표를 DB(industry_macro_series)에 영구 저장(UPSERT).
     동시에 메모리 캐시도 즉시 갱신.
     """
     global _CACHED_DB_SERIES, _LAST_DB_FETCH_TIME
@@ -279,14 +284,14 @@ def append_macro_point(point: Dict[str, Any], industry: str = "semiconductor"):
             conn.commit()
             conn.close()
         except Exception as e:
-            logger.warning(f"Failed to upsert macro point into DB: {e}")
+            logger.warning(f"Failed to upsert macro point for {industry} into DB: {e}")
 
     # 메모리 캐시 갱신
-    if _CACHED_DB_SERIES:
-        _CACHED_DB_SERIES = [p for p in _CACHED_DB_SERIES if p["date"] != d]
-        _CACHED_DB_SERIES.append(point)
-        _CACHED_DB_SERIES.sort(key=lambda x: x["date"])
-    _LAST_DB_FETCH_TIME = 0.0  # 캐시 무효화
+    if industry in _CACHED_DB_SERIES and _CACHED_DB_SERIES[industry]:
+        _CACHED_DB_SERIES[industry] = [p for p in _CACHED_DB_SERIES[industry] if p["date"] != d]
+        _CACHED_DB_SERIES[industry].append(point)
+        _CACHED_DB_SERIES[industry].sort(key=lambda x: x["date"])
+    _LAST_DB_FETCH_TIME[industry] = 0.0  # 캐시 무효화
 
 
 async def save_macro_point_async(point: Dict[str, Any], industry: str = "semiconductor") -> bool:

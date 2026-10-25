@@ -11,6 +11,7 @@ import SectorStatusGrid from '@/components/SectorStatusGrid';
 import SectorCorrelationHeatmap from '@/components/SectorCorrelationHeatmap';
 import NextLeaderScreener from '@/components/NextLeaderScreener';
 import SectorFlowGrid from '@/components/SectorFlowGrid';
+import DataSourceCaption from '@/components/common/DataSourceCaption';
 
 interface SectorAnalysisTabProps {
     onOpenDetail?: (code: string) => void;
@@ -187,6 +188,11 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                     </>
                 )}
 
+                <DataSourceCaption
+                    sources={['한국거래소(KRX)', 'S&P Dow Jones Indices', 'Nasdaq', '에프앤가이드(FnGuide)', 'Yahoo Finance']}
+                    updateFrequency="매 영업일 장 마감 후 갱신"
+                    className="pt-2 border-t border-white/5"
+                />
             </div>
         </div>
     );

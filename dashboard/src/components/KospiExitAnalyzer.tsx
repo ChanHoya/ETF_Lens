@@ -8,6 +8,7 @@ import { DollarModalContent, PerModalContent, CliModalContent, SentimentModalCon
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import RiskGaugeChart from './RiskGaugeChart';
 import ExitPortfolioSimulatorModal from './ExitPortfolioSimulatorModal';
+import DataSourceCaption from './common/DataSourceCaption';
 
 // Fallback Data for the 1-year Historical Trends (12 Months, 2025.11~2026.10)
 const mockDollarData = [
@@ -690,7 +691,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>DXY 101.5 돌파 시 달러 초강세 국면으로 ETF 리스크 관리가 권장됩니다.</p>
                     </div>
-                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: ICE (DXY), 서울외환시장 (USD/KRW)</div>
+                    <DataSourceCaption sources={['ICE (DXY)', '서울외환시장 (USD/KRW)']} align="right" className="mt-1" />
                 </div>
 
                 {/* Bento Card 3: Forward P/E */}
@@ -755,7 +756,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>PER 12.5배 터치 후 꺾이면 밸류에이션 한계 도달에 의한 매도 위험 신호입니다.</p>
                     </div>
-                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: 한국거래소(KRX), 에프앤가이드(FnGuide)</div>
+                    <DataSourceCaption sources={['한국거래소(KRX)', '에프앤가이드(FnGuide)']} align="right" className="mt-1" />
                 </div>
 
                 {/* Bento Card 4: OECD CLI */}
@@ -826,7 +827,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>2개월 연속 하락 국면 진입 시 국내 주식 비중을 단계적으로 하향 조절할 필요가 있습니다.</p>
                     </div>
-                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: OECD (Amplitude Adjusted MEI CLI), 세인트루이스 연준(FRED)</div>
+                    <DataSourceCaption sources={['OECD (Amplitude Adjusted MEI CLI)', '세인트루이스 연준(FRED)']} align="right" className="mt-1" />
                 </div>
 
                 {/* Bento Card 5: VIX & VKOSPI (Korean realized volatility proxy) */}
@@ -902,7 +903,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>KOSPI 20일 실현 변동성(VKOSPI 프록시)이 20% 초과 시 국내 변동성 급증 국면입니다.</p>
                     </div>
-                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: CBOE (VIX), 한국거래소 (VKOSPI)</div>
+                    <DataSourceCaption sources={['CBOE (VIX)', '한국거래소 (VKOSPI)']} align="right" className="mt-1" />
                 </div>
 
                 {/* Bento Card 6: Fear & Greed Index */}
@@ -965,7 +966,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>글로벌 탐욕(75배 이상) 진입 시 고점 경고, 극단적 공포(25 이하) 시 저점 매수 기회로 해독합니다.</p>
                     </div>
-                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: CNN Fear & Greed Index Model, Alternative.me</div>
+                    <DataSourceCaption sources={['CNN Fear & Greed Index Model', 'Alternative.me']} align="right" className="mt-1" />
                 </div>
 
                 {/* Bento Card 7: US 10Y-2Y Spread */}
@@ -1033,7 +1034,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>금리 역전(0% 미만) 이후 급격한 정상화(Steepening) 시 경기 침체가 임박한 강력한 매도 신호입니다.</p>
                     </div>
-                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: 미국 세인트루이스 연준 (FRED T10Y2Y)</div>
+                    <DataSourceCaption sources={['미국 세인트루이스 연준 (FRED T10Y2Y)']} align="right" className="mt-1" />
                 </div>
 
                 {/* Bento Card 8: US High-Yield OAS */}
@@ -1108,7 +1109,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>글로벌 신용 스프레드로, 5.0% 이상 돌파 시 신용 경색 우려가 높아지며 채권 위험관리가 필수적입니다.</p>
                     </div>
-                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: ICE BofA, 미국 세인트루이스 연준 (FRED BAMLH0A0HYM2)</div>
+                    <DataSourceCaption sources={['ICE BofA', '세인트루이스 연준 (FRED BAMLH0A0HYM2)']} align="right" className="mt-1" />
                 </div>
 
             </div>

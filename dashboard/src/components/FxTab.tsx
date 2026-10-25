@@ -16,6 +16,7 @@ import RegimeMilestones, { type Milestone } from './RegimeMilestones';
 import MarketDetailModal, { SeriesConfig, DetailDataPoint } from './MarketDetailModal';
 import DxyFormulaSection from './DxyFormulaSection';
 import FxTimingRadarWidget from './fx/FxTimingRadarWidget';
+import DataSourceCaption from './common/DataSourceCaption';
 
 type Row = {
     date: string; krw: number | null; dxy: number | null; us10: number | null; kr10: number | null; spread10: number | null;
@@ -807,9 +808,13 @@ export default function FxTab() {
 
                     <p className="flex items-start gap-1.5 text-[11px] text-gray-500 px-1">
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        출처: 한국은행 ECOS(국제수지), FRED(DEXKOUS·DGS10·IRLTLT01KRM156N·RBKRBIS·DEXJPUS·DEXCHUS·DEXTAUS·VIXCLS), Yahoo Finance(DX-Y.NYB·KRW=X·^KS11).
                         한국 금리·실질실효환율은 월간 지표라 최대 2개월 늦습니다. 판정 배지·근거 목록·적정 원/달러는 공개 지표로 만든 참고 정보이며 투자 권유가 아닙니다.
                     </p>
+                    <DataSourceCaption
+                        sources={['한국은행 ECOS(국제수지)', '세인트루이스 연준 FRED(환율·금리·BIS REER)', 'Yahoo Finance(DX-Y.NYB·KRW=X)']}
+                        updateFrequency="실시간 고시 및 영업일 20:00 반영"
+                        className="px-1"
+                    />
                 </>
             )}
 

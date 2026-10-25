@@ -19,6 +19,7 @@ import BrazilVsUsBondSimulator from './brazil/BrazilVsUsBondSimulator';
 import BrazilElectionCopomTracker from './brazil/BrazilElectionCopomTracker';
 import { API_BASE } from '@/lib/apiConfig';
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '@/lib/chartTheme';
+import DataSourceCaption from './common/DataSourceCaption';
 
 // ── 타입 ────────────────────────────────────────────────────────────────────
 interface Indicator {
@@ -796,6 +797,11 @@ export default function BrazilBondTab() {
                 ※ 본 화면은 투자 권유가 아닌 판단 보조용 정보입니다. 모든 수치는 기준일 스냅샷이며 이후 변동됩니다.
                 세금(IOF 포함)·환전 비용은 증권사·세무 전문가 확인이 필요합니다.
             </p>
+            <DataSourceCaption
+                sources={['브라질 중앙은행(BCB Copom)', '한국은행 ECOS', 'B3 증권거래소', 'FRED', '한-브라질 조세조약']}
+                updateFrequency="매 영업일 BRL/KRW 고시환율 및 국채 금리 반영"
+                className="pt-1"
+            />
         </div>
     );
 }

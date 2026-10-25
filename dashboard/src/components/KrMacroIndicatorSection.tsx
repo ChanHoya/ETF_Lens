@@ -15,6 +15,7 @@ import {
     CartesianGrid,
     ReferenceLine
 } from 'recharts';
+import DataSourceCaption from './common/DataSourceCaption';
 import {
     Activity,
     TrendingUp,
@@ -648,14 +649,18 @@ export default function KrMacroIndicatorSection() {
 
                     {/* 하단 국면 해설 배너 */}
                     {cyclePhase && (
-                        <div className={`mt-3 p-2.5 rounded-xl border ${cyclePhase.bg} text-xs flex items-center justify-between gap-2`}>
+                        <div className={`mt-3 p-2.5 rounded-xl border ${cyclePhase.bg} text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1.5`}>
                             <div className="flex items-center gap-2">
                                 <span className={`font-bold ${cyclePhase.color} shrink-0`}>
                                     ● {cyclePhase.name}
                                 </span>
                                 <span className="text-[11px] text-gray-300 line-clamp-1">{cyclePhase.desc}</span>
                             </div>
-                            <span className="text-[10px] text-gray-400 shrink-0 font-mono">출처: 통계청(KOSIS), OECD·세인트루이스연준(FRED)</span>
+                            <DataSourceCaption
+                                sources={['통계청(KOSIS)', 'OECD MEI CLI', '세인트루이스 연준(FRED)']}
+                                align="right"
+                                className="mt-0"
+                            />
                         </div>
                     )}
                 </div>
@@ -1293,7 +1298,12 @@ export default function KrMacroIndicatorSection() {
                                     : '월간 통관 실적 및 전년 동월 대비 성장률 추세'}
                             </span>
                         </div>
-                        <span className="text-[10px] text-gray-500 font-mono">출처: 관세청 · 한국은행 ECOS</span>
+                        <DataSourceCaption
+                            sources={['관세청 수출입무역통계', '한국은행 ECOS']}
+                            updateFrequency="매월 1일·11일·21일 공표"
+                            align="right"
+                            className="mt-0"
+                        />
                     </div>
                 </div>
 
@@ -1400,6 +1410,10 @@ export default function KrMacroIndicatorSection() {
                             ))
                         )}
                     </div>
+                    <DataSourceCaption
+                        sources={['관세청 6대 수출 통계', '에프앤가이드(FnGuide)', '한국거래소(KRX)']}
+                        updateFrequency="실시간 시세 및 수출 점유율 연동"
+                    />
                 </div>
 
 

@@ -43,6 +43,7 @@ import {
     Legend
 } from "recharts";
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from "@/lib/chartTheme";
+import DataSourceCaption from "./common/DataSourceCaption";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -1038,6 +1039,11 @@ export default function OilTab() {
                         </div>
                     </div>
                 )}
+                <DataSourceCaption
+                    sources={['미국 에너지정보청(EIA)', '미국 노동통계국(BLS)', '세인트루이스 연준(FRED)', 'S&P Global Platts']}
+                    updateFrequency="매주 수요일 원유재고 공표 / 실시간 시세"
+                    className="px-1"
+                />
             </div>
 
             {/* POPUP MODAL: 유가 지표 심층 분석 & 매크로(S&P500/Nasdaq/달러/CPI/PPI/PCE) 복합 오버레이 모달 */}
@@ -1454,11 +1460,15 @@ export default function OilTab() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-4 border-t border-white/10 bg-[#161724] flex items-center justify-between text-xs text-gray-400">
-                            <span>* 데이터 출처: 미국 에너지정보청(EIA), 미국 노동통계국(BLS), FRED 및 S&P Global</span>
+                        <div className="p-4 border-t border-white/10 bg-[#161724] flex flex-col sm:flex-row items-center justify-between gap-2">
+                            <DataSourceCaption
+                                sources={['미국 에너지정보청(EIA)', '미국 노동통계국(BLS)', 'FRED', 'S&P Global']}
+                                updateFrequency="2026.10 최신 월가 공표치"
+                                className="w-full sm:w-auto mt-0"
+                            />
                             <button
                                 onClick={() => setModalOpen(false)}
-                                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-all shadow-md"
+                                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-all shadow-md shrink-0 ml-auto"
                             >
                                 닫기
                             </button>

@@ -6,6 +6,7 @@ import {
     Tooltip as RechartsTooltip, Legend
 } from 'recharts';
 import { X, Calendar, TrendingUp, Info, Activity, ExternalLink } from 'lucide-react';
+import DataSourceCaption from './common/DataSourceCaption';
 
 export type SeriesConfig = {
     key: string;
@@ -40,6 +41,8 @@ export interface MarketDetailModalProps {
     currentStats?: { label: string; value: string | number; change?: string; subValue?: string; isPositive?: boolean; isAccent?: boolean }[];
     kpiCards?: { label: string; value: string | number; change?: string; subValue?: string; isPositive?: boolean; isAccent?: boolean }[];
     notice?: string;
+    sources?: string[];
+    updateFrequency?: string;
     defaultPeriod?: '6M' | '1Y' | '5Y' | '10Y';
     rebaseOnPeriod?: boolean;
     children?: React.ReactNode;
@@ -68,6 +71,8 @@ export default function MarketDetailModal({
     currentStats,
     kpiCards,
     notice,
+    sources,
+    updateFrequency = '실시간 시세 및 공식 공표치 반영',
     defaultPeriod = '1Y',
     rebaseOnPeriod = false,
     children,
@@ -465,13 +470,15 @@ export default function MarketDetailModal({
                 </div>
 
                 {/* 5. Footer */}
-                <div className="px-5 py-3 border-t border-white/10 bg-[#161926]/90 flex items-center justify-between">
-                    <span className="text-[10px] text-gray-500">
-                        * 원천: FRED, 야후 파이낸스, 한국은행 ECOS 및 S&P Global 공식 공시
-                    </span>
+                <div className="px-5 py-2.5 border-t border-white/10 bg-[#161926]/90 flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <DataSourceCaption
+                        sources={sources || ['미국 세인트루이스 연준(FRED)', '한국은행 ECOS', 'Yahoo Finance', 'S&P Global']}
+                        updateFrequency={updateFrequency}
+                        className="w-full sm:w-auto mt-0"
+                    />
                     <button
                         onClick={onClose}
-                        className="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-bold text-gray-200 transition-colors"
+                        className="px-4 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-bold text-gray-200 transition-colors ml-auto"
                     >
                         닫기
                     </button>

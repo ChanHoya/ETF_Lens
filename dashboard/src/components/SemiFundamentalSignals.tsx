@@ -28,6 +28,7 @@ import {
     Tooltip as RechartsTooltip,
 } from "recharts";
 import { API_BASE } from "../lib/apiConfig";
+import DataSourceCaption from "./common/DataSourceCaption";
 
 // 기본 정적 Fallback 데이터 (최신 2026-10 기준 동기화)
 
@@ -851,6 +852,11 @@ export default function SemiFundamentalSignals({
                     <p className="text-[9px] text-gray-500 leading-relaxed">
                         {currentSignalsData?.footnote}
                     </p>
+                    <DataSourceCaption
+                        sources={['통계청 KOSIS(광공업동향)', '관세청 수출입무역통계', '한국은행 ECOS', '산업통상자원부']}
+                        updateFrequency="매월 1일·월말 공표"
+                        className="mt-1"
+                    />
                 </div>
             </div>
 
@@ -1166,6 +1172,11 @@ export default function SemiFundamentalSignals({
                                     • <strong className="text-gray-200">정상 호황 판정 원리</strong>: 7개 지표 중 수출액(20%), 단가지수(15%) 2개 지표가 호황(+1.0)이고 나머지 5개가 중립(0.0)으로 가중합산 종합 점수 <span className="text-emerald-300 font-bold">+0.40 ~ +0.46</span> 수준의 <span className="text-emerald-300 font-bold">[정상 호황]</span>에 도달합니다.
                                 </p>
                             </div>
+                            <DataSourceCaption
+                                sources={['Bulliza 원본 공표치', '통계청 KOSIS', '관세청 수출입통계']}
+                                updateFrequency="2026.10 최신 검증"
+                                className="px-1"
+                            />
                         </div>
 
                         <div className="mt-4 pt-3 border-t border-white/10 flex justify-end shrink-0">

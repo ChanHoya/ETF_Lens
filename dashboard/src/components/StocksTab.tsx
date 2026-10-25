@@ -13,6 +13,7 @@ import { useCachedOverview } from '@/lib/useCachedOverview';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import RegimeMilestones, { type Milestone } from './RegimeMilestones';
 import MarketDetailModal, { SeriesConfig, DetailDataPoint } from './MarketDetailModal';
+import DataSourceCaption from './common/DataSourceCaption';
 
 type IdxKey = 'kospi' | 'spx' | 'ndx';
 type Card = {
@@ -486,10 +487,14 @@ export default function StocksTab() {
 
                     <p className="flex items-start gap-1.5 text-[11px] text-gray-500 px-1">
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        출처: Yahoo Finance(^KS11·^GSPC·^IXIC 주간), FRED(원/달러 DEXKOUS·미 10년 DGS10), multpl.com(S&P500 PER·CAPE·이익수익률).
                         최신 — KOSPI {dd.kospi ?? '-'}, S&P500 {dd.spx ?? '-'}, 밸류에이션 {dd.pe?.slice(0, 7) ?? '-'}.
                         KOSPI PER은 무료 이력 데이터가 없어 제외했습니다. 단기 과열·출구 신호는 시장 개요의 &lsquo;코스피 출구 전략 모니터링&rsquo;을 참고하세요. 투자 권유가 아닙니다.
                     </p>
+                    <DataSourceCaption
+                        sources={['한국거래소(KRX ^KS11)', 'S&P 다우존스(^GSPC)', '나스닥(^IXIC)', '세인트루이스 연준(FRED)', 'multpl.com']}
+                        updateFrequency="실시간 시세 및 장 마감 후 정산"
+                        className="px-1"
+                    />
 
                     {modalConfig && (
                         <MarketDetailModal

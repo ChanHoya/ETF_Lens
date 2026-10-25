@@ -6,6 +6,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import { API_BASE } from '../lib/apiConfig';
 import ChartLoadingPlaceholder from './ChartLoadingPlaceholder';
 import SectorInsightReport, { InsightContent } from './SectorInsightReport';
+import DataSourceCaption from './common/DataSourceCaption';
 
 interface SpaceChartProps {
     onOpenDetail?: (code: string) => void;
@@ -1052,6 +1053,10 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                         </table>
                     </div>
                 )}
+                <DataSourceCaption
+                    sources={['SEC EDGAR', 'NASA 공시', 'Yahoo Finance', '한국거래소(KRX)']}
+                    updateFrequency="실시간 시세 및 분기 공시"
+                />
             </div>
 
             {/* Divider */}
@@ -1070,6 +1075,10 @@ export default function SpaceChart({ onOpenDetail }: SpaceChartProps) {
                 activeTab={activeInsightTab}
                 onTabChange={(id) => setActiveInsightTab(id as any)}
                 fallback={SPACE_INSIGHT_FALLBACK}
+            />
+            <DataSourceCaption
+                sources={['글로벌 우주항공 방산기업 분기보고서', 'KARI(한국항공우주연구원)', 'Euroconsult']}
+                updateFrequency="분기 정기 업데이트"
             />
         </div>
     );

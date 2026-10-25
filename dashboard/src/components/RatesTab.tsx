@@ -15,6 +15,7 @@ import RegimeMilestones, { type Milestone } from './RegimeMilestones';
 import { useCachedOverview } from '@/lib/useCachedOverview';
 import MarketDetailModal, { SeriesConfig, DetailDataPoint } from './MarketDetailModal';
 import FedWatchRateProbabilityWidget from './rates/FedWatchRateProbabilityWidget';
+import DataSourceCaption from './common/DataSourceCaption';
 
 type Change = { date: string; from: number; to: number; bp: number } | null;
 type Meeting = { date: string; d_day: number } | null;
@@ -885,10 +886,14 @@ export default function RatesTab() {
 
                     <p className="flex items-start gap-1.5 text-[11px] text-gray-500 px-1">
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        출처: 한국은행 ECOS(기준금리·국고채·소비자물가), FRED(연준 정책금리·미국채·장단기 금리차·USREC·ECB·CPI).
                         최신 공표일 — 한국 기준금리·국고채 {dd.kr_base ?? '-'}, 미국채 {dd.us10y ?? '-'}, 한국 CPI {dd.kr_cpi?.slice(0, 7) ?? '-'}, 미국 CPI {dd.us_cpi?.slice(0, 7) ?? '-'}.
                         회의 일정은 한은·연준 공표 일정 기준이며, 시장 내재 기대는 국채 1년물로 계산한 근사치입니다. 투자 권유가 아닙니다.
                     </p>
+                    <DataSourceCaption
+                        sources={['한국은행 ECOS(기준금리·국고채)', '세인트루이스 연준 FRED(연준 정책금리·미국채·장단기 금리차)', 'CME FedWatch']}
+                        updateFrequency="영업일 20:00 KST / 실시간 반영"
+                        className="px-1"
+                    />
 
                     {modalConfig && (
                         <MarketDetailModal

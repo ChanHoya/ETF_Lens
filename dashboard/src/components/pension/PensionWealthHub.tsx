@@ -25,6 +25,7 @@ import MonteCarloRetirementSimulator from '@/components/pension/MonteCarloRetire
 import YearEndTaxSettlementPlanner from '@/components/pension/YearEndTaxSettlementPlanner';
 import DividendTaxShieldPlanner from '@/components/pension/DividendTaxShieldPlanner';
 import { STANDARD_TOOLTIP_PROPS, STANDARD_TOOLTIP_STYLE } from '@/lib/chartTheme';
+import DataSourceCaption from '@/components/common/DataSourceCaption';
 
 function PensionWealthHubInner() {
   const [activeSubTab, setActiveSubTab] = useState<'tax' | 'nps' | 'withdrawal' | 'shield' | 'isa_withdrawal' | 'monte_carlo' | 'dividend_shield'>('tax');
@@ -992,6 +993,11 @@ function PensionWealthHubInner() {
         </div>
       )}
 
+      <DataSourceCaption
+        sources={['국세청(소득세법 시행령)', '국민연금공단(NPS)', '국민건강보험공단', '한국투자증권 연금세제 가이드']}
+        updateFrequency="2026 세법 개정안 및 법정 연금공제율 준수"
+        className="px-2 pt-2 border-t border-white/5"
+      />
     </div>
   );
 }

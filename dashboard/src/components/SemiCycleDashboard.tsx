@@ -52,6 +52,7 @@ import {
 import { API_BASE } from "../lib/apiConfig";
 
 import SemiFundamentalSignals from "./SemiFundamentalSignals";
+import DataSourceCaption from "./common/DataSourceCaption";
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from "../lib/chartTheme";
 
 interface SemiCycleDashboardProps {
@@ -1072,6 +1073,10 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                             <div className="mt-4 pt-3 border-t border-white/5 text-[11px] text-gray-400">
                                 💡 장비/소부장 발주가 정점에 달하며 이익이 폭발하는 구간으로, 레버리지 유지 및 이익 극대화 전략이 유효합니다.
                             </div>
+                            <DataSourceCaption
+                                sources={['관세청 품목별 수출입통계', '통계청 광공업생산지수(가동률·재고율)', '산업통상자원부']}
+                                updateFrequency="매월 초 공표"
+                            />
                         </div>
                     </div>
                 </div>
@@ -1182,6 +1187,10 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                             </div>
                         ))}
                     </div>
+                    <DataSourceCaption
+                        sources={['글로벌 빅테크(MSFT·GOOGL·AMZN·META) SEC 10-Q 공시', 'Bloomberg', 'TSMC IR']}
+                        updateFrequency="분기 실적 발표 시"
+                    />
                 </div>
             )}
 
@@ -1258,6 +1267,10 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                             </div>
                         ))}
                     </div>
+                    <DataSourceCaption
+                        sources={['한국거래소(KRX)', '에프앤가이드(FnGuide)', 'Yahoo Finance', '각 사 IR 실적 공시']}
+                        updateFrequency="매 영업일 종가 기준"
+                    />
                 </div>
             )}
 
@@ -1360,6 +1373,10 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                             <p className="text-xs text-white font-semibold mt-1">{strategyData.asset_allocation_model?.defensive}</p>
                         </div>
                     </div>
+                    <DataSourceCaption
+                        sources={['한국거래소(KRX)', '금융투자협회 전자공시', '각 자산운용사(미래에셋·삼성·한국투자·KB)']}
+                        updateFrequency="매 영업일 기준"
+                    />
                 </div>
             )}
         </div>

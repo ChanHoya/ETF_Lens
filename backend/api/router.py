@@ -3741,6 +3741,19 @@ async def get_semi_industries_summary(force: bool = Query(False)):
     return await SemiCycleEngine.get_industries_summary(force=force)
 
 
+@router.get("/macro/industry-series")
+async def get_industry_macro_series(industry: str = Query("semiconductor", description="업종 코드 (semiconductor, battery, automobile)")):
+    """DB에 영구 적재된 업종별 펀더멘털 공표통계 10개년 시계열 조회 (DB-First)."""
+    from core.macro_historical_data import get_combined_macro_series
+    series = get_combined_macro_series(industry=industry)
+    return {
+        "industry": industry,
+        "count": len(series),
+        "latest": series[-1] if series else None,
+        "series": series,
+    }
+
+
 @router.get("/space-chart")
 async def get_space_chart_data(etf: str = None, db: AsyncSession = Depends(get_db)):
     """

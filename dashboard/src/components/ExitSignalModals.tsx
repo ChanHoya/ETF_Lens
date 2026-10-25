@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 import { Search } from 'lucide-react';
 import { API_BASE } from '../lib/apiConfig';
 import { STANDARD_TOOLTIP_STYLE, STANDARD_LEGEND_WRAPPER_STYLE, useChartHighlight } from '../lib/chartTheme';
+import DataSourceCaption from './common/DataSourceCaption';
 
 const useVisualSort = (data: any[], keys: string[]) => {
     return React.useMemo(() => {
@@ -210,12 +211,11 @@ export function DollarModalContent() {
                 })()}
             </div>
 
-            {/* 데이터 소스 통합 명기 */}
-            <div className="mt-2 text-right">
-                <span className="text-[9px] text-gray-500 font-mono tracking-tight">
-                    출처: ICE (달러인덱스 DXY), 서울외환시장 (USD/KRW), 한국거래소 (KOSPI), S&P 다우존스 (S&P 500)
-                </span>
-            </div>
+            <DataSourceCaption
+                sources={['ICE (달러인덱스 DXY)', '서울외환시장 (USD/KRW)', '한국거래소 (KOSPI)', 'S&P 다우존스']}
+                align="right"
+                className="mt-2"
+            />
         </div>
     );
 }
@@ -240,9 +240,11 @@ export function PerModalContent() {
             </div>
             <div className="mt-2 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-500 shrink-0 px-1 gap-1">
                 <span>KOSPI 및 주요 대표 종목별 1년 포워드 PER 궤적입니다.</span>
-                <span className="text-[9px] font-mono text-gray-400">
-                    출처: 한국거래소(KRX), 에프앤가이드(FnGuide 컨센서스)
-                </span>
+                <DataSourceCaption
+                    sources={['한국거래소(KRX)', '에프앤가이드(FnGuide 컨센서스)']}
+                    align="right"
+                    className="mt-0"
+                />
             </div>
         </div>
     );
@@ -587,12 +589,11 @@ export function CliModalContent() {
                 </p>
             </div>
 
-            {/* 데이터 소스 통합 명기 */}
-            <div className="mt-1 text-right">
-                <span className="text-[9px] text-gray-500 font-mono tracking-tight">
-                    출처: OECD (Amplitude Adjusted MEI CLI), 세인트루이스 연준(FRED), 한국거래소(KRX)
-                </span>
-            </div>
+            <DataSourceCaption
+                sources={['OECD (Amplitude Adjusted MEI CLI)', '세인트루이스 연준(FRED)', '한국거래소(KRX)']}
+                align="right"
+                className="mt-1"
+            />
         </div>
     );
 }
@@ -819,12 +820,11 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                 )}
             </div>
 
-            {/* 데이터 소스 통합 명기 */}
-            <div className="mt-1 text-right">
-                <span className="text-[9px] text-gray-500 font-mono tracking-tight">
-                    출처: CBOE (VIX), 한국거래소 (KOSPI 종가 기반 20일 변동성 연율화 Proxy), CNN (Fear & Greed Index)
-                </span>
-            </div>
+            <DataSourceCaption
+                sources={['CBOE (VIX)', '한국거래소 (KOSPI 변동성 Proxy)', 'CNN (Fear & Greed Index)']}
+                align="right"
+                className="mt-1"
+            />
         </div>
     );
 }
@@ -1167,12 +1167,11 @@ export function HySpreadModalContent() {
                 </div>
             </div>
 
-            {/* 데이터 소스 통합 명기 */}
-            <div className="mt-1 text-right">
-                <span className="text-[9px] text-gray-500 font-mono tracking-tight">
-                    출처: ICE BofA, 미국 세인트루이스 연준 (FRED BAMLH0A0HYM2: US High Yield OAS)
-                </span>
-            </div>
+            <DataSourceCaption
+                sources={['ICE BofA', '미국 세인트루이스 연준 (FRED BAMLH0A0HYM2: High Yield OAS)']}
+                align="right"
+                className="mt-1"
+            />
         </div>
     );
 }

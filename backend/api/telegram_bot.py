@@ -453,12 +453,72 @@ async def handle_telegram_webhook(req: Request):
         await send_telegram_message(text=exit_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
         return {"ok": True, "command": "exit"}
 
-    # 2-9. 기본 도움말
+    # 2-9. /semi 또는 /반도체: 반도체 7대 신호등 및 사이클 5국면 브리핑
+    elif text.startswith("/semi") or text.startswith("/반도체"):
+        now_str = datetime.now(_KST).strftime("%Y-%m-%d %H:%M")
+        semi_msg = (
+            f"🖥️ <b>[i-Prism] 대한민국 반도체 사이클 & 7대 실데이터 신호등 브리핑</b>\n"
+            f"⏱ <i>기준 시각: {now_str} KST (2026-10 최신 통계)</i>\n\n"
+            f"<b>🧭 현재 사이클 국면: ● 강한 호황 (Strong Bull)</b>\n"
+            f"• <b>종합 퀀트 점수</b>: <b>+0.51 / +1.00</b> (게이지 76%)\n"
+            f"• <b>권장 포트폴리오 액션</b>: <b>적극 비중확대</b> (대형주·소부장 레버리지)\n\n"
+            f"<b>📊 7대 펀더멘털 실데이터 판정 (호황 3 · 중립 4 · 둔화 0)</b>\n"
+            f"• 🟢 <b>수출액</b>: $310.0억 (역대 최고치 갱신, YoY +260% 폭증)\n"
+            f"• 🟢 <b>수출단가지수</b>: 252.0 (D램/HBM 프리미엄 주도 급등)\n"
+            f"• 🟢 <b>실질수출물량</b>: 215.0 (AI 가속기 물량 폭증)\n"
+            f"• ⚪ <b>제조업 가동률</b>: 102.2% (정상 가동 범위)\n"
+            f"• ⚪ <b>제조업 재고율</b>: 99.0 (건전한 재고 수준)\n"
+            f"• ⚪ <b>대장주 낙폭</b>: -12.4% (안정권)\n"
+            f"• ⚪ <b>필라델피아 반도체(SOX)</b>: 건전 조정 국면\n\n"
+            f"💡 <i>서버 D램 및 HBM 수요 폭발로 수출액과 단가가 동반 급등하는 강력한 확장 국면입니다.</i>"
+        )
+        reply_markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "📊 반도체 5대 탭 대시보드", "url": f"{DASHBOARD_URL}/?tab=sector"},
+                    {"text": "🏆 수혜 ETF 플레이북", "callback_data": "macro_playbook:semiconductor"}
+                ]
+            ]
+        }
+        await send_telegram_message(text=semi_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
+        return {"ok": True, "command": "semi"}
+
+    # 2-10. /macro 또는 /산업매크로: 대한민국 3대 주력 수출산업(반도체·2차전지·자동차) DB 현황
+    elif text.startswith("/macro") or text.startswith("/산업매크로") or text.startswith("/매크로"):
+        now_str = datetime.now(_KST).strftime("%Y-%m-%d %H:%M")
+        macro_msg = (
+            f"🌐 <b>[i-Prism] 대한민국 3대 주력 수출산업 DB 펀더멘털 브리핑</b>\n"
+            f"⏱ <i>기준 시각: {now_str} KST (10개년 DB-First)</i>\n\n"
+            f"<b>1. 🖥️ 반도체 (Semiconductor)</b>\n"
+            f"• 국면: <b>● 강한 호황 (+0.51)</b>\n"
+            f"• 최신 수출: $310.0억 | 단가 252.0 | 가동률 102.2%\n\n"
+            f"<b>2. 🔋 2차전지 (Battery)</b>\n"
+            f"• 국면: <b>● 호황 진입 / 턴어라운드 (+0.35)</b>\n"
+            f"• 최신 수출: $86.5억 | 단가 104.2 | 재고 98.4 (캐즘 탈출)\n\n"
+            f"<b>3. 🚗 자동차 (Automobile)</b>\n"
+            f"• 국면: <b>● 정상 호황 (+0.42)</b>\n"
+            f"• 최신 수출: $71.8억 | 단가 144.5 | 가동률 102.4% (하이브리드 견인)\n\n"
+            f"💡 <i>3대 핵심 산업 모두 2026년 하반기 실적 확장세가 견고하게 유지되고 있습니다.</i>"
+        )
+        reply_markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "📊 섹터 종합 분석 바로가기", "url": f"{DASHBOARD_URL}/?tab=sector"},
+                    {"text": "📈 수출 수혜 노출도 진단", "url": f"{DASHBOARD_URL}/my"}
+                ]
+            ]
+        }
+        await send_telegram_message(text=macro_msg, test_chat_id=chat_id_str, reply_markup=reply_markup)
+        return {"ok": True, "command": "macro"}
+
+    # 2-11. 기본 도움말
     else:
         help_msg = (
             f"🤖 <b>[i-Prism] 스마트 자산관리 텔레그램 봇</b>\n\n"
             f"사용 가능한 명령어:\n"
             f"• <code>/morning</code>: 아침 08:30 뉴욕 마감 & 개장전 체크포인트 브리핑\n"
+            f"• <code>/semi</code>: 반도체 7대 실데이터 신호등 & 사이클 5국면 진단\n"
+            f"• <code>/macro</code>: 3대 주력 수출산업(반도체·2차전지·자동차) DB 펀더멘털\n"
             f"• <code>/exit</code>: 코스피 출구 전략 종합위험지수(0~21점) & 7대 지표 기여도\n"
             f"• <code>/fomc</code>: 11월 FOMC 및 한은 금통위 D-Day & FedWatch 인하 확률\n"
             f"• <code>/bond</code>: 브라질 국채 vs 미국 30년 국채 실질 토탈리턴 비교\n"

@@ -23,6 +23,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { getApiBase } from '@/lib/apiConfig';
+import DataSourceCaption from './common/DataSourceCaption';
 
 export interface DistrictItem {
   code: string;
@@ -834,6 +835,11 @@ export default function SeoulDistrictHeatmap() {
           </div>
         </div>
       </div>
+      <DataSourceCaption
+        sources={['국토교통부 실거래가 공개시스템(MOLIT OpenAPI)', '서울 열린데이터광장', '한국부동산원']}
+        updateFrequency="매주 월요일 04:30 KST 정기 동기화"
+        className="px-2 mt-3"
+      />
     </div>
   );
 }

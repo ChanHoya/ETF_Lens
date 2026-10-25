@@ -57,6 +57,22 @@ async def sync_semiconductor_macro_stats() -> Optional[Dict[str, Any]]:
         # 엔진 캐시 무효화로 즉시 최신 지표 반영
         SemiCycleEngine.clear_cache()
         print(f"[{datetime.now()}] [Semi Stats Sync] Appended new dynamic macro point: {new_point}")
+
+        # 텔레그램 속보 자동 발송 연계
+        try:
+            from core.notifier import send_telegram_message
+            alert_text = (
+                f"🖥️ <b>[i-Prism 속보] 반도체 펀더멘털 공표 통계 갱신 ({current_year_month})</b>\n\n"
+                f"• <b>수출액</b>: ${new_point['export_amt']}억\n"
+                f"• <b>단가지수</b>: {new_point['unit_price']}\n"
+                f"• <b>수출물량</b>: {new_point['volume']}\n"
+                f"• <b>가동률</b>: {new_point['cap_util']}%\n"
+                f"• <b>재고지수</b>: {new_point['inventory']}\n\n"
+                f"DB 영구 저장 및 퀀트 사이클 시계 갱신이 완료되었습니다."
+            )
+            await send_telegram_message(text=alert_text)
+        except Exception as tel_err:
+            print(f"[Semi Stats Sync] Telegram alert skipped: {tel_err}")
     else:
         print(f"[{datetime.now()}] [Semi Stats Sync] Data already up-to-date ({last_date})")
 

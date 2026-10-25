@@ -12,6 +12,7 @@ import MarketDetailModal, { SeriesConfig, DetailDataPoint } from './MarketDetail
 import MacroPortfolioSensitivityWidget from './MacroPortfolioSensitivityWidget';
 import MacroHeroCompass from './MacroHeroCompass';
 import MacroConsensusSurpriseModal from './macro/MacroConsensusSurpriseModal';
+import DataSourceCaption from './common/DataSourceCaption';
 
 type EventItem = {
     kind: 'bok' | 'fomc' | 'event'; date: string; d_day: number; title: string; status: 'upcoming' | 'pending' | 'done';
@@ -821,7 +822,12 @@ function LaneTimeline({ t }: { t: Overview['timeline'] }) {
                     <ul className="mt-2 flex flex-wrap gap-1.5">
                         {s.drivers.map(x => <li key={x} className="text-[11px] text-gray-300 bg-white/5 border border-white/5 rounded-md px-2 py-0.5">{x}</li>)}
                     </ul>
-                    {s.source && <p className="text-[10px] text-gray-500 mt-1.5">출처: {s.source}</p>}
+                    {s.source && (
+                        <div className="mt-1.5 flex items-center gap-1 text-[9.5px] font-mono text-slate-500">
+                            <span className="font-semibold text-slate-400">Source.</span>
+                            <span>{s.source}</span>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -999,6 +1005,11 @@ export default function MacroTab() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                         환율·금리·주식 탭과 같은 데이터(FRED·한국은행 ECOS·Yahoo·multpl)를 결합한 참고 분석입니다. 유사 국면은 패턴 비교일 뿐 예측이 아니며, 자산별 근거와 AI 코멘트는 투자 권유가 아닙니다.
                     </p>
+                    <DataSourceCaption
+                        sources={['미국 세인트루이스 연준(FRED)', '한국은행 ECOS', 'Yahoo Finance', 'CBOE(VIX)', 'multpl.com']}
+                        updateFrequency="매일 20:00 KST / 실시간 반영"
+                        className="px-1"
+                    />
                 </>
             )}
         </div>

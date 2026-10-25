@@ -42,6 +42,7 @@ import MajorComplexTimeseriesModal from './MajorComplexTimeseriesModal';
 import MyApartmentPortfolioWidget from './MyApartmentPortfolioWidget';
 import MortgageRateRefinancingPlanner from './realestate/MortgageRateRefinancingPlanner';
 import HomeUpgradeDsrCalculator from './realestate/HomeUpgradeDsrCalculator';
+import DataSourceCaption from './common/DataSourceCaption';
 
 
 
@@ -553,7 +554,7 @@ export default function RealEstateTab() {
               </h3>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              2024년 1월 ~ 2026년 10월 현재 (단위: 매물 천 건, 거래량 천 건 | 출처: 서울부동산정보광장·아실)
+              2024년 1월 ~ 2026년 10월 현재 (단위: 매물 천 건, 거래량 천 건)
             </p>
           </div>
 
@@ -665,6 +666,11 @@ export default function RealEstateTab() {
             <strong>최신 데이터 인사이트:</strong> 2024년 7월 정책모기지 막차 수요(8,900건) 이후 9월 스트레스 DSR 2단계 여파로 2,000건대 급락을 겪었습니다. 이후 2025년 내내 저점 횡보(2~3천건대)를 거쳐 2026년 현재까지도 매물이 8.3만 건 수준에 지속 적체된 채 월 거래량 3~4천 건대에 갇혀 있는 전형적인 '거래절벽 & 환금성 저하' 국면이 이어지고 있습니다.
           </span>
         </div>
+        <DataSourceCaption
+          sources={['서울부동산정보광장', '국토교통부 실거래가 공개시스템', '아실(ASIL)']}
+          updateFrequency="매일 집계 및 월간 확정"
+          className="px-1"
+        />
       </div>
 
       {/* S22: 서울 25개 자치구별 실거래가 & 전세가율 히트맵 / 갭투자 위험 레이더 */}

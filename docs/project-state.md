@@ -2,20 +2,20 @@
 
 > **Keep this file under 200 lines.**
 ## Quick Summary
-Base: Semiconductor Macro Architecture & Multi-Tab Refresh
-✅ Recent: [반도체 특화분석 전 탭 2026-10 현행화 및 DB 영구 저장(DB-First) 아키텍처 전면 개편]
-1. [반도체 펀더멘털 공표통계 시계열 2026-10 현행화 및 전 탭 동기화]:
-   - 2026-08에 멈춰있던 반도체 수출액(310.0억$), 단가지수(252.0), 물량(215.0), 가동률(102.2), 재고(99.0) 등 공표통계를 2026-10 최신 월로 현행화.
-   - `SemiCycleDashboard.tsx` 상단 '데이터 갱신' 버튼을 통해 7대 실데이터 신호등, 종합 대시보드, CapEx 트래커, 밸류에이션 맵, ETF 매트릭스 등 5개 전 탭 일괄 갱신 파이프라인 구축.
-   - `SemiFundamentalSignals.tsx` 자체 '데이터 갱신' 버튼 신설 및 Fallback 데이터 최신화.
-2. [하드코딩 제거 및 DB-First 영구 저장 아키텍처 전면 개편 (`models.py`, `macro_historical_data.py`, `semi_stats_sync.py`)]:
-   - 소스코드 내 하드코딩 리스트 의존을 탈피하고, 신규 DB 테이블 `industry_macro_series`를 구축하여 10개년 122개 월차 시계열을 영구 시드 마이그레이션 완료.
-   - `get_combined_macro_series()`를 DB-First 조회 구조로 전면 전환 (DB 우선 SELECT, 5분 고속 캐싱, 안전 Fallback 체계).
-   - 신규 월 데이터 발생 시 파이썬 메모리가 아닌 DB 테이블에 `ON CONFLICT DO UPDATE`로 영구 UPSERT 저장.
-   - 스케줄러 및 `force=true` 호출 시 DB 누락분을 감지해 자동 INSERT/동기화하도록 연동하여, 향후 코드 수정 없이도 DB 중심 자동 현행화 보장.
-3. [무결성 검증 완료]: 백엔드 pytest 19/19 100% 통과, Next.js 16.1.6 최적화 빌드 완료, 브라우저 렌더링 및 동기화 토스트 검증 완료.
+Base: Universal Micro Data Source Attribution & Multi-Industry DB Series & Telegram Alert
+✅ Recent: [추천 1~3 완료 — 전역 마이크로 데이터 출처 표기 표준화 & 2차전지·자동차 DB 시계열 확장 & 텔레그램 속보 연계]
+1. [전역 데이터 출처(Source Attribution) 마이크로 캡션 표준화]:
+   - 기존 폰트보다 더 작고 세련된 `text-[9.5px]` font-mono 기반 공통 마이크로 캡션 컴포넌트(`DataSourceCaption.tsx`)를 신설.
+   - 시장동향 5대 탭(종합/환율/금리/주식/유가), 섹터분석(특화분석 5개 탭, 소부장, 우주항공, 섹터 전역), 코스피 출구 전략(7대 지표 카드 및 6개 모달), 부동산 탭, 연금·절세 허브, 브라질 국채 탭, 공통 모달(`MarketDetailModal`) 등 모든 화면의 그래프 및 테이블 하단에 데이터 출처와 갱신 주기를 빈틈없이 명기 완료.
+2. [핵심 수출 업종(2차전지·자동차) 10개년 펀더멘털 DB 시계열 확장]:
+   - `industry_macro_series` DB 테이블에 2차전지(`battery`) 및 자동차(`automobile`) 10개년(2016.09~2026.10, 각 122개 월차, 총 244개 레코드) 공표 통계 시계열(수출액, 단가, 물량, 가동률, 재고) 영구 적재 완료.
+   - 백엔드 `get_combined_macro_series(industry)` 다중 산업 캐시 분리 및 신규 엔드포인트 `GET /api/v1/macro/industry-series` 신설.
+3. [신규 지표 갱신 감지 시 텔레그램 속보 자동 알림 및 명령어 연동]:
+   - `telegram_bot.py`에 `/semi` (반도체 7대 지표 및 5국면 브리핑) 및 `/macro` (반도체·2차전지·자동차 3대 주력산업 DB 펀더멘털 브리핑) 명령어 추가.
+   - `semi_stats_sync.py` 스케줄러에 신규 월차 공표치 감지 시 텔레그램 속보 자동 발송 로직 연계 완료.
+4. [전체 검증 완료]: 백엔드 신규 및 회귀 pytest 25건 100% 통과, Next.js 프로덕션 빌드 완료, 브라우저 실측 렌더링 검증 완료.
 
-🚀 Current: 반도체 특화분석 전 탭 2026-10 현행화 및 DB-First 아키텍처 개편 완료 / 다음 작업 대기
+🚀 Current: 추천 1~3 (전역 출처 표기, 2차전지/자동차 DB 확장, 텔레그램 속보 연동) 전체 완료 / 다음 작업 대기
 
 ✅ Recent: [코스피 출구 전략 달러인덱스(DXY) 전역 정합성 통일 & 타임머신 복기 & 7대 지표 모달 & 출구 시뮬레이터 & 텔레그램 /exit 경보]
 
