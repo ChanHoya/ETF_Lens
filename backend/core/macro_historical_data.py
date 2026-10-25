@@ -1,12 +1,13 @@
+# 대한민국 반도체 및 주요 산업 펀더멘털 공표통계 시계열 및 DB(industry_macro_series) 연동 모듈
 """
-대한민국 반도체 7대 펀더멘털 실데이터 시계열 (2016.01 ~ 2026.08)
+대한민국 반도체 7대 펀더멘털 실데이터 시계열 (2016.01 ~ 2026.10)
 출처:
 - 관세청 무역통계 (K-stat): 월별 반도체 수출액 (단위: 억 달러)
 - 한국은행 경제통계시스템 (ECOS): 반도체 수출단가지수 & 실질수출물량지수 (2020=100)
 - 통계청 KOSIS (광업제조업조사): 반도체 제조업 가동률지수 & 재고지수 (2020=100)
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 # 120개월 (2016.09 ~ 2026.08) 실제 통계 시계열
 # [수출액($억), 수출단가지수, 실질수출물량지수, 가동률지수, 재고지수]
@@ -154,22 +155,179 @@ HISTORICAL_MACRO_SERIES: List[Dict[str, Any]] = [
     {"date": "2026-10", "export_amt": 310.0, "unit_price": 252.0, "volume": 215.0, "cap_util": 102.2, "inventory": 99.0},
 ]
 
-_DYNAMIC_SERIES: List[Dict[str, Any]] = []
+import os
+import sqlite3
+import logging
+import time
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+# DB 최신 시계열 메모리 캐시 (5분 TTL)
+_CACHED_DB_SERIES: List[Dict[str, Any]] = []
+_LAST_DB_FETCH_TIME: float = 0.0
+_DB_CACHE_TTL = 300.0
 
 
-def get_combined_macro_series() -> List[Dict[str, Any]]:
-    """기본 정적 HISTORICAL_MACRO_SERIES와 동적/DB 최신 지표를 결합하여 반환."""
-    if _DYNAMIC_SERIES:
-        merged = {r["date"]: dict(r) for r in HISTORICAL_MACRO_SERIES}
-        for r in _DYNAMIC_SERIES:
-            merged[r["date"]] = dict(r)
-        return sorted(merged.values(), key=lambda x: x["date"])
+def _get_sqlite_db_path() -> Optional[str]:
+    """로컬 SQLite DB 파일 절대 경로 확인."""
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    db_path = os.path.join(base_dir, "etf_data_v2.db")
+    if os.path.exists(db_path):
+        return db_path
+    legacy_path = os.path.join(base_dir, "etf_data.db")
+    if os.path.exists(legacy_path):
+        return legacy_path
+    return None
+
+
+def get_combined_macro_series(industry: str = "semiconductor") -> List[Dict[str, Any]]:
+    """
+    DB(industry_macro_series 테이블) 우선 조회 방식의 매크로 펀더멘털 시계열.
+    1. 로컬/운영 DB에서 저장된 영구 시계열을 우선 로드.
+    2. DB 연결 실패 또는 데이터가 비어 있을 경우 기본 HISTORICAL_MACRO_SERIES 폴백.
+    """
+    global _CACHED_DB_SERIES, _LAST_DB_FETCH_TIME
+    now = time.time()
+
+    if _CACHED_DB_SERIES and (now - _LAST_DB_FETCH_TIME < _DB_CACHE_TTL):
+        return _CACHED_DB_SERIES
+
+    db_path = _get_sqlite_db_path()
+    if db_path:
+        try:
+            conn = sqlite3.connect(db_path, timeout=5.0)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT date, export_amt, unit_price, volume, cap_util, inventory
+                FROM industry_macro_series
+                WHERE industry = ?
+                ORDER BY date ASC
+                """,
+                (industry,),
+            )
+            rows = cursor.fetchall()
+            conn.close()
+
+            if rows and len(rows) > 0:
+                result = [
+                    {
+                        "date": r["date"],
+                        "export_amt": float(r["export_amt"]) if r["export_amt"] is not None else 0.0,
+                        "unit_price": float(r["unit_price"]) if r["unit_price"] is not None else 0.0,
+                        "volume": float(r["volume"]) if r["volume"] is not None else 0.0,
+                        "cap_util": float(r["cap_util"]) if r["cap_util"] is not None else 0.0,
+                        "inventory": float(r["inventory"]) if r["inventory"] is not None else 0.0,
+                    }
+                    for r in rows
+                ]
+                _CACHED_DB_SERIES = result
+                _LAST_DB_FETCH_TIME = now
+                return result
+        except Exception as e:
+            logger.warning(f"Failed to read industry_macro_series from DB, falling back to static series: {e}")
+
+    # Fallback
     return HISTORICAL_MACRO_SERIES
 
 
-def append_macro_point(point: Dict[str, Any]):
-    """신규 월별 반도체 펀더멘털 지표(수출액/단가지수/물량/가동률/재고)를 동적으로 추가."""
-    global _DYNAMIC_SERIES
-    _DYNAMIC_SERIES = [p for p in _DYNAMIC_SERIES if p["date"] != point.get("date")]
-    _DYNAMIC_SERIES.append(point)
+def append_macro_point(point: Dict[str, Any], industry: str = "semiconductor"):
+    """
+    신규 월별 반도체 펀더멘털 지표를 DB(industry_macro_series)에 영구 저장(UPSERT).
+    동시에 메모리 캐시도 즉시 갱신.
+    """
+    global _CACHED_DB_SERIES, _LAST_DB_FETCH_TIME
+    d = point.get("date")
+    if not d:
+        return
+
+    db_path = _get_sqlite_db_path()
+    if db_path:
+        try:
+            conn = sqlite3.connect(db_path, timeout=5.0)
+            cursor = conn.cursor()
+            now_iso = datetime.utcnow().isoformat()
+            cursor.execute(
+                """
+                INSERT INTO industry_macro_series
+                    (industry, date, export_amt, unit_price, volume, cap_util, inventory, is_confirmed, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(industry, date) DO UPDATE SET
+                    export_amt=excluded.export_amt,
+                    unit_price=excluded.unit_price,
+                    volume=excluded.volume,
+                    cap_util=excluded.cap_util,
+                    inventory=excluded.inventory,
+                    is_confirmed=excluded.is_confirmed,
+                    updated_at=excluded.updated_at
+                """,
+                (
+                    industry,
+                    d,
+                    point.get("export_amt"),
+                    point.get("unit_price"),
+                    point.get("volume"),
+                    point.get("cap_util"),
+                    point.get("inventory"),
+                    point.get("is_confirmed", False),
+                    now_iso,
+                    now_iso,
+                ),
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.warning(f"Failed to upsert macro point into DB: {e}")
+
+    # 메모리 캐시 갱신
+    if _CACHED_DB_SERIES:
+        _CACHED_DB_SERIES = [p for p in _CACHED_DB_SERIES if p["date"] != d]
+        _CACHED_DB_SERIES.append(point)
+        _CACHED_DB_SERIES.sort(key=lambda x: x["date"])
+    _LAST_DB_FETCH_TIME = 0.0  # 캐시 무효화
+
+
+async def save_macro_point_async(point: Dict[str, Any], industry: str = "semiconductor") -> bool:
+    """비동기 세션을 통한 DB 영구 저장."""
+    from db.database import AsyncSessionLocal
+    from db.models import IndustryMacroSeries
+    from sqlalchemy import select
+
+    d = point.get("date")
+    if not d:
+        return False
+
+    async with AsyncSessionLocal() as db:
+        stmt = select(IndustryMacroSeries).where(
+            IndustryMacroSeries.industry == industry,
+            IndustryMacroSeries.date == d,
+        )
+        res = await db.execute(stmt)
+        obj = res.scalar_one_or_none()
+        if obj:
+            obj.export_amt = point.get("export_amt")
+            obj.unit_price = point.get("unit_price")
+            obj.volume = point.get("volume")
+            obj.cap_util = point.get("cap_util")
+            obj.inventory = point.get("inventory")
+            obj.is_confirmed = point.get("is_confirmed", False)
+            obj.updated_at = datetime.utcnow()
+        else:
+            new_obj = IndustryMacroSeries(
+                industry=industry,
+                date=d,
+                export_amt=point.get("export_amt"),
+                unit_price=point.get("unit_price"),
+                volume=point.get("volume"),
+                cap_util=point.get("cap_util"),
+                inventory=point.get("inventory"),
+                is_confirmed=point.get("is_confirmed", False),
+            )
+            db.add(new_obj)
+        await db.commit()
+
+    append_macro_point(point, industry)
+    return True
 

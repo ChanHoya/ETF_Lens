@@ -1,7 +1,8 @@
+# 반도체 5대 산업 통계(수출액/단가/물량/가동률/재고)를 DB(industry_macro_series)에 영구 동기화하는 스케줄러 모듈
 """
 반도체 5대 산업 통계(수출액/단가/물량/가동률/재고) 동기화 파이프라인.
 관세청 무역통계 / 한국은행 ECOS / KOSIS 통계 기반으로 최신 월차 지표를 수집/추정하고
-macro_historical_data._DYNAMIC_SERIES 에 연동하여 퀀트 사이클 엔진에 반영합니다.
+DB(industry_macro_series)에 영구 저장하여 퀀트 사이클 엔진에 반영합니다.
 """
 
 import asyncio

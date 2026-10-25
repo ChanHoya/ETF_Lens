@@ -2,24 +2,22 @@
 
 > **Keep this file under 200 lines.**
 ## Quick Summary
-Base: Exit Strategy Monitoring (KOSPI) & Brazil Bond Analysis
-✅ Recent: [코스피 출구 전략 달러인덱스(DXY) 전역 정합성 통일 & 타임머신 복기 & 7대 지표 모달 & 출구 시뮬레이터 & 텔레그램 /exit 경보]
-1. [달러 인덱스(DXY) 데이터 불일치 원인 규명 및 전역 일관성 통일 (`exit_signal.py`, DB, `KospiExitAnalyzer.tsx`)]:
-   - 원인 진단: `exit_signal.py`에서 연준 광의의 무역가중 달러 지수(`DTWEXBGS`, 2006=100, 지수대 ~121.40)를 수집하여 `MarketMacroLog`에 적재해왔으나, `FxTab`과 금융시장은 주요 6개국 통화 바스켓 기준 공식 ICE 달러 인덱스(`DX-Y.NYB`, 1973=100, 지수대 ~101.8)를 채택하고 있어 박스/컨텐츠마다 수치 괴리 발생.
-   - 조치: `exit_signal.py` 수집 소스를 `DX-Y.NYB`로 전면 교체하고, 기존 DB 2,515개 시계열 행의 `dollar_index`를 실제 DXY(101.81 등)로 일괄 갱신 및 캐시 무효화 완료. 출구전략 박스와 환율 대시보드 간 달러 인덱스 100% 일치화 완성.
-2. [1번 개선: 차트 타임머신 인터랙션 (`RiskGaugeChart.tsx`, `exit_signal.py`)]:
-   - 좌측 과거 시계열 차트의 특정 날짜를 클릭하면 해당 과거 시점의 7대 지표 기여도(0~3점), 종합 위험점수, 시장 진단 및 권장 액션이 복원되는 타임머신 스냅샷 모드 구축.
-   - 상단 복기 배너 및 `[⚡ 최신 시점으로 복귀]` 원클릭 버튼 완비. 백엔드 `/history` API에서 일자별 7대 지표 breakdown 및 diagnosis 반환 연동.
-3. [2번 개선: 7대 지표 기여도 행 클릭 시 10개년 상세 모달 즉시 팝업 (`RiskGaugeChart.tsx`, `KospiExitAnalyzer.tsx`)]:
-   - 우측 7개 지표 행(VIX, VKOSPI, 공포-탐욕, CLI, KOSPI PER, 미 장단기 금리차, 하이일드 스프레드) 클릭 시 10개년 시계열 및 해석 모달 팝업 연결.
-4. [3번 개선: 내 포트폴리오(My/TFF) 연계 출구 액션 & 현금화 시뮬레이터 (`ExitPortfolioSimulatorModal.tsx`)]:
-   - 실시간 위험 점수(15점) 기준 목표 주식 비중(25%)과 안전자산 비중(75%) 목표 산출, 필요 현금 확보액(8,265만 원) 자동 계산.
-   - 고베타/레버리지 우선 매도 순위, 3대 피난처 안전자산(KOFR, 미국30년국채, 달러) 교체 가이드 및 HTS/MTS 주문 복사 지원.
-5. [4번 개선: 텔레그램 실시간 출구 위험경보 봇 연동 (`telegram_bot.py`)]:
-   - `/exit`, `/출구`, `/위험` 명령어 추가로 7대 지표별 위험 기여도, 시장 진단, 권장 액션 브리핑 및 웹 대시보드 바로가기 버튼 발송 지원.
-6. [무결성 검증 완료]: Next.js 16.1.6 빌드 100% 성공, API 응답(DXY: 101.81) 및 브라우저 렌더링 검증 완료.
+Base: Semiconductor Macro Architecture & Multi-Tab Refresh
+✅ Recent: [반도체 특화분석 전 탭 2026-10 현행화 및 DB 영구 저장(DB-First) 아키텍처 전면 개편]
+1. [반도체 펀더멘털 공표통계 시계열 2026-10 현행화 및 전 탭 동기화]:
+   - 2026-08에 멈춰있던 반도체 수출액(310.0억$), 단가지수(252.0), 물량(215.0), 가동률(102.2), 재고(99.0) 등 공표통계를 2026-10 최신 월로 현행화.
+   - `SemiCycleDashboard.tsx` 상단 '데이터 갱신' 버튼을 통해 7대 실데이터 신호등, 종합 대시보드, CapEx 트래커, 밸류에이션 맵, ETF 매트릭스 등 5개 전 탭 일괄 갱신 파이프라인 구축.
+   - `SemiFundamentalSignals.tsx` 자체 '데이터 갱신' 버튼 신설 및 Fallback 데이터 최신화.
+2. [하드코딩 제거 및 DB-First 영구 저장 아키텍처 전면 개편 (`models.py`, `macro_historical_data.py`, `semi_stats_sync.py`)]:
+   - 소스코드 내 하드코딩 리스트 의존을 탈피하고, 신규 DB 테이블 `industry_macro_series`를 구축하여 10개년 122개 월차 시계열을 영구 시드 마이그레이션 완료.
+   - `get_combined_macro_series()`를 DB-First 조회 구조로 전면 전환 (DB 우선 SELECT, 5분 고속 캐싱, 안전 Fallback 체계).
+   - 신규 월 데이터 발생 시 파이썬 메모리가 아닌 DB 테이블에 `ON CONFLICT DO UPDATE`로 영구 UPSERT 저장.
+   - 스케줄러 및 `force=true` 호출 시 DB 누락분을 감지해 자동 INSERT/동기화하도록 연동하여, 향후 코드 수정 없이도 DB 중심 자동 현행화 보장.
+3. [무결성 검증 완료]: 백엔드 pytest 19/19 100% 통과, Next.js 16.1.6 최적화 빌드 완료, 브라우저 렌더링 및 동기화 토스트 검증 완료.
 
-🚀 Current: 코스피 출구 전략 DXY 통일 및 1~4번 개선사항 개발 완료 / 사용자 피드백 대기
+🚀 Current: 반도체 특화분석 전 탭 2026-10 현행화 및 DB-First 아키텍처 개편 완료 / 다음 작업 대기
+
+✅ Recent: [코스피 출구 전략 달러인덱스(DXY) 전역 정합성 통일 & 타임머신 복기 & 7대 지표 모달 & 출구 시뮬레이터 & 텔레그램 /exit 경보]
 
 ✅ Previous: Sprint 41 완료 — [브라질 국채 vs 미국 30년 국채 실질 토탈리턴 비교 & 부동산 상급지 갈아타기 스트레스 DSR 2단계 계산기]
 

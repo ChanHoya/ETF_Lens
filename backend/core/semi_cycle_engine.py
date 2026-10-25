@@ -1,3 +1,4 @@
+# 반도체 및 주요 업종 사이클 시계(CSCI), CapEx 모멘텀, 서브섹터 밸류에이션 퀀트 엔진
 """
 Semiconductor Macro Cycle & Quantitative Valuation Engine (CSCI)
 CSCI (Composite Semiconductor Cycle Index) & 4-Phase Cycle Detection Engine
@@ -1134,7 +1135,15 @@ class SemiCycleEngine:
         """
         now = time.time()
         cache_key = f"semi_macro_signals_{industry}"
-        if not force and cache_key in _CACHE_DATA and (now - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
+
+        if force:
+            cls.clear_cache()
+            try:
+                from scheduler.semi_stats_sync import sync_semiconductor_macro_stats
+                await sync_semiconductor_macro_stats()
+            except Exception as e:
+                logger.warning(f"Failed to sync semiconductor macro stats on force: {e}")
+        elif cache_key in _CACHE_DATA and (now - _CACHE_DATA[cache_key]["ts"] < _CACHE_TTL):
             return _CACHE_DATA[cache_key]["data"]
 
         if industry not in INDUSTRY_PROFILES:

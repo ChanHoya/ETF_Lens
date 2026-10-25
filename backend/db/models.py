@@ -470,3 +470,27 @@ class RealEstateMonthlyStats(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class IndustryMacroSeries(Base):
+    """업종별(반도체, 2차전지 등) 월간 펀더멘털 공표통계 시계열 영구 저장 테이블.
+    (수출액, 수출단가지수, 실질수출물량, 가동률지수, 재고지수 등)
+    """
+    __tablename__ = "industry_macro_series"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    industry = Column(String(50), index=True, default="semiconductor")  # semiconductor, battery 등
+    date = Column(String(7), index=True, nullable=False)               # YYYY-MM
+    export_amt = Column(Float, nullable=True)                          # 월간 수출액 (억 달러)
+    unit_price = Column(Float, nullable=True)                          # 수출 단가지수 (2020=100)
+    volume = Column(Float, nullable=True)                              # 실질 수출물량지수 (2020=100)
+    cap_util = Column(Float, nullable=True)                            # 가동률지수 (2020=100)
+    inventory = Column(Float, nullable=True)                           # 재고지수 (낮을수록 호황)
+    is_confirmed = Column(Boolean, default=True)                       # 확정치 여부 (잠정/추정치=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("industry", "date", name="uq_industry_macro_series_industry_date"),
+    )
+
+
+
