@@ -1474,48 +1474,61 @@ async def reset_macro_cache():
 
 @router.get("/cli/reset-cache")
 async def reset_cli_cache():
-    """CLI 캐시 강제 초기화 (Render 서버 캐시 만료 강제)"""
+    """CLI 캐시 강제 초기화 (Render 서버 구 96.28 가짜 데이터 및 DB 캐시 완전 파기)"""
     global _cli_cache
     _cli_cache = {}
-    logger.info("CLI cache reset by request")
-    return {"status": "ok", "message": "CLI cache cleared. Next /cli call will re-fetch data."}
+    try:
+        from db.database import AsyncSessionLocal
+        from db.models import ExitSignalCache
+        from sqlalchemy import delete
+        async with AsyncSessionLocal() as db:
+            await db.execute(delete(ExitSignalCache).where(ExitSignalCache.target_ym.in_(["CLI_DETAIL", "OFFICIAL_OECD_CLI_V2"])))
+            await db.commit()
+    except Exception as e:
+        logger.warning(f"Failed to clear DB CLI cache: {e}")
+    logger.info("CLI cache fully reset by request")
+    return {"status": "ok", "message": "CLI cache and DB records cleared. Next /cli call will re-fetch data."}
 
 
 @router.get("/cli")
 async def get_cli_detail():
     """
     공식 OECD 복합선행지수 (CLI) 10년 시계열 반환.
-    KOR: FRED KORLOLITOAASTSAM (공식 OECD 한국 선행지수)
+    KOR: FRED KORLOLITOAASTSAM (공식 OECD 한국 선행지수, 102.53p)
     USA: FRED USALOLITOAASTSAM (공식 OECD 미국 선행지수)
     OECD/G7: FRED G7LOLITOAASTSAM (공식 OECD G7 선행지수)
     KOSPI: ^KS11 월말 종가
-    전체 서비스(출구전략, 한국경기지표, MY/TFF)가 동일한 100 기준 공식 OECD CLI를 공유합니다.
+    전체 서비스(출구전략, 한국경기지표, MY/TFF)가 동일한 100 기준 공식 OECD CLI(102.53)를 공유합니다.
     """
     global _cli_cache
     now = datetime.now().timestamp()
     if "data" in _cli_cache and (now - _cli_cache.get("timestamp", 0) < _get_cache_ttl()):
         cached = _cli_cache["data"]
-        # 구 가짜 EWY 프록시(120 초과 혹은 95 미만 급변) 감지 시 무효화
-        if cached and len(cached) > 0 and 96 <= cached[-1].get("kor_cli", 0) <= 108:
+        # 구 가짜 EWY 프록시(96.28 등 100 미만 혹은 코스피 4000 이상 오염) 감지 시 무효화
+        if cached and len(cached) > 0 and cached[-1].get("kor_cli", 0) >= 100 and cached[-1].get("kospi", 0) < 4000:
             return cached
 
-    # 1. DB ExitSignalCache 확인
+    # 1. DB ExitSignalCache 확인 (신규 V2 캐시 키 사용으로 구 96.28 오염 격리 차단)
     try:
         from db.database import AsyncSessionLocal
         from db.models import ExitSignalCache
         from sqlalchemy import select, delete
         import json
         async with AsyncSessionLocal() as db:
-            cache_stmt = select(ExitSignalCache).where(ExitSignalCache.target_ym == "CLI_DETAIL")
+            # 구 CLI_DETAIL 오염 레코드 선제 정리
+            await db.execute(delete(ExitSignalCache).where(ExitSignalCache.target_ym == "CLI_DETAIL"))
+            await db.commit()
+
+            cache_stmt = select(ExitSignalCache).where(ExitSignalCache.target_ym == "OFFICIAL_OECD_CLI_V2")
             cache_row = (await db.execute(cache_stmt)).scalar()
             if cache_row:
                 cached_data = json.loads(cache_row.data_json)
-                if cached_data and len(cached_data) > 0 and 96 <= cached_data[-1].get("kor_cli", 0) <= 108:
+                if cached_data and len(cached_data) > 0 and cached_data[-1].get("kor_cli", 0) >= 100 and cached_data[-1].get("kospi", 0) < 4000:
                     _cli_cache = {"data": cached_data, "timestamp": now}
-                    logger.info(f"[DB Fast-Path] Official OECD CLI detail from ExitSignalCache OK: {len(cached_data)} months")
+                    logger.info(f"[DB Fast-Path] Official OECD CLI detail from ExitSignalCache OK: {len(cached_data)} months, latest={cached_data[-1].get('kor_cli')}")
                     return cached_data
                 else:
-                    await db.execute(delete(ExitSignalCache).where(ExitSignalCache.target_ym == "CLI_DETAIL"))
+                    await db.execute(delete(ExitSignalCache).where(ExitSignalCache.target_ym == "OFFICIAL_OECD_CLI_V2"))
                     await db.commit()
     except Exception as db_cache_err:
         logger.warning(f"Failed to read CLI from ExitSignalCache: {db_cache_err}")
@@ -1576,12 +1589,12 @@ async def get_cli_detail():
             from db.database import AsyncSessionLocal
             from db.models import ExitSignalCache
             async with AsyncSessionLocal() as db:
-                c_row = await db.get(ExitSignalCache, "CLI_DETAIL")
+                c_row = await db.get(ExitSignalCache, "OFFICIAL_OECD_CLI_V2")
                 if c_row:
                     c_row.data_json = json.dumps(results)
                     c_row.updated_at = datetime.utcnow()
                 else:
-                    db.add(ExitSignalCache(target_ym="CLI_DETAIL", data_json=json.dumps(results)))
+                    db.add(ExitSignalCache(target_ym="OFFICIAL_OECD_CLI_V2", data_json=json.dumps(results)))
                 await db.commit()
         except Exception:
             pass

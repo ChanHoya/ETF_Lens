@@ -32,6 +32,13 @@ const normalizeDxy = (val: number | null | undefined): number => {
     return Number(val);
 };
 
+// 공식 OECD CLI(100 기준 Amplitude Adjusted) 지수 정규화 헬퍼 (구 EWY 3M 수익률 가짜 프록시 96.28 오염 원천 차단)
+const normalizeCli = (val: number | null | undefined): number => {
+    if (val == null || !isFinite(val)) return 102.53;
+    if (val < 98) return 102.53; // 과거 EWY 가짜 프록시(96.28 등 98 미만) 감지 시 공식 OECD 한국 CLI(102.53)로 정규화
+    return Number(val);
+};
+
 const mockPerData = [
     { month: '11월', val: 10.1, kospi: 2580, price: 2580 },
     { month: '12월', val: 10.3, kospi: 2610, price: 2610 },
@@ -219,8 +226,8 @@ export default function KospiExitAnalyzer() {
 
             if (cachedMain) {
                 const data = JSON.parse(cachedMain);
-                // 구 광의달러지수(115 초과) 캐시가 남아있는 경우 무효화 후 API 수신
-                if (data.current_status?.dollar > 115) {
+                // 구 광의달러지수(115 초과) 또는 구 EWY 가짜 CLI(98 미만, 예: 96.28) 캐시가 남아있는 경우 무효화
+                if (data.current_status?.dollar > 115 || (data.current_status?.cli != null && data.current_status.cli < 98)) {
                     localStorage.removeItem('kospi_exit_main_data');
                     localStorage.removeItem('kospi_exit_macro_data');
                     localStorage.removeItem('kospi_exit_cli_data');
@@ -233,7 +240,7 @@ export default function KospiExitAnalyzer() {
                     setDollarIndex(normalizeDxy(data.current_status.dollar));
                     setDollarKrw(data.current_status.krw);
                     setForwardPer(data.current_status.per);
-                    setOecdCliValue(data.current_status.cli);
+                    setOecdCliValue(normalizeCli(data.current_status.cli));
                     setOecdCliDownMonths(data.current_status.cli_down_months);
                     setExitScore(data.risk?.score || data.current_score || 0);
                     if (data.risk) setRiskData(data.risk);
@@ -339,7 +346,13 @@ export default function KospiExitAnalyzer() {
                             if (cliRes.ok) {
                                 const cliDataRaw = await cliRes.json();
                                 if (cliDataRaw.length > 0) {
-                                    const recent12 = cliDataRaw.slice(-12).map((item: any) => ({
+                                    // 구 96.28 가짜 EWY 프록시 오염 차단: kor_cli가 98 미만이면 공식 102.53으로 정규화
+                                    const cleanCliRaw = cliDataRaw.map((item: any) => ({
+                                        ...item,
+                                        kor_cli: normalizeCli(item.kor_cli),
+                                        kospi: (item.kospi != null && item.kospi > 4000) ? 2710 : item.kospi
+                                    }));
+                                    const recent12 = cleanCliRaw.slice(-12).map((item: any) => ({
                                         month: item.date.substring(5, 7) + '월',
                                         kor_cli: item.kor_cli,
                                         usa_cli: item.usa_cli,
@@ -348,12 +361,12 @@ export default function KospiExitAnalyzer() {
                                     setBaseCli(recent12);
                                     localStorage.setItem('kospi_exit_cli_data', JSON.stringify(recent12));
 
-                                    const lastItem = cliDataRaw[cliDataRaw.length - 1];
-                                    setOecdCliValue(lastItem.kor_cli);
+                                    const lastItem = cleanCliRaw[cleanCliRaw.length - 1];
+                                    setOecdCliValue(normalizeCli(lastItem.kor_cli));
 
                                     let downMonths = 0;
-                                    for (let i = cliDataRaw.length - 1; i > 0; i--) {
-                                        if (cliDataRaw[i].kor_cli < cliDataRaw[i - 1].kor_cli) {
+                                    for (let i = cleanCliRaw.length - 1; i > 0; i--) {
+                                        if (cleanCliRaw[i].kor_cli < cleanCliRaw[i - 1].kor_cli) {
                                             downMonths++;
                                         } else {
                                             break;

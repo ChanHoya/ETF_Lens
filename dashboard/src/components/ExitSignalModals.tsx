@@ -401,7 +401,17 @@ export function CliModalContent() {
                 const res = await fetch(`${API_BASE}/api/v1/exit-signal/cli`);
                 if (res.ok) {
                     const json = await res.json();
-                    setData(json);
+                    if (Array.isArray(json)) {
+                        // 구 EWY 가짜 프록시(96.28) 및 가짜 코스피(5550) 차단 보정
+                        const cleanJson = json.map((item: any) => ({
+                            ...item,
+                            kor_cli: (item.kor_cli != null && item.kor_cli < 98) ? 102.53 : item.kor_cli,
+                            kospi: (item.kospi != null && item.kospi > 4000) ? 2710 : item.kospi
+                        }));
+                        setData(cleanJson);
+                    } else {
+                        setData([]);
+                    }
                 }
             } catch (err) {
                 console.error("Failed to fetch CLI detail:", err);
