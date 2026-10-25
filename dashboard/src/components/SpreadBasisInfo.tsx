@@ -23,13 +23,13 @@ export default function SpreadBasisInfo() {
     return (
         <>
             <button onClick={() => setOpen(true)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white">
-                <HelpCircle className="w-3.5 h-3.5" />기준 설명
+                className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-all">
+                <HelpCircle className="w-3 h-3" />기준 설명
             </button>
             {open && createPortal(
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-3" onClick={() => setOpen(false)}>
+                <div className="fixed top-[52px] sm:top-[60px] md:top-[64px] left-0 right-0 bottom-0 z-[200] flex items-start justify-center bg-black/70 backdrop-blur-sm p-3 overflow-y-auto animate-in fade-in duration-200" onClick={() => setOpen(false)}>
                     <div role="dialog" aria-modal="true" aria-label="장단기 금리차 비교 기준"
-                        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-[#0d0d12] border border-white/10 rounded-2xl shadow-2xl"
+                        className="relative w-full max-w-2xl my-auto sm:my-4 max-h-[88vh] overflow-y-auto bg-[#0d0d12] border border-white/10 rounded-3xl shadow-2xl"
                         onClick={(e) => e.stopPropagation()}>
                         <div className="sticky top-0 flex items-center justify-between px-5 py-3 border-b border-white/10 bg-[#121217]">
                             <p className="flex items-center gap-2 text-white font-bold"><HelpCircle className="w-4 h-4 text-emerald-400" />장단기 금리차 비교 기준</p>

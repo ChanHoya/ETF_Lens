@@ -327,10 +327,11 @@ export default function OilTab() {
                     <button
                         onClick={() => fetchAllOilData(true)}
                         disabled={refreshing}
-                        className="self-start md:self-center flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 border border-amber-500/30 text-xs font-bold text-amber-300 transition-all shadow-md disabled:opacity-50"
+                        className="self-start md:self-center flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 border border-amber-500/30 text-xs font-semibold text-amber-300 transition-all shadow-sm disabled:opacity-50"
+                        title="Update"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 text-amber-400 ${refreshing ? "animate-spin" : ""}`} />
-                        <span>{refreshing ? "시세 갱신 중..." : "최신 유가 동기화"}</span>
+                        <span>{refreshing ? "Updating..." : "Update"}</span>
                     </button>
                 </div>
             </div>
@@ -944,9 +945,9 @@ export default function OilTab() {
                             <button
                                 key={idx}
                                 onClick={() => setSelectedScenarioIdx(idx)}
-                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                                className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-all ${
                                     selectedScenarioIdx === idx
-                                        ? "bg-amber-600 text-white shadow-lg"
+                                        ? "bg-amber-600 text-white shadow-md"
                                         : "text-gray-400 hover:text-white"
                                     }`}
                             >
@@ -1469,7 +1470,7 @@ export default function OilTab() {
                             />
                             <button
                                 onClick={() => setModalOpen(false)}
-                                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-all shadow-md shrink-0 ml-auto"
+                                className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-all shadow-sm shrink-0 ml-auto"
                             >
                                 닫기
                             </button>

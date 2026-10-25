@@ -3,21 +3,16 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: UI/UX Standard Template & Sticky Navigation Minimization & Universal Modal Overlay & Recharts Date Formatting
-✅ Recent: [Sprint 42 완료 — 서비스 전체 UI/UX 표준 템플릿 구축 및 전면 보수]
-1. [헤더 고정(Sticky) & 1줄 슬라이드 축소(Minimize)]:
-   - 상단 헤더 컨테이너를 `sticky top-0 z-[250] bg-[#050505]/95 backdrop-blur-md`로 고정하여 스크롤 중에도 항상 표시 유지.
-   - 시장동향/종목분석 등 서브메뉴 진입 시 메인 메뉴가 우측 원형 `<>` 버튼으로 minimize되고 서브메뉴가 윗줄로 슬라이드업되어 1줄로 통합. `<>` 클릭 시 펼침/접힘 토글 지원.
-2. [전역 팝업 모달 상단 헤더 보존형 배치]:
-   - 코스피 출구 전략(ExitSignalModals 5종), 시장 지표 상세(MarketDetailModal), 원유·컨센서스·부동산·중간선거·브라질 국채·TFF 팩트시트·My 자산 모달 전체의 오버레이를 `fixed top-[52px]~top-[64px] left-0 right-0 bottom-0 z-[200]`로 교정하여 상단 메뉴 보존.
-3. [단일 외곽 컨텐츠 박스 & 버튼 규격 통일]:
-   - 컨텐츠 박스 전체를 단일 외곽 박스로 감싸고 내부에 서브 박스를 배치하는 구조로 통일.
-   - 모든 기간/선택/Update 버튼을 컴팩트 규격(`px-2.5 py-1 text-xs rounded-lg font-semibold`)으로 통일.
-4. [Recharts X축 연도 `'26` 축약 & `Update` 명칭 일원화]:
-   - 전역 유틸 `chartDateUtils.ts` 및 `chartTicks.ts`를 신설/개편하여 X축 연도 라벨을 `2026-01-10` -> `'26/01/10'`, `2026` -> `'26'`으로 일괄 축약하여 라벨 겹침 방지.
-   - 전 서비스의 '새로고침', '데이터 갱신' 버튼을 `Update`로 일원화.
-5. [검증 완료]: Next.js 16.1.6 11개 페이지 최적화 빌드 성공 (`exit code 0`), 브라우저 실측 렌더링 검증 완료.
+✅ Recent: [Sprint 42 보완 완료 — 상단 네비게이션 애니메이션 고도화 및 시장동향 서브메뉴 버튼 전수 점검·축소]
+1. [상단 네비게이션 모션 고도화 (`MainApp.tsx`)]:
+   - 메인 메뉴가 오른쪽으로 minimize될 때 우측 원형 `<>` 버튼을 향해 부드럽게 축소(`scale-95 translate-x-8 opacity-0 max-w-0 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] origin-right`)되는 모션 구현.
+   - 서브 메뉴는 메인 메뉴 아래(2번째 줄)에서 그대로 똑바로 수직 위(`translate-y-0`)로 스크롤 업 안착하며, 2번째 줄 컨테이너는 위로 접혀(`-translate-y-4 opacity-0 max-h-0`) 아래 컨텐츠와 매끄럽게 연결.
+2. [시장동향 서브메뉴 전체 버튼 전수 점검 및 표준 규격 통일]:
+   - 환율(`FxTab.tsx`), 금리(`RatesTab.tsx`, `SpreadBasisInfo.tsx`), 주식(`StocksTab.tsx`), 유가(`OilTab.tsx`), 시장지표(`KrMacroIndicatorSection.tsx`, `DiscoverTab.tsx`), 종합(`MacroTab.tsx`), 미국중간선거(`MidtermElectionTab.tsx`) 내 모든 기간 버튼(`5Y`, `10Y`, `20Y`, `1Y`, `3Y`), 국가/통화/지수 토글, 시나리오/프리셋 버튼을 `px-2 py-0.5 text-[11px]` 및 `px-2.5 py-1 text-xs font-semibold`로 전수 축소.
+   - 남아있던 '최신 동기화', '최신 유가 동기화', '최신 판세 동기화', '업데이트', '결과 업데이트' 버튼 명칭을 모두 `Update`로 일원화.
+3. [검증 완료]: Next.js 16.1.6 11개 페이지 빌드 성공 (`exit code 0`), 브라우저 실측 렌더링 및 스크린샷 검증 완료.
 
-🚀 Current: Sprint 42 (서비스 전체 UI/UX 표준 템플릿 구축 및 전면 보수) 전체 완료 / 다음 작업 대기
+🚀 Current: Sprint 42 전체 완료 / 다음 작업 대기
 
 ✅ Recent: [코스피 출구 전략 달러인덱스(DXY) 전역 정합성 통일 & 타임머신 복기 & 7대 지표 모달 & 출구 시뮬레이터 & 텔레그램 /exit 경보]
 

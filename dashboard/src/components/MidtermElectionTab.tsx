@@ -284,10 +284,11 @@ export default function MidtermElectionTab() {
                     <button
                         onClick={() => fetchAllData(true)}
                         disabled={refreshing}
-                        className="self-start md:self-center flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 border border-white/15 text-xs font-bold text-white transition-all shadow-md disabled:opacity-50"
+                        className="self-start md:self-center flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 active:scale-95 border border-white/15 text-xs font-semibold text-white transition-all shadow-sm disabled:opacity-50"
+                        title="Update"
                     >
-                        <RefreshCw className={`w-3.5 h-3.5 text-indigo-400 ${refreshing ? "animate-spin" : ""}`} />
-                        <span>{refreshing ? "판세 분석 갱신 중..." : "최신 판세 동기화"}</span>
+                        <RefreshCw className={`w-3 h-3 text-indigo-400 ${refreshing ? "animate-spin" : ""}`} />
+                        <span>Update</span>
                     </button>
                 </div>
             </div>
@@ -917,14 +918,14 @@ export default function MidtermElectionTab() {
                         {/* Filter & Toggle Controls */}
                         <div className="flex flex-wrap items-center gap-2">
                             {/* Period Filter (5Y, 10Y, 30Y, ALL) */}
-                            <div className="flex items-center bg-black/50 border border-white/10 rounded-xl p-1 gap-1">
+                            <div className="flex items-center bg-black/50 border border-white/10 rounded-lg p-0.5 gap-0.5">
                                 {(["5Y", "10Y", "30Y", "ALL"] as const).map((period) => (
                                     <button
                                         key={period}
                                         onClick={() => setCyclePeriod(period)}
-                                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all ${
                                             cyclePeriod === period
-                                                ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/20 scale-[1.02]"
+                                                ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm scale-[1.02]"
                                                 : "text-gray-400 hover:text-white hover:bg-white/5"
                                         }`}
                                     >
@@ -934,29 +935,29 @@ export default function MidtermElectionTab() {
                             </div>
 
                             {/* Additional Indicator Toggles */}
-                            <div className="flex items-center gap-1.5 bg-black/50 border border-white/10 rounded-xl p-1">
+                            <div className="flex items-center gap-1 bg-black/50 border border-white/10 rounded-lg p-0.5">
                                 <button
                                     onClick={() => setShowFedRate(!showFedRate)}
-                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all ${
+                                    className={`px-2 py-0.5 rounded-md text-[10.5px] font-semibold flex items-center gap-1 transition-all ${
                                         showFedRate
                                             ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
                                             : "text-gray-500 hover:text-gray-300 border border-transparent"
                                     }`}
                                     title="미국 연방기금 기준금리(Fed Funds Rate) 오버레이 토글"
                                 >
-                                    <DollarSign className="w-3 h-3" />
+                                    <DollarSign className="w-2.5 h-2.5" />
                                     <span>기준금리(Fed)</span>
                                 </button>
                                 <button
                                     onClick={() => setShowEvents(!showEvents)}
-                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all ${
+                                    className={`px-2 py-0.5 rounded-md text-[10.5px] font-semibold flex items-center gap-1 transition-all ${
                                         showEvents
                                             ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
                                             : "text-gray-500 hover:text-gray-300 border border-transparent"
                                     }`}
                                     title="역사적 주요 정치/경제 이벤트 마커 토글"
                                 >
-                                    <Landmark className="w-3 h-3" />
+                                    <Landmark className="w-2.5 h-2.5" />
                                     <span>주요 이벤트</span>
                                 </button>
                             </div>
@@ -1363,9 +1364,9 @@ export default function MidtermElectionTab() {
                     {/* Interview Trigger Button */}
                     <button
                         onClick={() => setIsInterviewModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 active:scale-95 text-xs font-bold text-white shadow-lg transition-all"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 active:scale-95 text-xs font-semibold text-white shadow-md transition-all"
                     >
-                        <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
                         <span>AI 투자성향 & 자산배분 진단 인터뷰</span>
                     </button>
                 </div>
@@ -1402,9 +1403,9 @@ export default function MidtermElectionTab() {
                                 <button
                                     key={p}
                                     onClick={() => handleProfileChange(p)}
-                                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${
+                                    className={`py-1 text-[11px] font-semibold rounded-lg border transition-all ${
                                         riskProfile === p
-                                            ? "bg-indigo-600 text-white border-indigo-400 shadow-md"
+                                            ? "bg-indigo-600 text-white border-indigo-400 shadow-sm"
                                             : "bg-white/5 text-gray-400 border-white/5 hover:text-white"
                                     }`}
                                 >

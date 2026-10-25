@@ -461,11 +461,11 @@ export default function KrMacroIndicatorSection() {
                             fetchExportData(exportPeriod);
                         }}
                         disabled={refreshing}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 active:scale-95 border border-blue-400/30 text-xs font-semibold text-blue-200 hover:text-white transition-all disabled:opacity-50"
-                        title="한국은행 ECOS, 통계청, OECD 최신 데이터 강제 동기화"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 active:scale-95 border border-blue-400/30 text-xs font-semibold text-blue-200 hover:text-white transition-all disabled:opacity-50"
+                        title="한국은행 ECOS, 통계청, OECD 최신 데이터 Update"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 text-sky-400 ${refreshing ? 'animate-spin' : ''}`} />
-                        <span>{refreshing ? '최신화 중...' : '최신 동기화'}</span>
+                        <span>{refreshing ? 'Updating...' : 'Update'}</span>
                     </button>
                 </div>
             </div>
@@ -488,12 +488,12 @@ export default function KrMacroIndicatorSection() {
                             </div>
 
                             {/* 기간 선택 버튼 (1Y, 3Y, 5Y, 10Y) */}
-                            <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/10 shrink-0 self-start sm:self-auto">
+                            <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/10 shrink-0 self-start sm:self-auto gap-0.5">
                                 {(['1Y', '3Y', '5Y', '10Y'] as Timeframe[]).map(tf => (
                                     <button
                                         key={tf}
                                         onClick={() => setTimeframe(tf)}
-                                        className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all ${
+                                        className={`px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all ${
                                             timeframe === tf
                                                 ? 'bg-blue-600 text-white shadow-sm'
                                                 : 'text-gray-400 hover:text-white'
@@ -1348,11 +1348,11 @@ export default function KrMacroIndicatorSection() {
                             <button
                                 onClick={triggerFlashAlert}
                                 disabled={flashAlertLoading}
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 active:scale-95 border border-sky-400/30 text-xs font-semibold text-sky-200 hover:text-white transition-all disabled:opacity-50"
-                                title="관세청 최신 수출 통계 및 통계청 순환변동치를 즉시 재동기화하고 텔레그램 채널로 속보를 발송합니다"
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 active:scale-95 border border-sky-400/30 text-xs font-semibold text-sky-200 hover:text-white transition-all disabled:opacity-50"
+                                title="관세청 최신 수출 통계 및 통계청 순환변동치를 즉시 Update하고 텔레그램 속보를 발송합니다"
                             >
                                 <Send className={`w-3.5 h-3.5 text-sky-400 ${flashAlertLoading ? 'animate-bounce' : ''}`} />
-                                <span>{flashAlertLoading ? '속보 발송 & 갱신 중...' : '텔레그램 속보 발송 & 데이터 갱신'}</span>
+                                <span>{flashAlertLoading ? '속보 발송 중...' : 'Update & 텔레그램 속보'}</span>
                             </button>
                         </div>
                     </div>

@@ -124,10 +124,10 @@ function SectionTitle({ icon, title, sub }: { icon: React.ReactNode; title: stri
 
 function Toggle<T extends string>({ options, value, onChange }: { options: readonly { id: T; label: string }[]; value: T; onChange: (v: T) => void }) {
     return (
-        <div className="flex gap-1.5">
+        <div className="flex gap-1">
             {options.map(o => (
                 <button key={o.id} onClick={() => onChange(o.id)}
-                    className={`text-xs font-bold px-2.5 py-1 rounded-lg border transition ${value === o.id
+                    className={`text-[11px] font-semibold px-2 py-0.5 rounded-lg border transition ${value === o.id
                         ? 'bg-indigo-500/20 border-indigo-400/50 text-indigo-300'
                         : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'}`}>
                     {o.label}
@@ -802,8 +802,10 @@ export default function RatesTab() {
                     <div className="ml-auto flex items-center gap-2 text-[11px] text-gray-500">
                         {data && <span>{data.stale ? '⚠ 최신 수집 실패 · 이전 값 · ' : ''}{new Date(data.updated_at).toLocaleString('ko-KR')} 기준{refreshing ? ' · 최신 데이터 확인 중…' : ''}</span>}
                         <button onClick={refresh} disabled={refreshing}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 disabled:opacity-50">
-                            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />업데이트
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 disabled:opacity-50 transition-all"
+                            title="Update"
+                        >
+                            <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />Update
                         </button>
                     </div>
                 </div>

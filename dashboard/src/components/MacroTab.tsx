@@ -730,7 +730,7 @@ function Correlation({ c }: { c: NonNullable<Overview['correlation']> }) {
             <div>
                 <div className="flex gap-1.5 mb-2">
                     {([['now', '최근 1년'], ['long', '10년']] as const).map(([k, l]) => (
-                        <button key={k} onClick={() => setMode(k)} className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${mode === k ? 'bg-indigo-500/20 border-indigo-400/50 text-indigo-300' : 'bg-white/5 border-white/10 text-gray-400'}`}>{l}</button>
+                        <button key={k} onClick={() => setMode(k)} className={`text-[11px] font-semibold px-2 py-0.5 rounded-lg border ${mode === k ? 'bg-indigo-500/20 border-indigo-400/50 text-indigo-300' : 'bg-white/5 border-white/10 text-gray-400'}`}>{l}</button>
                     ))}
                 </div>
                 <div className="overflow-x-auto">
@@ -948,8 +948,10 @@ export default function MacroTab() {
                         {error && <span className="text-rose-400 font-medium">업데이트 실패 ({error})</span>}
                         {data && <span>{new Date(data.updated_at).toLocaleString('ko-KR')} 기준{refreshing ? ' · 최신 데이터 확인 중…' : ''}</span>}
                         <button onClick={refresh} disabled={refreshing}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 disabled:opacity-50">
-                            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />업데이트
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 disabled:opacity-50 transition-all"
+                            title="Update"
+                        >
+                            <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />Update
                         </button>
                     </div>
                 </div>
@@ -993,8 +995,10 @@ export default function MacroTab() {
                             <div className="flex items-center gap-2">
                                 {evMsg && <span className="text-[11px] text-gray-400">{evMsg}</span>}
                                 <button onClick={updateEvents} disabled={evBusy}
-                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 disabled:opacity-50">
-                                    <RefreshCw className={`w-3.5 h-3.5 ${evBusy ? 'animate-spin' : ''}`} />{evBusy ? '결과 확인 중…' : '결과 업데이트'}
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white disabled:opacity-50 transition-all"
+                                    title="Update"
+                                >
+                                    <RefreshCw className={`w-3 h-3 ${evBusy ? 'animate-spin' : ''}`} />Update
                                 </button>
                             </div>
                         </div>
