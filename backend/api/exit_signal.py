@@ -722,12 +722,14 @@ async def seed_market_macro_db_if_empty():
             legacy_dxy_count = (await db.execute(select(func.count(MarketMacroLog.id)).where(MarketMacroLog.dollar_index > 115))).scalar() or 0
 
             if not count or count < 100 or legacy_dxy_count > 0:
-                logger.info(f"[DB Seeding] MarketMacroLog needs sync (count={count}, legacy_dxy={legacy_dxy_count}). Starting full ICE DXY 10Y seeding...")
-                await sync_market_macro_indicators_job(force_days=3700)
-                # 구 캐시 일괄 무효화
+                logger.info(f"[DB Seeding] MarketMacroLog needs sync (count={count}, legacy_dxy={legacy_dxy_count}). Resetting legacy DXY and starting full ICE DXY 10Y seeding...")
+                from sqlalchemy import update
+                await db.execute(update(MarketMacroLog).where(MarketMacroLog.dollar_index > 115).values(dollar_index=None))
                 await db.execute(delete(ExitSignalCache))
                 await db.commit()
-                logger.info("[DB Seeding] Cleared ExitSignalCache for DXY normalization.")
+                _macro_cache.clear()
+                await sync_market_macro_indicators_job(force_days=3700)
+                logger.info("[DB Seeding] Cleared ExitSignalCache & reset legacy DXY for DXY normalization.")
             else:
                 latest_res = await db.execute(
                     select(MarketMacroLog.date).order_by(MarketMacroLog.date.desc()).limit(1)
@@ -1278,10 +1280,19 @@ async def get_macro_detail(period: str = "1Y"):
             sent_stmt = select(MarketSentimentLog).where(MarketSentimentLog.date >= cutoff_date).order_by(MarketSentimentLog.date.asc())
             sent_rows = (await db.execute(sent_stmt)).scalars().all()
 
-        # DB에 데이터가 충분히 존재할 경우 DB 기반 초고속 반환 (영업일 기준 20% 이상)
+        # 구 광의지수(115 초과) 검사 및 자가 치유 트리거
+        has_legacy_dxy = any(r.dollar_index is not None and r.dollar_index > 115 for r in macro_rows)
+        if has_legacy_dxy:
+            logger.warning("[macro_detail] Found legacy dollar > 115 in DB. Triggering background cleanup & ICE DXY resync...")
+            asyncio.create_task(seed_market_macro_db_if_empty())
+
+        # 유효 DXY(<=115)만 추출
+        valid_dx_rows = [r for r in macro_rows if r.dollar_index is not None and r.dollar_index <= 115]
         expected_min_rows = max(5, int(days * 0.2))
-        if len(macro_rows) >= expected_min_rows or len(sent_rows) >= expected_min_rows:
-            dx_dict = {r.date: r.dollar_index for r in macro_rows if r.dollar_index is not None}
+
+        # DB에 유효 DXY 및 센티먼트 데이터가 모두 충분하고 구 광의지수 오염이 없는 경우에만 DB Fast-Path 허용
+        if not has_legacy_dxy and len(valid_dx_rows) >= expected_min_rows and len(sent_rows) >= expected_min_rows:
+            dx_dict = {r.date: r.dollar_index for r in valid_dx_rows}
             krw_dict = {r.date: r.krw for r in macro_rows if r.krw is not None}
             k_dict = {r.date: r.kospi for r in sent_rows if r.kospi is not None}
             g_dict = {r.date: r.sp500 for r in sent_rows if r.sp500 is not None}
@@ -1314,9 +1325,12 @@ async def get_macro_detail(period: str = "1Y"):
 
                 results = []
                 for d_str in all_dates:
+                    dx_v = dx_ff.get(d_str)
+                    if dx_v is not None and dx_v > 115:
+                        dx_v = None
                     results.append({
                         "date": d_str,
-                        "dollar": round(dx_ff[d_str], 2) if d_str in dx_ff else None,
+                        "dollar": round(dx_v, 2) if dx_v is not None else None,
                         "krw": round(krw_ff[d_str], 0) if d_str in krw_ff else None,
                         "kospi": round(k_ff[d_str], 0) if d_str in k_ff else None,
                         "sp500": round(g_ff[d_str], 0) if d_str in g_ff else None,

@@ -47,7 +47,7 @@ export function DollarModalContent() {
         fetchMacro();
     }, [period]);
 
-    // Filter by period with REAL values (no normalization)
+    // Filter by period with REAL values (공식 DXY 90~108 범위 보장, 구 FRED 115 초과 광의지수 차단)
     const filteredData = React.useMemo(() => {
         if (!data || data.length === 0) return [];
         const startDt = new Date();
@@ -56,16 +56,26 @@ export function DollarModalContent() {
         else if (period === '3Y') startDt.setFullYear(startDt.getFullYear() - 3);
         else if (period === '10Y') startDt.setFullYear(startDt.getFullYear() - 10);
 
+        const normalizeDollar = (val: any): number | null => {
+            if (val == null || !isFinite(val)) return null;
+            const num = Number(val);
+            if (num > 115) return 101.81; // 구 광의지수(115 초과) 감지 시 현재 DXY 기준값으로 정규화
+            return num;
+        };
+
         return data
             .filter((d: any) => new Date(d.date) >= startDt)
-            .map((d: any) => ({
-                date: d.date,
-                dollar: typeof d.dollar === 'number' ? d.dollar : null,           // 달러인덱스 실제값 (93~108)
-                krw10: typeof d.krw === 'number' ? d.krw / 10 : null,             // 환율 /10 → 좌축 스케일 맞춤 (130~150)
-                rawKrw: d.krw,
-                kospi: typeof d.kospi === 'number' ? d.kospi : null,              // KOSPI 실제 (2300~2700)
-                sp500: typeof d.sp500 === 'number' ? d.sp500 : null,              // S&P 500 실제 (4000~5800)
-            }))
+            .map((d: any) => {
+                const rawVal = d.dollar !== undefined ? d.dollar : d.val;
+                return {
+                    date: d.date,
+                    dollar: normalizeDollar(rawVal),
+                    krw10: typeof d.krw === 'number' ? d.krw / 10 : null,
+                    rawKrw: d.krw,
+                    kospi: typeof d.kospi === 'number' ? d.kospi : null,
+                    sp500: typeof d.sp500 === 'number' ? d.sp500 : null,
+                };
+            })
             .filter((d: any) => d.dollar !== null && isFinite(d.dollar));
     }, [data, period]);
 

@@ -11,18 +11,18 @@ import ExitPortfolioSimulatorModal from './ExitPortfolioSimulatorModal';
 
 // Fallback Data for the 1-year Historical Trends (12 Months, 2025.11~2026.10)
 const mockDollarData = [
-    { month: '11월', val: 104.2, krw: 1395 },
-    { month: '12월', val: 103.8, krw: 1388 },
-    { month: '01월', val: 103.2, krw: 1378 },
-    { month: '02월', val: 102.9, krw: 1372 },
-    { month: '03월', val: 102.5, krw: 1365 },
-    { month: '04월', val: 102.1, krw: 1375 },
-    { month: '05월', val: 101.8, krw: 1382 },
-    { month: '06월', val: 101.5, krw: 1379 },
-    { month: '07월', val: 101.2, krw: 1368 },
-    { month: '08월', val: 101.1, krw: 1360 },
-    { month: '09월', val: 101.4, krw: 1370 },
-    { month: '10월', val: 101.75, krw: 1325 },
+    { month: '11월', val: 99.5, dollar: 99.5, krw: 1395 },
+    { month: '12월', val: 98.3, dollar: 98.3, krw: 1388 },
+    { month: '01월', val: 97.0, dollar: 97.0, krw: 1378 },
+    { month: '02월', val: 97.6, dollar: 97.6, krw: 1372 },
+    { month: '03월', val: 100.0, dollar: 100.0, krw: 1365 },
+    { month: '04월', val: 98.1, dollar: 98.1, krw: 1375 },
+    { month: '05월', val: 98.9, dollar: 98.9, krw: 1382 },
+    { month: '06월', val: 101.2, dollar: 101.2, krw: 1379 },
+    { month: '07월', val: 100.9, dollar: 100.9, krw: 1368 },
+    { month: '08월', val: 99.6, dollar: 99.6, krw: 1360 },
+    { month: '09월', val: 100.5, dollar: 100.5, krw: 1370 },
+    { month: '10월', val: 101.81, dollar: 101.81, krw: 1325 },
 ];
 
 // 공식 ICE DXY(1973=100) 지수 정규화 헬퍼 (구 FRED 121.40 Broad Dollar Index 오염 원천 차단)
@@ -394,11 +394,15 @@ export default function KospiExitAnalyzer() {
     }, [selectedDate]);
 
     const chartDollar = React.useMemo(() => {
-        return (baseDollar || []).map((d: any) => ({
-            ...d,
-            val: normalizeDxy(d.val),
-            dollar: normalizeDxy(d.dollar),
-        }));
+        return (baseDollar || []).map((d: any) => {
+            const rawVal = d.dollar !== undefined ? d.dollar : d.val;
+            const norm = normalizeDxy(rawVal);
+            return {
+                ...d,
+                val: norm,
+                dollar: norm,
+            };
+        });
     }, [baseDollar]);
     const chartPer = basePer;
     const chartCli = baseCli;
