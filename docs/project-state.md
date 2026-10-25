@@ -3,15 +3,24 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: UI/UX Standard Template & Sticky Navigation Minimization & Universal Modal Overlay & Recharts Date Formatting
-✅ Recent: [Sprint 42 보완 완료 — 시장지표 및 미국중간선거 Update 버튼 & 시나리오 탭 컴팩트 표준화]
-1. [한국/미국 경기 지표 & 플레이북 버튼 컴팩트화 (`KrMacroIndicatorSection.tsx`, `DiscoverTab.tsx`)]:
-   - '한국 경기 지표' 및 '미국 경기 지표' 헤더 Update 버튼을 `px-2 py-0.5 text-[11px] rounded-md`로 축소.
-   - '수출 주력군 수혜 ETF 플레이북'의 'Update & 텔레그램 속보' 버튼을 `px-2 py-0.5 text-[11px] rounded-md`로 컴팩트화.
-   - '월가 예상치 대조 (8대 지표)' 배지 버튼을 `px-2 py-0.5 text-[11px] rounded-md`로 표준 축소.
-2. [미국 중간선거 Update & 4대 시나리오 탭 컴팩트화 (`MidtermElectionTab.tsx`)]:
-   - 헤더 'Update' 버튼을 `px-2 py-0.5 text-[11px] rounded-md`로 일원화.
-   - '3. 4대 선거 시나리오 인터랙티브 판세 시뮬레이터'의 4대 탭('분점정부 (60%)', '여당 수성 (25%)', '야당 압승 (10%)', '역분점정부 (5%)')을 `px-2 py-0.5 text-[11px] font-medium rounded-md`로 축소 및 상시 즉각 렌더링 폴백 보장.
-3. [검증 완료]: Next.js 16.1.6 11개 페이지 최적화 빌드 100% 성공, 브라우저 실측 렌더링 및 스크린샷 검증 완료.
+✅ Recent: [Sprint 42 보완 완료 — 섹터분석 컨텐츠 페이지 및 전 섹터 특화 분석 내 버튼·탭 컴팩트 표준 규격 일원화]
+1. [섹터분석 메인 및 서브탭 일원화 (`SectorAnalysisTab.tsx`)]:
+   - 국가 필터 버튼(`통합`, `국내`, `미국`)을 `px-2.5 py-1 text-xs font-semibold rounded-md`로 축소.
+   - 4대 서브탭(`섹터 순환매 동향`, `차기 주도주 발굴`, `섹터별 주가 흐름`, `섹터 간 상관관계 분석`)을 `px-3.5 py-2 text-xs font-bold`로 컴팩트화.
+2. [섹터 특화 인사이트 & 반도체 매크로 사이클 (`SectorInsightReport.tsx`, `SemiCycleDashboard.tsx`)]:
+   - 상단 헤더 우측 `Gemini Expert Report` 뱃지 및 `Update` 버튼을 `px-2 py-0.5 text-[11px] font-medium rounded-md`로 축소.
+   - 사이클 탭 3종(`1. 매크로 4국면...`, `2. Q-Cycle...`, `3. 핵심 ETF...`)을 `px-2.5 py-1 text-xs font-semibold rounded-md`로 축소.
+   - CSCI 프레임워크 박스 우측 `Update` 버튼을 `px-2 py-0.5 text-[11px] font-medium rounded-md`로 축소.
+   - 5대 서브탭(`7대 실데이터 신호...`, `종합 대시보드`, `빅테크 CapEx 트래커...`, `서브섹터 밸류에이션 맵`, `국면별 최적 ETF 매트릭스`)을 `px-2.5 py-1 text-xs font-semibold rounded-md`로 축소.
+3. [실데이터 신호등 & 모달 (`SemiFundamentalSignals.tsx`)]:
+   - `5국면 판단기준`, `Update`, `Bulliza 지표 비교` 버튼을 `px-2 py-0.5 text-[11px] font-medium rounded-md`로 컴팩트화.
+   - 모달 닫기 버튼을 `px-3 py-1 text-xs font-semibold rounded-md`로 표준화.
+4. [전 섹터 차트 및 필터 칩 일원화 (`SemiChart.tsx`, `SemiPartsChart.tsx`, `SpaceChart.tsx`, `BioChart.tsx`, `EnergyChart.tsx`, `SectorFlowGrid.tsx`, `SectorCorrelationHeatmap.tsx`, `NextLeaderScreener.tsx`)]:
+   - 시장 토글(`국내상장 ETF...`) 3종 버튼을 `px-2.5 py-1 text-xs font-semibold rounded-md`로 일원화.
+   - 기간 선택 버튼(`1M` ~ `10Y`)을 `px-2 py-0.5 text-[11px] font-semibold rounded-md`로 일원화.
+   - 구성종목 주가 비교 ETF 칩 버튼들을 `px-2 py-0.5 text-[11px] font-medium rounded-md`로 일원화.
+   - 섹터 흐름 시장 탭, 상관관계 히트맵 기간/지역 스위치, 퀀트 스크리너 섹터 탭 그리드를 표준 컴팩트 규격으로 일괄 정돈.
+5. [검증 완료]: Next.js 16.1.6 11개 페이지 최적화 빌드 성공 (`exit code 0`), 브라우저 실측 렌더링 및 스크린샷 검증 완료.
 
 🚀 Current: Sprint 42 완료 / 다음 작업 대기
 

@@ -120,12 +120,12 @@ export default function SectorInsightReport({
                     <button
                         onClick={handleUpdate}
                         disabled={generating}
-                        className={`flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all ${a.badge} hover:brightness-125 disabled:opacity-60`}
+                        className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md border transition-all ${a.badge} hover:brightness-125 disabled:opacity-60 cursor-pointer`}
                         title="Gemini로 현재 시세 기반 리포트를 새로 생성합니다"
                     >
                         {generating
-                            ? <><Loader2 className="w-3 h-3 animate-spin" /> 분석 중…</>
-                            : <><RefreshCw className="w-3 h-3" /> Update</>}
+                            ? <><Loader2 className="w-2.5 h-2.5 animate-spin" /> 분석 중…</>
+                            : <><RefreshCw className="w-2.5 h-2.5" /> Update</>}
                     </button>
                 </div>
             </div>
@@ -138,7 +138,7 @@ export default function SectorInsightReport({
             )}
 
             {/* Tab Menu */}
-            <div className="flex flex-wrap bg-[#1a1a23]/60 p-1 rounded-xl border border-white/5 gap-1 self-start">
+            <div className="flex flex-wrap bg-[#1a1a23]/60 p-0.5 rounded-lg border border-white/5 gap-1 self-start">
                 {tabs.map((tab) => {
                     const Icon = tab.icon;
                     const sel = activeTab === tab.id;
@@ -146,12 +146,12 @@ export default function SectorInsightReport({
                         <button
                             key={tab.id}
                             onClick={() => onTabChange(tab.id)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                                 sel ? `bg-gradient-to-r ${a.active} text-white shadow-md`
                                     : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
                             }`}
                         >
-                            <Icon className="w-3.5 h-3.5" />
+                            <Icon className="w-3 h-3" />
                             {tab.label}
                         </button>
                     );

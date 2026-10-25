@@ -780,19 +780,19 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                         반도체 소부장 주요 종목 현황
                     </h3>
                     <div className="flex items-center gap-2.5">
-                        <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
+                        <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/5 shadow-inner">
                             {([['KR', '국내상장 ETF(국내주식)'], ['KR_US', '국내상장 ETF(해외주식)'], ['US', '해외상장 ETF']] as const).map(([val, lbl]) => (
                                 <button key={val}
                                     onClick={() => { setMarketTab(val); setSelectedEtf(null); }}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${marketTab === val ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}>
+                                    className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${marketTab === val ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}>
                                     {lbl}
                                 </button>
                             ))}
                         </div>
-                        <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 shadow-inner">
+                        <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/5 shadow-inner">
                             {periodOptions.map(p => (
                                 <button key={p} onClick={() => setPeriod(p)}
-                                    className={`px-2.5 py-1.5 text-xs font-bold rounded-md transition-all ${period === p ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}>
+                                    className={`px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all cursor-pointer ${period === p ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}>
                                     {p}
                                 </button>
                             ))}
@@ -800,15 +800,15 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                     </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 items-center mb-2 bg-black/30 p-2.5 rounded-2xl border border-white/5">
-                    <span className="text-[11px] font-bold text-gray-400 mr-1 flex items-center">🔍 구성종목 주가 비교:</span>
+                <div className="flex flex-wrap gap-1.5 items-center mb-2 bg-black/30 p-2 rounded-xl border border-white/5">
+                    <span className="text-[11px] font-medium text-gray-400 mr-1 flex items-center">🔍 구성종목 추가 비교:</span>
                     {etfsToSelect.filter(e => activeTabEtfs.includes(e) || selectedEtf === e).map((etfName, idx) => {
                         const isSelected = selectedEtf === etfName;
                         const themeColor = colors[idx % colors.length];
                         return (
                             <button key={etfName}
                                 onClick={() => setSelectedEtf(isSelected ? null : etfName)}
-                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border ${isSelected ? 'bg-indigo-600/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]' : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'}`}
+                                className={`px-2 py-0.5 text-[11px] font-medium rounded-md transition-all border cursor-pointer ${isSelected ? 'bg-indigo-600/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]' : 'bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10'}`}
                                 style={{ borderColor: isSelected ? themeColor : 'rgba(255,255,255,0.06)' }}>
                                 {etfName} {isSelected && '✓'}
                             </button>
@@ -816,7 +816,7 @@ export default function SemiPartsChart({ onOpenDetail }: SemiPartsChartProps) {
                     })}
                     {selectedEtf && (
                         <button onClick={() => setSelectedEtf(null)}
-                            className="text-[10px] text-rose-400 hover:text-rose-300 font-bold ml-auto hover:underline transition-all">
+                            className="text-[10px] text-rose-400 hover:text-rose-300 font-semibold ml-auto hover:underline transition-all cursor-pointer">
                             비교 초기화 (X)
                         </button>
                     )}

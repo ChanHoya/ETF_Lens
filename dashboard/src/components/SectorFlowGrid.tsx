@@ -168,7 +168,7 @@ export default function SectorFlowGrid({
                 <p className="text-sm text-gray-400 max-w-md mb-6">{error}</p>
                 <button 
                     onClick={() => window.location.reload()} 
-                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/20"
+                    className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-md transition-all shadow-sm cursor-pointer"
                 >
                     다시 시도
                 </button>
@@ -180,14 +180,14 @@ export default function SectorFlowGrid({
         <div className="space-y-6 w-full animate-in fade-in duration-300">
             {/* Market Tabs */}
             <div className="flex justify-between items-center bg-black/10 p-2 rounded-2xl border border-white/5 backdrop-blur-md w-full flex-wrap gap-4">
-                <div className="flex bg-[#1a1a23] p-1 rounded-xl border border-white/10">
+                <div className="flex bg-[#1a1a23] p-0.5 rounded-lg border border-white/10">
                     {(['KOSPI', 'KOSDAQ', 'S&P 500', 'NASDAQ'] as const).map((mkt) => (
                         <button
                             key={mkt}
                             onClick={() => setActiveMarket(mkt)}
-                            className={`px-4 py-2 text-xs md:text-sm font-black rounded-lg transition-all ${
+                            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                                 activeMarket === mkt
-                                ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                                ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-sm'
                                 : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
                             }`}
                         >

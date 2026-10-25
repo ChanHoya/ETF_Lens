@@ -469,9 +469,9 @@ export default function SemiFundamentalSignals({
                             </span>
                             <button
                                 onClick={() => setShowCriteriaModal(true)}
-                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/40 text-xs font-bold text-gray-200 hover:text-white transition-all shadow-sm"
+                                className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/40 text-[11px] font-medium text-gray-200 hover:text-white transition-all shadow-sm cursor-pointer"
                             >
-                                <Scale className="w-3.5 h-3.5 text-emerald-400" />
+                                <Scale className="w-2.5 h-2.5 text-emerald-400" />
                                 <span>5국면 판단기준</span>
                             </button>
                         </div>
@@ -601,17 +601,17 @@ export default function SemiFundamentalSignals({
                             <button
                                 onClick={() => fetchData(true)}
                                 disabled={isRefreshing}
-                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/40 text-xs font-semibold text-gray-200 hover:text-white transition-all shadow-sm active:scale-95 disabled:opacity-60 cursor-pointer"
+                                className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/40 text-[11px] font-medium text-gray-200 hover:text-white transition-all shadow-sm active:scale-95 disabled:opacity-60 cursor-pointer"
                                 title="최신 거시 실데이터(수출/단가/재고 등)를 즉시 동기화합니다."
                             >
-                                <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isRefreshing ? "animate-spin" : ""}`} />
+                                <RefreshCw className={`w-2.5 h-2.5 text-emerald-400 ${isRefreshing ? "animate-spin" : ""}`} />
                                 <span>{isRefreshing ? "동기화 중..." : "Update"}</span>
                             </button>
                             <button
                                 onClick={() => setShowCompareModal(true)}
-                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 hover:border-indigo-400 text-xs font-bold text-indigo-200 hover:text-white transition-all shadow-sm"
+                                className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 hover:border-indigo-400 text-[11px] font-medium text-indigo-200 hover:text-white transition-all shadow-sm cursor-pointer"
                             >
-                                <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                                <Layers className="w-2.5 h-2.5 text-indigo-400" />
                                 <span>Bulliza 지표 비교</span>
                             </button>
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold font-mono">
@@ -1014,7 +1014,7 @@ export default function SemiFundamentalSignals({
                         <div className="mt-4 pt-3 border-t border-white/10 flex justify-end shrink-0">
                             <button
                                 onClick={() => setShowCriteriaModal(false)}
-                                className="px-4 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all"
+                                className="px-3 py-1 rounded-md bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition-all cursor-pointer"
                             >
                                 닫기
                             </button>

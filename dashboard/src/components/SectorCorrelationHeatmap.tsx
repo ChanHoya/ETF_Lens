@@ -151,30 +151,30 @@ export default function SectorCorrelationHeatmap({ selectedSector }: SectorCorre
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 self-start sm:self-center">
+                <div className="flex items-center gap-2 self-start sm:self-center">
                     {/* Period Switch */}
-                    <div className="flex bg-[#1a1a23] p-1 rounded-xl border border-white/5 text-xs font-bold">
+                    <div className="flex bg-[#1a1a23] p-0.5 rounded-lg border border-white/5 text-xs font-semibold">
                         <button
                             onClick={() => setPeriod('180d')}
-                            className={`px-3 py-1.5 rounded-lg transition-all ${period === '180d' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${period === '180d' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}
                         >
                             6개월
                         </button>
                         <button
                             onClick={() => setPeriod('360d')}
-                            className={`px-3 py-1.5 rounded-lg transition-all ${period === '360d' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${period === '360d' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}
                         >
                             1년
                         </button>
                     </div>
 
                     {/* Region Switch */}
-                    <div className="flex bg-[#1a1a23] p-1 rounded-xl border border-white/5 text-xs font-bold">
+                    <div className="flex bg-[#1a1a23] p-0.5 rounded-lg border border-white/5 text-xs font-semibold">
                         {(['ALL', 'KR', 'US'] as const).map(r => (
                             <button
                                 key={r}
                                 onClick={() => setFilterRegion(r)}
-                                className={`px-3 py-1.5 rounded-lg transition-all ${filterRegion === r ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${filterRegion === r ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}
                             >
                                 {r === 'ALL' ? '전체' : r === 'KR' ? '국내' : '미국'}
                             </button>

@@ -405,16 +405,16 @@ export default function NextLeaderScreener({ onOpenDetail }: NextLeaderScreenerP
                 </div>
 
                 {/* Sector Navigation Tab Grid */}
-                <div className="grid grid-cols-5 md:grid-cols-10 gap-2 mb-6">
+                <div className="grid grid-cols-5 md:grid-cols-10 gap-1.5 mb-5">
                     {sectorsList.map((sector) => {
                         const isActive = selectedSector === sector;
                         return (
                             <button
                                 key={sector}
                                 onClick={() => setSelectedSector(sector)}
-                                className={`px-2 py-3 text-xs font-bold rounded-xl transition-all border text-center ${
+                                className={`px-2 py-1.5 text-xs font-semibold rounded-lg transition-all border text-center cursor-pointer ${
                                     isActive
-                                        ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white border-indigo-500 shadow-lg shadow-indigo-600/20'
+                                        ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white border-indigo-500 shadow-md'
                                         : 'bg-black/30 border-white/5 text-gray-400 hover:text-gray-200 hover:bg-white/5'
                                 }`}
                             >

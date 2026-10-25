@@ -41,7 +41,7 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                     </div>
 
                     {subTab === 'rotation' && (
-                        <div className="flex bg-[#1a1a23] p-1 rounded-xl border border-white/10 self-start md:self-center">
+                        <div className="flex bg-[#1a1a23] p-0.5 rounded-lg border border-white/10 self-start md:self-center">
                             {(['ALL', 'KR', 'US'] as const).map((r) => (
                                 <button
                                     key={r}
@@ -49,15 +49,15 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                                         setRegion(r);
                                         setSelectedSector(null); // Reset sector selection on region change
                                     }}
-                                    className={`px-4 py-2 text-sm font-bold rounded-lg transition-all flex items-center gap-2 ${
+                                    className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
                                         region === r 
-                                        ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg' 
+                                        ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-sm' 
                                         : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
                                     }`}
                                 >
-                                    {r === 'ALL' && <Globe className="w-4 h-4" />}
-                                    {r === 'KR' && <span className="text-[10px] bg-white/10 px-1 rounded">KR</span>}
-                                    {r === 'US' && <span className="text-[10px] bg-white/10 px-1 rounded">US</span>}
+                                    {r === 'ALL' && <Globe className="w-3 h-3" />}
+                                    {r === 'KR' && <span className="text-[9px] bg-white/10 px-1 rounded">KR</span>}
+                                    {r === 'US' && <span className="text-[9px] bg-white/10 px-1 rounded">US</span>}
                                     {r === 'ALL' ? '통합' : r === 'KR' ? '국내' : '미국'}
                                 </button>
                             ))}
@@ -66,49 +66,49 @@ export default function SectorAnalysisTab({ onOpenDetail }: SectorAnalysisTabPro
                 </div>
 
                 {/* Sub-Tabs: Rotation vs Screener vs Flow vs Correlation */}
-                <div className="flex border-b border-white/10 w-full gap-2 overflow-x-auto no-scrollbar">
+                <div className="flex border-b border-white/10 w-full gap-1 overflow-x-auto no-scrollbar">
                     <button
                         onClick={() => setSubTab('rotation')}
-                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 shrink-0 ${
+                        className={`px-3.5 py-2 font-bold text-xs border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
                             subTab === 'rotation'
                             ? 'border-indigo-500 text-indigo-400 font-extrabold'
                             : 'border-transparent text-gray-400 hover:text-gray-200'
                         }`}
                     >
-                        <Layers className="w-4 h-4" />
+                        <Layers className="w-3.5 h-3.5" />
                         섹터 순환매 동향
                     </button>
                     <button
                         onClick={() => setSubTab('screener')}
-                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 shrink-0 ${
+                        className={`px-3.5 py-2 font-bold text-xs border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
                             subTab === 'screener'
                             ? 'border-indigo-500 text-indigo-400 font-extrabold'
                             : 'border-transparent text-gray-400 hover:text-gray-200'
                         }`}
                     >
-                        <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
+                        <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
                         차기 주도주 발굴 (퀀트 스크리너)
                     </button>
                     <button
                         onClick={() => setSubTab('flow')}
-                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 shrink-0 ${
+                        className={`px-3.5 py-2 font-bold text-xs border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
                             subTab === 'flow'
                             ? 'border-indigo-500 text-indigo-400 font-extrabold'
                             : 'border-transparent text-gray-400 hover:text-gray-200'
                         }`}
                     >
-                        <Activity className="w-4 h-4 text-cyan-400" />
+                        <Activity className="w-3.5 h-3.5 text-cyan-400" />
                         섹터별 주가 흐름
                     </button>
                     <button
                         onClick={() => setSubTab('correlation')}
-                        className={`px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 shrink-0 ${
+                        className={`px-3.5 py-2 font-bold text-xs border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
                             subTab === 'correlation'
                             ? 'border-indigo-500 text-indigo-400 font-extrabold'
                             : 'border-transparent text-gray-400 hover:text-gray-200'
                         }`}
                     >
-                        <Grid className="w-4 h-4 text-emerald-400" />
+                        <Grid className="w-3.5 h-3.5 text-emerald-400" />
                         섹터 간 상관관계 분석
                     </button>
                 </div>
