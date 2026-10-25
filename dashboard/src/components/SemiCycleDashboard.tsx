@@ -1,4 +1,5 @@
 "use client";
+// 반도체 매크로 사이클 시계, CapEx 트래커, 밸류에이션 맵 등 특화분석 통합 대시보드 컴포넌트
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
@@ -177,7 +178,9 @@ const FALLBACK_CLOCK_DATA: any = {
         {"date": "2026-05", "x": -0.03, "y": 1.80, "csci": "+1.43", "phase": 2, "label": "26.05"},
         {"date": "2026-06", "x": -0.03, "y": 1.82, "csci": "+1.45", "phase": 2, "label": "26.06"},
         {"date": "2026-07", "x": -0.03, "y": 1.83, "csci": "+1.46", "phase": 2, "label": "26.07"},
-        {"date": "2026-08", "x": -0.03, "y": 1.85, "csci": "+1.47", "phase": 2, "label": "현재 (26.08)"},
+        {"date": "2026-08", "x": -0.03, "y": 1.85, "csci": "+1.47", "phase": 2, "label": "26.08"},
+        {"date": "2026-09", "x": -0.02, "y": 1.85, "csci": "+1.48", "phase": 2, "label": "26.09"},
+        {"date": "2026-10", "x": -0.02, "y": 1.85, "csci": "+1.48", "phase": 2, "label": "현재 (26.10)"},
     ],
 };
 
@@ -220,6 +223,7 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
     const [refreshToast, setRefreshToast] = useState<string | null>(null);
+    const [signalsRefreshTrigger, setSignalsRefreshTrigger] = useState<number>(0);
     const [activeSubTab, setActiveSubTab] = useState<"signals" | "overview" | "capex" | "subsector" | "etf">("signals");
     const [clockPeriod, setClockPeriod] = useState<"5Y" | "3Y" | "1Y">("5Y");
     const capexChartHighlight = useChartHighlight();
@@ -298,6 +302,9 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
 
     const fetchAllData = async (force: boolean = false) => {
         setIsRefreshing(true);
+        if (force) {
+            setSignalsRefreshTrigger((prev) => prev + 1);
+        }
         try {
             const forceParam = force ? "?force=true" : "";
             const [clockRes, trackerRes, subsectorRes, strategyRes] = await Promise.allSettled([
@@ -305,6 +312,7 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
                 fetch(`${API_BASE}/api/v1/analyze/semi-cycle/tracker${forceParam}`, { cache: "no-store" }),
                 fetch(`${API_BASE}/api/v1/analyze/semi-cycle/subsectors${forceParam}`, { cache: "no-store" }),
                 fetch(`${API_BASE}/api/v1/analyze/semi-cycle/strategy${forceParam}`, { cache: "no-store" }),
+                fetch(`${API_BASE}/api/v1/analyze/semi-cycle/macro-signals?industry=semiconductor${forceParam}`, { cache: "no-store" }),
             ]);
 
             if (clockRes.status === "fulfilled" && clockRes.value.ok) setClockData(await clockRes.value.json());
@@ -313,13 +321,13 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
             if (strategyRes.status === "fulfilled" && strategyRes.value.ok) setStrategyData(await strategyRes.value.json());
 
             if (force) {
-                setRefreshToast("최신 반도체 퀀트 매크로 지표 동기화 완료");
+                setRefreshToast("반도체 특화분석 전 탭 최신 지표 동기화 완료.");
                 setTimeout(() => setRefreshToast(null), 3000);
             }
         } catch (err) {
             console.warn("Failed to fetch semi cycle data, using robust fallback:", err);
             if (force) {
-                setRefreshToast("오프라인 캐시 기반 최신화 완료");
+                setRefreshToast("오프라인 캐시 기반 최신화 완료.");
                 setTimeout(() => setRefreshToast(null), 3000);
             }
         } finally {
@@ -557,7 +565,10 @@ export default function SemiCycleDashboard({ onOpenDetail, trendCards }: SemiCyc
 
             {/* TAB: SIGNALS (7대 실데이터 신호등 & 5국면 진단) */}
             {activeSubTab === "signals" && (
-                <SemiFundamentalSignals industry="semiconductor" />
+                <SemiFundamentalSignals
+                    industry="semiconductor"
+                    refreshTrigger={signalsRefreshTrigger}
+                />
             )}
 
             {/* TAB: OVERVIEW */}

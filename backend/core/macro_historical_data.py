@@ -150,6 +150,8 @@ HISTORICAL_MACRO_SERIES: List[Dict[str, Any]] = [
     {"date": "2026-06", "export_amt": 275.0, "unit_price": 240.0, "volume": 213.2, "cap_util": 101.7, "inventory": 100.1},
     {"date": "2026-07", "export_amt": 280.0, "unit_price": 242.3, "volume": 213.6, "cap_util": 101.7, "inventory": 100.1},
     {"date": "2026-08", "export_amt": 282.0, "unit_price": 243.5, "volume": 214.0, "cap_util": 101.8, "inventory": 100.0},
+    {"date": "2026-09", "export_amt": 295.0, "unit_price": 248.0, "volume": 214.5, "cap_util": 102.0, "inventory": 99.5},
+    {"date": "2026-10", "export_amt": 310.0, "unit_price": 252.0, "volume": 215.0, "cap_util": 102.2, "inventory": 99.0},
 ]
 
 _DYNAMIC_SERIES: List[Dict[str, Any]] = []

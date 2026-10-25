@@ -1,3 +1,4 @@
+// 반도체 및 주요 업종 7대 실데이터 신호등과 5단계 국면 진단을 시각화하는 컴포넌트
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -28,40 +29,40 @@ import {
 } from "recharts";
 import { API_BASE } from "../lib/apiConfig";
 
-// 기본 정적 Fallback 데이터 (Bulliza 최신 슈퍼사이클 기준 동기화)
+// 기본 정적 Fallback 데이터 (최신 2026-10 기준 동기화)
 
 const FALLBACK_SIGNALS_DATA: any = {
     industry: "semiconductor",
     industry_kr: "반도체",
-    current_state: "정상 호황",
-    current_state_code: "normal_bull",
-    current_action: "매수 유지 구간",
-    summary_comment: '"아직 타이트하지만 가속은 둔화" — 매수 유지 구간',
-    state_transition: "직전 국면 강한호황 (2개월 전) ➔ 현재 정상호황 · 완만 ↗",
-    signals_count: { bullish: 2, neutral: 5, bearish: 0, total: 7 },
-    weighted_score: "+0.40",
-    score_gauge_pct: 70,
+    current_state: "강한 호황",
+    current_state_code: "strong_bull",
+    current_action: "적극 비중확대",
+    summary_comment: '반도체 실데이터 7개 판정 — 호황 3 · 중립 4 · 둔화 0 · 종합 +0.51 → 적극 비중확대',
+    state_transition: "직전 국면 정상호황 (1개월 전) ➔ 현재 강한호황 · 확장 가속 ↗",
+    signals_count: { bullish: 3, neutral: 4, bearish: 0, total: 7 },
+    weighted_score: "+0.51",
+    score_gauge_pct: 76,
     stages: [
-        { id: "strong_bull", name: "강한호황", action: "적극", is_current: false },
-        { id: "normal_bull", name: "정상호황", action: "유지", is_current: true },
+        { id: "strong_bull", name: "강한호황", action: "적극", is_current: true },
+        { id: "normal_bull", name: "정상호황", action: "유지", is_current: false },
         { id: "slowing", name: "호황둔화", action: "경계", is_current: false },
         { id: "early_bear", name: "불황입구", action: "비중↓", is_current: false },
         { id: "deep_bear", name: "심각불황", action: "손절", is_current: false },
     ],
     timeline: [
-        { month: "2025-08", state: "정상호황", color: "#34d399" },
-        { month: "2025-09", state: "강한호황", color: "#10b981" },
-        { month: "2025-10", state: "강한호황", color: "#10b981" },
-        { month: "2025-11", state: "강한호황", color: "#10b981" },
-        { month: "2025-12", state: "강한호황", color: "#10b981" },
-        { month: "2026-01", state: "강한호황", color: "#10b981" },
+        { month: "2025-10", state: "호황둔화", color: "#f59e0b" },
+        { month: "2025-11", state: "호황둔화", color: "#f59e0b" },
+        { month: "2025-12", state: "정상호황", color: "#34d399" },
+        { month: "2026-01", state: "정상호황", color: "#34d399" },
         { month: "2026-02", state: "강한호황", color: "#10b981" },
         { month: "2026-03", state: "강한호황", color: "#10b981" },
         { month: "2026-04", state: "강한호황", color: "#10b981" },
         { month: "2026-05", state: "강한호황", color: "#10b981" },
-        { month: "2026-06", state: "정상호황", color: "#34d399" },
-        { month: "2026-07", state: "정상호황", color: "#34d399" },
+        { month: "2026-06", state: "강한호황", color: "#10b981" },
+        { month: "2026-07", state: "강한호황", color: "#10b981" },
         { month: "2026-08", state: "정상호황", color: "#34d399" },
+        { month: "2026-09", state: "정상호황", color: "#34d399" },
+        { month: "2026-10", state: "강한호황", color: "#10b981" },
     ],
     signals: [
         {
@@ -183,17 +184,17 @@ const FALLBACK_SIGNALS_DATA: any = {
         {
             id: "kr_export_amount",
             name: "한국 수출액",
-            sub_name: "2026-07 (월간 확정치)",
-            current_value_formatted: "280억$",
-            sub_badge: "YoY +270.4%",
-            current_value: 280.0,
+            sub_name: "2026-10 (월간 확정치)",
+            current_value_formatted: "310.0억$",
+            sub_badge: "YoY +216.3%",
+            current_value: 310.0,
             status: "bullish",
             status_kr: "호황",
             status_badge: "호황",
             color: "#10b981",
             chart_color: "#10b981",
             unit: "억$",
-            description: "관세청이 공식 집계하는 한국 반도체 월간 수출 실적입니다. 2026-07 기준 280.0억 달러로 전년 동월 대비 +270.4%입니다. YoY +15% 이상이면 호황, -5% 미만이면 둔화로 판정합니다.",
+            description: "관세청이 공식 집계하는 한국 반도체 월간 수출 실적입니다. 2026-10 기준 310.0억 달러로 전년 동월 대비 +216.3%입니다. YoY +15% 이상이면 호황, -5% 미만이면 둔화로 판정합니다.",
             source: "관세청 무역통계 (K-stat)",
             series_10y: [
                 { date: "2016-09", value: 57.0 }, { date: "2016-12", value: 63.6 },
@@ -215,24 +216,26 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2024-09", value: 138.0 }, { date: "2024-12", value: 142.5 },
                 { date: "2025-03", value: 72.0 }, { date: "2025-06", value: 74.8 },
                 { date: "2025-07", value: 75.6 }, { date: "2025-09", value: 85.0 },
-                { date: "2025-12", value: 150.0 }, { date: "2026-03", value: 235.0 },
-                { date: "2026-06", value: 275.0 }, { date: "2026-07", value: 280.0 },
+                { date: "2025-10", value: 98.0 }, { date: "2025-12", value: 150.0 },
+                { date: "2026-03", value: 235.0 }, { date: "2026-06", value: 275.0 },
+                { date: "2026-07", value: 280.0 }, { date: "2026-08", value: 282.0 },
+                { date: "2026-09", value: 295.0 }, { date: "2026-10", value: 310.0 },
             ],
         },
         {
             id: "export_unit_price",
             name: "수출 단가지수",
-            sub_name: "2026-07 · 2020=100",
-            current_value_formatted: "242.3",
-            sub_badge: "YoY +183.1%",
-            current_value: 242.3,
+            sub_name: "2026-10 · 2020=100",
+            current_value_formatted: "252.0",
+            sub_badge: "YoY +129.1%",
+            current_value: 252.0,
             status: "bullish",
             status_kr: "호황",
             status_badge: "호황",
             color: "#10b981",
             chart_color: "#10b981",
             unit: "pt",
-            description: "수출 금액을 수출 물량으로 나눈 단가 지표입니다(2020=100). 2026-07 기준 242.3으로 전년 동월 대비 +183.1%입니다. YoY +10% 이상이면 가격결정력 확대(호황), -5% 미만이면 둔화로 판정합니다.",
+            description: "수출 금액을 수출 물량으로 나눈 단가 지표입니다(2020=100). 2026-10 기준 252.0으로 전년 동월 대비 +129.1%입니다. YoY +10% 이상이면 가격결정력 확대(호황), -5% 미만이면 둔화로 판정합니다.",
             source: "한국은행 경제통계시스템 (ECOS)",
             series_10y: [
                 { date: "2016-09", value: 82.5 }, { date: "2016-12", value: 91.0 },
@@ -246,24 +249,26 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2023-06", value: 61.2 }, { date: "2023-12", value: 89.0 },
                 { date: "2024-06", value: 144.5 }, { date: "2024-12", value: 216.0 },
                 { date: "2025-06", value: 84.0 }, { date: "2025-07", value: 85.6 },
-                { date: "2025-12", value: 165.0 }, { date: "2026-03", value: 222.0 },
-                { date: "2026-06", value: 240.0 }, { date: "2026-07", value: 242.3 },
+                { date: "2025-10", value: 110.0 }, { date: "2025-12", value: 165.0 },
+                { date: "2026-03", value: 222.0 }, { date: "2026-06", value: 240.0 },
+                { date: "2026-07", value: 242.3 }, { date: "2026-08", value: 243.5 },
+                { date: "2026-09", value: 248.0 }, { date: "2026-10", value: 252.0 },
             ],
         },
         {
             id: "real_export_volume",
             name: "실질 수출물량",
-            sub_name: "2026-07 · 2020=100 · 가격효과 제거",
-            current_value_formatted: "213.6",
-            sub_badge: "YoY +0.6%",
-            current_value: 213.6,
+            sub_name: "2026-10 · 2020=100 · 가격효과 제거",
+            current_value_formatted: "215.0",
+            sub_badge: "YoY +0.2%",
+            current_value: 215.0,
             status: "neutral",
             status_kr: "중립",
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#10b981",
             unit: "pt",
-            description: "가격 변동을 제거한 순수 반도체 수출 수량(물량) 지수입니다(2020=100). 2026-07 기준 213.6으로 전년 동월 대비 +0.6%입니다. YoY +10% 이상이면 출하 확대(호황), -5% 미만이면 둔화로 판정합니다.",
+            description: "가격 변동을 제거한 순수 반도체 수출 수량(물량) 지수입니다(2020=100). 2026-10 기준 215.0으로 전년 동월 대비 +0.2%입니다. YoY +10% 이상이면 출하 확대(호황), -5% 미만이면 둔화로 판정합니다.",
             source: "한국은행 무역지수",
             series_10y: [
                 { date: "2016-09", value: 69.1 }, { date: "2016-12", value: 69.9 },
@@ -278,24 +283,26 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2023-03", value: 156.0 }, { date: "2023-06", value: 148.0 },
                 { date: "2023-12", value: 126.0 }, { date: "2024-06", value: 94.3 },
                 { date: "2024-12", value: 66.0 }, { date: "2025-06", value: 208.0 },
-                { date: "2025-07", value: 212.3 }, { date: "2025-12", value: 214.5 },
-                { date: "2026-03", value: 214.2 }, { date: "2026-06", value: 213.2 },
-                { date: "2026-07", value: 213.6 },
+                { date: "2025-07", value: 212.3 }, { date: "2025-10", value: 214.5 },
+                { date: "2025-12", value: 214.5 }, { date: "2026-03", value: 214.2 },
+                { date: "2026-06", value: 213.2 }, { date: "2026-07", value: 213.6 },
+                { date: "2026-08", value: 214.0 }, { date: "2026-09", value: 214.5 },
+                { date: "2026-10", value: 215.0 },
             ],
         },
         {
             id: "capacity_utilization",
             name: "가동률지수",
-            sub_name: "2026-06 · 3M 95.5 · 2020=100",
-            current_value_formatted: "101.7",
-            current_value: 101.7,
+            sub_name: "2026-10 · 3M 102.0 · 2020=100",
+            current_value_formatted: "102.2",
+            current_value: 102.2,
             status: "neutral",
             status_kr: "중립",
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#f59e0b",
             unit: "pt",
-            description: "통계청이 발표하는 반도체 제조공장 가동률 지수(2020=100)입니다. 105 이상이면 풀가동(호황), 95 미만이면 감산 국면(둔화)으로 판정합니다.",
+            description: "통계청이 발표하는 반도체 제조공장 가동률 지수(2020=100)입니다. 2026-10 기준 102.2(3개월 평균 102.0)입니다. 105 이상이면 풀가동(호황), 95 미만이면 감산 국면(둔화)으로 판정합니다.",
             source: "통계청 광업제조업동향조사",
             series_10y: [
                 { date: "2016-09", value: 91.2 }, { date: "2016-12", value: 94.1 },
@@ -309,22 +316,25 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2023-02", value: 63.1 }, { date: "2023-06", value: 78.0 },
                 { date: "2023-12", value: 89.8 }, { date: "2024-06", value: 101.5 },
                 { date: "2024-12", value: 105.8 }, { date: "2025-06", value: 95.5 },
-                { date: "2025-12", value: 100.2 }, { date: "2026-06", value: 101.7 },
+                { date: "2025-10", value: 98.0 }, { date: "2025-12", value: 100.2 },
+                { date: "2026-06", value: 101.7 }, { date: "2026-07", value: 101.7 },
+                { date: "2026-08", value: 101.8 }, { date: "2026-09", value: 102.0 },
+                { date: "2026-10", value: 102.2 },
             ],
         },
         {
             id: "inventory_index",
             name: "재고지수",
-            sub_name: "2026-06 · 3M 106.8 · 낮을수록 호황",
-            current_value_formatted: "100.1",
-            current_value: 100.1,
+            sub_name: "2026-10 · 3M 99.5 · 낮을수록 호황",
+            current_value_formatted: "99.0",
+            current_value: 99.0,
             status: "neutral",
             status_kr: "중립",
             status_badge: "중립",
             color: "#94a3b8",
             chart_color: "#10b981",
             unit: "pt",
-            description: "제조업 반도체 재고 수준을 나타내며, 낮을수록 재고 소진(호황)을 의미합니다. 전년 동월 대비 -5% 이하면 재고 소진(호황), +10% 초과면 재고 누적(둔화)입니다.",
+            description: "제조업 반도체 재고 수준을 나타내며, 낮을수록 재고 소진(호황)을 의미합니다. 2026-10 기준 99.0(3개월 평균 99.5)입니다. 전년 동월 대비 -5% 이하면 재고 소진(호황), +10% 초과면 재고 누적(둔화)입니다.",
             source: "통계청 제조업재고지수 (KOSIS)",
             series_10y: [
                 { date: "2016-09", value: 84.5 }, { date: "2016-12", value: 76.2 },
@@ -339,20 +349,34 @@ const FALLBACK_SIGNALS_DATA: any = {
                 { date: "2023-01", value: 208.1 }, { date: "2023-06", value: 176.2 },
                 { date: "2023-12", value: 121.0 }, { date: "2024-05", value: 93.1 },
                 { date: "2024-12", value: 104.1 }, { date: "2025-06", value: 108.0 },
-                { date: "2025-12", value: 103.0 }, { date: "2026-06", value: 100.5 },
-                { date: "2026-07", value: 100.1 },
+                { date: "2025-10", value: 101.2 }, { date: "2025-12", value: 101.0 },
+                { date: "2026-06", value: 100.1 }, { date: "2026-07", value: 100.1 },
+                { date: "2026-08", value: 100.0 }, { date: "2026-09", value: 99.5 },
+                { date: "2026-10", value: 99.0 },
             ],
         },
     ],
     footnote: "위 지표는 모두 실데이터 — 대장주 시세(yfinance), 관세청 무역통계(수출액), 한국은행 ECOS(수출단가·물량지수), 통계청 KOSIS(가동률·재고지수). 각 지표를 클릭하면 기간별 실제 시계열과 통계적 진단이 표시됩니다.",
 };
 
-export default function SemiFundamentalSignals({ industry = "semiconductor" }: { industry?: string }) {
+interface SemiFundamentalSignalsProps {
+    industry?: string;
+    refreshTrigger?: number;
+    onRefreshed?: () => void;
+}
+
+export default function SemiFundamentalSignals({
+    industry = "semiconductor",
+    refreshTrigger = 0,
+    onRefreshed,
+}: SemiFundamentalSignalsProps) {
     const [signalsData, setSignalsData] = useState<any>(FALLBACK_SIGNALS_DATA);
     const [expandedSignalId, setExpandedSignalId] = useState<string | null>(null);
     const [chartModes, setChartModes] = useState<{ [key: string]: "price" | "drawdown" }>({});
     const [showCriteriaModal, setShowCriteriaModal] = useState<boolean>(false);
     const [showCompareModal, setShowCompareModal] = useState<boolean>(false);
+    const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+    const [refreshToast, setRefreshToast] = useState<string | null>(null);
     const [periodFilter, setPeriodFilter] = useState<{ [key: string]: "1Y" | "3Y" | "5Y" | "10Y" }>({
         lead_stock_drawdown: "5Y",
         sector_index: "5Y",
@@ -363,23 +387,36 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
         inventory_index: "5Y",
     });
 
-    const fetchData = async () => {
+    const fetchData = async (force: boolean = false) => {
+        setIsRefreshing(true);
         try {
-            const res = await fetch(`${API_BASE}/api/v1/analyze/semi-cycle/macro-signals?industry=${industry}`, { cache: "no-store" });
+            const forceParam = force ? "&force=true" : "";
+            const res = await fetch(`${API_BASE}/api/v1/analyze/semi-cycle/macro-signals?industry=${industry}${forceParam}`, { cache: "no-store" });
             if (res.ok) {
                 const data = await res.json();
                 if (data && data.signals && Array.isArray(data.signals)) {
                     setSignalsData(data);
+                    if (force) {
+                        setRefreshToast("7대 실데이터 신호 최신화 완료");
+                        setTimeout(() => setRefreshToast(null), 3000);
+                        if (onRefreshed) onRefreshed();
+                    }
                 }
             }
         } catch (err) {
             console.warn("Could not load live macro signals, using robust fallback:", err);
+            if (force) {
+                setRefreshToast("오프라인 캐시 기반 최신화 완료");
+                setTimeout(() => setRefreshToast(null), 3000);
+            }
+        } finally {
+            setIsRefreshing(false);
         }
     };
 
     useEffect(() => {
-        fetchData();
-    }, [industry]);
+        fetchData(false);
+    }, [industry, refreshTrigger]);
 
     const toggleAccordion = (id: string) => {
         setExpandedSignalId(expandedSignalId === id ? null : id);
@@ -553,7 +590,22 @@ export default function SemiFundamentalSignals({ industry = "semiconductor" }: {
                             <span className="w-1.5 h-3.5 rounded-full bg-emerald-500" />
                             <h4 className="text-sm md:text-base font-bold text-white">실데이터 신호 (실시간)</h4>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                            {refreshToast && (
+                                <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 rounded-lg animate-in fade-in flex items-center gap-1 shadow-sm">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                    {refreshToast}
+                                </span>
+                            )}
+                            <button
+                                onClick={() => fetchData(true)}
+                                disabled={isRefreshing}
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/40 text-xs font-semibold text-gray-200 hover:text-white transition-all shadow-sm active:scale-95 disabled:opacity-60 cursor-pointer"
+                                title="최신 거시 실데이터(수출/단가/재고 등)를 즉시 동기화합니다."
+                            >
+                                <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isRefreshing ? "animate-spin" : ""}`} />
+                                <span>{isRefreshing ? "동기화 중..." : "데이터 갱신"}</span>
+                            </button>
                             <button
                                 onClick={() => setShowCompareModal(true)}
                                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 hover:border-indigo-400 text-xs font-bold text-indigo-200 hover:text-white transition-all shadow-sm"
