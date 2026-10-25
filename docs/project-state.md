@@ -3,15 +3,15 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: UI/UX Standard Template & Sticky Navigation Minimization & Universal Modal Overlay & Recharts Date Formatting
-✅ Recent: [Sprint 42 보완 완료 — 종합/환율/유가 서브메뉴 Update 버튼 및 선택창·버튼 컴팩트 표준 규격 일원화]
-1. [종합 서브메뉴 Update 버튼 컴팩트화 (`MacroPortfolioSensitivityWidget.tsx`, `MacroTab.tsx`)]:
-   - '매크로 ↔ 내 포트폴리오 실시간 스트레스 진단' 박스 및 '이벤트 시나리오 · 결과' 박스 우측의 Update 버튼을 표준 컴팩트 규격(`px-2 py-0.5 text-[11px] rounded-md gap-1 w-2.5 h-2.5`)으로 축소하여 상단 메인 Update 버튼과 일관성 확보.
-2. [환율 서브메뉴 지표 선택 버튼 및 선택창 폰트 컴팩트화 (`FxTab.tsx`, `FxFinder.tsx`)]:
-   - '원/달러는 무엇과 같이 움직이나' 박스 아래 지표 선택 버튼 7종을 `text-[9.5px] font-medium px-1.5 py-0.5 rounded-md`로 축소하여 단정하게 정렬.
-   - '환율 인텔리전스' 박스 우측 ETF 선택창 드롭다운 폰트와 패딩을 `px-2 py-0.5 text-[11px] rounded-md`로 컴팩트하게 일원화.
-3. [유가 서브메뉴 Update 버튼 컴팩트화 (`OilTab.tsx`)]:
-   - '글로벌 유가 동향 및 에너지 시장 분석' 헤더 배너 우측의 큰 Update 버튼을 `px-2 py-0.5 text-[11px] rounded-md gap-1 w-2.5 h-2.5`로 축소.
-4. [검증 완료]: Next.js 16.1.6 11개 페이지 빌드 성공 (`exit code 0`), 브라우저 실측 렌더링 및 3대 탭 스크린샷 검증 완료.
+✅ Recent: [Sprint 42 보완 완료 — 시장지표 및 미국중간선거 Update 버튼 & 시나리오 탭 컴팩트 표준화]
+1. [한국/미국 경기 지표 & 플레이북 버튼 컴팩트화 (`KrMacroIndicatorSection.tsx`, `DiscoverTab.tsx`)]:
+   - '한국 경기 지표' 및 '미국 경기 지표' 헤더 Update 버튼을 `px-2 py-0.5 text-[11px] rounded-md`로 축소.
+   - '수출 주력군 수혜 ETF 플레이북'의 'Update & 텔레그램 속보' 버튼을 `px-2 py-0.5 text-[11px] rounded-md`로 컴팩트화.
+   - '월가 예상치 대조 (8대 지표)' 배지 버튼을 `px-2 py-0.5 text-[11px] rounded-md`로 표준 축소.
+2. [미국 중간선거 Update & 4대 시나리오 탭 컴팩트화 (`MidtermElectionTab.tsx`)]:
+   - 헤더 'Update' 버튼을 `px-2 py-0.5 text-[11px] rounded-md`로 일원화.
+   - '3. 4대 선거 시나리오 인터랙티브 판세 시뮬레이터'의 4대 탭('분점정부 (60%)', '여당 수성 (25%)', '야당 압승 (10%)', '역분점정부 (5%)')을 `px-2 py-0.5 text-[11px] font-medium rounded-md`로 축소 및 상시 즉각 렌더링 폴백 보장.
+3. [검증 완료]: Next.js 16.1.6 11개 페이지 최적화 빌드 100% 성공, 브라우저 실측 렌더링 및 스크린샷 검증 완료.
 
 🚀 Current: Sprint 42 완료 / 다음 작업 대기
 

@@ -284,10 +284,10 @@ export default function MidtermElectionTab() {
                     <button
                         onClick={() => fetchAllData(true)}
                         disabled={refreshing}
-                        className="self-start md:self-center flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 active:scale-95 border border-white/15 text-xs font-semibold text-white transition-all shadow-sm disabled:opacity-50"
+                        className="self-start md:self-center flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/10 hover:bg-white/15 active:scale-95 border border-white/15 text-[11px] font-medium text-white transition-all shadow-sm disabled:opacity-50"
                         title="Update"
                     >
-                        <RefreshCw className={`w-3 h-3 text-indigo-400 ${refreshing ? "animate-spin" : ""}`} />
+                        <RefreshCw className={`w-2.5 h-2.5 text-indigo-400 ${refreshing ? "animate-spin" : ""}`} />
                         <span>Update</span>
                     </button>
                 </div>
@@ -595,14 +595,19 @@ export default function MidtermElectionTab() {
                     </div>
 
                     {/* Scenario Switcher Tabs */}
-                    <div className="flex flex-wrap items-center bg-black/40 border border-white/10 rounded-xl p-1 gap-1">
-                        {scenariosData?.scenarios?.map((sc: any) => (
+                    <div className="flex flex-wrap items-center bg-black/40 border border-white/10 rounded-lg p-0.5 gap-0.5">
+                        {(scenariosData?.scenarios || [
+                            { id: "gridlock", title: "분점정부 (60%)" },
+                            { id: "red_hold", title: "여당 수성 (25%)" },
+                            { id: "blue_wave", title: "야당 압승 (10%)" },
+                            { id: "inverse_gridlock", title: "역분점정부 (5%)" }
+                        ]).map((sc: any) => (
                             <button
                                 key={sc.id}
                                 onClick={() => handleScenarioSelect(sc.id)}
-                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                                className={`px-2 py-0.5 text-[11px] font-medium rounded-md transition-all ${
                                     selectedScenarioId === sc.id
-                                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40"
+                                        ? "bg-indigo-600 text-white shadow-sm"
                                         : "text-gray-400 hover:text-white"
                                 }`}
                             >
