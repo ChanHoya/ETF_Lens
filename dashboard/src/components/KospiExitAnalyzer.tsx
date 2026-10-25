@@ -1123,6 +1123,7 @@ export default function KospiExitAnalyzer() {
                         </div>
                     </div>
                 </div>,
+                document.body
             )}
 
             {/* Feature 3: 내 자산/펀드 연계 출구 시뮬레이터 모달 */}
