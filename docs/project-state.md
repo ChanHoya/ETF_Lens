@@ -3,16 +3,17 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: UI/UX Standard Template & Sticky Navigation Minimization & Universal Modal Overlay & Recharts Date Formatting
-✅ Recent: [Sprint 42 보완 완료 — 상단 네비게이션 애니메이션 고도화 및 시장동향 서브메뉴 버튼 전수 점검·축소]
-1. [상단 네비게이션 모션 고도화 (`MainApp.tsx`)]:
-   - 메인 메뉴가 오른쪽으로 minimize될 때 우측 원형 `<>` 버튼을 향해 부드럽게 축소(`scale-95 translate-x-8 opacity-0 max-w-0 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] origin-right`)되는 모션 구현.
-   - 서브 메뉴는 메인 메뉴 아래(2번째 줄)에서 그대로 똑바로 수직 위(`translate-y-0`)로 스크롤 업 안착하며, 2번째 줄 컨테이너는 위로 접혀(`-translate-y-4 opacity-0 max-h-0`) 아래 컨텐츠와 매끄럽게 연결.
-2. [시장동향 서브메뉴 전체 버튼 전수 점검 및 표준 규격 통일]:
-   - 환율(`FxTab.tsx`), 금리(`RatesTab.tsx`, `SpreadBasisInfo.tsx`), 주식(`StocksTab.tsx`), 유가(`OilTab.tsx`), 시장지표(`KrMacroIndicatorSection.tsx`, `DiscoverTab.tsx`), 종합(`MacroTab.tsx`), 미국중간선거(`MidtermElectionTab.tsx`) 내 모든 기간 버튼(`5Y`, `10Y`, `20Y`, `1Y`, `3Y`), 국가/통화/지수 토글, 시나리오/프리셋 버튼을 `px-2 py-0.5 text-[11px]` 및 `px-2.5 py-1 text-xs font-semibold`로 전수 축소.
-   - 남아있던 '최신 동기화', '최신 유가 동기화', '최신 판세 동기화', '업데이트', '결과 업데이트' 버튼 명칭을 모두 `Update`로 일원화.
-3. [검증 완료]: Next.js 16.1.6 11개 페이지 빌드 성공 (`exit code 0`), 브라우저 실측 렌더링 및 스크린샷 검증 완료.
+✅ Recent: [Sprint 42 보완 완료 — 메인메뉴 템플릿 전메뉴 단일 일원화 및 서브메뉴 동일 x축 수직 안착 슬라이드 완성]
+1. [메인메뉴 템플릿 전메뉴 단일 일원화 (`MainApp.tsx`)]:
+   - 종목분석/시장동향 캡슐 내부에 조건부로 포함되어 캡슐 너비와 위치를 왜곡시키던 `<>` 접기 버튼을 캡슐 바깥 `absolute right-0` 독립 버튼으로 분리.
+   - 메인메뉴 캡슐(`< 종목분석 섹터분석 시장동향 연금.절세 부동산 TFF_Fund My | ETF추적기 ETF Check >`)은 종목분석, 섹터분석, 시장동향, 연금·절세, 부동산, TFF, My 등 7대 메뉴 전체에서 크기, 패딩, 위치가 100% 동일한 단일 템플릿으로 완전 일원화.
+2. [서브메뉴 동일 x축 위치 수직 슬라이딩 안착 (`MainApp.tsx`)]:
+   - 기존에 2번째 줄(중앙 정렬)과 1번째 줄(우측 끝 `justify-end` 정렬)의 정렬 기준이 달라 minimize 시 서브메뉴가 상단 오른쪽 끝으로 휙 날아가던 결함 해결.
+   - 1번째 줄 서브메뉴를 화면 중앙(`absolute inset-x-0 mx-auto justify-center`)에 배치하여, 2번째 줄에 있을 때의 x축 중심과 1번째 줄로 올라갔을 때의 x축 중심이 0px 오차로 완벽 일치.
+   - 서브메뉴 클릭 및 minimize 시 수평(x축) 이동 없이 오직 수직 Y축(`translate-y-6` -> `translate-y-0`)으로만 똑바로 올라와 안착하는 부드러운 엘리베이터 모션 구현.
+3. [검증 완료]: Next.js 16.1.6 11개 페이지 빌드 성공 (`exit code 0`), 브라우저 실측 렌더링 및 7개 탭 스크린샷 검증 완료.
 
-🚀 Current: Sprint 42 전체 완료 / 다음 작업 대기
+🚀 Current: Sprint 42 완료 / 다음 작업 대기
 
 ✅ Recent: [코스피 출구 전략 달러인덱스(DXY) 전역 정합성 통일 & 타임머신 복기 & 7대 지표 모달 & 출구 시뮬레이터 & 텔레그램 /exit 경보]
 

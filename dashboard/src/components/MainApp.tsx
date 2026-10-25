@@ -1270,89 +1270,78 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                   </div>
                 </div>
 
-                {/* 우측 네비게이션 영역: 1줄 통합 축소 모드 & 메인 메뉴 펼침 모드 (부드러운 애니메이션 전환) */}
-                <div className="relative flex items-center justify-end grow min-h-[40px] overflow-visible">
-                  {/* [1줄 축소 모드 시 수직 위로 스크롤 업 안착하는 서브 메뉴] */}
-                  {hasSubNav && (
-                    <div
-                      className={`flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide py-0.5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform origin-bottom ${
-                        isNavMinimized
-                          ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto relative z-10'
-                          : 'opacity-0 translate-y-5 scale-95 pointer-events-none absolute right-0 z-0'
-                      }`}
-                    >
-                      {isMarketTab && (
-                        <div className="flex items-center gap-1.5 sm:gap-2 bg-transparent px-2.5 py-0.5 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
-                          <TodayMarketButton isOpen={isTodayMarketOpen} onOpenChange={setIsTodayMarketOpen} />
-                          <div className="h-3.5 w-[1px] bg-white/20 shrink-0" />
-                          <SlidingTabs
-                            items={[
-                              { id: 'macro', label: '종합' },
-                              { id: 'fx', label: '환율' },
-                              { id: 'rates', label: '금리' },
-                              { id: 'stocks', label: '주식' },
-                              { id: 'oil', label: '유가' },
-                              { id: 'discover', label: '시장지표' },
-                              { id: 'us_midterm', label: "🗳️ 미국중간선거('26.11)" },
-                            ]}
-                            activeId={activeTab}
-                            onChange={(newId) => {
-                              setActiveTab(newId as 'macro' | 'fx' | 'rates' | 'stocks' | 'oil' | 'discover' | 'us_midterm');
-                              setIsTodayMarketOpen(false);
-                              setIsNavMinimized(true);
-                            }}
-                            pillClassName="bg-white/20 shadow-inner border border-white/20"
-                            tabClassName="text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap"
-                            activeTabClassName="text-white"
-                            inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
-                          />
-                        </div>
-                      )}
+                {/* [1줄 축소 모드 서브메뉴]: 화면 중앙(2번째 줄과 동일한 x축 위치)에 안착하여 완벽한 수직 상승 애니메이션 구현 */}
+                {hasSubNav && (
+                  <div
+                    className={`absolute inset-x-0 mx-auto w-fit max-w-[calc(100%-280px)] flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] z-10 ${
+                      isNavMinimized
+                        ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
+                        : 'opacity-0 translate-y-6 scale-95 pointer-events-none'
+                    }`}
+                  >
+                    {isMarketTab && (
+                      <div className="flex items-center gap-1.5 sm:gap-2 bg-transparent px-2.5 py-0.5 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
+                        <TodayMarketButton isOpen={isTodayMarketOpen} onOpenChange={setIsTodayMarketOpen} />
+                        <div className="h-3.5 w-[1px] bg-white/20 shrink-0" />
+                        <SlidingTabs
+                          items={[
+                            { id: 'macro', label: '종합' },
+                            { id: 'fx', label: '환율' },
+                            { id: 'rates', label: '금리' },
+                            { id: 'stocks', label: '주식' },
+                            { id: 'oil', label: '유가' },
+                            { id: 'discover', label: '시장지표' },
+                            { id: 'us_midterm', label: "🗳️ 미국중간선거('26.11)" },
+                          ]}
+                          activeId={activeTab}
+                          onChange={(newId) => {
+                            setActiveTab(newId as 'macro' | 'fx' | 'rates' | 'stocks' | 'oil' | 'discover' | 'us_midterm');
+                            setIsTodayMarketOpen(false);
+                            setIsNavMinimized(true);
+                          }}
+                          pillClassName="bg-white/20 shadow-inner border border-white/20"
+                          tabClassName="text-xs sm:text-sm font-bold px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full whitespace-nowrap"
+                          activeTabClassName="text-white"
+                          inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
+                        />
+                      </div>
+                    )}
 
-                      {isAnalysisTab && (
-                        <div className="bg-transparent px-2.5 py-0.5 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
-                          <SlidingTabs
-                            items={[
-                              { id: 'select', label: '종목선택' },
-                              { id: 'info', label: '기본정보' },
-                              { id: 'chart', label: '차트' },
-                              { id: 'holdings', label: '구성종목' },
-                              { id: 'covered_call', label: '커버드콜' },
-                              { id: 'brazil', label: '🇧🇷 브라질채권' },
-                            ]}
-                            activeId={activeTab}
-                            onChange={(newId) => {
-                              if (newId !== 'select' && newId !== 'brazil' && !data) {
-                                alert('먼저 종목을 선택하고 비교를 실행해주세요.');
-                                return;
-                              }
-                              setActiveTab(newId as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'brazil');
-                              setNaverEtfCode(null);
-                              setSelectedDetailEtf(null);
-                              setIsNavMinimized(true);
-                            }}
-                            pillClassName="bg-white/20 shadow-inner border border-white/20"
-                            tabClassName="text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap"
-                            activeTabClassName="text-white"
-                            inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
-                          />
-                        </div>
-                      )}
+                    {isAnalysisTab && (
+                      <div className="bg-transparent px-2.5 py-0.5 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
+                        <SlidingTabs
+                          items={[
+                            { id: 'select', label: '종목선택' },
+                            { id: 'info', label: '기본정보' },
+                            { id: 'chart', label: '차트' },
+                            { id: 'holdings', label: '구성종목' },
+                            { id: 'covered_call', label: '커버드콜' },
+                            { id: 'brazil', label: '🇧🇷 브라질채권' },
+                          ]}
+                          activeId={activeTab}
+                          onChange={(newId) => {
+                            if (newId !== 'select' && newId !== 'brazil' && !data) {
+                              alert('먼저 종목을 선택하고 비교를 실행해주세요.');
+                              return;
+                            }
+                            setActiveTab(newId as 'select' | 'info' | 'holdings' | 'chart' | 'discover' | 'covered_call' | 'brazil');
+                            setNaverEtfCode(null);
+                            setSelectedDetailEtf(null);
+                            setIsNavMinimized(true);
+                          }}
+                          pillClassName="bg-white/20 shadow-inner border border-white/20"
+                          tabClassName="text-xs sm:text-sm font-bold px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full whitespace-nowrap"
+                          activeTabClassName="text-white"
+                          inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                      {/* 메인 메뉴 원형 펼치기 버튼 (<> 표시) */}
-                      <button
-                        type="button"
-                        onClick={() => setIsNavMinimized(false)}
-                        title="메인 메뉴 펼치기"
-                        aria-label="메인 메뉴 펼치기"
-                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-indigo-500/20 hover:bg-indigo-500/35 border border-indigo-400/40 text-indigo-300 hover:text-white transition-all shadow-sm active:scale-95 shrink-0 ml-1 cursor-pointer"
-                      >
-                        <span className="font-mono text-xs font-bold tracking-tighter">&lt;&gt;</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* [메인 메뉴 펼쳐진 상태]: 오른쪽으로 부드럽게 축소(minimize) 애니메이션 */}
+                {/* 우측 네비게이션 영역: 메인 메뉴 & 독립된 원형 <> 버튼 (모든 탭 100% 동일한 단일 템플릿 규격) */}
+                <div className="flex items-center justify-end shrink-0 ml-auto z-20 relative pr-9 sm:pr-10 overflow-visible">
+                  {/* [메인 메뉴 펼침 모드]: 모든 탭에서 동일한 크기/위치의 단일 템플릿 캡슐 */}
                   <div
                     className={`relative flex items-center w-full md:w-auto overflow-hidden rounded-full bg-transparent border border-white/20 shadow-sm group transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform origin-right ${
                       isNavMinimized && hasSubNav
@@ -1500,20 +1489,20 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                     >
                       <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
-
-                    {/* 서브 메뉴가 있는 탭인 경우 우측에 원형 <> 접기 버튼 제공 */}
-                    {hasSubNav && (
-                      <button
-                        type="button"
-                        onClick={() => setIsNavMinimized(true)}
-                        title="서브메뉴 올리고 축소하기"
-                        aria-label="서브메뉴 올리고 축소하기"
-                        className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white transition-all shrink-0 mr-1 shadow-md border border-indigo-400/30 active:scale-95 cursor-pointer z-10"
-                      >
-                        <span className="font-mono text-[10px] font-bold">&lt;&gt;</span>
-                      </button>
-                    )}
                   </div>
+
+                  {/* 메인 메뉴 접기/펼치기 원형 <> 버튼 (헤더 우측 끝 절대 위치에 고정되어 메인메뉴 위치에 영향을 주지 않음) */}
+                  {hasSubNav && (
+                    <button
+                      type="button"
+                      onClick={() => setIsNavMinimized(prev => !prev)}
+                      title={isNavMinimized ? "메인 메뉴 펼치기" : "서브메뉴 올리고 축소하기"}
+                      aria-label={isNavMinimized ? "메인 메뉴 펼치기" : "서브메뉴 올리고 축소하기"}
+                      className="absolute right-0 top-1/2 -translate-y-1/2 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-indigo-500/20 hover:bg-indigo-500/35 border border-indigo-400/40 text-indigo-300 hover:text-white transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer z-30"
+                    >
+                      <span className="font-mono text-[10px] sm:text-xs font-bold tracking-tighter">&lt;&gt;</span>
+                    </button>
+                  )}
                 </div>
               </header>
 
@@ -1523,13 +1512,13 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                   className={`w-full flex justify-center relative z-[250] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform overflow-hidden ${
                     isNavMinimized
                       ? 'max-h-0 opacity-0 -translate-y-4 mb-0 pointer-events-none'
-                      : 'max-h-16 opacity-100 translate-y-0 mb-1.5 pointer-events-auto'
+                      : 'max-h-16 opacity-100 translate-y-0 mt-1 mb-2 pointer-events-auto'
                   }`}
                 >
                   {isMarketTab && (
-                    <div className="flex items-center gap-2 md:gap-3 bg-transparent px-3 py-1 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
+                    <div className="flex items-center gap-1.5 sm:gap-2 bg-transparent px-2.5 py-0.5 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
                       <TodayMarketButton isOpen={isTodayMarketOpen} onOpenChange={setIsTodayMarketOpen} />
-                      <div className="h-4 w-[1px] bg-white/20 shrink-0" />
+                      <div className="h-3.5 w-[1px] bg-white/20 shrink-0" />
                       <SlidingTabs
                         items={[
                           { id: 'macro', label: '종합' },
@@ -1547,7 +1536,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                           setIsNavMinimized(true);
                         }}
                         pillClassName="bg-white/20 shadow-inner border border-white/20"
-                        tabClassName="text-sm md:text-[15px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
+                        tabClassName="text-xs sm:text-sm font-bold px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full whitespace-nowrap"
                         activeTabClassName="text-white"
                         inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
                       />
@@ -1555,7 +1544,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                   )}
 
                   {isAnalysisTab && (
-                    <div className="bg-transparent px-3 py-1 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
+                    <div className="bg-transparent px-2.5 py-0.5 rounded-full border border-white/20 shadow-sm overflow-x-auto scrollbar-hide">
                       <SlidingTabs
                         items={[
                           { id: 'select', label: '종목선택' },
@@ -1577,7 +1566,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                           setIsNavMinimized(true);
                         }}
                         pillClassName="bg-white/20 shadow-inner border border-white/20"
-                        tabClassName="text-sm md:text-[15px] font-bold px-3 py-1 rounded-full whitespace-nowrap"
+                        tabClassName="text-xs sm:text-sm font-bold px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full whitespace-nowrap"
                         activeTabClassName="text-white"
                         inactiveTabClassName="text-gray-400 hover:text-white hover:bg-white/10"
                       />
