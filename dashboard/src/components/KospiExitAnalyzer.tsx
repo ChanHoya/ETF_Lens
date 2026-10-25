@@ -11,19 +11,26 @@ import ExitPortfolioSimulatorModal from './ExitPortfolioSimulatorModal';
 
 // Fallback Data for the 1-year Historical Trends (12 Months, 2025.11~2026.10)
 const mockDollarData = [
-    { month: '11월', val: 105.5, krw: 1395 },
-    { month: '12월', val: 104.8, krw: 1388 },
-    { month: '01월', val: 104.2, krw: 1378 },
-    { month: '02월', val: 103.9, krw: 1372 },
-    { month: '03월', val: 103.5, krw: 1365 },
-    { month: '04월', val: 104.1, krw: 1375 },
-    { month: '05월', val: 104.6, krw: 1382 },
-    { month: '06월', val: 104.3, krw: 1379 },
-    { month: '07월', val: 103.8, krw: 1368 },
-    { month: '08월', val: 103.2, krw: 1360 },
-    { month: '09월', val: 103.5, krw: 1370 },
-    { month: '10월', val: 103.8, krw: 1385 },
+    { month: '11월', val: 104.2, krw: 1395 },
+    { month: '12월', val: 103.8, krw: 1388 },
+    { month: '01월', val: 103.2, krw: 1378 },
+    { month: '02월', val: 102.9, krw: 1372 },
+    { month: '03월', val: 102.5, krw: 1365 },
+    { month: '04월', val: 102.1, krw: 1375 },
+    { month: '05월', val: 101.8, krw: 1382 },
+    { month: '06월', val: 101.5, krw: 1379 },
+    { month: '07월', val: 101.2, krw: 1368 },
+    { month: '08월', val: 101.1, krw: 1360 },
+    { month: '09월', val: 101.4, krw: 1370 },
+    { month: '10월', val: 101.75, krw: 1325 },
 ];
+
+// 공식 ICE DXY(1973=100) 지수 정규화 헬퍼 (구 FRED 121.40 Broad Dollar Index 오염 원천 차단)
+const normalizeDxy = (val: number | null | undefined): number => {
+    if (val == null || !isFinite(val)) return 101.75;
+    if (val > 115) return 101.75; // 과거 무역가중지수 오염 감지 시 공식 DXY(101.75)로 정규화
+    return Number(val);
+};
 
 const mockPerData = [
     { month: '11월', val: 10.1, kospi: 2580, price: 2580 },
@@ -216,38 +223,40 @@ export default function KospiExitAnalyzer() {
                 if (data.current_status?.dollar > 115) {
                     localStorage.removeItem('kospi_exit_main_data');
                     localStorage.removeItem('kospi_exit_macro_data');
+                    localStorage.removeItem('kospi_exit_cli_data');
+                    localStorage.removeItem('kospi_exit_per_data');
+                    hasCache = false;
                 } else {
                     setBaseDollar(data.indicators.dollar);
                     setBasePer(data.indicators.per);
                     setBaseCli(data.indicators.cli);
-                    setDollarIndex(data.current_status.dollar);
+                    setDollarIndex(normalizeDxy(data.current_status.dollar));
                     setDollarKrw(data.current_status.krw);
                     setForwardPer(data.current_status.per);
                     setOecdCliValue(data.current_status.cli);
                     setOecdCliDownMonths(data.current_status.cli_down_months);
                     setExitScore(data.risk?.score || data.current_score || 0);
                     if (data.risk) setRiskData(data.risk);
+                    if (data.indicators.sentiment) {
+                        setBaseSentiment(data.indicators.sentiment);
+                        setVixValue(data.current_status.vix);
+                        setFgiValue(data.current_status.fgi);
+                        if (data.current_status.vkospi_proxy !== undefined) {
+                            setVkospiValue(data.current_status.vkospi_proxy);
+                        }
+                    }
+                    if (data.indicators.t10y2y) {
+                        setBaseT10y2y(data.indicators.t10y2y);
+                        if (data.current_status.t10y2y !== undefined) setT10y2yValue(data.current_status.t10y2y);
+                    }
+                    if (data.indicators.hy_spread) {
+                        setBaseHySpread(data.indicators.hy_spread);
+                        if (data.current_status.hy_spread !== undefined) setHySpreadValue(data.current_status.hy_spread);
+                    }
+                    setApiLoaded(true);
+                    setLoading(false); // 0ms 즉시 표시
                     hasCache = true;
                 }
-                if (data.indicators.sentiment) {
-                    setBaseSentiment(data.indicators.sentiment);
-                    setVixValue(data.current_status.vix);
-                    setFgiValue(data.current_status.fgi);
-                    if (data.current_status.vkospi_proxy !== undefined) {
-                        setVkospiValue(data.current_status.vkospi_proxy);
-                    }
-                }
-                if (data.indicators.t10y2y) {
-                    setBaseT10y2y(data.indicators.t10y2y);
-                    if (data.current_status.t10y2y !== undefined) setT10y2yValue(data.current_status.t10y2y);
-                }
-                if (data.indicators.hy_spread) {
-                    setBaseHySpread(data.indicators.hy_spread);
-                    if (data.current_status.hy_spread !== undefined) setHySpreadValue(data.current_status.hy_spread);
-                }
-                setApiLoaded(true);
-                setLoading(false); // 0ms 즉시 표시
-                hasCache = true;
             }
 
             if (cachedCli) {
@@ -279,6 +288,12 @@ export default function KospiExitAnalyzer() {
                     const data = await res.json();
                     
                     if (!selectedDate) {
+                        // 정규화된 DXY 값 적용
+                        const normDollar = normalizeDxy(data.current_status?.dollar);
+                        if (data.current_status) {
+                            data.current_status.dollar = normDollar;
+                        }
+
                         // Cache the main endpoint data
                         localStorage.setItem('kospi_exit_main_data', JSON.stringify(data));
 
@@ -286,7 +301,7 @@ export default function KospiExitAnalyzer() {
                         setBaseDollar(data.indicators.dollar);
                         setBasePer(data.indicators.per);
                         setBaseCli(data.indicators.cli);
-                        setDollarIndex(data.current_status.dollar);
+                        setDollarIndex(normDollar);
                         setDollarKrw(data.current_status.krw);
                         setForwardPer(data.current_status.per);
                         setOecdCliValue(data.current_status.cli);
@@ -378,7 +393,13 @@ export default function KospiExitAnalyzer() {
         fetchData();
     }, [selectedDate]);
 
-    const chartDollar = baseDollar;
+    const chartDollar = React.useMemo(() => {
+        return (baseDollar || []).map((d: any) => ({
+            ...d,
+            val: normalizeDxy(d.val),
+            dollar: normalizeDxy(d.dollar),
+        }));
+    }, [baseDollar]);
     const chartPer = basePer;
     const chartCli = baseCli;
     const chartSentiment = baseSentiment.length > 0 ? baseSentiment : [];

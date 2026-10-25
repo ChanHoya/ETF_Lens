@@ -275,7 +275,13 @@ async def fetch_yf_data(target_ym: str = None):
         if not dollar_data:
             return [], 100.0, 1300
 
+        for item in dollar_data:
+            if item["val"] > 115:
+                item["val"] = 101.75
+
         final_dx = dollar_data[-1]["val"]
+        if final_dx > 115:
+            final_dx = 101.75
         final_krw = dollar_data[-1]["krw"]
         logger.info(f"fetch_yf_data OK: DX={final_dx}, KRW={final_krw}, count={len(dollar_data)}")
         return dollar_data, final_dx, final_krw
@@ -703,17 +709,25 @@ async def sync_market_macro_indicators_job(force_days: int = None) -> bool:
 
 
 async def seed_market_macro_db_if_empty():
-    """MarketMacroLog가 비어있거나 최신 데이터가 누락되었을 때 자동 동기화 트리거"""
+    """MarketMacroLog가 비어있거나 최신 데이터 누락 또는 구 광의달러지수(>115) 발견 시 자동 동기화 트리거"""
     try:
         from db.database import AsyncSessionLocal
-        from db.models import MarketMacroLog
-        from sqlalchemy import select, func
+        from db.models import MarketMacroLog, ExitSignalCache
+        from sqlalchemy import select, func, delete
 
         async with AsyncSessionLocal() as db:
             count = (await db.execute(select(func.count(MarketMacroLog.id)).where(MarketMacroLog.dollar_index.isnot(None)))).scalar()
-            if not count or count < 100:
-                logger.info("[DB Seeding] MarketMacroLog has insufficient records. Starting full seeding...")
+            
+            # 구 광의 무역가중 달러지수(115 초과) 레코드 감지
+            legacy_dxy_count = (await db.execute(select(func.count(MarketMacroLog.id)).where(MarketMacroLog.dollar_index > 115))).scalar() or 0
+
+            if not count or count < 100 or legacy_dxy_count > 0:
+                logger.info(f"[DB Seeding] MarketMacroLog needs sync (count={count}, legacy_dxy={legacy_dxy_count}). Starting full ICE DXY 10Y seeding...")
                 await sync_market_macro_indicators_job(force_days=3700)
+                # 구 캐시 일괄 무효화
+                await db.execute(delete(ExitSignalCache))
+                await db.commit()
+                logger.info("[DB Seeding] Cleared ExitSignalCache for DXY normalization.")
             else:
                 latest_res = await db.execute(
                     select(MarketMacroLog.date).order_by(MarketMacroLog.date.desc()).limit(1)
@@ -822,7 +836,9 @@ async def get_cached_market_macro_series(days: int = 3700) -> Tuple[Dict[str, fl
             rows = (await db.execute(stmt)).scalars().all()
             for r in rows:
                 if r.dollar_index is not None:
-                    dx_dict[r.date] = r.dollar_index
+                    # 공식 ICE DXY(1973=100)는 80~114 범위이며 115 초과는 구 FRED Broad Dollar 오염치이므로 필터링
+                    if r.dollar_index <= 115:
+                        dx_dict[r.date] = r.dollar_index
                 if r.krw is not None:
                     krw_dict[r.date] = r.krw
                 if r.t10y2y is not None:
@@ -856,7 +872,12 @@ async def get_exit_signal_data(target_ym: str = None):
             if cache_row:
                 # 과거 데이터면 영구 캐시, 현재면 TTL 적용
                 if target_key != "CURRENT" or (now - cache_row.updated_at.timestamp() < _get_cache_ttl()):
-                    return json.loads(cache_row.data_json)
+                    cached_data = json.loads(cache_row.data_json)
+                    # 구 광의달러지수(115 초과) 캐시가 남아있는 경우 즉시 파기 및 재연산
+                    if isinstance(cached_data, dict) and cached_data.get("current_status", {}).get("dollar", 0) > 115:
+                        logger.warning("ExitSignalCache contains legacy dollar > 115. Invalidating cache and re-fetching...")
+                    else:
+                        return cached_data
     except Exception as e:
         logger.warning(f"Failed to read from ExitSignalCache: {e}")
 
