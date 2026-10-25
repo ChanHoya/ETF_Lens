@@ -209,6 +209,13 @@ export function DollarModalContent() {
                     });
                 })()}
             </div>
+
+            {/* 데이터 소스 통합 명기 */}
+            <div className="mt-2 text-right">
+                <span className="text-[9px] text-gray-500 font-mono tracking-tight">
+                    출처: ICE (달러인덱스 DXY), 서울외환시장 (USD/KRW), 한국거래소 (KOSPI), S&P 다우존스 (S&P 500)
+                </span>
+            </div>
         </div>
     );
 }
@@ -231,7 +238,12 @@ export function PerModalContent() {
                 <PerMiniChart title={defaultStocks[1].name} symbol={defaultStocks[1].id} />
                 <PerMiniChart title={defaultStocks[2].name} symbol={defaultStocks[2].id} />
             </div>
-            <p className="text-[11px] text-gray-500 text-center mt-2 shrink-0">KOSPI 주요 종목별 1년 포워드 PER 궤적입니다.</p>
+            <div className="mt-2 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-500 shrink-0 px-1 gap-1">
+                <span>KOSPI 및 주요 대표 종목별 1년 포워드 PER 궤적입니다.</span>
+                <span className="text-[9px] font-mono text-gray-400">
+                    출처: 한국거래소(KRX), 에프앤가이드(FnGuide 컨센서스)
+                </span>
+            </div>
         </div>
     );
 }
@@ -417,17 +429,17 @@ export function CliModalContent() {
 
         if (below100Count >= 2) {
             analysisTitle = "🚨 [수축 국면] 글로벌 매크로 하락세 뚜렷";
-            analysisText = `현재 한국 CLI(\${kor_cli}), 미국 CLI(\${usa_cli}), G7(OECD 대체) 평균(\${oecd_cli}) 중 다수가 기준선(100)을 하회하며 수축 국면을 나타내고 있습니다. 과거 2020년, 2022년처럼 매크로 지표가 급격히 하락하는 시기와 유사할 가능성이 높습니다. 글로벌 동조화 하락이 뚜렷히 확인되므로 위험 자산(주식) 비중을 방어적으로 축소할 것을 강력 권고합니다.`;
+            analysisText = `현재 한국 CLI(${kor_cli?.toFixed(2)}p), 미국 CLI(${usa_cli?.toFixed(2)}p), G7(OECD 평균)(${oecd_cli?.toFixed(2)}p) 중 다수가 기준선(100)을 하회하며 수축 국면을 나타내고 있습니다. 과거 2020년, 2022년처럼 매크로 지표가 급격히 하락하는 시기와 유사할 가능성이 높습니다. 글로벌 동조화 하락이 뚜렷히 확인되므로 위험 자산(주식) 비중을 방어적으로 축소할 것을 권고합니다.`;
             bannerBgClass = "bg-rose-900/20 border-rose-500/30";
             textTitleClass = "text-rose-400";
         } else if (below100Count === 1) {
             analysisTitle = "⚠️ [둔화 우려] 일부 특정 지표 악화 진행 중";
-            analysisText = `현재 한국 CLI(\${kor_cli}), 미국 CLI(\${usa_cli}), G7(OECD 대체) 평균(\${oecd_cli}) 지표들의 방향성이 엇갈리며 일부 국가에서 경기 둔화 징후가 나타납니다. 만약 한국 CLI가 미국/G7의 하락 추세와 향후 동반적으로 꺾인다면 단기 약세장이 올 수 있으므로 다음 달 지표 발표까지 포트폴리오 리스크를 관리하세요.`;
+            analysisText = `현재 한국 CLI(${kor_cli?.toFixed(2)}p), 미국 CLI(${usa_cli?.toFixed(2)}p), G7(OECD 평균)(${oecd_cli?.toFixed(2)}p) 지표들의 방향성이 엇갈리며 일부 국가에서 경기 둔화 징후가 나타납니다. 만약 한국 CLI가 미국/G7의 하락 추세와 향후 동반적으로 꺾인다면 단기 약세장이 올 수 있으므로 포트폴리오 리스크를 관리하세요.`;
             bannerBgClass = "bg-amber-900/20 border-amber-500/30";
             textTitleClass = "text-amber-400";
         } else if (kor_cli && usa_cli && oecd_cli) {
             analysisTitle = "✅ [확장 국면] 글로벌 경기 견조한 회복세 지속";
-            analysisText = `현재 한국 CLI(\${kor_cli}), 미국 CLI(\${usa_cli}), G7(OECD 대체) 평균(\${oecd_cli}) 모두 기준선인 100 위에 위치하며 양호한 흐름을 보이고 있습니다. 경기 침체 리스크는 제한적이며, 코스피를 포함한 주식 시장 투자에 여전히 우호적인 거시경제 환경입니다. 현재의 긍정적인 추세가 꺾이기 전까지는 주식 비중 확대를 유지해도 좋습니다.`;
+            analysisText = `현재 한국 CLI(${kor_cli?.toFixed(2)}p), 미국 CLI(${usa_cli?.toFixed(2)}p), G7(OECD 평균)(${oecd_cli?.toFixed(2)}p) 모두 기준선인 100 위에 위치하며 양호한 흐름을 보이고 있습니다. 경기 침체 리스크는 제한적이며, 코스피를 포함한 주식 시장 투자에 여전히 우호적인 거시경제 환경입니다.`;
             bannerBgClass = "bg-emerald-900/20 border-emerald-500/30";
             textTitleClass = "text-emerald-400";
         }
@@ -563,6 +575,13 @@ export function CliModalContent() {
                 <p className="text-[12px] text-gray-300 leading-relaxed">
                     {analysisText}
                 </p>
+            </div>
+
+            {/* 데이터 소스 통합 명기 */}
+            <div className="mt-1 text-right">
+                <span className="text-[9px] text-gray-500 font-mono tracking-tight">
+                    출처: OECD (Amplitude Adjusted MEI CLI), 세인트루이스 연준(FRED), 한국거래소(KRX)
+                </span>
             </div>
         </div>
     );
@@ -789,6 +808,13 @@ export function SentimentModalContent({ isFgi }: { isFgi?: boolean }) {
                     </div>
                 )}
             </div>
+
+            {/* 데이터 소스 통합 명기 */}
+            <div className="mt-1 text-right">
+                <span className="text-[9px] text-gray-500 font-mono tracking-tight">
+                    출처: CBOE (VIX), 한국거래소 (KOSPI 종가 기반 20일 변동성 연율화 Proxy), CNN (Fear & Greed Index)
+                </span>
+            </div>
         </div>
     );
 }
@@ -958,6 +984,13 @@ export function T10y2yModalContent() {
                     </div>
                 </div>
             </div>
+
+            {/* 데이터 소스 통합 명기 */}
+            <div className="mt-1 text-right">
+                <span className="text-[9px] text-gray-500 font-mono tracking-tight">
+                    출처: 미국 세인트루이스 연준 (FRED T10Y2Y), 한국거래소 (KOSPI)
+                </span>
+            </div>
         </div>
     );
 }
@@ -1122,6 +1155,13 @@ export function HySpreadModalContent() {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* 데이터 소스 통합 명기 */}
+            <div className="mt-1 text-right">
+                <span className="text-[9px] text-gray-500 font-mono tracking-tight">
+                    출처: ICE BofA, 미국 세인트루이스 연준 (FRED BAMLH0A0HYM2: US High Yield OAS)
+                </span>
             </div>
         </div>
     );

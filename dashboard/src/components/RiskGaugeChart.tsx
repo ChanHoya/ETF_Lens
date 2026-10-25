@@ -443,6 +443,13 @@ export default function RiskGaugeChart({
                     </div>
                 )}
             </div>
+
+            {/* 데이터 소스 통합 명기 */}
+            <div className="mt-2 text-right">
+                <span className="text-[9px] text-gray-500 font-mono tracking-tight">
+                    데이터 소스: CBOE(VIX) · KRX(VKOSPI Proxy) · CNN(FGI) · OECD/통계청(CLI) · FnGuide(PER) · FRED(장단기 금리차·하이일드 OAS)
+                </span>
+            </div>
         </div>
     );
 }

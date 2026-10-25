@@ -1028,6 +1028,12 @@ export default function TffDashboard({ onOpenDetail }: Props) {
                                 />
                             )}
                         </div>
+
+                        {/* TFF 펀드 통합 데이터 소스 명기 */}
+                        <div className="mt-3 flex flex-col sm:flex-row items-center justify-between px-2 text-[10px] text-gray-500 font-mono gap-1">
+                            <span>* 월별 운용보고서 기반 결산치 및 시장 종가 연동 실시간 추정치</span>
+                            <span>출처: 한국거래소(KRX) · 예탁결제원(SEIBro) · 자산운용사 공시 · TFF 운용보고서</span>
+                        </div>
                         
                         {/* 디버그용 출력부 (개발 단계용 숨김 가능) */}
                         <details className="mt-8">

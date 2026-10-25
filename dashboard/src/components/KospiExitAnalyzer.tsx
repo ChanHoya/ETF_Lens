@@ -48,18 +48,18 @@ const mockPerData = [
 ];
 
 const mockCliData = [
-    { month: '11월', val: 100.2 },
-    { month: '12월', val: 100.3 },
-    { month: '01월', val: 100.4 },
-    { month: '02월', val: 100.5 },
-    { month: '03월', val: 100.5 },
-    { month: '04월', val: 100.6 },
-    { month: '05월', val: 100.7 },
-    { month: '06월', val: 100.7 },
-    { month: '07월', val: 100.8 },
-    { month: '08월', val: 100.8 },
-    { month: '09월', val: 100.7 },
-    { month: '10월', val: 100.6 },
+    { month: '11월', val: 100.09, kor_cli: 100.09, usa_cli: 99.82 },
+    { month: '12월', val: 100.38, kor_cli: 100.38, usa_cli: 99.98 },
+    { month: '01월', val: 100.73, kor_cli: 100.73, usa_cli: 100.15 },
+    { month: '02월', val: 101.14, kor_cli: 101.14, usa_cli: 100.31 },
+    { month: '03월', val: 101.56, kor_cli: 101.56, usa_cli: 100.43 },
+    { month: '04월', val: 101.97, kor_cli: 101.97, usa_cli: 100.54 },
+    { month: '05월', val: 102.33, kor_cli: 102.33, usa_cli: 100.65 },
+    { month: '06월', val: 102.59, kor_cli: 102.59, usa_cli: 100.76 },
+    { month: '07월', val: 102.69, kor_cli: 102.69, usa_cli: 100.87 },
+    { month: '08월', val: 102.66, kor_cli: 102.66, usa_cli: 100.95 },
+    { month: '09월', val: 102.53, kor_cli: 102.53, usa_cli: 101.00 },
+    { month: '10월', val: 102.53, kor_cli: 102.53, usa_cli: 101.00 },
 ];
 
 const useVisualSort = (data: any[], keys: string[]) => {
@@ -428,9 +428,13 @@ export default function KospiExitAnalyzer() {
     };
 
     const getCliStatus = () => {
-        if (oecdCliDownMonths === 0) return { level: 'safe', text: '확장 국면', color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' };
-        if (oecdCliDownMonths === 1) return { level: 'warning', text: '둔화 우려', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/30' };
-        return { level: 'danger', text: '수축 국면', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/30', desc: '2개월 연속 하락' };
+        if (oecdCliValue >= 100) {
+            if (oecdCliDownMonths === 0) return { level: 'safe', text: '확장 국면', color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' };
+            return { level: 'warning', text: '둔화 국면', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/30' };
+        } else {
+            if (oecdCliDownMonths === 0) return { level: 'warning', text: '회복 국면', color: 'text-sky-400', bg: 'bg-sky-400/10', border: 'border-sky-400/30' };
+            return { level: 'danger', text: '수축 국면', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/30', desc: '기준선 100 하회' };
+        }
     };
 
     const getVixStatus = () => {
@@ -673,6 +677,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>DXY 101.5 돌파 시 달러 초강세 국면으로 ETF 리스크 관리가 권장됩니다.</p>
                     </div>
+                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: ICE (DXY), 서울외환시장 (USD/KRW)</div>
                 </div>
 
                 {/* Bento Card 3: Forward P/E */}
@@ -737,6 +742,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>PER 12.5배 터치 후 꺾이면 밸류에이션 한계 도달에 의한 매도 위험 신호입니다.</p>
                     </div>
+                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: 한국거래소(KRX), 에프앤가이드(FnGuide)</div>
                 </div>
 
                 {/* Bento Card 4: OECD CLI */}
@@ -749,7 +755,7 @@ export default function KospiExitAnalyzer() {
                             <span className="p-1.5 rounded-lg bg-white/5 border border-white/5">
                                 <TrendingDown className="w-4 h-4 text-rose-400" />
                             </span>
-                            <h4 className="text-white text-xs font-extrabold">경기 선행 지수 (CLI)</h4>
+                            <h4 className="text-white text-xs font-extrabold">한국/미국 경기선행지수 (CLI)</h4>
                         </div>
                         <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${cStatus.bg} ${cStatus.color} ${cStatus.border}`}>
                             {cStatus.text}
@@ -782,7 +788,7 @@ export default function KospiExitAnalyzer() {
                                                 <div className="bg-black/90 border border-white/10 p-2 rounded-lg text-[10px]">
                                                     <p className="text-gray-400 mb-1">{label}</p>
                                                     {payload.map((entry: any, index: number) => {
-                                                        const nameMap: any = { kor_cli: '한국 CLI', usa_cli: '미국 CLI', oecd_cli: 'G7 CLI' };
+                                                        const nameMap: any = { kor_cli: '한국 CLI (OECD)', usa_cli: '미국 CLI (OECD)', oecd_cli: 'G7 CLI' };
                                                         return (
                                                             <div key={`item-${index}`} className="flex items-center gap-2 font-medium" style={{ color: entry.color }}>
                                                                 <span>{nameMap[entry.name] || entry.name} :</span>
@@ -807,6 +813,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>2개월 연속 하락 국면 진입 시 국내 주식 비중을 단계적으로 하향 조절할 필요가 있습니다.</p>
                     </div>
+                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: OECD (Amplitude Adjusted MEI CLI), 세인트루이스 연준(FRED)</div>
                 </div>
 
                 {/* Bento Card 5: VIX & VKOSPI (Korean realized volatility proxy) */}
@@ -882,6 +889,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>KOSPI 20일 실현 변동성(VKOSPI 프록시)이 20% 초과 시 국내 변동성 급증 국면입니다.</p>
                     </div>
+                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: CBOE (VIX), 한국거래소 (VKOSPI)</div>
                 </div>
 
                 {/* Bento Card 6: Fear & Greed Index */}
@@ -944,6 +952,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>글로벌 탐욕(75배 이상) 진입 시 고점 경고, 극단적 공포(25 이하) 시 저점 매수 기회로 해독합니다.</p>
                     </div>
+                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: CNN Fear & Greed Index Model, Alternative.me</div>
                 </div>
 
                 {/* Bento Card 7: US 10Y-2Y Spread */}
@@ -1011,6 +1020,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>금리 역전(0% 미만) 이후 급격한 정상화(Steepening) 시 경기 침체가 임박한 강력한 매도 신호입니다.</p>
                     </div>
+                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: 미국 세인트루이스 연준 (FRED T10Y2Y)</div>
                 </div>
 
                 {/* Bento Card 8: US High-Yield OAS */}
@@ -1085,6 +1095,7 @@ export default function KospiExitAnalyzer() {
                         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-400" />
                         <p>글로벌 신용 스프레드로, 5.0% 이상 돌파 시 신용 경색 우려가 높아지며 채권 위험관리가 필수적입니다.</p>
                     </div>
+                    <div className="mt-1 flex justify-end text-[9px] text-gray-500 font-mono">출처: ICE BofA, 미국 세인트루이스 연준 (FRED BAMLH0A0HYM2)</div>
                 </div>
 
             </div>
@@ -1126,7 +1137,7 @@ export default function KospiExitAnalyzer() {
                                 {activePopup === 'hy_spread' && <DollarSign className="w-4.5 h-4.5 text-purple-400" />}
                                 {activePopup === 'dollar' ? '달러 인덱스 & 환율 장기 추이 상세조회' :
                                     (activePopup === 'per' ? '주요 섹터 포워드 PER 밸류에이션 비교' :
-                                        (activePopup === 'cli' ? '경기 선행 지수 (CLI) 매크로 주기 분석' :
+                                        (activePopup === 'cli' ? '한국/미국 경기선행지수 (CLI) 매크로 주기 분석' :
                                             (activePopup === 'vix' ? 'VIX & VKOSPI 다차원 변동성 분석' :
                                                 (activePopup === 'fgi' ? '글로벌 Fear & Greed Index 투자 심리' :
                                                     (activePopup === 't10y2y' ? '미국 국채 장단기 금리차 (10Y-2Y) 상세분석' : '미국 하이일드 채권 스프레드 (OAS) 상세분석')))))}

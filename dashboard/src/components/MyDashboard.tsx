@@ -552,6 +552,12 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                 accountHoldings={holdings.filter((h: any) => h.account_no === selectedAccount?.account_no)}
             />
 
+            {/* MY 대시보드 통합 데이터 소스 명기 */}
+            <div className="mt-4 pt-3 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between text-[10px] text-gray-500 font-mono gap-1 px-1">
+                <span>* 마이데이터/KIS 증권사 계좌 연동 및 실시간 시장가/NAV 기준</span>
+                <span>출처: 한국투자증권(KIS Open API) · 한국거래소(KRX) · 에프앤가이드(FnGuide)</span>
+            </div>
+
         </div>
     );
 }

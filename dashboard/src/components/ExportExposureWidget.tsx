@@ -367,6 +367,12 @@ export default function ExportExposureWidget({
                     <span>{comment}</span>
                 </div>
             </div>
+
+            {/* 데이터 소스 명기 */}
+            <div className="mt-1 flex items-center justify-between text-[9px] text-gray-500 font-mono px-1">
+                <span>* ETF 구성종목(PDF) 가중치 분해 기반 추정치</span>
+                <span>출처: 관세청 품목별 수출입통계 · 통계청 경기선행지수 · FnGuide PDF</span>
+            </div>
         </div>
     );
 }

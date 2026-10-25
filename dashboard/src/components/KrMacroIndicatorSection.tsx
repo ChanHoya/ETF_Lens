@@ -655,7 +655,7 @@ export default function KrMacroIndicatorSection() {
                                 </span>
                                 <span className="text-[11px] text-gray-300 line-clamp-1">{cyclePhase.desc}</span>
                             </div>
-                            <span className="text-[10px] text-gray-400 shrink-0 font-mono">출처: KOSIS · FRED</span>
+                            <span className="text-[10px] text-gray-400 shrink-0 font-mono">출처: 통계청(KOSIS), OECD·세인트루이스연준(FRED)</span>
                         </div>
                     )}
                 </div>

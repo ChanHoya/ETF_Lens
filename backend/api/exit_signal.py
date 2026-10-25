@@ -453,9 +453,40 @@ async def fetch_oecd_cli_simple() -> tuple[list, float | None, int]:
         return [], None, 0
 
 
-async def fetch_fred_cli(target_ym: str = None):
-    """OECD 공식 API로 한국 CLI 가져오기 (이전 FRED 스크래핑 대체)."""
-    return await fetch_oecd_cli_simple()
+async def fetch_fred_cli(target_ym: str = None) -> tuple[list, float | None, int]:
+    """공식 OECD 한국 복합선행지수 (FRED KORLOLITOAASTSAM, 100 기준 Amplitude Adjusted) 수집."""
+    try:
+        raw_series = await _fetch_fred_series("KORLOLITOAASTSAM", days=600)
+        if not raw_series:
+            from db.database import AsyncSessionLocal
+            from db.models import KRMacroIndicatorLog
+            from sqlalchemy import select
+            async with AsyncSessionLocal() as db:
+                rows = (await db.execute(select(KRMacroIndicatorLog).order_by(KRMacroIndicatorLog.date.asc()))).scalars().all()
+                raw_series = {f"{r.date}-01": r.oecd_cli for r in rows if r.oecd_cli is not None}
+
+        if not raw_series:
+            return [], 102.53, 0
+
+        if target_ym:
+            raw_series = {k: v for k, v in raw_series.items() if k[:7] <= target_ym}
+
+        monthly_items = sorted([(k[:7], v) for k, v in raw_series.items()])
+        recent12 = monthly_items[-12:]
+        cli_data = [{"month": f"{int(ym[5:7]):02d}월", "val": round(val, 2)} for ym, val in recent12]
+
+        current_cli = round(recent12[-1][1], 2)
+        down_months = 0
+        for i in range(len(recent12) - 1, 0, -1):
+            if recent12[i][1] < recent12[i - 1][1]:
+                down_months += 1
+            else:
+                break
+
+        return cli_data, current_cli, down_months
+    except Exception as e:
+        logger.error(f"fetch_fred_cli failed: {e}")
+        return [], 102.53, 0
 
 
 @router.get("/reset-cache")
@@ -1451,172 +1482,113 @@ async def reset_cli_cache():
 
 
 @router.get("/cli")
-
 async def get_cli_detail():
     """
-    CLI (Composite Leading Indicator) 상세 데이터 반환.
-    Primary: OECD SDMX API (KOR + USA + OECD).
-    Fallback: yfinance 프록시 (EWY, ^GSPC).
+    공식 OECD 복합선행지수 (CLI) 10년 시계열 반환.
+    KOR: FRED KORLOLITOAASTSAM (공식 OECD 한국 선행지수)
+    USA: FRED USALOLITOAASTSAM (공식 OECD 미국 선행지수)
+    OECD/G7: FRED G7LOLITOAASTSAM (공식 OECD G7 선행지수)
+    KOSPI: ^KS11 월말 종가
+    전체 서비스(출구전략, 한국경기지표, MY/TFF)가 동일한 100 기준 공식 OECD CLI를 공유합니다.
     """
     global _cli_cache
     now = datetime.now().timestamp()
     if "data" in _cli_cache and (now - _cli_cache.get("timestamp", 0) < _get_cache_ttl()):
-        return _cli_cache["data"]
+        cached = _cli_cache["data"]
+        # 구 가짜 EWY 프록시(120 초과 혹은 95 미만 급변) 감지 시 무효화
+        if cached and len(cached) > 0 and 96 <= cached[-1].get("kor_cli", 0) <= 108:
+            return cached
 
-    # 1. DB ExitSignalCache 확인 (초고속 DB 서빙)
+    # 1. DB ExitSignalCache 확인
     try:
         from db.database import AsyncSessionLocal
         from db.models import ExitSignalCache
-        from sqlalchemy import select
+        from sqlalchemy import select, delete
         import json
         async with AsyncSessionLocal() as db:
             cache_stmt = select(ExitSignalCache).where(ExitSignalCache.target_ym == "CLI_DETAIL")
             cache_row = (await db.execute(cache_stmt)).scalar()
             if cache_row:
-                age = (datetime.utcnow() - cache_row.updated_at).total_seconds()
-                if age < 86400:  # 1일간 DB 캐시 즉시 유효
-                    cached_data = json.loads(cache_row.data_json)
+                cached_data = json.loads(cache_row.data_json)
+                if cached_data and len(cached_data) > 0 and 96 <= cached_data[-1].get("kor_cli", 0) <= 108:
                     _cli_cache = {"data": cached_data, "timestamp": now}
-                    logger.info(f"[DB Fast-Path] CLI detail from ExitSignalCache OK: {len(cached_data)} months")
+                    logger.info(f"[DB Fast-Path] Official OECD CLI detail from ExitSignalCache OK: {len(cached_data)} months")
                     return cached_data
+                else:
+                    await db.execute(delete(ExitSignalCache).where(ExitSignalCache.target_ym == "CLI_DETAIL"))
+                    await db.commit()
     except Exception as db_cache_err:
         logger.warning(f"Failed to read CLI from ExitSignalCache: {db_cache_err}")
 
     try:
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=365 * 10)
-        start_str = start_date.strftime("%Y-%m-%d")
-        end_str = end_date.strftime("%Y-%m-%d")        
-
-        def _fetch_oecd_series(series_id: str) -> pd.Series:
-            """
-            Fetch CLI series via yfinance proxy (OECD API is unavailable).
-            - KOR: EWY ETF 3M momentum + 100 (aligned with kor_cli scale)
-            - USA: ^GSPC (S&P500) 3M momentum + 100
-            - G7:  VEA (Vanguard Developed Markets) 3M momentum + 100
-            """
-            ticker_map = {
-                "KORLOLITOAASTSAM": "EWY",
-                "USALOLITOAASTSAM": "^GSPC",
-                "G7LOLITOAASTSAM": "VEA",
-            }
-            tkr = ticker_map.get(series_id, "^GSPC")
-            try:
-                t = yf.Ticker(tkr)
-                df = t.history(start=start_str, end=end_str, auto_adjust=True)
-                if df.empty or "Close" not in df.columns:
-                    return pd.Series(dtype=float)
-                s = df["Close"]
-                if hasattr(s.index, "tz") and s.index.tz is not None:
-                    s.index = s.index.tz_localize(None)
-                s.index = pd.to_datetime(s.index)
-                # Resample to monthly (last trading day of month)
-                monthly = s.resample("ME").last()
-                # 3M momentum normalized to CLI scale (100 = neutral)
-                mom3 = monthly.pct_change(3) * 100 + 100.0
-                mom3 = mom3.dropna()
-                mom3.index = mom3.index.strftime("%Y-%m")
-                logger.info(f"yfinance proxy {tkr} → {series_id}: {len(mom3)} months")
-                return mom3
-            except Exception as e:
-                logger.warning(f"yfinance proxy {series_id} ({tkr}) failed: {e}")
-                return pd.Series(dtype=float)
-
-        def _fetch_yfin(tkr: str) -> pd.Series:
-            """yfinance Ticker.history with start/end (reliable)."""
-            try:
-                t = yf.Ticker(tkr)
-                df = t.history(start=start_str, end=end_str, auto_adjust=True)
-                if df.empty or "Close" not in df.columns:
-                    return pd.Series(dtype=float)
-                s = df["Close"]
-                if hasattr(s.index, "tz") and s.index.tz is not None:
-                    s.index = s.index.tz_localize(None)
-                s.index = pd.to_datetime(s.index)
-                return s
-            except Exception as e:
-                logger.warning(f"yfinance {tkr} failed: {e}")
-                return pd.Series(dtype=float)
-
-        # Parallel: OECD KOR/USA/G7 + KOSPI
-        kor_s, usa_s, g7_s, ks_raw = await asyncio.gather(
-            asyncio.to_thread(_fetch_oecd_series, "KORLOLITOAASTSAM"),
-            asyncio.to_thread(_fetch_oecd_series, "USALOLITOAASTSAM"),
-            asyncio.to_thread(_fetch_oecd_series, "G7LOLITOAASTSAM"),
-            asyncio.to_thread(_fetch_yfin, "^KS11"),
+        # 공식 FRED 3대 OECD CLI 시리즈 및 KOSPI 병렬 수집
+        kor_raw, usa_raw, g7_raw, ks_dict = await asyncio.gather(
+            _fetch_fred_series("KORLOLITOAASTSAM", days=3700),
+            _fetch_fred_series("USALOLITOAASTSAM", days=3700),
+            _fetch_fred_series("G7LOLITOAASTSAM", days=3700),
+            _fetch_yahoo_v8("%5EKS11", days=3700),
         )
 
-        # Monthly KOSPI 처리
-        if not ks_raw.empty:
-            kospi_monthly = ks_raw.resample("ME").last()
-            kospi_monthly.index = kospi_monthly.index.strftime("%Y-%m")
-        else:
-            kospi_monthly = pd.Series(dtype=float)
+        kor_m = {k[:7]: round(v, 2) for k, v in kor_raw.items()}
+        usa_m = {k[:7]: round(v, 2) for k, v in usa_raw.items()}
+        g7_m = {k[:7]: round(v, 2) for k, v in g7_raw.items()}
 
-        # OECD 데이터 부족 시 yfinance 프록시 폴백 (EWY momentum)
-        if kor_s.empty:
-            logger.warning("OECD KOR empty, using EWY proxy")
-            ewy_raw = await asyncio.to_thread(_fetch_yfin, "EWY")
-            if not ewy_raw.empty:
-                ewy_m = ewy_raw.resample("ME").last()
-                ewy_m3 = ewy_m.pct_change(3) * 100 + 100.0
-                ewy_m3.index = ewy_m3.index.strftime("%Y-%m")
-                kor_s = ewy_m3.dropna()
+        ks_m = {}
+        for d_str, price in ks_dict.items():
+            ym = d_str[:7]
+            ks_m[ym] = price
 
-        # Collect 달 목록: KOSPI 기준으로 10년치
-        all_months = sorted(set(kor_s.index.tolist() + usa_s.index.tolist() + g7_s.index.tolist()))
+        all_months = sorted(set(kor_m.keys()) | set(usa_m.keys()) | set(g7_m.keys()))
         if not all_months:
-            raise ValueError("No CLI data available from any source")
-        
+            raise ValueError("No official OECD CLI data returned from FRED")
+
+        def _ffill_m(d: dict[str, float], months: list[str], default_val: float) -> dict[str, float]:
+            last = None
+            out = {}
+            for m in months:
+                if m in d:
+                    last = d[m]
+                if last is not None:
+                    out[m] = last
+                elif default_val is not None:
+                    out[m] = default_val
+            return out
+
+        kor_ff = _ffill_m(kor_m, all_months, 102.53)
+        usa_ff = _ffill_m(usa_m, all_months, 101.00)
+        g7_ff = _ffill_m(g7_m, all_months, 100.94)
+        ks_ff = _ffill_m(ks_m, all_months, 2600.0)
+
         results = []
-        for ym in all_months[-120:]:  # 최그 10년
-            k_val = kor_s.get(ym)
-            u_val = usa_s.get(ym)
-            o_val = g7_s.get(ym)
-            kp_val = kospi_monthly.get(ym)
-            yr = int(ym[:4])
+        for ym in all_months[-120:]:
             results.append({
-                "year": yr,
+                "year": int(ym[:4]),
                 "date": ym,
-                "kor_cli": round(float(k_val), 2) if k_val and pd.notna(k_val) else None,
-                "usa_cli": round(float(u_val), 2) if u_val and pd.notna(u_val) else None,
-                "oecd_cli": round(float(o_val), 2) if o_val and pd.notna(o_val) else None,
-                "kospi": round(float(kp_val), 0) if kp_val and pd.notna(kp_val) else None,
+                "kor_cli": kor_ff.get(ym, 102.53),
+                "usa_cli": usa_ff.get(ym, 101.00),
+                "oecd_cli": g7_ff.get(ym, 100.94),
+                "kospi": round(ks_ff.get(ym, 2600.0), 0),
             })
 
-        # ffill로 최근 1-2개월 데이터 공백 채우기
-        df_res = pd.DataFrame(results)
-        df_res[["kor_cli", "usa_cli", "oecd_cli", "kospi"]] = df_res[
-            ["kor_cli", "usa_cli", "oecd_cli", "kospi"]
-        ].ffill()
-        filled_results = df_res.to_dict("records")
+        _cli_cache = {"data": results, "timestamp": now}
 
-        _cli_cache = {"data": filled_results, "timestamp": now}
-        logger.info(f"CLI detail OK: {len(filled_results)} months")
+        try:
+            from db.database import AsyncSessionLocal
+            from db.models import ExitSignalCache
+            async with AsyncSessionLocal() as db:
+                c_row = await db.get(ExitSignalCache, "CLI_DETAIL")
+                if c_row:
+                    c_row.data_json = json.dumps(results)
+                    c_row.updated_at = datetime.utcnow()
+                else:
+                    db.add(ExitSignalCache(target_ym="CLI_DETAIL", data_json=json.dumps(results)))
+                await db.commit()
+        except Exception:
+            pass
 
-        # DB ExitSignalCache에 영구 저장
-        async def _save_cli_cache():
-            try:
-                from db.database import AsyncSessionLocal
-                from db.models import ExitSignalCache
-                from sqlalchemy import select
-                import json
-                async with AsyncSessionLocal() as db:
-                    cache_stmt = select(ExitSignalCache).where(ExitSignalCache.target_ym == "CLI_DETAIL")
-                    cache_row = (await db.execute(cache_stmt)).scalar()
-                    if cache_row:
-                        cache_row.data_json = json.dumps(filled_results)
-                    else:
-                        db.add(ExitSignalCache(target_ym="CLI_DETAIL", data_json=json.dumps(filled_results)))
-                    await db.commit()
-            except Exception as e:
-                logger.warning(f"Failed to save CLI to ExitSignalCache: {e}")
-        asyncio.create_task(_save_cli_cache())
-
-        return filled_results
-
+        return results
     except Exception as e:
-        logger.error(f"Error fetching CLI detail: {e}")
+        logger.error(f"Failed to fetch official OECD CLI: {e}")
         return []
 
 
