@@ -3,18 +3,15 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: UI/UX Standard Template & Sticky Navigation Minimization & Universal Modal Overlay & Recharts Date Formatting
-✅ Recent: [매크로 이벤트 실시간 자동 동기화 룰셋 제정 및 전 서비스 페이지 최신 분석 일관성 반영]
-1. [실시간 뉴스 기반 미해결 이벤트 자동 평가 파이프라인 탑재 (`brazil_bond.py`)]:
-   - 서비스 조회일자 기준 도래/경과한 매크로 이벤트 중 미평가 건 발견 시, 실시간 뉴스 검색(`get_recent_news`) 및 Gemini AI를 자동 호출하여 `actual` 및 `outlook`을 자율 갱신하고 영속화.
-   - AI 라이브 컨텍스트(`_build_live_ctx`)에 최근 완료 이벤트 1건 및 실시간 뉴스 헤드라인을 자동 주입하여 AI 전략 리포트(`insight`), 대선 펄스(`election-pulse`), 플레이북 전반이 항상 최신 결과를 기반으로 분석되도록 개편.
-2. [현행 정보 기반 분석 내용 전수 점검 및 동기화 (`brazil_bond.py`, `BrazilBondTab.tsx`)]:
-   - `_DEFAULT_ELECTION_PULSE` 기본값을 10/26 룰라 50.9% 4선 확정, 보우소나루 불복 소송 예고, 금융시장 급락 및 Tranche 3 분할 매수 가이드로 전면 현행화.
-   - `getElectionDDayLabel()`을 '결선 완료 (4선 확정)'으로 교정하여 과거 시점 라벨 잔존을 원천 차단.
-3. [에이전트 헌법 영구 룰셋 제정 (`AGENTS.md` Rule 9, `GEMINI.md` Rule 8)]:
-   - '매크로 이벤트 실시간 자동 동기화 및 서비스 전역 분석 일관성 원칙'을 신설 명문화하여 향후 모든 매크로 이벤트 도래 시 자동 평가 및 분석 연쇄 갱신을 의무화.
-4. [무결성 검증 완료]: 백엔드 pytest 10/10 100% Pass, Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`exit code 0`).
+✅ Recent: [최상단 Activation Zone 대시보드 배너 '다음 관전 이벤트' 완료 이벤트 필터링 및 Copom(11월) 승계]
+1. [최상단 대시보드 배너 '다음 관전 이벤트' 카드 최신화 (`BrazilBondTab.tsx`, `brazil_bond.py`)]:
+   - 백엔드 `get_summary`에서 `upcoming` 산출 시 오늘(2026-10-26) 개표 완료된 대선 결선을 제외하도록 `_is_completed` 필터를 강화하여, `next_catalyst`가 정식으로 **11월 5일 브라질 Copom (D-10)**으로 반환되도록 교정.
+   - 프론트엔드 최상단 Activation Zone 배너에서도 `activeNext` 판정 로직을 추가하여 개표 완료된 이벤트를 건너뛰고 차기 미완료 이벤트를 동적 계산하도록 이중 안전장치 탑재.
+2. [매크로 이벤트 실시간 자동 동기화 룰셋 제정 (`AGENTS.md` Rule 9, `GEMINI.md` Rule 8)]:
+   - '매크로 이벤트 실시간 자동 동기화 및 서비스 전역 분석 일관성 원칙' 제정으로 조회일자 기준 자동 이벤트 평가 및 전 페이지 연쇄 반영 의무화.
+3. [무결성 검증 완료]: 백엔드 pytest 8/8 통과, Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`exit code 0`).
 
-🚀 Current: 매크로 이벤트 실시간 자동 동기화 엔진 & 룰셋 제정 완료 / 정상 배포 대기
+🚀 Current: 최상단 대시보드 배너 다음 관전 이벤트 승계 완료 / 검증 완료
 
 ✅ Recent: [코스피 출구 전략 달러인덱스(DXY) 전역 정합성 통일 & 타임머신 복기 & 7대 지표 모달 & 출구 시뮬레이터 & 텔레그램 /exit 경보]
 

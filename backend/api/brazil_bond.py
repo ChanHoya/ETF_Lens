@@ -586,11 +586,18 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
         select(SectorInsight.generated_at).where(SectorInsight.sector == "brazil_catalysts")
     )).scalar_one_or_none()
 
+    def _is_completed(c: dict) -> bool:
+        if c.get("d_day", 0) < 0:
+            return True
+        if c.get("d_day", 0) == 0 and c.get("actual") and ("대기" not in c["actual"] and "진행" not in c["actual"] and "—" not in c["actual"]):
+            return True
+        return False
+
     timeline = sorted(
         [{**c, "d_day": _d_day(c["date"], today)} for c in catalysts],
         key=lambda x: x["date"],
     )
-    upcoming = [c for c in timeline if c["d_day"] >= 0]
+    upcoming = [c for c in timeline if not _is_completed(c)]
 
     # IPCA 지표 동적 월 라벨 (예: 2026-08-01 -> 8월 물가)
     ipca_d = data["ipca_mom"][0]

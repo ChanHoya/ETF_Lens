@@ -596,16 +596,32 @@ export default function BrazilBondTab() {
                             <ConditionPill ok={s.signal.fx_ok} label={`환율 290원↓`} />
                         </div>
                     </div>
-                    {s.next_catalyst && (
-                        <div className="bg-black/25 rounded-xl px-5 py-3 text-center shrink-0 border border-white/10">
-                            <div className="flex items-center gap-1.5 justify-center text-white/70 text-xs font-bold uppercase mb-1">
-                                <CalendarClock className="w-3.5 h-3.5" /> 다음 관전 이벤트
+                    {(() => {
+                        // 완료되지 않은 최우선 차기 이벤트 자동 계산 (당일 완료 이벤트 제외)
+                        const activeNext = s.timeline?.find(c => {
+                            if (c.d_day < 0) return false;
+                            if (c.d_day === 0 && c.actual && !c.actual.includes('대기') && !c.actual.includes('진행') && !c.actual.includes('—')) {
+                                return false;
+                            }
+                            return true;
+                        }) || s.next_catalyst;
+
+                        if (!activeNext) return null;
+                        const dDayNum = getDynamicDDay(activeNext.date);
+
+                        return (
+                            <div className="bg-black/25 rounded-xl px-5 py-3 text-center shrink-0 border border-white/10">
+                                <div className="flex items-center gap-1.5 justify-center text-white/70 text-xs font-bold uppercase mb-1">
+                                    <CalendarClock className="w-3.5 h-3.5" /> 다음 관전 이벤트
+                                </div>
+                                <div className="text-3xl font-black text-white leading-none">
+                                    {dDayNum === 0 ? 'D-DAY' : `D-${dDayNum}`}
+                                </div>
+                                <div className="text-xs text-white/80 mt-1 font-semibold">{activeNext.title}</div>
+                                <div className="text-xs text-white/60 mt-1 font-mono">{activeNext.date}</div>
                             </div>
-                            <div className="text-3xl font-black text-white leading-none">D-{getDynamicDDay(s.next_catalyst.date)}</div>
-                            <div className="text-xs text-white/80 mt-1 font-semibold">{s.next_catalyst.title}</div>
-                            <div className="text-xs text-white/60 mt-1">{s.next_catalyst.date}</div>
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
             </div>
 
