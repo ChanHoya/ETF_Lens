@@ -1761,19 +1761,27 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
     const autoIntelAttemptRef = useRef(0);
     const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
     const [showManualEditor, setShowManualEditor] = useState(false);
-    const [editMode, setEditMode] = useState<'first_round' | 'event'>('first_round');
+    const [editMode, setEditMode] = useState<'runoff' | 'first_round' | 'event'>('runoff');
+    const [resultTab, setResultTab] = useState<'runoff' | 'first_round'>('runoff');
+
+    // 2차 결선 투표 결과 폼
+    const [roStatus, setRoStatus] = useState('개표 완료 (당선 확정)');
+    const [roLula, setRoLula] = useState<number>(50.9);
+    const [roFlavio, setRoFlavio] = useState<number>(49.1);
+    const [roWinner, setRoWinner] = useState<'lula' | 'flavio'>('lula');
+    const [roSummary, setRoSummary] = useState('공식 개표 100% 집계 결과 룰라 후보가 50.9%를 득표하며 49.1%의 플라비우 후보를 1.8%p 차로 제치고 사상 첫 통산 4선(재선)에 최종 성공했습니다.');
 
     // 1차 투표 결과 폼
     const [frStatus, setFrStatus] = useState('개표 완료');
-    const [frLula, setFrLula] = useState<number>(48.2);
-    const [frFlavio, setFrFlavio] = useState<number>(43.5);
-    const [frOthers, setFrOthers] = useState<number>(8.3);
-    const [frTurnout, setFrTurnout] = useState<number>(81.2);
+    const [frLula, setFrLula] = useState<number>(48.4);
+    const [frFlavio, setFrFlavio] = useState<number>(43.2);
+    const [frOthers, setFrOthers] = useState<number>(8.4);
+    const [frTurnout, setFrTurnout] = useState<number>(79.5);
     const [frRunoff, setFrRunoff] = useState<boolean>(true);
-    const [frSummary, setFrSummary] = useState('과반 득표자 부재로 룰라와 플라비우 보우소나루 2인의 10월 25일 결선 대결 확정');
+    const [frSummary, setFrSummary] = useState('과반 득표자 부재로 룰라(48.4%)와 플라비우(43.2%) 양자 결선 진출 확정');
 
     // 신규 이벤트 폼
-    const [evDate, setEvDate] = useState('2026-10-05');
+    const [evDate, setEvDate] = useState('2026-10-26');
     const [evTitle, setEvTitle] = useState('');
     const [evDetail, setEvDetail] = useState('');
     const [savingManual, setSavingManual] = useState(false);
@@ -1840,6 +1848,47 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
             setToast({ msg: `네트워크 오류: ${e.message}`, ok: false });
         } finally {
             setAiRefreshing(false);
+            setTimeout(() => setToast(null), 5000);
+        }
+    };
+
+    const handleSaveRunoff = async () => {
+        try {
+            setSavingManual(true);
+            const payload = {
+                ...(intel || {}),
+                phase: 'decided',
+                as_of: '2026-10-26',
+                headline: '룰라 브라질 대통령 통산 4선 당선 확정... 결선 득표율 50.9%로 플라비우(49.1%)에 대역전승',
+                runoff: {
+                    status: roStatus,
+                    lula_pct: Number(roLula),
+                    flavio_pct: Number(roFlavio),
+                    winner: roWinner,
+                    summary: roSummary,
+                },
+            };
+            const res = await fetch(`${API_BASE}/api/v1/brazil-bond/election-intel`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data?.content) {
+                    setIntel(data.content);
+                }
+                setShowManualEditor(false);
+                setResultTab('runoff');
+                setToast({ msg: '2차 결선 공식 개표 결과가 수동 반영되었습니다!', ok: true });
+            } else {
+                const err = await res.json().catch(() => ({}));
+                setToast({ msg: `저장 실패: ${err.detail || '오류'}`, ok: false });
+            }
+        } catch (e: any) {
+            setToast({ msg: `오류: ${e.message}`, ok: false });
+        } finally {
+            setSavingManual(false);
             setTimeout(() => setToast(null), 5000);
         }
     };
@@ -2009,20 +2058,30 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
                         <div className="flex items-center justify-between border-b border-white/10 pb-3">
                             <div className="flex gap-2">
                                 <button
-                                    onClick={() => setEditMode('first_round')}
+                                    onClick={() => setEditMode('runoff')}
                                     className={`px-3 py-1 rounded-lg text-xs font-bold border transition ${
-                                        editMode === 'first_round'
-                                            ? 'bg-amber-500 text-black border-amber-400'
+                                        editMode === 'runoff'
+                                            ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-black border-amber-400 shadow'
                                             : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
                                     }`}
                                 >
-                                    🗳️ 1차 투표 공식 집계 결과 입력
+                                    🏆 2차 결선 공식 개표 결과 입력
+                                </button>
+                                <button
+                                    onClick={() => setEditMode('first_round')}
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold border transition ${
+                                        editMode === 'first_round'
+                                            ? 'bg-cyan-500 text-black border-cyan-400'
+                                            : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
+                                    }`}
+                                >
+                                    🗳️ 1차 투표 결과 입력
                                 </button>
                                 <button
                                     onClick={() => setEditMode('event')}
                                     className={`px-3 py-1 rounded-lg text-xs font-bold border transition ${
                                         editMode === 'event'
-                                            ? 'bg-cyan-500 text-black border-cyan-400'
+                                            ? 'bg-purple-500 text-white border-purple-400'
                                             : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
                                     }`}
                                 >
@@ -2032,7 +2091,72 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
                             <span className="text-[11px] text-gray-400">수동 입력 시 24시간 동안 AI 자동 덮어쓰기 방지</span>
                         </div>
 
-                        {editMode === 'first_round' ? (
+                        {editMode === 'runoff' ? (
+                            <div className="space-y-3 text-xs">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div>
+                                        <label className="text-gray-400 block mb-1">개표 상태</label>
+                                        <input
+                                            type="text"
+                                            value={roStatus}
+                                            onChange={e => setRoStatus(e.target.value)}
+                                            className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-white font-semibold"
+                                            placeholder="예: 개표 완료 (당선 확정)"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-rose-400 block mb-1">룰라 득표율 (%)</label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            value={roLula}
+                                            onChange={e => setRoLula(Number(e.target.value))}
+                                            className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-rose-300 font-mono font-bold"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-blue-400 block mb-1">플라비우 득표율 (%)</label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            value={roFlavio}
+                                            onChange={e => setRoFlavio(Number(e.target.value))}
+                                            className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-blue-300 font-mono font-bold"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-amber-400 block mb-1">최종 당선자</label>
+                                        <select
+                                            value={roWinner}
+                                            onChange={e => setRoWinner(e.target.value as 'lula' | 'flavio')}
+                                            className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-amber-300 font-bold"
+                                        >
+                                            <option value="lula">룰라 (PT · 4선 확정)</option>
+                                            <option value="flavio">플라비우 (PL)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-gray-400 block mb-1">결선 결과 총평 요약</label>
+                                    <input
+                                        type="text"
+                                        value={roSummary}
+                                        onChange={e => setRoSummary(e.target.value)}
+                                        className="w-full px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-white"
+                                        placeholder="공식 결선 개표 완료 및 룰라 4선 성공 총평"
+                                    />
+                                </div>
+                                <div className="flex justify-end pt-2">
+                                    <button
+                                        onClick={handleSaveRunoff}
+                                        disabled={savingManual}
+                                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-bold disabled:opacity-50 cursor-pointer shadow-md"
+                                    >
+                                        {savingManual ? '반영 중...' : '🏆 2차 결선 결과 저장 및 적용'}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : editMode === 'first_round' ? (
                             <div className="space-y-3 text-xs">
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                     <div>
@@ -2184,43 +2308,144 @@ function BrazilElectionDetailModal({ isOpen, onClose }: { isOpen: boolean; onClo
                         </div>
                     </div>
 
-                    {/* 🗳️ 1차 투표 공식 결과 배너 (저장된 경우 표시) */}
-                    {intel?.first_round && (
-                        <div className="p-5 rounded-2xl bg-gradient-to-r from-cyan-950/50 via-[#0e1b2e] to-purple-950/50 border-2 border-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.3)] space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="flex items-center gap-2 text-sm font-black text-cyan-300">
-                                    <Vote className="w-5 h-5 text-cyan-400 animate-pulse" />
-                                    🗳️ 1차 투표 공식 집계 결과 (2026.10.04)
-                                </span>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
-                                        {intel.first_round.status || '개표 완료 (공식 집계)'}
-                                    </span>
-                                    <span className="text-xs text-gray-400 font-mono">
-                                        투표율: {intel.first_round.turnout_pct ?? 79.5}%
+                    {/* 🗳️ 대선 공식 집계 결과 대시보드 (2차 결선 결과 & 1차 투표 결과 탭 전환) */}
+                    {(intel?.runoff || intel?.first_round) && (
+                        <div className="space-y-2.5">
+                            {/* 탭 토글 바 (2차 결선 결과와 1차 투표 결과를 원클릭 전환) */}
+                            {intel?.runoff && intel?.first_round && (
+                                <div className="flex items-center justify-between pb-0.5">
+                                    <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/40 border border-white/10">
+                                        <button
+                                            type="button"
+                                            onClick={() => setResultTab('runoff')}
+                                            className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                                                resultTab === 'runoff'
+                                                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-black shadow-md'
+                                                    : 'text-gray-400 hover:text-white'
+                                            }`}
+                                        >
+                                            🏆 2차 결선투표 결과 (당선 확정)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setResultTab('first_round')}
+                                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                                resultTab === 'first_round'
+                                                    ? 'bg-cyan-500 text-black shadow-md'
+                                                    : 'text-gray-400 hover:text-white'
+                                            }`}
+                                        >
+                                            🗳️ 1차 투표 결과 (10.04)
+                                        </button>
+                                    </div>
+                                    <span className="text-[11px] text-amber-300 font-semibold hidden sm:inline">
+                                        {resultTab === 'runoff' ? '🎉 사상 첫 4선 대통령 탄생 · 정치 불확실성 소멸' : '과반 미달로 2차 결선 진출 확정'}
                                     </span>
                                 </div>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-xs font-bold">
-                                    <span className="text-rose-400">룰라 {intel.first_round.lula_pct ?? 48.4}%</span>
-                                    <span className="text-gray-400">기타 후보군 {intel.first_round.others_pct ?? 8.4}%</span>
-                                    <span className="text-blue-400">플라비우 {intel.first_round.flavio_pct ?? 43.2}%</span>
+                            )}
+
+                            {/* 🏆 2차 결선 공식 개표 결과 배너 (선택 시 또는 기본) */}
+                            {intel?.runoff && resultTab === 'runoff' && (
+                                <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-950/70 via-[#181305] to-emerald-950/70 border-2 border-amber-400 shadow-[0_0_35px_rgba(245,158,11,0.35)] space-y-3 animate-in fade-in duration-200">
+                                    <div className="flex items-center justify-between">
+                                        <span className="flex items-center gap-2 text-sm font-black text-amber-300">
+                                            <span className="text-base">🏆</span>
+                                            2차 결선투표 공식 개표 결과 (2026.10.25)
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 font-black animate-pulse">
+                                                {intel.runoff.status || '개표 100% 완료 (당선 확정)'}
+                                            </span>
+                                            <span className="text-xs px-2.5 py-0.5 rounded-md bg-amber-400 text-black font-black shadow">
+                                                당선 확정
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center text-xs font-bold">
+                                            <div className="flex items-center gap-1.5 text-rose-400">
+                                                <span className="px-1.5 py-0.5 rounded bg-rose-500/30 text-[10px] font-black border border-rose-500/40 text-rose-200">
+                                                    당선 (4선)
+                                                </span>
+                                                <span className="text-sm font-black text-rose-300">
+                                                    룰라 {intel.runoff.lula_pct ?? 50.9}%
+                                                </span>
+                                            </div>
+                                            <span className="text-[11px] text-amber-300 font-mono font-bold">
+                                                격차 +{((intel.runoff.lula_pct ?? 50.9) - (intel.runoff.flavio_pct ?? 49.1)).toFixed(1)}%p
+                                            </span>
+                                            <div className="flex items-center gap-1.5 text-blue-400">
+                                                <span className="text-sm font-bold text-blue-300">
+                                                    플라비우 {intel.runoff.flavio_pct ?? 49.1}%
+                                                </span>
+                                                <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-[10px] font-bold border border-blue-500/30 text-blue-300">
+                                                    낙선
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="h-4 w-full bg-gray-800 rounded-full overflow-hidden flex shadow-inner">
+                                            <div
+                                                className="bg-gradient-to-r from-rose-600 to-rose-500 h-full transition-all"
+                                                style={{ width: `${intel.runoff.lula_pct ?? 50.9}%` }}
+                                                title={`룰라 ${intel.runoff.lula_pct ?? 50.9}%`}
+                                            />
+                                            <div
+                                                className="bg-gradient-to-r from-blue-500 to-blue-600 h-full transition-all"
+                                                style={{ width: `${intel.runoff.flavio_pct ?? 49.1}%` }}
+                                                title={`플라비우 ${intel.runoff.flavio_pct ?? 49.1}%`}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-black/50 border border-white/10 text-xs text-gray-200 flex flex-wrap items-center justify-between gap-2">
+                                        <span className="leading-relaxed font-medium">
+                                            {intel.runoff.summary || '공식 개표 100% 집계 결과 룰라 후보가 50.9%를 득표하며 플라비우 후보(49.1%)를 1.8%p 차로 제치고 사상 첫 통산 4선(재선)에 최종 성공했습니다.'}
+                                        </span>
+                                        <span className="px-2.5 py-1 rounded-lg bg-emerald-500 text-black font-black text-xs shadow-md shrink-0">
+                                            룰라 4선 확정 · 정치 불확실성 소멸
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="h-4 w-full bg-gray-800 rounded-full overflow-hidden flex shadow-inner">
-                                    <div className="bg-rose-500 h-full transition-all" style={{ width: `${intel.first_round.lula_pct ?? 48.4}%` }} title={`룰라 ${intel.first_round.lula_pct ?? 48.4}%`} />
-                                    <div className="bg-gray-600 h-full transition-all" style={{ width: `${intel.first_round.others_pct ?? 8.4}%` }} title={`기타 ${intel.first_round.others_pct ?? 8.4}%`} />
-                                    <div className="bg-blue-500 h-full transition-all" style={{ width: `${intel.first_round.flavio_pct ?? 43.2}%` }} title={`플라비우 ${intel.first_round.flavio_pct ?? 43.2}%`} />
+                            )}
+
+                            {/* 🗳️ 1차 투표 공식 결과 배너 (선택 시 또는 결선 결과 부재 시) */}
+                            {intel?.first_round && (resultTab === 'first_round' || !intel?.runoff) && (
+                                <div className="p-5 rounded-2xl bg-gradient-to-r from-cyan-950/50 via-[#0e1b2e] to-purple-950/50 border-2 border-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.3)] space-y-3 animate-in fade-in duration-200">
+                                    <div className="flex items-center justify-between">
+                                        <span className="flex items-center gap-2 text-sm font-black text-cyan-300">
+                                            <Vote className="w-5 h-5 text-cyan-400 animate-pulse" />
+                                            🗳️ 1차 투표 공식 집계 결과 (2026.10.04)
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                                                {intel.first_round.status || '개표 완료 (공식 집계)'}
+                                            </span>
+                                            <span className="text-xs text-gray-400 font-mono">
+                                                투표율: {intel.first_round.turnout_pct ?? 79.5}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-xs font-bold">
+                                            <span className="text-rose-400">룰라 {intel.first_round.lula_pct ?? 48.4}%</span>
+                                            <span className="text-gray-400">기타 후보군 {intel.first_round.others_pct ?? 8.4}%</span>
+                                            <span className="text-blue-400">플라비우 {intel.first_round.flavio_pct ?? 43.2}%</span>
+                                        </div>
+                                        <div className="h-4 w-full bg-gray-800 rounded-full overflow-hidden flex shadow-inner">
+                                            <div className="bg-rose-500 h-full transition-all" style={{ width: `${intel.first_round.lula_pct ?? 48.4}%` }} title={`룰라 ${intel.first_round.lula_pct ?? 48.4}%`} />
+                                            <div className="bg-gray-600 h-full transition-all" style={{ width: `${intel.first_round.others_pct ?? 8.4}%` }} title={`기타 ${intel.first_round.others_pct ?? 8.4}%`} />
+                                            <div className="bg-blue-500 h-full transition-all" style={{ width: `${intel.first_round.flavio_pct ?? 43.2}%` }} title={`플라비우 ${intel.first_round.flavio_pct ?? 43.2}%`} />
+                                        </div>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-black/40 border border-white/10 text-xs text-gray-200 flex flex-wrap items-center justify-between gap-2">
+                                        <span>{intel.first_round.summary}</span>
+                                        {intel.first_round.runoff && (
+                                            <span className="px-2.5 py-1 rounded bg-amber-400 text-black font-black text-xs shadow-md">
+                                                2차 결선 진출 확정 (10월 25일)
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="p-3 rounded-xl bg-black/40 border border-white/10 text-xs text-gray-200 flex flex-wrap items-center justify-between gap-2">
-                                <span>{intel.first_round.summary}</span>
-                                {intel.first_round.runoff && (
-                                    <span className="px-2.5 py-1 rounded bg-amber-400 text-black font-black text-xs shadow-md">
-                                        2차 결선 진출 확정 (10월 25일)
-                                    </span>
-                                )}
-                            </div>
+                            )}
                         </div>
                     )}
 
@@ -2492,6 +2717,7 @@ function MacroTimeline({ timeline, augScenarios }: {
     const activeTimeline = useMemo(() => {
         if (!timeline) return [];
         const hasRunoff = timeline.some(c => c.key === 'election_runoff');
+        let list = [...timeline];
         if (!hasRunoff) {
             const runoff: Catalyst = {
                 date: "2026-10-26",
@@ -2499,32 +2725,63 @@ function MacroTimeline({ timeline, augScenarios }: {
                 title: "브라질 대선 2차 결선투표",
                 impact: "both",
                 d_day: getDynamicDDay("2026-10-26"),
-                note: "1차 투표 과반 득표자 부재 시 상위 2명 결선 진출. 룰라(PT) vs 플라비우 보우소나루(PL) 결선 초접전 구도. 부동층/군소후보 표심 이동 및 투표율이 승부 좌우.",
-                actual: null,
-                outlook: "결선 판세에 따른 금리 스파이크 시(14.5% 어깨 고금리) 장기채(2033/2035) 50% 분할 매수 기회 활용. 중앙은행 독립성 견지로 극단적 완화는 차단.",
+                note: "10월 26일(월) 공식 개표 완료. 룰라 대통령 50.9% 득표로 4선 성공(재선 확정). 대선 정치 불확실성 완전 소멸.",
+                actual: "2026 브라질 대선 2차 결선투표 공식 개표 완료 결과, 현직 루이스 이나시우 룰라 다시우바 대통령이 50.9%를 득표하며 플라비우 보우소나루 후보(49.1%)를 1.8%p 차로 제치고 사상 첫 통산 4선(재선)을 확정지었습니다. 투표 연장 파행 등 초접전 대역전극 끝에 당선이 확정되었으며, 대선 관련 정치적 불확실성이 완전히 소멸되었습니다.",
+                outlook: "룰라 4선 확정으로 대선 바이너리 리스크 프리미엄은 소멸되었으나, 시장은 향후 재정 준칙 준수와 내각 구성을 주시하고 있습니다. 현재 원/헤알 환율(262원대)은 매수 조건(290원 이하)을 충족 중이나 5년물 국채금리(12.91%)는 매수 타깃(14.2% 이상)에 미달하므로, 무리한 추격 매수보다는 단기 변동성 진정 확인 후 3차 트랜치(잔여 40%) 분할 매수 기회로 대응하는 전략이 유효합니다.",
             };
-            const updated = [...timeline, runoff];
-            updated.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            return updated;
+            list.push(runoff);
+        } else {
+            // timeline에 election_runoff 또는 election이 있지만 actual이 비어있다면 최신 결과로 보완
+            list = list.map(c => {
+                if (c.key === 'election_runoff' && (!c.actual || c.actual.includes('대기'))) {
+                    return {
+                        ...c,
+                        note: "10월 26일(월) 공식 개표 완료. 룰라 대통령 50.9% 득표로 4선 성공(재선 확정). 대선 정치 불확실성 완전 소멸.",
+                        actual: "2026 브라질 대선 2차 결선투표 공식 개표 완료 결과, 현직 루이스 이나시우 룰라 다시우바 대통령이 50.9%를 득표하며 플라비우 보우소나루 후보(49.1%)를 1.8%p 차로 제치고 사상 첫 통산 4선(재선)을 확정지었습니다. 투표 연장 파행 등 초접전 대역전극 끝에 당선이 확정되었으며, 대선 관련 정치적 불확실성이 완전히 소멸되었습니다.",
+                        outlook: "룰라 4선 확정으로 대선 바이너리 리스크 프리미엄은 소멸되었으나, 시장은 향후 재정 준칙 준수와 내각 구성을 주시하고 있습니다. 현재 원/헤알 환율(262원대)은 매수 조건(290원 이하)을 충족 중이나 5년물 국채금리(12.91%)는 매수 타깃(14.2% 이상)에 미달하므로, 무리한 추격 매수보다는 단기 변동성 진정 확인 후 3차 트랜치(잔여 40%) 분할 매수 기회로 대응하는 전략이 유효합니다.",
+                    };
+                }
+                if (c.key === 'election' && (!c.actual || c.actual.includes('대기'))) {
+                    return {
+                        ...c,
+                        actual: "1차 투표 공식 집계 결과: 룰라 48.4%, 플라비우 보우소나루 43.2%, 기타 후보군 8.4%. 과반(50%) 득표자 부재로 10월 25일(현지시각) 2차 결선투표 진출 확정.",
+                        outlook: "1차 투표에서 플라비우 후보가 여론조사 대비 선전하며 초접전 양상으로 전개. 결선 투표일까지 정치적 변동성이 지속되나, 의회 보수화 및 중앙은행 독립성으로 인해 극단적 재정 완화 우려는 제한적.",
+                    };
+                }
+                return c;
+            });
         }
-        return timeline;
+        list.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return list;
     }, [timeline]);
 
-    // 가장 가까운 다음 미완료 이벤트의 key 찾기
-    const nextEventKey = activeTimeline.find(c => c.d_day >= 0)?.key;
+    // 이벤트 완료 여부 판정 (과거 날짜이거나, 당일(D-0)이더라도 결과 발표가 완료된 경우)
+    const isEventCompleted = (c: Catalyst) => {
+        if (c.d_day < 0) return true;
+        if (c.d_day === 0 && c.actual && !c.actual.includes('대기') && !c.actual.includes('진행') && !c.actual.includes('—')) {
+            return true;
+        }
+        return false;
+    };
 
-    // 과거 이벤트와 다가오는 이벤트 분리
-    const pastEvents = activeTimeline.filter(c => c.d_day < 0);
-    const upcomingEvents = activeTimeline.filter(c => c.d_day >= 0);
+    // 과거(완료) 이벤트와 다가오는(미완료) 이벤트 분리
+    const pastEvents = activeTimeline.filter(isEventCompleted);
+    const upcomingEvents = activeTimeline.filter(c => !isEventCompleted(c));
+
+    // 가장 가까운 다음 미완료 이벤트의 key 찾기
+    const nextEventKey = upcomingEvents[0]?.key;
 
     const [isPastExpanded, setIsPastExpanded] = useState(false);
     const [isElectionModalOpen, setIsElectionModalOpen] = useState(false);
+
+    // 오늘(D-0) 개표 완료된 이벤트 하이라이트 확인
+    const todayCompletedEvent = pastEvents.find(e => e.d_day === 0);
 
     const renderCard = (c: Catalyst, isPastCard: boolean) => {
         const isNext = c.key === nextEventKey;
         const col = impactColor(c.impact);
         const dot = isPastCard
-            ? 'bg-gray-600'
+            ? (c.key === 'election_runoff' ? 'bg-amber-400 ring-2 ring-amber-400/30' : 'bg-gray-600')
             : isNext
                 ? 'bg-amber-400 ring-4 ring-amber-400/40 animate-pulse'
                 : col === 'amber' ? 'bg-amber-400' : col === 'cyan' ? 'bg-cyan-400' : 'bg-rose-400';
@@ -2537,7 +2794,9 @@ function MacroTimeline({ timeline, augScenarios }: {
                 <span className={`absolute -left-[18px] top-4 w-3 h-3 rounded-full ${dot}`} />
                 <div className={`rounded-2xl border transition-all duration-300 ${
                     isPastCard
-                        ? 'border-white/5 bg-black/10 opacity-70 hover:opacity-100 p-4'
+                        ? c.key === 'election_runoff'
+                            ? 'border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-black/20 to-black/20 p-4 ring-1 ring-amber-500/20'
+                            : 'border-white/5 bg-black/10 opacity-70 hover:opacity-100 p-4'
                         : isNext
                             ? 'border-amber-400/80 bg-gradient-to-r from-amber-500/20 via-yellow-500/10 to-amber-500/20 shadow-[0_0_25px_rgba(245,158,11,0.25)] animate-pulse p-4 ring-1 ring-amber-400/50'
                             : 'border-white/10 bg-black/20 p-4'
@@ -2552,10 +2811,15 @@ function MacroTimeline({ timeline, augScenarios }: {
                                             NEXT EVENT
                                         </span>
                                     )}
-                                    <span className={`text-base font-black ${isPastCard ? 'text-gray-500' : isNext ? 'text-amber-300 text-lg' : 'text-gray-200'}`}>
-                                        {isPastCard ? '완료' : `D-${c.d_day}`}
+                                    {isPastCard && c.key === 'election_runoff' && (
+                                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wider">
+                                            당선 확정
+                                        </span>
+                                    )}
+                                    <span className={`text-base font-black ${isPastCard ? (c.key === 'election_runoff' ? 'text-amber-300' : 'text-gray-500') : isNext ? 'text-amber-300 text-lg' : 'text-gray-200'}`}>
+                                        {isPastCard ? (c.key === 'election_runoff' ? '개표 완료' : '완료') : `D-${c.d_day}`}
                                     </span>
-                                    <span className={`text-sm font-bold ${isPastCard ? 'text-gray-400' : isNext ? 'text-white text-base' : 'text-white'}`}>{c.title}</span>
+                                    <span className={`text-sm font-bold ${isPastCard ? (c.key === 'election_runoff' ? 'text-white' : 'text-gray-400') : isNext ? 'text-white text-base' : 'text-white'}`}>{c.title}</span>
                                     <span className="text-xs text-gray-400 font-mono">{c.date}</span>
                                 </div>
                                 <div className="mt-1.5 flex items-center gap-2">
@@ -2594,7 +2858,7 @@ function MacroTimeline({ timeline, augScenarios }: {
                             <div className="flex items-center gap-2 text-xs text-amber-200">
                                 <Vote className="w-4 h-4 text-amber-400 shrink-0" />
                                 <span className="font-semibold">
-                                    {c.key === 'election' ? '1차 투표(10/4) 결과에 따른 결선(10/25) 진출 및 여론조사 판세 분석' : '2차 결선투표(10/25) 룰라 vs 플라비우 초접전 및 국채 영향'}
+                                    {c.key === 'election' ? '1차 투표(10/4) 결과에 따른 결선(10/25) 진출 및 여론조사 판세 분석' : '2차 결선 공식 개표 완료 (룰라 50.9% 4선 확정) 및 채권 시장 영향'}
                                 </span>
                             </div>
                             <button
@@ -2647,7 +2911,12 @@ function MacroTimeline({ timeline, augScenarios }: {
                             <span className="font-bold text-gray-300 group-hover:text-white shrink-0">
                                 ✅ 완료된 매크로 이벤트 ({pastEvents.length}건)
                             </span>
-                            <span className="text-[11px] text-gray-400 truncate hidden sm:inline">
+                            {todayCompletedEvent && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-bold shrink-0">
+                                    🏆 오늘 공식 개표 완료: 룰라 4선 확정(50.9%)
+                                </span>
+                            )}
+                            <span className="text-[11px] text-gray-400 truncate hidden md:inline">
                                 · {pastEvents.map(e => `${e.title.replace('브라질 ', '')} (${e.date})`).join('  |  ')}
                             </span>
                         </div>
