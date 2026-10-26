@@ -204,8 +204,8 @@ const getElectionDDayLabel = (): string => {
     if (dFirst === 0) return "1차 투표 D-DAY";
     const dRunoff = getDynamicDDay(ELECTION_RUNOFF_DATE);
     if (dRunoff > 0) return `결선 D-${dRunoff}`;
-    if (dRunoff === 0) return "결선 D-DAY";
-    return "대선 종료";
+    if (dRunoff === 0) return "결선 완료 (4선 확정)";
+    return "대선 종료 (4선 확정)";
 };
 
 export default function BrazilBondTab() {

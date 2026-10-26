@@ -466,8 +466,10 @@ async def _save_persisted_catalysts(db: AsyncSession, catalysts: list[dict]):
 
 
 async def _auto_evaluate_past_catalysts(db: AsyncSession, catalysts: list[dict], today: date) -> list[dict]:
-    """서비스 진입 시(GET /summary) 지난 이벤트 중 actual/outlook 누락 건을 기본 확정 데이터로 자동 반영."""
+    """서비스 진입 시(GET /summary) 지난 이벤트 중 actual/outlook 누락 건을 기본 확정 데이터로 자동 반영.
+    하드코딩되지 않은 신규/차기 도래 이벤트는 실시간 뉴스 및 AI 자동 평가를 통해 스스로 결과를 업데이트하고 저장."""
     changed = False
+    unresolved = []
     for c in catalysts:
         c_date = date.fromisoformat(c["date"])
         if c_date <= today:
@@ -494,6 +496,41 @@ async def _auto_evaluate_past_catalysts(db: AsyncSession, catalysts: list[dict],
                     c["actual"] = "기준금리 0.25%p 인상 → 연 2.75% 결정. 12개월 이어진 동결을 끝낸 긴축 전환으로, 신현송 총재 주재 회의에서 금통위원 7명 전원이 참석해 결정."
                     c["outlook"] = "한은 긴축 전환은 원화 강세 압력으로 작용해 원/헤알 290원 하회 트리거에 우호적. 현재 약 292.9원으로 진입 조건에 근접했으나, 실제 290원 하회를 확인한 뒤 1차 분할 진입을 판단하고 8/6 브라질 Copom 결과와 병행 관찰 권장."
                     changed = True
+                else:
+                    unresolved.append(c)
+
+    # 하드코딩되지 않은 향후 도래 이벤트(11/5 Copom 등)의 실시간 뉴스 및 AI 자동 평가
+    if unresolved:
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if api_key:
+            try:
+                from core.brazil_news import get_recent_news
+                news_items = await get_recent_news(limit=6)
+                news_titles = [n.get("title", "") for n in news_items if n.get("title")]
+                for uc in unresolved:
+                    prompt = f"""너는 브라질 국채 및 매크로 이벤트 전문 수석 애널리스트다.
+이벤트명: {uc['title']} (일자: {uc['date']})
+현재 조회 날짜: {today.isoformat()}
+최근 수집된 관련 뉴스 헤드라인:
+{chr(10).join(['- ' + t for t in news_titles[:5]])}
+
+플레이북 투자 원칙:
+- 5년물 14.2% 이상 + 원/헤알 290원 이하 동시 충족이 매수 최적 조건.
+- 분할 매수 실행(Tranche 1, 2, 3) 및 중앙은행 Selic 통화정책 방향성 주시.
+
+위 최신 뉴스 및 정보를 바탕으로 해당 이벤트의 "실제 발표 내용(actual)"과 "국채 전망 및 액션플랜(outlook)"을 전문적이고 명확하게 작성하라.
+반드시 아래 JSON 형식으로만 응답하라:
+{{"actual": "...", "outlook": "..."}}
+"""
+                    raw = await asyncio.to_thread(_call_gemini_sync, api_key, prompt)
+                    res = _extract_json(raw)
+                    if res.get("actual") and res.get("outlook"):
+                        uc["actual"] = res["actual"]
+                        uc["outlook"] = res["outlook"]
+                        changed = True
+            except Exception as auto_err:
+                print(f"[brazil_bond] auto evaluate unresolved catalyst failed: {auto_err}")
+
     if changed:
         await _save_persisted_catalysts(db, catalysts)
     return catalysts
@@ -895,7 +932,7 @@ def _build_br_prompt(ctx: str) -> str:
 - 결론: 조건부 분할 매수(일시납 절대 금지). 목표 진입 = 5년물 14.2%↑ AND 원/헤알 290원↓ 동시 충족(황금 교차).
 - Activation Zone: 금리 14.2~14.7%+환율≤290 → 1차 진입 / 14.7~15.0%+환율≤290 → 적극매수 / 금리>15.0% → 리스크 재평가.
 - 캐리 쿠션: 5년 보유 시 헤알화 -48.8%(반토막) 전까지 원금 손실 없음.
-- 최대 리스크: 10월 4일 브라질 대선(Binary Event). 8/4~5 Copom, 7/16 한국 금통위가 핵심 관전.
+- 핵심 리스크: 10/26 결선 결과(룰라 50.9% 4선 확정) 직후 정국 혼란 및 보우소나루 불복 소송 노이즈, 11/5 차기 Copom 금리 인하 속도. 5년물 14.2% 미달 시 무리한 추격 매수 지양.
 - 비중: 유동자산 5~10% 위성 포지션. 만기 3~5년 스위트스팟. 직접 매수 시 조세협약 비과세.
 
 [라이브 지표]
@@ -951,6 +988,30 @@ async def _build_live_ctx(db: AsyncSession) -> str:
         lines.append(f"- 실질금리(Selic−IPCA12M): {round(vals['selic_target']-vals['ipca_12m'],2)}%p")
     sig = compute_signal(vals.get("y5"), vals.get("brl_krw"))
     lines.append(f"- 현재 Activation Zone 판정: {sig['grade']} — {sig['headline']}")
+
+    # 최근 완료 매크로 이벤트 & 차기 예정 이벤트 컨텍스트 주입
+    try:
+        catalysts = await _get_persisted_catalysts(db)
+        today = datetime.now(_KST).date()
+        past = [c for c in catalysts if date.fromisoformat(c["date"]) <= today and c.get("actual") and "대기" not in c.get("actual", "")]
+        if past:
+            last_ev = past[-1]
+            lines.append(f"- 최근 완료 이벤트: [{last_ev['title']} ({last_ev['date']})] {last_ev['actual'][:140]}...")
+        upcoming = [c for c in catalysts if date.fromisoformat(c["date"]) > today]
+        if upcoming:
+            lines.append(f"- 차기 예정 이벤트: [{upcoming[0]['title']} ({upcoming[0]['date']})] {upcoming[0].get('note', '')}")
+    except Exception as e:
+        print(f"[brazil_bond] live ctx catalyst extraction error: {e}")
+
+    # 최신 실시간 속보 헤드라인 주입
+    try:
+        from core.brazil_news import get_recent_news
+        news_items = await get_recent_news(limit=3)
+        if news_items:
+            lines.append("- 최신 실시간 속보: " + " | ".join(n.get("title", "") for n in news_items if n.get("title")))
+    except Exception as ne:
+        print(f"[brazil_bond] live ctx news extraction error: {ne}")
+
     return "\n".join(lines)
 
 
@@ -1035,20 +1096,20 @@ async def generate_insight(db: AsyncSession = Depends(get_db)):
 
 # ── 10월 대선 실시간 정세 & Tranche 3 AI Live Pulse ────────────────────────────
 _DEFAULT_ELECTION_PULSE = {
-    "headline": "대선 전후 불확실성 정점… 의회 Centrão 견제 속 시나리오 B(온건 연임) 베이스라인 우세",
-    "market_mood": "여론조사 초박빙 접전으로 장기물 금리(5년물 14.28%)가 높은 레벨을 유지하고 있으나, 의회 보수·중도파의 재정 독주 견제 능력에 신뢰를 두며 차분한 관망세를 유지하고 있습니다.",
+    "headline": "룰라 4선 확정 속 보우소나루 불복 소송 예고… 금융시장 단기 급락 속 Tranche 3 분할 매수 기회 모색",
+    "market_mood": "룰라 대통령이 50.9% 득표율로 역전승을 거두며 통산 4선에 성공했으나, 보우소나루 측의 선거무효 소송 예고로 단기 정치 불안이 불거졌습니다. 해외 브라질 ETF 급락 등 자산시장 전반에 리스크 프리미엄이 확대되었으나, 의회 Centrão 과반 견제와 BCB 중앙은행 독립성 방파제가 작동하여 시스템 위기로의 확산은 차단되고 있습니다.",
     "convergence_scenario": {
         "primary": "B",
-        "probabilities": {"A": 25, "B": 60, "C": 15},
-        "reasoning": "현 금융시장은 룰라 연임 시에도 의회의 Centrão(중도·우파 연합)가 과반 의석으로 급격한 재정 팽창을 저지할 것으로 보아 시나리오 B를 기본 가격에 반영하고 있습니다."
+        "probabilities": {"A": 5, "B": 75, "C": 20},
+        "reasoning": "선거 결과 룰라 4선 연임(시나리오 B/C 영역)이 확정되었으며, 의회 보수·중도파(Centrão 300석↑)의 완벽한 과반 견제 구조로 인해 극단적 포퓰리즘(C)보다는 온건·실용 연임(B)으로 정책 수렴이 유력합니다."
     },
-    "live_analysis": "대선 1차 투표(10/5)를 앞두고 정치 테마 노이즈가 고조되고 있습니다. 시장의 최대 관심사는 페르난두 아다지 재무장관의 유임 여부와 신재정프레임워크(Fiscal Anchor)의 준수 의지입니다. 상·하원 선거에서 중도·보수 연합의 과반 유지가 확실시됨에 따라 극단적 좌파 포퓰리즘(시나리오 C)으로 직행할 확률은 15% 수준으로 제한적입니다.",
-    "tranche3_action": "잔여 40% 중 20%는 대선 직전 5년물 14.2% 이상 + 환율 260원대 구간에서 1차 선진입하고, 나머지 20%는 1차 투표 결과 확인 후 단기 금리 스파이크(14.5%↑) 또는 불확실성 해소 랠리 확인 시 2차 집행 권장.",
-    "recommended_bond_guide": "대선 전후 변동성 방어 및 금리 고점 대응을 위해 투자 성향별 2대 바벨 포트폴리오를 추천합니다: ① 보수·안정형은 '단기 50% + 장기 30% + 달러 20%'로 안정적 인컴을 수취하고, ② 고수익 추구 여유자금형은 '헤알 장기 50% + 헤알 중기 30% + 달러 장기 20%'로 금리 어깨/고점(14.5%↑) 구간에서 듀레이션을 적극 확보하여 대선 후 금리 인하 사이클 도래 시 자본차익(Capital Gain)을 극대화하십시오. (Worst 시나리오가 오더라도 2021년 법제화된 BCB 중앙은행 독립성으로 인해 하방 위험은 제한적입니다)",
+    "live_analysis": "10월 26일 결선투표 공식 개표 완료로 대선의 바이너리 불확실성은 소멸되었습니다. 시장의 핵심 초점은 차기 내각(페르난두 아다지 재무장관 유임 여부) 및 2027년도 신재정준칙 준수 의지로 이동했습니다. 보우소나루 후보의 대선 불복 및 선거무효 소송 카드는 단기 노이즈에 그칠 가능성이 높으며, 11월 5일 차기 Copom 회의 전까지 헤알화 및 국채금리 변동성을 분할 매수 타이밍으로 저울질하는 국면입니다.",
+    "tranche3_action": "현재 5년물 국채금리(12.91%)는 매수 최적 타깃(14.2% 이상)에 미달하므로 즉각적인 전량 추격 매수는 지양합니다. 원/헤알 환율(262원대)은 290원 이하 조건을 충족하므로, 대선 불복 노이즈로 금리가 14%대로 단기 스파이크하거나 변동성이 진정되는 시점에 Tranche 3(잔여 40%)을 2~3회에 걸쳐 분할 집행하는 전략을 강력 권장합니다.",
+    "recommended_bond_guide": "대선 직후 정국 혼란 방어 및 금리 인하 사이클 향유를 위해 바벨 전략을 지속합니다: ① 보수·안정형은 '단기 50% + 장기 30% + 달러 20%' 바벨로 연 13%대 고쿠폰 인컴을 확실히 락인하고, ② 적극투자형은 금리 변동성 국면에서 '장기채(2033/2035) 50%'를 확보하여 향후 금리 하향 안정 시 자본차익(Capital Gain)을 극대화하십시오. (중앙은행 법적 독립성으로 인해 하방 방파제 완비)",
     "monitoring_points": [
-        "10/5 1차 투표 득표율 격차 및 10/26 결선투표(Runoff) 진출 여부",
-        "의회(상·하원) 내 중도·우파 연합(Centrão) 과반 의석(하원 300석↑) 확보율",
-        "BCB 중앙은행 독립성 견고성 및 차기 경제팀(재무장관) 인선 신뢰도"
+        "보우소나루 후보 측 선거무효 소송 진행 추이 및 사법부(TSE) 기각 여부",
+        "11/5 차기 브라질 Copom 금리 결정(Selic 25bp 추가 인하 가능성) 및 물가 추세",
+        "룰라 4기 내각 구성(재무장관 페르난두 아다지 유임 여부) 및 신재정준칙 수호 선언"
     ]
 }
 
@@ -1066,8 +1127,8 @@ def _election_phase_text(today: date) -> str:
     if d_runoff > 0:
         return f"브라질 대선 1차 투표가 끝났고 2차 결선투표 결과 반영일({runoff.isoformat()}, 한국시간)까지 D-{d_runoff}인 시점"
     if d_runoff == 0:
-        return f"브라질 대선 2차 결선투표 결과가 반영되는 당일(D-Day, {runoff.isoformat()})"
-    return f"브라질 대선 일정(결선 {runoff.isoformat()})이 모두 끝나 당선자가 확정된 이후 시점"
+        return f"브라질 대선 2차 결선투표 공식 개표 완료로 룰라 대통령의 통산 4선 당선이 확정된 직후 당일(D-Day, {runoff.isoformat()})"
+    return f"브라질 대선 일정(결선 {runoff.isoformat()})이 모두 끝나 룰라 대통령의 4선 당선이 확정된 이후 시점"
 
 
 def _build_election_prompt(ctx: str, news_titles: list[str], today: date | None = None) -> str:
