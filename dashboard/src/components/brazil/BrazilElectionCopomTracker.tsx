@@ -23,6 +23,13 @@ interface TrackerData {
     runoff_date: string;
     d_day: number;
     phase: string;
+    winner?: string;
+    actual_result?: {
+      lula: number;
+      flavio: number;
+      winner: string;
+      status: string;
+    };
     lead_candidate: string;
     lead_margin: number;
     polls: PollItem[];
@@ -51,30 +58,37 @@ interface TrackerData {
 
 const DEFAULT_TRACKER: TrackerData = {
   status: 'fallback',
-  as_of: '2026-10-18',
+  as_of: '2026-10-26',
   election: {
     runoff_date: '2026-10-25',
-    d_day: 7,
-    phase: 'runoff_campaign',
+    d_day: 0,
+    phase: 'decided',
+    winner: '룰라 (PT · 당선 확정)',
     lead_candidate: 'Lula',
-    lead_margin: 0.5,
+    lead_margin: 1.8,
+    actual_result: {
+      lula: 50.9,
+      flavio: 49.1,
+      winner: '룰라',
+      status: '당선 확정 (통산 4선)',
+    },
     polls: [
-      { pollster: 'Quaest', date: '2026-10-15', lula: 48.5, flavio: 47.0, undecided: 4.5, margin: '±2.0%p' },
+      { pollster: '공식 개표', date: '2026-10-26', lula: 50.9, flavio: 49.1, undecided: 0.0, margin: '공식 결과' },
       { pollster: 'AtlasIntel', date: '2026-10-17', lula: 49.2, flavio: 48.1, undecided: 2.7, margin: '±1.5%p' },
+      { pollster: 'Quaest', date: '2026-10-15', lula: 48.5, flavio: 47.0, undecided: 4.5, margin: '±2.0%p' },
       { pollster: 'Datafolha', date: '2026-10-16', lula: 48.0, flavio: 47.5, undecided: 4.5, margin: '±2.0%p' },
-      { pollster: 'Paraná Pesquisas', date: '2026-10-14', lula: 47.2, flavio: 48.0, undecided: 4.8, margin: '±2.2%p' },
     ],
     average: {
-      lula: 48.2,
-      flavio: 47.7,
-      undecided: 4.1
+      lula: 50.9,
+      flavio: 49.1,
+      undecided: 0.0,
     },
-    insight: '초박빙 접전 양상이나 부동층 표심이 4%대로 축소되며 결선 당일 투표율(기권율)이 승부의 최대 변수로 부상하고 있습니다.'
+    insight: '룰라 대통령이 50.9% 득표로 결선 대역전승을 거두며 통산 4선에 성공했습니다. 대선 리스크 프리미엄이 소멸되며 금융시장의 시선은 차기 Copom(11/5) 기준금리 인하 및 룰라 정부 재정 준칙으로 신속히 전환되고 있습니다.',
   },
   copom: {
     meeting_date: '2026-11-05',
-    d_day: 18,
-    current_selic: 10.50,
+    d_day: 10,
+    current_selic: 13.75,
     rate_cut_probabilities: {
       cut_50bp: 10.0,
       cut_25bp: 68.0,
@@ -83,8 +97,8 @@ const DEFAULT_TRACKER: TrackerData = {
     },
     expected_delta_bp: -22.0,
     focus_consensus_end_2026: 9.75,
-    analysis: 'IPCA 인플레이션의 안정세와 연준 피벗 가속화로 11월 Copom 25bp 인하 확률이 68%로 우세합니다. 결선 대선 결과에 따른 재정 신뢰도가 향후 인하 경로의 폭을 결정할 전망입니다.'
-  }
+    analysis: 'IPCA 인플레이션의 안정세와 연준 피벗 가속화로 11월 Copom 25bp 인하 확률이 68%로 우세합니다. 결선 대선 결과에 따른 재정 신뢰도가 향후 인하 경로의 폭을 결정할 전망입니다.',
+  },
 };
 
 export default function BrazilElectionCopomTracker() {
@@ -111,6 +125,7 @@ export default function BrazilElectionCopomTracker() {
   }, []);
 
   const { election, copom } = data;
+  const isDecided = election.phase === 'decided';
 
   return (
     <div className="w-full flex flex-col gap-4 text-gray-100">
@@ -130,14 +145,20 @@ export default function BrazilElectionCopomTracker() {
                 </span>
                 <div>
                   <h3 className="text-sm md:text-base font-black text-white flex items-center gap-1.5">
-                    2026 브라질 대선 결선 실시간 여론조사
+                    {isDecided ? '2026 브라질 대선 결선 공식 개표 결과' : '2026 브라질 대선 결선 실시간 여론조사'}
                   </h3>
-                  <span className="text-[11px] text-gray-400">10월 25일 결선투표 공식 개표 D-Day</span>
+                  <span className="text-[11px] text-gray-400">
+                    {isDecided ? '10월 25일 결선투표 개표 완료 · 룰라 당선 확정' : '10월 25일 결선투표 공식 개표 D-Day'}
+                  </span>
                 </div>
               </div>
               <div className="text-right">
-                <span className="px-2.5 py-1 rounded-full text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                  D-{election.d_day > 0 ? election.d_day : 'DAY'}
+                <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${
+                  isDecided
+                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                }`}>
+                  {isDecided ? '당선 확정 (4선)' : (election.d_day > 0 ? `D-${election.d_day}` : 'D-DAY')}
                 </span>
               </div>
             </div>
@@ -147,15 +168,19 @@ export default function BrazilElectionCopomTracker() {
               <div className="flex items-center justify-between text-xs mb-2">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                  <span className="font-bold text-rose-300">룰라 (PT·현직)</span>
+                  <span className="font-bold text-rose-300">
+                    룰라 (PT{isDecided ? '·당선' : '·현직'})
+                  </span>
                   <span className="text-base font-black text-white">{election.average.lula}%</span>
                 </div>
                 <div className="text-[11px] text-gray-400 font-medium">
-                  부동층 {election.average.undecided}%
+                  {isDecided ? '개표율 100%' : `부동층 ${election.average.undecided}%`}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-base font-black text-white">{election.average.flavio}%</span>
-                  <span className="font-bold text-blue-300">플라비우 (PL·야당)</span>
+                  <span className="font-bold text-blue-300">
+                    플라비우 (PL{isDecided ? '·낙선' : '·야당'})
+                  </span>
                   <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
                 </div>
               </div>
@@ -166,10 +191,12 @@ export default function BrazilElectionCopomTracker() {
                   className="bg-gradient-to-r from-rose-600 to-rose-400 h-full transition-all duration-500"
                   style={{ width: `${election.average.lula}%` }}
                 />
-                <div
-                  className="bg-gray-600 h-full transition-all duration-500"
-                  style={{ width: `${election.average.undecided}%` }}
-                />
+                {election.average.undecided > 0 && (
+                  <div
+                    className="bg-gray-600 h-full transition-all duration-500"
+                    style={{ width: `${election.average.undecided}%` }}
+                  />
+                )}
                 <div
                   className="bg-gradient-to-l from-blue-600 to-blue-400 h-full transition-all duration-500"
                   style={{ width: `${election.average.flavio}%` }}
@@ -177,8 +204,16 @@ export default function BrazilElectionCopomTracker() {
               </div>
 
               <div className="flex justify-between items-center text-[11px] text-gray-400 mt-2">
-                <span>격차: <strong>+{election.lead_margin}%p</strong> ({election.lead_candidate} 우세)</span>
-                <span className="text-amber-400">초박빙 오차범위 내 접전</span>
+                <span>
+                  {isDecided ? (
+                    <>최종 격차: <strong className="text-rose-400">+{election.lead_margin}%p</strong> (룰라 역전승)</>
+                  ) : (
+                    <>격차: <strong>+{election.lead_margin}%p</strong> ({election.lead_candidate} 우세)</>
+                  )}
+                </span>
+                <span className={isDecided ? 'text-emerald-400 font-semibold' : 'text-amber-400'}>
+                  {isDecided ? '정치적 불확실성 완전 소멸' : '초박빙 오차범위 내 접전'}
+                </span>
               </div>
             </div>
 

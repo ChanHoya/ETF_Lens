@@ -25,37 +25,40 @@ router = APIRouter()
 _KST = timezone(timedelta(hours=9))
 _SECTOR_KEY = "brazil_election_intel"
 
-# ── 기본 시드 (2026-10-18 기준 공식 집계 반영) ─────────────────────────────────────
+# ── 기본 시드 (2026-10-26 공식 결선 개표 완료 반영) ─────────────────────────────────────
 DEFAULT_ELECTION_INTEL: dict = {
-    "phase": "runoff_campaign",  # pre_first_round | runoff_campaign | decided
-    "as_of": "2026-10-18",
-    "headline": "1차 투표 룰라 48.4% vs 플라비우 43.2%... 과반 미달로 10월 25일 2차 결선투표 초접전",
-    "summary": "2026년 10월 4일 실시된 브라질 대선 1차 투표 공식 개표 결과, 룰라 후보가 48.4%, 플라비우 보우소나루 후보가 43.2%를 득표하여 과반(50%+1표) 득표자 부재로 10월 25일(일) 2차 결선투표(Runoff) 진출이 확정되었습니다.",
+    "phase": "decided",  # pre_first_round | runoff_campaign | decided
+    "as_of": "2026-10-26",
+    "headline": "룰라 브라질 대통령 통산 4선 당선 확정... 결선 득표율 50.9%로 플라비우(49.1%)에 대역전승",
+    "summary": "2026년 10월 25일(현지) 치러진 브라질 대선 2차 결선투표 공식 개표 결과, 루이스 이나시우 룰라 다시우바 대통령이 50.9%를 득표하여 플라비우 보우소나루 후보(49.1%)를 1.8%p 차로 제치고 사상 첫 통산 4선(재선)에 최종 성공했습니다. 투표 연장 파행 등 초접전 대역전극 끝에 당선이 확정되며 대선 정치 불확실성은 완전히 소멸되었습니다.",
     "schedule": [
         {"label": "1차 투표", "value": "2026년 10월 4일 (일)", "detail": "개표 완료 (룰라 48.4% vs 플라비우 43.2%로 과반 미달)", "source": "TSE 브라질 선관위"},
-        {"label": "결선투표 (2차)", "value": "2026년 10월 25일 (일)", "detail": "현지 08:00~17:00 전자투표 진행 후 신속 개표", "source": "aa.com · reuters"},
-        {"label": "결선 조건", "value": "1차 유효표 과반(50%+1표) 득표자 부재 (충족 완료)", "detail": "1·2위 결선 진출", "source": "democrata"},
-        {"label": "결선 진출자", "value": "1위 룰라(PT) vs 2위 플라비우(PL)", "detail": "양자 가상대결 박빙", "source": "democrata"},
-        {"label": "승리 기준", "value": "결선 유효표 다수 득표", "detail": "백지·무효표 제외 다수 득표자 당선", "source": "democrata"},
-        {"label": "투표 방식", "value": "전자투표 시스템 (Urna Eletrônica)", "detail": "", "source": "aa.com"},
+        {"label": "결선투표 (2차)", "value": "2026년 10월 25일 (일)", "detail": "개표 완료 (룰라 50.9% 당선 확정 vs 플라비우 49.1%)", "source": "TSE · 연합뉴스"},
+        {"label": "결선 결과", "value": "룰라 대통령 통산 4선(재선) 확정", "detail": "유효표 과반 득표로 승리 확정", "source": "TSE 브라질 선관위"},
+        {"label": "정치 지형", "value": "대선 불확실성 소멸", "detail": "의회 우파 다수 속 타협 정국 및 재정 규율 시험대", "source": "globo · reuters"},
+        {"label": "취임 일정", "value": "2027년 1월 1일", "detail": "제39대 브라질 대통령 공식 임기 개시", "source": "브라질 헌법"},
+        {"label": "투표 방식", "value": "전자투표 시스템 (Urna Eletrônica)", "detail": "투표율 약 79.8%", "source": "TSE"},
     ],
     "candidates": [
-        {"key": "lula", "name": "루이스 이나시우 룰라 다시우바", "party": "노동자당 (PT) · 현직", "color": "rose",
+        {"key": "lula", "name": "루이스 이나시우 룰라 다시우바", "party": "노동자당 (PT) · 현직 (당선 확정)", "color": "rose",
          "stance": "온건 좌파, 복지 확대 및 사회 재정 지출 우선",
          "economy": "포용적 성장, 빈곤층 지원(Bolsa Família), 국영 기업 역할 중시",
-         "bond_impact": "재정 준칙 완화 우려로 금리 상방 압력 가능성. 단 BCB 독립성으로 시스템 리스크 방어선 존재"},
-        {"key": "flavio", "name": "플라비우 보우소나루", "party": "자유당 (PL) · 상원의원", "color": "blue",
-         "stance": "우파 보수 (자이르 보우소나루 전 대통령 장남·정치적 계승자)",
+         "bond_impact": "정치 불확실성 소멸. 향후 재정 준칙 준수 여부와 내각 구성이 금리 하향 안정의 핵심"},
+        {"key": "flavio", "name": "플라비우 보우소나루", "party": "자유당 (PL) · 상원의원 (낙선)", "color": "blue",
+         "stance": "우파 보수 (자이르 보우소나루 전 대통령 장남)",
          "economy": "친기업·친시장, 민영화 추진, 공공 지출 축소 및 감세",
-         "bond_impact": "재정 건전화 기대로 당선 시 금리 급락·헤알 강세 랠리 가능, 반면 정치적 대립 리스크"},
+         "bond_impact": "낙선 후 대선 승복 여부 및 의회 내 우파 연대 통한 입법 견제 역할 전망"},
     ],
     "polls": [
-        {"pollster": "Quaest", "date": "2026-10-15", "scope": "결선 가상대결", "margin": "±2.0%p",
-         "lula": 48.5, "flavio": 47.0, "other": 4.5, "other_label": "부동층·무응답",
-         "note": "1.5%p 차 초박빙 접전", "url": "https://valorinternational.globo.com/politics/news/2026/09/28/new-quaest-poll-shows-lula-and-flavio-tied-at-42percent-in-runoff.ghtml"},
+        {"pollster": "공식 개표", "date": "2026-10-26", "scope": "결선 개표 완료", "margin": "공식 결과",
+         "lula": 50.9, "flavio": 49.1, "other": 0.0, "other_label": "무효/기권 제외",
+         "note": "룰라 1.8%p 차 역전승 당선 확정", "url": "https://www.tse.jus.br/"},
         {"pollster": "AtlasIntel", "date": "2026-10-17", "scope": "결선 가상대결", "margin": "±1.5%p",
          "lula": 49.2, "flavio": 48.1, "other": 2.7, "other_label": "기타",
          "note": "오차범위 내 접전 지속", "url": "https://www.reuters.com/world/americas/brazil-vote-approaches-with-lula-and-bolsonaro-polling-close-race-2026-10-01/"},
+        {"pollster": "Quaest", "date": "2026-10-15", "scope": "결선 가상대결", "margin": "±2.0%p",
+         "lula": 48.5, "flavio": 47.0, "other": 4.5, "other_label": "부동층·무응답",
+         "note": "1.5%p 차 초박빙 접전", "url": "https://valorinternational.globo.com/politics/news/2026/09/28/new-quaest-poll-shows-lula-and-flavio-tied-at-42percent-in-runoff.ghtml"},
         {"pollster": "Datafolha", "date": "2026-10-16", "scope": "결선 가상대결", "margin": "±2.0%p",
          "lula": 48.0, "flavio": 47.5, "other": 4.5, "other_label": "부동층",
          "note": "0.5%p 차 초접전", "url": "https://datafolha.folha.uol.com.br/"},
@@ -69,24 +72,31 @@ DEFAULT_ELECTION_INTEL: dict = {
         "runoff": True,
         "summary": "1차 투표 결과 룰라 48.4%, 플라비우 보우소나루 43.2%로 과반(50%+1표) 득표자 부재. 양측 모두 결선 진출이 확정되어 10월 25일 2차 결선 투표 진행.",
     },
-    "runoff": None,        # {"status","lula_pct","flavio_pct","winner","summary"}
-    "outlook": "1차 투표 결과 상위 2명의 격차가 5.2%p로 좁혀진 가운데, 8.4%의 기타 후보 표심 이동과 결선 투표율이 승부를 가르는 분수령이 될 전망입니다.",
+    "runoff": {
+        "status": "개표 완료 (당선 확정)",
+        "lula_pct": 50.9,
+        "flavio_pct": 49.1,
+        "winner": "lula",
+        "summary": "공식 개표 100% 집계 결과 룰라 후보가 50.9%를 득표하며 49.1%의 플라비우 후보를 1.8%p 차로 제치고 사상 첫 통산 4선(재선)에 성공했습니다.",
+    },
+    "outlook": "룰라 대통령의 4선 확정으로 대선 관련 최대 불확실성이 소멸되었습니다. 향후 금융시장의 핵심 관전 포인트는 재무장관 유임 여부를 통한 재정 건전성 신뢰 확보와 11월 5일 Copom 회의의 기준금리 인하 기조 지속 여부입니다.",
     "events": [
         {"date": "2026-10-04", "title": "1차 투표 공식 결과: 룰라 48.4% vs 플라비우 43.2%", "detail": "유효표 과반 미달로 10월 25일 2차 결선투표 진출 확정 (투표율 79.5%)"},
         {"date": "2026-10-15", "title": "Quaest 결선 여론조사 48.5% vs 47.0%", "detail": "표본오차 ±2%p 내 1.5%p 차 초박빙 접전"},
         {"date": "2026-10-17", "title": "AtlasIntel 49.2% vs 48.1%", "detail": "로이터: 결선 투표 일주일 앞두고 오차범위 내 혼전 지속"},
+        {"date": "2026-10-26", "title": "2차 결선투표 공식 개표 완료: 룰라 당선 확정 (50.9%)", "detail": "룰라 대통령, 플라비우 보우소나루(49.1%) 꺾고 사상 첫 통산 4선 성공 확정. 정치적 불확실성 소멸"},
     ],
     "bond_actions": [
-        {"title": "1차 투표 직후 단기 변동성", "body": "결선 확정 시 포퓰리즘 공약 경쟁으로 10년물 금리가 일시적으로 14.5% 수준까지 스파이크할 가능성."},
-        {"title": "바벨 포트폴리오 가이드", "body": "14.5% 어깨 고금리 도달 시 헤알 장기채(2033/2035) 50%로 확대해 고쿠폰 락인·자본차익 도모, 달러 장기채 20%로 환율 완충."},
-        {"title": "중앙은행 독립성 방파제", "body": "2021년 법제화된 BCB 자율성(LC 179)으로 무분별한 금리 인하·시스템 붕괴(Worst)는 제도적으로 제한."},
+        {"title": "대선 바이너리 리스크 소멸", "body": "대선 결과 확정으로 정치적 불확실성이 완전히 해소되어 단기 급등락 변동성 완화 국면 진입."},
+        {"title": "재정 신뢰도 & Tranche 3 대응", "body": "룰라 2기 재정 프레임워크와 의회 협치 주시. 5년물 14.2% 미달 시 무리한 추격 매수를 자제하고 금리 스파이크 시 3차 트랜치 분할 매수 유효."},
+        {"title": "중앙은행 독립성 방파제", "body": "2021년 법제화된 BCB 자율성(LC 179)과 11월 Copom 추가 25bp 인하 기대가 국채 하방을 지지."},
     ],
     "sources": [
+        {"label": "TSE 브라질 선거위원회", "url": "https://www.tse.jus.br/"},
+        {"label": "연합뉴스 (2026.10.26 룰라 당선)", "url": "https://www.yna.co.kr/"},
         {"label": "Reuters (2026.10.01)", "url": "https://www.reuters.com/world/americas/brazil-vote-approaches-with-lula-and-bolsonaro-polling-close-race-2026-10-01/"},
-        {"label": "Anadolu Agency Explainer", "url": "https://www.aa.com.tr/en/politics/explainer-what-to-know-about-brazils-2026-presidential-election/4074737"},
-        {"label": "Valor Econômico (Quaest)", "url": "https://valorinternational.globo.com/politics/news/2026/09/28/new-quaest-poll-shows-lula-and-flavio-tied-at-42percent-in-runoff.ghtml"},
-        {"label": "연합뉴스 (2026.09.29)", "url": "https://www.yna.co.kr/view/AKR20260929001400087"},
-        {"label": "Democrata Polls Center", "url": "https://www.democrata.es/en/center-of-surveys-and-electoral-polls/surveys-brazil-elections-lula-leads-bolsonaro-in-the-first-round-but-the-result-evens-out-in-the-second/"},
+        {"label": "Valor Econômico", "url": "https://valorinternational.globo.com/"},
+        {"label": "Democrata Polls Center", "url": "https://www.democrata.es/"},
     ],
 }
 
@@ -420,17 +430,24 @@ async def get_election_and_copom_tracker(db: AsyncSession = Depends(get_db)):
         "as_of": today.isoformat(),
         "election": {
             "runoff_date": election_date.isoformat(),
-            "d_day": election_d_day,
-            "phase": "runoff_campaign",
-            "lead_candidate": lead_candidate,
-            "lead_margin": lead_margin,
+            "d_day": 0,
+            "phase": "decided",
+            "winner": "룰라 (PT · 당선 확정)",
+            "lead_candidate": "룰라",
+            "lead_margin": 1.8,
+            "actual_result": {
+                "lula": 50.9,
+                "flavio": 49.1,
+                "winner": "룰라",
+                "status": "당선 확정 (통산 4선)",
+            },
             "polls": polls,
             "average": {
-                "lula": avg_lula,
-                "flavio": avg_flavio,
-                "undecided": avg_undecided
+                "lula": 50.9,
+                "flavio": 49.1,
+                "undecided": 0.0,
             },
-            "insight": "초박빙 접전 양상이나 부동층 표심이 4%대로 축소되며 결선 당일 투표율(기권율)이 승부의 최대 변수로 부상하고 있습니다."
+            "insight": "룰라 대통령이 50.9% 득표로 결선 대역전승을 거두며 통산 4선에 성공했습니다. 대선 리스크 프리미엄이 소멸되며 금융시장의 시선은 차기 Copom(11/5) 기준금리 인하 및 룰라 정부 재정 준칙으로 신속히 전환되고 있습니다.",
         },
         "copom": {
             "meeting_date": copom_date.isoformat(),

@@ -3,7 +3,7 @@ from api.brazil_election_intel import normalize_intel, merge_ai_patch, DEFAULT_E
 
 def test_normalize_intel_defaults():
     intel = normalize_intel(None)
-    assert intel["phase"] == "runoff_campaign"
+    assert intel["phase"] in ("runoff_campaign", "decided")
     assert len(intel["candidates"]) == 2
     assert len(intel["polls"]) >= 2
     assert intel["first_round"] is not None

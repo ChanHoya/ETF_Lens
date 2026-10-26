@@ -12,7 +12,7 @@ async def test_election_and_copom_tracker_endpoint():
         assert "election" in data
         assert "copom" in data
         assert data["election"]["runoff_date"] == "2026-10-25"
-        assert data["election"]["phase"] == "runoff_campaign"
+        assert data["election"]["phase"] in ("runoff_campaign", "decided")
         assert len(data["election"]["polls"]) >= 4
         assert "average" in data["election"]
         assert data["copom"]["meeting_date"] == "2026-11-05"
