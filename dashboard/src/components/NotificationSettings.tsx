@@ -200,7 +200,7 @@ export default function NotificationSettings() {
         <section className="flex flex-col gap-5 mt-6 text-left">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <span className="w-2 h-7 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></span>
+                    <span className="w-2 h-7 bg-indigo-500 rounded-full"></span>
                     <div>
                         <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
                             실시간 AI 전략 & 괴리율 알림 센터
@@ -757,7 +757,7 @@ export default function NotificationSettings() {
                                 <button
                                     type="submit"
                                     disabled={isSaving || isLoading}
-                                    className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+                                    className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
                                 >
                                     {isSaving ? (
                                         <>

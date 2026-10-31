@@ -3,15 +3,25 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: UI/UX Standard Template & Sticky Navigation Minimization & Universal Modal Overlay & Recharts Date Formatting
-✅ Recent: [최상단 Activation Zone 대시보드 배너 '다음 관전 이벤트' 완료 이벤트 필터링 및 Copom(11월) 승계]
-1. [최상단 대시보드 배너 '다음 관전 이벤트' 카드 최신화 (`BrazilBondTab.tsx`, `brazil_bond.py`)]:
-   - 백엔드 `get_summary`에서 `upcoming` 산출 시 오늘(2026-10-26) 개표 완료된 대선 결선을 제외하도록 `_is_completed` 필터를 강화하여, `next_catalyst`가 정식으로 **11월 5일 브라질 Copom (D-10)**으로 반환되도록 교정.
-   - 프론트엔드 최상단 Activation Zone 배너에서도 `activeNext` 판정 로직을 추가하여 개표 완료된 이벤트를 건너뛰고 차기 미완료 이벤트를 동적 계산하도록 이중 안전장치 탑재.
-2. [매크로 이벤트 실시간 자동 동기화 룰셋 제정 (`AGENTS.md` Rule 9, `GEMINI.md` Rule 8)]:
-   - '매크로 이벤트 실시간 자동 동기화 및 서비스 전역 분석 일관성 원칙' 제정으로 조회일자 기준 자동 이벤트 평가 및 전 페이지 연쇄 반영 의무화.
-3. [무결성 검증 완료]: 백엔드 pytest 8/8 통과, Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`exit code 0`).
+✅ Recent: [redesign-skill 기반 UI/UX 전면 업그레이드 (Phase 1~4) 완료]
+1. [Phase 1: Geist 글꼴 및 금융 텍스트 렌더링 정상화 (`globals.css`)]:
+   - Geist Sans, Geist Mono, Manrope 정식 로드 및 `--font-sans`, `--font-mono` 테마 연동.
+   - 금융 데이터 자릿수 떨림 방지를 위한 `font-variant-numeric: tabular-nums` 및 `cv02, cv03, cv04, cv11, tnum` 전역 적용.
+   - 오펀 단어 방지를 위한 `h1~h6` `text-wrap: balance`, `p` `text-wrap: pretty` 적용.
+2. [Phase 2: AI 네온 그라디언트 블롭 제거 및 순수 다크 팔레트 정돈 (`MainApp.tsx`, `PasswordGate.tsx`, `TffGateWrapper.tsx`)]:
+   - 배경의 보라/핑크/인디고 네온 블러 블롭 전면 제거.
+   - 배경 `#000000` 플랫 다크 서피스 정돈 및 검색창/모달/드롭다운 불필요 그라디언트 제거.
+3. [Phase 3: 햅틱 조작감 & 접근성 포커스 링 전역 보강 (`globals.css`, `SlidingTabs.tsx`, `NotificationSettings.tsx`, `MyAuthModal.tsx`)]:
+   - 모든 대화형 버튼에 물리 스프링 클릭 감각(`active:scale-[0.98]`, `cubic-bezier(0.22, 1, 0.36, 1)`) 및 고대비 포커스 링 탑재.
+   - `prefers-reduced-motion` 미디어 쿼리 지원으로 접근성 표준 완비.
+   - AI 클리셰 보라 그라디언트 탭 인디케이터를 정제된 솔리드 인디고(`bg-indigo-600`)로 단일화.
+4. [Phase 4: 중첩 라운드(`inner = outer - gap`) 및 컴포넌트 여백 조화]:
+   - 외곽 박스 대비 내부 모듈러 카드 모서리 곡률 정합성 확보.
+5. [무결성 검증 완료]: Next.js 16.1.6 11개 페이지 최적화 프로덕션 빌드 성공, 백엔드 E2E 통합 테스트 6/6 100% Pass.
 
-🚀 Current: 최상단 대시보드 배너 다음 관전 이벤트 승계 완료 / 검증 완료
+🚀 Current: redesign-skill 기반 UI/UX 전면 고도화 완료
+
+✅ Previous: [최상단 Activation Zone 대시보드 배너 '다음 관전 이벤트' 완료 이벤트 필터링 및 Copom(11월) 승계]
 
 ✅ Recent: [코스피 출구 전략 달러인덱스(DXY) 전역 정합성 통일 & 타임머신 복기 & 7대 지표 모달 & 출구 시뮬레이터 & 텔레그램 /exit 경보]
 

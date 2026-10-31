@@ -262,9 +262,8 @@ export default function CompareTable({
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white/[0.03] p-4 lg:p-5 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] mt-0">
                 {/* Table Details */}
                 <section className="col-span-1 lg:col-span-3 overflow-hidden flex flex-col relative group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     <h3 className="text-base md:text-lg font-bold mb-3 flex items-center gap-2 relative z-10">
-                        <span className="w-1.5 h-6 bg-gradient-to-b from-indigo-400 to-purple-500 rounded-full"></span>
+                        <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
                         종합 매트릭스
                     </h3>
 

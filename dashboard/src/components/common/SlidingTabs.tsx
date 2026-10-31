@@ -38,7 +38,7 @@ export default function SlidingTabs({
 }: SlidingTabsProps) {
   const tabList = items || tabs || [];
   const currentActiveId = activeId || activeTab || "";
-  const currentPillClass = pillClassName || activePillClassName || "bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_15px_rgba(99,102,241,0.4)]";
+  const currentPillClass = pillClassName || activePillClassName || "bg-indigo-600 shadow-sm";
 
   const containerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());

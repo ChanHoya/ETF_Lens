@@ -270,10 +270,9 @@ export default function CompareChart({
                             });
                             return (
                             <section className="bg-white/[0.02] backdrop-blur-3xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 border border-white/5 relative group w-full">
-                                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                                 <div className="flex justify-between items-center mb-4 relative z-10">
                                     <h3 className="text-base md:text-lg font-bold flex items-center gap-3">
-                                        <span className="w-1.5 h-6 bg-gradient-to-b from-blue-400 to-indigo-500 rounded-full"></span>
+                                        <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
                                         가격 추이
                                         <span className="text-xs font-normal text-gray-500 ml-1 hidden sm:inline">(원, 5만원 이하 종목)</span>
                                     </h3>

@@ -88,10 +88,6 @@ export default function TffGateWrapper({ onOpenDetail }: Props) {
     // 암호 입력 화면
     return (
         <div className="flex-1 flex flex-col items-center justify-center w-full min-h-[60vh] relative z-10">
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-sky-600/10 rounded-full blur-[100px]" />
-            </div>
-
             <div className="relative z-10 flex flex-col items-center gap-6 px-6 w-full max-w-sm">
                 <div className="flex flex-col items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-[0_0_30px_rgba(14,165,233,0.3)]">

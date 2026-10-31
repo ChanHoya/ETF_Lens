@@ -379,7 +379,7 @@ export default function AIInsight() {
     <div className="w-full">
       {/* ── 섹션 타이틀 (AI 투자전략 및 추천 ETF) ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-md shrink-0">
           <Brain className="w-5 h-5 text-white" />
         </div>
         <div>

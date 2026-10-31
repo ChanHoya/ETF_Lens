@@ -148,7 +148,7 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="px-4 py-3 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-b border-white/10 flex justify-between items-center shrink-0">
+                        <div className="px-4 py-3 bg-[#181818] border-b border-white/10 flex justify-between items-center shrink-0">
                             <div className="flex items-center gap-2">
                                 <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
                                     <Sparkles className="w-4 h-4 text-indigo-400" />
@@ -180,7 +180,7 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
 
                             {isLoading && (
                                 <div className="flex gap-3 justify-start items-start animate-in fade-in duration-300">
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/30 to-purple-500/30 shrink-0 flex items-center justify-center mt-1 border border-indigo-400/30 animate-pulse">
+                                    <div className="w-8 h-8 rounded-full bg-indigo-500/20 shrink-0 flex items-center justify-center mt-1 border border-indigo-400/30 animate-pulse">
                                         <Bot className="w-4 h-4 text-indigo-400" />
                                     </div>
                                     <div className="bg-[#1C1C24] border border-indigo-500/20 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-3 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
@@ -227,7 +227,7 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
         <>
             {isOpen && (
                 <div className="absolute top-14 left-0 w-full min-h-[300px] max-h-[80vh] bg-[#12121A] border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col z-[100] t-modal-panel">
-                    <div className="px-4 py-3 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-b border-white/10 flex justify-between items-center shrink-0">
+                    <div className="px-4 py-3 bg-[#181818] border-b border-white/10 flex justify-between items-center shrink-0">
                         <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
                                 <Sparkles className="w-4 h-4 text-indigo-400" />
@@ -251,7 +251,7 @@ export default function ChatBot({ renderTrigger, renderChat, isOpen: externalOpe
                         ))}
                         {isLoading && (
                             <div className="flex gap-3 justify-start items-start animate-in fade-in duration-300">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/30 to-purple-500/30 shrink-0 flex items-center justify-center mt-1 border border-indigo-400/30 animate-pulse">
+                                <div className="w-8 h-8 rounded-full bg-indigo-500/20 shrink-0 flex items-center justify-center mt-1 border border-indigo-400/30 animate-pulse">
                                     <Bot className="w-4 h-4 text-indigo-400" />
                                 </div>
                                 <div className="bg-[#1C1C24] border border-indigo-500/20 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-3 shadow-[0_0_15px_rgba(99,102,241,0.15)]">

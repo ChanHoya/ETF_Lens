@@ -3213,7 +3213,7 @@ function AiReportSection({ insight, insightAt, genLoading, onGenerate }: {
             <div className="flex items-center justify-between mb-3">
                 <SectionTitle icon={<Sparkles className="w-5 h-5 text-indigo-400" />} title="AI 전략 리포트" sub={insightAt ? `생성: ${new Date(insightAt).toLocaleString('ko-KR')}` : '라이브 지표 + 플레이북 기반'} />
                 <button onClick={onGenerate} disabled={genLoading}
-                    className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg disabled:opacity-50 hover:brightness-110 transition">
+                    className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl bg-indigo-600 text-white shadow-md disabled:opacity-50 hover:bg-indigo-500 active:scale-[0.98] transition">
                     {genLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                     {genLoading ? '분석 중…' : (insight ? '재생성' : 'AI 분석 생성')}
                 </button>

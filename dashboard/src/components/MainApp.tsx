@@ -1226,16 +1226,9 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
   }, [data]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-2 md:px-6 md:py-3 text-gray-100 font-sans selection:bg-indigo-500/30 overflow-x-hidden relative bg-[#050505]">
-      {/* Dynamic Lovable Gradient Background */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-600/20 blur-[130px] mix-blend-screen transition-all duration-1000"></div>
-        <div className="absolute top-[20%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-purple-600/20 blur-[130px] mix-blend-screen transition-all duration-1000"></div>
-        <div className="absolute bottom-[-10%] left-[10%] w-[60vw] h-[60vw] rounded-full bg-pink-600/10 blur-[150px] mix-blend-screen transition-all duration-1000"></div>
-      </div>
-
+    <main className="flex min-h-screen flex-col items-center p-2 md:px-6 md:py-3 text-gray-100 font-sans selection:bg-indigo-500/30 overflow-x-hidden relative bg-[#000000]">
       {/* 상단 통합 헤드라인 영역: 로고, 툴버튼, 메인 메뉴바, 서브탭 바 (스크롤 고정 Sticky & 1줄 슬라이드 축소) */}
-      <div id="iprism-headline" className="sticky top-0 z-[250] w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col items-center shrink-0 bg-[#050505]/95 backdrop-blur-md pt-2 pb-1.5 border-b border-white/5 transition-all">
+      <div id="iprism-headline" className="sticky top-0 z-[250] w-full max-w-[95vw] xl:max-w-[1400px] flex flex-col items-center shrink-0 bg-[#000000]/95 backdrop-blur-md pt-2 pb-1.5 border-b border-white/5 transition-all">
         {(() => {
           const isMarketTab = ['macro', 'fx', 'rates', 'stocks', 'oil', 'discover', 'us_midterm'].includes(activeTab);
           const isAnalysisTab = ['select', 'info', 'chart', 'holdings', 'covered_call', 'brazil'].includes(activeTab);
@@ -1369,7 +1362,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                       }`}
                     >
                       <div
-                        className="t-tabs-pill rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+                        className="t-tabs-pill rounded-full bg-indigo-600 shadow-sm"
                         style={{
                           transform: `translateX(${navPillStyle.left}px)`,
                           width: `${navPillStyle.width}px`,
@@ -1715,7 +1708,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                           }
                         }
                       }}
-                      className="w-full pl-12 pr-4 py-3 bg-gradient-to-br from-black/60 to-indigo-950/20 border border-indigo-500/30 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400 outline-none transition-all text-white placeholder-gray-500 font-medium text-sm shadow-[0_0_20px_rgba(79,70,229,0.15)] backdrop-blur-md"
+                      className="w-full pl-12 pr-4 py-3 bg-[#181818] border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400 outline-none transition-all text-white placeholder-gray-500 font-medium text-sm shadow-sm"
                       placeholder="전체 종목 통합 검색 (예: 테크, 배당, 2차전지)"
                     />
 
@@ -1723,7 +1716,7 @@ function MainAppInner({ initialTab = 'macro', showMyTab = false, showTffTab = fa
                     {globalActive && (
                       <div
                         id="global-dropdown"
-                        className="absolute top-[calc(100%+8px)] left-0 z-[100] w-full bg-[#0c0a18]/95 border border-indigo-500/30 rounded-2xl max-h-[300px] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.9)] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200"
+                        className="absolute top-[calc(100%+8px)] left-0 z-[100] w-full bg-[#181818] border border-white/10 rounded-xl max-h-[300px] overflow-y-auto shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200"
                         onScroll={handleDropdownScroll}
                       >
                         {etfDictionary.length === 0 ? (

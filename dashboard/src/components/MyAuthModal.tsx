@@ -62,7 +62,7 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: ()
     return (
         <div className={`w-full max-w-md mx-auto bg-white/[0.03] p-6 lg:p-8 border border-white/10 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] ${isShaking ? 't-shake' : ''}`}>
             <div className="mb-8 text-center">
-                <div className={`mx-auto w-16 h-16 rounded-2xl border flex items-center justify-center mb-4 transition-all duration-300 ${isSuccess ? 'bg-emerald-500/20 border-emerald-500/40' : 'bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 border-indigo-500/30'}`}>
+                <div className={`mx-auto w-16 h-16 rounded-2xl border flex items-center justify-center mb-4 transition-all duration-300 ${isSuccess ? 'bg-emerald-500/20 border-emerald-500/40' : 'bg-indigo-500/10 border-indigo-500/20'}`}>
                     {isSuccess ? (
                         <CheckCircle2 className="w-8 h-8 text-emerald-400 t-check-pop" />
                     ) : (
@@ -104,7 +104,7 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: ()
                         </div>
                     </div>
 
-                    <button type="submit" className="w-full mt-6 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-indigo-500/25">
+                    <button type="submit" className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md">
                         잠금 해제
                     </button>
 
@@ -128,7 +128,7 @@ export default function MyAuthModal({ onSuccess, initialError }: { onSuccess: ()
                         />
                     </div>
 
-                    <button type="submit" className="w-full mt-6 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-indigo-500/25">
+                    <button type="submit" className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md">
                         비밀번호 저장 및 시작
                     </button>
 
