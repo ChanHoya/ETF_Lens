@@ -584,7 +584,7 @@ export default function CoveredCallTab({
             {/* Data Table */}
             <div className="bg-black/20 border border-white/5 rounded-2xl overflow-hidden shadow-xl mb-4">
                 <div className="overflow-x-auto pb-4">
-                    <table className="w-full text-left border-collapse whitespace-nowrap min-w-[900px]">
+                    <table className="w-full text-left border-collapse whitespace-nowrap min-w-[900px] text-xs">
                         <thead className="bg-[#09090b] border-b border-white/10">
                             <tr className="text-xs font-semibold text-gray-400 text-center tracking-wider hover:bg-white/[0.02]">
                                 <th className="py-2 px-4 w-12 text-center relative">
@@ -851,9 +851,9 @@ export default function CoveredCallTab({
                                     {Object.keys(realStats).length > 0 && <span className="bg-indigo-500/30 text-indigo-200 text-[10px] px-2 py-0.5 rounded ml-1 font-bold">REAL DATA</span>}
                                 </h4>
                                 <div className="bg-white/[0.02] border border-white/5 rounded-2xl overflow-x-auto shadow-inner">
-                                    <table className="w-full text-left border-collapse whitespace-nowrap min-w-[1000px]">
+                                    <table className="w-full text-left border-collapse whitespace-nowrap min-w-[1000px] text-xs">
                                         <thead className="bg-[#09090b] border-b border-white/10">
-                                            <tr className="text-[11px] font-semibold text-gray-400 text-center tracking-wider">
+                                            <tr className="text-xs font-semibold text-gray-400 text-center tracking-wider">
                                                 <th className="py-3 px-4 text-left">종목명 (운용사)</th>
                                                 <th className="py-3 px-3">비교 벤치마크</th>
                                                 <th className="py-3 px-3 bg-indigo-500/10 text-indigo-400/80">종목 {chartPeriod} 수익률</th>

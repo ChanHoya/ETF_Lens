@@ -268,11 +268,11 @@ export default function CompareTable({
                     </h3>
 
                     <div className="overflow-x-auto pb-6 relative z-10">
-                        <table className="w-full text-left border-collapse whitespace-nowrap">
+                        <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
                             <thead>
                                 <tr className="border-b border-white/10">
                                     {data.data_payload.header.map((h: string, i: number) => (
-                                        <th key={i} className="py-2 px-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                                        <th key={i} className="py-2.5 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
                                     ))}
                                 </tr>
                             </thead>

@@ -185,7 +185,7 @@ export default function AIRebalanceSimulator({ holdings }: AIRebalanceSimulatorP
                     
                     {/* Period Selector */}
                     <div className="flex flex-col gap-2">
-                        <label className="text-xs font-bold text-gray-400 flex items-center gap-1.5">
+                        <label className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
                             <Layers className="w-3.5 h-3.5 text-purple-400" /> 시뮬레이션 기간
                         </label>
                         <div className="flex gap-1.5 mt-1 bg-black/30 p-1 rounded-xl">
@@ -193,9 +193,9 @@ export default function AIRebalanceSimulator({ holdings }: AIRebalanceSimulatorP
                                 <button
                                     key={p}
                                     onClick={() => setPeriod(p)}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${
+                                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all duration-300 ${
                                         period === p 
-                                        ? "bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.3)]" 
+                                        ? "bg-emerald-500 text-black shadow-sm font-bold" 
                                         : "text-gray-400 hover:text-white"
                                     }`}
                                 >
@@ -208,15 +208,15 @@ export default function AIRebalanceSimulator({ holdings }: AIRebalanceSimulatorP
                     {/* Defense Factor Slider */}
                     <div className="flex flex-col gap-2">
                         <div className="flex justify-between items-center">
-                            <label className="text-xs font-bold text-gray-400 flex items-center gap-1.5">
+                            <label className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
                                 <ShieldAlert className="w-3.5 h-3.5 text-amber-400" /> 대비 계수 (Defense Factor)
                             </label>
-                            <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                            <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
                                 {Math.round(defenseFactor * 100)}% 대피
                             </span>
                         </div>
                         <div className="flex items-center gap-3 mt-3">
-                            <span className="text-[10px] text-gray-500">공격</span>
+                            <span className="text-xs text-gray-400">공격</span>
                             <input
                                 type="range"
                                 min="0.1"
@@ -226,22 +226,22 @@ export default function AIRebalanceSimulator({ holdings }: AIRebalanceSimulatorP
                                 onChange={(e) => setDefenseFactor(parseFloat(e.target.value))}
                                 className="flex-1 h-1.5 bg-black/40 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                             />
-                            <span className="text-[10px] text-gray-500">방어</span>
+                            <span className="text-xs text-gray-400">방어</span>
                         </div>
                     </div>
 
                     {/* Safe Asset Dropdown */}
                     <div className="flex flex-col gap-2">
-                        <label className="text-xs font-bold text-gray-400 flex items-center gap-1.5">
+                        <label className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
                             <TrendingUp className="w-3.5 h-3.5 text-indigo-400" /> 위기 시 대피할 안전 자산
                         </label>
                         <select
                             value={safeAsset}
                             onChange={(e) => setSafeAsset(e.target.value)}
-                            className="mt-1 w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-gray-200 outline-none focus:border-emerald-500/50"
+                            className="mt-1 w-full bg-black/40 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 outline-none focus:border-emerald-500/50"
                         >
                             {safeAssetOptions.map(opt => (
-                                <option key={opt.code} value={opt.code}>
+                                <option key={opt.code} value={opt.code} className="bg-[#181818] text-gray-200 py-1">
                                     [{opt.code}] {opt.name}
                                 </option>
                             ))}

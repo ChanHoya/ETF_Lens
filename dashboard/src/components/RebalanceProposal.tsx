@@ -342,7 +342,7 @@ export default function RebalanceProposal() {
                             <div className="flex flex-col gap-6 relative z-10 animate-in fade-in duration-300">
                                 <div className="border border-white/10 rounded-2xl overflow-hidden bg-black/20">
                                     <div className="overflow-x-auto">
-                                        <table className="w-full text-left border-collapse whitespace-nowrap">
+                                        <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
                                             <thead>
                                                 <tr className="bg-white/[0.03] text-xs font-semibold text-gray-400 border-b border-white/10">
                                                     <th className="p-3">계좌번호</th>
@@ -353,7 +353,7 @@ export default function RebalanceProposal() {
                                                     <th className="p-3 text-right">총 주문금액</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-white/5 text-sm">
+                                            <tbody className="divide-y divide-white/5 text-xs">
                                                 {orders.map((ord, idx) => (
                                                     <tr key={idx} className="hover:bg-white/[0.01] transition-colors">
                                                         <td className="p-3 font-mono text-xs text-gray-300">{ord.account_no}</td>

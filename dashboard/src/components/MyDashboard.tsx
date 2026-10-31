@@ -389,19 +389,19 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                     <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto flex-wrap">
                         <button
                             onClick={() => askAi("내 포트폴리오 중에서 우주섹터 관련 종목 전체 현재 평가금액 알려줘")}
-                            className="px-3.5 py-2.5 bg-white/[0.03] hover:bg-indigo-500/10 border border-white/10 hover:border-indigo-500/30 rounded-xl text-xs font-semibold text-gray-300 hover:text-indigo-300 transition-all text-left flex items-center gap-1.5 shadow-inner"
+                            className="px-3 py-1.5 bg-white/[0.04] hover:bg-indigo-500/10 border border-white/10 hover:border-indigo-500/30 rounded-lg text-xs font-medium text-gray-300 hover:text-indigo-300 transition-all text-left flex items-center gap-1.5 shadow-sm active:scale-[0.98]"
                         >
                             🚀 우주섹터 평가금액은?
                         </button>
                         <button
                             onClick={() => askAi("내 포트폴리오 중에서 바이오섹터 관련 종목의 평가금액과 총 비중은 어떻게 돼?")}
-                            className="px-3.5 py-2.5 bg-white/[0.03] hover:bg-emerald-500/10 border border-white/10 hover:border-emerald-500/30 rounded-xl text-xs font-semibold text-gray-300 hover:text-emerald-300 transition-all text-left flex items-center gap-1.5 shadow-inner"
+                            className="px-3 py-1.5 bg-white/[0.04] hover:bg-emerald-500/10 border border-white/10 hover:border-emerald-500/30 rounded-lg text-xs font-medium text-gray-300 hover:text-emerald-300 transition-all text-left flex items-center gap-1.5 shadow-sm active:scale-[0.98]"
                         >
                             🧬 바이오섹터 평가금액/비중은?
                         </button>
                         <button
                             onClick={() => askAi("내 KIS 포트폴리오 자산 배분을 분석하고 리밸런싱 개선 방향을 조언해줘")}
-                            className="px-3.5 py-2.5 bg-white/[0.03] hover:bg-purple-500/10 border border-white/10 hover:border-purple-500/30 rounded-xl text-xs font-semibold text-gray-300 hover:text-purple-300 transition-all text-left flex items-center gap-1.5 shadow-inner"
+                            className="px-3 py-1.5 bg-white/[0.04] hover:bg-purple-500/10 border border-white/10 hover:border-purple-500/30 rounded-lg text-xs font-medium text-gray-300 hover:text-purple-300 transition-all text-left flex items-center gap-1.5 shadow-sm active:scale-[0.98]"
                         >
                             📊 리밸런싱 조언 필요해
                         </button>
@@ -422,29 +422,29 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
                 </div>
 
                 <div className="bg-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-md overflow-x-auto">
-                    <table className="w-full text-left border-collapse whitespace-nowrap">
+                    <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
                         <thead>
-                            <tr className="bg-black/20 text-sm font-medium text-gray-400 border-b border-white/10">
-                                <th className="p-4 text-center">계좌번호</th>
-                                <th className="p-4 text-center">계좌유형</th>
-                                <th className="p-4 text-center">계좌별명</th>
-                                <th className="p-4 text-right">계좌자산</th>
-                                <th className="p-4 text-right pr-6 min-w-[200px]">출금가능 금액</th>
+                            <tr className="bg-black/20 text-xs font-semibold text-gray-400 border-b border-white/10">
+                                <th className="p-3 text-center">계좌번호</th>
+                                <th className="p-3 text-center">계좌유형</th>
+                                <th className="p-3 text-center">계좌별명</th>
+                                <th className="p-3 text-right">계좌자산</th>
+                                <th className="p-3 text-right pr-6 min-w-[200px]">출금가능 금액</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-white/5 text-xs">
                             {accounts.map((acc: any, idx: number) => (
                                 <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                                    <td className="p-4 text-center font-mono text-gray-200">{acc.account_no}</td>
-                                    <td className="p-4 text-center text-gray-300">위탁계좌</td>
-                                    <td className="p-4 text-center text-gray-300">{acc.account_name}</td>
-                                    <td className="p-4 text-right font-bold text-gray-200">{formatNumber(acc.total_asset)}</td>
-                                    <td className="p-4 text-right pr-6 text-gray-400">
-                                        <div className="flex justify-end items-center gap-6 w-full">
+                                    <td className="p-3 text-center font-mono tabular-nums text-gray-300 text-xs">{acc.account_no}</td>
+                                    <td className="p-3 text-center text-gray-300 text-xs">위탁계좌</td>
+                                    <td className="p-3 text-center text-gray-300 text-xs">{acc.account_name}</td>
+                                    <td className="p-3 text-right font-bold font-mono tabular-nums text-gray-200 text-xs">{formatNumber(acc.total_asset)}</td>
+                                    <td className="p-3 text-right pr-6 text-gray-400 font-mono tabular-nums text-xs">
+                                        <div className="flex justify-end items-center gap-4 w-full">
                                             <span>{formatNumber(acc.cash_balance)}</span>
                                             <button
                                                 onClick={() => setSelectedAccount(acc)}
-                                                className="px-3 py-1.5 border border-white/10 rounded text-xs hover:bg-white/10 transition-colors text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/10">
+                                                className="px-2.5 py-1 border border-indigo-500/30 rounded-lg text-xs font-medium hover:bg-indigo-500/10 transition-colors text-indigo-300 active:scale-[0.98]">
                                                 상세보기
                                             </button>
                                         </div>

@@ -3,16 +3,19 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: UI/UX Standard Template & Sticky Navigation Minimization & Universal Modal Overlay & Recharts Date Formatting
-✅ Recent: [메뉴별 상단 대시보드 제목 폰트 크기 `text-xl font-extrabold text-white` 전역 표준 일원화]
-1. [상단 대시보드 제목 규격 전수 일원화 (17개 컴포넌트)]:
-   - 가장 빈번하게 사용 중인 `text-xl font-extrabold text-white` (leading-none / tracking-tight)를 서비스 전역 표준으로 확정.
-   - 불균형하게 크거나(`text-2xl md:text-3xl`) 제각각이던 유가(`OilTab`), 미국 중간선거(`MidtermElectionTab`), 부동산(`RealEstateTab`), 커버드콜(`CoveredCallTab`), 연금웰스허브(`PensionWealthHub`), TFF펀드(`TffDashboard`), 마이자산(`MyAssetsView`, `MyDashboard`), 종합자산(`TotalAssetBoard`), 배당캘린더(`DividendDashboard`) 등의 대시보드 타이틀을 전수 통일.
-   - 인공적인 다색 그라디언트 텍스트(`bg-clip-text text-transparent`)를 제거하고 고대비 순백색 타이포그래피로 신뢰감 확립.
-2. [redesign-skill 기반 UI/UX 전면 업그레이드 (Phase 1~4)]:
-   - Geist 글꼴 정식 연동, `tabular-nums` 자릿수 고정폭, `text-wrap: balance/pretty` 오펀 방지, AI 네온 블롭 제거, 햅틱 스프링 및 포커스 링 전역 보강.
-3. [무결성 검증 완료]: Next.js 16.1.6 11개 페이지 최적화 프로덕션 빌드 성공 (`code 0`), 백엔드 E2E 통합 테스트 6/6 통과.
+✅ Recent: [컨텐츠 박스 내부 버튼·테이블 셀·드롭다운 박스 폰트 크기 `text-xs` 전역 표준 일원화]
+1. [테이블 및 셀 폰트 전역 표준화 (`globals.css`, `MyDashboard.tsx`, `CoveredCallTab.tsx` 등)]:
+   - `table`, `table th`, `table td` 기본 폰트 크기를 `0.75rem (12px / text-xs)`로 CSS 베이스 레벨에서 일괄 선언하여, 상위 17.5px 상속으로 인해 셀 숫자가 비대해지던 현상 전면 완치.
+   - 테이블 패딩을 `p-3`로 정돈하고 모든 수치 데이터에 `font-mono tabular-nums` 적용.
+2. [컨텐츠 박스 내부 버튼 규격 일원화 (`MyDashboard.tsx`, `AIRebalanceSimulator.tsx`)]:
+   - AI Assistant 퀵 질문 버튼 및 테이블 행 내부 상세보기 액션 버튼을 표준 `px-2.5 py-1` ~ `px-3 py-1.5 text-xs font-medium rounded-lg`로 정돈.
+3. [드롭다운(Select) 폰트 및 높이 일원화 (`globals.css`, `AIRebalanceSimulator.tsx`)]:
+   - `select` 및 `select option`에 `text-xs (12px)` 및 `px-2.5 py-1.5` 표준 패딩을 지정하여 기간 버튼(`3M, 6M, 1Y`) 및 레이블과 수직 리듬 일치.
+4. [무결성 검증 완료]: Next.js 16.1.6 11개 페이지 최적화 빌드 완료 (`exit code 0`), 백엔드 E2E 테스트 6/6 통과.
 
-🚀 Current: 메뉴별 상단 대시보드 제목 폰트 크기 전역 일원화 완료
+🚀 Current: 컨텐츠 박스 내부 버튼·테이블 셀·드롭다운 폰트 전역 일원화 완료
+
+✅ Previous: [메뉴별 상단 대시보드 제목 폰트 크기 `text-xl font-extrabold text-white` 전역 표준 일원화]
 
 ✅ Previous: [redesign-skill 기반 UI/UX 전면 업그레이드 (Phase 1~4) 완료]
 

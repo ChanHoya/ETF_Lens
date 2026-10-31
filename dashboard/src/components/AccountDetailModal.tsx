@@ -219,19 +219,19 @@ export default function AccountDetailModal({ isOpen, onClose, account, accountHo
                             보유 종목 상세현황
                         </h3>
                         <div className="bg-white/[0.02] border border-white/10 rounded-xl overflow-x-auto">
-                            <table className="w-full text-left border-collapse whitespace-nowrap min-w-[700px]">
+                            <table className="w-full text-left border-collapse whitespace-nowrap min-w-[700px] text-xs">
                                 <thead>
-                                    <tr className="bg-black/30 border-b border-white/10 text-sm font-medium text-gray-400">
-                                        <th className="py-4 px-6">코드 <span className="text-gray-500 mx-1">/</span> 종목명</th>
-                                        <th className="py-4 px-4 text-center">구분</th>
-                                        <th className="py-4 px-4 text-right">수량</th>
-                                        <th className="py-4 px-4 text-right">매입단가 <span className="text-gray-500 mx-1">/</span> 현재가</th>
-                                        <th className="py-4 px-4 text-right">매입금액 <span className="text-gray-500 mx-1">/</span> 평가금액</th>
-                                        <th className="py-4 px-4 text-right text-indigo-300">비중</th>
-                                        <th className="py-4 px-6 text-right">평가손익 <span className="text-gray-500 mx-1">/</span> 수익률</th>
+                                    <tr className="bg-black/30 border-b border-white/10 text-xs font-semibold text-gray-400">
+                                        <th className="py-3 px-4">코드 <span className="text-gray-500 mx-1">/</span> 종목명</th>
+                                        <th className="py-3 px-3 text-center">구분</th>
+                                        <th className="py-3 px-3 text-right">수량</th>
+                                        <th className="py-3 px-3 text-right">매입단가 <span className="text-gray-500 mx-1">/</span> 현재가</th>
+                                        <th className="py-3 px-3 text-right">매입금액 <span className="text-gray-500 mx-1">/</span> 평가금액</th>
+                                        <th className="py-3 px-3 text-right text-indigo-300">비중</th>
+                                        <th className="py-3 px-4 text-right">평가손익 <span className="text-gray-500 mx-1">/</span> 수익률</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5 text-sm">
+                                <tbody className="divide-y divide-white/5 text-xs">
                                     {/* 보유종목을 카테고리별 정렬 후 렌더링 */}
                                     {[...accountHoldings].sort((a: any, b: any) => categorizeItem(a.name, a.code).localeCompare(categorizeItem(b.name, b.code)) || b.eval_amount - a.eval_amount).map((h: any, idx: number) => {
                                         const hPurchase = h.qty * h.avg_price;

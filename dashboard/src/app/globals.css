@@ -61,6 +61,43 @@ table, .tabular-nums, input, [data-tabular] {
   font-variant-numeric: tabular-nums;
 }
 
+/* 전역 테이블 및 셀 표준 폰트 크기 및 정렬 일원화 */
+table {
+  font-size: 0.75rem; /* text-xs (12px) 표준 기본값 */
+  line-height: 1.45;
+  border-collapse: collapse;
+}
+
+table th {
+  font-size: 0.75rem; /* text-xs (12px) */
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+table td {
+  font-size: 0.75rem; /* text-xs (12px) */
+  line-height: 1.45;
+}
+
+/* 폼 요소, 버튼, 드롭다운 표준 폰트 크기 및 상속 */
+select {
+  font-size: 0.75rem; /* text-xs (12px) */
+  line-height: 1.4;
+  font-family: inherit;
+}
+
+select option {
+  font-size: 0.75rem;
+  background-color: #181818;
+  color: #f3f4f6;
+  padding: 4px 8px;
+}
+
+html.light select option {
+  background-color: #ffffff;
+  color: #10131a;
+}
+
 /* 임의 픽셀(px) 지정 텍스트 1~1.5pt(+1.5px) 비례 보정 (모든 화면/메뉴 가독성 향상) */
 [class*="text-[7px]"]  { font-size: 9px !important;    line-height: 1.35 !important; }
 [class*="text-[8px]"]  { font-size: 9.5px !important;  line-height: 1.35 !important; }
