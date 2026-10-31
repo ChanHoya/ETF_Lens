@@ -315,7 +315,7 @@ export default function OilTab() {
                                 {overview?.updated_at || "실시간 시장 연동"}
                             </span>
                         </div>
-                        <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                        <h2 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
                             글로벌 유가 동향 및 에너지 시장 분석
                         </h2>
                         <p className="text-xs md:text-sm text-gray-400 font-medium max-w-3xl leading-relaxed">

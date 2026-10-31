@@ -295,8 +295,8 @@ export default function PortfolioBacktester({ holdings }: BacktesterProps) {
     return (
         <section className="flex flex-col gap-4 mt-6">
             <div className="flex items-center justify-between flex-wrap gap-2">
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                    <span className="w-1.5 h-6 bg-purple-500 rounded-full"></span>
+                <h2 className="text-xl font-extrabold text-white flex items-center gap-2.5">
+                    <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
                     포트폴리오 백테스터 & 성과 분석
                 </h2>
                 <button

@@ -479,12 +479,12 @@ export default function TotalAssetBoard({ onOpenDetail }: TotalAssetBoardProps) 
             {/* 1. Header & Action Buttons */}
             <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-300">
+                    <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
                         <Wallet className="w-5 h-5" />
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <h2 className="text-lg md:text-xl font-black tracking-tight text-white flex items-center gap-1.5">
+                            <h2 className="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
                                 Hoya 종합 자산 현황
                                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold">
                                     3. 포트폴리오 연동

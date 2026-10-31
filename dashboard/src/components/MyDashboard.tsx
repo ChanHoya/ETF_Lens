@@ -337,7 +337,7 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
             {/* Section 2: 포트폴리오 현황 트리맵 */}
             <section className="flex flex-col gap-4">
                 <div className="flex items-baseline gap-4 justify-between flex-wrap">
-                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
                         <span className="w-1.5 h-6 bg-rose-500 rounded-full"></span>
                         포트폴리오 현황
                     </h2>
@@ -372,7 +372,7 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
 
             {/* AI Portfolio Assistant Section */}
             <section className="flex flex-col gap-4">
-                <h2 className="text-2xl font-bold flex items-center gap-2">
+                <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
                     <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
                     AI Portfolio Assistant
                 </h2>
@@ -412,7 +412,7 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
             {/* Section 3: 계좌내역 (Account Status) */}
             <section className="flex flex-col gap-4">
                 <div className="flex justify-between items-end">
-                    <h2 className="text-2xl font-bold flex items-baseline gap-3">
+                    <h2 className="text-xl font-extrabold text-white flex items-baseline gap-3">
                         <div className="flex items-center gap-2">
                             <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
                             계좌내역
@@ -462,7 +462,7 @@ export default function MyDashboard({ data, tradesData, isRefreshing = false, on
             {/* 포트폴리오 백테스터 & AI 리밸런싱 시뮬레이터 통합 탭 */}
             <div className="flex flex-col gap-4 mt-2">
                 <div className="flex items-center justify-between border-b border-white/10 pb-2 flex-wrap gap-3">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
+                    <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
                         <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
                         포트폴리오 시뮬레이션
                     </h2>

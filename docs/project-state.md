@@ -3,23 +3,18 @@
 > **Keep this file under 200 lines.**
 ## Quick Summary
 Base: UI/UX Standard Template & Sticky Navigation Minimization & Universal Modal Overlay & Recharts Date Formatting
-✅ Recent: [redesign-skill 기반 UI/UX 전면 업그레이드 (Phase 1~4) 완료]
-1. [Phase 1: Geist 글꼴 및 금융 텍스트 렌더링 정상화 (`globals.css`)]:
-   - Geist Sans, Geist Mono, Manrope 정식 로드 및 `--font-sans`, `--font-mono` 테마 연동.
-   - 금융 데이터 자릿수 떨림 방지를 위한 `font-variant-numeric: tabular-nums` 및 `cv02, cv03, cv04, cv11, tnum` 전역 적용.
-   - 오펀 단어 방지를 위한 `h1~h6` `text-wrap: balance`, `p` `text-wrap: pretty` 적용.
-2. [Phase 2: AI 네온 그라디언트 블롭 제거 및 순수 다크 팔레트 정돈 (`MainApp.tsx`, `PasswordGate.tsx`, `TffGateWrapper.tsx`)]:
-   - 배경의 보라/핑크/인디고 네온 블러 블롭 전면 제거.
-   - 배경 `#000000` 플랫 다크 서피스 정돈 및 검색창/모달/드롭다운 불필요 그라디언트 제거.
-3. [Phase 3: 햅틱 조작감 & 접근성 포커스 링 전역 보강 (`globals.css`, `SlidingTabs.tsx`, `NotificationSettings.tsx`, `MyAuthModal.tsx`)]:
-   - 모든 대화형 버튼에 물리 스프링 클릭 감각(`active:scale-[0.98]`, `cubic-bezier(0.22, 1, 0.36, 1)`) 및 고대비 포커스 링 탑재.
-   - `prefers-reduced-motion` 미디어 쿼리 지원으로 접근성 표준 완비.
-   - AI 클리셰 보라 그라디언트 탭 인디케이터를 정제된 솔리드 인디고(`bg-indigo-600`)로 단일화.
-4. [Phase 4: 중첩 라운드(`inner = outer - gap`) 및 컴포넌트 여백 조화]:
-   - 외곽 박스 대비 내부 모듈러 카드 모서리 곡률 정합성 확보.
-5. [무결성 검증 완료]: Next.js 16.1.6 11개 페이지 최적화 프로덕션 빌드 성공, 백엔드 E2E 통합 테스트 6/6 100% Pass.
+✅ Recent: [메뉴별 상단 대시보드 제목 폰트 크기 `text-xl font-extrabold text-white` 전역 표준 일원화]
+1. [상단 대시보드 제목 규격 전수 일원화 (17개 컴포넌트)]:
+   - 가장 빈번하게 사용 중인 `text-xl font-extrabold text-white` (leading-none / tracking-tight)를 서비스 전역 표준으로 확정.
+   - 불균형하게 크거나(`text-2xl md:text-3xl`) 제각각이던 유가(`OilTab`), 미국 중간선거(`MidtermElectionTab`), 부동산(`RealEstateTab`), 커버드콜(`CoveredCallTab`), 연금웰스허브(`PensionWealthHub`), TFF펀드(`TffDashboard`), 마이자산(`MyAssetsView`, `MyDashboard`), 종합자산(`TotalAssetBoard`), 배당캘린더(`DividendDashboard`) 등의 대시보드 타이틀을 전수 통일.
+   - 인공적인 다색 그라디언트 텍스트(`bg-clip-text text-transparent`)를 제거하고 고대비 순백색 타이포그래피로 신뢰감 확립.
+2. [redesign-skill 기반 UI/UX 전면 업그레이드 (Phase 1~4)]:
+   - Geist 글꼴 정식 연동, `tabular-nums` 자릿수 고정폭, `text-wrap: balance/pretty` 오펀 방지, AI 네온 블롭 제거, 햅틱 스프링 및 포커스 링 전역 보강.
+3. [무결성 검증 완료]: Next.js 16.1.6 11개 페이지 최적화 프로덕션 빌드 성공 (`code 0`), 백엔드 E2E 통합 테스트 6/6 통과.
 
-🚀 Current: redesign-skill 기반 UI/UX 전면 고도화 완료
+🚀 Current: 메뉴별 상단 대시보드 제목 폰트 크기 전역 일원화 완료
+
+✅ Previous: [redesign-skill 기반 UI/UX 전면 업그레이드 (Phase 1~4) 완료]
 
 ✅ Previous: [최상단 Activation Zone 대시보드 배너 '다음 관전 이벤트' 완료 이벤트 필터링 및 Copom(11월) 승계]
 

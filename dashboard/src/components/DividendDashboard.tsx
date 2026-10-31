@@ -370,7 +370,7 @@ export default function DividendDashboard({ autoLoadMyAssets = false }: { autoLo
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <h2 className="text-lg md:text-xl font-black text-white tracking-tight">
+                            <h2 className="text-xl font-extrabold text-white tracking-tight">
                                 ETF 배당 캘린더 & Cashflow 시뮬레이터
                             </h2>
                             <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">

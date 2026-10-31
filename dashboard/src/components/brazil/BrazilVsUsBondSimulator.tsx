@@ -103,7 +103,7 @@ export default function BrazilVsUsBondSimulator() {
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                            <h2 className="text-xl font-extrabold text-white tracking-tight">
                                 브라질 국채 vs 미국 30년 국채 실질 토탈리턴 비교
                             </h2>
                             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300">

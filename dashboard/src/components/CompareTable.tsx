@@ -238,8 +238,8 @@ export default function CompareTable({
                     <div className="bg-[#0B0F19] border border-white/10 rounded-2xl w-full max-w-[1800px] min-h-fit overflow-hidden flex flex-col shadow-2xl shadow-indigo-500/10 my-2">
                         {/* 모달 헤더 */}
                         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 sticky top-0 z-40 bg-[#0B0F19]/95 backdrop-blur-xl">
-                            <h2 className="text-lg font-bold flex items-center gap-3">
-                                <span className="w-1.5 h-6 bg-gradient-to-b from-teal-400 to-emerald-500 rounded-full"></span>
+                            <h2 className="text-xl font-extrabold text-white flex items-center gap-2.5">
+                                <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
                                 기본 정보
                                 <span className="text-xs text-gray-500 font-normal">— 종목 클릭 시 상세 조회</span>
                             </h2>

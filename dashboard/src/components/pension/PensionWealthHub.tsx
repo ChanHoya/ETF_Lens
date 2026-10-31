@@ -126,9 +126,9 @@ function PensionWealthHubInner() {
                 2026 세법 개정 반영
               </span>
             </div>
-            <h1 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+            <h2 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
               연금·절세 웰스 허브 <span className="text-emerald-400 text-sm md:text-base font-normal">| 연금 3총사 절세 & 국민연금 BEP 분석기</span>
-            </h1>
+            </h2>
             <p className="text-xs md:text-sm text-gray-300/80 leading-relaxed max-w-2xl">
               연금저축·IRP·ISA 세액공제와 과세이연 복리 증식, 그리고 기대수명별 국민연금 조기 vs 정상 vs 연기 수령 손익분기점(BEP)을 정확한 금융 수학으로 시뮬레이션합니다.
             </p>

@@ -272,7 +272,7 @@ export default function MidtermElectionTab() {
                                 D-{countdown.days}일 {countdown.hours}시간 {countdown.minutes}분 (2026.11.03)
                             </span>
                         </div>
-                        <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                        <h2 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
                             미국 중간선거('26.11) 영향 분석 및 자산배분 가이드
                         </h2>
                         <p className="text-xs md:text-sm text-gray-400 font-medium max-w-3xl leading-relaxed">

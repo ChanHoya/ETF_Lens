@@ -209,7 +209,7 @@ export default function FedWatchRateProbabilityWidget() {
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                            <h2 className="text-xl font-extrabold text-white tracking-tight">
                                 11월 FOMC & 한은 금통위 D-Day
                             </h2>
                             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-300">

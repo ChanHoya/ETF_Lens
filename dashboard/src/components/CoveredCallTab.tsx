@@ -471,7 +471,7 @@ export default function CoveredCallTab({
 
             {/* Header & Description */}
             <div className="mb-4 border-b border-white/10 pb-4">
-                <h2 className="text-2xl font-extrabold text-white mb-2 flex items-center gap-3">
+                <h2 className="text-xl font-extrabold text-white mb-2 flex items-center gap-2.5">
                     <Activity className="w-6 h-6 text-indigo-400" />
                     커버드콜 (Covered Call) 상품 비교 분석
                 </h2>

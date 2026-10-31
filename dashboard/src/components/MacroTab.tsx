@@ -296,10 +296,10 @@ function MacroExecutiveOverview({ d }: { d: Overview }) {
                         <Gauge className="w-4 h-4" />
                     </span>
                     <div>
-                        <h4 className="text-sm font-extrabold text-white flex items-center gap-2">
+                        <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
                             글로벌 6대 매크로 핵심 지표 통합 대시보드
-                        </h4>
-                        <p className="text-[11px] text-gray-400">
+                        </h2>
+                        <p className="text-xs text-gray-400 mt-0.5">
                             각 지표 박스를 클릭하면 6M · 1Y · 5Y · 10Y 통합 시계열 추이 그래프 팝업이 열립니다.
                         </p>
                     </div>

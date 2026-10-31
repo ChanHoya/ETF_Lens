@@ -238,11 +238,11 @@ function MyAssetsViewInner({ onOpenDetail, onAnalyzePeers }: { onOpenDetail?: (c
             {isAuthorized && (
                 <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 max-w-[95vw] xl:max-w-[1400px]">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-xl border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                        <div className="p-2 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
                             <span className="text-xl">💰</span>
                         </div>
                         <div>
-                            <h2 className="text-xl md:text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-purple-300 drop-shadow-sm">
+                            <h2 className="text-xl font-extrabold tracking-tight text-white">
                                 My Assets
                             </h2>
                             {lastFetchLabel && (

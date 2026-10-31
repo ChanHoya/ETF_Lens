@@ -152,11 +152,11 @@ export default function AccountSummaryDashboard({
                 {/* Header */}
                 <div className="sticky top-0 z-10 bg-[#0f1117]/95 backdrop-blur-xl px-6 py-4 border-b border-white/10 flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
+                        <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
                             <PieIcon className="w-5 h-5 text-indigo-300" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-black text-white">계좌별 종합 대시보드</h2>
+                            <h2 className="text-xl font-extrabold text-white">계좌별 종합 대시보드</h2>
                             <p className="text-[11px] text-gray-400">Account Board Overview — 계좌 분류별 자산 비중, 매수/평가 비교, 수익률 분석</p>
                         </div>
                     </div>

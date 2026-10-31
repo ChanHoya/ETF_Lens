@@ -564,7 +564,7 @@ export default function TffDashboard({ onOpenDetail }: Props) {
             {/* 상단 공통 헤더 — 1행: 타이틀 + 제어 버튼들 */}
             <div className="w-full max-w-[95vw] xl:max-w-[1400px] mb-3 relative z-20 flex flex-row items-center justify-between gap-3 flex-wrap">
                 <div className="flex flex-col items-start px-2">
-                    <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-1 text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400 drop-shadow-md">
+                    <h2 className="text-xl font-extrabold text-white tracking-tight mb-1">
                         TFF Fund Dashboard
                     </h2>
                     <p className="flex items-center gap-2 text-gray-400 text-xs md:text-sm">

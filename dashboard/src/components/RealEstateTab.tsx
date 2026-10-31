@@ -198,9 +198,9 @@ export default function RealEstateTab() {
                 {apiSource === "SEOUL_OPEN_DATA_LIVE" ? "서울 오픈데이터 라이브 연동" : "검증된 캐시 연동 (sample 대기)"}
               </span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
+            <h2 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
               부동산 거시 진단 & 기회비용 인텔리전스
-            </h1>
+            </h2>
             <p className="mt-1 text-sm text-slate-300 max-w-2xl leading-relaxed">
               2024년 정책대출 반등 후 2025~2026년 현재까지 이어진 장기 매물 적체와 환금성 마비, 통계적 착시를 해부하고 실물 부동산과 금융자산(배당 ETF)의 보유비용 및 현금흐름을 객관적으로 대조합니다.
             </p>
